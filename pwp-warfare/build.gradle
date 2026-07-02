@@ -55,6 +55,9 @@ dependencies {
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-1.20.1:4.4.9")
     implementation fg.deobf("top.theillusivec4.curios:curios-forge:5.14.1+1.20.1")
     implementation "de.maxhenkel.voicechat:voicechat-api:2.6.20"
+
+    implementation project(':pwp-core-client')
+    implementation project(':pwp-cosmetics')
 }
 
 jar {

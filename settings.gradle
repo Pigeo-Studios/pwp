@@ -1,0 +1,16 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { name = 'Forge'; url = 'https://maven.minecraftforge.net/' }
+    }
+}
+
+rootProject.name = 'pwp'
+
+include 'pwp-core-client'
+include 'pwp-cosmetics'
+include 'pwp-lobby'
+include 'pwp-warfare'
+include 'pwp-medicine'
+include 'pwp-movement'
+include 'pwp-limits'

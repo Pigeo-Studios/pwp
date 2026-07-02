@@ -92,37 +92,29 @@ public class MatchAllocator {
 
     // Запуск матча
     private static void startMatch(MapConfig map) {
-        try {
-            int port = ServerManager.startMatchServer(map.name, map.maxPlayers);
-            if (port < 0) {
-                log.error("Failed to start match server for {}", map.displayName);
-                return;
-            }
-
-            MatchInfo mi = new MatchInfo();
-            mi.serverId = port - 25565; // FIXME: proper serverId
-            mi.mapName = map.name;
-            mi.port = port;
-            mi.maxPlayers = map.maxPlayers;
-            mi.phase = MatchPhase.STARTING;
-
-            activeMatches.put(mi.serverId, mi);
-            log.info("Match started: {} on port {} (max {})", map.displayName, port, map.maxPlayers);
-
-            // Перемещаем игроков из очереди в матч
-            List<String> toMove = new ArrayList<>();
-            while (!playerQueue.isEmpty() && toMove.size() < map.maxPlayers) {
-                toMove.add(playerQueue.poll());
-            }
-
-            mi.playerCount = toMove.size();
-            mi.phase = MatchPhase.PLAYING;
-
-            log.info("{} players moved to {}", toMove.size(), map.displayName);
-
-        } catch (Exception e) {
-            log.error("Failed to start match: {}", e.getMessage());
+        ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers);
+        if (sr.error != null || !sr.ready) {
+            log.error("Failed to start match server for {}: {}", map.displayName, sr.error);
+            return;
         }
+
+        MatchInfo mi = new MatchInfo();
+        mi.serverId = sr.serverId;
+        mi.mapName = map.name;
+        mi.port = sr.port;
+        mi.maxPlayers = map.maxPlayers;
+        mi.phase = MatchPhase.PLAYING;
+
+        activeMatches.put(mi.serverId, mi);
+        log.info("Match started: {} on port {} (max {})", map.displayName, sr.port, map.maxPlayers);
+
+        List<String> toMove = new ArrayList<>();
+        while (!playerQueue.isEmpty() && toMove.size() < map.maxPlayers) {
+            toMove.add(playerQueue.poll());
+        }
+
+        mi.playerCount = toMove.size();
+        log.info("{} players moved to {}", toMove.size(), map.displayName);
     }
 
     // Матч завершён — освобождаем сервер

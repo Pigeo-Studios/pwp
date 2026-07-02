@@ -24,6 +24,7 @@ minecraft {
 }
 
 repositories {
+    mavenCentral()
     maven {
         name = "GeckoLib"
         url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
@@ -33,4 +34,5 @@ repositories {
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-1.20.1:4.4.9")
+    implementation project(':pwp-core-client')
 }

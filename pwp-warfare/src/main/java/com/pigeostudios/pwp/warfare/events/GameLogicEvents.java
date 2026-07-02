@@ -870,7 +870,16 @@ public class GameLogicEvents {
                isBeingActivelyCaptured = true;
                float baseSpeed = 1.0F / (point.captureTimeMinutes * 60 * 20);
                String oldOwner = point.owner;
-               handleTeamInfluence(point, dominantTeam, multiplier, baseSpeed, data, level);
+                String oldOwner = point.owner;
+                handleTeamInfluence(point, dominantTeam, multiplier, baseSpeed, data, level);
+                if (!point.owner.equals(oldOwner)) {
+                   for (ServerPlayer p : playersInBox) {
+                      if (p.isAlive() && !p.isSpectator() && p.getTeam() != null
+                              && p.getTeam().getName().equalsIgnoreCase(dominantTeam)) {
+                         MatchStatsTracker.get().recordCapture(p);
+                      }
+                   }
+                }
                if (!point.owner.equals(oldOwner) && !point.owner.equals("NEUTRAL") && point.lockDurationMinutes > 0) {
                   point.lockedUntilTick = level.getGameTime() + point.lockDurationMinutes * 60L * 20L;
                   data.setDirty();

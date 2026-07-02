@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.cosmetics.CosmeticManager;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,13 @@ public class ResupplyHandler {
                itemToGive.setTag(savedTags.get(i));
             }
 
+            if (ModList.get().isLoaded("pwp_cosmetics")) {
+               String slotType = guessCosmeticSlot(itemToGive, i);
+               if (slotType != null) {
+                  itemToGive = CosmeticManager.applySkin(player, itemToGive, slotType);
+               }
+            }
+
             if (i < 41) {
                pInv.setItem(i, itemToGive);
             } else {
@@ -55,7 +63,19 @@ public class ResupplyHandler {
    }
 
    // РћС‡РёС‰Р°РµС‚ РІСЃРµ СЃР»РѕС‚С‹ Curios Сѓ РёРіСЂРѕРєР°
-   public static void clearCurios(ServerPlayer player) {
+    // Определяет тип косметического слота по предмету
+    private static String guessCosmeticSlot(ItemStack stack, int slotIndex) {
+       String itemId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
+
+       if (itemId.contains("knife") || itemId.contains("bayonet") || itemId.contains("dagger")) return "KNIFE";
+       if (itemId.contains("pistol") || itemId.contains("deagle") || itemId.contains("glock")) return "SECONDARY";
+
+       if (slotIndex < 9) return "PRIMARY";
+
+       return null;
+    }
+
+    public static void clearCurios(ServerPlayer player) {
       if (ModList.get().isLoaded("curios")) {
          try {
             CuriosApi.getCuriosInventory(player).ifPresent(handler -> {

@@ -180,6 +180,37 @@ public class MatchStatsTracker {
             } else {
                 log.warn("Could not save match result (Core API may be down)");
             }
+
+            for (PlayerMatchStats ps : this.players.values()) {
+                long xp = 0;
+                long coins = 0;
+
+                xp += ps.kills * 50L;
+                xp += ps.assists * 25L;
+                xp += ps.vehicleKills * 150L;
+                xp += ps.captures * 100L;
+                xp += ps.revives * 75L;
+                xp += durationSec / 60 * 10L;
+
+                coins += ps.kills * 10L;
+                coins += ps.assists * 5L;
+                coins += ps.vehicleKills * 30L;
+                coins += ps.captures * 25L;
+                coins += ps.revives * 15L;
+
+                if (ps.team.equals(winner)) {
+                    xp += 200;
+                    coins += 50;
+                } else {
+                    xp += 100;
+                    coins += 20;
+                }
+
+                CoreAPI.addXp(ps.uuid, xp, "MATCH");
+                CoreAPI.addCurrency(ps.uuid, coins, "MATCH_REWARD");
+
+                log.info("{} earned {} XP and {} Coins", ps.nickname, xp, coins);
+            }
         } else {
             log.info("pwp_core_client not installed, skipping match save");
         }

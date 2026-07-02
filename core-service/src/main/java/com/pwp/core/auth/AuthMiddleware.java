@@ -2,11 +2,20 @@ package com.pwp.core.auth;
 
 import com.pwp.core.CoreApplication;
 import io.javalin.http.Context;
+import io.javalin.http.TooManyRequestsResponse;
 import io.javalin.http.UnauthorizedResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AuthMiddleware {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthMiddleware.class);
+
+    private static final Map<String, RateBucket> rateBuckets = new ConcurrentHashMap<>();
 
     public static void handle(Context ctx) {
         if (ctx.path().equals("/api/v1/health")) return;
@@ -23,5 +32,29 @@ public class AuthMiddleware {
         if (!valid) {
             throw new UnauthorizedResponse("Invalid API key");
         }
+
+        if (!checkRateLimit(token)) {
+            log.warn("Rate limit exceeded for key {}", token.substring(0, Math.min(8, token.length())));
+            throw new TooManyRequestsResponse("Rate limit exceeded");
+        }
+    }
+
+    private static synchronized boolean checkRateLimit(String key) {
+        int limit = CoreApplication.config.api.rateLimitPerMinute;
+        long now = System.currentTimeMillis() / 1000;
+
+        RateBucket bucket = rateBuckets.computeIfAbsent(key, k -> new RateBucket());
+        if (now > bucket.windowStart) {
+            bucket.windowStart = now;
+            bucket.count = 0;
+        }
+
+        bucket.count++;
+        return bucket.count <= limit;
+    }
+
+    private static class RateBucket {
+        long windowStart = System.currentTimeMillis() / 1000;
+        int count;
     }
 }

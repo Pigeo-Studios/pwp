@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
+import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -173,10 +174,11 @@ public class DownedHandler {
             String reviveItemName = (String)WarfareConfig.REVIVE_ITEM.get();
             Item reviveItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation(reviveItemName));
             if (held.getItem() == reviveItem) {
-               revivePlayer(target);
-               if (!var6.isCreative()) {
-                  held.shrink(1);
-               }
+                revivePlayer(target);
+                MatchStatsTracker.get().recordRevive(var6);
+                if (!var6.isCreative()) {
+                   held.shrink(1);
+                }
 
                var6.displayClientMessage(Component.literal("Teammate revived!").withStyle(ChatFormatting.GREEN), true);
             }
