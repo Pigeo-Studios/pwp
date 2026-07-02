@@ -16,6 +16,7 @@ public class AuthMiddleware {
     private static final Logger log = LoggerFactory.getLogger(AuthMiddleware.class);
 
     private static final Map<String, RateBucket> rateBuckets = new ConcurrentHashMap<>();
+    private static long lastCleanup = System.currentTimeMillis();
 
     public static void handle(Context ctx, CoreApplication.ApiConfig apiConfig) {
         if (ctx.path().equals("/api/v1/health")) return;
@@ -38,22 +39,36 @@ public class AuthMiddleware {
         }
     }
 
-    private static synchronized boolean checkRateLimit(String key, CoreApplication.ApiConfig apiConfig) {
+    private static boolean checkRateLimit(String key, CoreApplication.ApiConfig apiConfig) {
         int limit = apiConfig.rateLimitPerMinute;
-        long now = System.currentTimeMillis() / 1000;
+        long now = System.currentTimeMillis();
 
-        RateBucket bucket = rateBuckets.computeIfAbsent(key, k -> new RateBucket());
-        if (now > bucket.windowStart) {
-            bucket.windowStart = now;
-            bucket.count = 0;
+        // Evict stale buckets every 5 minutes
+        if (now - lastCleanup > 300_000) {
+            lastCleanup = now;
+            rateBuckets.entrySet().removeIf(e ->
+                now - e.getValue().windowStart > 120_000
+            );
         }
 
-        bucket.count++;
-        return bucket.count <= limit;
+        RateBucket bucket = rateBuckets.computeIfAbsent(key, k -> new RateBucket(now));
+
+        synchronized (bucket) {
+            if (now - bucket.windowStart > 60_000) {
+                bucket.windowStart = now;
+                bucket.count = 0;
+            }
+            bucket.count++;
+            return bucket.count <= limit;
+        }
     }
 
     private static class RateBucket {
-        long windowStart = System.currentTimeMillis() / 1000;
+        long windowStart;
         int count;
+
+        RateBucket(long now) {
+            this.windowStart = now;
+        }
     }
 }

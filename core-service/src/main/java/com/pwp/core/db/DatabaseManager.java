@@ -25,6 +25,7 @@ public class DatabaseManager {
         hikari.setMaxLifetime(cfg.maxLifetimeMs);
         hikari.setMinimumIdle(2);
         hikari.setConnectionTimeout(5000);
+        hikari.setConnectionTestQuery("SELECT 1");
         hikari.setPoolName("PWP-Core-Pool");
 
         dataSource = new HikariDataSource(hikari);

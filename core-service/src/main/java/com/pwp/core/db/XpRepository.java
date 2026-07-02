@@ -4,7 +4,7 @@ import java.sql.*;
 
 public class XpRepository {
 
-    public static XpData get(String uuid) throws SQLException {
+    public static XpData get(String uuid) throws Exception {
         String sql = "SELECT * FROM player_xp WHERE uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -22,7 +22,7 @@ public class XpRepository {
         return null;
     }
 
-    public static XpData addXp(String uuid, long amount) throws SQLException {
+    public static XpData addXp(String uuid, long amount) throws Exception {
         Connection c = DatabaseManager.getConnection();
         c.setAutoCommit(false);
         try {
@@ -36,7 +36,10 @@ public class XpRepository {
             ps = c.prepareStatement("SELECT xp, level, prestige FROM player_xp WHERE uuid = ?");
             ps.setString(1, uuid);
             ResultSet rs = ps.executeQuery();
-            rs.next();
+            if (!rs.next()) {
+                c.rollback();
+                throw new SQLException("Player not found: " + uuid);
+            }
             long newXp = rs.getLong("xp");
             int level = rs.getInt("level");
             int prestige = rs.getInt("prestige");
@@ -70,7 +73,7 @@ public class XpRepository {
             d.xpForNext = xpForNext;
             d.leveledUp = leveledUp;
             return d;
-        } catch (SQLException e) {
+        } catch (Exception e) {
             c.rollback();
             throw e;
         } finally {

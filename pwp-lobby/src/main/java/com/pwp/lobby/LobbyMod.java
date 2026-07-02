@@ -1,5 +1,6 @@
 package com.pwp.lobby;
 
+import com.pwp.coreclient.CoreAPI;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
@@ -44,9 +45,18 @@ public class LobbyMod {
 
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            MatchAllocator.playerJoined(player.getStringUUID());
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        // Check registration via Core Service (cracked server auth)
+        String uuid = player.getStringUUID();
+        var playerData = CoreAPI.loadPlayer(uuid);
+        if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
+            player.connection.disconnect(
+                    Component.literal("§cYou are not registered on this server.\n§7Register at pwp.example.com"));
+            return;
         }
+
+        MatchAllocator.playerJoined(uuid);
     }
 
     @SubscribeEvent

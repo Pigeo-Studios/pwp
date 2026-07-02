@@ -10,9 +10,13 @@ public class XpController {
     public XpController(Javalin app) {
         app.post("/api/v1/xp/add", ctx -> {
             AddXpRequest req = ctx.bodyAsClass(AddXpRequest.class);
+            if (req.amount <= 0) {
+                ctx.json(ApiResponse.error("amount must be positive"));
+                return;
+            }
             XpRepository.XpData result = XpRepository.addXp(req.uuid, req.amount);
             LogRepository.log(req.uuid, "XP_ADD", req.amount,
-                    "{\"reason\":\"" + (req.reason != null ? req.reason : "") + "\"}");
+                    "{\"reason\":\"" + (req.reason != null ? req.reason.replace("\"", "'") : "") + "\"}");
             ctx.json(ApiResponse.ok(result));
         });
 

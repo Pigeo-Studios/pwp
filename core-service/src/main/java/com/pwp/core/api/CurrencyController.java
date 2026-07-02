@@ -10,10 +10,14 @@ public class CurrencyController {
     public CurrencyController(Javalin app) {
         app.post("/api/v1/currency/add", ctx -> {
             AddRequest req = ctx.bodyAsClass(AddRequest.class);
+            if (req.amount <= 0) {
+                ctx.json(ApiResponse.error("amount must be positive"));
+                return;
+            }
             boolean ok = CurrencyRepository.add(req.uuid, req.amount);
             if (ok) {
                 LogRepository.log(req.uuid, "COINS_ADD", req.amount,
-                        "{\"reason\":\"" + (req.reason != null ? req.reason : "") + "\"}");
+                        "{\"reason\":\"" + (req.reason != null ? req.reason.replace("\"", "'") : "") + "\"}");
                 long balance = CurrencyRepository.getBalance(req.uuid);
                 ctx.json(ApiResponse.ok(new BalanceResponse(balance)));
             } else {
@@ -23,10 +27,14 @@ public class CurrencyController {
 
         app.post("/api/v1/currency/spend", ctx -> {
             SpendRequest req = ctx.bodyAsClass(SpendRequest.class);
+            if (req.amount <= 0) {
+                ctx.json(ApiResponse.error("amount must be positive"));
+                return;
+            }
             boolean ok = CurrencyRepository.spend(req.uuid, req.amount);
             if (ok) {
                 LogRepository.log(req.uuid, "COINS_SPEND", -req.amount,
-                        "{\"item_id\":\"" + (req.itemId != null ? req.itemId : "") + "\"}");
+                        "{\"item_id\":\"" + (req.itemId != null ? req.itemId.replace("\"", "'") : "") + "\"}");
                 long balance = CurrencyRepository.getBalance(req.uuid);
                 ctx.json(ApiResponse.ok(new BalanceResponse(balance)));
             } else {

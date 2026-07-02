@@ -4,7 +4,6 @@ import com.pwp.core.api.*;
 import com.pwp.core.auth.AuthMiddleware;
 import com.pwp.core.db.DatabaseManager;
 import io.javalin.Javalin;
-import io.javalin.http.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +39,12 @@ public class CoreApplication {
         new MatchController(app);
         new ShopController(app);
         new DonationController(app);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            log.info("Shutting down Core Service...");
+            app.stop();
+            DatabaseManager.shutdown();
+        }));
 
         app.start(port);
         log.info("PWP Core Service running on port {}", port);

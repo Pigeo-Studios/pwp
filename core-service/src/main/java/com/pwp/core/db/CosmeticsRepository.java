@@ -65,7 +65,19 @@ public class CosmeticsRepository {
     }
 
     public static boolean equipItem(String uuid, String itemUuid, String slotType, String role) throws SQLException {
-        String sql = "REPLACE INTO player_equipment (uuid, slot_type, role, item_uuid) VALUES (?, ?, ?, ?)";
+        // Verify item belongs to this player
+        String checkSql = "SELECT COUNT(*) FROM player_cosmetics WHERE item_uuid = ? AND player_uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(checkSql)) {
+            ps.setString(1, itemUuid);
+            ps.setString(2, uuid);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getInt(1) == 0) return false;
+            }
+        }
+
+        String sql = "INSERT INTO player_equipment (uuid, slot_type, role, item_uuid) VALUES (?, ?, ?, ?) " +
+                "ON DUPLICATE KEY UPDATE item_uuid = VALUES(item_uuid)";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, uuid);
