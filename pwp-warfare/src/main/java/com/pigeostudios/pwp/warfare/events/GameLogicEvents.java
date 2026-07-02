@@ -1172,6 +1172,7 @@ public class GameLogicEvents {
              Entity sourceEntity = event.getSource().getEntity();
              String weapon = event.getSource().getMsgId();
 
+             // Прямое убийство игроком
              if (sourceEntity instanceof ServerPlayer killer) {
                 boolean isTeamkill = killer.getTeam() != null && victim.getTeam() != null
                         && killer.getTeam().isAlliedTo(victim.getTeam());
@@ -1186,10 +1187,20 @@ public class GameLogicEvents {
                    double dist = killer.distanceTo(victim);
                    MatchStatsTracker.get().recordKill(killer, victim, weapon, dist);
                 }
+
+             // Убийство техникой
              } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
                 List<Entity> passengers = sourceEntity.getPassengers();
                 if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
                    MatchStatsTracker.get().recordVehicleKill(driver);
+                }
+
+             // Смерть через downed system (forceGiveUp/bleed out)
+             } else {
+                ServerPlayer lastAttacker = victim.getLastHurtByPlayer();
+                if (lastAttacker != null && lastAttacker.isAlive()) {
+                   double dist = lastAttacker.distanceTo(victim);
+                   MatchStatsTracker.get().recordKill(lastAttacker, victim, "knockout", dist);
                 }
              }
 
