@@ -30,7 +30,7 @@ public class LobbyMod {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            MapRegistry.configure("../PWP/maps");
+            MapRegistry.configure("C:\\Users\\maska\\OneDrive\\Desktop\\карты");
             MapRegistry.loadAll();
             MatchAllocator.configure(2, 80);
         });
