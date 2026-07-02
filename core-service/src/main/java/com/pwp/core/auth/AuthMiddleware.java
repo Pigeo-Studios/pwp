@@ -17,7 +17,7 @@ public class AuthMiddleware {
 
     private static final Map<String, RateBucket> rateBuckets = new ConcurrentHashMap<>();
 
-    public static void handle(Context ctx) {
+    public static void handle(Context ctx, CoreApplication.ApiConfig apiConfig) {
         if (ctx.path().equals("/api/v1/health")) return;
 
         String authHeader = ctx.header("Authorization");
@@ -26,21 +26,20 @@ public class AuthMiddleware {
         }
 
         String token = authHeader.substring("Bearer ".length());
-        String[] validKeys = CoreApplication.config.api.keys;
-        boolean valid = Arrays.asList(validKeys).contains(token);
+        boolean valid = Arrays.asList(apiConfig.keys).contains(token);
 
         if (!valid) {
             throw new UnauthorizedResponse("Invalid API key");
         }
 
-        if (!checkRateLimit(token)) {
+        if (!checkRateLimit(token, apiConfig)) {
             log.warn("Rate limit exceeded for key {}", token.substring(0, Math.min(8, token.length())));
             throw new TooManyRequestsResponse("Rate limit exceeded");
         }
     }
 
-    private static synchronized boolean checkRateLimit(String key) {
-        int limit = CoreApplication.config.api.rateLimitPerMinute;
+    private static synchronized boolean checkRateLimit(String key, CoreApplication.ApiConfig apiConfig) {
+        int limit = apiConfig.rateLimitPerMinute;
         long now = System.currentTimeMillis() / 1000;
 
         RateBucket bucket = rateBuckets.computeIfAbsent(key, k -> new RateBucket());

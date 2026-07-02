@@ -4,7 +4,7 @@ import com.pwp.core.api.*;
 import com.pwp.core.auth.AuthMiddleware;
 import com.pwp.core.db.DatabaseManager;
 import io.javalin.Javalin;
-import io.javalin.http.ContentType;
+import io.javalin.http.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,11 +25,11 @@ public class CoreApplication {
 
         int port = config.server.port;
         Javalin app = Javalin.create(cfg -> {
-            cfg.http.defaultContentType = ContentType.APPLICATION_JSON;
             cfg.showJavalinBanner = false;
+            com.pwp.core.api.GsonMapper.apply(cfg);
         });
 
-        app.before("/api/*", AuthMiddleware.handle(config.api));
+        app.before("/api/*", ctx -> AuthMiddleware.handle(ctx, config.api));
 
         app.get("/api/v1/health", ctx -> ctx.json("{\"status\":\"ok\"}"));
 
