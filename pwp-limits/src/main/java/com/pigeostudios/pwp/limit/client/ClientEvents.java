@@ -56,8 +56,7 @@ public class ClientEvents {
                 || id.equals(VanillaGuiOverlay.FOOD_LEVEL.id())
                 || id.equals(VanillaGuiOverlay.HOTBAR.id())
                 || id.equals(VanillaGuiOverlay.EXPERIENCE_BAR.id())
-                || id.equals(VanillaGuiOverlay.ARMOR_LEVEL.id())
-                || id.equals(VanillaGuiOverlay.PLAYER_LIST.id())) {
+                || id.equals(VanillaGuiOverlay.ARMOR_LEVEL.id())) {
             event.setCanceled(true);
             return;
         }
@@ -66,9 +65,10 @@ public class ClientEvents {
             event.setCanceled(true);
             return;
         }
-        if ((mc.gameMode.getPlayerMode() == GameType.SURVIVAL || mc.gameMode.getPlayerMode() == GameType.ADVENTURE)
-                && id.equals(VanillaGuiOverlay.DEBUG_TEXT.id())) {
-            event.setCanceled(true);
+        if (mc.gameMode.getPlayerMode() == GameType.SURVIVAL || mc.gameMode.getPlayerMode() == GameType.ADVENTURE) {
+            if (id.equals(VanillaGuiOverlay.DEBUG_TEXT.id()) || id.equals(VanillaGuiOverlay.PLAYER_LIST.id())) {
+                event.setCanceled(true);
+            }
         }
     }
 
