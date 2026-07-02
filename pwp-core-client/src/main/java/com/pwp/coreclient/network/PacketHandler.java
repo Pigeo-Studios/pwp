@@ -18,8 +18,14 @@ public class PacketHandler {
     private static int id = 0;
 
     public static void register() {
-        // Only register packets that are safe on both sides
-        // ConnectToServerPacket and OpenVotingScreenPacket are registered separately
-        // on the client side to avoid loading client-only classes on server
+        // Register everything on both sides
+        INSTANCE.registerMessage(id++, ConnectToServerPacket.class,
+                ConnectToServerPacket::encode,
+                ConnectToServerPacket::decode,
+                ConnectToServerPacket::handle);
+        INSTANCE.registerMessage(id++, OpenVotingScreenPacket.class,
+                OpenVotingScreenPacket::encode,
+                OpenVotingScreenPacket::decode,
+                OpenVotingScreenPacket::handle);
     }
 }

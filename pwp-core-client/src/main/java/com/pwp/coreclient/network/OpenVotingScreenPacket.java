@@ -19,14 +19,18 @@ public class OpenVotingScreenPacket {
 
     public static void handle(OpenVotingScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                    try {
-                        Class<?> screenClass = Class.forName("com.pwp.lobby.gui.VotingScreen");
-                        screenClass.getMethod("open").invoke(null);
-                    } catch (Exception e) {
-                        // pwp-lobby not installed on client
-                    }
-                })
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                try {
+                    Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
+                    Object mc = mcClass.getMethod("getInstance").invoke(null);
+                    Object player = mcClass.getMethod("getPlayer").invoke(mc);
+                    Object connection = player.getClass().getMethod("getConnection").invoke(player);
+                    connection.getClass().getMethod("sendChat", String.class)
+                        .invoke(connection, "/pwp votes");
+                } catch (Exception e) {
+                    // Silent fail
+                }
+            })
         );
         ctx.get().setPacketHandled(true);
     }
