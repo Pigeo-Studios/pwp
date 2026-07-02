@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'com.pwp'
@@ -32,8 +33,13 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-jar {
+shadowJar {
+    archiveBaseName = 'core-service'
+    archiveClassifier = ''
+    archiveVersion = '1.0.0'
     manifest {
         attributes 'Main-Class': 'com.pwp.core.CoreApplication'
     }
 }
+
+build.dependsOn shadowJar
