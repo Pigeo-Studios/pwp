@@ -1,0 +1,25 @@
+{
+    "pwp_core.ui.loading": "Loading...",
+    "pwp_core.ui.back": "Back",
+    "pwp_core.ui.close": "Close",
+    "pwp_core.ui.confirm": "Confirm",
+    "pwp_core.ui.cancel": "Cancel",
+    "pwp_core.ui.save": "Save",
+    "pwp_core.ui.yes": "Yes",
+    "pwp_core.ui.no": "No",
+    "pwp_core.ui.continue": "Continue",
+    "pwp_core.ui.retry": "Retry",
+
+    "pwp_core.error.connection": "Failed to connect to server. Retrying...",
+    "pwp_core.error.timeout": "Connection timed out.",
+    "pwp_core.error.generic": "An error occurred.",
+
+    "pwp_core.notification.xp_earned": "+%d XP",
+    "pwp_core.notification.coins_earned": "+%d Coins",
+    "pwp_core.notification.level_up": "Level %d!",
+    "pwp_core.notification.item_received": "Received: %s",
+
+    "pwp_core.gui.title": "PWP",
+    "pwp_core.gui.loading_profile": "Loading your profile...",
+    "pwp_core.gui.saving": "Saving..."
+}

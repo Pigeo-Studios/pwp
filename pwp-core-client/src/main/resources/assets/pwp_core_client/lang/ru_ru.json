@@ -1,0 +1,25 @@
+{
+    "pwp_core.ui.loading": "Загрузка...",
+    "pwp_core.ui.back": "Назад",
+    "pwp_core.ui.close": "Закрыть",
+    "pwp_core.ui.confirm": "Подтвердить",
+    "pwp_core.ui.cancel": "Отмена",
+    "pwp_core.ui.save": "Сохранить",
+    "pwp_core.ui.yes": "Да",
+    "pwp_core.ui.no": "Нет",
+    "pwp_core.ui.continue": "Продолжить",
+    "pwp_core.ui.retry": "Повторить",
+
+    "pwp_core.error.connection": "Не удалось подключиться к серверу. Повтор...",
+    "pwp_core.error.timeout": "Время подключения истекло.",
+    "pwp_core.error.generic": "Произошла ошибка.",
+
+    "pwp_core.notification.xp_earned": "+%d опыта",
+    "pwp_core.notification.coins_earned": "+%d монет",
+    "pwp_core.notification.level_up": "Уровень %d!",
+    "pwp_core.notification.item_received": "Получено: %s",
+
+    "pwp_core.gui.title": "PWP",
+    "pwp_core.gui.loading_profile": "Загрузка профиля...",
+    "pwp_core.gui.saving": "Сохранение..."
+}
