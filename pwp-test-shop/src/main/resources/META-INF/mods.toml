@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="pwptestshop"
+version="1.0.0"
+displayName="PWP Test Shop"
+logoFile=""
+credits="Pigeo Studios"
+authors="Pigeo Studios"
+description='''
+Тестовый мод с красивым анимированным магазином китов.
+Для PWP проекта.
+'''
+
+[[dependencies.pwptestshop]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.pwptestshop]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="CLIENT"

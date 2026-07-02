@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.item.ModItems;
+import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -596,13 +597,15 @@ public class GameLogicEvents {
                      data.countdownTicks--;
                      data.setDirty();
                   } else {
-                     data.countdownActive = false;
-                     sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
-                     data.isGameStarted = true;
-                     data.setDirty();
-                     sendSyncPacket(level, data);
+                      data.countdownActive = false;
+                      sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
+                      data.isGameStarted = true;
+                      data.setDirty();
+                      sendSyncPacket(level, data);
 
-                     for (ServerPlayer p : level.players()) {
+                      MatchStatsTracker.get().startMatch(data.currentMapImage, "AAS");
+
+                      for (ServerPlayer p : level.players()) {
                         String pending = p.getPersistentData().getString("WARFARE_PendingKit");
                         String current = p.getPersistentData().getString("WARFARE_CurrentKit");
                         String kitToApply = !pending.isEmpty() ? pending : current;
@@ -1153,27 +1156,44 @@ public class GameLogicEvents {
    }
 
    @SubscribeEvent(priority = EventPriority.HIGHEST)
-   public static void onEntityDeath(LivingDeathEvent event) {
-      if (!event.getEntity().level().isClientSide) {
-         Entity entity = event.getEntity();
-         if (entity instanceof ServerPlayer player) {
-            if (event.getSource().getEntity() instanceof ServerPlayer killer) {
-               if (!player.getPersistentData().getBoolean("WARFARE_IsDowned")
-                  && killer.getTeam() != null && player.getTeam() != null
-                  && killer.getTeam().isAlliedTo(player.getTeam())) {
-                  DownedHandler.handleTeamkill(killer);
-               }
-            }
-            processEntityLoss(player);
-            player.getPersistentData().putBoolean("WARFARE_IsDowned", false);
-            if (player.getPersistentData().getBoolean("WARFARE_GivingUp")) {
-               return;
-            }
-         } else if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-            processEntityLoss(entity);
-         }
-      }
-   }
+    public static void onEntityDeath(LivingDeathEvent event) {
+       if (!event.getEntity().level().isClientSide) {
+          Entity entity = event.getEntity();
+          if (entity instanceof ServerPlayer victim) {
+             Entity sourceEntity = event.getSource().getEntity();
+             String weapon = event.getSource().getMsgId();
+
+             if (sourceEntity instanceof ServerPlayer killer) {
+                boolean isTeamkill = killer.getTeam() != null && victim.getTeam() != null
+                        && killer.getTeam().isAlliedTo(victim.getTeam());
+
+                if (!victim.getPersistentData().getBoolean("WARFARE_IsDowned") && isTeamkill) {
+                   DownedHandler.handleTeamkill(killer);
+                }
+
+                if (isTeamkill) {
+                   MatchStatsTracker.get().recordTeamKill(killer, victim);
+                } else {
+                   double dist = killer.distanceTo(victim);
+                   MatchStatsTracker.get().recordKill(killer, victim, weapon, dist);
+                }
+             } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                List<Entity> passengers = sourceEntity.getPassengers();
+                if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
+                   MatchStatsTracker.get().recordVehicleKill(driver);
+                }
+             }
+
+             processEntityLoss(victim);
+             victim.getPersistentData().putBoolean("WARFARE_IsDowned", false);
+             if (victim.getPersistentData().getBoolean("WARFARE_GivingUp")) {
+                return;
+             }
+          } else if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
+             processEntityLoss(entity);
+          }
+       }
+    }
 
    private static void saveKitNbtBeforeDeath(ServerPlayer player) {
       WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
@@ -1534,10 +1554,14 @@ public class GameLogicEvents {
       }
    }
 
-   private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
-      data.isGameStarted = false;
-      data.setDirty();
-      String winnerName;
+    private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
+       data.isGameStarted = false;
+       data.setDirty();
+
+       String winner = blueWon ? "BLUE" : "RED";
+       MatchStatsTracker.get().finalizeMatch(winner, data.blueTickets, data.redTickets);
+
+       String winnerName;
       String winnerFaction;
       if (blueWon) {
          winnerFaction = data.blueFaction;

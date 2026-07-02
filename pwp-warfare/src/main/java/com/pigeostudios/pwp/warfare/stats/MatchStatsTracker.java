@@ -1,0 +1,193 @@
+package com.pigeostudios.pwp.warfare.stats;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.pwp.coreclient.CoreAPI;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.fml.ModList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class MatchStatsTracker {
+
+    private static final Logger log = LoggerFactory.getLogger(MatchStatsTracker.class);
+    private static final Gson GSON = new Gson();
+
+    private static MatchStatsTracker instance;
+
+    private final Map<String, PlayerMatchStats> players = new HashMap<>();
+    private final Map<Integer, String> killFeed = new HashMap<>();
+
+    private String mapName;
+    private String mode;
+    private long startedAt;
+    private boolean active;
+
+    private MatchStatsTracker() {}
+
+    public static MatchStatsTracker get() {
+        if (instance == null) instance = new MatchStatsTracker();
+        return instance;
+    }
+
+    public static void reset() {
+        instance = new MatchStatsTracker();
+    }
+
+    public void startMatch(String mapName, String mode) {
+        this.mapName = mapName;
+        this.mode = mode;
+        this.startedAt = System.currentTimeMillis();
+        this.active = true;
+        this.players.clear();
+        this.killFeed.clear();
+        log.info("Match stats tracking started: {} ({})", mapName, mode);
+    }
+
+    public void endMatch() {
+        this.active = false;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public PlayerMatchStats getOrCreate(ServerPlayer player) {
+        String uuid = player.getStringUUID();
+        String nickname = player.getScoreboardName();
+        String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NONE";
+
+        return players.computeIfAbsent(uuid, k -> {
+            PlayerMatchStats s = new PlayerMatchStats(uuid, nickname, team);
+            s.role = player.getPersistentData().getString("WARFARE_CurrentKit");
+            s.squadId = player.getPersistentData().getInt("WARFARE_SquadID");
+            s.wasSquadLeader = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+            return s;
+        });
+    }
+
+    public void recordKill(ServerPlayer killer, ServerPlayer victim, String weapon, double distance) {
+        if (!active) return;
+        PlayerMatchStats k = getOrCreate(killer);
+        PlayerMatchStats v = getOrCreate(victim);
+
+        k.recordKill();
+        v.recordDeath();
+
+        if (distance > k.longestKill) k.longestKill = distance;
+
+        log.debug("KILL: {} → {} ({}, {:.1f}m)", killer.getScoreboardName(), victim.getScoreboardName(), weapon, distance);
+    }
+
+    public void recordTeamKill(ServerPlayer killer, ServerPlayer victim) {
+        if (!active) return;
+        PlayerMatchStats k = getOrCreate(killer);
+        PlayerMatchStats v = getOrCreate(victim);
+
+        k.kills--;
+        k.score -= 50;
+        v.deaths++;
+        v.score -= 25;
+
+        log.warn("TEAMKILL: {} → {}", killer.getScoreboardName(), victim.getScoreboardName());
+    }
+
+    public void recordAssist(ServerPlayer assistant, ServerPlayer victim) {
+        if (!active) return;
+        getOrCreate(assistant).recordAssist();
+    }
+
+    public void recordCapture(ServerPlayer player) {
+        if (!active) return;
+        getOrCreate(player).recordCapture();
+    }
+
+    public void recordRevive(ServerPlayer medic) {
+        if (!active) return;
+        getOrCreate(medic).recordRevive();
+    }
+
+    public void recordVehicleKill(ServerPlayer killer) {
+        if (!active) return;
+        getOrCreate(killer).recordVehicleKill();
+    }
+
+    public void recordDamage(ServerPlayer dealer, double damage) {
+        if (!active) return;
+        getOrCreate(dealer).recordDamage(damage);
+    }
+
+    // ====== ФИНАЛИЗАЦИЯ МАТЧА ======
+
+    public void finalizeMatch(String winner, int blueScore, int redScore) {
+        if (!active) return;
+        active = false;
+
+        long endedAt = System.currentTimeMillis();
+        int durationSec = (int) ((endedAt - startedAt) / 1000);
+
+        JsonObject match = new JsonObject();
+        match.addProperty("mapName", mapName != null ? mapName : "unknown");
+        match.addProperty("mode", mode != null ? mode : "AAS");
+        match.addProperty("teamBlueScore", blueScore);
+        match.addProperty("teamRedScore", redScore);
+        match.addProperty("winner", winner);
+        match.addProperty("durationSeconds", durationSec);
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        match.addProperty("startedAt", java.time.LocalDateTime.now().minusSeconds(durationSec).format(fmt));
+        match.addProperty("endedAt", java.time.LocalDateTime.now().format(fmt));
+
+        JsonArray playersArr = new JsonArray();
+        for (PlayerMatchStats ps : this.players.values()) {
+            JsonObject p = new JsonObject();
+            p.addProperty("uuid", ps.uuid);
+            p.addProperty("team", ps.team);
+            p.addProperty("kills", ps.kills);
+            p.addProperty("deaths", ps.deaths);
+            p.addProperty("assists", ps.assists);
+            p.addProperty("score", ps.score);
+            p.addProperty("vehicleKills", ps.vehicleKills);
+            p.addProperty("captures", ps.captures);
+            p.addProperty("revives", ps.revives);
+            p.addProperty("shotsFired", ps.shotsFired);
+            p.addProperty("shotsHit", ps.shotsHit);
+            p.addProperty("damageDealt", ps.damageDealt);
+            p.addProperty("healingDone", ps.healingDone);
+            p.addProperty("suppliesDelivered", ps.suppliesDelivered);
+            p.addProperty("longestKill", ps.longestKill);
+            p.addProperty("role", ps.role != null ? ps.role : "");
+            p.addProperty("squadId", ps.squadId);
+            p.addProperty("wasSquadLeader", ps.wasSquadLeader);
+            playersArr.add(p);
+        }
+        match.add("players", playersArr);
+
+        if (ModList.get().isLoaded("pwp_core_client")) {
+            log.info("Saving match result to Core API...");
+            JsonObject response = CoreAPI.saveMatch(match);
+            if (response != null) {
+                log.info("Match saved successfully");
+            } else {
+                log.warn("Could not save match result (Core API may be down)");
+            }
+        } else {
+            log.info("pwp_core_client not installed, skipping match save");
+        }
+
+        reset();
+    }
+
+    public Map<String, PlayerMatchStats> getAllPlayers() {
+        return players;
+    }
+}
