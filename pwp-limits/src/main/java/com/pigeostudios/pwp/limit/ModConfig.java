@@ -14,7 +14,7 @@ public class ModConfig {
     static {
         BUILDER.push("General Settings");
         ENABLE_JUMP_COOLDOWN = BUILDER.define("enableJumpCooldown", true);
-        JUMP_COOLDOWN_SECONDS = BUILDER.defineInRange("jumpCooldownSeconds", 3.0, 0.1, 60.0);
+        JUMP_COOLDOWN_SECONDS = BUILDER.defineInRange("jumpCooldownSeconds", 1.0, 0.1, 60.0);
         BUILDER.pop();
         SPEC = BUILDER.build();
     }

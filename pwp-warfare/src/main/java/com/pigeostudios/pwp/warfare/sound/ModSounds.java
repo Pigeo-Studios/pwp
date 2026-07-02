@@ -37,7 +37,7 @@ public class ModSounds {
    }
 
    static {
-      String[] factions = new String[]{"ukraine", "russia", "usa", "nato", "bluefor", "redfor", "insurgency", "pmc", "army"};
+      String[] factions = new String[]{"ukraine", "russia", "usa", "nato", "bluefor", "redfor", "insurgency", "pmc"};
 
       for (String faction : factions) {
          List<RegistryObject<SoundEvent>> screams = new ArrayList<>();

@@ -5,7 +5,6 @@ license="All rights reserved"
 modId="pwp_lobby"
 version="1.0.0"
 displayName="PWP Lobby"
-logoFile="pwp_lobby.png"
 credits="Pigeo Studios"
 authors="Pigeo Studios"
 description='''

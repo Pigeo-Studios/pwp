@@ -32,7 +32,7 @@ public class LobbyMod {
         event.enqueueWork(() -> {
             MapRegistry.configure("../PWP-Server/maps");
             MapRegistry.loadAll();
-            MatchAllocator.configure(1, 80);
+            MatchAllocator.configure(1);
         });
     }
 
@@ -47,8 +47,8 @@ public class LobbyMod {
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
-        // Check registration via Core Service (cracked server auth)
         String uuid = player.getStringUUID();
+
         var playerData = CoreAPI.loadPlayer(uuid);
         if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
             player.connection.disconnect(

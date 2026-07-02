@@ -4,10 +4,16 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.network.ConnectToServerPacket;
+import com.pwp.coreclient.network.PacketHandler;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.ModList;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -213,6 +219,22 @@ public class MatchStatsTracker {
             }
         } else {
             log.info("pwp_core_client not installed, skipping match save");
+        }
+
+        // Transfer all players back to lobby then shut down
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                player.sendSystemMessage(
+                        Component.literal("§e[PWP] Returning to lobby..."), false);
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.PLAYER.with(() -> player),
+                        new ConnectToServerPacket("127.0.0.1", 25565));
+            }
+            server.execute(() -> {
+                try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                server.halt(false);
+            });
         }
 
         reset();

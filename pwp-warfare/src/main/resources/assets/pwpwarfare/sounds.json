@@ -3,7 +3,7 @@
     "category": "block",
     "sounds": [
       {
-        "name": "pwpwarfare:rally_idle",
+        "name": "rally_idle",
         "stream": true
       }
     ]
@@ -13,7 +13,7 @@
     "subtitle": "subtitles.pwpwarfare.shovel_dig",
     "sounds": [
       {
-        "name": "pwpwarfare:shovel_dig",
+        "name": "shovel_dig",
         "stream": false
       }
     ]
@@ -22,7 +22,7 @@
     "category": "player",
     "sounds": [
       {
-        "name": "pwpwarfare:radio_open",
+        "name": "radio_open",
         "stream": false
       }
     ]
@@ -32,7 +32,7 @@
     "subtitle": "subtitles.pwpwarfare.hub_idle",
     "sounds": [
       {
-        "name": "pwpwarfare:hub_idle",
+        "name": "hub_idle",
         "stream": true
       }
     ]
@@ -42,7 +42,7 @@
     "subtitle": "subtitles.pwpwarfare.m2_load",
     "sounds": [
       {
-        "name": "pwpwarfare:m2_load",
+        "name": "m2_load",
         "stream": false
       }
     ]
@@ -52,7 +52,7 @@
     "subtitle": "subtitles.pwpwarfare.m2_unload",
     "sounds": [
       {
-        "name": "pwpwarfare:m2_unload",
+        "name": "m2_unload",
         "stream": false
       }
     ]
@@ -62,7 +62,7 @@
     "subtitle": "subtitles.pwpwarfare.ags_shoot",
     "sounds": [
       {
-        "name": "pwpwarfare:ags_shoot",
+        "name": "ags_shoot",
         "stream": false
       }
     ]
@@ -72,7 +72,7 @@
     "subtitle": "subtitles.pwpwarfare.m2_shoot",
     "sounds": [
       {
-        "name": "pwpwarfare:m2_shoot",
+        "name": "m2_shoot",
         "stream": false
       }
     ]
@@ -81,7 +81,7 @@
     "category": "master",
     "sounds": [
       {
-        "name": "pwpwarfare:siren_alarm",
+        "name": "siren_alarm",
         "stream": false
       }
     ]
@@ -89,48 +89,45 @@
   "player_downed": {
     "category": "player",
     "sounds": [
-      "pwpwarfare:player_downed"
+      "player_downed"
     ]
   },
   "help_scream": {
     "category": "player",
     "sounds": [
-      "pwpwarfare:help_scream"
+      "help_scream"
     ]
   },
-  "ukraine_scream_1": { "category": "player", "sounds": ["pwpwarfare:ukraine/scream_1"] },
-  "ukraine_scream_2": { "category": "player", "sounds": ["pwpwarfare:ukraine/scream_2"] },
-  "ukraine_scream_3": { "category": "player", "sounds": ["pwpwarfare:ukraine/scream_3"] },
+  "ukraine_scream_1": { "category": "player", "sounds": ["ukraine/scream_1"] },
+  "ukraine_scream_2": { "category": "player", "sounds": ["ukraine/scream_2"] },
+  "ukraine_scream_3": { "category": "player", "sounds": ["ukraine/scream_3"] },
 
-  "russia_scream_1": { "category": "player", "sounds": ["pwpwarfare:russia/scream_1"] },
-  "russia_scream_2": { "category": "player", "sounds": ["pwpwarfare:russia/scream_2"] },
-  "russia_scream_3": { "category": "player", "sounds": ["pwpwarfare:russia/scream_3"] },
+  "russia_scream_1": { "category": "player", "sounds": ["russia/scream_1"] },
+  "russia_scream_2": { "category": "player", "sounds": ["russia/scream_2"] },
+  "russia_scream_3": { "category": "player", "sounds": ["russia/scream_3"] },
 
-  "usa_scream_1": { "category": "player", "sounds": ["pwpwarfare:usa/scream_1"] },
-  "usa_scream_2": { "category": "player", "sounds": ["pwpwarfare:usa/scream_2"] },
-  "usa_scream_3": { "category": "player", "sounds": ["pwpwarfare:usa/scream_3"] },
+  "usa_scream_1": { "category": "player", "sounds": ["usa/scream_1"] },
+  "usa_scream_2": { "category": "player", "sounds": ["usa/scream_2"] },
+  "usa_scream_3": { "category": "player", "sounds": ["usa/scream_3"] },
 
-  "nato_scream_1": { "category": "player", "sounds": ["pwpwarfare:nato/scream_1"] },
-  "nato_scream_2": { "category": "player", "sounds": ["pwpwarfare:nato/scream_2"] },
-  "nato_scream_3": { "category": "player", "sounds": ["pwpwarfare:nato/scream_3"] },
+  "nato_scream_1": { "category": "player", "sounds": ["nato/scream_1"] },
+  "nato_scream_2": { "category": "player", "sounds": ["nato/scream_2"] },
+  "nato_scream_3": { "category": "player", "sounds": ["nato/scream_3"] },
 
-  "bluefor_scream_1": { "category": "player", "sounds": ["pwpwarfare:bluefor/scream_1"] },
-  "bluefor_scream_2": { "category": "player", "sounds": ["pwpwarfare:bluefor/scream_2"] },
-  "bluefor_scream_3": { "category": "player", "sounds": ["pwpwarfare:bluefor/scream_3"] },
+  "bluefor_scream_1": { "category": "player", "sounds": ["bluefor/scream_1"] },
+  "bluefor_scream_2": { "category": "player", "sounds": ["bluefor/scream_2"] },
+  "bluefor_scream_3": { "category": "player", "sounds": ["bluefor/scream_3"] },
 
-  "redfor_scream_1": { "category": "player", "sounds": ["pwpwarfare:redfor/scream_1"] },
-  "redfor_scream_2": { "category": "player", "sounds": ["pwpwarfare:redfor/scream_2"] },
-  "redfor_scream_3": { "category": "player", "sounds": ["pwpwarfare:redfor/scream_3"] },
+  "redfor_scream_1": { "category": "player", "sounds": ["redfor/scream_1"] },
+  "redfor_scream_2": { "category": "player", "sounds": ["redfor/scream_2"] },
+  "redfor_scream_3": { "category": "player", "sounds": ["redfor/scream_3"] },
 
-  "insurgency_scream_1": { "category": "player", "sounds": ["pwpwarfare:insurgency/scream_1"] },
-  "insurgency_scream_2": { "category": "player", "sounds": ["pwpwarfare:insurgency/scream_2"] },
-  "insurgency_scream_3": { "category": "player", "sounds": ["pwpwarfare:insurgency/scream_3"] },
+  "insurgency_scream_1": { "category": "player", "sounds": ["insurgency/scream_1"] },
+  "insurgency_scream_2": { "category": "player", "sounds": ["insurgency/scream_2"] },
+  "insurgency_scream_3": { "category": "player", "sounds": ["insurgency/scream_3"] },
 
-  "pmc_scream_1": { "category": "player", "sounds": ["pwpwarfare:pmc/scream_1"] },
-  "pmc_scream_2": { "category": "player", "sounds": ["pwpwarfare:pmc/scream_2"] },
-  "pmc_scream_3": { "category": "player", "sounds": ["pwpwarfare:pmc/scream_3"] },
+  "pmc_scream_1": { "category": "player", "sounds": ["pmc/scream_1"] },
+  "pmc_scream_2": { "category": "player", "sounds": ["pmc/scream_2"] },
+  "pmc_scream_3": { "category": "player", "sounds": ["pmc/scream_3"] },
 
-  "army_scream_1": { "category": "player", "sounds": ["pwpwarfare:army/scream_1"] },
-  "army_scream_2": { "category": "player", "sounds": ["pwpwarfare:army/scream_2"] },
-  "army_scream_3": { "category": "player", "sounds": ["pwpwarfare:army/scream_3"] }
 }

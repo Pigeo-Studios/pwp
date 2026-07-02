@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "com.pigeostudios.pwp.medicine.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "pwp_medicine.refmap.json",
   "mixins": [
   ],
   "client": [
