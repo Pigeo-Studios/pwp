@@ -1,13 +1,6 @@
 package com.pwp.coreclient.network;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.client.multiplayer.resolver.ServerAddress;
-import net.minecraft.client.gui.screens.ConnectScreen;
-import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -32,18 +25,35 @@ public class ConnectToServerPacket {
     }
 
     public static void handle(ConnectToServerPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() ->
-                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                    Minecraft mc = Minecraft.getInstance();
-                    if (mc.level != null) {
-                        mc.level.disconnect();
-                        mc.clearLevel();
+        if (ctx.get().getDirection().getReceptionSide().isClient()) {
+            ctx.get().enqueueWork(() -> {
+                try {
+                    Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
+                    Object mc = mcClass.getMethod("getInstance").invoke(null);
+                    Object level = mcClass.getMethod("getLevel").invoke(mc);
+                    if (level != null) {
+                        level.getClass().getMethod("disconnect").invoke(level);
+                        mcClass.getMethod("clearLevel").invoke(mc);
                     }
-                    ServerData sd = new ServerData("PWP Match", msg.host + ":" + msg.port, false);
-                    ServerAddress sa = new ServerAddress(msg.host, msg.port);
-                    ConnectScreen.startConnecting(new TitleScreen(), mc, sa, sd, false);
-                })
-        );
+                    Object sd = Class.forName("net.minecraft.client.multiplayer.ServerData")
+                            .getConstructor(String.class, String.class, boolean.class)
+                            .newInstance("PWP Match", msg.host + ":" + msg.port, false);
+                    Object sa = Class.forName("net.minecraft.client.multiplayer.resolver.ServerAddress")
+                            .getConstructor(String.class, int.class)
+                            .newInstance(msg.host, msg.port);
+                    Object screen = Class.forName("net.minecraft.client.gui.screens.TitleScreen")
+                            .getConstructor().newInstance();
+                    Class<?> csClass = Class.forName("net.minecraft.client.gui.screens.ConnectScreen");
+                    csClass.getMethod("startConnecting",
+                            Class.forName("net.minecraft.client.gui.screens.Screen"),
+                            mcClass,
+                            Class.forName("net.minecraft.client.multiplayer.resolver.ServerAddress"),
+                            Class.forName("net.minecraft.client.multiplayer.ServerData"),
+                            boolean.class)
+                            .invoke(null, screen, mc, sa, sd, false);
+                } catch (Exception ignored) {}
+            });
+        }
         ctx.get().setPacketHandled(true);
     }
 }
