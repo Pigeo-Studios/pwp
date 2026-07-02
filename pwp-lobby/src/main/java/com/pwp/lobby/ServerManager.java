@@ -14,7 +14,7 @@ public class ServerManager {
 
     private static final Logger log = LoggerFactory.getLogger(ServerManager.class);
 
-    private static final String TEMPLATE_PATH = "../server-template";
+    private static final String TEMPLATE_PATH = "../PWP-Server";
     private static final int BASE_PORT = 25566;
     private static final int MAX_SERVERS = 10;
     private static final long START_TIMEOUT_MS = 120_000;
