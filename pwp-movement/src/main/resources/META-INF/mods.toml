@@ -1,0 +1,10 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "All rights reserved"
+
+[[mods]]
+modId = "pwp_movement"
+version = "1.0.0"
+displayName = "PWP Movement"
+authors = "Pigeo Studios"
+description = "Добавляет иммерсивное передвижение: наклон камеры, усталость при спринте, оглушение при приземлении и кастомный HUD."

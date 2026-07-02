@@ -1,0 +1,11 @@
+{
+  "item.pwp_medicine.bandage": "Bandage",
+  "item.pwp_medicine.medkit": "Medkit",
+  "creativetab.medicine_tab": "PWP Medicine",
+  "effect.pwp_medicine.bleeding": "Bleeding",
+  "gui.pwp_medicine.bleeding": "YOU ARE BLEEDING",
+  "death.attack.player.item": "%1$s bled out while fighting %2$s",
+  "death.attack.generic": "%1$s died from blood loss",
+  "death.attack.bleeding": "%1$s bled out",
+  "death.attack.bleeding.player": "%1$s bled out while fighting %2$s"
+}

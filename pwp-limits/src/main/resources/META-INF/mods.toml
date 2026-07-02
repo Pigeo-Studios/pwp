@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="pwplimit"
+version="1.0.2"
+displayName="PWP: Limits"
+authors="Pigeo Studios"
+description='''
+PWP: Limits - реалистичные ограничения геймплея и кулдаун прыжка.
+'''
+
+[[dependencies.pwplimit]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.pwplimit]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"

@@ -1,0 +1,14 @@
+{
+  "bandage_start": {
+    "subtitle": "item.pwp_medicine.bandage_start",
+    "sounds": [ "pwp_medicine:bandage_start" ]
+  },
+  "bandage_finish": {
+    "subtitle": "item.pwp_medicine.bandage_finish",
+    "sounds": [ "pwp_medicine:bandage_finish" ]
+  },
+  "medkit_apply": {
+    "subtitle": "item.pwp_medicine.medkit_apply",
+    "sounds": [ "pwp_medicine:medkit_apply" ]
+  }
+}

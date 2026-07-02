@@ -1,0 +1,11 @@
+{
+  "item.pwp_medicine.bandage": "Бинт",
+  "item.pwp_medicine.medkit": "Аптечка",
+  "creativetab.medicine_tab": "Медицина PWP",
+  "effect.pwp_medicine.bleeding": "Кровотечение",
+  "gui.pwp_medicine.bleeding": "ВЫ ИСТЕКАЕТЕ КРОВЬЮ",
+  "death.attack.player.item": "%1$s истек кровью в бою с %2$s",
+  "death.attack.generic": "%1$s умер от потери крови",
+  "death.attack.bleeding": "%1$s истек кровью",
+  "death.attack.bleeding.player": "%1$s истек кровью в бою с %2$s"
+}

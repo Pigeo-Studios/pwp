@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "constructed=false": {
+      "model": "pwpwarfare:block/hub_base"
+    },
+    "constructed=true": {
+      "model": "pwpwarfare:block/hub_solid"
+    }
+  }
+}

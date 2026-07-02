@@ -1,0 +1,37 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="pwpwarfare"
+version="1.0.0"
+displayName="PWP Warfare"
+logoFile="logo.png"
+credits="Pigeo Studios"
+authors="Pigeo Studios"
+description='''
+    PWP Warfare — игровой режим для Minecraft.
+    Включает захват точек, технику, оружие, систему отрядов и многое другое.
+    Разработано Pigeo Studios.
+    '''
+
+[[dependencies.pwpwarfare]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.pwpwarfare]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.pwpwarfare]]
+modId="voicechat"
+mandatory=false
+versionRange="[1.20.1,)"
+ordering="AFTER"
+side="BOTH"

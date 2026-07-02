@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+[[mods]]
+modId="pwp_medicine"
+version="1.0.3"
+displayName="PWP Medicine"
+authors="Pigeo Studios"
+description='''
+Мод добавляет бинты и аптечки с уникальными механиками лечения и дебаффов.
+'''
