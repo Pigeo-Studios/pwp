@@ -1,15 +1,19 @@
 package com.pwp.lobby.maps;
 
 import java.util.List;
+import java.util.Map;
 
 public class MapConfig {
 
     public String name;
     public String displayName;
     public int maxPlayers = 100;
-    public int minPlayers = 10;
+    public int minPlayers = 2;
     public String image = "map1";
     public String description = "";
+    public String version = "1.0";
+
+    public String worldPath;
 
     public TeamConfig BLUE = new TeamConfig();
     public TeamConfig RED = new TeamConfig();
@@ -17,6 +21,7 @@ public class MapConfig {
     public List<SpawnConfig> spawns;
     public List<CapturePointConfig> capturePoints;
     public MapBoundsConfig mapBounds = new MapBoundsConfig();
+    public Map<String, List<String>> vehicles;
 
     public static class TeamConfig {
         public String faction = "bluefor";

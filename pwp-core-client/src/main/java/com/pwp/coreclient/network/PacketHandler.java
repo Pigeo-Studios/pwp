@@ -22,5 +22,9 @@ public class PacketHandler {
                 ConnectToServerPacket::encode,
                 ConnectToServerPacket::decode,
                 ConnectToServerPacket::handle);
+        INSTANCE.registerMessage(id++, OpenVotingScreenPacket.class,
+                OpenVotingScreenPacket::encode,
+                OpenVotingScreenPacket::decode,
+                OpenVotingScreenPacket::handle);
     }
 }

@@ -1,6 +1,7 @@
 package com.pwp.lobby;
 
 import com.pwp.coreclient.network.ConnectToServerPacket;
+import com.pwp.coreclient.network.OpenVotingScreenPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
@@ -29,7 +30,7 @@ public class LobbyMod {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            MapRegistry.configure("../server-template/maps");
+            MapRegistry.configure("../PWP/maps");
             MapRegistry.loadAll();
             MatchAllocator.configure(2, 80);
         });
@@ -66,11 +67,14 @@ public class LobbyMod {
                         VotingManager.startVoting();
                         var server = ServerLifecycleHooks.getCurrentServer();
                         if (server != null) {
-                            server.getPlayerList().getPlayers().forEach(p ->
+                            for (var p : server.getPlayerList().getPlayers()) {
                                 p.sendSystemMessage(
                                     net.minecraft.network.chat.Component.literal(
-                                        "§e[PWP] Voting started! Type §f/votemap <name>§e to vote"),
-                                    false));
+                                        "§e[PWP] Voting started!"), false);
+                                PacketHandler.INSTANCE.send(
+                                    PacketDistributor.PLAYER.with(() -> p),
+                                    new OpenVotingScreenPacket());
+                            }
                         }
                     }
                     return 1;

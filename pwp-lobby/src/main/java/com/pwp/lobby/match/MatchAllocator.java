@@ -45,7 +45,7 @@ public class MatchAllocator {
             return;
         }
 
-        ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers);
+        ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath);
         if (sr.error != null || !sr.ready) {
             log.error("Failed to start match server: {}", sr.error);
             return;

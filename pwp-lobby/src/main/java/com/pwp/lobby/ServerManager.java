@@ -31,18 +31,15 @@ public class ServerManager {
         public String error;
     }
 
-    public static StartResult startMatchServer(String mapName, int maxPlayers) {
+    public static StartResult startMatchServer(String mapName, int maxPlayers, String mapWorldPath) {
         StartResult result = new StartResult();
 
-        // Check if template exists
         Path templatePath = Paths.get(TEMPLATE_PATH);
         if (!Files.exists(templatePath) || !Files.isDirectory(templatePath)) {
-            result.error = "Template directory not found: " + templatePath.toAbsolutePath();
-            log.error(result.error);
+            result.error = "Template not found: " + templatePath.toAbsolutePath();
             return result;
         }
 
-        // Find forge launcher in template
         Path runBat = templatePath.resolve("run.bat");
         if (!Files.exists(runBat)) {
             result.error = "run.bat not found in template";
@@ -53,28 +50,47 @@ public class ServerManager {
         int port = BASE_PORT + serverId - 1;
         String serverDirName = "match_" + String.format("%02d", serverId);
         Path serverDir = Paths.get(serverDirName);
+        String worldFolderName = mapName;
 
         try {
-            // Clean up old match dir if exists
-            if (Files.exists(serverDir)) {
-                deleteDirectory(serverDir);
-            }
+            if (Files.exists(serverDir)) deleteDirectory(serverDir);
 
-            // Copy template
+            // Copy template (libraries, mods, configs)
             copyDirectory(templatePath, serverDir);
+
+            // Copy map world into the match server if it exists
+            if (mapWorldPath != null && !mapWorldPath.isEmpty()) {
+                Path mapWorldDir = Paths.get(mapWorldPath);
+                if (Files.exists(mapWorldDir) && Files.isDirectory(mapWorldDir)) {
+                    // Copy world files but skip map_config.json
+                    Path matchWorldDir = serverDir.resolve(worldFolderName);
+                    Files.createDirectories(matchWorldDir);
+                    Files.walk(mapWorldDir).forEach(src -> {
+                        try {
+                            Path rel = mapWorldDir.relativize(src);
+                            if (rel.toString().equals("map_config.json")) return;
+                            Path dest = matchWorldDir.resolve(rel);
+                            if (Files.isDirectory(src)) Files.createDirectories(dest);
+                            else Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    });
+                    log.info("Map world '{}' copied to match server", mapName);
+                }
+            }
 
             // Update server.properties
             Path propertiesPath = serverDir.resolve("server.properties");
             if (Files.exists(propertiesPath)) {
                 String props = Files.readString(propertiesPath);
                 props = props.replace("${PORT}", String.valueOf(port));
-                props = props.replace("${LEVEL}", mapName);
+                props = props.replace("${LEVEL}", worldFolderName);
                 props = props.replace("${MAX_PLAYERS}", String.valueOf(maxPlayers));
                 Files.writeString(propertiesPath, props);
             } else {
-                // Create default
                 Files.writeString(propertiesPath,
-                        "server-port=" + port + "\nlevel-name=" + mapName +
+                        "server-port=" + port + "\nlevel-name=" + worldFolderName +
                         "\nmax-players=" + maxPlayers + "\nonline-mode=true\n");
             }
 
