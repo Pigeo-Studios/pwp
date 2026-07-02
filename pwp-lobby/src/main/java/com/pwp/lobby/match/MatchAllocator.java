@@ -1,8 +1,14 @@
 package com.pwp.lobby.match;
 
+import com.pwp.coreclient.network.ConnectToServerPacket;
+import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.ServerManager;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +37,12 @@ public class MatchAllocator {
         lobbyPlayers.remove(uuid);
     }
 
+    /** Returns true if any match is in STARTING or PLAYING phase */
+    public static boolean hasActiveMatch() {
+        return activeMatches.values().stream()
+                .anyMatch(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING);
+    }
+
     public static synchronized void startMatch(MapConfig map) {
         int lobbyCount = lobbyPlayers.size();
         if (lobbyCount < minPlayersToStart) {
@@ -39,28 +51,60 @@ public class MatchAllocator {
         }
 
         boolean alreadyRunning = activeMatches.values().stream()
-                .anyMatch(m -> m.mapName.equals(map.name) && m.phase == MatchPhase.PLAYING);
+                .anyMatch(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING);
         if (alreadyRunning) {
-            log.info("Match for {} is already running", map.displayName);
+            log.info("A match is already starting or running");
             return;
         }
 
         ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath);
-        if (sr.error != null || !sr.ready) {
-            log.error("Failed to start match server: {}", sr.error);
-            return;
-        }
 
         MatchInfo mi = new MatchInfo();
         mi.serverId = sr.serverId;
         mi.mapName = map.name;
         mi.port = sr.port;
         mi.maxPlayers = map.maxPlayers;
-        mi.phase = MatchPhase.PLAYING;
+        mi.phase = sr.ready ? MatchPhase.PLAYING : MatchPhase.STARTING;
         mi.playerCount = lobbyCount;
 
         activeMatches.put(mi.serverId, mi);
-        log.info("Match started: {} on port {} ({} players)", map.displayName, sr.port, lobbyCount);
+        log.info("Match {}: {} on port {} ({} players) - {}", mi.serverId, map.displayName, sr.port,
+                lobbyCount, sr.ready ? "ready" : "starting");
+    }
+
+    /** Called from server tick — checks async servers and transfers players when ready */
+    public static void tick() {
+        for (MatchInfo mi : activeMatches.values()) {
+            if (mi.phase == MatchPhase.STARTING) {
+                if (ServerManager.isServerAlive(mi.serverId)) {
+                    int port = ServerManager.getServerPort(mi.serverId);
+                    if (port > 0 && ServerManager.waitForServerReady("127.0.0.1", port, 0)) {
+                        mi.phase = MatchPhase.PLAYING;
+                        mi.port = port;
+                        log.info("Match {} now ready on port {}", mi.serverId, port);
+                        transferPlayers(mi);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Send ConnectToServerPacket to all lobby players */
+    private static void transferPlayers(MatchInfo mi) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+
+        String host = "127.0.0.1";
+        log.info("Transferring {} players to {}:{} for match {}", lobbyPlayers.size(), host, mi.port, mi.mapName);
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            player.sendSystemMessage(
+                    Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."),
+                    false);
+            PacketHandler.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> player),
+                    new ConnectToServerPacket(host, mi.port));
+        }
     }
 
     public static void matchEnded(int serverId) {

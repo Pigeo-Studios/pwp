@@ -1,7 +1,5 @@
 package com.pwp.lobby;
 
-import com.pwp.coreclient.network.ConnectToServerPacket;
-import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
@@ -19,10 +17,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
-
-import java.util.stream.Collectors;
 
 @Mod("pwp_lobby")
 public class LobbyMod {
@@ -44,6 +39,7 @@ public class LobbyMod {
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) return;
         VotingManager.tick();
+        MatchAllocator.tick();
     }
 
     @SubscribeEvent
@@ -120,7 +116,7 @@ public class LobbyMod {
                 .then(Commands.literal("status")
                     .executes(ctx -> {
                         ctx.getSource().sendSuccess(() -> Component.literal(
-                            "§eActive: " + VotingManager.isActive() + " Timer: " + VotingManager.getTimer() +
+                            "§eActive: " + VotingManager.isActive() + " Timer: " + VotingManager.getRemainingSeconds() +
                             "s Winner: " + (VotingManager.getWinner() != null ? VotingManager.getWinner() : "none")), false);
                         return Command.SINGLE_SUCCESS;
                     })))
@@ -199,7 +195,7 @@ public class LobbyMod {
                 }
                 var counts = VotingManager.getVoteCounts();
                 ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§eVoting: " + VotingManager.getTimer() + "s remaining"), false);
+                    "§eVoting: " + VotingManager.getRemainingSeconds() + "s remaining"), false);
                 for (var entry : counts.entrySet()) {
                     ctx.getSource().sendSuccess(() -> Component.literal(
                         " §f" + entry.getKey() + " §7- " + entry.getValue() + " votes"), false);
@@ -216,19 +212,8 @@ public class LobbyMod {
         if (server == null) return;
 
         server.getPlayerList().getPlayers().forEach(p ->
-            p.sendSystemMessage(Component.literal("§e[PWP] Match starting: " + mapName + " on port..."), false));
+            p.sendSystemMessage(Component.literal("§e[PWP] Starting match on " + mapName + "..."), false));
 
         MatchAllocator.startMatch(map);
-
-        for (MatchInfo mi : MatchAllocator.getActiveMatches().values()) {
-            if (mi.mapName.equals(mapName)) {
-                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                    PacketHandler.INSTANCE.send(
-                            PacketDistributor.PLAYER.with(() -> player),
-                            new ConnectToServerPacket("127.0.0.1", mi.port));
-                }
-                break;
-            }
-        }
     }
 }

@@ -2,6 +2,7 @@ package com.pwp.lobby;
 
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
+import com.pwp.lobby.match.MatchAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,12 +14,16 @@ public class VotingManager {
 
     private static final Map<UUID, String> votes = new HashMap<>();
     private static boolean active = false;
-    private static int timer = 0;
-    private static int maxTimer = 30;
+    private static long voteStartTime = 0;
+    private static int voteDurationSec = 30;
     private static boolean finished = false;
     private static String winner = null;
 
     public static void startVoting() {
+        if (MatchAllocator.hasActiveMatch()) {
+            log.warn("Cannot start voting while a match is active");
+            return;
+        }
         List<MapConfig> maps = MapRegistry.getVotable();
         if (maps.size() < 1) {
             log.warn("No maps available for voting");
@@ -28,8 +33,8 @@ public class VotingManager {
         finished = false;
         winner = null;
         votes.clear();
-        timer = maxTimer;
-        log.info("Voting started: {} maps available", maps.size());
+        voteStartTime = System.currentTimeMillis();
+        log.info("Voting started: {} maps available, {} seconds", maps.size(), voteDurationSec);
     }
 
     public static void vote(UUID playerUuid, String mapName) {
@@ -41,11 +46,9 @@ public class VotingManager {
 
     public static void tick() {
         if (!active || finished) return;
-        if (timer > 0) {
-            timer--;
-            if (timer <= 0) {
-                finishVoting();
-            }
+        long elapsed = System.currentTimeMillis() - voteStartTime;
+        if (elapsed >= voteDurationSec * 1000L) {
+            finishVoting();
         }
     }
 
@@ -87,13 +90,18 @@ public class VotingManager {
         active = false;
         finished = false;
         votes.clear();
-        timer = 0;
+        voteStartTime = 0;
         winner = null;
     }
 
     public static boolean isActive() { return active; }
     public static boolean isFinished() { return finished; }
-    public static int getTimer() { return timer; }
-    public static int getMaxTimer() { return maxTimer; }
+    public static int getRemainingSeconds() {
+        if (!active) return 0;
+        long elapsed = System.currentTimeMillis() - voteStartTime;
+        int remaining = voteDurationSec - (int)(elapsed / 1000);
+        return Math.max(0, remaining);
+    }
+    public static int getVoteDuration() { return voteDurationSec; }
     public static int getVoteCount() { return votes.size(); }
 }
