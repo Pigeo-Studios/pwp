@@ -1,18 +1,22 @@
 package com.pwp.coreclient;
 
+import com.pwp.coreclient.network.PacketHandler;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
-@Mod("pwp_core_client")
+@Mod(CoreClientMod.MODID)
 public class CoreClientMod {
 
+    public static final String MODID = "pwp_core_client";
     public static final String CORE_API_URL = "http://localhost:8080";
     public static final String CORE_API_KEY = "pwp_server_key_change_me";
 
     public CoreClientMod() {
-        // CoreClientMod is a shared library mod for lobby and game servers.
-        // It provides:
-        //   - CoreApiClient: HTTP client to PWP Core Service
-        //   - PlayerData: in-memory cache of player profiles
-        //   - ConnectToServerPacket: seamless server transfer
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
+    }
+
+    private void commonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(PacketHandler::register);
     }
 }

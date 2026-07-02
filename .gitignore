@@ -31,3 +31,11 @@ server-template/run/
 # Environment
 .env
 *.local.*
+
+# Server template libraries
+server-template/libraries/
+server-template/run.bat
+server-template/run.sh
+server-template/user_jvm_args.txt
+server-template/forge-installer.jar.log
+server-template/eula.txt

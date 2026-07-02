@@ -13,14 +13,9 @@ public class MatchAllocator {
 
     private static final Logger log = LoggerFactory.getLogger(MatchAllocator.class);
 
-    // Очередь игроков, ожидающих матч
-    private static final Queue<String> playerQueue = new LinkedList<>();
-    // Активные матчи: serverId → MatchInfo
     private static final Map<Integer, MatchInfo> activeMatches = new ConcurrentHashMap<>();
-    // Игроки в лобби
     private static final Set<String> lobbyPlayers = ConcurrentHashMap.newKeySet();
-
-    private static int minPlayersToStart = 10;
+    private static int minPlayersToStart = 2;
     private static int fillPercent = 80;
 
     public static void configure(int minPlayers, int fillPct) {
@@ -28,73 +23,31 @@ public class MatchAllocator {
         fillPercent = fillPct;
     }
 
-    // Игрок зашёл в лобби
     public static void playerJoined(String uuid) {
         lobbyPlayers.add(uuid);
-        log.debug("Player joined lobby: {} (total: {})", uuid, lobbyPlayers.size());
     }
 
-    // Игрок вышел из лобби
     public static void playerLeft(String uuid) {
         lobbyPlayers.remove(uuid);
-        playerQueue.remove(uuid);
-        log.debug("Player left lobby: {} (total: {})", uuid, lobbyPlayers.size());
     }
 
-    // Игрок встал в очередь на матч
-    public static void enqueuePlayer(String uuid) {
-        if (!playerQueue.contains(uuid)) {
-            playerQueue.add(uuid);
-            log.debug("Player queued: {} (queue: {})", uuid, playerQueue.size());
-        }
-        tryAllocate();
-    }
-
-    // Поиск подходящего сервера для игрока
-    public static int findServerForPlayer(String uuid) {
-        for (var entry : activeMatches.entrySet()) {
-            MatchInfo mi = entry.getValue();
-            MapConfig cfg = MapRegistry.get(mi.mapName);
-            if (cfg == null) continue;
-
-            int fillPct = mi.playerCount * 100 / cfg.maxPlayers;
-            if (fillPct < fillPercent && mi.playerCount < cfg.maxPlayers) {
-                return entry.getKey();
-            }
-        }
-        return -1;
-    }
-
-    // Попытка запустить новый матч
-    private static synchronized void tryAllocate() {
-        int queueSize = playerQueue.size();
-        if (queueSize < minPlayersToStart) return;
-
-        MapConfig bestMap = MapRegistry.getBestFit(queueSize);
-        if (bestMap == null) return;
-
-        int totalPlayers = lobbyPlayers.size();
-        if (totalPlayers < bestMap.minPlayers) {
-            log.info("Not enough players for {}: {}/{}", bestMap.displayName, totalPlayers, bestMap.minPlayers);
+    public static synchronized void startMatch(MapConfig map) {
+        int lobbyCount = lobbyPlayers.size();
+        if (lobbyCount < minPlayersToStart) {
+            log.info("Not enough players: {}/{}", lobbyCount, minPlayersToStart);
             return;
         }
 
-        // Проверяем, есть ли уже матч на этой карте
         boolean alreadyRunning = activeMatches.values().stream()
-                .anyMatch(m -> m.mapName.equals(bestMap.name));
+                .anyMatch(m -> m.mapName.equals(map.name) && m.phase == MatchPhase.PLAYING);
         if (alreadyRunning) {
-            log.info("Match for {} is already running, waiting", bestMap.displayName);
+            log.info("Match for {} is already running", map.displayName);
             return;
         }
 
-        startMatch(bestMap);
-    }
-
-    // Запуск матча
-    private static void startMatch(MapConfig map) {
         ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers);
         if (sr.error != null || !sr.ready) {
-            log.error("Failed to start match server for {}: {}", map.displayName, sr.error);
+            log.error("Failed to start match server: {}", sr.error);
             return;
         }
 
@@ -104,61 +57,29 @@ public class MatchAllocator {
         mi.port = sr.port;
         mi.maxPlayers = map.maxPlayers;
         mi.phase = MatchPhase.PLAYING;
+        mi.playerCount = lobbyCount;
 
         activeMatches.put(mi.serverId, mi);
-        log.info("Match started: {} on port {} (max {})", map.displayName, sr.port, map.maxPlayers);
-
-        List<String> toMove = new ArrayList<>();
-        while (!playerQueue.isEmpty() && toMove.size() < map.maxPlayers) {
-            toMove.add(playerQueue.poll());
-        }
-
-        mi.playerCount = toMove.size();
-        log.info("{} players moved to {}", toMove.size(), map.displayName);
+        log.info("Match started: {} on port {} ({} players)", map.displayName, sr.port, lobbyCount);
     }
 
-    // Матч завершён — освобождаем сервер
     public static void matchEnded(int serverId) {
-        activeMatches.remove(serverId);
-        ServerManager.stopServer(serverId);
-        log.info("Match ended, server {} freed", serverId);
-
-        // Проверяем, можно ли запустить новый матч для ожидающих
-        tryAllocate();
-    }
-
-    // Проверка заполненности текущих матчей
-    public static boolean hasAvailableSlot(String mapName) {
-        for (var entry : activeMatches.entrySet()) {
-            MatchInfo mi = entry.getValue();
-            if (mi.phase != MatchPhase.PLAYING) continue;
-            MapConfig cfg = MapRegistry.get(mi.mapName);
-            if (cfg == null) continue;
-            if (mi.playerCount < cfg.maxPlayers) {
-                int fillPct = mi.playerCount * 100 / cfg.maxPlayers;
-                if (fillPct < fillPercent) return true;
-            }
+        MatchInfo mi = activeMatches.remove(serverId);
+        if (mi != null) {
+            ServerManager.stopServer(serverId);
+            log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
-        return false;
     }
 
     public static Map<Integer, MatchInfo> getActiveMatches() {
         return activeMatches;
     }
 
-    public static int getQueueSize() {
-        return playerQueue.size();
-    }
-
     public static int getLobbyPlayerCount() {
         return lobbyPlayers.size();
     }
 
-    // ====== INNER TYPES ======
-
-    public enum MatchPhase {
-        STARTING, PLAYING, ENDING
-    }
+    public enum MatchPhase { STARTING, PLAYING, ENDING }
 
     public static class MatchInfo {
         public int serverId;
@@ -166,6 +87,6 @@ public class MatchAllocator {
         public int port;
         public int playerCount;
         public int maxPlayers;
-        public MatchPhase phase;
+        public MatchPhase phase = MatchPhase.STARTING;
     }
 }

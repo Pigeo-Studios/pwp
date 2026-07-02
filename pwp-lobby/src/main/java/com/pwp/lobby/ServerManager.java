@@ -15,12 +15,13 @@ public class ServerManager {
     private static final Logger log = LoggerFactory.getLogger(ServerManager.class);
 
     private static final String TEMPLATE_PATH = "../server-template";
-    private static final String SERVERS_PATH = "../match_";
     private static final int BASE_PORT = 25566;
     private static final int MAX_SERVERS = 10;
+    private static final long START_TIMEOUT_MS = 120_000;
 
     private static final Map<Integer, Process> runningServers = new ConcurrentHashMap<>();
     private static final Map<Integer, Integer> serverPorts = new ConcurrentHashMap<>();
+    private static final Map<Integer, String> serverDirs = new ConcurrentHashMap<>();
     private static int nextServerId = 1;
 
     public static class StartResult {
@@ -32,70 +33,133 @@ public class ServerManager {
 
     public static StartResult startMatchServer(String mapName, int maxPlayers) {
         StartResult result = new StartResult();
+
+        // Check if template exists
+        Path templatePath = Paths.get(TEMPLATE_PATH);
+        if (!Files.exists(templatePath) || !Files.isDirectory(templatePath)) {
+            result.error = "Template directory not found: " + templatePath.toAbsolutePath();
+            log.error(result.error);
+            return result;
+        }
+
+        // Find forge launcher in template
+        Path runBat = templatePath.resolve("run.bat");
+        if (!Files.exists(runBat)) {
+            result.error = "run.bat not found in template";
+            return result;
+        }
+
+        int serverId = nextServerId++;
+        int port = BASE_PORT + serverId - 1;
+        String serverDirName = "match_" + String.format("%02d", serverId);
+        Path serverDir = Paths.get(serverDirName);
+
         try {
-            if (runningServers.size() >= MAX_SERVERS) {
-                result.error = "Maximum server limit reached";
-                return result;
+            // Clean up old match dir if exists
+            if (Files.exists(serverDir)) {
+                deleteDirectory(serverDir);
             }
 
-            int serverId = nextServerId++;
-            int port = BASE_PORT + serverId - 1;
-            String serverDir = SERVERS_PATH + String.format("%02d", serverId);
+            // Copy template
+            copyDirectory(templatePath, serverDir);
 
-            Files.createDirectories(Paths.get(serverDir));
-            copyDirectory(Paths.get(TEMPLATE_PATH), Paths.get(serverDir));
+            // Update server.properties
+            Path propertiesPath = serverDir.resolve("server.properties");
+            if (Files.exists(propertiesPath)) {
+                String props = Files.readString(propertiesPath);
+                props = props.replace("${PORT}", String.valueOf(port));
+                props = props.replace("${LEVEL}", mapName);
+                props = props.replace("${MAX_PLAYERS}", String.valueOf(maxPlayers));
+                Files.writeString(propertiesPath, props);
+            } else {
+                // Create default
+                Files.writeString(propertiesPath,
+                        "server-port=" + port + "\nlevel-name=" + mapName +
+                        "\nmax-players=" + maxPlayers + "\nonline-mode=true\n");
+            }
 
-            Path propertiesPath = Paths.get(serverDir, "server.properties");
-            String properties = Files.readString(propertiesPath);
-            properties = properties.replace("${PORT}", String.valueOf(port));
-            properties = properties.replace("${LEVEL}", mapName);
-            properties = properties.replace("${MAX_PLAYERS}", String.valueOf(maxPlayers));
-            Files.writeString(propertiesPath, properties);
+            // Read JVM args from template
+            Path jvmArgsPath = serverDir.resolve("user_jvm_args.txt");
+            String jvmArgs = "-Xmx4G -Xms2G";
+            if (Files.exists(jvmArgsPath)) {
+                jvmArgs = Files.readString(jvmArgsPath).trim();
+            }
 
+            // Start the server process
             ProcessBuilder pb = new ProcessBuilder(
-                    "java", "-Xmx2G", "-Xms1G", "-jar", "forge.jar", "nogui"
+                    "cmd.exe", "/c", "run.bat"
             );
-            pb.directory(new File(serverDir));
+            pb.directory(serverDir.toFile());
+            pb.environment().put("JAVA_HOME", System.getProperty("java.home"));
             pb.redirectErrorStream(true);
+
+            log.info("Starting match server {} on port {} (map: {})", serverId, port, mapName);
             Process process = pb.start();
+
+            // Read initial output in a separate thread
+            startOutputReader(serverId, process);
 
             runningServers.put(serverId, process);
             serverPorts.put(serverId, port);
+            serverDirs.put(serverId, serverDirName);
 
             result.serverId = serverId;
             result.port = port;
 
-            log.info("Match server {} starting on port {}...", serverId, port);
+            // Wait for server to be ready
+            log.info("Waiting for server {} to be ready...", serverId);
+            result.ready = waitForServerReady("127.0.0.1", port, START_TIMEOUT_MS);
 
-            boolean ready = waitForServerReady("127.0.0.1", port, 60_000);
-            result.ready = ready;
-            log.info("Match server {} ready: {}", serverId, ready);
+            if (result.ready) {
+                log.info("Match server {} ready on port {}", serverId, port);
+            } else {
+                log.warn("Match server {} not ready after {}ms", serverId, START_TIMEOUT_MS);
+            }
 
         } catch (Exception e) {
             log.error("Failed to start match server: {}", e.getMessage());
             result.error = e.getMessage();
         }
+
         return result;
     }
 
-    public static boolean waitForServerReady(String host, int port, int timeoutMs) {
+    private static void startOutputReader(int serverId, Process process) {
+        Thread reader = new Thread(() -> {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.contains("Done") && line.contains("For help")) {
+                        log.info("Server {} ready message detected", serverId);
+                    }
+                }
+            } catch (IOException e) {
+                // Process ended
+            }
+        }, "server-" + serverId + "-output");
+        reader.setDaemon(true);
+        reader.start();
+    }
+
+    public static boolean waitForServerReady(String host, int port, long timeoutMs) {
         long deadline = System.currentTimeMillis() + timeoutMs;
         int attempt = 0;
 
         while (System.currentTimeMillis() < deadline) {
             attempt++;
             try (Socket s = new Socket()) {
-                s.connect(new InetSocketAddress(host, port), 1000);
-                log.info("Server ready after {} attempts", attempt);
+                s.connect(new InetSocketAddress(host, port), 500);
+                log.info("Server ready after {} attempts ({}ms)", attempt,
+                        System.currentTimeMillis() - (deadline - timeoutMs));
                 return true;
             } catch (IOException e) {
                 if (attempt % 10 == 0) {
-                    log.debug("Waiting for server... (attempt {})", attempt);
+                    log.debug("Waiting for server... ({})", attempt);
                 }
                 try { Thread.sleep(1000); } catch (InterruptedException ie) { break; }
             }
         }
-        log.warn("Server not ready after {}ms", timeoutMs);
         return false;
     }
 
@@ -116,12 +180,14 @@ public class ServerManager {
         runningServers.remove(serverId);
         serverPorts.remove(serverId);
 
-        String serverDir = SERVERS_PATH + String.format("%02d", serverId);
-        try {
-            deleteDirectory(Paths.get(serverDir));
-            log.info("Cleaned up server directory {}", serverDir);
-        } catch (IOException e) {
-            log.warn("Failed to clean up server directory: {}", e.getMessage());
+        String dir = serverDirs.remove(serverId);
+        if (dir != null) {
+            try {
+                deleteDirectory(Paths.get(dir));
+                log.info("Cleaned up {}", dir);
+            } catch (IOException e) {
+                log.warn("Failed to clean up {}: {}", dir, e.getMessage());
+            }
         }
     }
 
@@ -145,7 +211,8 @@ public class ServerManager {
                 if (Files.isDirectory(src)) {
                     Files.createDirectories(dest);
                 } else {
-                    Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
+                    Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING,
+                            StandardCopyOption.COPY_ATTRIBUTES);
                 }
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
