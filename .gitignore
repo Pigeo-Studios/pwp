@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+bin/
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Minecraft / Forge
+run/
+logs/
+crash-*.log
+
+# Core Service
+core-service/logs/
+core-service/config.local.json
+
+# Game server instances
+match_*/
+server-template/run/
+
+# Environment
+.env
+*.local.*

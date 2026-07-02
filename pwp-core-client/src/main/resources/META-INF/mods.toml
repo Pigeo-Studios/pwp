@@ -1,0 +1,13 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All rights reserved"
+[[mods]]
+modId="pwp_core_client"
+version="1.0.0"
+displayName="PWP Core Client"
+logoFile="pwp_core_client.png"
+credits="Pigeo Studios"
+authors="Pigeo Studios"
+description='''
+Core client mod for PWP. Connects to PWP Core Service for player data.
+'''

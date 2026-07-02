@@ -1,0 +1,44 @@
+package com.pwp.coreclient.network;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.network.NetworkEvent;
+
+import java.util.function.Supplier;
+
+public class ConnectToServerPacket {
+
+    public final String host;
+    public final int port;
+
+    public ConnectToServerPacket(String host, int port) {
+        this.host = host;
+        this.port = port;
+    }
+
+    public static void encode(ConnectToServerPacket msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.host);
+        buf.writeInt(msg.port);
+    }
+
+    public static ConnectToServerPacket decode(FriendlyByteBuf buf) {
+        return new ConnectToServerPacket(buf.readUtf(), buf.readInt());
+    }
+
+    public static void handle(ConnectToServerPacket msg, Supplier<NetworkEvent.Context> ctx) {
+        ctx.get().enqueueWork(() ->
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    mc.clearLevel();
+                    mc.setServer(new ServerData("PWP Match", msg.host + ":" + msg.port, false));
+                    mc.disconnect(new net.minecraft.client.gui.screens.ConnectScreen(
+                            new net.minecraft.client.gui.screens.TitleScreen(),
+                            mc, new ServerData("PWP Match", msg.host + ":" + msg.port, false)));
+                })
+        );
+        ctx.get().setPacketHandled(true);
+    }
+}
