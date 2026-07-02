@@ -61,5 +61,22 @@
     "pwpwarfare.notification.coins": "+%d монет",
     "pwpwarfare.notification.level_up": "Новый уровень! Теперь вы %d уровня",
     "pwpwarfare.notification.rank_up": "Новый ранг: %s",
-    "pwpwarfare.notification.kit_unlocked": "Открыт новый класс: %s"
+    "pwpwarfare.notification.kit_unlocked": "Открыт новый класс: %s",
+
+    "pwpwarfare.message.kit_reserved": "Комплект зарезервирован: %s",
+    "pwpwarfare.message.kit_selected": "Комплект выбран: %s",
+    "pwpwarfare.message.ejected_not_qualified": "Вы высажены: нет подходящего комплекта!",
+    "pwpwarfare.message.unauthorized_driver": "Требуется %s! Высадка через %dс",
+    "pwpwarfare.message.teamkill_spectator_broadcast": "%s теперь наблюдает",
+    "pwpwarfare.message.teamkill_spectator_self": "Тимкилл! Теперь вы наблюдаете",
+    "pwpwarfare.message.teamkill_restrict": "Вам запрещён вход на главную базу!",
+    "pwpwarfare.message.teamkill_warn_subtitle": "Предупреждение о тимкилле",
+    "pwpwarfare.message.teamkill_restrict_expired": "Ограничение базы снято",
+    "pwpwarfare.message.teamkill_restrict_remaining": "Ограничение базы: %dс осталось",
+
+    "pwpwarfare.marker.attack": "Атака",
+    "pwpwarfare.marker.defend": "Оборона",
+    "pwpwarfare.marker.move": "Движение",
+    "pwpwarfare.marker.build": "Строительство",
+    "pwpwarfare.marker.observe": "Наблюдение"
 }

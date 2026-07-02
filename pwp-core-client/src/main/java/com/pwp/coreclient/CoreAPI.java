@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -28,8 +30,6 @@ public class CoreAPI {
 
     public static boolean isEnabled() { return enabled; }
 
-    // ====== ИГРОКИ ======
-
     public static JsonObject loadPlayer(String uuid) {
         return post("/api/v1/player/load", map("uuid", uuid));
     }
@@ -38,13 +38,9 @@ public class CoreAPI {
         return post("/api/v1/player/create", map("uuid", uuid, "nickname", nickname));
     }
 
-    // ====== СТАТИСТИКА ======
-
     public static JsonObject saveStats(String uuid, JsonObject stats) {
         return post("/api/v1/player/save", map("uuid", uuid, "stats", stats));
     }
-
-    // ====== ВАЛЮТА ======
 
     public static JsonObject addCurrency(String uuid, long amount, String reason) {
         return post("/api/v1/currency/add", map("uuid", uuid, "amount", amount, "reason", reason));
@@ -54,19 +50,13 @@ public class CoreAPI {
         return post("/api/v1/currency/spend", map("uuid", uuid, "amount", amount, "itemId", itemId));
     }
 
-    // ====== XP ======
-
     public static JsonObject addXp(String uuid, long amount, String reason) {
         return post("/api/v1/xp/add", map("uuid", uuid, "amount", amount, "reason", reason));
     }
 
-    // ====== МАТЧИ ======
-
     public static JsonObject saveMatch(JsonObject matchData) {
         return post("/api/v1/match/save", matchData);
     }
-
-    // ====== КОСМЕТИКА ======
 
     public static JsonObject grantItem(String uuid, String skinId, String source) {
         return post("/api/v1/cosmetics/grant", map("uuid", uuid, "skinId", skinId, "source", source));
@@ -76,8 +66,6 @@ public class CoreAPI {
         return post("/api/v1/cosmetics/equip", map("uuid", uuid, "itemUuid", itemUuid,
                 "slotType", slotType, "role", role));
     }
-
-    // ====== HTTP ======
 
     private static JsonObject post(String path, Object body) {
         if (!enabled) return null;
@@ -97,16 +85,18 @@ public class CoreAPI {
 
             int code = conn.getResponseCode();
             if (code == 200 || code == 201) {
-                byte[] bytes;
-                try (var is = conn.getInputStream()) {
-                    bytes = is.readAllBytes();
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                try (InputStream is = conn.getInputStream()) {
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = is.read(buf)) != -1) buffer.write(buf, 0, n);
                 }
                 conn.disconnect();
-                return GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), JsonObject.class);
+                return GSON.fromJson(buffer.toString(StandardCharsets.UTF_8.name()), JsonObject.class);
             }
             conn.disconnect();
         } catch (Exception e) {
-            log.warn("Core API call to {} failed: {}", path, e.getMessage());
+            log.warn("Core API call {} failed: {}", path, e.getMessage());
         }
         return null;
     }

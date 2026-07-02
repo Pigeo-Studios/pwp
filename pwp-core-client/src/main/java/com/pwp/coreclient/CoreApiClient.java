@@ -25,11 +25,15 @@ public class CoreApiClient {
     }
 
     private static String readResponse(HttpURLConnection conn) throws Exception {
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
         try (var reader = new InputStreamReader(
                 conn.getResponseCode() < 400 ? conn.getInputStream() : conn.getErrorStream(),
                 StandardCharsets.UTF_8)) {
-            return new String(reader.readAllBytes(), StandardCharsets.UTF_8);
+            char[] buf = new char[4096];
+            int n;
+            while ((n = reader.read(buf)) != -1) buffer.write(new String(buf, 0, n).getBytes(StandardCharsets.UTF_8));
         }
+        return buffer.toString(StandardCharsets.UTF_8.name());
     }
 
     private static String post(String path, Object body) throws Exception {

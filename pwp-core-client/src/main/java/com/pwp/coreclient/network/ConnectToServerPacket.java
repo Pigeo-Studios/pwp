@@ -2,6 +2,9 @@ package com.pwp.coreclient.network;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -32,11 +35,13 @@ public class ConnectToServerPacket {
         ctx.get().enqueueWork(() ->
                 DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
                     Minecraft mc = Minecraft.getInstance();
-                    mc.clearLevel();
-                    mc.setServer(new ServerData("PWP Match", msg.host + ":" + msg.port, false));
-                    mc.disconnect(new net.minecraft.client.gui.screens.ConnectScreen(
-                            new net.minecraft.client.gui.screens.TitleScreen(),
-                            mc, new ServerData("PWP Match", msg.host + ":" + msg.port, false)));
+                    if (mc.level != null) {
+                        mc.level.disconnect();
+                        mc.clearLevel();
+                    }
+                    ServerData sd = new ServerData("PWP Match", msg.host + ":" + msg.port, false);
+                    ServerAddress sa = new ServerAddress(msg.host, msg.port);
+                    ConnectScreen.startConnecting(new TitleScreen(), mc, sa, sd, false);
                 })
         );
         ctx.get().setPacketHandled(true);

@@ -61,5 +61,22 @@
     "pwpwarfare.notification.coins": "+%d Coins",
     "pwpwarfare.notification.level_up": "Level Up! You are now level %d",
     "pwpwarfare.notification.rank_up": "New Rank: %s",
-    "pwpwarfare.notification.kit_unlocked": "New kit unlocked: %s"
+    "pwpwarfare.notification.kit_unlocked": "New kit unlocked: %s",
+
+    "pwpwarfare.message.kit_reserved": "Kit reserved: %s",
+    "pwpwarfare.message.kit_selected": "Kit selected: %s",
+    "pwpwarfare.message.ejected_not_qualified": "Ejected: You do not have the required kit!",
+    "pwpwarfare.message.unauthorized_driver": "Requires %s! Eject in %ds",
+    "pwpwarfare.message.teamkill_spectator_broadcast": "%s is now spectating",
+    "pwpwarfare.message.teamkill_spectator_self": "You teamkilled! You are now spectating",
+    "pwpwarfare.message.teamkill_restrict": "You are restricted from the main base!",
+    "pwpwarfare.message.teamkill_warn_subtitle": "Teamkill Warning",
+    "pwpwarfare.message.teamkill_restrict_expired": "Base restriction expired",
+    "pwpwarfare.message.teamkill_restrict_remaining": "Base restriction: %ds remaining",
+
+    "pwpwarfare.marker.attack": "Attack",
+    "pwpwarfare.marker.defend": "Defend",
+    "pwpwarfare.marker.move": "Move",
+    "pwpwarfare.marker.build": "Build",
+    "pwpwarfare.marker.observe": "Observe"
 }
