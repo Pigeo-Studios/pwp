@@ -56,7 +56,8 @@ public class ClientEvents {
                 || id.equals(VanillaGuiOverlay.FOOD_LEVEL.id())
                 || id.equals(VanillaGuiOverlay.HOTBAR.id())
                 || id.equals(VanillaGuiOverlay.EXPERIENCE_BAR.id())
-                || id.equals(VanillaGuiOverlay.ARMOR_LEVEL.id())) {
+                || id.equals(VanillaGuiOverlay.ARMOR_LEVEL.id())
+                || id.equals(VanillaGuiOverlay.PLAYER_LIST.id())) {
             event.setCanceled(true);
             return;
         }
