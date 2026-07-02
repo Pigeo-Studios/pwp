@@ -1,0 +1,24 @@
+{
+    "name": "chora_valley",
+    "displayName": "Chora Valley",
+    "maxPlayers": 80,
+    "minPlayers": 10,
+    "image": "map2",
+    "description": "Mountainous valley with dense forest and a central town.",
+    "BLUE": { "faction": "nato", "tickets": 600 },
+    "RED": { "faction": "insurgency", "tickets": 600 },
+    "settings": {
+        "respawnTimer": 15,
+        "deathTicketCost": 2
+    },
+    "spawns": [
+        { "team": "BLUE", "x": 300, "z": 400 },
+        { "team": "RED", "x": -300, "z": -400 }
+    ],
+    "capturePoints": [
+        { "name": "Town", "x": -30, "z": 20, "radius": 25, "priority": 18, "ticketPenalty": 60 },
+        { "name": "Hilltop", "x": 40, "z": -20, "radius": 20, "priority": 12, "ticketPenalty": 45 },
+        { "name": "Outpost", "x": -60, "z": -10, "radius": 18, "priority": 8, "ticketPenalty": 30 }
+    ],
+    "mapBounds": { "centerX": 0, "centerZ": 0, "sizeBlocks": 1536 }
+}

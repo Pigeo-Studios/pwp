@@ -1,18 +1,22 @@
 package com.pwp.lobby;
 
+import com.pwp.lobby.maps.MapRegistry;
+import com.pwp.lobby.match.MatchAllocator;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod("pwp_lobby")
 public class LobbyMod {
 
     public LobbyMod() {
-        // PWP Lobby handles:
-        //   - Lobby world (spawn area, other players visible)
-        //   - Map voting UI
-        //   - Server Manager: match server pool (start, monitor, stop)
-        //   - Shop GUI (buy skins with coins or real money)
-        //   - Cosmetics preview and selection
-        //   - Player profile / statistics display
-        //   - Connects to Core Service for player data
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
+    }
+
+    private void commonSetup(FMLCommonSetupEvent event) {
+        MapRegistry.configure("../server-template/maps");
+        MapRegistry.loadAll();
+
+        MatchAllocator.configure(10, 80);
     }
 }
