@@ -100,8 +100,10 @@ public class ServerManager {
                             "\nmax-players=" + maxPlayers + "\nonline-mode=true\n");
                 }
 
-                // Start the server process
-                ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "run.bat");
+                // Generate win_args.txt and fix run.bat for the match server
+                generateWinArgsAndFixRunBat(serverDir);
+
+                ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "run.bat", "nogui");
                 pb.directory(serverDir.toFile());
                 pb.environment().put("JAVA_HOME", System.getProperty("java.home"));
                 pb.redirectErrorStream(true);
@@ -218,8 +220,8 @@ public class ServerManager {
     }
 
     private static final Set<String> SKIP_DIRS = Set.of("world", "logs", "crash-reports",
-            "tacz", "maps", "cache", "usercache.json", "banned-ips.json",
-            "banned-players.json", "ops.json", "whitelist.json");
+            "tacz", "maps", "cache", "match_01", "match_02", "match_03", "match_04", "match_05",
+            "usercache.json", "banned-ips.json", "banned-players.json", "ops.json", "whitelist.json");
     private static final ExecutorService matchExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "match-server-starter");
         t.setDaemon(true);
@@ -336,5 +338,68 @@ public class ServerManager {
                     .map(Path::toFile)
                     .forEach(File::delete);
         }
+    }
+
+    /** Generate win_args.txt and fix run.bat for the match server */
+    private static void generateWinArgsAndFixRunBat(Path serverDir) throws IOException {
+        Path librariesDir = serverDir.resolve("libraries");
+        if (!Files.exists(librariesDir)) {
+            log.warn("libraries dir not found, skipping win_args generation");
+            return;
+        }
+
+        // Build classpath from all JARs in libraries/
+        StringBuilder classpath = new StringBuilder();
+        List<Path> jars = new ArrayList<>();
+        Files.walk(librariesDir).forEach(p -> {
+            if (p.toString().endsWith(".jar")) jars.add(p);
+        });
+
+        for (int i = 0; i < jars.size(); i++) {
+            if (i > 0) classpath.append(";");
+            classpath.append(jars.get(i).toAbsolutePath().toString());
+        }
+
+        String winArgs = "-p " + classpath.toString() + "\n" +
+                "--add-modules ALL-MODULE-PATH\n" +
+                "--add-opens java.base/java.util.jar=cpw.mods.securejarhandler\n" +
+                "--add-opens java.base/java.lang.invoke=cpw.mods.securejarhandler\n" +
+                "--add-exports java.base/sun.security.util=cpw.mods.securejarhandler\n" +
+                "--add-exports jdk.naming.dns/com.sun.jndi.dns=java.naming\n" +
+                "-Djava.net.preferIPv6Addresses=system\n" +
+                "-DignoreList=bootstraplauncher-1.1.2.jar,securejarhandler-2.1.10.jar," +
+                "asm-commons-9.9.1.jar,asm-util-9.9.1.jar,asm-analysis-9.9.1.jar," +
+                "asm-tree-9.9.1.jar,asm-9.9.1.jar,JarJarFileSystems-0.3.19.jar\n" +
+                "-DlibraryDirectory=libraries\n" +
+                "-DlegacyClassPath=" + classpath.toString() + "\n" +
+                "cpw.mods.bootstraplauncher.BootstrapLauncher\n" +
+                "--launchTarget forgeserver\n" +
+                "--fml.forgeVersion 47.4.20\n" +
+                "--fml.mcVersion 1.20.1\n" +
+                "--fml.forgeGroup net.minecraftforge\n" +
+                "--fml.mcpVersion 20230612.114412\n" +
+                "nogui\n";
+
+        String[] dirs = {"libraries", "net", "minecraftforge", "forge", "1.20.1-47.4.20"};
+        Path winArgsDir = serverDir;
+        for (String d : dirs) {
+            winArgsDir = winArgsDir.resolve(d);
+        }
+        Files.createDirectories(winArgsDir);
+        Path winArgsPath = winArgsDir.resolve("win_args.txt");
+        Files.writeString(winArgsPath, winArgs);
+
+        // Fix run.bat to use absolute path to win_args.txt
+        Path runBatPath = serverDir.resolve("run.bat");
+        if (Files.exists(runBatPath)) {
+            String runBatContent = Files.readString(runBatPath);
+            runBatContent = runBatContent.replace(
+                "@libraries/net/minecraftforge/forge/1.20.1-47.4.20/win_args.txt",
+                "@" + winArgsPath.toAbsolutePath().toString().replace("\\", "/")
+            );
+            Files.writeString(runBatPath, runBatContent);
+        }
+
+        log.info("Generated win_args.txt for match server ({} jars in classpath)", jars.size());
     }
 }

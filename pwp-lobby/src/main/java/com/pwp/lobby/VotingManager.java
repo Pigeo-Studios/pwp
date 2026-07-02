@@ -37,11 +37,15 @@ public class VotingManager {
         log.info("Voting started: {} maps available, {} seconds", maps.size(), voteDurationSec);
     }
 
-    public static void vote(UUID playerUuid, String mapName) {
-        if (!active || finished) return;
+    /** Returns true if vote was accepted/changed, false if already voting for this map */
+    public static boolean vote(UUID playerUuid, String mapName) {
+        if (!active || finished) return false;
         MapConfig cfg = MapRegistry.get(mapName);
-        if (cfg == null) return;
+        if (cfg == null) return false;
+        String current = votes.get(playerUuid);
+        if (mapName.equals(current)) return false;
         votes.put(playerUuid, mapName);
+        return true;
     }
 
     public static void tick() {

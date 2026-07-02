@@ -175,7 +175,11 @@ public class LobbyMod {
                         return 0;
                     }
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
-                    VotingManager.vote(player.getUUID(), mapName);
+                    boolean accepted = VotingManager.vote(player.getUUID(), mapName);
+                    if (!accepted) {
+                        ctx.getSource().sendFailure(Component.literal("§cYou already voted for " + mapName));
+                        return 0;
+                    }
                     var server = ServerLifecycleHooks.getCurrentServer();
                     if (server != null) {
                         for (var p : server.getPlayerList().getPlayers()) {
@@ -183,6 +187,7 @@ public class LobbyMod {
                                 "§7" + player.getScoreboardName() + " voted for §f" + mapName), false);
                         }
                     }
+                    ctx.getSource().sendSuccess(() -> Component.literal("§aVoted for " + mapName), false);
                     return Command.SINGLE_SUCCESS;
                 })));
 
