@@ -399,6 +399,134 @@ Per minute: +10 XP  +1 Coin
 | API ключи | Bearer token в заголовке |
 | Клиент→БД | Никогда. Только через Core Service |
 | Сайт→БД | Никогда. Только через Core Service API |
-| Rate limit | 100 запросов/минуту (заглушка, реализовать в AuthMiddleware) |
+| Rate limit | 100 запросов/минуту на ключ, таймер на 1 секунду |
 | Валидация | Сервер проверяет баланс перед списанием |
 | Логирование | Все операции в operation_logs |
+
+## 11. Статус реализации
+
+### ✅ Core Service (core-service/) — ГОТОВО
+- [x] Javalin HTTP сервер, HikariCP пул, авторизация Bearer
+- [x] 7 REST контроллеров: Player, Currency, XP, Cosmetics, Match, Shop, Donation
+- [x] Rate limiter: 100 запросов/минуту на API ключ
+- [x] MySQL: 12 групп таблиц (игроки, статы, валюта, XP, ранги, ачивки, сезоны, косметика, матчи, combat_log, логи, донаты)
+- [x] Транзакции: match_save одной транзакцией (match_history + match_players)
+- [x] Авторасчёт уровня: `level * 1000 XP`
+
+### ✅ pwp-core-client (Forge mod) — ГОТОВО
+- [x] CoreAPI статический фасад: `saveMatch()`, `addXp()`, `addCurrency()`, `grantItem()` и т.д.
+- [x] CoreApiClient низкоуровневый HTTP клиент (POST/GET)
+- [x] PlayerData кеш профилей (Map<UUID, CachedProfile>)
+- [x] ConnectToServerPacket — переключение между серверами без выхода в меню
+- [x] PWPTheme — дизайн-система (Dark Ember палитра, шрифты, тени, иконки, стили)
+- [x] Easing — 15 функций плавности (linear, quad, cubic, expo, elastic, bounce, back, pulse, shake)
+
+### ✅ pwp-cosmetics (Forge mod) — ГОТОВО
+- [x] SkinRegistry — реестр скинов (id, name, slot, rarity, model)
+- [x] CosmeticManager.applySkin() — наложение скина на ItemStack
+- [x] Слоты: KNIFE, PRIMARY, SECONDARY, UNIFORM, HEADGEAR, PATCH, EFFECT, VOICE, ANIMATION
+- [x] Редкости: COMMON, RARE, EPIC, LEGENDARY, MYTHIC
+
+### ✅ pwp-lobby (Forge mod) — ГОТОВО
+- [x] MapConfig + MapRegistry — загрузка JSON-карт из `server-template/maps/`
+- [x] MatchAllocator — очередь, проверка 80% fill, автозапуск матча
+- [x] ServerManager — копирование шаблона, запуск `java -jar forge.jar`, ожидание готовности (socket ping до 60 сек), очистка
+- [x] VotingManager — голосование за карту из MapRegistry
+
+### ✅ pwp-warfare (Forge mod) — ДОБАВЛЕНО В СУЩЕСТВУЮЩИЙ
+- [x] MatchStatsTracker — трекинг матча в памяти (Map<UUID, PlayerMatchStats>)
+- [x] PlayerMatchStats — 20+ полей статистики за матч
+- [x] **Kill трекинг**: `onEntityDeath()` → `recordKill()` через `event.getSource().getEntity()`
+- [x] **Kill через нокаут**: `onEntityDeath()` → `victim.getLastHurtByPlayer()` (forceGiveUp ставит метку)
+- [x] **VehicleKill**: проверка `WARFARE_VehicleTeam` в NBT пассажира
+- [x] **Capture трекинг**: сравнение `point.owner` до/после `handleTeamInfluence()` в тиковом цикле
+- [x] **Revive трекинг**: `DownedHandler.onReviveInteract()` → `recordRevive(medic)`
+- [x] **XP/Coins начисление**: в `finalizeMatch()`: kill=50/10, assist=25/5, capture=100/25, revive=75/15, vehicle=150/30, win=200/50, время=10/1 за минуту
+- [x] **Cosmetics в китах**: `ResupplyHandler.applyKitToPlayer()` → `CosmeticManager.applySkin()` на ножи/оружие
+- [x] **Soft-зависимость**: проверка `ModList.get().isLoaded()` перед вызовом CoreAPI/Cosmetics
+
+### ⏳ Gradle multi-module — ГОТОВО
+- [x] Корневой `settings.gradle` — все 7 подпроектов
+- [x] `gradle.properties` в корне (Xmx2G, JDK 17)
+- [x] Межмодульные зависимости: `pwp-warfare` → `pwp-core-client` + `pwp-cosmetics`, `pwp-lobby` → `pwp-core-client` + `pwp-cosmetics`, `pwp-cosmetics` → `pwp-core-client`
+- [x] Удалены старые `settings.gradle` из подпроектов
+
+### ❌ НЕ СДЕЛАНО — осталось
+
+| # | Что | Почему важно | Сложность |
+|---|-----|-------------|-----------|
+| 1 | MatchResultScreen (GUI после матча) | Показывать kills/deaths/score/XP/Coins с анимацией | Средняя |
+| 2 | SendMatchResultPacket (сервер→клиент) | Передать данные матча на клиент для GUI | Средняя |
+| 3 | Собрать и протестировать | Проверить что всё компилируется и работает | Низкая |
+
+## 12. Как работает трекинг (детали)
+
+### Kill (прямое убийство)
+```
+LivingDeathEvent
+  └→ event.getSource().getEntity() instanceof ServerPlayer killer
+       └→ MatchStatsTracker.get().recordKill(killer, victim, weapon, distance)
+```
+
+### Kill (через нокаут)
+```
+Player А down-ит Б → LivingHurtEvent cancelled → enterDownedState(Б)
+  └→ WARFARE_KnockedBy = "А"
+       ↓
+Б истекает кровью → forceGiveUp(Б)
+  └→ setLastHurtByPlayer(А)      ← ставит метку!
+  └→ player.kill()
+       ↓
+LivingDeathEvent
+  └→ sourceEntity = null (genericKill bypasses invulnerability)
+  └→ victim.getLastHurtByPlayer() = А  ← читаем метку
+       └→ MatchStatsTracker.get().recordKill(А, Б, "knockout", dist)
+```
+
+### Teamkill
+```
+LivingDeathEvent
+  └→ killer.getTeam().isAlliedTo(victim.getTeam())
+       └→ MatchStatsTracker.get().recordTeamKill(killer, victim)
+       └→ killer: kills--, score -= 50
+       └→ victim: deaths++, score -= 25
+```
+
+### Capture
+```
+PlayerTickEvent (каждый тик)
+  └→ для каждой CapturePoint:
+       └→ запоминаем point.owner ДО
+       └→ handleTeamInfluence(...)
+       └→ если point.owner ИЗМЕНИЛСЯ:
+            └→ для всех playersInBox команды-победителя:
+                 └→ MatchStatsTracker.get().recordCapture(player)
+```
+
+### Revive
+```
+EntityInteract (медик использует medkit на downed игроке)
+  └→ revivePlayer(target)
+  └→ MatchStatsTracker.get().recordRevive(medic)    ← var6
+```
+
+### VehicleKill
+```
+LivingDeathEvent (destroyed entity с WARFARE_TicketPenalty)
+  └→ entity.getPersistentData().contains("WARFARE_VehicleTeam")
+       └→ entity.getPassengers().get(0) instanceof ServerPlayer driver
+            └→ MatchStatsTracker.get().recordVehicleKill(driver)
+```
+
+### XP/Coins начисление (match end)
+```
+executeVictory() → MatchStatsTracker.finalizeMatch(winner, blueScore, redScore)
+  └→ CoreAPI.saveMatch(match)           ← сохраняем матч
+  └→ для каждого PlayerMatchStats:
+       └→ XP = kills*50 + assists*25 + vehicleKills*150 + captures*100
+              + revives*75 + время*10 + (победа ? 200 : 100)
+       └→ Coins = kills*10 + assists*5 + vehicleKills*30 + captures*25
+                + revives*15 + (победа ? 50 : 20)
+       └→ CoreAPI.addXp(uuid, xp, "MATCH")
+       └→ CoreAPI.addCurrency(uuid, coins, "MATCH_REWARD")
+```
