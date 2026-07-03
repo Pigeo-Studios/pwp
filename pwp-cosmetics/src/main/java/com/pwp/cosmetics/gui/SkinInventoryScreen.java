@@ -37,10 +37,12 @@ public class SkinInventoryScreen extends Screen {
 
     private static Map<String, ItemStack> globalSkinItemCache = null;
     private static List<CosmeticEntry> globalSkinEntries = null;
+    private static Map<String, String> globalSkinNameCache = null;
 
     private List<CosmeticEntry> allCosmetics = new ArrayList<>();
     private List<CosmeticEntry> filtered = new ArrayList<>();
     private Map<String, ItemStack> skinItemCache = new HashMap<>();
+    private Map<String, String> skinNameCache = new HashMap<>();
     private String currentFilter = "ALL";
     private int scrollOffset = 0;
     private int maxScroll = 0;
@@ -103,6 +105,7 @@ public class SkinInventoryScreen extends Screen {
     private void loadSkinDefinitions() {
         if (globalSkinItemCache != null && globalSkinEntries != null) {
             skinItemCache = globalSkinItemCache;
+            skinNameCache = globalSkinNameCache;
             if (allCosmetics.isEmpty()) {
                 allCosmetics = new ArrayList<>(globalSkinEntries);
                 filterCosmetics();
@@ -115,11 +118,13 @@ public class SkinInventoryScreen extends Screen {
                 if (result != null && result.has("data")) {
                     JsonArray arr = result.get("data").getAsJsonArray();
                     Map<String, ItemStack> cache = new HashMap<>();
+                    Map<String, String> nameCache = new HashMap<>();
                     List<CosmeticEntry> allSkinEntries = new ArrayList<>();
                     for (JsonElement e : arr) {
                         JsonObject obj = e.getAsJsonObject();
                         String skinId = obj.get("skinId").getAsString();
                         String skinName = obj.has("name") ? obj.get("name").getAsString() : skinId;
+                        nameCache.put(skinId, skinName);
                         String slotType = obj.get("slotType").getAsString();
                         String rarity = obj.get("rarity").getAsString();
                         String modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull()
@@ -149,8 +154,10 @@ public class SkinInventoryScreen extends Screen {
                     }
                     globalSkinItemCache = cache;
                     globalSkinEntries = allSkinEntries;
+                    globalSkinNameCache = nameCache;
                     Minecraft.getInstance().submit(() -> {
                         skinItemCache = cache;
+                        skinNameCache = nameCache;
                         if (allCosmetics.isEmpty()) {
                             allCosmetics = allSkinEntries;
                             filterCosmetics();
@@ -210,7 +217,7 @@ public class SkinInventoryScreen extends Screen {
 
                 ItemStack stack = skinItemCache.get(entry.skinId);
                 if (stack != null && !stack.isEmpty()) {
-                    gui.renderItem(stack, x + 4, y + 3);
+                    gui.renderItem(stack, x + 4, y + 2);
                 }
 
                 String label = entry.skinId.length() > 12 ? entry.skinId.substring(0, 11) + ".." : entry.skinId;
@@ -220,10 +227,8 @@ public class SkinInventoryScreen extends Screen {
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, 0xFFC8812A);
 
                     List<Component> tooltip = new ArrayList<>();
-                    tooltip.add(Component.literal("§" + getRarityCode(entry.rarity) + entry.skinId));
-                    if (stack != null && !stack.isEmpty()) {
-                        tooltip.add(Component.literal("§7" + stack.getHoverName().getString()));
-                    }
+                    String displayName = skinNameCache.getOrDefault(entry.skinId, entry.skinId);
+                    tooltip.add(Component.literal("§" + getRarityCode(entry.rarity) + displayName));
                     tooltip.add(Component.literal("§7" + entry.slotType + " §8| §7" + entry.rarity));
                     if (entry.equipped) {
                         tooltip.add(Component.literal("§a✔ Equipped"));
