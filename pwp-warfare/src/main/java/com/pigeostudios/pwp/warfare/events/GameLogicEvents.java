@@ -198,11 +198,7 @@ public class GameLogicEvents {
                    if (boardingGrace < 20) {
                       player.getPersistentData().putInt("WARFARE_BoardingGrace", boardingGrace + 1);
                    } else {
-                        CompoundTag playerData = player.getPersistentData();
-                        int seatIndex = playerData.contains("SBWSeatIndex", 3)
-                           ? playerData.getInt("SBWSeatIndex")
-                           : vehicle.getPassengers().indexOf(player);
-                       if (seatIndex != 0) {
+                        if (vehicle.getFirstPassenger() != player) {
                          player.getPersistentData().remove("WARFARE_DriveKickTimer");
                        } else if (!player.isCreative() && !player.isSpectator()) {
                            String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
