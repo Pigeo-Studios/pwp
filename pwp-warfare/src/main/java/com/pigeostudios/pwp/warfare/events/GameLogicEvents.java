@@ -198,39 +198,33 @@ public class GameLogicEvents {
                    if (boardingGrace < 20) {
                       player.getPersistentData().putInt("WARFARE_BoardingGrace", boardingGrace + 1);
                    } else {
-                       int seatIndex = vehicle.getPassengers().indexOf(player);
+                        CompoundTag playerData = player.getPersistentData();
+                        int seatIndex = playerData.contains("SBWSeatIndex", 3)
+                           ? playerData.getInt("SBWSeatIndex")
+                           : vehicle.getPassengers().indexOf(player);
                        if (seatIndex != 0) {
                          player.getPersistentData().remove("WARFARE_DriveKickTimer");
-                      } else if (!player.isCreative() && !player.isSpectator()) {
-                          String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
-                          if (vType.isEmpty() || vType.equals("DEFAULT")) {
-                             ResourceLocation entityId = ForgeRegistries.ENTITY_TYPES.getKey(vehicle.getType());
-                             if (entityId != null) {
-                                String path = entityId.getPath().toLowerCase();
-                                if (path.contains("helicopter") || path.contains("chopper") || path.contains("cas")
-                                   || path.contains("plane") || path.contains("jet") || path.contains("aircraft")
-                                   || path.contains("drone") || path.contains("vtol")) {
-                                   vType = "HELICOPTER";
-                                } else {
-                                   vType = "TANK";
-                                }
-                             }
-                          }
-                          String vTypeUpper = vType.toUpperCase();
-                          String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
-                          boolean isAuthorized = true;
-                          String requiredSpecialist = "";
-                          if (!vType.equalsIgnoreCase("HELICOPTER") && !vTypeUpper.contains("CAS") && !vTypeUpper.contains("SUPPLY HELICOPTER")) {
-                             if ((vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU"))
-                                && !pKit.equals("Mechanic")
-                                && !pKit.equals("Mechanic Officer")) {
-                                isAuthorized = false;
-                                requiredSpecialist = "MECHANIC";
-                             }
-                          } else if (!pKit.equals("Pilot") && !pKit.equals("Pilot Officer")) {
-                             isAuthorized = false;
-                             requiredSpecialist = "PILOT";
-                          }
+                       } else if (!player.isCreative() && !player.isSpectator()) {
+                           String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+                           if (vType.isEmpty() || vType.equals("DEFAULT")) {
+                              player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                              return;
+                           }
+                           String vTypeUpper = vType.toUpperCase();
+                           String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+                           boolean isAuthorized = true;
+                           String requiredSpecialist = "";
+                           if (!vType.equalsIgnoreCase("HELICOPTER") && !vTypeUpper.contains("CAS") && !vTypeUpper.contains("SUPPLY HELICOPTER")) {
+                              if ((vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU"))
+                                 && !pKit.equals("Mechanic")
+                                 && !pKit.equals("Mechanic Officer")) {
+                                 isAuthorized = false;
+                                 requiredSpecialist = "MECHANIC";
+                              }
+                           } else if (!pKit.equals("Pilot") && !pKit.equals("Pilot Officer")) {
+                              isAuthorized = false;
+                              requiredSpecialist = "PILOT";
+                           }
 
                         if (!isAuthorized) {
                            int timer = player.getPersistentData().getInt("WARFARE_DriveKickTimer");
