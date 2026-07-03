@@ -305,7 +305,7 @@ public class ModCommands {
                                        Commands.argument("imagename", StringArgumentType.word())
                                           .suggests(
                                              (ctx, builder) -> SharedSuggestionProvider.suggest(
-                                                List.of("map1", "map2", "map3", "map4", "map5", "map6", "map7", "map8", "map9", "map10", "map11", "map12"),
+                                                 List.of("map1", "map2", "map3", "grozny", "map4", "map5", "map6", "map7", "map8", "map9", "map10", "map11", "map12"),
                                                 builder
                                              )
                                           )
