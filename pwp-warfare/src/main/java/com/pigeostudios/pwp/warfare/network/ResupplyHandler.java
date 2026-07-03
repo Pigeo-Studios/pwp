@@ -42,7 +42,7 @@ public class ResupplyHandler {
             if (ModList.get().isLoaded("pwp_cosmetics")) {
                 String currentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
                 List<String> allowed = kit.slotSkins != null ? kit.slotSkins.get(i) : null;
-                    if (allowed != null && !allowed.isEmpty()) {
+                if (allowed != null && !allowed.isEmpty()) {
                     com.pwp.cosmetics.CosmeticManager.SkinData skinData = null;
                     if (allowed.get(0).startsWith("__CAT__")) {
                         String catType = allowed.get(0).substring(7);
@@ -55,17 +55,6 @@ public class ResupplyHandler {
                     }
                     if (skinData != null && !skinData.item.isEmpty()) {
                         itemToGive = skinData.item.copy();
-                        if (kitStack.hasTag()) {
-                            net.minecraft.nbt.CompoundTag merged = kitStack.getTag().copy();
-                            if (itemToGive.hasTag()) {
-                                for (String key : itemToGive.getTag().getAllKeys()) {
-                                    if (!merged.contains(key)) {
-                                        merged.put(key, itemToGive.getTag().get(key));
-                                    }
-                                }
-                            }
-                            if (!merged.isEmpty()) itemToGive.setTag(merged);
-                        }
                     }
                 }
             }
