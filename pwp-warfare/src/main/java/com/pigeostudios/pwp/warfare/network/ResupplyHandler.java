@@ -53,7 +53,7 @@ public class ResupplyHandler {
                             if (skinData != null) break;
                         }
                     }
-                    if (skinData != null && !skinData.item.isEmpty() && skinData.item.getItem() != kitStack.getItem()) {
+                    if (skinData != null && !skinData.item.isEmpty()) {
                         itemToGive = skinData.item.copy();
                         if (kitStack.hasTag()) {
                             net.minecraft.nbt.CompoundTag merged = kitStack.getTag().copy();
@@ -86,7 +86,6 @@ public class ResupplyHandler {
       }
 
       player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
-      giveWalkieTalkie(player);
    }
 
     public static void clearCurios(ServerPlayer player) {
