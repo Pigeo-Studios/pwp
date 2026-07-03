@@ -58,7 +58,7 @@ public class SkinListScreen extends Screen {
                         se.modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull() ? obj.get("modelPath").getAsString() : "";
                         loaded.add(se);
                     }
-                    Minecraft.getInstance().tell(() -> {
+                    Minecraft.getInstance().submit(() -> {
                         skins = loaded;
                         scrollOffset = 0;
                     });
@@ -142,7 +142,7 @@ public class SkinListScreen extends Screen {
             try {
                 CoreAPI.deleteSkin(skinId);
                 Thread.sleep(200);
-                Minecraft.getInstance().tell(this::loadSkins);
+                Minecraft.getInstance().submit(this::loadSkins);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }

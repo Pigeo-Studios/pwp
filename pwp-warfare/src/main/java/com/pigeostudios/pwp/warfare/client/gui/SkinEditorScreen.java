@@ -34,6 +34,10 @@ public class SkinEditorScreen extends Screen {
 
     private static final String[] SLOT_TYPES = {"PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
     private static final String[] RARITIES = {"COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"};
+    private static final int[] RARITY_COLORS = {0xFF6A6D73, 0xFF3D6FA5, 0xFF7A4A8A, 0xFFC8812A, 0xFFA53D3D, 0xFFFFD700};
+    private static final int INV_COLS = 9;
+    private static final int INV_ROWS = 4;
+    private static final int SLOT_SIZE = 18;
 
     public SkinEditorScreen(SkinListScreen parent) {
         super(Component.literal("Add Skin"));
@@ -54,64 +58,49 @@ public class SkinEditorScreen extends Screen {
     protected void init() {
         int cx = this.width / 2;
 
-        nameBox = new EditBox(this.font, cx - 80, 30, 160, 18, Component.empty());
+        nameBox = new EditBox(this.font, cx - 70, 30, 140, 16, Component.empty());
         nameBox.setHint(Component.literal("e.g. Dragon Fang"));
         if (pendingEditName != null) {
             nameBox.setValue(pendingEditName);
-            if (pendingEditRegistryName != null && !pendingEditRegistryName.isEmpty()) {
+            if (pendingEditRegistryName != null && pendingEditRegistryName.startsWith("{")) {
                 previewRegistryName = pendingEditRegistryName;
-                if (pendingEditRegistryName.startsWith("{")) {
-                    try {
-                        CompoundTag loaded = TagParser.parseTag(pendingEditRegistryName);
-                        previewItem = ItemStack.of(loaded);
-                        ResourceLocation rl = ForgeRegistries.ITEMS.getKey(previewItem.getItem());
-                        previewItemName = rl != null ? rl.toString() : "unknown";
-                    } catch (Exception ignored) {}
-                }
+                try {
+                    CompoundTag loaded = TagParser.parseTag(pendingEditRegistryName);
+                    previewItem = ItemStack.of(loaded);
+                    ResourceLocation rl = ForgeRegistries.ITEMS.getKey(previewItem.getItem());
+                    previewItemName = rl != null ? rl.toString() : "unknown";
+                } catch (Exception ignored) {}
             }
         }
         addRenderableWidget(nameBox);
 
+        int btnY = 56;
         for (int i = 0; i < SLOT_TYPES.length; i++) {
-            int bx = cx - 165 + i * 65;
-            boolean sel = slotType.equals(SLOT_TYPES[i]);
-            int fi = i;
-            String label = sel ? "> " + SLOT_TYPES[i] + " <" : SLOT_TYPES[i];
+            int bx = cx - 160 + i * 64;
+            final int fi = i;
+            String label = SLOT_TYPES[i].charAt(0) + SLOT_TYPES[i].substring(1).toLowerCase();
             addRenderableWidget(Button.builder(Component.literal(label), b -> {
                 slotType = SLOT_TYPES[fi];
-                String text = nameBox.getValue();
-                int cursor = nameBox.getCursorPosition();
-                init();
-                nameBox.setValue(text);
-                nameBox.setCursorPosition(cursor);
-                setFocused(nameBox);
-            }).bounds(bx, 56, 70, 20).build());
+            }).bounds(bx, btnY, 60, 18).build());
         }
 
+        int rarityY = 78;
         for (int i = 0; i < RARITIES.length; i++) {
-            int bx = cx - 180 + i * 60;
-            boolean sel = rarity.equals(RARITIES[i]);
-            int fi = i;
-            String label = sel ? "> " + RARITIES[i] + " <" : RARITIES[i];
-            addRenderableWidget(Button.builder(Component.literal(label), b -> {
+            int bx = cx - 170 + i * 57;
+            final int fi = i;
+            addRenderableWidget(Button.builder(Component.literal(RARITIES[i].substring(0, 3)), b -> {
                 rarity = RARITIES[fi];
-                String text = nameBox.getValue();
-                int cursor = nameBox.getCursorPosition();
-                init();
-                nameBox.setValue(text);
-                nameBox.setCursorPosition(cursor);
-                setFocused(nameBox);
-            }).bounds(bx, 84, 55, 18).build());
+            }).bounds(bx, rarityY, 53, 16).build());
         }
 
         addRenderableWidget(Button.builder(Component.literal("Save"), b -> save())
-            .bounds(cx - 80, 220, 50, 20).build());
+            .bounds(cx - 60, 230, 50, 20).build());
         Button delBtn = Button.builder(Component.literal("Delete"), b -> delete())
-            .bounds(cx - 25, 220, 50, 20).build();
+            .bounds(cx - 5, 230, 50, 20).build();
         delBtn.active = editSkinId != null;
         addRenderableWidget(delBtn);
         addRenderableWidget(Button.builder(Component.literal("Back"), b -> close())
-            .bounds(cx + 30, 220, 50, 20).build());
+            .bounds(cx + 50, 230, 50, 20).build());
     }
 
     @Override
@@ -120,42 +109,51 @@ public class SkinEditorScreen extends Screen {
         int cx = this.width / 2;
 
         gui.drawCenteredString(this.font, titleText, cx, 8, 0xFFC8CBCE);
+        gui.drawString(this.font, "Name:", cx - 120, 33, 0xFF7A7D84, false);
+        gui.drawString(this.font, "Type:", cx - 120, 59, 0xFF7A7D84, false);
+        gui.drawString(this.font, "Rarity:", cx - 120, 81, 0xFF7A7D84, false);
 
-        gui.drawString(this.font, "Name:", cx - 130, 33, 0xFF7A7D84, false);
-        gui.drawString(this.font, "Type:", cx - 130, 60, 0xFF7A7D84, false);
-        gui.drawString(this.font, "Rarity:", cx - 130, 88, 0xFF7A7D84, false);
-
-        gui.drawString(this.font, "Preview:", cx - 130, 112, 0xFF7A7D84, false);
-        gui.fill(cx - 60, 122, cx + 20, 182, 0xCC12151A);
+        int previewX = cx - 120;
+        int previewY = 100;
+        gui.drawString(this.font, "Preview:", previewX, previewY, 0xFF7A7D84, false);
+        gui.fill(previewX, previewY + 10, previewX + 50, previewY + 60, 0xCC12151A);
         if (!previewItem.isEmpty()) {
-            gui.renderItem(previewItem, cx - 38, 134);
-            gui.renderItemDecorations(this.font, previewItem, cx - 38, 134);
-            String display = previewItemName.isEmpty() ? "unknown" : previewItemName;
-            if (display.length() > 25) display = display.substring(0, 22) + "...";
-            gui.drawString(this.font, display, cx - 55, 186, 0xFF3D6FA5, false);
-            gui.drawString(this.font, slotType + " | " + rarity, cx - 55, 196, 0xFFC8812A, false);
+            gui.renderItem(previewItem, previewX + 9, previewY + 14);
+            gui.renderItemDecorations(this.font, previewItem, previewX + 9, previewY + 14);
+            String name = previewItemName.isEmpty() ? "unknown" : previewItemName;
+            if (name.length() > 28) name = name.substring(0, 25) + "...";
+            gui.drawString(this.font, name, previewX + 56, previewY + 14, 0xFF3D6FA5, false);
+            gui.drawString(this.font, "Slot: " + slotType, previewX + 56, previewY + 26, 0xFFC8812A, false);
+            gui.drawString(this.font, "Rarity: " + rarity, previewX + 56, previewY + 38, RARITY_COLORS[java.util.Arrays.asList(RARITIES).indexOf(rarity)], false);
+        } else {
+            gui.drawCenteredString(this.font, "?", previewX + 25, previewY + 30, 0xFF4A4D54);
         }
 
-        gui.drawString(this.font, "Click item below to select:", cx - 130, 210, 0xFF4A4D54, false);
-        int invStartX = (this.width - 9 * 20) / 2;
+        int invY = 164;
+        gui.drawString(this.font, "Click an item to set as preview:", cx - 120, invY - 12, 0xFF4A4D54, false);
+        int gridWidth = INV_COLS * (SLOT_SIZE + 2);
+        int invStartX = (this.width - gridWidth) / 2;
+
         if (mc.player != null) {
             for (int i = 0; i < 36; i++) {
-                int col = i % 9, row = i / 9;
-                int ix = invStartX + col * 20;
-                int iy = 224 + row * 20;
+                int col = i % INV_COLS;
+                int row = i / INV_COLS;
+                int ix = invStartX + col * (SLOT_SIZE + 2);
+                int iy = invY + row * (SLOT_SIZE + 2);
                 ItemStack stack = mc.player.getInventory().items.get(i);
-                gui.fill(ix, iy, ix + 18, iy + 18, 0x2212151A);
+                gui.fill(ix, iy, ix + SLOT_SIZE, iy + SLOT_SIZE, 0x2212151A);
                 if (!stack.isEmpty()) {
                     gui.renderItem(stack, ix + 1, iy + 1);
-                    if (mx >= ix && mx <= ix + 18 && my >= iy && my <= iy + 18) {
+                    if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
                         gui.renderTooltip(this.font, stack, mx, my);
                     }
                 }
             }
         }
 
-        if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(this.font, statusMsg, cx, 256, 0xFFC8812A);
+        if (System.currentTimeMillis() - statusTime < 3000) {
+            gui.drawCenteredString(this.font, statusMsg, cx, this.height - 30, 0xFFC8812A);
+        }
 
         super.render(gui, mx, my, pt);
     }
@@ -164,13 +162,15 @@ public class SkinEditorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        int invStartX = (this.width - 9 * 20) / 2;
+        int gridWidth = INV_COLS * (SLOT_SIZE + 2);
+        int invStartX = (this.width - gridWidth) / 2;
         if (mc.player != null) {
             for (int i = 0; i < 36; i++) {
-                int col = i % 9, row = i / 9;
-                int ix = invStartX + col * 20;
-                int iy = 210 + row * 20;
-                if (mx >= ix && mx <= ix + 18 && my >= iy && my <= iy + 18) {
+                int col = i % INV_COLS;
+                int row = i / INV_COLS;
+                int ix = invStartX + col * (SLOT_SIZE + 2);
+                int iy = 164 + row * (SLOT_SIZE + 2);
+                if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
                     ItemStack stack = mc.player.getInventory().items.get(i);
                     if (!stack.isEmpty()) setPreviewItem(stack);
                     return true;
@@ -208,44 +208,42 @@ public class SkinEditorScreen extends Screen {
 
     private void save() {
         String name = nameBox.getValue().trim();
-        if (name.isEmpty()) { showMsg("Enter a name!"); return; }
-        if (previewItem.isEmpty()) { showMsg("Select an item from inventory!"); return; }
+        if (name.isEmpty()) { showMsg("§eEnter a name!"); return; }
+        if (previewItem.isEmpty()) { showMsg("§eClick an item from inventory!"); return; }
 
-        final String skinId;
-        if (editSkinId != null) {
-            skinId = editSkinId;
-        } else {
+        String skinId = editSkinId;
+        if (skinId == null) {
             String base = name.toLowerCase().replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_").replaceAll("^_|_$", "");
             String itemHash = String.valueOf(Math.abs(previewRegistryName.hashCode()));
             skinId = itemHash + "_" + base;
         }
 
-        showMsg("Saving...");
+        showMsg("§eSaving...");
         new Thread(() -> {
             try {
                 JsonObject result = CoreAPI.saveSkin(skinId, name, "", slotType, weaponTag, rarity, previewRegistryName);
                 if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
-                    mc.tell(() -> { showMsg("Saved!"); close(); });
+                    mc.submit(() -> { showMsg("§aSaved!"); close(); });
                 } else {
                     String err = result != null && result.has("error") ? result.get("error").getAsString() : "API returned null";
-                    mc.tell(() -> showMsg("Failed: " + err));
+                    mc.submit(() -> showMsg("§c" + err));
                 }
             } catch (Exception e) {
-                mc.tell(() -> showMsg("Error: " + e.getMessage()));
+                mc.submit(() -> showMsg("§cError: " + e.getMessage()));
             }
         }).start();
     }
 
     private void delete() {
-        if (editSkinId == null) { showMsg("Save first, then delete"); return; }
-        showMsg("Deleting...");
+        if (editSkinId == null) { showMsg("§eSave first, then delete"); return; }
+        showMsg("§eDeleting...");
         new Thread(() -> {
             try {
                 CoreAPI.deleteSkin(editSkinId);
                 Thread.sleep(200);
-                mc.tell(() -> { showMsg("Deleted!"); close(); });
+                mc.submit(() -> { showMsg("§aDeleted!"); close(); });
             } catch (Exception e) {
-                mc.tell(() -> showMsg("Error: " + e.getMessage()));
+                mc.submit(() -> showMsg("§cError: " + e.getMessage()));
             }
         }, "PWP-Skin-Delete").start();
     }

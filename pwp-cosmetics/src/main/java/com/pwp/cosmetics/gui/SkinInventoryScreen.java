@@ -149,7 +149,7 @@ public class SkinInventoryScreen extends Screen {
                     }
                     globalSkinItemCache = cache;
                     globalSkinEntries = allSkinEntries;
-                    Minecraft.getInstance().tell(() -> {
+                    Minecraft.getInstance().submit(() -> {
                         skinItemCache = cache;
                         if (allCosmetics.isEmpty()) {
                             allCosmetics = allSkinEntries;
@@ -316,13 +316,13 @@ public class SkinInventoryScreen extends Screen {
                     itemSnbt = tag.toString();
                 }
                 CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, "ALL", entry.skinId, itemSnbt));
-                Minecraft.getInstance().tell(() -> {
+                Minecraft.getInstance().submit(() -> {
                     statusMsg = "§a✔ Equipped!";
                     statusTime = System.currentTimeMillis();
                     loadCosmetics();
                 });
             } catch (Exception e) {
-                Minecraft.getInstance().tell(() -> {
+                Minecraft.getInstance().submit(() -> {
                     statusMsg = "§cEquip failed!";
                     statusTime = System.currentTimeMillis();
                 });
