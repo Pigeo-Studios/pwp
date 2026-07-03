@@ -304,16 +304,10 @@ public class ModCommands {
                                     .then(
                                        Commands.argument("imagename", StringArgumentType.word())
                                            .suggests((ctx, builder) -> {
-                                              List<String> images = new ArrayList<>();
-                                              try {
-                                                 var level = ((CommandSourceStack)ctx.getSource()).getLevel();
-                                                 var resources = level.getServer().getResourceManager().listResources("textures/gui/maps", s -> s.getPath().endsWith(".png"));
-                                                 for (var entry : resources.entrySet()) {
-                                                    String path = entry.getKey().getPath();
-                                                    String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-                                                    images.add(name);
-                                                 }
-                                              } catch (Exception ignored) {}
+                                              var level = ((CommandSourceStack)ctx.getSource()).getLevel();
+                                              var data = WarfareWorldData.get(level);
+                                              List<String> images = new ArrayList<>(data.getAvailableMapImages());
+                                              if (images.isEmpty()) images.add(data.currentMapImage);
                                               return SharedSuggestionProvider.suggest(images, builder);
                                            })
                                           .executes(ctx -> {

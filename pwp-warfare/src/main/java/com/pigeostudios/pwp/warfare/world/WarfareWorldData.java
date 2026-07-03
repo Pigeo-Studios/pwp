@@ -64,7 +64,36 @@ public class WarfareWorldData extends SavedData {
    public int mapCenterZ = 0;
    public int mapSizeBlocks = 2048;
    public String currentMapImage = "map1";
-   public static final String[] KIT_NAMES = new String[]{
+    public List<String> getAvailableMapImages() {
+       List<String> images = new ArrayList<>();
+       try {
+          java.nio.file.Path mapsDir = java.nio.file.Paths.get("maps");
+          if (!java.nio.file.Files.isDirectory(mapsDir)) {
+             mapsDir = java.nio.file.Paths.get("..", "maps");
+          }
+          if (java.nio.file.Files.isDirectory(mapsDir)) {
+             java.nio.file.Files.list(mapsDir).filter(java.nio.file.Files::isDirectory).forEach(dir -> {
+                java.nio.file.Path cfg = dir.resolve("map_config.json");
+                if (java.nio.file.Files.exists(cfg)) {
+                   try {
+                      String content = new String(java.nio.file.Files.readAllBytes(cfg));
+                      int idx = content.indexOf("\"image\"");
+                      if (idx != -1) {
+                         int start = content.indexOf('"', idx + 7) + 1;
+                         int end = content.indexOf('"', start);
+                         if (start > 0 && end > start) {
+                            images.add(content.substring(start, end));
+                         }
+                      }
+                   } catch (Exception ignored) {}
+                }
+             });
+          }
+       } catch (Exception ignored) {}
+       return images;
+    }
+
+    public static final String[] KIT_NAMES = new String[]{
       "Officer",
       "Pilot Officer",
       "Mechanic Officer",
