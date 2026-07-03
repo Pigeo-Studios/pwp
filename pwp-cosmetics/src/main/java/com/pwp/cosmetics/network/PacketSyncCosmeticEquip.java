@@ -37,17 +37,18 @@ public class PacketSyncCosmeticEquip {
     public static void handle(PacketSyncCosmeticEquip msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
-            if (player != null) {
-                ItemStack skinItem = ItemStack.EMPTY;
-                if (!msg.itemSnbt.isEmpty() && msg.itemSnbt.startsWith("{")) {
-                    try {
-                        CompoundTag tag = TagParser.parseTag(msg.itemSnbt);
-                        skinItem = ItemStack.of(tag);
-                    } catch (Exception ignored) {}
-                }
-                CosmeticManager.setEquipment(player.getUUID(), msg.slotType, msg.role,
-                    msg.skinId.isEmpty() ? null : msg.skinId, skinItem);
+            if (player == null) return;
+
+            ItemStack skinItem = ItemStack.EMPTY;
+            if (!msg.itemSnbt.isEmpty() && msg.itemSnbt.startsWith("{")) {
+                try {
+                    CompoundTag tag = TagParser.parseTag(msg.itemSnbt);
+                    skinItem = ItemStack.of(tag);
+                } catch (Exception ignored) {}
             }
+
+            CosmeticManager.setEquipment(player.getUUID(), msg.slotType, msg.role,
+                msg.skinId.isEmpty() ? null : msg.skinId, skinItem);
         });
         ctx.get().setPacketHandled(true);
     }
