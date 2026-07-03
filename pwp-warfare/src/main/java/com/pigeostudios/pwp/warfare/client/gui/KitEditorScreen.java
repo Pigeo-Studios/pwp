@@ -15,21 +15,30 @@ import net.minecraft.world.inventory.Slot;
 // Экран редактора наборов экипировки
 // Позволяет настроить предметы, лимиты и флаги пополнения для каждого набора
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
-   private EditBox maxTeamBox;
-   private EditBox maxSquadBox;
-   private EditBox minPlayersBox;
+    private EditBox maxTeamBox;
+    private EditBox maxSquadBox;
+    private EditBox minPlayersBox;
+    private boolean keepContainerOpen = false;
 
-   public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
-      super(menu, inv, title);
-      this.imageWidth = 176;
-      this.imageHeight = 262;
-      this.inventoryLabelY = 168;
-      this.titleLabelY = 4;
-   }
+    public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
+       super(menu, inv, title);
+       this.imageWidth = 176;
+       this.imageHeight = 262;
+       this.inventoryLabelY = 168;
+       this.titleLabelY = 4;
+    }
 
-   protected void init() {
-      super.init();
-      int x = this.leftPos;
+    @Override
+    public void removed() {
+        if (!keepContainerOpen) {
+            super.removed();
+        }
+    }
+
+    protected void init() {
+       super.init();
+       this.keepContainerOpen = false;
+       int x = this.leftPos;
       int y = this.topPos;
       this.addRenderableWidget(Button.builder(((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"), b -> {
          ((KitEditorMenu)this.menu).isLeaderOnly = !((KitEditorMenu)this.menu).isLeaderOnly;
@@ -46,8 +55,9 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
       this.addRenderableWidget(this.minPlayersBox);
       this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.kit_editor.save"), b -> this.saveKit()).bounds(x + 120, y + 148, 48, 20).build());
       this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.kit_editor.skins"), b -> {
+          keepContainerOpen = true;
           Minecraft.getInstance().setScreen(new KitSkinSelectScreen((KitEditorMenu) this.menu, this));
-      }).bounds(x + 74, y + 148, 44, 20).build());
+       }).bounds(x + 74, y + 148, 44, 20).build());
    }
 
    private void saveKit() {
