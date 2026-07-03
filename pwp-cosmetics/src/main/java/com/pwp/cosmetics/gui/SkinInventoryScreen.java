@@ -209,10 +209,11 @@ public class SkinInventoryScreen extends Screen {
                 int rarityColor = getRarityColor(entry.rarity);
 
                 gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, 0xCC12151A);
-                gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, entry.equipped ? rarityColor : 0xFF1E222A);
-
                 if (entry.equipped) {
-                    gui.fill(x + ITEM_SIZE - 6, y, x + ITEM_SIZE, y + 6, rarityColor);
+                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, 0xFFFFFFFF);
+                    gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
+                } else {
+                    gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
                 }
 
                 ItemStack stack = skinItemCache.get(entry.skinId);
