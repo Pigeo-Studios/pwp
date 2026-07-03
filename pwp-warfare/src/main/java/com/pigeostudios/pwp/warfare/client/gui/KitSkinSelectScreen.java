@@ -74,7 +74,7 @@ public class KitSkinSelectScreen extends Screen {
                         s.rarity = o.get("rarity").getAsString();
                         list.add(s);
                     }
-                    Minecraft.getInstance().tell(() -> allSkins = list);
+                    Minecraft.getInstance().submit(() -> allSkins = list);
                 }
             } catch (Exception ignored) {}
         }).start();
@@ -90,7 +90,7 @@ public class KitSkinSelectScreen extends Screen {
         }
         if (this.minecraft.player != null) {
             this.minecraft.player.displayClientMessage(
-                Component.literal("§aSkin settings saved! Don't forget to click 'Save' in kit editor."), true);
+                Component.literal("§aSkin settings saved! Click 'Save' in kit editor."), true);
         }
         if (parentScreen != null) {
             this.minecraft.setScreen(parentScreen);
@@ -123,7 +123,7 @@ public class KitSkinSelectScreen extends Screen {
         int leftX = 8, leftY = 34;
         gui.fill(leftX - 2, leftY - 2, leftX + 220, this.height - 10, 0xFF1E222A);
         gui.fill(leftX, leftY, leftX + 220, this.height - 12, 0xCC0A0C0E);
-        gui.drawCenteredString(this.font, "Weapon Slots (click to select)", leftX + 110, leftY + 2, 0xFFC8CBCE);
+        gui.drawCenteredString(this.font, "Weapon Slots", leftX + 110, leftY + 2, 0xFFC8CBCE);
 
         int sy = leftY + 16;
         for (int i = 0; i < weaponSlots.size(); i++) {
@@ -164,30 +164,39 @@ public class KitSkinSelectScreen extends Screen {
             gui.fill(rightX - 2, rightY - 2, rightX + rightW + 2, rightY + rightH + 2, 0xFF1E222A);
             gui.fill(rightX, rightY, rightX + rightW, rightY + rightH, 0xCC0A0C0E);
 
-            String cat = slotCategories.get(selectedSlot);
-            if (cat != null) {
-                gui.drawCenteredString(this.font, "Category: " + cat + "  [Click: change]", rightX + rightW / 2, rightY + 3, 0xFFC8CBCE);
-                gui.drawCenteredString(this.font, "Any " + cat + " skin equipped by player", rightX + rightW / 2, rightY + 30, 0xFF3D7A40);
-                gui.drawCenteredString(this.font, "will replace default item", rightX + rightW / 2, rightY + 42, 0xFF3D7A40);
-            } else {
-                gui.drawCenteredString(this.font, "Mode: Specific skins", rightX + rightW / 2, rightY + 3, 0xFFC8CBCE);
+            boolean isCategory = slotCategories.containsKey(selectedSlot);
+            String curCat = isCategory ? slotCategories.get(selectedSlot) : null;
 
+            int btnY = rightY + 4;
+            int btnW = (rightW - 8) / 5;
+            for (int i = 0; i < CATEGORIES.length; i++) {
+                int bx = rightX + 4 + i * (btnW + 1);
+                int color = CATEGORIES[i].equals(curCat) ? 0xFF3D7A40 : 0xFF1E222A;
+                gui.fill(bx, btnY, bx + btnW, btnY + 16, CATEGORIES[i].equals(curCat) ? 0xFF1A2E1A : 0x2212151A);
+                gui.renderOutline(bx, btnY, btnW, 16, color);
+                gui.drawCenteredString(this.font, CATEGORIES[i].substring(0, Math.min(4, CATEGORIES[i].length())), bx + btnW / 2, btnY + 3, color);
+            }
+
+            if (isCategory) {
+                gui.drawCenteredString(this.font, "Any " + curCat + " skin equipped by player", rightX + rightW / 2, btnY + 24, 0xFF3D7A40);
+                gui.drawCenteredString(this.font, "will replace default item in this slot", rightX + rightW / 2, btnY + 36, 0xFF3D7A40);
+            } else {
                 List<String> allowed = allowedSkins.computeIfAbsent(selectedSlot, k -> new ArrayList<>());
                 String tag = getWeaponTagForSlot(selectedSlot);
                 int totalMatching = 0;
                 for (SkinOption so : allSkins) {
                     if (so.weaponTag.equals(tag) || so.weaponTag.equals("any")) totalMatching++;
                 }
-                gui.drawCenteredString(this.font, "Skins: " + allowed.size() + "/" + totalMatching + " selected", rightX + rightW / 2, rightY + 14, 0xFFC8CBCE);
+                gui.drawCenteredString(this.font, "Skins: " + allowed.size() + "/" + totalMatching, rightX + rightW / 2, btnY + 24, 0xFFC8CBCE);
 
                 List<SkinOption> sortedSkins = new ArrayList<>(allSkins);
                 sortedSkins.sort((a, b) -> {
-                    boolean aAllowed = allowed.contains(a.skinId);
-                    boolean bAllowed = allowed.contains(b.skinId);
-                    if (aAllowed != bAllowed) return aAllowed ? -1 : 1;
+                    boolean aA = allowed.contains(a.skinId);
+                    boolean bA = allowed.contains(b.skinId);
+                    if (aA != bA) return aA ? -1 : 1;
                     return 0;
                 });
-                int skinY = rightY + 28;
+                int skinY = btnY + 36;
                 for (int si = skinScroll; si < sortedSkins.size(); si++) {
                     SkinOption so = sortedSkins.get(si);
                     if (skinY + 18 > rightY + rightH - 4) break;
@@ -206,10 +215,8 @@ public class KitSkinSelectScreen extends Screen {
                     skinY += 18;
                 }
                 if (totalMatching == 0) {
-                    gui.drawCenteredString(this.font, "No matching skins", rightX + rightW / 2, rightY + 60, 0xFF4A4D54);
+                    gui.drawCenteredString(this.font, "No matching skins", rightX + rightW / 2, btnY + 60, 0xFF4A4D54);
                 }
-
-                gui.drawCenteredString(this.font, "[Click skin to toggle]", rightX + rightW / 2, rightY + rightH - 12, 0xFF4A4D54);
             }
         } else {
             gui.drawCenteredString(this.font, "Click a weapon slot", this.width / 2, this.height / 2, 0xFF4A4D54);
@@ -235,34 +242,41 @@ public class KitSkinSelectScreen extends Screen {
         }
 
         if (selectedSlot >= 0) {
-            int rightX = this.width - 240, rightY = 34;
-            int rightW = 230;
+            int rightX = this.width - 240, rightY = 34, rightW = 230, rightH = this.height - 50;
+            int btnY = rightY + 4;
+            int btnW = (rightW - 8) / 5;
 
-            String cat = slotCategories.get(selectedSlot);
-            if (cat != null) {
-                int catLabelY = rightY + 3;
-                if (mx >= rightX && mx <= rightX + rightW && my >= catLabelY && my <= catLabelY + 12) {
-                    slotCategories.remove(selectedSlot);
+            for (int i = 0; i < CATEGORIES.length; i++) {
+                int bx = rightX + 4 + i * (btnW + 1);
+                if (mx >= bx && mx <= bx + btnW && my >= btnY && my <= btnY + 16) {
+                    String cat = CATEGORIES[i];
+                    String current = slotCategories.get(selectedSlot);
+                    if (cat.equals(current)) {
+                        slotCategories.remove(selectedSlot);
+                    } else {
+                        slotCategories.put(selectedSlot, cat);
+                        allowedSkins.remove(selectedSlot);
+                    }
                     return true;
                 }
-            } else {
+            }
+
+            if (!slotCategories.containsKey(selectedSlot)) {
                 List<String> allowed = allowedSkins.computeIfAbsent(selectedSlot, k -> new ArrayList<>());
                 String tag = getWeaponTagForSlot(selectedSlot);
-
                 List<SkinOption> sortedSkins = new ArrayList<>(allSkins);
                 sortedSkins.sort((a, b) -> {
-                    boolean aAllowed = allowed.contains(a.skinId);
-                    boolean bAllowed = allowed.contains(b.skinId);
-                    if (aAllowed != bAllowed) return aAllowed ? -1 : 1;
+                    boolean aA = allowed.contains(a.skinId);
+                    boolean bA = allowed.contains(b.skinId);
+                    if (aA != bA) return aA ? -1 : 1;
                     return 0;
                 });
-                int skinY = rightY + 28;
+                int skinY = btnY + 36;
                 for (int si = skinScroll; si < sortedSkins.size(); si++) {
                     SkinOption so = sortedSkins.get(si);
-                    if (skinY + 18 > this.height - 54) break;
+                    if (skinY + 18 > rightY + rightH - 4) break;
                     if (!so.weaponTag.equals(tag) && !so.weaponTag.equals("any")) continue;
-
-                    if (mx >= rightX + 2 && mx <= rightX + 238 && my >= skinY && my <= skinY + 16) {
+                    if (mx >= rightX + 2 && mx <= rightX + rightW - 2 && my >= skinY && my <= skinY + 16) {
                         if (allowed.contains(so.skinId)) allowed.remove(so.skinId);
                         else allowed.add(so.skinId);
                         return true;
@@ -270,30 +284,8 @@ public class KitSkinSelectScreen extends Screen {
                     skinY += 18;
                 }
             }
-
-            int modeY = rightY;
-            if (mx >= rightX && mx <= rightX + rightW && my >= modeY + 14 && my <= modeY + 26) {
-                if (slotCategories.containsKey(selectedSlot)) {
-                    slotCategories.remove(selectedSlot);
-                } else {
-                    String detected = guessCategoryForSlot(selectedSlot);
-                    slotCategories.put(selectedSlot, detected);
-                    allowedSkins.remove(selectedSlot);
-                }
-                return true;
-            }
         }
         return super.mouseClicked(mx, my, btn);
-    }
-
-    private String guessCategoryForSlot(int slot) {
-        ItemStack stack = menu.kitInventory.getItem(slot);
-        if (stack.isEmpty()) return "PRIMARY";
-        String id = ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
-        if (id.contains("knife") || id.contains("bayonet") || id.contains("dagger") || id.contains("sword")) return "KNIFE";
-        if (id.contains("pistol") || id.contains("deagle") || id.contains("glock") || id.contains("revolver")) return "SECONDARY";
-        if (slot < 9) return "PRIMARY";
-        return "MELEE";
     }
 
     @Override

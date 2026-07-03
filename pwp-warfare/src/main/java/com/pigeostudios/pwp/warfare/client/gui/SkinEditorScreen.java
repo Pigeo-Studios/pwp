@@ -26,6 +26,7 @@ public class SkinEditorScreen extends Screen {
     private String previewItemName = "";
     private String statusMsg = "";
     private long statusTime = 0;
+    private int previewSlotIndex = -1;
 
     private String editSkinId = null;
     private String titleText = "Add Skin";
@@ -74,23 +75,24 @@ public class SkinEditorScreen extends Screen {
         }
         addRenderableWidget(nameBox);
 
-        int btnY = 56;
         for (int i = 0; i < SLOT_TYPES.length; i++) {
             int bx = cx - 160 + i * 64;
             final int fi = i;
-            String label = SLOT_TYPES[i].charAt(0) + SLOT_TYPES[i].substring(1).toLowerCase();
-            addRenderableWidget(Button.builder(Component.literal(label), b -> {
+            Button btn = Button.builder(Component.literal(SLOT_TYPES[i]), b -> {
                 slotType = SLOT_TYPES[fi];
-            }).bounds(bx, btnY, 60, 18).build());
+                rebuildButtons();
+            }).bounds(bx, 56, 60, 18).build();
+            addRenderableWidget(btn);
         }
 
-        int rarityY = 78;
         for (int i = 0; i < RARITIES.length; i++) {
             int bx = cx - 170 + i * 57;
             final int fi = i;
-            addRenderableWidget(Button.builder(Component.literal(RARITIES[i].substring(0, 3)), b -> {
+            Button btn = Button.builder(Component.literal(RARITIES[i].substring(0, 3)), b -> {
                 rarity = RARITIES[fi];
-            }).bounds(bx, rarityY, 53, 16).build());
+                rebuildButtons();
+            }).bounds(bx, 78, 53, 16).build();
+            addRenderableWidget(btn);
         }
 
         addRenderableWidget(Button.builder(Component.literal("Save"), b -> save())
@@ -101,6 +103,25 @@ public class SkinEditorScreen extends Screen {
         addRenderableWidget(delBtn);
         addRenderableWidget(Button.builder(Component.literal("Back"), b -> close())
             .bounds(cx + 50, 230, 50, 20).build());
+
+        rebuildButtons();
+    }
+
+    private void rebuildButtons() {
+        int idx = 0;
+        for (Object w : renderables) {
+            if (w instanceof Button btn) {
+                if (idx < SLOT_TYPES.length) {
+                    boolean sel = slotType.equals(SLOT_TYPES[idx]);
+                    btn.setMessage(Component.literal(sel ? "\u25b6 " + SLOT_TYPES[idx] : "   " + SLOT_TYPES[idx]));
+                } else if (idx - SLOT_TYPES.length < RARITIES.length) {
+                    int ri = idx - SLOT_TYPES.length;
+                    boolean sel = rarity.equals(RARITIES[ri]);
+                    btn.setMessage(Component.literal(sel ? "\u25b6" + RARITIES[ri].substring(0, 3) : " " + RARITIES[ri].substring(0, 3)));
+                }
+                idx++;
+            }
+        }
     }
 
     @Override
@@ -113,35 +134,35 @@ public class SkinEditorScreen extends Screen {
         gui.drawString(this.font, "Type:", cx - 120, 59, 0xFF7A7D84, false);
         gui.drawString(this.font, "Rarity:", cx - 120, 81, 0xFF7A7D84, false);
 
-        int previewX = cx - 120;
-        int previewY = 100;
-        gui.drawString(this.font, "Preview:", previewX, previewY, 0xFF7A7D84, false);
-        gui.fill(previewX, previewY + 10, previewX + 50, previewY + 60, 0xCC12151A);
+        int pX = cx - 120, pY = 102;
+        gui.drawString(this.font, "Preview:", pX, pY, 0xFF7A7D84, false);
+        gui.fill(pX, pY + 10, pX + 50, pY + 60, 0xCC12151A);
         if (!previewItem.isEmpty()) {
-            gui.renderItem(previewItem, previewX + 9, previewY + 14);
-            gui.renderItemDecorations(this.font, previewItem, previewX + 9, previewY + 14);
-            String name = previewItemName.isEmpty() ? "unknown" : previewItemName;
-            if (name.length() > 28) name = name.substring(0, 25) + "...";
-            gui.drawString(this.font, name, previewX + 56, previewY + 14, 0xFF3D6FA5, false);
-            gui.drawString(this.font, "Slot: " + slotType, previewX + 56, previewY + 26, 0xFFC8812A, false);
-            gui.drawString(this.font, "Rarity: " + rarity, previewX + 56, previewY + 38, RARITY_COLORS[java.util.Arrays.asList(RARITIES).indexOf(rarity)], false);
+            gui.renderItem(previewItem, pX + 9, pY + 14);
+            gui.renderItemDecorations(this.font, previewItem, pX + 9, pY + 14);
+            gui.drawString(this.font, previewItemName.length() > 28 ? previewItemName.substring(0, 25) + "..." : previewItemName,
+                pX + 56, pY + 14, 0xFF3D6FA5, false);
+            gui.drawString(this.font, "Slot: " + slotType, pX + 56, pY + 26, 0xFFC8812A, false);
+            int rColor = RARITY_COLORS[java.util.Arrays.asList(RARITIES).indexOf(rarity)];
+            gui.drawString(this.font, rarity, pX + 56, pY + 38, rColor, false);
         } else {
-            gui.drawCenteredString(this.font, "?", previewX + 25, previewY + 30, 0xFF4A4D54);
+            gui.drawCenteredString(this.font, "?", pX + 25, pY + 30, 0xFF4A4D54);
         }
 
-        int invY = 164;
-        gui.drawString(this.font, "Click an item to set as preview:", cx - 120, invY - 12, 0xFF4A4D54, false);
-        int gridWidth = INV_COLS * (SLOT_SIZE + 2);
-        int invStartX = (this.width - gridWidth) / 2;
+        int invY = 166;
+        gui.drawString(this.font, "Click an item to preview:", cx - 120, invY - 12, 0xFF4A4D54, false);
+        int gridW = INV_COLS * (SLOT_SIZE + 2);
+        int invSX = (this.width - gridW) / 2;
 
         if (mc.player != null) {
             for (int i = 0; i < 36; i++) {
-                int col = i % INV_COLS;
-                int row = i / INV_COLS;
-                int ix = invStartX + col * (SLOT_SIZE + 2);
+                int col = i % INV_COLS, row = i / INV_COLS;
+                int ix = invSX + col * (SLOT_SIZE + 2);
                 int iy = invY + row * (SLOT_SIZE + 2);
                 ItemStack stack = mc.player.getInventory().items.get(i);
-                gui.fill(ix, iy, ix + SLOT_SIZE, iy + SLOT_SIZE, 0x2212151A);
+                boolean isSelected = i == previewSlotIndex;
+                gui.fill(ix, iy, ix + SLOT_SIZE, iy + SLOT_SIZE, isSelected ? 0x44C8812A : 0x2212151A);
+                if (isSelected) gui.renderOutline(ix, iy, SLOT_SIZE, SLOT_SIZE, 0xFFC8812A);
                 if (!stack.isEmpty()) {
                     gui.renderItem(stack, ix + 1, iy + 1);
                     if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
@@ -151,9 +172,8 @@ public class SkinEditorScreen extends Screen {
             }
         }
 
-        if (System.currentTimeMillis() - statusTime < 3000) {
+        if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
             gui.drawCenteredString(this.font, statusMsg, cx, this.height - 30, 0xFFC8812A);
-        }
 
         super.render(gui, mx, my, pt);
     }
@@ -162,17 +182,16 @@ public class SkinEditorScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        int gridWidth = INV_COLS * (SLOT_SIZE + 2);
-        int invStartX = (this.width - gridWidth) / 2;
+        int gridW = INV_COLS * (SLOT_SIZE + 2);
+        int invSX = (this.width - gridW) / 2;
         if (mc.player != null) {
             for (int i = 0; i < 36; i++) {
-                int col = i % INV_COLS;
-                int row = i / INV_COLS;
-                int ix = invStartX + col * (SLOT_SIZE + 2);
-                int iy = 164 + row * (SLOT_SIZE + 2);
+                int col = i % INV_COLS, row = i / INV_COLS;
+                int ix = invSX + col * (SLOT_SIZE + 2);
+                int iy = 166 + row * (SLOT_SIZE + 2);
                 if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
                     ItemStack stack = mc.player.getInventory().items.get(i);
-                    if (!stack.isEmpty()) setPreviewItem(stack);
+                    if (!stack.isEmpty()) { setPreviewItem(stack); previewSlotIndex = i; }
                     return true;
                 }
             }
@@ -204,38 +223,39 @@ public class SkinEditorScreen extends Screen {
             else if (id.contains("rifle") || id.contains("carbine")) weaponTag = "rifle";
             else weaponTag = "any";
         }
+        rebuildButtons();
     }
 
     private void save() {
         String name = nameBox.getValue().trim();
         if (name.isEmpty()) { showMsg("§eEnter a name!"); return; }
-        if (previewItem.isEmpty()) { showMsg("§eClick an item from inventory!"); return; }
+        if (previewItem.isEmpty()) { showMsg("§eClick an item in the grid!"); return; }
 
-        String skinId = editSkinId;
-        if (skinId == null) {
-            String base = name.toLowerCase().replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_").replaceAll("^_|_$", "");
-            String itemHash = String.valueOf(Math.abs(previewRegistryName.hashCode()));
-            skinId = itemHash + "_" + base;
-        }
+        final String saveSkinId = editSkinId != null ? editSkinId :
+            String.valueOf(Math.abs(previewRegistryName.hashCode())) + "_" +
+            name.toLowerCase().replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_").replaceAll("^_|_$", "");
+        final String saveName = name;
+        final String saveSlot = slotType;
+        final String saveWeapon = weaponTag;
+        final String saveRarity = rarity;
+        final String saveRegistry = previewRegistryName;
 
         showMsg("§eSaving...");
         new Thread(() -> {
             try {
-                JsonObject result = CoreAPI.saveSkin(skinId, name, "", slotType, weaponTag, rarity, previewRegistryName);
-                if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
+                JsonObject result = CoreAPI.saveSkin(saveSkinId, saveName, "", saveSlot, saveWeapon, saveRarity, saveRegistry);
+                if (result != null && result.has("success") && result.get("success").getAsBoolean())
                     mc.submit(() -> { showMsg("§aSaved!"); close(); });
-                } else {
-                    String err = result != null && result.has("error") ? result.get("error").getAsString() : "API returned null";
-                    mc.submit(() -> showMsg("§c" + err));
-                }
+                else
+                    mc.submit(() -> showMsg("§c" + (result != null && result.has("error") ? result.get("error").getAsString() : "API error")));
             } catch (Exception e) {
-                mc.submit(() -> showMsg("§cError: " + e.getMessage()));
+                mc.submit(() -> showMsg("§c" + e.getMessage()));
             }
         }).start();
     }
 
     private void delete() {
-        if (editSkinId == null) { showMsg("§eSave first, then delete"); return; }
+        if (editSkinId == null) { showMsg("§eSave first!"); return; }
         showMsg("§eDeleting...");
         new Thread(() -> {
             try {
@@ -243,7 +263,7 @@ public class SkinEditorScreen extends Screen {
                 Thread.sleep(200);
                 mc.submit(() -> { showMsg("§aDeleted!"); close(); });
             } catch (Exception e) {
-                mc.submit(() -> showMsg("§cError: " + e.getMessage()));
+                mc.submit(() -> showMsg("§c" + e.getMessage()));
             }
         }, "PWP-Skin-Delete").start();
     }
