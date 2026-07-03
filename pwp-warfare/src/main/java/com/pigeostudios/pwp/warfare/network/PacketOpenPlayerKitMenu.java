@@ -19,13 +19,14 @@ public class PacketOpenPlayerKitMenu {
       this.kits = kits;
    }
 
-   public static void encode(PacketOpenPlayerKitMenu msg, FriendlyByteBuf buf) {
+    public static void encode(PacketOpenPlayerKitMenu msg, FriendlyByteBuf buf) {
       buf.writeInt(msg.kits.size());
 
       for (PacketOpenPlayerKitMenu.KitDTO k : msg.kits) {
          buf.writeUtf(k.name);
          buf.writeBoolean(k.available);
          buf.writeUtf(k.reason);
+         buf.writeBoolean(k.isSelected);
          buf.writeInt(k.items.size());
 
          for (ItemStack stack : k.items) {
@@ -42,6 +43,7 @@ public class PacketOpenPlayerKitMenu {
          String name = buf.readUtf();
          boolean avail = buf.readBoolean();
          String reason = buf.readUtf();
+         boolean isSelected = buf.readBoolean();
          int itemCount = buf.readInt();
          List<ItemStack> items = new ArrayList<>();
 
@@ -49,7 +51,7 @@ public class PacketOpenPlayerKitMenu {
             items.add(buf.readItem());
          }
 
-         list.add(new PacketOpenPlayerKitMenu.KitDTO(name, avail, reason, items));
+         list.add(new PacketOpenPlayerKitMenu.KitDTO(name, avail, reason, isSelected, items));
       }
 
       return new PacketOpenPlayerKitMenu(list);
@@ -62,16 +64,18 @@ public class PacketOpenPlayerKitMenu {
    }
 
    // DTO для передачи информации о ките: название, доступность, предметы
-   public static class KitDTO {
+    public static class KitDTO {
       public String name;
       public boolean available;
       public String reason;
+      public boolean isSelected;
       public List<ItemStack> items;
 
-      public KitDTO(String n, boolean a, String r, List<ItemStack> items) {
+      public KitDTO(String n, boolean a, String r, boolean sel, List<ItemStack> items) {
          this.name = n;
          this.available = a;
          this.reason = r;
+         this.isSelected = sel;
          this.items = items;
       }
    }

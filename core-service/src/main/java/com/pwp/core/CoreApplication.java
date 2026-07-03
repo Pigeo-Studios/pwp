@@ -39,6 +39,10 @@ public class CoreApplication {
         new MatchController(app);
         new ShopController(app);
         new DonationController(app);
+        new SkinController(app);
+        new CaseController(app);
+        new RankController(app);
+        new RewardController(app);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutting down Core Service...");
@@ -83,7 +87,7 @@ public class CoreApplication {
 
     public static class ApiConfig {
         public String[] keys = {"pwp_server_key_change_me"};
-        public int rateLimitPerMinute = 100;
+        public int rateLimitPerMinute = 500;
         public int rateLimitPerMinuteAdmin = 10;
     }
 

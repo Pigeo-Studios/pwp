@@ -12,8 +12,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-// Экран выбора класса (набора экипировки) игроком
-// Отображает доступные наборы с иконками и кнопкой предпросмотра
 public class PlayerKitSelectScreen extends Screen {
    private final List<PacketOpenPlayerKitMenu.KitDTO> kits;
    private static final int COLUMNS = 4;
@@ -36,7 +34,8 @@ public class PlayerKitSelectScreen extends Screen {
          int col = i % 4;
          int x = startX + col * 100;
          int y = startY + row * 60 + 26;
-         Button btn = Button.builder(Component.literal(kit.name), b -> {
+         Component label = kit.isSelected ? Component.literal("✔ " + kit.name) : Component.literal(kit.name);
+         Button btn = Button.builder(label, b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit.name));
             this.onClose();
          }).bounds(x, y, 70, 20).build();
@@ -65,8 +64,13 @@ public class PlayerKitSelectScreen extends Screen {
          ResourceLocation iconLoc = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconName + ".png");
          int iconX = startX + col * 100 + 45 - 12;
          int iconY = startY + row * 60;
-         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, kit.available ? 1.0F : 0.4F);
+         float alpha = kit.available ? 1.0F : 0.4F;
+         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
          gui.blit(iconLoc, iconX, iconY, 0.0F, 0.0F, 24, 24, 24, 24);
+
+         if (kit.isSelected) {
+            gui.renderOutline(iconX - 2, iconY - 2, 28, 28, 0xFF00FF00);
+         }
       }
 
       RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -75,7 +79,7 @@ public class PlayerKitSelectScreen extends Screen {
       for (Renderable widget : this.renderables) {
          if (widget instanceof Button btn && btn.isHovered() && !btn.active) {
             for (PacketOpenPlayerKitMenu.KitDTO kit : this.kits) {
-               if (btn.getMessage().getString().equals(kit.name)) {
+               if (btn.getMessage().getString().equals(kit.name) || btn.getMessage().getString().equals("✔ " + kit.name)) {
                   gui.renderTooltip(this.font, Component.literal(kit.reason), mx, my);
                   break;
                }

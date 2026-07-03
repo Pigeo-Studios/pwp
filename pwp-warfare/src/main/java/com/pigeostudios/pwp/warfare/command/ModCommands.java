@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketOpenSkinInventory;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -38,8 +39,6 @@ import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.network.PacketDistributor;
 
-// РЎРµСЂРІРµСЂРЅС‹Рµ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РёРІРЅС‹Рµ РєРѕРјР°РЅРґС‹ РјРѕРґР°
-// РЈРїСЂР°РІР»РµРЅРёРµ РёРіСЂРѕР№: С‚РѕС‡РєРё Р·Р°С…РІР°С‚Р°, С‚РёРєРµС‚С‹, РѕС‚СЂСЏРґС‹, С„СЂР°РєС†РёРё, СЂРµСЃРїР°СѓРЅ Рё Р·Р°С‰РёС‚РЅС‹Рµ Р·РѕРЅС‹
 public class ModCommands {
    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
       dispatcher.register(
@@ -399,7 +398,21 @@ public class ModCommands {
                String status = active ? "started" : "stopped";
                ((CommandSourceStack)ctx.getSource()).sendSuccess(() -> Component.literal("Voting process " + status), true);
                return 1;
-            })))
+                         })))
+      );
+
+      dispatcher.register(
+         Commands.literal("pwp")
+            .then(Commands.literal("inv")
+               .executes(ctx -> {
+                  ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+                  PacketHandler.INSTANCE.send(
+                     PacketDistributor.PLAYER.with(() -> player),
+                     new PacketOpenSkinInventory()
+                  );
+                  return 1;
+               })
+            )
       );
    }
 

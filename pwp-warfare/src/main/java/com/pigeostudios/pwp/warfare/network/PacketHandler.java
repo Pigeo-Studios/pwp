@@ -84,6 +84,9 @@ public class PacketHandler {
       INSTANCE.registerMessage(
          id++, PacketOpenVictoryScreen.class, PacketOpenVictoryScreen::encode, PacketOpenVictoryScreen::decode, PacketOpenVictoryScreen::handle
       );
+      INSTANCE.registerMessage(
+         id++, PacketOpenSkinInventory.class, PacketOpenSkinInventory::encode, PacketOpenSkinInventory::decode, PacketOpenSkinInventory::handle
+      );
    }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {

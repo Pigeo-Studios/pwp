@@ -1,16 +1,37 @@
 package com.pwp.cosmetics;
 
+import com.pwp.cosmetics.network.PacketSyncCosmeticEquip;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 @Mod("pwp_cosmetics")
 public class CosmeticsMod {
 
+    public static final String MODID = "pwp_cosmetics";
+    public static SimpleChannel NETWORK;
+    private static int packetId = 0;
+
     public CosmeticsMod() {
-        // PWP Cosmetics handles:
-        //   - Applying player's cosmetic skins when a kit is given
-        //   - Custom 3D models (GeckoLib) for knives, weapons, uniforms
-        //   - GUI for selecting/equipping cosmetics
-        //   - Slot types: KNIFE, PRIMARY, SECONDARY, UNIFORM, EFFECT
-        //   - Role-based equipment (Medic->Red Knife, Sniper->Black Knife)
+        SkinRegistry.initDefaults();
+        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+        initNetwork();
     }
+
+    private void initNetwork() {
+        NETWORK = NetworkRegistry.newSimpleChannel(
+            new ResourceLocation(MODID, "main"),
+            () -> "1", "1"::equals, "1"::equals
+        );
+        NETWORK.registerMessage(
+            packetId++, PacketSyncCosmeticEquip.class,
+            PacketSyncCosmeticEquip::encode,
+            PacketSyncCosmeticEquip::decode,
+            PacketSyncCosmeticEquip::handle
+        );
+    }
+
 }

@@ -1,10 +1,7 @@
 package com.pigeostudios.pwp.warfare.world;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -643,6 +640,7 @@ public class WarfareWorldData extends SavedData {
       public int maxPerTeam = -1;
       public int maxPerSquad = -1;
       public int minSquadPlayers = 0;
+      public Map<Integer, List<String>> slotSkins = new HashMap<>();
 
       public KitInfo(String name) {
          this.name = name;
@@ -669,6 +667,17 @@ public class WarfareWorldData extends SavedData {
          }
 
          t.put("Items", items);
+
+         if (this.slotSkins != null && !this.slotSkins.isEmpty()) {
+            CompoundTag skins = new CompoundTag();
+            for (Map.Entry<Integer, List<String>> e : this.slotSkins.entrySet()) {
+               ListTag list = new ListTag();
+               for (String s : e.getValue()) list.add(StringTag.valueOf(s));
+               skins.put(String.valueOf(e.getKey()), list);
+            }
+            t.put("SlotSkins", skins);
+         }
+
          return t;
       }
 
@@ -690,6 +699,16 @@ public class WarfareWorldData extends SavedData {
                k.inventory.set(slot, ItemStack.of(itemTag));
                k.resupplyFlags[slot] = itemTag.getBoolean("Resupply");
                k.saveNbtFlags[slot] = itemTag.getBoolean("SaveNbt");
+            }
+         }
+
+         if (t.contains("SlotSkins")) {
+            CompoundTag skins = t.getCompound("SlotSkins");
+            for (String key : skins.getAllKeys()) {
+               ListTag list = skins.getList(key, 8);
+               List<String> ids = new ArrayList<>();
+               for (int i = 0; i < list.size(); i++) ids.add(list.getString(i));
+               k.slotSkins.put(Integer.parseInt(key), ids);
             }
          }
 

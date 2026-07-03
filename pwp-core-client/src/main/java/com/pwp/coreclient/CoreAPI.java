@@ -67,6 +67,92 @@ public class CoreAPI {
                 "slotType", slotType, "role", role));
     }
 
+    // ====== SKINS ======
+    public static JsonObject getSkins() {
+        return get("/api/v1/skins");
+    }
+
+    public static JsonObject getSkinsBySlot(String slotType) {
+        return get("/api/v1/skins/slot/" + slotType);
+    }
+
+    public static JsonObject getSkinsByWeapon(String weaponTag) {
+        return get("/api/v1/skins/weapon/" + weaponTag);
+    }
+
+    public static JsonObject saveSkin(String skinId, String name, String description, String slotType,
+                                       String weaponTag, String rarity, String modelPath) {
+        return post("/api/v1/skins/save", map(
+                "skinId", skinId, "name", name, "description", description,
+                "slotType", slotType, "weaponTag", weaponTag, "rarity", rarity,
+                "modelPath", modelPath, "enabled", true));
+    }
+
+    public static JsonObject deleteSkin(String skinId) {
+        return post("/api/v1/skins/delete", map("skinId", skinId));
+    }
+
+    public static JsonObject getCosmetics(String uuid) {
+        return get("/api/v1/cosmetics/" + uuid);
+    }
+
+    // ====== CASES ======
+    public static JsonObject getCases() {
+        return get("/api/v1/cases");
+    }
+
+    public static JsonObject openCase(String uuid, String caseId) {
+        return post("/api/v1/cases/open", map("uuid", uuid, "caseId", caseId));
+    }
+
+    // ====== REWARDS ======
+    public static JsonObject calculateRewards(String uuid, String team, String winner,
+                                               int kills, int assists, int vehicleKills,
+                                               int captures, int revives, int headshots,
+                                               int durationMinutes) {
+        return post("/api/v1/rewards/calculate", map(
+                "uuid", uuid, "team", team, "winner", winner,
+                "kills", kills, "assists", assists, "vehicleKills", vehicleKills,
+                "captures", captures, "revives", revives, "headshots", headshots,
+                "durationMinutes", durationMinutes));
+    }
+
+    // ====== RANKS ======
+    public static JsonObject checkRank(String uuid) {
+        return post("/api/v1/ranks/check", map("uuid", uuid));
+    }
+
+    public static JsonObject getPlayerRanks(String uuid) {
+        return get("/api/v1/ranks/player/" + uuid);
+    }
+
+    private static JsonObject get(String path) {
+        if (!enabled) return null;
+        try {
+            URI uri = new URI(baseUrl + path);
+            HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            int code = conn.getResponseCode();
+            if (code == 200 || code == 201) {
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                try (InputStream is = conn.getInputStream()) {
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = is.read(buf)) != -1) buffer.write(buf, 0, n);
+                }
+                conn.disconnect();
+                return GSON.fromJson(buffer.toString(StandardCharsets.UTF_8.name()), JsonObject.class);
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            log.warn("Core API get {} failed: {}", path, e.getMessage());
+        }
+        return null;
+    }
+
     private static JsonObject post(String path, Object body) {
         if (!enabled) return null;
         try {
@@ -84,17 +170,18 @@ public class CoreAPI {
             }
 
             int code = conn.getResponseCode();
-            if (code == 200 || code == 201) {
-                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                try (InputStream is = conn.getInputStream()) {
-                    byte[] buf = new byte[4096];
-                    int n;
-                    while ((n = is.read(buf)) != -1) buffer.write(buf, 0, n);
-                }
-                conn.disconnect();
-                return GSON.fromJson(buffer.toString(StandardCharsets.UTF_8.name()), JsonObject.class);
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            try (InputStream is = code < 400 ? conn.getInputStream() : conn.getErrorStream()) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = is.read(buf)) != -1) buffer.write(buf, 0, n);
             }
             conn.disconnect();
+            String responseBody = buffer.toString(StandardCharsets.UTF_8.name());
+            if (code == 200 || code == 201) {
+                return GSON.fromJson(responseBody, JsonObject.class);
+            }
+            log.warn("Core API {} returned {}: {}", path, code, responseBody);
         } catch (Exception e) {
             log.warn("Core API call {} failed: {}", path, e.getMessage());
         }

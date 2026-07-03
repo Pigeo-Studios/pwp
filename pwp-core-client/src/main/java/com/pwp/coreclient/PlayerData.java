@@ -1,8 +1,12 @@
 package com.pwp.coreclient;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,15 +34,46 @@ public class PlayerData {
         public long loadedAt;
 
         public long getCoins() {
-            return data.has("coins") ? data.get("coins").getAsLong() : 0;
+            return data != null && data.has("coins") ? data.get("coins").getAsLong() : 0;
         }
 
         public long getXp() {
-            return data.has("xp") ? data.get("xp").getAsLong() : 0;
+            return data != null && data.has("xp") ? data.get("xp").getAsLong() : 0;
         }
 
         public int getLevel() {
-            return data.has("level") ? data.get("level").getAsInt() : 1;
+            return data != null && data.has("level") ? data.get("level").getAsInt() : 1;
         }
+
+        public int getPrestige() {
+            return data != null && data.has("prestige") ? data.get("prestige").getAsInt() : 0;
+        }
+
+        public List<CosmeticEntry> getCosmetics() {
+            List<CosmeticEntry> list = new ArrayList<>();
+            if (data == null || !data.has("cosmetics")) return list;
+            JsonArray arr = data.get("cosmetics").getAsJsonArray();
+            for (JsonElement e : arr) {
+                JsonObject obj = e.getAsJsonObject();
+                CosmeticEntry ce = new CosmeticEntry();
+                ce.itemUuid = obj.get("itemUuid").getAsString();
+                ce.skinId = obj.get("skinId").getAsString();
+                ce.slotType = obj.get("slotType").getAsString();
+                ce.rarity = obj.get("rarity").getAsString();
+                ce.source = obj.get("source").getAsString();
+                ce.equipped = obj.has("equipped") && obj.get("equipped").getAsBoolean();
+                list.add(ce);
+            }
+            return list;
+        }
+    }
+
+    public static class CosmeticEntry {
+        public String itemUuid;
+        public String skinId;
+        public String slotType;
+        public String rarity;
+        public String source;
+        public boolean equipped;
     }
 }

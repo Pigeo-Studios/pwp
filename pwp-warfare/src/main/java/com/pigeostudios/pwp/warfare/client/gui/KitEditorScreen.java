@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveKit;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -44,6 +45,9 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
       this.minPlayersBox.setValue(String.valueOf(((KitEditorMenu)this.menu).minSquadPlayers));
       this.addRenderableWidget(this.minPlayersBox);
       this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.kit_editor.save"), b -> this.saveKit()).bounds(x + 120, y + 148, 48, 20).build());
+      this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.kit_editor.skins"), b -> {
+          Minecraft.getInstance().setScreen(new KitSkinSelectScreen((KitEditorMenu) this.menu, this));
+      }).bounds(x + 74, y + 148, 44, 20).build());
    }
 
    private void saveKit() {
@@ -72,7 +76,8 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
                ((KitEditorMenu)this.menu).maxPerSquad,
                ((KitEditorMenu)this.menu).minSquadPlayers,
                ((KitEditorMenu)this.menu).resupplyFlags,
-               ((KitEditorMenu)this.menu).saveNbtFlags
+               ((KitEditorMenu)this.menu).saveNbtFlags,
+               ((KitEditorMenu)this.menu).slotSkins
             )
          );
       this.minecraft.player.displayClientMessage(Component.translatable("gui.pwpwarfare.kit_editor.saved"), true);

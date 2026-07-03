@@ -2,13 +2,12 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// Пакет сохранения настроек набора (кита) из редактора
-// Отправляется администратором после редактирования кита
 public class PacketSaveKit {
    private final String team;
    private final String kitName;
@@ -18,9 +17,11 @@ public class PacketSaveKit {
    private final int minSquadPlayers;
    private final boolean[] resupplyFlags;
    private final boolean[] nbtFlags;
+   private final Map<Integer, List<String>> slotSkins;
 
    public PacketSaveKit(
-      String team, String kitName, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers, boolean[] resupplyFlags, boolean[] nbtFlags
+      String team, String kitName, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
+      boolean[] resupplyFlags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
    ) {
       this.team = team;
       this.kitName = kitName;
@@ -30,6 +31,7 @@ public class PacketSaveKit {
       this.minSquadPlayers = minSquadPlayers;
       this.resupplyFlags = resupplyFlags;
       this.nbtFlags = nbtFlags;
+      this.slotSkins = slotSkins != null ? slotSkins : new HashMap<>();
    }
 
    public static void encode(PacketSaveKit msg, FriendlyByteBuf buf) {
@@ -46,6 +48,13 @@ public class PacketSaveKit {
 
       for (int i = 0; i < 49; i++) {
          buf.writeBoolean(msg.nbtFlags[i]);
+      }
+
+      buf.writeInt(msg.slotSkins.size());
+      for (Map.Entry<Integer, List<String>> e : msg.slotSkins.entrySet()) {
+         buf.writeInt(e.getKey());
+         buf.writeInt(e.getValue().size());
+         for (String s : e.getValue()) buf.writeUtf(s);
       }
    }
 
@@ -68,10 +77,19 @@ public class PacketSaveKit {
          f2[i] = buf.readBoolean();
       }
 
-      return new PacketSaveKit(t, k, l, mt, ms, minP, f1, f2);
+      Map<Integer, List<String>> skins = new HashMap<>();
+      int skinCount = buf.readInt();
+      for (int i = 0; i < skinCount; i++) {
+         int slot = buf.readInt();
+         int listSize = buf.readInt();
+         List<String> ids = new ArrayList<>();
+         for (int j = 0; j < listSize; j++) ids.add(buf.readUtf());
+         skins.put(slot, ids);
+      }
+
+      return new PacketSaveKit(t, k, l, mt, ms, minP, f1, f2, skins);
    }
 
-   // Сохраняет изменения кита: лимиты, флаги ресапплая и содержимое инвентаря
    public static void handle(PacketSaveKit msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
@@ -85,6 +103,7 @@ public class PacketSaveKit {
                kit.minSquadPlayers = msg.minSquadPlayers;
                kit.resupplyFlags = msg.resupplyFlags;
                kit.saveNbtFlags = msg.nbtFlags;
+               kit.slotSkins = msg.slotSkins;
 
                for (int i = 0; i < 49; i++) {
                   kit.inventory.set(i, menu.kitInventory.getItem(i).copy());

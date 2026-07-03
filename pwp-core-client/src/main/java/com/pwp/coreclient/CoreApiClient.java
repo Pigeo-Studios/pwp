@@ -97,4 +97,54 @@ public class CoreApiClient {
     public static JsonObject getPlayerProfile(String uuid) throws Exception {
         return parseResult(get("/api/v1/player/" + uuid));
     }
+
+    // ====== SKINS ======
+    public static JsonObject getSkins() throws Exception {
+        return parseResult(get("/api/v1/skins"));
+    }
+
+    public static JsonObject getSkinsBySlot(String slotType) throws Exception {
+        return parseResult(get("/api/v1/skins/slot/" + slotType));
+    }
+
+    public static JsonObject getSkinsByWeapon(String weaponTag) throws Exception {
+        return parseResult(get("/api/v1/skins/weapon/" + weaponTag));
+    }
+
+    public static JsonObject getCosmetics(String uuid) throws Exception {
+        return parseResult(get("/api/v1/cosmetics/" + uuid));
+    }
+
+    // ====== CASES ======
+    public static JsonObject getCases() throws Exception {
+        return parseResult(get("/api/v1/cases"));
+    }
+
+    public static JsonObject openCase(String uuid, String caseId) throws Exception {
+        return parseResult(post("/api/v1/cases/open", new Object() {
+            String xuuid = uuid; String xcaseId = caseId;
+        }));
+    }
+
+    // ====== REWARDS ======
+    public static JsonObject calculateRewards(String uuid, String team, String winner,
+                                               int kills, int assists, int vehicleKills,
+                                               int captures, int revives, int headshots,
+                                               int durationMinutes) throws Exception {
+        return parseResult(post("/api/v1/rewards/calculate", new Object() {
+            String xuuid = uuid; String xteam = team; String xwinner = winner;
+            int xkills = kills; int xassists = assists; int xvehicleKills = vehicleKills;
+            int xcaptures = captures; int xrevives = revives; int xheadshots = headshots;
+            int xdurationMinutes = durationMinutes;
+        }));
+    }
+
+    // ====== RANKS ======
+    public static JsonObject checkRank(String uuid) throws Exception {
+        return parseResult(post("/api/v1/ranks/check", new Object() { String xuuid = uuid; }));
+    }
+
+    public static JsonObject getPlayerRanks(String uuid) throws Exception {
+        return parseResult(get("/api/v1/ranks/player/" + uuid));
+    }
 }

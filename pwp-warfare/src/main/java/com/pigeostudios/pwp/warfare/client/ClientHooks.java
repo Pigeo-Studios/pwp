@@ -9,6 +9,7 @@ import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.KitTeamSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.PlayerKitSelectScreen;
+import com.pigeostudios.pwp.warfare.client.gui.SkinListScreen;
 import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.VictoryScreen;
 import com.pigeostudios.pwp.warfare.client.sound.HubLoopingSound;
@@ -93,9 +94,13 @@ public class ClientHooks {
       Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
    }
 
-   public static void openKitTeamSelect() {
-      Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
-   }
+    public static void openKitTeamSelect() {
+       Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
+    }
+
+    public static void openSkinSetup() {
+       Minecraft.getInstance().setScreen(new SkinListScreen());
+    }
 
    public static void openRadioMenu() {
       Minecraft.getInstance().setScreen(new RadioRadialScreen());
@@ -345,7 +350,11 @@ public class ClientHooks {
       }
    }
 
-   public static void openVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
-      Minecraft.getInstance().setScreen(new VictoryScreen(winnerName, winnerFaction, subText, isBlueWinner));
-   }
+    public static void openVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner) {
+       Minecraft.getInstance().setScreen(new VictoryScreen(winnerName, winnerFaction, subText, isBlueWinner));
+    }
+
+    public static void openSkinInventory() {
+       Minecraft.getInstance().setScreen(new com.pwp.cosmetics.gui.SkinInventoryScreen());
+    }
 }

@@ -220,5 +220,24 @@
     "gui.pwpwarfare.radial.tactical": "Tactical",
     "gui.pwpwarfare.radial.markers": "Markers",
 
-    "gui.pwpwarfare.map_marker_select.title": "Select Marker Type"
+    "gui.pwpwarfare.map_marker_select.title": "Select Marker Type",
+
+    "gui.pwpwarfare.kit_skin_select.title": "Kit Weapon Skins",
+    "gui.pwpwarfare.kit_editor.skins": "Skins",
+
+    "gui.pwpwarfare.skin_list.title": "Skin Setup",
+    "gui.pwpwarfare.skin_list.add": "+ Add Skin",
+    "gui.pwpwarfare.skin_list.refresh": "Refresh",
+
+    "gui.pwpwarfare.skin_editor.add": "Add Skin",
+    "gui.pwpwarfare.skin_editor.edit": "Edit Skin",
+    "gui.pwpwarfare.skin_editor.save": "Save",
+    "gui.pwpwarfare.skin_editor.cancel": "Cancel",
+
+    "gui.pwpwarfare.skin_editor.name": "Name",
+    "gui.pwpwarfare.skin_editor.skin_id": "Skin ID",
+    "gui.pwpwarfare.skin_editor.slot_type": "Slot Type",
+    "gui.pwpwarfare.skin_editor.weapon_tag": "Weapon Tag",
+    "gui.pwpwarfare.skin_editor.rarity": "Rarity",
+    "gui.pwpwarfare.skin_editor.model_path": "Model Path"
 }

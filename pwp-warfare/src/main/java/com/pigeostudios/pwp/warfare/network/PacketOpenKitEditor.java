@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -70,7 +71,8 @@ public class PacketOpenKitEditor {
                                  kit.maxPerSquad,
                                  kit.minSquadPlayers,
                                  kit.resupplyFlags,
-                                 kit.saveNbtFlags
+                                 kit.saveNbtFlags,
+                                 kit.slotSkins
                               );
                            }
                         },
@@ -86,10 +88,18 @@ public class PacketOpenKitEditor {
                               buf.writeBoolean(f);
                            }
 
-                           for (boolean f : kit.saveNbtFlags) {
-                              buf.writeBoolean(f);
-                           }
-                        }
+                            for (boolean f : kit.saveNbtFlags) {
+                               buf.writeBoolean(f);
+                            }
+
+                            Map<Integer, List<String>> skins = kit.slotSkins;
+                            buf.writeInt(skins.size());
+                            for (Map.Entry<Integer, List<String>> e : skins.entrySet()) {
+                               buf.writeInt(e.getKey());
+                               buf.writeInt(e.getValue().size());
+                               for (String s : e.getValue()) buf.writeUtf(s);
+                            }
+                         }
                      );
                   }
                }
