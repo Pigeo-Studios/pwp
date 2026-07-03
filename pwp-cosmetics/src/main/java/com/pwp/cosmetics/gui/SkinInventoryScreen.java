@@ -23,8 +23,10 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -95,21 +97,29 @@ public class SkinInventoryScreen extends Screen {
 
         UUID uuid = mc.player.getUUID();
         PlayerData.CachedProfile profile = PlayerData.get(uuid);
+        Set<String> equippedSkinIds = new HashSet<>();
         if (profile != null) {
-            allCosmetics = profile.getCosmetics();
+            equippedSkinIds = profile.getCosmetics().stream()
+                    .filter(c -> c.equipped)
+                    .map(c -> c.skinId)
+                    .collect(Collectors.toSet());
         }
-        loadSkinDefinitions();
-        filterCosmetics();
+        loadSkinDefinitions(equippedSkinIds);
     }
 
-    private void loadSkinDefinitions() {
+    private void loadSkinDefinitions(Set<String> equippedSkinIds) {
         if (globalSkinItemCache != null && globalSkinEntries != null) {
             skinItemCache = globalSkinItemCache;
             skinNameCache = globalSkinNameCache;
-            if (allCosmetics.isEmpty()) {
-                allCosmetics = new ArrayList<>(globalSkinEntries);
-                filterCosmetics();
+            allCosmetics = new ArrayList<>(globalSkinEntries);
+            for (CosmeticEntry ce : allCosmetics) {
+                if (equippedSkinIds.contains(ce.skinId)) {
+                    ce.equipped = true;
+                } else {
+                    ce.equipped = false;
+                }
             }
+            filterCosmetics();
             return;
         }
         new Thread(() -> {
@@ -149,7 +159,7 @@ public class SkinInventoryScreen extends Screen {
                         ce.slotType = slotType;
                         ce.rarity = rarity;
                         ce.source = "builtin";
-                        ce.equipped = false;
+                        ce.equipped = equippedSkinIds.contains(skinId);
                         allSkinEntries.add(ce);
                     }
                     globalSkinItemCache = cache;
@@ -158,10 +168,8 @@ public class SkinInventoryScreen extends Screen {
                     Minecraft.getInstance().submit(() -> {
                         skinItemCache = cache;
                         skinNameCache = nameCache;
-                        if (allCosmetics.isEmpty()) {
-                            allCosmetics = allSkinEntries;
-                            filterCosmetics();
-                        }
+                        allCosmetics = new ArrayList<>(allSkinEntries);
+                        filterCosmetics();
                     });
                 }
             } catch (Exception ignored) {}

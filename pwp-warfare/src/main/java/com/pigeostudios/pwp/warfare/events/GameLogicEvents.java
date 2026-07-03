@@ -22,8 +22,14 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.PermissionHelper;
 import com.pwp.coreclient.network.ConnectToServerPacket;
+import com.pwp.cosmetics.CosmeticManager;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import net.minecraft.nbt.TagParser;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1145,21 +1151,62 @@ public class GameLogicEvents {
       return "Unknown";
    }
 
-   @SubscribeEvent
+    @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-       if (!event.getEntity().level().isClientSide) {
-          ServerPlayer player = (ServerPlayer)event.getEntity();
-          PermissionHelper.autoOpIfAdmin(player);
-          ServerLevel level = player.serverLevel();
-          WarfareWorldData data = WarfareWorldData.get(level);
-         sendSyncPacket(level, data);
-         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
-         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
-         if (!data.isGameStarted && player.hasPermissions(2)) {
-            player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
-         }
-      }
-   }
+        if (!event.getEntity().level().isClientSide) {
+           ServerPlayer player = (ServerPlayer)event.getEntity();
+           PermissionHelper.autoOpIfAdmin(player);
+           loadCosmeticsForPlayer(player);
+           ServerLevel level = player.serverLevel();
+           WarfareWorldData data = WarfareWorldData.get(level);
+          sendSyncPacket(level, data);
+          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
+          PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+          if (!data.isGameStarted && player.hasPermissions(2)) {
+             player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
+          }
+       }
+    }
+
+    private static void loadCosmeticsForPlayer(ServerPlayer player) {
+        try {
+            UUID uuid = player.getUUID();
+            JsonObject profile = CoreAPI.loadPlayer(uuid.toString());
+            if (profile == null || !profile.has("data")) return;
+            JsonObject data = profile.getAsJsonObject("data");
+            if (!data.has("cosmetics")) return;
+
+            JsonObject skinsResult = CoreAPI.getSkins();
+            Map<String, String> skinModels = new HashMap<>();
+            if (skinsResult != null && skinsResult.has("data")) {
+                for (JsonElement e : skinsResult.get("data").getAsJsonArray()) {
+                    JsonObject s = e.getAsJsonObject();
+                    String sid = s.get("skinId").getAsString();
+                    String mp = s.has("modelPath") && !s.get("modelPath").isJsonNull() ? s.get("modelPath").getAsString() : "";
+                    if (!mp.isEmpty()) skinModels.put(sid, mp);
+                }
+            }
+
+            for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
+                JsonObject c = e.getAsJsonObject();
+                if (c.has("equipped") && c.get("equipped").getAsBoolean()) {
+                    String skinId = c.get("skinId").getAsString();
+                    String slotType = c.get("slotType").getAsString();
+                    String modelPath = skinModels.getOrDefault(skinId, "");
+                    ItemStack item = ItemStack.EMPTY;
+                    if (modelPath.startsWith("{")) {
+                        try {
+                            item = ItemStack.of(TagParser.parseTag(modelPath));
+                        } catch (Exception ignored) {}
+                    } else if (modelPath.contains(":")) {
+                        Item i = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(modelPath));
+                        if (i != null) item = new ItemStack(i);
+                    }
+                    CosmeticManager.setEquipment(uuid, slotType, "ALL", skinId, item);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
 
    @SubscribeEvent
    public static void onPlayerRespawn(PlayerRespawnEvent event) {
