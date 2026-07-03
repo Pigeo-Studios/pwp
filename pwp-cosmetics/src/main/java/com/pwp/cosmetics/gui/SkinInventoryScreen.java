@@ -92,6 +92,9 @@ public class SkinInventoryScreen extends Screen {
     }
 
     private void loadCosmetics() {
+        globalSkinItemCache = null;
+        globalSkinEntries = null;
+        globalSkinNameCache = null;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
