@@ -289,33 +289,47 @@ public class SkinInventoryScreen extends Screen {
         new Thread(() -> {
             try {
                 com.pwp.coreclient.CoreAPI.grantItem(uuid, entry.skinId, "menu");
-                Thread.sleep(200);
+                Thread.sleep(300);
                 JsonObject fresh = com.pwp.coreclient.CoreAPI.loadPlayer(uuid);
-                if (fresh != null && fresh.has("data")) {
-                    JsonObject data = fresh.getAsJsonObject("data");
-                    PlayerData.put(mc.player.getUUID(), data);
-                    if (data.has("cosmetics")) {
-                        for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
-                            JsonObject obj = e.getAsJsonObject();
-                            if (obj.get("skinId").getAsString().equals(entry.skinId)) {
-                                String realItemUuid = obj.get("itemUuid").getAsString();
-                                String slotType = obj.get("slotType").getAsString();
-                                com.pwp.coreclient.CoreAPI.equipItem(uuid, realItemUuid, slotType, role);
-                                break;
-                            }
+                if (fresh == null || !fresh.has("data")) {
+                    Minecraft.getInstance().submit(() -> {
+                        statusMsg = "§cAPI error (grant/load failed)";
+                        statusTime = System.currentTimeMillis();
+                    });
+                    return;
+                }
+                JsonObject data = fresh.getAsJsonObject("data");
+                PlayerData.put(mc.player.getUUID(), data);
+                boolean equipped = false;
+                if (data.has("cosmetics")) {
+                    for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
+                        JsonObject obj = e.getAsJsonObject();
+                        if (obj.get("skinId").getAsString().equals(entry.skinId)) {
+                            String realItemUuid = obj.get("itemUuid").getAsString();
+                            String slotType = obj.get("slotType").getAsString();
+                            com.pwp.coreclient.CoreAPI.equipItem(uuid, realItemUuid, slotType, role);
+                            equipped = true;
+                            break;
                         }
                     }
                 }
-                Thread.sleep(200);
+                if (!equipped) {
+                    Minecraft.getInstance().submit(() -> {
+                        statusMsg = "§cSkin not found in profile!";
+                        statusTime = System.currentTimeMillis();
+                    });
+                    return;
+                }
+                Thread.sleep(300);
                 JsonObject fresh2 = com.pwp.coreclient.CoreAPI.loadPlayer(uuid);
                 if (fresh2 != null && fresh2.has("data")) {
                     PlayerData.put(mc.player.getUUID(), fresh2.getAsJsonObject("data"));
                 }
-                ItemStack equippedItem = skinItemCache.get(entry.skinId);
+                ItemStack eqItem = skinItemCache.get(entry.skinId);
                 String itemSnbt = "";
-                if (equippedItem != null && !equippedItem.isEmpty()) {
+                if (eqItem != null && !eqItem.isEmpty()) {
                     CompoundTag tag = new CompoundTag();
-                    equippedItem.save(tag);
+                    eqItem.save(tag);
                     itemSnbt = tag.toString();
                 }
                 CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, "ALL", entry.skinId, itemSnbt));
@@ -326,7 +340,7 @@ public class SkinInventoryScreen extends Screen {
                 });
             } catch (Exception e) {
                 Minecraft.getInstance().submit(() -> {
-                    statusMsg = "§cEquip failed!";
+                    statusMsg = "§cEquip failed: " + e.getMessage();
                     statusTime = System.currentTimeMillis();
                 });
             }
