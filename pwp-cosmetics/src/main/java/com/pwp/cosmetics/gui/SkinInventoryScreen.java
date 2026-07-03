@@ -210,20 +210,16 @@ public class SkinInventoryScreen extends Screen {
 
                 gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, 0xCC12151A);
                 if (entry.equipped) {
-                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, 0xFFFFFFFF);
-                    gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
+                    gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, 0xFF00FF00);
+                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
                 } else {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
                 }
 
                 ItemStack stack = skinItemCache.get(entry.skinId);
                 if (stack != null && !stack.isEmpty()) {
-                    gui.renderItem(stack, x + 4, y + 2);
+                    gui.renderItem(stack, x + 4, y + 4);
                 }
-
-                String label = skinNameCache.getOrDefault(entry.skinId, entry.skinId);
-                if (label.length() > 14) label = label.substring(0, 11) + "..";
-                gui.drawString(this.font, label, x + 2, y + ITEM_SIZE / 2 - 4, rarityColor, false);
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, 0xFFC8812A);
