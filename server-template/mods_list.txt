@@ -25,7 +25,7 @@ PWP SERVER — ПОЛНЫЙ СПИСОК МОДОВ
 [PWP — свои моды, сборка из проекта]
   pwp-core-client-*.jar (собирается)
   pwp-cosmetics-*.jar     (собирается)
-  pwp-lobby-*.jar         (собирается)
+  pwp-lobby-*.jar         (собирается, ТОЛЬКО НА ЛОББИ — исключить из match_template/mods/)
   pwp-warfare-1.0.1.jar (собирается)
   pwp-medicine-1.0.3.jar (собирается)
   pwp-movement-1.0.0.jar (собирается)

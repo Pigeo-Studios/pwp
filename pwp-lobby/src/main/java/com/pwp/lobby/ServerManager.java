@@ -1,9 +1,14 @@
 package com.pwp.lobby;
 
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -35,6 +40,11 @@ public class ServerManager {
         volatile boolean booted;
         volatile boolean failed;
         volatile String error;
+        volatile String phase; // "template","map","config","booting", or null when done
+        volatile long phaseStartedAt;
+        volatile long logDoneAt;  // when "Done" was found in log file (0 = not yet)
+        volatile long portOpenAt; // when port was detected open (0 = not yet)
+        long lastBroadcastMs;
 
         ServerInstance(int serverId, int port, Path directory) {
             this.serverId = serverId;
@@ -82,12 +92,16 @@ public class ServerManager {
             try {
                 if (Files.exists(serverDir)) deleteDirectory(serverDir);
 
+                instance.phase = "template";
+                instance.phaseStartedAt = System.currentTimeMillis();
                 log.info("Copying template to {}...", dirName);
                 robocopy(templatePath, serverDir);
 
                 if (mapWorldPath != null && !mapWorldPath.isEmpty()) {
                     Path mapWorldDir = Paths.get(mapWorldPath);
                     if (Files.isDirectory(mapWorldDir)) {
+                        instance.phase = "map";
+                        instance.phaseStartedAt = System.currentTimeMillis();
                         log.info("Copying map world '{}'...", mapName);
                         Path matchWorldDir = serverDir.resolve(mapName);
                         Files.createDirectories(matchWorldDir);
@@ -95,6 +109,8 @@ public class ServerManager {
                     }
                 }
 
+                instance.phase = "config";
+                instance.phaseStartedAt = System.currentTimeMillis();
                 Files.writeString(serverDir.resolve("server.properties"),
                         "server-port=" + port + "\nlevel-name=" + mapName +
                         "\nmax-players=" + maxPlayers + "\nonline-mode=false\n");
@@ -107,18 +123,24 @@ public class ServerManager {
                     Files.writeString(vcConfig, vcContent);
                 }
 
-                ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "run.bat", "nogui");
+                instance.phase = "booting";
+                instance.phaseStartedAt = System.currentTimeMillis();
+                String title = "PWP Match " + serverId;
+                String dir = serverDir.toAbsolutePath().toString();
+                ProcessBuilder pb = new ProcessBuilder(
+                        "cmd.exe", "/c",
+                        "start", title, "/D", dir, "/WAIT",
+                        "cmd", "/c", "run.bat", "nogui");
                 pb.directory(serverDir.toFile());
                 pb.environment().put("JAVA_HOME", System.getProperty("java.home"));
-                pb.redirectErrorStream(true);
 
                 instance.process = pb.start();
-                startOutputReader(serverId, instance.process);
                 log.info("Match server {} started on port {} (map: {})", serverId, port, mapName);
             } catch (Exception e) {
                 log.error("Failed to start match server {}: {}", serverId, e.getMessage());
                 instance.failed = true;
                 instance.error = e.getMessage();
+                instance.phase = null;
                 try { if (Files.exists(serverDir)) deleteDirectory(serverDir); } catch (IOException ignored) {}
             }
         });
@@ -126,7 +148,7 @@ public class ServerManager {
         return result;
     }
 
-    /** Called from main tick — updates booted status and cleans dead servers */
+    /** Called from main tick — updates booted status, cleans dead servers, broadcasts progress */
     public static void tick() {
         long now = System.currentTimeMillis();
         for (ServerInstance si : servers.values()) {
@@ -144,6 +166,67 @@ public class ServerManager {
                 log.warn("Server {} process died prematurely", si.serverId);
                 si.failed = true;
                 si.error = "process died";
+            }
+        }
+
+        // Detect boot via logs/latest.log "Done", fallback to port-based timeout
+        for (ServerInstance si : servers.values()) {
+            if (si.phase == "booting" && !si.booted && !si.failed) {
+                Path logFile = si.directory.resolve("logs/latest.log");
+                // Method 1: read log file line-by-line looking for "Done"
+                if (si.logDoneAt == 0 && Files.exists(logFile)) {
+                    try (BufferedReader br = new BufferedReader(new FileReader(logFile.toFile()))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            if (line.contains("Done") && line.contains("For help")) {
+                                si.logDoneAt = System.currentTimeMillis();
+                                log.info("Server {} detected 'Done' in log", si.serverId);
+                                break;
+                            }
+                        }
+                    } catch (IOException ignored) {}
+                }
+                // Method 2: fallback — port open + 55s (covers ~44s from port to "Done")
+                if (si.logDoneAt == 0 && si.portOpenAt == 0) {
+                    try (Socket s = new Socket()) {
+                        s.connect(new InetSocketAddress("127.0.0.1", si.port), 200);
+                        si.portOpenAt = System.currentTimeMillis();
+                        log.info("Server {} port open, fallback boot in 55s", si.serverId);
+                    } catch (IOException ignored) {}
+                }
+                boolean logReady  = si.logDoneAt  != 0 && now - si.logDoneAt  >= 2000;
+                boolean portReady = si.portOpenAt != 0 && now - si.portOpenAt >= 55000;
+                if (logReady || portReady) {
+                    si.booted = true;
+                    log.info("Server {} fully booted (log={})", si.serverId, si.logDoneAt != 0);
+                }
+            }
+        }
+
+        // Broadcast progress to lobby players (throttled to every 2s per server)
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        for (ServerInstance si : servers.values()) {
+            if (si.phase != null && !si.failed && now - si.lastBroadcastMs > 2000) {
+                si.lastBroadcastMs = now;
+                long elapsed = (now - si.phaseStartedAt) / 1000;
+                String msg = switch (si.phase) {
+                    case "template" -> "§7[PWP] Copying server template... §e" + elapsed + "s";
+                    case "map" -> "§7[PWP] Copying map world... §e" + elapsed + "s";
+                    case "config" -> "§7[PWP] Preparing config... §e" + elapsed + "s";
+                    case "booting" -> "§7[PWP] Starting server... §e" + elapsed + "s";
+                    default -> null;
+                };
+                if (msg != null) {
+                    String finalMsg = msg;
+                    server.getPlayerList().getPlayers().forEach(p ->
+                            p.sendSystemMessage(Component.literal(finalMsg), false));
+                }
+            }
+            if (si.booted && si.phase != null) {
+                si.phase = null;
+                server.getPlayerList().getPlayers().forEach(p ->
+                        p.sendSystemMessage(Component.literal("§a[PWP] Match server ready! §7(port " + si.port + ")"), false));
             }
         }
     }
@@ -165,7 +248,9 @@ public class ServerManager {
 
     public static boolean isAlive(int serverId) {
         ServerInstance si = servers.get(serverId);
-        return si != null && !si.failed;
+        if (si == null || si.failed) return false;
+        if (si.process != null && !si.process.isAlive()) return false;
+        return true;
     }
 
     public static boolean isBooted(int serverId) {
@@ -201,25 +286,6 @@ public class ServerManager {
             p.destroyForcibly();
             throw new IOException("robocopy interrupted", e);
         }
-    }
-
-    private static void startOutputReader(int serverId, Process process) {
-        Thread reader = new Thread(() -> {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (line.contains("Done") && line.contains("For help")) {
-                        // Brief delay to let Forge finish internal init after "Done"
-                        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-                        ServerInstance si = servers.get(serverId);
-                        if (si != null) si.booted = true;
-                        log.info("Server {} is fully booted", serverId);
-                    }
-                }
-            } catch (IOException ignored) {}
-        }, "output-" + serverId);
-        reader.setDaemon(true);
-        reader.start();
     }
 
     private static void deleteDirectory(Path dir) throws IOException {

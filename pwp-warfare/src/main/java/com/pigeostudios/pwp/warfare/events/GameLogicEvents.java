@@ -22,6 +22,7 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.coreclient.PermissionHelper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1135,11 +1136,12 @@ public class GameLogicEvents {
    }
 
    @SubscribeEvent
-   public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-      if (!event.getEntity().level().isClientSide) {
-         ServerPlayer player = (ServerPlayer)event.getEntity();
-         ServerLevel level = player.serverLevel();
-         WarfareWorldData data = WarfareWorldData.get(level);
+    public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
+       if (!event.getEntity().level().isClientSide) {
+          ServerPlayer player = (ServerPlayer)event.getEntity();
+          PermissionHelper.autoOpIfAdmin(player);
+          ServerLevel level = player.serverLevel();
+          WarfareWorldData data = WarfareWorldData.get(level);
          sendSyncPacket(level, data);
          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
          PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));

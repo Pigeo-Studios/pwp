@@ -1,6 +1,7 @@
 package com.pwp.lobby;
 
 import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.PermissionHelper;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
@@ -20,8 +21,12 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
+import java.nio.file.Paths;
+
 @Mod("pwp_lobby")
 public class LobbyMod {
+
+    private static boolean isMatchServer = false;
 
     public LobbyMod() {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
@@ -30,6 +35,13 @@ public class LobbyMod {
 
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
+            String dirName = Paths.get("").toAbsolutePath().getFileName().toString();
+            isMatchServer = dirName.startsWith("match_");
+
+            if (isMatchServer) {
+                return;
+            }
+
             MapRegistry.configure("../PWP-Server/maps");
             MapRegistry.loadAll();
             MatchAllocator.configure(1);
@@ -47,6 +59,8 @@ public class LobbyMod {
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
+        if (isMatchServer) return;
+
         String uuid = player.getStringUUID();
 
         var playerData = CoreAPI.loadPlayer(uuid);
@@ -56,6 +70,7 @@ public class LobbyMod {
             return;
         }
 
+        PermissionHelper.autoOpIfAdmin(player);
         MatchAllocator.playerJoined(uuid);
     }
 
