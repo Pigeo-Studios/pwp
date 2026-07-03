@@ -30,14 +30,16 @@ public class CosmeticManager {
         if (slots == null) return null;
         SkinData data = slots.get(slotType + ":" + role);
         if (data == null) data = slots.get(slotType + ":ALL");
-        if (data == null) {
-            for (String st : new String[]{"KNIFE", "MELEE", "PRIMARY", "SECONDARY", "UNIFORM"}) {
-                data = slots.get(st + ":" + role);
-                if (data == null) data = slots.get(st + ":ALL");
-                if (data != null) break;
-            }
-        }
         return data;
+    }
+
+    public static SkinData getEquipmentBySkinId(UUID playerUuid, String skinId) {
+        Map<String, SkinData> slots = playerEquipment.get(playerUuid);
+        if (slots == null) return null;
+        for (SkinData data : slots.values()) {
+            if (data.skinId.equals(skinId)) return data;
+        }
+        return null;
     }
 
     public static ItemStack getSkinItem(UUID playerUuid, String slotType, String role) {

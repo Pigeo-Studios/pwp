@@ -38,7 +38,9 @@ public class WarfareConfig {
          "Allow players to break walls and barbed wire even if PREVENT_BLOCK_BREAKING is true"
       )
       .define("allowBreakingDefenses", true);
-   public static final BooleanValue AUTO_GIVE_SL_RADIO = BUILDER.comment("Automatically give radio to new Squad Leaders")   .define("autoGiveSlRadio", false);
+    public static final BooleanValue AUTO_GIVE_SL_RADIO = BUILDER.comment("Automatically give radio to new Squad Leaders")   .define("autoGiveSlRadio", false);
+    public static final BooleanValue AUTO_GIVE_WALKIETALKIE = BUILDER.comment("Automatically give walkietalkie to all players on match servers")
+       .define("autoGiveWalkieTalkie", true);
    public static final BooleanValue HUB_PLACEMENT_REQUIRES_CRATE = BUILDER.comment(
          "Does placing a FOB require a Supply Crate nearby? (Consumes the crate, crate gives 0 mats to FOB)"
       )

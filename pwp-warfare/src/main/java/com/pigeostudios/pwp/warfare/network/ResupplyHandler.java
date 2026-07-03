@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -11,9 +12,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.resources.ResourceLocation;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
@@ -39,18 +42,18 @@ public class ResupplyHandler {
             if (ModList.get().isLoaded("pwp_cosmetics")) {
                 String currentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
                 List<String> allowed = kit.slotSkins != null ? kit.slotSkins.get(i) : null;
-                if (allowed != null && !allowed.isEmpty()) {
+                    if (allowed != null && !allowed.isEmpty()) {
                     com.pwp.cosmetics.CosmeticManager.SkinData skinData = null;
                     if (allowed.get(0).startsWith("__CAT__")) {
                         String catType = allowed.get(0).substring(7);
                         skinData = CosmeticManager.getEquipment(player.getUUID(), catType, currentKit);
                     } else {
-                        skinData = CosmeticManager.getEquipment(player.getUUID(), "KNIFE", currentKit);
-                        if (skinData != null && !(allowed.contains(skinData.skinId) || player.hasPermissions(2))) {
-                            skinData = null;
+                        for (String skinId : allowed) {
+                            skinData = CosmeticManager.getEquipmentBySkinId(player.getUUID(), skinId);
+                            if (skinData != null) break;
                         }
                     }
-                    if (skinData != null && !skinData.item.isEmpty()) {
+                    if (skinData != null && !skinData.item.isEmpty() && skinData.item.getItem() != kitStack.getItem()) {
                         itemToGive = skinData.item.copy();
                         if (kitStack.hasTag()) {
                             net.minecraft.nbt.CompoundTag merged = kitStack.getTag().copy();
@@ -83,6 +86,7 @@ public class ResupplyHandler {
       }
 
       player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
+      giveWalkieTalkie(player);
    }
 
     public static void clearCurios(ServerPlayer player) {
@@ -279,6 +283,25 @@ public class ResupplyHandler {
                   PacketHandler.sendToAllClients(player.serverLevel(), data);
                }
             }
+         }
+      }
+   }
+
+   public static void giveWalkieTalkie(ServerPlayer player) {
+      if (!WarfareConfig.AUTO_GIVE_WALKIETALKIE.get()) return;
+      Item walkieItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("walkietalkie", "netherite_walkietalkie"));
+      if (walkieItem == null) return;
+      boolean hasWalkie = false;
+      for (ItemStack stack : player.getInventory().items) {
+         if (stack.getItem() == walkieItem) { hasWalkie = true; break; }
+      }
+      if (!hasWalkie && player.getOffhandItem().getItem() == walkieItem) {
+         hasWalkie = true;
+      }
+      if (!hasWalkie) {
+         ItemStack walkieStack = new ItemStack(walkieItem);
+         if (!player.getInventory().add(walkieStack)) {
+            player.drop(walkieStack, false);
          }
       }
    }
