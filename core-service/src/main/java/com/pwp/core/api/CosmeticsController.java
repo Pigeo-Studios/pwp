@@ -3,6 +3,7 @@ package com.pwp.core.api;
 import com.pwp.core.db.CosmeticsRepository;
 import com.pwp.core.db.LogRepository;
 import com.pwp.core.db.ShopRepository;
+import com.pwp.core.db.SkinRepository;
 import com.pwp.core.model.*;
 import io.javalin.Javalin;
 import io.javalin.http.NotFoundResponse;
@@ -33,14 +34,25 @@ public class CosmeticsController {
         app.post("/api/v1/cosmetics/grant", ctx -> {
             GrantRequest req = ctx.bodyAsClass(GrantRequest.class);
 
+            String slotType;
+            String rarity;
+
             ShopItem shopItem = ShopRepository.findBySkinId(req.skinId);
-            if (shopItem == null) {
-                ctx.json(ApiResponse.error("skin not found in shop"));
-                return;
+            if (shopItem != null) {
+                slotType = shopItem.slotType;
+                rarity = shopItem.rarity;
+            } else {
+                SkinDefinition def = SkinRepository.findById(req.skinId);
+                if (def == null) {
+                    ctx.json(ApiResponse.error("skin not found"));
+                    return;
+                }
+                slotType = def.slotType;
+                rarity = def.rarity;
             }
 
             CosmeticItem item = CosmeticsRepository.grantItem(
-                    req.uuid, req.skinId, shopItem.slotType, shopItem.rarity, req.source
+                    req.uuid, req.skinId, slotType, rarity, req.source
             );
             LogRepository.log(req.uuid, "COSMETIC_GRANT", 0,
                     "{\"skin_id\":\"" + req.skinId + "\",\"source\":\"" + req.source + "\"}");
