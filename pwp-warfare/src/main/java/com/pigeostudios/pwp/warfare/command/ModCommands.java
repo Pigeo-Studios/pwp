@@ -303,12 +303,19 @@ public class ModCommands {
                                  Commands.literal("setimage")
                                     .then(
                                        Commands.argument("imagename", StringArgumentType.word())
-                                          .suggests(
-                                             (ctx, builder) -> SharedSuggestionProvider.suggest(
-                                                 List.of("map1", "map2", "map3", "grozny", "map4", "map5", "map6", "map7", "map8", "map9", "map10", "map11", "map12"),
-                                                builder
-                                             )
-                                          )
+                                           .suggests((ctx, builder) -> {
+                                              List<String> images = new ArrayList<>();
+                                              try {
+                                                 var level = ((CommandSourceStack)ctx.getSource()).getLevel();
+                                                 var resources = level.getServer().getResourceManager().listResources("textures/gui/maps", s -> s.getPath().endsWith(".png"));
+                                                 for (var entry : resources.entrySet()) {
+                                                    String path = entry.getKey().getPath();
+                                                    String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
+                                                    images.add(name);
+                                                 }
+                                              } catch (Exception ignored) {}
+                                              return SharedSuggestionProvider.suggest(images, builder);
+                                           })
                                           .executes(ctx -> {
                                              String imgName = StringArgumentType.getString(ctx, "imagename");
                                              ServerLevel level = ((CommandSourceStack)ctx.getSource()).getLevel();
