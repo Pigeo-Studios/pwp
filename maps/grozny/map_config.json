@@ -1,0 +1,42 @@
+{
+    "name": "grozny",
+    "displayName": "Grozny",
+    "description": "Urban combat in the city of Grozny. Dense buildings with rooftop sightlines and close-quarters streets.",
+    "maxPlayers": 80,
+    "minPlayers": 2,
+    "image": "grozny",
+    "version": "1.0",
+
+    "teams": {
+        "BLUE": { "faction": "russia", "tickets": 600 },
+        "RED": { "faction": "insurgency", "tickets": 600 }
+    },
+
+    "settings": {
+        "respawnTimer": 15,
+        "deathTicketCost": 2,
+        "lockDurationMinutes": 0
+    },
+
+    "spawns": [
+        { "team": "BLUE", "x": 200, "z": 200 },
+        { "team": "RED", "x": -200, "z": -200 }
+    ],
+
+    "capturePoints": [
+        { "name": "City Center", "x": 0, "z": 0, "radius": 30, "priority": 18, "ticketPenalty": 60 },
+        { "name": "Market", "x": -60, "z": 40, "radius": 20, "priority": 12, "ticketPenalty": 45 },
+        { "name": "Outskirts", "x": 70, "z": -50, "radius": 25, "priority": 8, "ticketPenalty": 30 }
+    ],
+
+    "mapBounds": {
+        "centerX": 0,
+        "centerZ": 0,
+        "sizeBlocks": 1536
+    },
+
+    "vehicles": {
+        "BLUE": ["apc", "helicopter"],
+        "RED": ["apc", "helicopter"]
+    }
+}

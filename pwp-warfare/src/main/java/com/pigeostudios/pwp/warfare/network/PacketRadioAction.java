@@ -177,22 +177,6 @@ public class PacketRadioAction {
          data.setDirty();
          PacketHandler.sendToAllClients(level, data);
          player.sendSystemMessage(Component.literal("FOB Blueprint placed!").withStyle(ChatFormatting.GREEN));
-      } else if (actionId == 20) {
-         placeBlueprint(
-            level,
-            targetPos,
-            player,
-            (BlockState)((Block)ModBlocks.M2_CONSTRUCTION_BLOCK.get()).defaultBlockState().setValue(M2ConstructionBlock.FACING, player.getDirection().getOpposite()),
-            "M2"
-         );
-      } else if (actionId == 21) {
-         placeBlueprint(
-            level,
-            targetPos,
-            player,
-            (BlockState)((Block)ModBlocks.AGS_CONSTRUCTION_BLOCK.get()).defaultBlockState().setValue(AGSConstructionBlock.FACING, player.getDirection().getOpposite()),
-            "AGS"
-         );
       } else if (actionId == 22) {
          placeBlueprint(
             level,

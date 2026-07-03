@@ -104,23 +104,11 @@ public class HubRadialScreen extends Screen {
             if (this.materials < (Integer)WarfareConfig.HUB_RESUPPLY_COST.get()) {
                noMats = true;
             }
-         } else if (i == 1) {
-            if (this.cdAGS > 0) {
-               onCooldown = true;
-            }
-
-            if (this.materials < 20) {
-               noMats = true;
-            }
-         } else if (i == 2) {
-            if (this.cdM2 > 0) {
-               onCooldown = true;
-            }
-
-            if (this.materials < 15) {
-               noMats = true;
-            }
-         } else if (i == 3) {
+          } else if (i == 1) {
+             onCooldown = true;
+          } else if (i == 2) {
+             onCooldown = true;
+          } else if (i == 3) {
             if (this.cdMortar > 0) {
                onCooldown = true;
             }
@@ -192,16 +180,20 @@ public class HubRadialScreen extends Screen {
 
             int sector = (int)(shiftedAngle / 72.0);
             if (sector == 0) {
-               if (this.cdAmmo > 0) {
-                  return true;
-               }
+                if (this.cdAmmo > 0) {
+                   return true;
+                }
 
-               if (this.materials >= (Integer)WarfareConfig.HUB_RESUPPLY_COST.get() || Minecraft.getInstance().player.isCreative()) {
-                  ClientData.lastFobResupplyTime = System.currentTimeMillis();
-               }
-            }
+                if (this.materials >= (Integer)WarfareConfig.HUB_RESUPPLY_COST.get() || Minecraft.getInstance().player.isCreative()) {
+                   ClientData.lastFobResupplyTime = System.currentTimeMillis();
+                }
+             }
 
-            PacketHandler.INSTANCE.sendToServer(new PacketRequestAmmo(this.hubPos, sector));
+             if (sector == 1 || sector == 2) {
+                return true;
+             }
+
+             PacketHandler.INSTANCE.sendToServer(new PacketRequestAmmo(this.hubPos, sector));
             this.onClose();
             return true;
          }

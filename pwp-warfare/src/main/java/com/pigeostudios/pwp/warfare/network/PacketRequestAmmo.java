@@ -104,20 +104,6 @@ public class PacketRequestAmmo {
 
                         player.sendSystemMessage(Component.literal("No Kit equipped!").withStyle(ChatFormatting.RED));
                         return;
-                     case 1:
-                        cost = 15;
-                        cooldownTime = 1200;
-                        if (hub.cooldownAGS > 0) {
-                           isOnCooldown = true;
-                        }
-                        break;
-                     case 2:
-                        cost = 15;
-                        cooldownTime = 1200;
-                        if (hub.cooldownM2 > 0) {
-                           isOnCooldown = true;
-                        }
-                        break;
                      case 3:
                         cost = 20;
                         cooldownTime = 1200;
@@ -144,27 +130,7 @@ public class PacketRequestAmmo {
                   }
 
                   boolean success = false;
-                  if (msg.type == 1) {
-                     ItemStack stack = new ItemStack((ItemLike)ModItems.AGS_AMMO.get());
-                     AGSAmmoItem.setAmmo(stack, 30);
-                     if (player.getInventory().add(stack)) {
-                        success = true;
-                     } else {
-                        player.drop(stack, false);
-                     }
-
-                     success = true;
-                  } else if (msg.type == 2) {
-                     ItemStack stack = new ItemStack((ItemLike)ModItems.M2_AMMO.get());
-                     M2AmmoItem.setAmmo(stack, 200);
-                     if (player.getInventory().add(stack)) {
-                        success = true;
-                     } else {
-                        player.drop(stack, false);
-                     }
-
-                     success = true;
-                  } else if (msg.type == 3) {
+                  if (msg.type == 3) {
                      Item mortarItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "mortar_shell"));
                      if (mortarItem == null || mortarItem == Items.AIR) {
                         mortarItem = Items.ARROW;

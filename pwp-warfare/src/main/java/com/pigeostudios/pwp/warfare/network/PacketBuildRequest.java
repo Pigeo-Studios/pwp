@@ -180,59 +180,7 @@ public class PacketBuildRequest {
                                  }
                               }
                            }
-                        } else if (msg.structureId == 20) {
-                           int cost = 100;
-                           if (!canPlaceAt(level, msg.pos)) {
-                              sendBlockedMessage(player);
-                              return;
-                           }
-
-                           if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
-                              sendNoMaterialsMessage(player, cost);
-                           } else {
-                              if (!isCreative) {
-                                 consumeMaterials(level, msg.pos, team, cost);
-                              }
-
-                              BlockState m2State = (BlockState)((BlockState)((Block)ModBlocks.M2_CONSTRUCTION_BLOCK.get())
-                                    .defaultBlockState()
-                                    .setValue(M2ConstructionBlock.FACING, facing))
-                                 .setValue(M2ConstructionBlock.VALID, true);
-                              if (level.setBlock(msg.pos, m2State, 3)) {
-                                 if (level.getBlockEntity(msg.pos) instanceof M2ConstructionBlockEntity m2) {
-                                    m2.setTeam(team);
-                                 }
-
-                                 player.sendSystemMessage(Component.literal("M2 Blueprint placed!").withStyle(ChatFormatting.GREEN));
-                              }
-                           }
-                        } else if (msg.structureId == 21) {
-                           int cost = 100;
-                           if (!canPlaceAt(level, msg.pos)) {
-                              sendBlockedMessage(player);
-                              return;
-                           }
-
-                           if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
-                              sendNoMaterialsMessage(player, cost);
-                           } else {
-                              if (!isCreative) {
-                                 consumeMaterials(level, msg.pos, team, cost);
-                              }
-
-                              BlockState agsState = (BlockState)((BlockState)((Block)ModBlocks.AGS_CONSTRUCTION_BLOCK.get())
-                                    .defaultBlockState()
-                                    .setValue(AGSConstructionBlock.FACING, facing))
-                                 .setValue(AGSConstructionBlock.VALID, true);
-                              if (level.setBlock(msg.pos, agsState, 3)) {
-                                 if (level.getBlockEntity(msg.pos) instanceof AGSConstructionBlockEntity ags) {
-                                    ags.setTeam(team);
-                                 }
-
-                                 player.sendSystemMessage(Component.literal("AGS-30 Blueprint placed!").withStyle(ChatFormatting.GREEN));
-                              }
-                           }
-                        } else if (msg.structureId == 22) {
+                         } else if (msg.structureId == 22) {
                            int cost = 300;
                            if (!canPlaceAt(level, msg.pos)) {
                               sendBlockedMessage(player);

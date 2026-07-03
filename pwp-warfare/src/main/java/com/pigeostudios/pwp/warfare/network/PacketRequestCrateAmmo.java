@@ -51,12 +51,6 @@ public class PacketRequestCrateAmmo {
                      case 0:
                         cost = (Integer)WarfareConfig.HUB_RESUPPLY_COST.get();
                         break;
-                     case 1:
-                        cost = 20;
-                        break;
-                     case 2:
-                        cost = 15;
-                        break;
                      case 3:
                         cost = 20;
                         break;
@@ -96,28 +90,8 @@ public class PacketRequestCrateAmmo {
                   } else if (!player.isCreative() && crate.getMaterials() < cost) {
                      player.sendSystemMessage(Component.literal("Not enough Materials in Crate! Need: " + cost).withStyle(ChatFormatting.RED));
                   } else {
-                     boolean success = false;
-                     if (msg.type == 1) {
-                        ItemStack stack = new ItemStack((ItemLike)ModItems.AGS_AMMO.get());
-                        AGSAmmoItem.setAmmo(stack, 30);
-                        if (player.getInventory().add(stack)) {
-                           success = true;
-                        } else {
-                           player.drop(stack, false);
-                        }
-
-                        success = true;
-                     } else if (msg.type == 2) {
-                        ItemStack stack = new ItemStack((ItemLike)ModItems.M2_AMMO.get());
-                        M2AmmoItem.setAmmo(stack, 200);
-                        if (player.getInventory().add(stack)) {
-                           success = true;
-                        } else {
-                           player.drop(stack, false);
-                        }
-
-                        success = true;
-                     } else if (msg.type == 3) {
+                      boolean success = false;
+                      if (msg.type == 3) {
                         Item mortarItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "mortar_shell"));
                         if (mortarItem == null || mortarItem == Items.AIR) {
                            mortarItem = Items.ARROW;

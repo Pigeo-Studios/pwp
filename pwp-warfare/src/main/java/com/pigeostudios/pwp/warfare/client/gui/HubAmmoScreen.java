@@ -28,10 +28,8 @@ public class HubAmmoScreen extends Screen {
    }
 
    private void updateCooldowns() {
-      if (Minecraft.getInstance().level != null && Minecraft.getInstance().level.getBlockEntity(this.hubPos) instanceof HubBlockEntity hub) {
-         this.cachedCdAGS = hub.cooldownAGS;
-         this.cachedCdM2 = hub.cooldownM2;
-      }
+      this.cachedCdAGS = 1;
+      this.cachedCdM2 = 1;
    }
 
    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
