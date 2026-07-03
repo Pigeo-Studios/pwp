@@ -6,10 +6,31 @@
     "minPlayers": 2,
     "image": "grozny",
     "version": "1.0",
+    "mode": "aas",
+    "modeDisplayName": "Advance and Secure",
+    "durationMinutes": 90,
 
     "teams": {
-        "BLUE": { "faction": "russia", "tickets": 600 },
-        "RED": { "faction": "insurgency", "tickets": 600 }
+        "BLUE": {
+            "faction": "russia",
+            "tickets": 600,
+            "spawn": {
+                "dimension": "minecraft:overworld",
+                "x": 200,
+                "y": 80,
+                "z": 200
+            }
+        },
+        "RED": {
+            "faction": "insurgency",
+            "tickets": 600,
+            "spawn": {
+                "dimension": "minecraft:overworld",
+                "x": -200,
+                "y": 80,
+                "z": -200
+            }
+        }
     },
 
     "settings": {
@@ -18,15 +39,58 @@
         "lockDurationMinutes": 0
     },
 
-    "spawns": [
-        { "team": "BLUE", "x": 200, "z": 200 },
-        { "team": "RED", "x": -200, "z": -200 }
+    "mainZones": [
+        {
+            "team": "BLUE",
+            "shape": "cylinder",
+            "pos1": { "x": 150, "y": 50, "z": 150 },
+            "pos2": { "x": 250, "y": 120, "z": 250 }
+        },
+        {
+            "team": "RED",
+            "shape": "cylinder",
+            "pos1": { "x": -250, "y": 50, "z": -250 },
+            "pos2": { "x": -150, "y": 120, "z": -150 }
+        }
     ],
 
     "capturePoints": [
-        { "name": "City Center", "x": 0, "z": 0, "radius": 30, "priority": 18, "ticketPenalty": 60 },
-        { "name": "Market", "x": -60, "z": 40, "radius": 20, "priority": 12, "ticketPenalty": 45 },
-        { "name": "Outskirts", "x": 70, "z": -50, "radius": 25, "priority": 8, "ticketPenalty": 30 }
+        {
+            "name": "City Center",
+            "shape": "cylinder",
+            "pos1": { "x": -30, "y": 50, "z": -30 },
+            "pos2": { "x": 30, "y": 120, "z": 30 },
+            "bluePriority": 18,
+            "redPriority": 18,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Market",
+            "shape": "cylinder",
+            "pos1": { "x": -80, "y": 50, "z": 20 },
+            "pos2": { "x": -40, "y": 120, "z": 60 },
+            "bluePriority": 12,
+            "redPriority": 12,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 45,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Outskirts",
+            "shape": "cylinder",
+            "pos1": { "x": 45, "y": 50, "z": -75 },
+            "pos2": { "x": 95, "y": 120, "z": -25 },
+            "bluePriority": 8,
+            "redPriority": 8,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 30,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        }
     ],
 
     "mapBounds": {

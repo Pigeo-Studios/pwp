@@ -34,6 +34,12 @@ public class MatchAllocator {
                 .anyMatch(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING);
     }
 
+    public static MatchInfo getActiveMatch() {
+        return activeMatches.values().stream()
+                .filter(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING)
+                .findFirst().orElse(null);
+    }
+
     public static synchronized void startMatch(MapConfig map) {
         if (lobbyPlayers.size() < minPlayersToStart) {
             log.info("Not enough players: {}/{}", lobbyPlayers.size(), minPlayersToStart);
@@ -53,11 +59,32 @@ public class MatchAllocator {
         MatchInfo mi = new MatchInfo();
         mi.serverId = sr.serverId;
         mi.mapName = map.name;
+        mi.displayName = map.displayName;
+        mi.modeDisplayName = map.modeDisplayName;
         mi.port = sr.port;
         mi.maxPlayers = map.maxPlayers;
         mi.playerCount = lobbyPlayers.size();
+        mi.blueFaction = map.BLUE.faction;
+        mi.redFaction = map.RED.faction;
+        mi.blueTickets = map.BLUE.tickets;
+        mi.redTickets = map.RED.tickets;
         activeMatches.put(mi.serverId, mi);
         log.info("Match {}: {} on port {} ({} players)", mi.serverId, map.displayName, sr.port, lobbyPlayers.size());
+    }
+
+    public static void joinActiveMatch(ServerPlayer player) {
+        MatchInfo mi = getActiveMatch();
+        if (mi == null || mi.phase != MatchPhase.PLAYING) {
+            player.sendSystemMessage(Component.literal("§cNo active match available to join"), false);
+            return;
+        }
+        String host = "127.0.0.1";
+        player.sendSystemMessage(
+                Component.literal("§e[PWP] Joining match on " + host + ":" + mi.port + "..."),
+                false);
+        PacketHandler.INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new ConnectToServerPacket(host, mi.port));
     }
 
     public static void tick() {
@@ -113,9 +140,15 @@ public class MatchAllocator {
     public static class MatchInfo {
         public int serverId;
         public String mapName;
+        public String displayName;
+        public String modeDisplayName;
         public int port;
         public int playerCount;
         public int maxPlayers;
+        public String blueFaction;
+        public String redFaction;
+        public int blueTickets;
+        public int redTickets;
         public MatchPhase phase = MatchPhase.STARTING;
     }
 }

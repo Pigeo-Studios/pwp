@@ -23,6 +23,7 @@ import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.PermissionHelper;
+import com.pwp.coreclient.network.ConnectToServerPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,8 +96,10 @@ public class GameLogicEvents {
    public static final Map<UUID, String> pendingRespawnLocations = new HashMap<>();
    public static final Map<UUID, String> pendingTeams = new HashMap<>();
    public static final Map<UUID, Map<Integer, CompoundTag>> PERSISTENT_NBT_STORAGE = new HashMap<>();
-   private static final Map<String, Boolean> lastBlueBlockedMap = new HashMap<>();
-   private static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
+    private static final Map<String, Boolean> lastBlueBlockedMap = new HashMap<>();
+    private static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
+    private static int returnToLobbyTimer = -1;
+    private static MinecraftServer returnToLobbyServer = null;
 
    // Р—Р°РїСѓСЃРє РѕР±СЂР°С‚РЅРѕРіРѕ РѕС‚СЃС‡С‘С‚Р° РїРµСЂРµРґ РЅР°С‡Р°Р»РѕРј РёРіСЂС‹
    public static void startGameCountdown(ServerLevel level) {
@@ -678,18 +681,35 @@ public class GameLogicEvents {
                   }
                }
 
-               if (data.redArtRequest != null) {
-                  data.redArtRequest.timer--;
-                  if (data.redArtRequest.timer <= 0) {
-                     data.redArtRequest = null;
-                     data.setDirty();
-                     PacketHandler.sendToAllClients(level, data);
-                  }
-               }
-            }
-         }
-      }
-   }
+                if (data.redArtRequest != null) {
+                   data.redArtRequest.timer--;
+                   if (data.redArtRequest.timer <= 0) {
+                      data.redArtRequest = null;
+                      data.setDirty();
+                      PacketHandler.sendToAllClients(level, data);
+                   }
+                }
+             }
+          }
+
+          if (returnToLobbyTimer > 0) {
+             returnToLobbyTimer--;
+             if (returnToLobbyTimer == 0 && returnToLobbyServer != null) {
+                String lobbyHost = "127.0.0.1";
+                int lobbyPort = 25565;
+                for (ServerPlayer player : returnToLobbyServer.getPlayerList().getPlayers()) {
+                   player.sendSystemMessage(
+                      Component.literal("§e[PWP] Returning to lobby..."), false);
+                   com.pwp.coreclient.network.PacketHandler.INSTANCE.send(
+                      net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                      new ConnectToServerPacket(lobbyHost, lobbyPort));
+                }
+                returnToLobbyServer.halt(false);
+                returnToLobbyServer = null;
+             }
+          }
+       }
+    }
 
    private static void spawnArtShell(ServerLevel level, BlockPos pos) {
       int rad = (Integer)WarfareConfig.ART_STRIKE_RADIUS.get();
@@ -1566,84 +1586,87 @@ public class GameLogicEvents {
    }
 
     private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
-       data.isGameStarted = false;
-       data.setDirty();
+        data.isGameStarted = false;
+        data.setDirty();
 
-       String winner = blueWon ? "BLUE" : "RED";
-       MatchStatsTracker.get().finalizeMatch(winner, data.blueTickets, data.redTickets);
+        String winner = blueWon ? "BLUE" : "RED";
+        MatchStatsTracker.get().finalizeMatch(winner, data.blueTickets, data.redTickets);
 
-       String winnerName;
-      String winnerFaction;
-      if (blueWon) {
-         winnerFaction = data.blueFaction;
-         winnerName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("bluefor")
-            ? formatFactionName(winnerFaction)
-            : (String)WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get();
-         if (winnerName.isEmpty()) {
-            winnerName = "BLUE TEAM";
-         }
-      } else {
-         winnerFaction = data.redFaction;
-         winnerName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("redfor")
-            ? formatFactionName(winnerFaction)
-            : (String)WarfareConfig.RED_TEAM_CUSTOM_NAME.get();
-         if (winnerName.isEmpty()) {
-            winnerName = "RED TEAM";
-         }
-      }
+        String winnerName;
+       String winnerFaction;
+       if (blueWon) {
+          winnerFaction = data.blueFaction;
+          winnerName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("bluefor")
+             ? formatFactionName(winnerFaction)
+             : (String)WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get();
+          if (winnerName.isEmpty()) {
+             winnerName = "BLUE TEAM";
+          }
+       } else {
+          winnerFaction = data.redFaction;
+          winnerName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("redfor")
+             ? formatFactionName(winnerFaction)
+             : (String)WarfareConfig.RED_TEAM_CUSTOM_NAME.get();
+          if (winnerName.isEmpty()) {
+             winnerName = "RED TEAM";
+          }
+       }
 
-      String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
-      PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon));
-      Scoreboard scoreboard = level.getScoreboard();
-      PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
-      PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
-      if (blueTeam != null) {
-         blueTeam.setAllowFriendlyFire(false);
-      }
+       String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
+       PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon));
+       Scoreboard scoreboard = level.getScoreboard();
+       PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
+       PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
+       if (blueTeam != null) {
+          blueTeam.setAllowFriendlyFire(false);
+       }
 
-      if (redTeam != null) {
-         redTeam.setAllowFriendlyFire(false);
-      }
+       if (redTeam != null) {
+          redTeam.setAllowFriendlyFire(false);
+       }
 
-      String currentDim = level.dimension().location().toString();
+       String currentDim = level.dimension().location().toString();
 
-      for (ServerPlayer player : level.players()) {
-         if (player.getPersistentData().getBoolean("WARFARE_TeamKillSpectator")) {
-            player.getPersistentData().remove("WARFARE_TeamKillSpectator");
-            player.getPersistentData().remove("WARFARE_TeamKills");
-            player.getPersistentData().remove("WARFARE_BaseRestrictedUntil");
-            player.setGameMode(GameType.SURVIVAL);
-         }
+       for (ServerPlayer player : level.players()) {
+          if (player.getPersistentData().getBoolean("WARFARE_TeamKillSpectator")) {
+             player.getPersistentData().remove("WARFARE_TeamKillSpectator");
+             player.getPersistentData().remove("WARFARE_TeamKills");
+             player.getPersistentData().remove("WARFARE_BaseRestrictedUntil");
+             player.setGameMode(GameType.SURVIVAL);
+          }
 
-         if (!player.isCreative() && !player.isSpectator()) {
-            if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
-               DownedHandler.revivePlayer(player);
-            }
+          if (!player.isCreative() && !player.isSpectator()) {
+             if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                DownedHandler.revivePlayer(player);
+             }
 
-            player.setHealth(player.getMaxHealth());
-            player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-            player.getPersistentData().remove("WARFARE_PendingKit");
-            player.getInventory().clearContent();
-            ResupplyHandler.clearCurios(player);
-            player.inventoryMenu.broadcastChanges();
-            player.containerMenu.broadcastChanges();
-            String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-            BlockPos spawnPos = null;
-            if (pTeam.equals("BLUE")) {
-               spawnPos = data.blueSpawns.get(currentDim);
-            } else if (pTeam.equals("RED")) {
-               spawnPos = data.redSpawns.get(currentDim);
-            }
+             player.setHealth(player.getMaxHealth());
+             player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
+             player.getPersistentData().remove("WARFARE_PendingKit");
+             player.getInventory().clearContent();
+             ResupplyHandler.clearCurios(player);
+             player.inventoryMenu.broadcastChanges();
+             player.containerMenu.broadcastChanges();
+             String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
+             BlockPos spawnPos = null;
+             if (pTeam.equals("BLUE")) {
+                spawnPos = data.blueSpawns.get(currentDim);
+             } else if (pTeam.equals("RED")) {
+                spawnPos = data.redSpawns.get(currentDim);
+             }
 
-            if (spawnPos != null) {
-               player.setRespawnPosition(level.dimension(), spawnPos, 0.0F, true, false);
-               if (player.isAlive()) {
-                  player.teleportTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
-               }
-            }
-         }
-      }
-   }
+             if (spawnPos != null) {
+                player.setRespawnPosition(level.dimension(), spawnPos, 0.0F, true, false);
+                if (player.isAlive()) {
+                   player.teleportTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5);
+                }
+             }
+          }
+       }
+
+       returnToLobbyTimer = 300;
+       returnToLobbyServer = level.getServer();
+    }
 
    private static String formatFactionName(String faction) {
       return faction.replace("_", " ").toUpperCase();

@@ -2,12 +2,13 @@ package com.pwp.lobby;
 
 import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.PermissionHelper;
+import com.pwp.coreclient.network.OpenMatchScreenPacket;
+import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
 import com.pwp.lobby.match.MatchAllocator.MatchInfo;
 import com.mojang.brigadier.Command;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,6 +20,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.nio.file.Paths;
@@ -65,18 +67,21 @@ public class LobbyMod {
 
         String uuid = player.getStringUUID();
 
-        var playerData = CoreAPI.loadPlayer(uuid);
-        if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
-            CoreAPI.createPlayer(uuid, player.getScoreboardName());
-            playerData = CoreAPI.loadPlayer(uuid);
-        }
-        if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
-            player.connection.disconnect(
-                    Component.literal("§cRegistration failed. Contact admin."));
-            return;
+        try {
+            var playerData = CoreAPI.loadPlayer(uuid);
+            if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
+                CoreAPI.createPlayer(uuid, player.getScoreboardName());
+            }
+        } catch (Exception e) {
+            System.out.println("[PWP] Core API unavailable (DB down?), proceeding without registration: " + e.getMessage());
         }
 
         MatchAllocator.playerJoined(uuid);
+
+        if (!MatchAllocator.hasActiveMatch() && !VotingManager.isActive()) {
+            VotingManager.startVoting();
+            serverBroadcast("§e[PWP] Voting started! Type /votemap <map> to vote");
+        }
     }
 
     @SubscribeEvent
@@ -90,153 +95,152 @@ public class LobbyMod {
     public void onRegisterCommands(RegisterCommandsEvent event) {
         var dispatcher = event.getDispatcher();
 
-        // /pwp - main admin command
         dispatcher.register(Commands.literal("pwp")
-            .requires(s -> s.hasPermission(2))
-
-            // /pwp vote
+            .then(Commands.literal("join")
+                .executes(ctx -> {
+                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    MatchAllocator.joinActiveMatch(player);
+                    return Command.SINGLE_SUCCESS;
+                }))
+            .then(Commands.literal("start")
+                .requires(s -> s.hasPermission(2))
+                .executes(ctx -> {
+                    if (MatchAllocator.hasActiveMatch()) {
+                        ctx.getSource().sendFailure(Component.literal("A match is already running"));
+                        return 0;
+                    }
+                    String mapName = "grozny";
+                    MapConfig map = MapRegistry.get(mapName);
+                    if (map == null) {
+                        ctx.getSource().sendFailure(Component.literal("Map config not found"));
+                        return 0;
+                    }
+                    MatchAllocator.startMatch(map);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Match started"), true);
+                    return Command.SINGLE_SUCCESS;
+                }))
             .then(Commands.literal("vote")
-                .then(Commands.literal("start")
-                    .executes(ctx -> {
-                        if (!VotingManager.isActive()) {
-                            VotingManager.startVoting();
-                            var server = ServerLifecycleHooks.getCurrentServer();
-                            if (server != null) {
-                                for (var p : server.getPlayerList().getPlayers()) {
-                                    p.sendSystemMessage(Component.literal("§e[PWP] Voting started! Type /votemap <map> to vote"), false);
-                                }
-                            }
-                            ctx.getSource().sendSuccess(() -> Component.literal("Voting started"), true);
-                        } else {
-                            ctx.getSource().sendFailure(Component.literal("Voting already active"));
-                        }
-                        return Command.SINGLE_SUCCESS;
-                    }))
-                .then(Commands.literal("set")
-                    .then(Commands.argument("map", StringArgumentType.greedyString())
-                        .suggests((ctx, builder) -> {
-                            for (MapConfig m : MapRegistry.getVotable()) {
-                                builder.suggest(m.name);
-                            }
-                            return builder.buildFuture();
-                        })
-                        .executes(ctx -> {
-                            String mapName = StringArgumentType.getString(ctx, "map");
-                            if (MapRegistry.get(mapName) != null) {
-                                VotingManager.stopVoting();
-                                LobbyMod.onVoteFinished(mapName);
-                                ctx.getSource().sendSuccess(() -> Component.literal("Match started: " + mapName), true);
-                            } else {
-                                ctx.getSource().sendFailure(Component.literal("Unknown map: " + mapName));
-                            }
-                            return Command.SINGLE_SUCCESS;
-                        })))
-                .then(Commands.literal("list")
-                    .executes(ctx -> {
-                        var maps = MapRegistry.getVotable();
-                        ctx.getSource().sendSuccess(() -> Component.literal("§eAvailable maps:"), false);
-                        for (MapConfig m : maps) {
-                            String running = MatchAllocator.getActiveMatches().values().stream()
-                                .anyMatch(mi -> mi.mapName.equals(m.name)) ? " §c[RUNNING]" : "";
-                            ctx.getSource().sendSuccess(() -> Component.literal(
-                                " §7- §f" + m.name + " §7(" + m.displayName + ")" + running), false);
-                        }
-                        return Command.SINGLE_SUCCESS;
-                    }))
-                .then(Commands.literal("status")
-                    .executes(ctx -> {
+                .requires(s -> s.hasPermission(2))
+                .executes(ctx -> {
+                    if (VotingManager.isActive()) {
+                        ctx.getSource().sendFailure(Component.literal("Voting already active"));
+                        return 0;
+                    }
+                    VotingManager.startVoting();
+                    serverBroadcast("§e[PWP] Voting started! Type /votemap <map> to vote");
+                    ctx.getSource().sendSuccess(() -> Component.literal("Voting started"), true);
+                    return Command.SINGLE_SUCCESS;
+                }))
+            .then(Commands.literal("stop")
+                .requires(s -> s.hasPermission(2))
+                .executes(ctx -> {
+                    MatchInfo mi = MatchAllocator.getActiveMatch();
+                    if (mi == null) {
+                        ctx.getSource().sendFailure(Component.literal("No active match"));
+                        return 0;
+                    }
+                    MatchAllocator.matchEnded(mi.serverId);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Match stopped"), true);
+                    return Command.SINGLE_SUCCESS;
+                }))
+            .then(Commands.literal("status")
+                .requires(s -> s.hasPermission(2))
+                .executes(ctx -> {
+                    MatchInfo mi = MatchAllocator.getActiveMatch();
+                    if (mi != null) {
                         ctx.getSource().sendSuccess(() -> Component.literal(
-                            "§eActive: " + VotingManager.isActive() + " Timer: " + VotingManager.getRemainingSeconds() +
-                            "s Winner: " + (VotingManager.getWinner() != null ? VotingManager.getWinner() : "none")), false);
-                        return Command.SINGLE_SUCCESS;
-                    })))
+                            "§eMatch: " + mi.displayName + " | " + mi.modeDisplayName +
+                            " | " + mi.blueFaction + " vs " + mi.redFaction +
+                            " | Tickets: " + mi.blueTickets + "/" + mi.redTickets +
+                            " | Phase: " + mi.phase +
+                            " | Players: " + mi.playerCount + "/" + mi.maxPlayers), false);
+                    } else if (VotingManager.isActive()) {
+                        ctx.getSource().sendSuccess(() -> Component.literal(
+                            "§eVoting active: " + VotingManager.getRemainingSeconds() + "s remaining"), false);
+                    } else {
+                        ctx.getSource().sendSuccess(() -> Component.literal("§eNo active match or voting"), false);
+                    }
+                    return Command.SINGLE_SUCCESS;
+                }))
+            .executes(ctx -> {
+                ServerPlayer player = ctx.getSource().getPlayerOrException();
+                MatchInfo mi = MatchAllocator.getActiveMatch();
+                int online = MatchAllocator.getLobbyPlayerCount();
 
-            // /pwp match
-            .then(Commands.literal("match")
-                .then(Commands.literal("list")
-                    .executes(ctx -> {
-                        var matches = MatchAllocator.getActiveMatches();
-                        if (matches.isEmpty()) {
-                            ctx.getSource().sendSuccess(() -> Component.literal("§eNo active matches"), false);
-                        } else {
-                            for (MatchInfo mi : matches.values()) {
-                                ctx.getSource().sendSuccess(() -> Component.literal(
-                                    " §7- §f" + mi.mapName + " §7port=" + mi.port +
-                                    " §7" + mi.playerCount + "/" + mi.maxPlayers), false);
-                            }
-                        }
-                        return Command.SINGLE_SUCCESS;
-                    }))
-                .then(Commands.literal("stop")
-                    .then(Commands.argument("port", com.mojang.brigadier.arguments.IntegerArgumentType.integer(25565, 65535))
-                        .executes(ctx -> {
-                            int port = ctx.getArgument("port", Integer.class);
-                            var match = MatchAllocator.getActiveMatches().values().stream()
-                                .filter(m -> m.port == port).findFirst();
-                            if (match.isPresent()) {
-                                MatchAllocator.matchEnded(match.get().serverId);
-                                ctx.getSource().sendSuccess(() -> Component.literal("Match on port " + port + " stopped"), true);
-                            } else {
-                                ctx.getSource().sendFailure(Component.literal("No match on port " + port));
-                            }
-                            return Command.SINGLE_SUCCESS;
-                        })))));
+                String status;
+                boolean canJoin = false;
+                int remainingSec = 0;
+                if (mi != null) {
+                    switch (mi.phase) {
+                        case STARTING: status = "STARTING"; break;
+                        case PLAYING: status = "PLAYING"; canJoin = true; break;
+                        default: status = "NONE";
+                    }
+                } else if (VotingManager.isActive()) {
+                    status = "VOTING";
+                    remainingSec = VotingManager.getRemainingSeconds();
+                } else {
+                    status = "NONE";
+                }
 
-        // /votemap <map> (for all players)
+                String firstMap = "grozny";
+                MapConfig cfg = MapRegistry.get(firstMap);
+                if (cfg == null) cfg = MapRegistry.getVotable().isEmpty() ? null : MapRegistry.getVotable().get(0);
+
+                String mapDisplayName = mi != null ? mi.displayName : (cfg != null ? cfg.displayName : "Grozny");
+                String modeDisplayName = mi != null ? mi.modeDisplayName : (cfg != null ? cfg.modeDisplayName : "AAS");
+                String blueFaction = mi != null ? mi.blueFaction : (cfg != null ? cfg.BLUE.faction : "russia");
+                String redFaction = mi != null ? mi.redFaction : (cfg != null ? cfg.RED.faction : "insurgency");
+                int blueTickets = mi != null ? mi.blueTickets : (cfg != null ? cfg.BLUE.tickets : 600);
+                int redTickets = mi != null ? mi.redTickets : (cfg != null ? cfg.RED.tickets : 600);
+
+                OpenMatchScreenPacket pkt = new OpenMatchScreenPacket(
+                        mapDisplayName, modeDisplayName,
+                        blueFaction, redFaction,
+                        blueTickets, redTickets,
+                        remainingSec, status, online, canJoin);
+
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.PLAYER.with(() -> player),
+                        pkt);
+
+                return Command.SINGLE_SUCCESS;
+            }));
+
         dispatcher.register(Commands.literal("votemap")
-            .then(Commands.argument("name", StringArgumentType.greedyString())
+            .then(Commands.argument("name", com.mojang.brigadier.arguments.StringArgumentType.word())
                 .suggests((ctx, builder) -> {
                     for (MapConfig m : MapRegistry.getVotable()) {
-                        if (!MatchAllocator.getActiveMatches().values().stream()
-                                .anyMatch(mi -> mi.mapName.equals(m.name))) {
-                            builder.suggest(m.name);
-                        }
+                        builder.suggest(m.name);
                     }
                     return builder.buildFuture();
                 })
                 .executes(ctx -> {
-                    String mapName = StringArgumentType.getString(ctx, "name");
+                    String mapName = ctx.getArgument("name", String.class);
                     if (MapRegistry.get(mapName) == null) {
                         ctx.getSource().sendFailure(Component.literal("Unknown map: " + mapName));
                         return 0;
                     }
                     if (!VotingManager.isActive()) {
-                        ctx.getSource().sendFailure(Component.literal("No active voting. Use /pwp vote start"));
+                        ctx.getSource().sendFailure(Component.literal("No active voting"));
                         return 0;
                     }
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
-                    boolean accepted = VotingManager.vote(player.getUUID(), mapName);
-                    if (!accepted) {
-                        ctx.getSource().sendFailure(Component.literal("§cYou already voted for " + mapName));
+                    if (!VotingManager.vote(player.getUUID(), mapName)) {
+                        ctx.getSource().sendFailure(Component.literal("§cVote not accepted (already voted?)"));
                         return 0;
-                    }
-                    var server = ServerLifecycleHooks.getCurrentServer();
-                    if (server != null) {
-                        for (var p : server.getPlayerList().getPlayers()) {
-                            p.sendSystemMessage(Component.literal(
-                                "§7" + player.getScoreboardName() + " voted for §f" + mapName), false);
-                        }
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal("§aVoted for " + mapName), false);
                     return Command.SINGLE_SUCCESS;
                 })));
+    }
 
-        // /votes - show current votes
-        dispatcher.register(Commands.literal("votes")
-            .executes(ctx -> {
-                if (!VotingManager.isActive()) {
-                    ctx.getSource().sendSuccess(() -> Component.literal("§eNo active voting"), false);
-                    return Command.SINGLE_SUCCESS;
-                }
-                var counts = VotingManager.getVoteCounts();
-                ctx.getSource().sendSuccess(() -> Component.literal(
-                    "§eVoting: " + VotingManager.getRemainingSeconds() + "s remaining"), false);
-                for (var entry : counts.entrySet()) {
-                    ctx.getSource().sendSuccess(() -> Component.literal(
-                        " §f" + entry.getKey() + " §7- " + entry.getValue() + " votes"), false);
-                }
-                return Command.SINGLE_SUCCESS;
-            }));
+    private static void serverBroadcast(String msg) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) {
+            server.getPlayerList().getPlayers().forEach(p ->
+                p.sendSystemMessage(Component.literal(msg), false));
+        }
     }
 
     public static void onVoteFinished(String mapName) {

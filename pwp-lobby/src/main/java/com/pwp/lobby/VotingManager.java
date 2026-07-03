@@ -15,7 +15,8 @@ public class VotingManager {
     private static final Map<UUID, String> votes = new HashMap<>();
     private static boolean active = false;
     private static long voteStartTime = 0;
-    private static int voteDurationSec = 30;
+    private static int voteDurationSec = 300;
+    private static boolean accelerated = false;
     private static boolean finished = false;
     private static String winner = null;
 
@@ -31,6 +32,7 @@ public class VotingManager {
         }
         active = true;
         finished = false;
+        accelerated = false;
         winner = null;
         votes.clear();
         voteStartTime = System.currentTimeMillis();
@@ -51,6 +53,18 @@ public class VotingManager {
     public static void tick() {
         if (!active || finished) return;
         long elapsed = System.currentTimeMillis() - voteStartTime;
+        int remaining = voteDurationSec - (int)(elapsed / 1000);
+
+        if (!accelerated && remaining > 60) {
+            int online = MatchAllocator.getLobbyPlayerCount();
+            if (online > 0 && votes.size() * 10 >= online * 9) {
+                accelerated = true;
+                long now = System.currentTimeMillis();
+                voteStartTime = now - (voteDurationSec - 60) * 1000L;
+                log.info("90% threshold reached, vote accelerated to 60s remaining");
+            }
+        }
+
         if (elapsed >= voteDurationSec * 1000L) {
             finishVoting();
         }
@@ -93,6 +107,7 @@ public class VotingManager {
     public static void stopVoting() {
         active = false;
         finished = false;
+        accelerated = false;
         votes.clear();
         voteStartTime = 0;
         winner = null;

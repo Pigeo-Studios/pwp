@@ -27,5 +27,17 @@ public class PacketHandler {
                 OpenVotingScreenPacket::encode,
                 OpenVotingScreenPacket::decode,
                 OpenVotingScreenPacket::handle);
+        INSTANCE.registerMessage(id++, OpenMatchScreenPacket.class,
+                OpenMatchScreenPacket::encode,
+                OpenMatchScreenPacket::decode,
+                OpenMatchScreenPacket::handle);
+        INSTANCE.registerMessage(id++, VoteMapPacket.class,
+                VoteMapPacket::encode,
+                VoteMapPacket::decode,
+                VoteMapPacket::handle);
+        INSTANCE.registerMessage(id++, JoinMatchPacket.class,
+                JoinMatchPacket::encode,
+                JoinMatchPacket::decode,
+                JoinMatchPacket::handle);
     }
 }

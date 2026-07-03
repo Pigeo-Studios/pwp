@@ -12,13 +12,16 @@ public class MapConfig {
     public String image = "map1";
     public String description = "";
     public String version = "1.0";
+    public String mode = "aas";
+    public String modeDisplayName = "Advance and Secure";
+    public int durationMinutes = 90;
 
     public String worldPath;
 
     public TeamConfig BLUE = new TeamConfig();
     public TeamConfig RED = new TeamConfig();
     public GameSettings settings = new GameSettings();
-    public List<SpawnConfig> spawns;
+    public List<MainZoneConfig> mainZones;
     public List<CapturePointConfig> capturePoints;
     public MapBoundsConfig mapBounds = new MapBoundsConfig();
     public Map<String, List<String>> vehicles;
@@ -26,6 +29,14 @@ public class MapConfig {
     public static class TeamConfig {
         public String faction = "bluefor";
         public int tickets = 800;
+        public SpawnConfig spawn = new SpawnConfig();
+    }
+
+    public static class SpawnConfig {
+        public String dimension = "minecraft:overworld";
+        public int x;
+        public int y = 64;
+        public int z;
     }
 
     public static class GameSettings {
@@ -34,20 +45,48 @@ public class MapConfig {
         public int lockDurationMinutes = 0;
     }
 
-    public static class SpawnConfig {
+    public static class MainZoneConfig {
         public String team;
-        public int x;
-        public int z;
+        public String shape = "cylinder";
+        public Pos1 pos1 = new Pos1();
+        public Pos2 pos2 = new Pos2();
+
+        public static class Pos1 {
+            public int x;
+            public int y;
+            public int z;
+        }
+
+        public static class Pos2 {
+            public int x;
+            public int y;
+            public int z;
+        }
     }
 
     public static class CapturePointConfig {
         public String name;
-        public int x;
-        public int z;
-        public int radius = 30;
-        public String shape = "CIRCLE";
-        public int priority = 19;
+        public String shape = "cylinder";
+        public Pos1 pos1 = new Pos1();
+        public Pos2 pos2 = new Pos2();
+        public int bluePriority = 10;
+        public int redPriority = 10;
+        public int captureTimeMinutes = 2;
         public int ticketPenalty = 60;
+        public int captureDeduction;
+        public int lockDurationMinutes;
+
+        public static class Pos1 {
+            public int x;
+            public int y;
+            public int z;
+        }
+
+        public static class Pos2 {
+            public int x;
+            public int y;
+            public int z;
+        }
     }
 
     public static class MapBoundsConfig {

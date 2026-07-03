@@ -122,6 +122,7 @@ public class DownedHandler {
 
    // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅР°СЏ СЃРјРµСЂС‚СЊ РёРіСЂРѕРєР° (РёСЃС‚РµС‡РµРЅРёРµ РєСЂРѕРІРё РёР»Рё СЃРґР°С‡Р°)
    public static void forceGiveUp(ServerPlayer player) {
+      player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.PLAYER_DOWNED.get(), SoundSource.PLAYERS, 1.5F, 1.0F);
       String victimName = player.getScoreboardName();
       String killerName = player.getPersistentData().getString("WARFARE_KnockedBy");
       ServerLevel level = player.serverLevel();

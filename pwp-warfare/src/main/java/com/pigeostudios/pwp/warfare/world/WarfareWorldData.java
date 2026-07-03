@@ -63,7 +63,8 @@ public class WarfareWorldData extends SavedData {
    public int mapCenterX = 0;
    public int mapCenterZ = 0;
    public int mapSizeBlocks = 2048;
-   public String currentMapImage = "map1";
+    public String currentMapImage = "map1";
+    public boolean configApplied = false;
     public List<String> getAvailableMapImages() {
        List<String> images = new ArrayList<>();
        try {
