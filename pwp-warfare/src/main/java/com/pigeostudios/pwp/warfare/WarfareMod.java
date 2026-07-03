@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.client.ClientConfigRegistry;
-import com.pigeostudios.pwp.warfare.command.DebugCommands;
 import com.pigeostudios.pwp.warfare.command.ModCommands;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.ModEntities;
@@ -74,7 +73,6 @@ public class WarfareMod {
    @SubscribeEvent
    public void onRegisterCommands(RegisterCommandsEvent event) {
       ModCommands.register(event.getDispatcher());
-      DebugCommands.register(event.getDispatcher());
    }
 
    public static void applyMapConfig(ServerLevel level) {
