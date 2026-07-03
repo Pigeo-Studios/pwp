@@ -59,18 +59,23 @@ public class LobbyMod {
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
+        PermissionHelper.autoOpIfAdmin(player);
+
         if (isMatchServer) return;
 
         String uuid = player.getStringUUID();
 
         var playerData = CoreAPI.loadPlayer(uuid);
         if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
+            CoreAPI.createPlayer(uuid, player.getScoreboardName());
+            playerData = CoreAPI.loadPlayer(uuid);
+        }
+        if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
             player.connection.disconnect(
-                    Component.literal("§cYou are not registered on this server.\n§7Register at pwp.example.com"));
+                    Component.literal("§cRegistration failed. Contact admin."));
             return;
         }
 
-        PermissionHelper.autoOpIfAdmin(player);
         MatchAllocator.playerJoined(uuid);
     }
 
