@@ -221,7 +221,8 @@ public class SkinInventoryScreen extends Screen {
                     gui.renderItem(stack, x + 4, y + 2);
                 }
 
-                String label = entry.skinId.length() > 12 ? entry.skinId.substring(0, 11) + ".." : entry.skinId;
+                String label = skinNameCache.getOrDefault(entry.skinId, entry.skinId);
+                if (label.length() > 14) label = label.substring(0, 11) + "..";
                 gui.drawString(this.font, label, x + 2, y + ITEM_SIZE / 2 - 4, rarityColor, false);
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
