@@ -14,8 +14,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 import net.minecraft.server.level.ServerPlayer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
@@ -23,7 +21,6 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 // РћР±СЂР°Р±РѕС‚С‡РёРє РїРѕРїРѕР»РЅРµРЅРёСЏ Р·Р°РїР°СЃРѕРІ: РІС‹РґР°С‡Р° РєРёС‚РѕРІ, СЂРµСЃР°РїРїР»Р°Р№ РїСЂРµРґРјРµС‚РѕРІ,
 // СЂР°Р±РѕС‚Р° СЃ Curios API Рё РїСЂРёРјРµРЅРµРЅРёРµ РѕС‚Р»РѕР¶РµРЅРЅС‹С… РєРёС‚РѕРІ РїСЂРё СЂРµСЃРїР°РІРЅРµ
 public class ResupplyHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResupplyHandler.class);
     // Р’С‹РґР°С‘С‚ РёРіСЂРѕРєСѓ РїРѕР»РЅС‹Р№ РЅР°Р±РѕСЂ РїСЂРµРґРјРµС‚РѕРІ РёР· СѓРєР°Р·Р°РЅРЅРѕРіРѕ РєРёС‚Р°
    public static void applyKitToPlayer(ServerPlayer player, WarfareWorldData.KitInfo kit) {
       Inventory pInv = player.getInventory();
@@ -41,32 +38,20 @@ public class ResupplyHandler {
 
             if (ModList.get().isLoaded("pwp_cosmetics")) {
                 String currentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
-                ResupplyHandler.LOGGER.info("KitApply slot={} item={} currentKit={}", i, itemToGive.getHoverName().getString(), currentKit);
-                
                 List<String> allowed = kit.slotSkins != null ? kit.slotSkins.get(i) : null;
-                ResupplyHandler.LOGGER.info("KitApply slot={} allowed={}", i, allowed);
-                
                 if (allowed != null && !allowed.isEmpty()) {
-                    String catType = null;
                     com.pwp.cosmetics.CosmeticManager.SkinData skinData = null;
-                    
                     if (allowed.get(0).startsWith("__CAT__")) {
-                        catType = allowed.get(0).substring(7);
+                        String catType = allowed.get(0).substring(7);
                         skinData = CosmeticManager.getEquipment(player.getUUID(), catType, currentKit);
-                        ResupplyHandler.LOGGER.info("KitApply slot={} category={} skinData={}", i, catType, skinData != null ? skinData.skinId : null);
                     } else {
                         skinData = CosmeticManager.getEquipment(player.getUUID(), "KNIFE", currentKit);
-                        String playerSkin = skinData != null ? skinData.skinId : null;
-                        if (playerSkin != null && (allowed.contains(playerSkin) || player.hasPermissions(2))) {
-                            ResupplyHandler.LOGGER.info("KitApply slot={} specific skin matched={}", i, playerSkin);
-                        } else {
+                        if (skinData != null && !(allowed.contains(skinData.skinId) || player.hasPermissions(2))) {
                             skinData = null;
                         }
                     }
-                    
                     if (skinData != null && !skinData.item.isEmpty()) {
                         itemToGive = skinData.item.copy();
-                        ResupplyHandler.LOGGER.info("KitApply slot={} replaced with skinItem={}", i, itemToGive.getHoverName().getString());
                     }
                 }
             }
@@ -88,22 +73,6 @@ public class ResupplyHandler {
 
       player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
    }
-
-   // РћС‡РёС‰Р°РµС‚ РІСЃРµ СЃР»РѕС‚С‹ Curios Сѓ РёРіСЂРѕРєР°
-    // Определяет тип косметического слота по предмету
-    private static String guessCosmeticSlot(ItemStack stack, int slotIndex) {
-       String itemId = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
-
-       if (itemId.contains("knife") || itemId.contains("bayonet") || itemId.contains("dagger")) return "KNIFE";
-       if (itemId.contains("sword") || itemId.contains("melee") || itemId.contains("bat") || itemId.contains("axe")) return "MELEE";
-       if (itemId.contains("pistol") || itemId.contains("deagle") || itemId.contains("glock")) return "SECONDARY";
-       if (itemId.contains("uniform") || itemId.contains("hat") || itemId.contains("helmet")) return "UNIFORM";
-
-       if (slotIndex < 9) return "PRIMARY";
-       if (slotIndex >= 41 && slotIndex < 49) return "MELEE";
-
-       return null;
-    }
 
     public static void clearCurios(ServerPlayer player) {
       if (ModList.get().isLoaded("curios")) {

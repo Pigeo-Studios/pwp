@@ -1,9 +1,6 @@
 package com.pwp.cosmetics;
 
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,7 +8,6 @@ import java.util.UUID;
 
 public class CosmeticManager {
 
-    private static final Logger log = LoggerFactory.getLogger(CosmeticManager.class);
     private static final Map<UUID, Map<String, SkinData>> playerEquipment = new HashMap<>();
 
     public static class SkinData {
@@ -25,17 +21,13 @@ public class CosmeticManager {
     }
 
     public static void setEquipment(UUID playerUuid, String slotType, String role, String skinId, ItemStack item) {
-        log.info("setEquipment: uuid={}, slot={}, role={}, skinId={}, hasItem={}", playerUuid, slotType, role, skinId, !item.isEmpty());
         playerEquipment.computeIfAbsent(playerUuid, k -> new HashMap<>())
                 .put(slotType + ":" + role, new SkinData(skinId, item));
     }
 
     public static SkinData getEquipment(UUID playerUuid, String slotType, String role) {
         Map<String, SkinData> slots = playerEquipment.get(playerUuid);
-        if (slots == null) {
-            log.info("getEquipment: uuid={} NOT FOUND in map", playerUuid);
-            return null;
-        }
+        if (slots == null) return null;
         SkinData data = slots.get(slotType + ":" + role);
         if (data == null) data = slots.get(slotType + ":ALL");
         if (data == null) {
@@ -45,7 +37,6 @@ public class CosmeticManager {
                 if (data != null) break;
             }
         }
-        log.info("getEquipment: uuid={}, slot={}, role={}, found={}", playerUuid, slotType, role, data != null ? data.skinId : null);
         return data;
     }
 

@@ -7,13 +7,10 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.function.Supplier;
 
 public class PacketSyncCosmeticEquip {
-    private static final Logger log = LoggerFactory.getLogger(PacketSyncCosmeticEquip.class);
     private final String slotType;
     private final String role;
     private final String skinId;
@@ -46,9 +43,7 @@ public class PacketSyncCosmeticEquip {
                     try {
                         CompoundTag tag = TagParser.parseTag(msg.itemSnbt);
                         skinItem = ItemStack.of(tag);
-                    } catch (Exception e) {
-                        log.warn("Failed to parse skin item SNBT: {}", e.getMessage());
-                    }
+                    } catch (Exception ignored) {}
                 }
                 CosmeticManager.setEquipment(player.getUUID(), msg.slotType, msg.role,
                     msg.skinId.isEmpty() ? null : msg.skinId, skinItem);
