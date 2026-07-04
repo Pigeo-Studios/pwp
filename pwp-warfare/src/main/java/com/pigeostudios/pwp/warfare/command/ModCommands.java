@@ -414,6 +414,23 @@ public class ModCommands {
                })
             )
       );
+
+      dispatcher.register(
+         Commands.literal("ready")
+            .executes(ctx -> {
+               ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+               ServerLevel level = player.serverLevel();
+               WarfareWorldData data = WarfareWorldData.get(level);
+               if (!data.voteActive || data.isGameStarted) {
+                  player.sendSystemMessage(Component.literal("No active voting.").withStyle(ChatFormatting.RED));
+                  return 0;
+               }
+               data.votes.put(player.getUUID(), true);
+               player.sendSystemMessage(Component.literal("You voted YES to start the match!").withStyle(ChatFormatting.GREEN));
+               PacketHandler.sendToAllClients(level, data);
+               return 1;
+            })
+      );
    }
 
    private static CompletableFuture<Suggestions> suggestLocalPoints(CommandContext<CommandSourceStack> ctx, SuggestionsBuilder builder) {

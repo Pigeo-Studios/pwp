@@ -1164,22 +1164,27 @@ public class GameLogicEvents {
    }
 
     @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-           ServerPlayer player = (ServerPlayer)event.getEntity();
-           PermissionHelper.autoOpIfAdmin(player);
-           loadCosmeticsForPlayer(player);
-           PacketHandler.broadcastPlayerSkin(player);
-           ServerLevel level = player.serverLevel();
-           WarfareWorldData data = WarfareWorldData.get(level);
-          sendSyncPacket(level, data);
-          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
-          PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
-          if (!data.isGameStarted && player.hasPermissions(2)) {
-             player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
-          }
-       }
-    }
+     public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
+         if (!event.getEntity().level().isClientSide) {
+            ServerPlayer player = (ServerPlayer)event.getEntity();
+            PermissionHelper.autoOpIfAdmin(player);
+            loadCosmeticsForPlayer(player);
+            PacketHandler.broadcastPlayerSkin(player);
+            ServerLevel level = player.serverLevel();
+            WarfareWorldData data = WarfareWorldData.get(level);
+           sendSyncPacket(level, data);
+           PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
+           PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+           String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
+           if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
+              player.setGameMode(GameType.SPECTATOR);
+              player.sendSystemMessage(Component.literal("Choose a team to start playing!").withStyle(ChatFormatting.GOLD));
+           }
+           if (!data.isGameStarted && player.hasPermissions(2)) {
+              player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
+           }
+        }
+     }
 
     private static void loadCosmeticsForPlayer(ServerPlayer player) {
         try {
@@ -1225,9 +1230,12 @@ public class GameLogicEvents {
    public static void onPlayerRespawn(PlayerRespawnEvent event) {
       if (!event.getEntity().level().isClientSide) {
          ServerPlayer newPlayer = (ServerPlayer)event.getEntity();
-         if (newPlayer.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
-            newPlayer.setGameMode(GameType.SURVIVAL);
-         }
+          String teamName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName() : "";
+          if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
+             newPlayer.setGameMode(GameType.SPECTATOR);
+          } else if (newPlayer.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
+             newPlayer.setGameMode(GameType.SURVIVAL);
+          }
 
          newPlayer.connection.send(new ClientboundPlayerAbilitiesPacket(newPlayer.getAbilities()));
          pendingRespawnLocations.remove(newPlayer.getUUID());

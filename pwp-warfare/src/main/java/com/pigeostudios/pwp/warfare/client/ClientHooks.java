@@ -174,57 +174,66 @@ public class ClientHooks {
       }
    }
 
-    public static void handleSyncGameData(PacketSyncGameData msg) {
-       ClientData.BLUE_TICKETS = msg.blueTickets;
-       ClientData.RED_TICKETS = msg.redTickets;
-       ClientData.hasBlueRally = msg.hasBlueRally;
-       ClientData.hasRedRally = msg.hasRedRally;
-       ClientData.blueBleeding = msg.blueBleeding;
-       ClientData.redBleeding = msg.redBleeding;
-       ClientData.RESPAWN_TIME = msg.respawnTime;
-       ClientData.blueRallyBlocked = msg.blueBlocked;
-       ClientData.redRallyBlocked = msg.redBlocked;
-       ClientData.clientHubs = new ArrayList<>(msg.hubs);
-       ClientData.BLUE_FACTION = msg.blueFaction;
-       ClientData.RED_FACTION = msg.redFaction;
-       ClientData.isGameStarted = msg.isGameStarted;
-       ClientData.allCapturePoints = new ArrayList<>(msg.capturePoints);
-       ClientData.customBlueName = msg.blueCustomName;
-       ClientData.customRedName = msg.redCustomName;
-       ClientData.activeMarkers = new ArrayList<>(msg.activeMarkers);
-       ClientData.serverHubSpawnCosts = msg.hubSpawnCosts;
-       ClientData.serverHubSpawnCostAmount = msg.hubSpawnCost;
-       ClientData.mapCenterX = msg.mapCenterX;
-       ClientData.mapCenterZ = msg.mapCenterZ;
-       ClientData.mapSizeBlocks = msg.mapSizeBlocks;
-       ClientData.currentMapImage = msg.currentMapImage;
-       ClientData.blueReady = msg.blueReady;
-       ClientData.redReady = msg.redReady;
-       ClientData.clientVehicles = new ArrayList<>(msg.markedVehicles);
-       ClientData.blueSpawns = new HashMap<>(msg.blueSpawns);
-       ClientData.redSpawns = new HashMap<>(msg.redSpawns);
-       ClientData.neutralSpawns = new HashMap<>(msg.neutralSpawns);
-       ClientData.playerKits = new HashMap<>(msg.playerKits);
-       ClientData.voteActive = msg.voteActive;
-       ClientData.voteTimer = msg.voteTimer;
-       ClientData.votes = new HashMap<>(msg.votes);
-       ClientData.blueCMDId = msg.blueCMDId;
-       ClientData.redCMDId = msg.redCMDId;
-       ClientData.blueCmdVoteActive = msg.blueCmdVoteActive;
-       ClientData.blueCmdCandidateName = msg.blueCmdCandidateName;
-       ClientData.blueCmdVotes = new HashMap<>(msg.blueCmdVotes);
-       ClientData.redCmdVoteActive = msg.redCmdVoteActive;
-       ClientData.redCmdCandidateName = msg.redCmdCandidateName;
-       ClientData.redCmdVotes = new HashMap<>(msg.redCmdVotes);
-       ClientData.activeStrikes = new ArrayList<>(msg.activeStrikes);
-       ClientData.blueArtPos = msg.blueArtPos;
-       ClientData.redArtPos = msg.redArtPos;
-       ClientData.blueArtTimer = msg.blueArtTimer;
-       ClientData.redArtTimer = msg.redArtTimer;
-       ClientData.blueArtReqName = msg.blueArtReqName;
-       ClientData.redArtReqName = msg.redArtReqName;
-       updatePlayerSkin();
-    }
+     public static void handleSyncGameData(PacketSyncGameData msg) {
+        ClientData.BLUE_TICKETS = msg.blueTickets;
+        ClientData.RED_TICKETS = msg.redTickets;
+        ClientData.hasBlueRally = msg.hasBlueRally;
+        ClientData.hasRedRally = msg.hasRedRally;
+        ClientData.blueBleeding = msg.blueBleeding;
+        ClientData.redBleeding = msg.redBleeding;
+        ClientData.RESPAWN_TIME = msg.respawnTime;
+        ClientData.blueRallyBlocked = msg.blueBlocked;
+        ClientData.redRallyBlocked = msg.redBlocked;
+        ClientData.clientHubs = new ArrayList<>(msg.hubs);
+        ClientData.BLUE_FACTION = msg.blueFaction;
+        ClientData.RED_FACTION = msg.redFaction;
+        ClientData.isGameStarted = msg.isGameStarted;
+        ClientData.allCapturePoints = new ArrayList<>(msg.capturePoints);
+        ClientData.customBlueName = msg.blueCustomName;
+        ClientData.customRedName = msg.redCustomName;
+        ClientData.activeMarkers = new ArrayList<>(msg.activeMarkers);
+        ClientData.serverHubSpawnCosts = msg.hubSpawnCosts;
+        ClientData.serverHubSpawnCostAmount = msg.hubSpawnCost;
+        ClientData.mapCenterX = msg.mapCenterX;
+        ClientData.mapCenterZ = msg.mapCenterZ;
+        ClientData.mapSizeBlocks = msg.mapSizeBlocks;
+        ClientData.currentMapImage = msg.currentMapImage;
+        ClientData.blueReady = msg.blueReady;
+        ClientData.redReady = msg.redReady;
+        ClientData.clientVehicles = new ArrayList<>(msg.markedVehicles);
+        ClientData.blueSpawns = new HashMap<>(msg.blueSpawns);
+        ClientData.redSpawns = new HashMap<>(msg.redSpawns);
+        ClientData.neutralSpawns = new HashMap<>(msg.neutralSpawns);
+        ClientData.playerKits = new HashMap<>(msg.playerKits);
+        ClientData.voteActive = msg.voteActive;
+        ClientData.voteTimer = msg.voteTimer;
+        ClientData.votes = new HashMap<>(msg.votes);
+        ClientData.blueCMDId = msg.blueCMDId;
+        ClientData.redCMDId = msg.redCMDId;
+        ClientData.blueCmdVoteActive = msg.blueCmdVoteActive;
+        ClientData.blueCmdCandidateName = msg.blueCmdCandidateName;
+        ClientData.blueCmdVotes = new HashMap<>(msg.blueCmdVotes);
+        ClientData.redCmdVoteActive = msg.redCmdVoteActive;
+        ClientData.redCmdCandidateName = msg.redCmdCandidateName;
+        ClientData.redCmdVotes = new HashMap<>(msg.redCmdVotes);
+        ClientData.activeStrikes = new ArrayList<>(msg.activeStrikes);
+        ClientData.blueArtPos = msg.blueArtPos;
+        ClientData.redArtPos = msg.redArtPos;
+        ClientData.blueArtTimer = msg.blueArtTimer;
+        ClientData.redArtTimer = msg.redArtTimer;
+        ClientData.blueArtReqName = msg.blueArtReqName;
+        ClientData.redArtReqName = msg.redArtReqName;
+        updatePlayerSkin();
+
+        // Auto-open team selection screen if player has no team
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.screen == null) {
+           String teamName = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "";
+           if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
+              mc.setScreen(new com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen());
+           }
+        }
+     }
 
      public static void updatePlayerSkin() {
         ClientSkinManager.applyAllSkins();

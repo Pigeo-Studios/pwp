@@ -227,9 +227,15 @@ public class WarfareMod {
             LOGGER.info("Core API not available, using NBT-based kits");
          }
 
-         data.configApplied = true;
-         data.setDirty();
-         LOGGER.info("Map config applied successfully for map: {}", root.get("name").getAsString());
+          data.configApplied = true;
+          data.setDirty();
+          LOGGER.info("Map config applied successfully for map: {}", root.get("name").getAsString());
+
+          // Auto-start voting
+          data.voteActive = true;
+          data.voteTimer = WarfareConfig.VOTE_AUTO_START_TIME.get() * 60;
+          data.votes.clear();
+          PacketHandler.sendToAllClients(level, data);
       } catch (IOException e) {
          LOGGER.error("Failed to read map_config.json", e);
       }
