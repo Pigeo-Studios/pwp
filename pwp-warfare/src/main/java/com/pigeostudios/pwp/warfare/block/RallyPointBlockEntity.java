@@ -68,14 +68,15 @@ public class RallyPointBlockEntity extends BlockEntity {
    }
 
    // Проверяет, не истекло ли время жизни точки сбора
-   public void checkExpiry(Level level, BlockPos pos) {
-      if (this.expiryTick != -1L) {
-         if (level.getGameTime() >= this.expiryTick) {
-            this.isDecay = true;
-            level.removeBlock(pos, false);
-         }
-      }
-   }
+    public void checkExpiry(Level level, BlockPos pos) {
+       if (this.expiryTick != -1L) {
+          if (level.getGameTime() >= this.expiryTick) {
+             this.isDecay = true;
+             cleanupData((ServerLevel)level);
+             level.removeBlock(pos, false);
+          }
+       }
+    }
 
    public void handleSoundClient() {
       DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> this.clientSoundRef = ClientHooks.playRallySound(this, this.clientSoundRef));

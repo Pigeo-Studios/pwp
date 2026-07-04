@@ -9,6 +9,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
+import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -287,14 +288,17 @@ public class GameLogicEvents {
                         player.getInventory().setItem(walkieSlot, ItemStack.EMPTY);
                      }
                   }
-               } else if (!offHandStack.isEmpty() && offHandStack.getItem() == walkieItem) {
-                  moveItemToInventory(player, offHandStack);
-                  player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
-               }
-            }
-         }
-      }
-   }
+                } else if (!offHandStack.isEmpty() && offHandStack.getItem() == walkieItem) {
+                   moveItemToInventory(player, offHandStack);
+                   player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
+                }
+             }
+             if (WarfareConfig.TEAM_BASED_WALKIETALKIE.get() && player instanceof ServerPlayer) {
+                WarfareVoicechatPlugin.applyTeamChannel((ServerPlayer) player);
+             }
+          }
+       }
+    }
 
    private static boolean isHeavyItem(Item item) {
       if (item == ModItems.AGS_AMMO.get()) {
@@ -548,21 +552,21 @@ public class GameLogicEvents {
                      squadsChanged = true;
                   }
 
-                  if (squad.rallyPos != null && squad.rallyExpiryTick != -1L && now >= squad.rallyExpiryTick) {
-                     if (level.isLoaded(squad.rallyPos)) {
-                        if (level.getBlockEntity(squad.rallyPos) instanceof RallyPointBlockEntity rbe) {
-                           rbe.isDecay = true;
-                        }
+                   if (squad.rallyPos != null && squad.rallyExpiryTick != -1L && now >= squad.rallyExpiryTick) {
+                      if (level.isLoaded(squad.rallyPos)) {
+                         if (level.getBlockEntity(squad.rallyPos) instanceof RallyPointBlockEntity rbe) {
+                            rbe.isDecay = true;
+                         }
 
-                        level.removeBlock(squad.rallyPos, false);
-                     } else {
-                        data.blueRallies.remove(squad.rallyPos);
-                        data.redRallies.remove(squad.rallyPos);
-                        squad.rallyPos = null;
-                        squad.rallyExpiryTick = -1L;
-                        squadsChanged = true;
-                     }
-                  }
+                         level.removeBlock(squad.rallyPos, false);
+                      }
+
+                      data.blueRallies.remove(squad.rallyPos);
+                      data.redRallies.remove(squad.rallyPos);
+                      squad.rallyPos = null;
+                      squad.rallyExpiryTick = -1L;
+                      squadsChanged = true;
+                   }
                }
 
                if (squadsChanged) {
