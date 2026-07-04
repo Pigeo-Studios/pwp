@@ -101,6 +101,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public class GameLogicEvents {
    public static final Map<UUID, String> pendingRespawnLocations = new HashMap<>();
    public static final Map<UUID, String> pendingTeams = new HashMap<>();
+   public static final Map<UUID, BlockPos> pendingSpawnPositions = new HashMap<>();
    public static final Map<UUID, Map<Integer, CompoundTag>> PERSISTENT_NBT_STORAGE = new HashMap<>();
     private static final Map<String, Boolean> lastBlueBlockedMap = new HashMap<>();
     private static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
@@ -1219,6 +1220,28 @@ public class GameLogicEvents {
          newPlayer.connection.send(new ClientboundPlayerAbilitiesPacket(newPlayer.getAbilities()));
          pendingRespawnLocations.remove(newPlayer.getUUID());
          pendingTeams.remove(newPlayer.getUUID());
+
+         BlockPos spawnPos = pendingSpawnPositions.remove(newPlayer.getUUID());
+         if (spawnPos != null) {
+            newPlayer.teleportTo(newPlayer.serverLevel(), spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, newPlayer.getYRot(), 0.0F);
+         }
+
+         ServerLevel level = newPlayer.serverLevel();
+         WarfareWorldData data = WarfareWorldData.get(level);
+         if (data.isGameStarted) {
+            if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
+               ResupplyHandler.tryApplyPendingKit(newPlayer, data);
+            } else {
+               String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+               if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
+                  String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
+                  WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
+                  if (kit != null) {
+                     ResupplyHandler.applyKitToPlayer(newPlayer, kit);
+                  }
+               }
+            }
+         }
       }
    }
 

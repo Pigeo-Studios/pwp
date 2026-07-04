@@ -145,30 +145,13 @@ public class PacketRespawnRequest {
                      }
                   }
 
-                   if (useCustomSpawn && targetPos != null) {
-                      player.setRespawnPosition(targetDimension, targetPos, 0.0F, true, false);
-                      player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
-                      if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
-                         player.setGameMode(GameType.SURVIVAL);
-                      }
-
-                       if (data.isGameStarted) {
-                        if (player.getPersistentData().contains("WARFARE_PendingKit")) {
-                           ResupplyHandler.tryApplyPendingKit(player, data);
-                        } else {
-                           String currentKitName = player.getPersistentData().getString("WARFARE_CurrentKit");
-                           if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                              String tName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-                              WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
-                              if (kit != null) {
-                                 ResupplyHandler.applyKitToPlayer(player, kit);
-                              }
-                           }
-                        }
-                     } else {
-                        player.sendSystemMessage(Component.literal("РљРёС‚ Р·Р°Р±СЂРѕРЅРёСЂРѕРІР°РЅ. РџСЂРµРґРјРµС‚С‹ Р±СѓРґСѓС‚ РІС‹РґР°РЅС‹ РїРѕСЃР»Рµ РЅР°С‡Р°Р»Р° РёРіСЂС‹.").withStyle(ChatFormatting.YELLOW));
-                     }
-                  } else {
+                    if (useCustomSpawn && targetPos != null) {
+                       player.setRespawnPosition(targetDimension, targetPos, 0.0F, true, false);
+                       if (player.isAlive() && !player.isRemoved()) {
+                          player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
+                       }
+                       GameLogicEvents.pendingSpawnPositions.put(player.getUUID(), targetPos);
+                   } else {
                      player.sendSystemMessage(Component.literal("Spawn point is currently unavailable!").withStyle(ChatFormatting.RED));
                   }
                }
