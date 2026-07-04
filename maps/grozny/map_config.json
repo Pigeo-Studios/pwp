@@ -12,7 +12,7 @@
 
     "teams": {
         "BLUE": {
-            "faction": "russia",
+            "faction": "usa",
             "tickets": 600,
             "spawn": {
                 "dimension": "minecraft:overworld",
@@ -22,7 +22,7 @@
             }
         },
         "RED": {
-            "faction": "insurgency",
+            "faction": "usa",
             "tickets": 600,
             "spawn": {
                 "dimension": "minecraft:overworld",

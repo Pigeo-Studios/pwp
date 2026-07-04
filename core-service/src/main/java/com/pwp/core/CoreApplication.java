@@ -1,6 +1,7 @@
 package com.pwp.core;
 
 import com.pwp.core.api.*;
+import com.pwp.core.api.KitController;
 import com.pwp.core.auth.AuthMiddleware;
 import com.pwp.core.db.DatabaseManager;
 import io.javalin.Javalin;
@@ -43,6 +44,7 @@ public class CoreApplication {
         new CaseController(app);
         new RankController(app);
         new RewardController(app);
+        new KitController(app);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutting down Core Service...");

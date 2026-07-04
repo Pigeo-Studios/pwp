@@ -57,7 +57,16 @@ public class DatabaseManager {
 
             "CREATE TABLE IF NOT EXISTS reward_config ("
             + "action VARCHAR(32) PRIMARY KEY, xp_reward BIGINT NOT NULL DEFAULT 0, "
-            + "coins_reward BIGINT NOT NULL DEFAULT 0, score_reward INT NOT NULL DEFAULT 0)"
+            + "coins_reward BIGINT NOT NULL DEFAULT 0, score_reward INT NOT NULL DEFAULT 0)",
+
+            "CREATE TABLE IF NOT EXISTS kit_definitions ("
+            + "faction VARCHAR(32) NOT NULL, kit_name VARCHAR(32) NOT NULL, "
+            + "leader_only BOOLEAN NOT NULL DEFAULT FALSE, "
+            + "max_per_team INT NOT NULL DEFAULT -1, "
+            + "max_per_squad INT NOT NULL DEFAULT -1, "
+            + "min_squad_players INT NOT NULL DEFAULT 0, "
+            + "items JSON NOT NULL, slot_skins JSON, "
+            + "PRIMARY KEY (faction, kit_name))"
         };
         try (Connection c = getConnection(); Statement s = c.createStatement()) {
             for (String sql : tables) {

@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
+import com.pwp.coreclient.CoreAPI;
+import net.minecraftforge.fml.ModList;
 import com.pigeostudios.pwp.warfare.client.ClientConfigRegistry;
 import com.pigeostudios.pwp.warfare.command.ModCommands;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
@@ -200,6 +202,27 @@ public class WarfareMod {
                   }
                }
             }
+         }
+
+         if (ModList.get().isLoaded("pwp_core_client") && CoreAPI.isEnabled()) {
+            try {
+               String[] factions = {data.blueFaction, data.redFaction};
+               String[] teams = {"BLUE", "RED"};
+               for (int i = 0; i < 2; i++) {
+                  String faction = factions[i];
+                  if (faction == null || faction.isEmpty() || faction.equals("none")) continue;
+                  JsonObject response = CoreAPI.getFactionKits(faction);
+                  if (response != null && response.has("data")) {
+                     data.loadKitsFromApi(teams[i], response);
+                     LOGGER.info("Loaded {} kits from API for faction {} on team {}",
+                        response.getAsJsonArray("data").size(), faction, teams[i]);
+                  }
+               }
+            } catch (Exception e) {
+               LOGGER.warn("Failed to load kits from API, using NBT kits: {}", e.getMessage());
+            }
+         } else {
+            LOGGER.info("Core API not available, using NBT-based kits");
          }
 
          data.configApplied = true;

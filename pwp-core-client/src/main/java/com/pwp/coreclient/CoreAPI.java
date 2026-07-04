@@ -1,6 +1,7 @@
 package com.pwp.coreclient;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,6 +127,23 @@ public class CoreAPI {
         return get("/api/v1/ranks/player/" + uuid);
     }
 
+    // ====== KITS ======
+    public static JsonObject getFactionKits(String faction) {
+        return get("/api/v1/kits/faction/" + faction.toLowerCase());
+    }
+
+    public static JsonObject getFactionKit(String faction, String kitName) {
+        return get("/api/v1/kits/faction/" + faction.toLowerCase() + "/" + kitName);
+    }
+
+    public static JsonObject saveFactionKit(String faction, String kitName, JsonObject kitData) {
+        return put("/api/v1/kits/faction/" + faction.toLowerCase() + "/" + kitName, kitData);
+    }
+
+    public static JsonObject bulkSaveFactionKits(String faction, JsonArray kits) {
+        return post("/api/v1/kits/faction/" + faction.toLowerCase() + "/bulk", kits);
+    }
+
     private static JsonObject get(String path) {
         if (!enabled) return null;
         try {
@@ -149,6 +167,41 @@ public class CoreAPI {
             conn.disconnect();
         } catch (Exception e) {
             log.warn("Core API get {} failed: {}", path, e.getMessage());
+        }
+        return null;
+    }
+
+    private static JsonObject put(String path, Object body) {
+        if (!enabled) return null;
+        try {
+            URI uri = new URI(baseUrl + path);
+            HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
+            conn.setRequestMethod("PUT");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                os.write(GSON.toJson(body).getBytes(StandardCharsets.UTF_8));
+            }
+
+            int code = conn.getResponseCode();
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            try (InputStream is = code < 400 ? conn.getInputStream() : conn.getErrorStream()) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = is.read(buf)) != -1) buffer.write(buf, 0, n);
+            }
+            conn.disconnect();
+            String responseBody = buffer.toString(StandardCharsets.UTF_8.name());
+            if (code == 200 || code == 201) {
+                return GSON.fromJson(responseBody, JsonObject.class);
+            }
+            log.warn("Core API {} returned {}: {}", path, code, responseBody);
+        } catch (Exception e) {
+            log.warn("Core API call {} failed: {}", path, e.getMessage());
         }
         return null;
     }

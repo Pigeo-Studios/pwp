@@ -1,19 +1,33 @@
 package com.pigeostudios.pwp.warfare.world;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.mojang.logging.LogUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.ByteTag;
+import net.minecraft.nbt.IntTag;
+import net.minecraft.nbt.ShortTag;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.ForgeRegistries;
 
 // РЎРѕС…СЂР°РЅСЏРµРјС‹Рµ РґР°РЅРЅС‹Рµ РјРёСЂР° РґР»СЏ РёРіСЂРѕРІРѕРіРѕ СЂРµР¶РёРјР° В«Advance And SecureВ»
 // РҐСЂР°РЅРёС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ Р·Р°С…РІР°С‚Р° С‚РѕС‡РµРє, РѕС‚СЂСЏРґРѕРІ, FOB, С‚РµС…РЅРёРєРё Рё РЅР°СЃС‚СЂРѕРµРє РёРіСЂС‹
@@ -112,7 +126,25 @@ public class WarfareWorldData extends SavedData {
       "Drone Operator",
       "Anti_air"
    };
-   public List<BlockPos> triggerBlocks = new ArrayList<>();
+   public void loadKitsFromApi(String team, JsonObject apiResponse) {
+      if (apiResponse == null || !apiResponse.has("data")) return;
+      JsonArray kits = apiResponse.getAsJsonArray("data");
+      Map<String, WarfareWorldData.KitInfo> target = team.equalsIgnoreCase("BLUE") ? this.blueKits : this.redKits;
+      for (int i = 0; i < kits.size(); i++) {
+         JsonObject kitJson = kits.get(i).getAsJsonObject();
+         String kitName = kitJson.get("kitName").getAsString();
+         target.put(kitName, WarfareWorldData.KitInfo.loadFromJson(kitJson));
+      }
+   }
+
+   public void loadKitsFromApi(String team, String jsonString) {
+      try {
+         Gson gson = new Gson();
+         loadKitsFromApi(team, gson.fromJson(jsonString, JsonObject.class));
+      } catch (Exception ignored) {}
+   }
+
+       public List<BlockPos> triggerBlocks = new ArrayList<>();
    public WarfareWorldData.ArtStrikeRequest blueArtRequest = null;
    public WarfareWorldData.ArtStrikeRequest redArtRequest = null;
    public List<WarfareWorldData.ActiveStrike> activeStrikes = new ArrayList<>();
@@ -713,6 +745,118 @@ public class WarfareWorldData extends SavedData {
          }
 
          return k;
+      }
+
+      public static WarfareWorldData.KitInfo loadFromJson(JsonObject json) {
+         WarfareWorldData.KitInfo k = new WarfareWorldData.KitInfo(json.get("kitName").getAsString());
+         k.isLeaderOnly = json.has("leaderOnly") && json.get("leaderOnly").getAsBoolean();
+         k.maxPerTeam = json.has("maxPerTeam") ? json.get("maxPerTeam").getAsInt() : -1;
+         k.maxPerSquad = json.has("maxPerSquad") ? json.get("maxPerSquad").getAsInt() : -1;
+         k.minSquadPlayers = json.has("minSquadPlayers") ? json.get("minSquadPlayers").getAsInt() : 0;
+
+         if (json.has("items")) {
+            try {
+               JsonArray items = new Gson().fromJson(json.get("items").getAsString(), JsonArray.class);
+               for (int i = 0; i < items.size(); i++) {
+                  JsonObject itemJson = items.get(i).getAsJsonObject();
+                  int slot = itemJson.get("slot").getAsInt();
+                  if (slot < 0 || slot >= 49) continue;
+                  k.resupplyFlags[slot] = itemJson.has("resupply") && itemJson.get("resupply").getAsBoolean();
+                  k.saveNbtFlags[slot] = itemJson.has("saveNbt") && itemJson.get("saveNbt").getAsBoolean();
+                  if (itemJson.has("item") && itemJson.get("item").isJsonObject()) {
+                     JsonObject itemData = itemJson.getAsJsonObject("item");
+                     String itemId = itemData.has("id") ? itemData.get("id").getAsString() : "";
+                     if (!itemId.isEmpty() && !itemId.equals("minecraft:air")) {
+                        Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(itemId));
+                        if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                           int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;
+                           ItemStack stack = new ItemStack(item, count);
+                           if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
+                              CompoundTag tag = jsonToCompound(itemData.getAsJsonObject("tag"));
+                              if (!tag.isEmpty()) stack.setTag(tag);
+                           }
+                           k.inventory.set(slot, stack);
+                        }
+                     }
+                  }
+               }
+            } catch (Exception e) {
+               LogUtils.getLogger().warn("Failed to parse items for kit " + k.name + ": " + e.getMessage());
+            }
+         }
+
+         if (json.has("slotSkins")) {
+            try {
+               JsonObject skins = new Gson().fromJson(json.get("slotSkins").getAsString(), JsonObject.class);
+               for (String key : skins.keySet()) {
+                  JsonArray list = skins.getAsJsonArray(key);
+                  List<String> ids = new ArrayList<>();
+                  for (int i = 0; i < list.size(); i++) ids.add(list.get(i).getAsString());
+                  k.slotSkins.put(Integer.parseInt(key), ids);
+               }
+            } catch (Exception e) {
+               LogUtils.getLogger().warn("Failed to parse slot skins for kit " + k.name + ": " + e.getMessage());
+            }
+         }
+
+         return k;
+      }
+
+      private static CompoundTag jsonToCompound(JsonObject json) {
+         CompoundTag tag = new CompoundTag();
+         for (String key : json.keySet()) {
+            try {
+               JsonElement val = json.get(key);
+               if (val.isJsonObject()) {
+                  tag.put(key, jsonToCompound(val.getAsJsonObject()));
+               } else if (val.isJsonArray()) {
+                  JsonArray arr = val.getAsJsonArray();
+                  if (arr.size() > 0) {
+                     JsonElement first = arr.get(0);
+                     if (first.isJsonObject()) {
+                        ListTag list = new ListTag();
+                        for (int i = 0; i < arr.size(); i++) {
+                           list.add(jsonToCompound(arr.get(i).getAsJsonObject()));
+                        }
+                        tag.put(key, list);
+                     } else if (first.isJsonPrimitive() && first.getAsJsonPrimitive().isString()) {
+                        ListTag list = new ListTag();
+                        for (int i = 0; i < arr.size(); i++) {
+                           list.add(StringTag.valueOf(arr.get(i).getAsString()));
+                        }
+                        tag.put(key, list);
+                     } else if (first.isJsonPrimitive() && first.getAsJsonPrimitive().isNumber()) {
+                        ListTag list = new ListTag();
+                        for (int i = 0; i < arr.size(); i++) {
+                           list.add(IntTag.valueOf(arr.get(i).getAsInt()));
+                        }
+                        tag.put(key, list);
+                     }
+                  }
+               } else if (val.isJsonPrimitive()) {
+                  var prim = val.getAsJsonPrimitive();
+                  if (prim.isString()) {
+                     tag.putString(key, prim.getAsString());
+                  } else if (prim.isNumber()) {
+                     double d = prim.getAsDouble();
+                     if (d == Math.floor(d) && !Double.isInfinite(d)) {
+                        if (d >= Byte.MIN_VALUE && d <= Byte.MAX_VALUE) tag.putByte(key, (byte)d);
+                        else if (d >= Short.MIN_VALUE && d <= Short.MAX_VALUE) tag.putShort(key, (short)d);
+                        else if (d >= Integer.MIN_VALUE && d <= Integer.MAX_VALUE) tag.putInt(key, (int)d);
+                        else tag.putLong(key, (long)d);
+                     } else {
+                        if (d == (float)d) tag.putFloat(key, (float)d);
+                        else tag.putDouble(key, d);
+                     }
+                  } else if (prim.isBoolean()) {
+                     tag.putBoolean(key, prim.getAsBoolean());
+                  }
+               }
+            } catch (Exception e) {
+               LogUtils.getLogger().warn("Failed to convert JSON field '{}' to NBT: {}", key, e.getMessage());
+            }
+         }
+         return tag;
       }
    }
 
