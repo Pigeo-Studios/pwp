@@ -13,7 +13,7 @@
     "teams": {
         "BLUE": {
             "faction": "usa",
-            "tickets": 600,
+            "tickets": 960,
             "spawn": {
                 "dimension": "minecraft:overworld",
                 "x": 200,
@@ -23,7 +23,7 @@
         },
         "RED": {
             "faction": "usa",
-            "tickets": 600,
+            "tickets": 960,
             "spawn": {
                 "dimension": "minecraft:overworld",
                 "x": -200,

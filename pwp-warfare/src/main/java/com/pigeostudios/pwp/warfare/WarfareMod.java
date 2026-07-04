@@ -131,14 +131,16 @@ public class WarfareMod {
             if (settings.has("deathTicketCost")) data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
          }
 
-         if (root.has("mapBounds")) {
-            JsonObject bounds = root.getAsJsonObject("mapBounds");
-            if (bounds.has("centerX")) data.mapCenterX = bounds.get("centerX").getAsInt();
-            if (bounds.has("centerZ")) data.mapCenterZ = bounds.get("centerZ").getAsInt();
-            if (bounds.has("sizeBlocks")) data.mapSizeBlocks = bounds.get("sizeBlocks").getAsInt();
-         }
+          if (root.has("mapBounds")) {
+             JsonObject bounds = root.getAsJsonObject("mapBounds");
+             if (bounds.has("centerX")) data.mapCenterX = bounds.get("centerX").getAsInt();
+             if (bounds.has("centerZ")) data.mapCenterZ = bounds.get("centerZ").getAsInt();
+             if (bounds.has("sizeBlocks")) data.mapSizeBlocks = bounds.get("sizeBlocks").getAsInt();
+             level.getWorldBorder().setCenter(data.mapCenterX, data.mapCenterZ);
+             level.getWorldBorder().setSize(data.mapSizeBlocks);
+          }
 
-         if (root.has("image")) {
+          if (root.has("image")) {
             data.currentMapImage = root.get("image").getAsString();
          }
 
