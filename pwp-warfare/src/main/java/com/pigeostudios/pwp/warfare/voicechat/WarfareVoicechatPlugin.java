@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.voicechat;
 
+import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRadioVoiceActivity;
 import com.pigeostudios.pwp.warfare.network.PacketVoiceActivity;
@@ -71,15 +72,22 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             }
 
             String pName = sender.getScoreboardName();
+            String senderTeam = sender.getTeam() != null ? sender.getTeam().getName() : null;
+            boolean teamBased = WarfareConfig.TEAM_BASED_WALKIETALKIE.get();
             Integer talkerCanal = this.getActiveWalkieTalkieCanal(sender);
             if (talkerCanal != null) {
-               PacketRadioVoiceActivity radioPacket = new PacketRadioVoiceActivity(pName);
+                PacketRadioVoiceActivity radioPacket = new PacketRadioVoiceActivity(pName);
 
-               for (ServerPlayer p : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
-                  if (!p.getUUID().equals(sender.getUUID()) && this.playerHasWalkieTalkieOnCanal(p, talkerCanal)) {
-                     PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), radioPacket);
-                  }
-               }
+                for (ServerPlayer p : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
+                   if (p.getUUID().equals(sender.getUUID())) continue;
+                   if (teamBased && senderTeam != null) {
+                      String pTeam = p.getTeam() != null ? p.getTeam().getName() : null;
+                      if (!senderTeam.equals(pTeam)) continue;
+                   }
+                   if (this.playerHasWalkieTalkieOnCanal(p, talkerCanal)) {
+                      PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), radioPacket);
+                   }
+                }
             }
 
             WarfareWorldData data = WarfareWorldData.get(sender.serverLevel());
@@ -154,14 +162,48 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
       }
    }
 
-   private boolean isWalkieTalkieStack(ItemStack stack) {
-      if (stack != null && !stack.isEmpty()) {
-         ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
-         return id != null && id.getNamespace().equals("walkietalkie");
-      } else {
-         return false;
-      }
-   }
+    private boolean isWalkieTalkieStack(ItemStack stack) {
+       if (stack != null && !stack.isEmpty()) {
+          ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+          return id != null && id.getNamespace().equals("walkietalkie");
+       } else {
+          return false;
+       }
+    }
+
+    public static int getTeamChannel(ServerPlayer player) {
+       String team = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
+       return team.equalsIgnoreCase("BLUE") ? 1 : 2;
+    }
+
+    public static void applyTeamChannel(ServerPlayer player) {
+       if (!WarfareConfig.TEAM_BASED_WALKIETALKIE.get()) return;
+       int channel = getTeamChannel(player);
+       for (ItemStack stack : player.getInventory().items) {
+          if (isWalkieTalkieStatic(stack)) {
+             setCanal(stack, channel);
+          }
+       }
+       ItemStack offhand = player.getOffhandItem();
+       if (isWalkieTalkieStatic(offhand)) {
+          setCanal(offhand, channel);
+       }
+    }
+
+    private static boolean isWalkieTalkieStatic(ItemStack stack) {
+       if (stack != null && !stack.isEmpty()) {
+          ResourceLocation id = ForgeRegistries.ITEMS.getKey(stack.getItem());
+          return id != null && id.getNamespace().equals("walkietalkie");
+       }
+       return false;
+    }
+
+    private static void setCanal(ItemStack stack, int canal) {
+       CompoundTag tag = stack.getOrCreateTag();
+       tag.putInt("walkietalkie.canal", canal);
+       tag.putBoolean("walkietalkie.activate", true);
+       stack.setTag(tag);
+    }
 
    private void onPlayerConnectedVoice(PlayerConnectedEvent event) {
       try {

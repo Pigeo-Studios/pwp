@@ -1,5 +1,6 @@
 package com.pwp.lobby.gui;
 
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -15,27 +16,32 @@ public class ServerListScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        int y = 40;
+        int cy = height / 2;
 
         addRenderableWidget(Button.builder(
-                Component.literal("No active matches yet"),
-                b -> {}).bounds(cx - 100, y, 200, 25).build());
+                Component.literal("No active matches"),
+                b -> {}).bounds(cx - 90, cy - 15, 180, 25).build());
 
         addRenderableWidget(Button.builder(
-                Component.literal("Close"),
-                b -> onClose()).bounds(cx - 40, height - 30, 80, 20).build());
+                Component.literal("\u2715 Close"),
+                b -> onClose()).bounds(cx - 40, height - 28, 80, 20).build());
     }
 
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
         super.render(gui, mx, my, pt);
-        gui.drawCenteredString(font, "Active Matches", width / 2, 15, 0xFFFFFF);
+        gui.drawCenteredString(font, "\u2694 Active Matches", width / 2, 15, PWPTheme.Colors.TEXT_ACCENT);
     }
 
     public static void open() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null)
             mc.setScreen(new ServerListScreen());
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }

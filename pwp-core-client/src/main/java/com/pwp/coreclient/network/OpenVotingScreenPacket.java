@@ -7,12 +7,79 @@ import java.util.function.Supplier;
 
 public class OpenVotingScreenPacket {
 
-    public OpenVotingScreenPacket() {}
+    public final int remainingSeconds;
+    public final int onlinePlayers;
+    public final int totalVotes;
+    public final String leaderName;
+    public final String[] mapNames;
+    public final String[] mapDisplayNames;
+    public final String[] mapDescriptions;
+    public final int[] maxPlayers;
+    public final int[] voteCounts;
+    public final String[] worldPaths;
 
-    public static void encode(OpenVotingScreenPacket msg, FriendlyByteBuf buf) {}
+    public OpenVotingScreenPacket(int remainingSeconds, int onlinePlayers, int totalVotes,
+                                   String leaderName,
+                                   String[] mapNames, String[] mapDisplayNames,
+                                   String[] mapDescriptions, int[] maxPlayers,
+                                   int[] voteCounts, String[] worldPaths) {
+        this.remainingSeconds = remainingSeconds;
+        this.onlinePlayers = onlinePlayers;
+        this.totalVotes = totalVotes;
+        this.leaderName = leaderName;
+        this.mapNames = mapNames;
+        this.mapDisplayNames = mapDisplayNames;
+        this.mapDescriptions = mapDescriptions;
+        this.maxPlayers = maxPlayers;
+        this.voteCounts = voteCounts;
+        this.worldPaths = worldPaths;
+    }
+
+    public static void encode(OpenVotingScreenPacket msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.remainingSeconds);
+        buf.writeInt(msg.onlinePlayers);
+        buf.writeInt(msg.totalVotes);
+        buf.writeUtf(msg.leaderName != null ? msg.leaderName : "");
+
+        int len = msg.mapNames.length;
+        buf.writeInt(len);
+        for (int i = 0; i < len; i++) {
+            buf.writeUtf(msg.mapNames[i]);
+            buf.writeUtf(msg.mapDisplayNames[i]);
+            buf.writeUtf(msg.mapDescriptions[i] != null ? msg.mapDescriptions[i] : "");
+            buf.writeInt(msg.maxPlayers[i]);
+            buf.writeInt(msg.voteCounts[i]);
+            buf.writeUtf(msg.worldPaths[i] != null ? msg.worldPaths[i] : "");
+        }
+    }
 
     public static OpenVotingScreenPacket decode(FriendlyByteBuf buf) {
-        return new OpenVotingScreenPacket();
+        int remainingSeconds = buf.readInt();
+        int onlinePlayers = buf.readInt();
+        int totalVotes = buf.readInt();
+        String leaderName = buf.readUtf();
+        if (leaderName.isEmpty()) leaderName = null;
+
+        int len = buf.readInt();
+        String[] mapNames = new String[len];
+        String[] mapDisplayNames = new String[len];
+        String[] mapDescriptions = new String[len];
+        int[] maxPlayers = new int[len];
+        int[] voteCounts = new int[len];
+        String[] worldPaths = new String[len];
+
+        for (int i = 0; i < len; i++) {
+            mapNames[i] = buf.readUtf();
+            mapDisplayNames[i] = buf.readUtf();
+            mapDescriptions[i] = buf.readUtf();
+            maxPlayers[i] = buf.readInt();
+            voteCounts[i] = buf.readInt();
+            worldPaths[i] = buf.readUtf();
+        }
+
+        return new OpenVotingScreenPacket(remainingSeconds, onlinePlayers, totalVotes,
+                leaderName, mapNames, mapDisplayNames, mapDescriptions,
+                maxPlayers, voteCounts, worldPaths);
     }
 
     public static void handle(OpenVotingScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {
@@ -20,7 +87,8 @@ public class OpenVotingScreenPacket {
             ctx.get().enqueueWork(() -> {
                 try {
                     Class<?> votingScreenClass = Class.forName("com.pwp.lobby.gui.VotingScreen");
-                    votingScreenClass.getConstructor().newInstance();
+                    votingScreenClass.getMethod("openWithPacket", OpenVotingScreenPacket.class)
+                            .invoke(null, msg);
                 } catch (Exception ignored) {}
             });
         }

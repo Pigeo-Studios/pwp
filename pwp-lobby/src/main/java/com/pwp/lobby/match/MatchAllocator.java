@@ -2,6 +2,7 @@ package com.pwp.lobby.match;
 
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerManager;
 import com.pwp.lobby.maps.MapConfig;
 import net.minecraft.network.chat.Component;
@@ -42,16 +43,22 @@ public class MatchAllocator {
 
     public static synchronized void startMatch(MapConfig map) {
         if (lobbyPlayers.size() < minPlayersToStart) {
+            LobbyMod.serverBroadcast("§e[PWP] §cНедостаточно игроков для запуска матча (" + lobbyPlayers.size() + "/" + minPlayersToStart + ")");
             log.info("Not enough players: {}/{}", lobbyPlayers.size(), minPlayersToStart);
             return;
         }
         if (hasActiveMatch()) {
+            LobbyMod.serverBroadcast("§e[PWP] §cМатч уже запущен!");
             log.info("A match is already running");
             return;
         }
 
+        LobbyMod.serverBroadcast("§e[PWP] §fЗапуск матча на карте §e" + map.displayName + "§f...");
+        log.info("Starting match on {} with {} players", map.displayName, lobbyPlayers.size());
+
         ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath);
         if (sr.error != null) {
+            LobbyMod.serverBroadcast("§e[PWP] §cОшибка запуска матча: " + sr.error);
             log.error("Failed to start match: {}", sr.error);
             return;
         }
@@ -68,7 +75,10 @@ public class MatchAllocator {
         mi.redFaction = map.RED.faction;
         mi.blueTickets = map.BLUE.tickets;
         mi.redTickets = map.RED.tickets;
+        mi.worldPath = map.worldPath;
+        mi.startedAt = System.currentTimeMillis();
         activeMatches.put(mi.serverId, mi);
+        LobbyMod.sendMatchListUpdateToAll();
         log.info("Match {}: {} on port {} ({} players)", mi.serverId, map.displayName, sr.port, lobbyPlayers.size());
     }
 
@@ -78,7 +88,19 @@ public class MatchAllocator {
             player.sendSystemMessage(Component.literal("§cNo active match available to join"), false);
             return;
         }
-        String host = "127.0.0.1";
+        connectPlayerToMatch(player, mi, "127.0.0.1");
+    }
+
+    public static void joinMatchById(int serverId, ServerPlayer player) {
+        MatchInfo mi = activeMatches.get(serverId);
+        if (mi == null || mi.phase != MatchPhase.PLAYING) {
+            player.sendSystemMessage(Component.literal("§cMatch not available to join"), false);
+            return;
+        }
+        connectPlayerToMatch(player, mi, "127.0.0.1");
+    }
+
+    private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
         player.sendSystemMessage(
                 Component.literal("§e[PWP] Joining match on " + host + ":" + mi.port + "..."),
                 false);
@@ -93,6 +115,7 @@ public class MatchAllocator {
         for (MatchInfo mi : activeMatches.values()) {
             if (!ServerManager.isAlive(mi.serverId)) {
                 log.warn("Match {} server is dead, cleaning up", mi.serverId);
+                LobbyMod.serverBroadcast("§e[PWP] §cМатч " + mi.displayName + " прерван из-за ошибки сервера!");
                 activeMatches.remove(mi.serverId);
                 ServerManager.stopServer(mi.serverId);
                 continue;
@@ -100,7 +123,9 @@ public class MatchAllocator {
 
             if (mi.phase == MatchPhase.STARTING && ServerManager.isBooted(mi.serverId)) {
                 mi.phase = MatchPhase.PLAYING;
+                LobbyMod.serverBroadcast("§e[PWP] §aСервер матча готов! §7Перенос игроков на §e" + mi.mapName + "§7...");
                 log.info("Match {} ready on port {}, transferring players", mi.serverId, mi.port);
+                LobbyMod.sendMatchListUpdateToAll();
                 transferPlayers(mi);
             }
         }
@@ -128,8 +153,10 @@ public class MatchAllocator {
         MatchInfo mi = activeMatches.remove(serverId);
         if (mi != null) {
             ServerManager.stopServer(serverId);
+            LobbyMod.serverBroadcast("§e[PWP] §fМатч §e" + mi.displayName + " §fзавершён. Возвращайтесь в лобби!");
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
+        LobbyMod.sendMatchListUpdateToAll();
     }
 
     public static Map<Integer, MatchInfo> getActiveMatches() { return activeMatches; }
@@ -149,6 +176,13 @@ public class MatchAllocator {
         public String redFaction;
         public int blueTickets;
         public int redTickets;
+        public String worldPath;
+        public long startedAt;
         public MatchPhase phase = MatchPhase.STARTING;
+
+        public int getElapsedSeconds() {
+            if (startedAt == 0) return 0;
+            return (int)((System.currentTimeMillis() - startedAt) / 1000);
+        }
     }
 }

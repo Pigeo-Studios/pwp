@@ -2,7 +2,9 @@ package com.pwp.lobby;
 
 import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.PermissionHelper;
+import com.pwp.coreclient.network.OpenMatchListScreenPacket;
 import com.pwp.coreclient.network.OpenMatchScreenPacket;
+import com.pwp.coreclient.network.OpenVotingScreenPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
@@ -24,6 +26,7 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.nio.file.Paths;
+import java.util.List;
 
 @Mod("pwp_lobby")
 public class LobbyMod {
@@ -44,7 +47,18 @@ public class LobbyMod {
                 return;
             }
 
-            MapRegistry.configure("../PWP-Server/maps");
+            String[] tryPaths = {"../maps", "../PWP-Server/maps", "maps"};
+            String foundPath = null;
+            for (String p : tryPaths) {
+                var f = new java.io.File(p);
+                if (f.isDirectory()) {
+                    foundPath = p;
+                    break;
+                }
+            }
+            if (foundPath == null) foundPath = "../PWP-Server/maps";
+
+            MapRegistry.configure(foundPath);
             MapRegistry.loadAll();
             MatchAllocator.configure(1);
         });
@@ -57,6 +71,115 @@ public class LobbyMod {
         MatchAllocator.tick();
     }
 
+    public static void sendMatchListUpdateToAll() {
+        OpenMatchListScreenPacket pkt = buildMatchListPacket();
+        if (pkt == null) return;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.getPlayerList().getPlayers().forEach(p ->
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+    }
+
+    private static OpenMatchScreenPacket buildMatchScreenPacket() {
+        MatchAllocator.MatchInfo mi = MatchAllocator.getActiveMatch();
+
+        String mapDisplayName, modeDisplayName, status;
+        int remainingSec = 0, blueTickets = 0, redTickets = 0, online = 0;
+        boolean canJoin = false;
+        String blueFaction = "", redFaction = "";
+
+        if (mi != null) {
+            mapDisplayName = mi.displayName;
+            modeDisplayName = mi.modeDisplayName;
+            blueTickets = mi.blueTickets;
+            redTickets = mi.redTickets;
+            blueFaction = mi.blueFaction;
+            redFaction = mi.redFaction;
+            online = MatchAllocator.getLobbyPlayerCount();
+            switch (mi.phase) {
+                case STARTING: status = "STARTING"; break;
+                case PLAYING: status = "PLAYING"; canJoin = true; break;
+                default: status = "NONE";
+            }
+        } else if (VotingManager.isActive()) {
+            mapDisplayName = "Voting in progress";
+            modeDisplayName = "";
+            status = "VOTING";
+            remainingSec = VotingManager.getRemainingSeconds();
+            online = MatchAllocator.getLobbyPlayerCount();
+
+            var maps = MapRegistry.getVotable();
+            if (!maps.isEmpty()) {
+                MapConfig cfg = maps.get(0);
+                blueFaction = cfg.BLUE.faction;
+                redFaction = cfg.RED.faction;
+                blueTickets = cfg.BLUE.tickets;
+                redTickets = cfg.RED.tickets;
+            }
+        } else {
+            return null;
+        }
+
+        return new OpenMatchScreenPacket(
+                mapDisplayName, modeDisplayName,
+                blueFaction, redFaction,
+                blueTickets, redTickets,
+                remainingSec, status, online, canJoin);
+    }
+
+    private static void broadcastMatchScreenToPlayer(ServerPlayer player) {
+        OpenMatchScreenPacket pkt = buildMatchScreenPacket();
+        if (pkt != null) {
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
+        }
+    }
+
+    private static void broadcastMatchScreenToAll() {
+        OpenMatchScreenPacket pkt = buildMatchScreenPacket();
+        if (pkt == null) return;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.getPlayerList().getPlayers().forEach(p ->
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+    }
+
+    private static OpenVotingScreenPacket buildVotingPacket() {
+        if (!VotingManager.isActive()) return null;
+        java.util.List<com.pwp.lobby.maps.MapConfig> maps = VotingManager.getVotableMaps();
+        int len = maps.size();
+        String[] mapNames = new String[len];
+        String[] mapDisplayNames = new String[len];
+        String[] mapDescriptions = new String[len];
+        int[] maxPlayers = new int[len];
+        int[] voteCounts = new int[len];
+        String[] worldPaths = new String[len];
+        for (int i = 0; i < len; i++) {
+            com.pwp.lobby.maps.MapConfig cfg = maps.get(i);
+            mapNames[i] = cfg.name;
+            mapDisplayNames[i] = cfg.displayName;
+            mapDescriptions[i] = cfg.description != null ? cfg.description : "";
+            maxPlayers[i] = cfg.maxPlayers;
+            voteCounts[i] = VotingManager.getVoteCountForMap(cfg.name);
+            worldPaths[i] = cfg.worldPath;
+        }
+        return new OpenVotingScreenPacket(
+                VotingManager.getRemainingSeconds(),
+                MatchAllocator.getLobbyPlayerCount(),
+                VotingManager.getVoteCount(),
+                VotingManager.getLeadingMap(),
+                mapNames, mapDisplayNames, mapDescriptions,
+                maxPlayers, voteCounts, worldPaths);
+    }
+
+    private static void broadcastVotingScreen() {
+        OpenVotingScreenPacket pkt = buildVotingPacket();
+        if (pkt == null) return;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.getPlayerList().getPlayers().forEach(p ->
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+    }
+
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
@@ -66,21 +189,38 @@ public class LobbyMod {
         if (isMatchServer) return;
 
         String uuid = player.getStringUUID();
+        String name = player.getScoreboardName();
 
         try {
             var playerData = CoreAPI.loadPlayer(uuid);
             if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
-                CoreAPI.createPlayer(uuid, player.getScoreboardName());
+                CoreAPI.createPlayer(uuid, name);
             }
         } catch (Exception e) {
             System.out.println("[PWP] Core API unavailable (DB down?), proceeding without registration: " + e.getMessage());
         }
 
         MatchAllocator.playerJoined(uuid);
+        int online = MatchAllocator.getLobbyPlayerCount();
+
+        serverBroadcast("§7[PWP] §e" + name + " §fзашёл в лобби. §7Онлайн: §e" + online);
+
+        if (MatchAllocator.hasActiveMatch()) {
+            sendMatchListToPlayer(player);
+        } else {
+            broadcastMatchScreenToPlayer(player);
+        }
+
+        if (VotingManager.isActive()) {
+            serverBroadcast("§7[PWP] Идёт голосование! §e/votemap §7<карта> — осталось §e" + VotingManager.getRemainingSeconds() + "с");
+            OpenVotingScreenPacket pkt = buildVotingPacket();
+            if (pkt != null) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
+            }
+        }
 
         if (!MatchAllocator.hasActiveMatch() && !VotingManager.isActive()) {
             VotingManager.startVoting();
-            serverBroadcast("§e[PWP] Voting started! Type /votemap <map> to vote");
         }
     }
 
@@ -126,9 +266,12 @@ public class LobbyMod {
                         ctx.getSource().sendFailure(Component.literal("Voting already active"));
                         return 0;
                     }
+                    List<MapConfig> votable = MapRegistry.getVotable();
+                    if (votable.isEmpty()) {
+                        ctx.getSource().sendFailure(Component.literal("§cNo maps available for voting! Check maps directory."));
+                        return 0;
+                    }
                     VotingManager.startVoting();
-                    serverBroadcast("§e[PWP] Voting started! Type /votemap <map> to vote");
-                    ctx.getSource().sendSuccess(() -> Component.literal("Voting started"), true);
                     return Command.SINGLE_SUCCESS;
                 }))
             .then(Commands.literal("stop")
@@ -235,12 +378,74 @@ public class LobbyMod {
                 })));
     }
 
-    private static void serverBroadcast(String msg) {
+    private static OpenMatchListScreenPacket buildMatchListPacket() {
+        var matches = MatchAllocator.getActiveMatches();
+        if (matches.isEmpty()) return null;
+        int len = matches.size();
+        String[] mapNames = new String[len];
+        String[] displayNames = new String[len];
+        String[] statuses = new String[len];
+        int[] blueTickets = new int[len];
+        int[] redTickets = new int[len];
+        int[] playerCounts = new int[len];
+        int[] maxPlayers = new int[len];
+        int[] elapsedSeconds = new int[len];
+        int[] serverIds = new int[len];
+        String[] worldPaths = new String[len];
+        String[] blueFactions = new String[len];
+        String[] redFactions = new String[len];
+        int idx = 0;
+        for (MatchAllocator.MatchInfo mi : matches.values()) {
+            mapNames[idx] = mi.mapName;
+            displayNames[idx] = mi.displayName;
+            statuses[idx] = mi.phase == MatchAllocator.MatchPhase.PLAYING ? "PLAYING" : "STARTING";
+            blueTickets[idx] = mi.blueTickets;
+            redTickets[idx] = mi.redTickets;
+            playerCounts[idx] = mi.playerCount;
+            maxPlayers[idx] = mi.maxPlayers;
+            elapsedSeconds[idx] = mi.getElapsedSeconds();
+            serverIds[idx] = mi.serverId;
+            worldPaths[idx] = mi.worldPath != null ? mi.worldPath : "";
+            blueFactions[idx] = mi.blueFaction;
+            redFactions[idx] = mi.redFaction;
+            idx++;
+        }
+        return new OpenMatchListScreenPacket(len, mapNames, displayNames, statuses,
+                blueTickets, redTickets, playerCounts, maxPlayers,
+                elapsedSeconds, serverIds, worldPaths, blueFactions, redFactions);
+    }
+
+    private static void sendMatchListToPlayer(ServerPlayer player) {
+        OpenMatchListScreenPacket pkt = buildMatchListPacket();
+        if (pkt != null) {
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
+        }
+    }
+
+    public static void serverBroadcast(String msg) {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             server.getPlayerList().getPlayers().forEach(p ->
                 p.sendSystemMessage(Component.literal(msg), false));
         }
+    }
+
+    public static void broadcastVotingUpdate() {
+        OpenVotingScreenPacket pkt = buildVotingPacket();
+        if (pkt == null) return;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.getPlayerList().getPlayers().forEach(p ->
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+    }
+
+    public static void broadcastMatchListUpdate() {
+        OpenMatchListScreenPacket pkt = buildMatchListPacket();
+        if (pkt == null) return;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.getPlayerList().getPlayers().forEach(p ->
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
     }
 
     public static void onVoteFinished(String mapName) {
@@ -249,9 +454,6 @@ public class LobbyMod {
 
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
-
-        server.getPlayerList().getPlayers().forEach(p ->
-            p.sendSystemMessage(Component.literal("§e[PWP] Starting match on " + mapName + "..."), false));
 
         MatchAllocator.startMatch(map);
     }

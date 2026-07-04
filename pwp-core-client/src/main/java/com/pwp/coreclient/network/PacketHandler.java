@@ -39,5 +39,13 @@ public class PacketHandler {
                 JoinMatchPacket::encode,
                 JoinMatchPacket::decode,
                 JoinMatchPacket::handle);
+        INSTANCE.registerMessage(id++, OpenMatchListScreenPacket.class,
+                OpenMatchListScreenPacket::encode,
+                OpenMatchListScreenPacket::decode,
+                OpenMatchListScreenPacket::handle);
+        INSTANCE.registerMessage(id++, JoinMatchServerPacket.class,
+                JoinMatchServerPacket::encode,
+                JoinMatchServerPacket::decode,
+                JoinMatchServerPacket::handle);
     }
 }

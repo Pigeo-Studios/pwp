@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -7,58 +8,72 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
-// Экран предпросмотра набора экипировки
-// Показывает содержимое инвентаря набора до его выбора
 public class KitPreviewScreen extends Screen {
-   private final Screen parent;
-   private final String kitName;
-   private final List<ItemStack> items;
+    private final Screen parent;
+    private final String kitName;
+    private final List<ItemStack> items;
+    private static final int SLOT_SIZE = 18;
+    private static final int PANEL_PAD = 10;
 
-   public KitPreviewScreen(Screen parent, String kitName, List<ItemStack> items) {
-      super(Component.translatable("gui.pwpwarfare.kit_preview.format", kitName));
-      this.parent = parent;
-      this.kitName = kitName;
-      this.items = items;
-   }
+    public KitPreviewScreen(Screen parent, String kitName, List<ItemStack> items) {
+        super(Component.translatable("gui.pwpwarfare.kit_preview.format", kitName));
+        this.parent = parent;
+        this.kitName = kitName;
+        this.items = items;
+    }
 
-   protected void init() {
-      this.addRenderableWidget(
-         Button.builder(Component.translatable("gui.pwpwarfare.kit_preview.back"), b -> this.minecraft.setScreen(this.parent))
-            .bounds(this.width / 2 - 40, this.height - 30, 80, 20)
-            .build()
-      );
-   }
+    @Override
+    protected void init() {
+        addRenderableWidget(
+            Button.builder(
+                Component.translatable("gui.pwpwarfare.kit_preview.back"),
+                b -> minecraft.setScreen(parent)
+            ).bounds(width / 2 - 40, height - 30, 80, 20).build()
+        );
+    }
 
-   public void render(GuiGraphics gui, int mx, int my, float pt) {
-      this.renderBackground(gui);
-      gui.drawCenteredString(this.font, this.title, this.width / 2, 20, 16777215);
-      int startX = this.width / 2 - 81;
-      int startY = 50;
+    @Override
+    public void render(GuiGraphics gui, int mx, int my, float pt) {
+        renderBackground(gui);
 
-      for (int i = 0; i < 27; i++) {
-         int x = startX + i % 9 * 18;
-         int y = startY + i / 9 * 18;
-         this.drawSlot(gui, x, y, this.items.get(i + 9));
-      }
+        int gridW = 9 * SLOT_SIZE;
+        int gridH = 3 * SLOT_SIZE + 2 * SLOT_SIZE;
+        int panelW = gridW + PANEL_PAD * 2;
+        int panelH = gridH + PANEL_PAD * 2 + 30;
+        int cx = (width - panelW) / 2;
+        int cy = (height - panelH) / 2;
 
-      for (int i = 0; i < 9; i++) {
-         int x = startX + i * 18;
-         int y = startY + 60;
-         this.drawSlot(gui, x, y, this.items.get(i));
-      }
+        gui.fill(cx, cy, cx + panelW, cy + panelH, PWPTheme.Colors.SURFACE);
+        gui.renderOutline(cx, cy, panelW, panelH, PWPTheme.Colors.BORDER);
+        gui.drawCenteredString(font, title, width / 2, cy + 4, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.fill(cx + 4, cy + 14, cx + panelW - 4, cy + 15, PWPTheme.Colors.ACCENT);
 
-      for (int i = 0; i < 5; i++) {
-         int x = startX + i * 18;
-         int y = startY + 85;
-         this.drawSlot(gui, x, y, this.items.get(i + 36));
-      }
+        int startX = cx + PANEL_PAD;
+        int startY = cy + 24;
 
-      super.render(gui, mx, my, pt);
-   }
+        for (int i = 0; i < 27; i++) {
+            int x = startX + i % 9 * SLOT_SIZE;
+            int y = startY + i / 9 * SLOT_SIZE;
+            drawSlot(gui, x, y, items.get(i + 9));
+        }
+        for (int i = 0; i < 9; i++) {
+            int x = startX + i * SLOT_SIZE;
+            int y = startY + 3 * SLOT_SIZE;
+            drawSlot(gui, x, y, items.get(i));
+        }
+        for (int i = 0; i < 5; i++) {
+            int x = startX + i * SLOT_SIZE;
+            int y = startY + 4 * SLOT_SIZE + 4;
+            drawSlot(gui, x, y, items.get(i + 36));
+        }
 
-   private void drawSlot(GuiGraphics gui, int x, int y, ItemStack stack) {
-      gui.fill(x, y, x + 17, y + 17, 1358954495);
-      gui.renderFakeItem(stack, x + 1, y + 1);
-      gui.renderItemDecorations(this.font, stack, x + 1, y + 1);
-   }
+        super.render(gui, mx, my, pt);
+    }
+
+    private void drawSlot(GuiGraphics gui, int x, int y, ItemStack stack) {
+        gui.fill(x, y, x + 17, y + 17, PWPTheme.Colors.SURFACE_LIGHT);
+        gui.renderOutline(x, y, 17, 17, PWPTheme.Colors.BORDER);
+        gui.renderFakeItem(stack, x + 1, y + 1);
+        gui.renderItemDecorations(font, stack, x + 1, y + 1);
+    }
 }

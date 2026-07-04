@@ -127,11 +127,13 @@ public class ServerManager {
                 instance.phaseStartedAt = System.currentTimeMillis();
                 String title = "PWP Match " + serverId;
                 String dir = serverDir.toAbsolutePath().toString();
+                File sDir = serverDir.toFile();
+
                 ProcessBuilder pb = new ProcessBuilder(
                         "cmd.exe", "/c",
                         "start", title, "/D", dir, "/WAIT",
                         "cmd", "/c", "run.bat", "nogui");
-                pb.directory(serverDir.toFile());
+                pb.directory(sDir);
                 pb.environment().put("JAVA_HOME", System.getProperty("java.home"));
 
                 instance.process = pb.start();

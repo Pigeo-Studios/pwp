@@ -40,7 +40,7 @@ public class WarfareConfig {
       .define("allowBreakingDefenses", true);
     public static final BooleanValue AUTO_GIVE_SL_RADIO = BUILDER.comment("Automatically give radio to new Squad Leaders")   .define("autoGiveSlRadio", false);
     public static final BooleanValue AUTO_GIVE_WALKIETALKIE = BUILDER.comment("Automatically give walkietalkie to all players on match servers")
-       .define("autoGiveWalkieTalkie", false);
+       .define("autoGiveWalkieTalkie", true);
    public static final BooleanValue HUB_PLACEMENT_REQUIRES_CRATE = BUILDER.comment(
          "Does placing a FOB require a Supply Crate nearby? (Consumes the crate, crate gives 0 mats to FOB)"
       )
@@ -81,8 +81,10 @@ public class WarfareConfig {
    public static final IntValue SUPPLY_TRUCK_CRATES = BUILDER.comment("Max supply crates in a truck").defineInRange("supplyTruckCrates", 2, 1, 20);
    public static final IntValue SUPPLY_CRATE_MATERIALS = BUILDER.comment("Materials per dropped supply crate")
       .defineInRange("supplyCrateMaterials", 50, 10, 1000);
-   public static final ConfigValue<String> BLUE_TEAM_CUSTOM_NAME = BUILDER.define("blueTeamCustomName", "BLUEFOR");
-   public static final ConfigValue<String> RED_TEAM_CUSTOM_NAME = BUILDER.define("redTeamCustomName", "REDFOR");
+    public static final BooleanValue TEAM_BASED_WALKIETALKIE = BUILDER.comment("Lock walkietalkie channels per team (BLUE=1, RED=2)")
+       .define("teamBasedWalkieTalkie", true);
+    public static final ConfigValue<String> BLUE_TEAM_CUSTOM_NAME = BUILDER.define("blueTeamCustomName", "BLUEFOR");
+    public static final ConfigValue<String> RED_TEAM_CUSTOM_NAME = BUILDER.define("redTeamCustomName", "REDFOR");
 
    static {
       BUILDER.push("Gameplay Settings");

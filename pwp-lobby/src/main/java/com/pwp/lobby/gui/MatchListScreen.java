@@ -1,9 +1,9 @@
 package com.pwp.lobby.gui;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.network.OpenVotingScreenPacket;
+import com.pwp.coreclient.network.JoinMatchServerPacket;
+import com.pwp.coreclient.network.OpenMatchListScreenPacket;
 import com.pwp.coreclient.network.PacketHandler;
-import com.pwp.coreclient.network.VoteMapPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -19,32 +19,27 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
-public class VotingScreen extends Screen {
+public class MatchListScreen extends Screen {
 
     private static final int CARDS_PER_PAGE = 4;
     private static final Map<String, ResourceLocation> imageCache = new HashMap<>();
     private static boolean sessionDismissed = false;
-    private static int lastKnownRemaining = -1;
 
     private int page = 0;
-    private String votedMap = null;
+    private OpenMatchListScreenPacket packet;
     private long openedAt;
-    private OpenVotingScreenPacket packet;
+    private int confirmSid = -1;
 
-    public VotingScreen(OpenVotingScreenPacket packet) {
-        super(Component.literal("MAP VOTE"));
+    public MatchListScreen(OpenMatchListScreenPacket packet) {
+        super(Component.literal("ACTIVE MATCHES"));
         this.packet = packet;
         this.openedAt = System.currentTimeMillis();
     }
 
-    public void updatePacket(OpenVotingScreenPacket pkt) {
+    public void updatePacket(OpenMatchListScreenPacket pkt) {
         this.packet = pkt;
         this.openedAt = System.currentTimeMillis();
         init();
-    }
-
-    public static void dismissSession() {
-        sessionDismissed = true;
     }
 
     @Override
@@ -56,15 +51,15 @@ public class VotingScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
-        if (packet == null || packet.mapNames.length == 0) return;
+        if (packet == null || packet.count == 0) return;
 
         int cx = width / 2;
         int cardW = Math.min(320, width - 40);
-        int cardH = 68;
+        int cardH = 72;
         int cardGap = 5;
 
         int start = page * CARDS_PER_PAGE;
-        int end = Math.min(start + CARDS_PER_PAGE, packet.mapNames.length);
+        int end = Math.min(start + CARDS_PER_PAGE, packet.count);
 
         int contentH = (end - start) * (cardH + cardGap);
         int startY = 55 + (height - 55 - contentH - 40) / 2;
@@ -72,21 +67,26 @@ public class VotingScreen extends Screen {
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + cardGap) {
             final int idx = i;
-            boolean sel = packet.mapNames[i].equals(votedMap);
             int bx = cx - cardW / 2;
 
             addRenderableWidget(Button.builder(
                     Component.literal(""),
                     b -> {
-                        votedMap = packet.mapNames[idx];
-                        PacketHandler.INSTANCE.sendToServer(new VoteMapPacket(packet.mapNames[idx]));
-                        sessionDismissed = true;
-                        onClose();
+                        int sid = packet.serverIds[idx];
+                        if (confirmSid != sid) {
+                            confirmSid = sid;
+                            init();
+                        } else {
+                            PacketHandler.INSTANCE.sendToServer(new JoinMatchServerPacket(sid));
+                            confirmSid = -1;
+                            sessionDismissed = true;
+                            onClose();
+                        }
                     }).bounds(bx, y, cardW, cardH).build());
         }
 
-        int totalPages = Math.max(1, (packet.mapNames.length + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
-        int navY = startY + Math.min(CARDS_PER_PAGE, packet.mapNames.length) * (cardH + cardGap) + 8;
+        int totalPages = Math.max(1, (packet.count + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
+        int navY = startY + Math.min(CARDS_PER_PAGE, packet.count) * (cardH + cardGap) + 8;
 
         if (totalPages > 1) {
             String pageLabel = "Page " + (page + 1) + "/" + totalPages;
@@ -118,46 +118,36 @@ public class VotingScreen extends Screen {
         renderBackground(gui);
         super.render(gui, mx, my, pt);
 
-        if (packet == null || packet.mapNames.length == 0) {
-            gui.drawCenteredString(font, "\u00a7eNo maps available", width / 2, height / 2, 0xFFFFFF);
+        if (packet == null || packet.count == 0) {
+            gui.drawCenteredString(font, "\u00a77No active matches", width / 2, height / 2, 0xFFFFFF);
             return;
         }
 
         int cx = width / 2;
-
-        gui.drawCenteredString(font, "\u00a76\u2694 MAP VOTE", cx, 10, 0xFFFFFF);
-
-        int remaining = packet.remainingSeconds - (int)((System.currentTimeMillis() - openedAt) / 1000);
-        if (remaining < 0) remaining = 0;
-        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
-        String timerColor = remaining <= 10 ? "\u00a7c" : (remaining <= 30 ? "\u00a7e" : "\u00a7a");
-        gui.drawCenteredString(font, timerColor + timeStr + "\u00a77  |  \u00a7e" + packet.onlinePlayers + "\u00a77 players online", cx, 24, 0xFFFFFF);
-
-        String voteInfo = votedMap != null
-            ? "\u00a7a\u2714 Voted: \u00a7f" + votedMap
-            : "\u00a77Click a card to vote  |  \u00a7e" + packet.totalVotes + "\u00a77/" + packet.onlinePlayers + " voted";
-        gui.drawCenteredString(font, voteInfo, cx, 38, 0xFFFFFF);
+        gui.drawCenteredString(font, "\u00a76\u2694 ACTIVE MATCHES", cx, 10, 0xFFFFFF);
+        gui.drawCenteredString(font, "\u00a77Click a match to join", cx, 24, 0x7A7D84);
 
         int cardW = Math.min(320, width - 40);
-        int cardH = 68;
+        int cardH = 72;
         int cardGap = 5;
 
         int start = page * CARDS_PER_PAGE;
-        int end = Math.min(start + CARDS_PER_PAGE, packet.mapNames.length);
+        int end = Math.min(start + CARDS_PER_PAGE, packet.count);
         int contentH = (end - start) * (cardH + cardGap);
         int startY = 55 + (height - 55 - contentH - 40) / 2;
 
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + cardGap) {
-            boolean sel = packet.mapNames[i].equals(votedMap);
-            boolean isLeader = packet.mapNames[i].equals(packet.leaderName) && packet.totalVotes > 0;
+            boolean isPlaying = "PLAYING".equals(packet.statuses[i]);
+            boolean isStarting = "STARTING".equals(packet.statuses[i]);
             boolean hover = mx >= cx - cardW / 2 && mx <= cx + cardW / 2 && my >= y && my <= y + cardH;
+            boolean isConfirm = confirmSid != -1 && packet.serverIds[i] == confirmSid;
             int bx = cx - cardW / 2;
 
             gui.fill(bx, y, bx + cardW, y + cardH,
-                sel ? 0xFF2A2010 : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE));
+                isConfirm ? 0xFF2A2010 : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE));
 
-            int borderColor = sel ? PWPTheme.Colors.ACCENT : (isLeader ? 0xFFC8812A : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER));
+            int borderColor = isConfirm ? PWPTheme.Colors.ACCENT : (isPlaying ? PWPTheme.Colors.SUCCESS : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER));
             gui.fill(bx, y, bx + cardW, y + 1, borderColor);
             gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, borderColor);
             gui.fill(bx, y, bx + 1, y + cardH, borderColor);
@@ -179,51 +169,39 @@ public class VotingScreen extends Screen {
             int textX = imgX + imgSize + 12;
             int textMaxW = bx + cardW - textX - 8;
 
-            String nameStr = (isLeader ? "\u00a76\u265B " : (sel ? "\u00a7e\u2714 " : "\u00a7f")) + packet.mapDisplayNames[i];
-            gui.drawString(font, nameStr, textX, y + 6, 0xFFFFFF);
+            String nameStr = (isPlaying ? "\u00a7a\u25CF " : "\u00a7e\u25B6 ") + packet.displayNames[i];
+            gui.drawString(font, nameStr, textX, y + 5, 0xFFFFFF);
 
-            if (packet.mapDescriptions[i] != null && !packet.mapDescriptions[i].isEmpty()) {
-                String descStr = "\u00a77" + packet.mapDescriptions[i];
-                int descW = font.width(descStr);
-                if (descW > textMaxW) {
-                    descStr = font.plainSubstrByWidth(descStr, textMaxW - 4) + "...";
-                }
-                gui.drawString(font, descStr, textX, y + 18, 0x7A7D84);
+            String elapsed = formatDuration(packet.elapsedSeconds[i]);
+            gui.drawString(font, "\u00a77" + elapsed + "  |  \u00a7e" + packet.playerCounts[i] + "\u00a77/" + packet.maxPlayers[i], textX, y + 17, 0x7A7D84);
+
+            String factionStr = "\u00a79" + packet.blueFactions[i] + " \u00a77vs \u00a7c" + packet.redFactions[i];
+            gui.drawString(font, factionStr, textX, y + 29, 0x7A7D84);
+
+            String ticketStr = "\u00a79" + packet.blueTickets[i] + " \u00a77| \u00a7c" + packet.redTickets[i];
+            gui.drawString(font, ticketStr, textX, y + 41, 0x7A7D84);
+
+            if (isConfirm) {
+                gui.drawString(font, "\u00a7a\u2714 Click again to join", textX, y + 56, PWPTheme.Colors.SUCCESS);
+            } else if (isPlaying) {
+                gui.drawString(font, "\u00a7eClick to join", textX, y + 56, PWPTheme.Colors.TEXT_DIM);
+            } else {
+                gui.drawString(font, "\u00a77Starting...", textX, y + 56, PWPTheme.Colors.TEXT_DIM);
             }
-
-            gui.drawString(font, "\u00a77Players: \u00a7e" + packet.maxPlayers[i], textX, y + 30, 0x7A7D84);
-
-            int votes = packet.voteCounts[i];
-            int barX = textX;
-            int barY = y + 46;
-            int barW = bx + cardW - textX - 8;
-            int barH = 6;
-            int maxVotes = 0;
-            for (int j = 0; j < packet.voteCounts.length; j++) {
-                if (packet.voteCounts[j] > maxVotes) maxVotes = packet.voteCounts[j];
-            }
-
-            gui.fill(barX, barY, barX + barW, barY + barH, 0xFF181C24);
-            if (votes > 0 && maxVotes > 0) {
-                float pct = (float) votes / maxVotes;
-                int fillW = (int) (barW * pct);
-                int fillColor = isLeader ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.ACCENT_DIM;
-                gui.fill(barX, barY, barX + fillW, barY + barH, fillColor);
-            }
-
-            String voteText = "\u00a7e" + votes + "\u00a77 vote" + (votes != 1 ? "s" : "");
-            if (packet.totalVotes > 0) {
-                int pct = votes * 100 / packet.totalVotes;
-                voteText += " \u00a77(" + pct + "%)";
-            }
-            gui.drawString(font, voteText, barX, barY + barH + 1, 0x7A7D84);
         }
 
-        int totalPages = Math.max(1, (packet.mapNames.length + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
-        int navY = startY + Math.min(CARDS_PER_PAGE, packet.mapNames.length) * (cardH + cardGap) + 8;
+        int totalPages = Math.max(1, (packet.count + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
+        int navY = startY + Math.min(CARDS_PER_PAGE, packet.count) * (cardH + cardGap) + 8;
         if (totalPages > 1) {
             gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, 0x7A7D84);
         }
+    }
+
+    private static String formatDuration(int secs) {
+        int m = secs / 60;
+        int s = secs % 60;
+        if (m >= 60) return (m / 60) + "h " + (m % 60) + "m";
+        return m + "m " + s + "s";
     }
 
     private static ResourceLocation getMapTexture(String mapName, String worldPath) {
@@ -236,7 +214,7 @@ public class VotingScreen extends Screen {
                     com.mojang.blaze3d.platform.NativeImage img =
                             com.mojang.blaze3d.platform.NativeImage.read(fis);
                     DynamicTexture tex = new DynamicTexture(img);
-                    ResourceLocation loc = ResourceLocation.tryParse("pwp_lobby:map_" + name.replaceAll("[^a-zA-Z0-9_]", "_"));
+                    ResourceLocation loc = ResourceLocation.tryParse("pwp_lobby:match_" + name.replaceAll("[^a-zA-Z0-9_]", "_"));
                     if (loc == null) return null;
                     Minecraft.getInstance().getTextureManager().register(loc, tex);
                     return loc;
@@ -252,24 +230,21 @@ public class VotingScreen extends Screen {
         return false;
     }
 
-    public static void openWithPacket(OpenVotingScreenPacket pkt) {
-        if (pkt.remainingSeconds > lastKnownRemaining + 10) {
-            sessionDismissed = false;
-        }
-        lastKnownRemaining = pkt.remainingSeconds;
-
-        if (sessionDismissed) return;
+    public static void openWithPacket(OpenMatchListScreenPacket pkt) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        if (mc.screen instanceof VotingScreen vs) {
-            vs.updatePacket(pkt);
-        } else {
-            mc.setScreen(new VotingScreen(pkt));
-        }
-    }
 
-    public static void resetVoteSession() {
-        sessionDismissed = false;
-        lastKnownRemaining = -1;
+        if (pkt.count == 0) {
+            sessionDismissed = false;
+            return;
+        }
+
+        if (sessionDismissed) return;
+
+        if (mc.screen instanceof MatchListScreen ms) {
+            ms.updatePacket(pkt);
+        } else {
+            mc.setScreen(new MatchListScreen(pkt));
+        }
     }
 }
