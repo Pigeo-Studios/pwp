@@ -128,19 +128,22 @@ public class DownedHandler {
       ServerLevel level = player.serverLevel();
       boolean showMessages = level.getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES);
       if (showMessages) {
-         MutableComponent logMsg;
-         if (killerName != null && !killerName.isEmpty()) {
-            logMsg = Component.literal(victimName)
-               .withStyle(ChatFormatting.WHITE)
-               .append(Component.literal(" was finished by ").withStyle(ChatFormatting.GRAY))
-               .append(Component.literal(killerName).withStyle(ChatFormatting.GOLD));
-         } else {
-            logMsg = Component.literal(victimName)
-               .withStyle(ChatFormatting.WHITE)
-               .append(Component.literal(" has bled out").withStyle(ChatFormatting.GRAY));
-         }
+         WarfareWorldData wd = WarfareWorldData.get(level);
+         if (!wd.hideDeathMessages) {
+            MutableComponent logMsg;
+            if (killerName != null && !killerName.isEmpty()) {
+               logMsg = Component.literal(victimName)
+                  .withStyle(ChatFormatting.WHITE)
+                  .append(Component.literal(" was finished by ").withStyle(ChatFormatting.GRAY))
+                  .append(Component.literal(killerName).withStyle(ChatFormatting.GOLD));
+            } else {
+               logMsg = Component.literal(victimName)
+                  .withStyle(ChatFormatting.WHITE)
+                  .append(Component.literal(" has bled out").withStyle(ChatFormatting.GRAY));
+            }
 
-         player.server.getPlayerList().broadcastSystemMessage(logMsg, false);
+            player.server.getPlayerList().broadcastSystemMessage(logMsg, false);
+         }
       }
 
       if (killerName != null && !killerName.isEmpty()) {

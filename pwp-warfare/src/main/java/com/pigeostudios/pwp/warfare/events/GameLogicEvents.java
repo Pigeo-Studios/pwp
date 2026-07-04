@@ -613,6 +613,10 @@ public class GameLogicEvents {
                       PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
                       if (blueTeam != null) blueTeam.setAllowFriendlyFire(true);
                       if (redTeam != null) redTeam.setAllowFriendlyFire(true);
+                      if (data.hideNametags) {
+                         if (blueTeam != null) blueTeam.setNameTagVisibility(PlayerTeam.Visibility.NEVER);
+                         if (redTeam != null) redTeam.setNameTagVisibility(PlayerTeam.Visibility.NEVER);
+                      }
                       sendSyncPacket(level, data);
 
                       MatchStatsTracker.get().startMatch(data.currentMapImage, "AAS");

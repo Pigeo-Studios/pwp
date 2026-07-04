@@ -36,7 +36,9 @@
     "settings": {
         "respawnTimer": 15,
         "deathTicketCost": 2,
-        "lockDurationMinutes": 0
+        "lockDurationMinutes": 0,
+        "hideDeathMessages": true,
+        "hideNametags": true
     },
 
     "mainZones": [

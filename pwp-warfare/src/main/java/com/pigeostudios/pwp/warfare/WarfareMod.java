@@ -125,11 +125,13 @@ public class WarfareMod {
             }
          }
 
-         if (root.has("settings")) {
-            JsonObject settings = root.getAsJsonObject("settings");
-            if (settings.has("respawnTimer")) data.respawnTimer = settings.get("respawnTimer").getAsInt();
-            if (settings.has("deathTicketCost")) data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
-         }
+          if (root.has("settings")) {
+             JsonObject settings = root.getAsJsonObject("settings");
+             if (settings.has("respawnTimer")) data.respawnTimer = settings.get("respawnTimer").getAsInt();
+             if (settings.has("deathTicketCost")) data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
+             if (settings.has("hideDeathMessages")) data.hideDeathMessages = settings.get("hideDeathMessages").getAsBoolean();
+             if (settings.has("hideNametags")) data.hideNametags = settings.get("hideNametags").getAsBoolean();
+          }
 
           if (root.has("mapBounds")) {
              JsonObject bounds = root.getAsJsonObject("mapBounds");
@@ -226,6 +228,10 @@ public class WarfareMod {
          } else {
             LOGGER.info("Core API not available, using NBT-based kits");
          }
+
+          if (data.hideDeathMessages) {
+             level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES).set(false, level.getServer());
+          }
 
           data.configApplied = true;
           data.setDirty();
