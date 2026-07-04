@@ -606,6 +606,12 @@ public class GameLogicEvents {
                       sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
                       data.isGameStarted = true;
                       data.setDirty();
+
+                      Scoreboard scoreboard = level.getScoreboard();
+                      PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
+                      PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
+                      if (blueTeam != null) blueTeam.setAllowFriendlyFire(true);
+                      if (redTeam != null) redTeam.setAllowFriendlyFire(true);
                       sendSyncPacket(level, data);
 
                       MatchStatsTracker.get().startMatch(data.currentMapImage, "AAS");
@@ -1232,20 +1238,21 @@ public class GameLogicEvents {
 
          ServerLevel level = newPlayer.serverLevel();
          WarfareWorldData data = WarfareWorldData.get(level);
-         if (data.isGameStarted) {
-            if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
-               ResupplyHandler.tryApplyPendingKit(newPlayer, data);
-            } else {
-               String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
-               if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                  String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
-                  WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
-                  if (kit != null) {
-                     ResupplyHandler.applyKitToPlayer(newPlayer, kit);
-                  }
-               }
-            }
-         }
+             if (data.isGameStarted) {
+             if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
+                ResupplyHandler.tryApplyPendingKit(newPlayer, data);
+             } else {
+                String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+                if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
+                   String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
+                   WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
+                   if (kit != null) {
+                      ResupplyHandler.applyKitToPlayer(newPlayer, kit);
+                   }
+                }
+             }
+             ResupplyHandler.giveWalkieTalkie(newPlayer);
+          }
       }
    }
 
