@@ -57,13 +57,15 @@ public class ResupplyHandler {
                         net.minecraft.nbt.CompoundTag preCosmeticTag = itemToGive.hasTag() ? itemToGive.getTag().copy() : null;
                         itemToGive = skinData.item.copy();
                         if (kitStack.getItem() != skinData.item.getItem() && preCosmeticTag != null) {
-                            net.minecraft.nbt.CompoundTag merged = itemToGive.hasTag() ? itemToGive.getTag().copy() : new net.minecraft.nbt.CompoundTag();
-                            for (String key : preCosmeticTag.getAllKeys()) {
-                                if (!merged.contains(key)) {
-                                    merged.put(key, preCosmeticTag.get(key).copy());
+                            net.minecraft.nbt.CompoundTag merged = preCosmeticTag.copy();
+                            if (itemToGive.hasTag()) {
+                                for (String key : itemToGive.getTag().getAllKeys()) {
+                                    if (!merged.contains(key)) {
+                                        merged.put(key, itemToGive.getTag().get(key).copy());
+                                    }
                                 }
                             }
-                            if (!merged.isEmpty()) itemToGive.setTag(merged);
+                            itemToGive.setTag(merged);
                         }
                     }
                 }
