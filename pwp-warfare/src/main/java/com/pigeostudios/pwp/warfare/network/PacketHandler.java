@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -15,6 +16,7 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.server.ServerLifecycleHooks;
+import net.minecraft.world.scores.Team;
 
 // Р¦РµРЅС‚СЂР°Р»СЊРЅС‹Р№ СЂРµРіРёСЃС‚СЂР°С‚РѕСЂ СЃРµС‚РµРІС‹С… РїР°РєРµС‚РѕРІ РјРѕРґР°
 // РЎРѕРґРµСЂР¶РёС‚ РєР°РЅР°Р» СЃРІСЏР·Рё Рё РјРµС‚РѕРґС‹ РѕС‚РїСЂР°РІРєРё РґР°РЅРЅС‹С… РІСЃРµРј РєР»РёРµРЅС‚Р°Рј
@@ -86,6 +88,9 @@ public class PacketHandler {
       );
       INSTANCE.registerMessage(
          id++, PacketOpenSkinInventory.class, PacketOpenSkinInventory::encode, PacketOpenSkinInventory::decode, PacketOpenSkinInventory::handle
+      );
+      INSTANCE.registerMessage(
+         id++, PacketSyncPlayerSkin.class, PacketSyncPlayerSkin::encode, PacketSyncPlayerSkin::decode, PacketSyncPlayerSkin::handle
       );
    }
 
@@ -196,6 +201,33 @@ public class PacketHandler {
    // РћС‚РїСЂР°РІР»СЏРµС‚ РїР°РєРµС‚ SyncGameData РІСЃРµРј РёРіСЂРѕРєР°Рј РІ СѓРєР°Р·Р°РЅРЅРѕРј РёР·РјРµСЂРµРЅРёРё
    public static void sendToAllClients(ServerLevel level, WarfareWorldData data) {
       INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), createSyncPacket(data, false, false, false, false));
+   }
+
+   public static void broadcastPlayerSkin(ServerPlayer targetPlayer) {
+      if (targetPlayer == null) return;
+      UUID uuid = targetPlayer.getUUID();
+      String faction = "none";
+      Team team = targetPlayer.getTeam();
+      if (team != null) {
+         String tName = team.getName();
+         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+         if (server != null) {
+            for (ServerLevel level : server.getAllLevels()) {
+               WarfareWorldData data = WarfareWorldData.get(level);
+               if (tName.equalsIgnoreCase("Blue")) {
+                  faction = data.blueFaction;
+                  break;
+               } else if (tName.equalsIgnoreCase("Red")) {
+                  faction = data.redFaction;
+                  break;
+               }
+            }
+         }
+      }
+      String kit = targetPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+      if (kit.isEmpty()) kit = "Unassigned";
+      PacketSyncPlayerSkin packet = new PacketSyncPlayerSkin(uuid, faction, kit);
+      INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
    }
 
    private static PacketSyncGameData createSyncPacket(WarfareWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {

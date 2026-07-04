@@ -23,6 +23,7 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.PermissionHelper;
 import com.pwp.coreclient.network.ConnectToServerPacket;
@@ -1168,6 +1169,7 @@ public class GameLogicEvents {
            ServerPlayer player = (ServerPlayer)event.getEntity();
            PermissionHelper.autoOpIfAdmin(player);
            loadCosmeticsForPlayer(player);
+           PacketHandler.broadcastPlayerSkin(player);
            ServerLevel level = player.serverLevel();
            WarfareWorldData data = WarfareWorldData.get(level);
           sendSyncPacket(level, data);

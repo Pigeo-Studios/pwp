@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
+import com.pigeostudios.pwp.warfare.client.ClientSkinManager;
 import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadSelectionScreen;
 import com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen;
@@ -107,7 +108,7 @@ public class ClientEvents {
             }
 
              if (mc.level.getGameTime() % 40L == 0L) {
-                ClientHooks.updatePlayerSkin();
+                ClientSkinManager.applyAllSkins();
              }
 
              if (mc.player.getPersistentData().getBoolean("WARFARE_IsDowned") && mc.player.isAlive()) {

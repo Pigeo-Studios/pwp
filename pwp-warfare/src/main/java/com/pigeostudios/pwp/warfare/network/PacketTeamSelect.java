@@ -52,7 +52,8 @@ public class PacketTeamSelect {
                team.setSeeFriendlyInvisibles(true);
             }
 
-            scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
+             scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
+            PacketHandler.broadcastPlayerSkin(player);
             PacketHandler.sendToAllClients(player.serverLevel(), data);
             PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension), new PacketSyncSquads(data.squads));
             if (data.isGameStarted) {

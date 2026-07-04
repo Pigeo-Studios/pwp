@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.item.ModItems;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.cosmetics.CosmeticManager;
 import java.util.*;
@@ -91,6 +93,7 @@ public class ResupplyHandler {
       }
 
       player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
+      PacketHandler.broadcastPlayerSkin(player);
    }
 
     public static void clearCurios(ServerPlayer player) {
@@ -292,21 +295,28 @@ public class ResupplyHandler {
    }
 
    public static void giveWalkieTalkie(ServerPlayer player) {
-      if (!WarfareConfig.AUTO_GIVE_WALKIETALKIE.get()) return;
-      Item walkieItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("walkietalkie", "netherite_walkietalkie"));
-      if (walkieItem == null) return;
-      boolean hasWalkie = false;
-      for (ItemStack stack : player.getInventory().items) {
-         if (stack.getItem() == walkieItem) { hasWalkie = true; break; }
-      }
-      if (!hasWalkie && player.getOffhandItem().getItem() == walkieItem) {
-         hasWalkie = true;
-      }
-      if (!hasWalkie) {
-         ItemStack walkieStack = new ItemStack(walkieItem);
-         if (!player.getInventory().add(walkieStack)) {
-            player.drop(walkieStack, false);
-         }
-      }
-   }
+       if (!WarfareConfig.AUTO_GIVE_WALKIETALKIE.get()) return;
+       Item walkieItem = ForgeRegistries.ITEMS.getValue(new ResourceLocation("walkietalkie", "netherite_walkietalkie"));
+       if (walkieItem == null) return;
+       boolean hasWalkie = false;
+       for (ItemStack stack : player.getInventory().items) {
+          if (stack.getItem() == walkieItem) { hasWalkie = true; break; }
+       }
+       if (!hasWalkie && player.getOffhandItem().getItem() == walkieItem) {
+          hasWalkie = true;
+       }
+       if (!hasWalkie) {
+          ItemStack walkieStack = new ItemStack(walkieItem);
+          if (WarfareConfig.TEAM_BASED_WALKIETALKIE.get()) {
+             int channel = WarfareVoicechatPlugin.getTeamChannel(player);
+             CompoundTag tag = walkieStack.getOrCreateTag();
+             tag.putInt("walkietalkie.canal", channel);
+             tag.putBoolean("walkietalkie.activate", true);
+             walkieStack.setTag(tag);
+          }
+          if (!player.getInventory().add(walkieStack)) {
+             player.drop(walkieStack, false);
+          }
+       }
+    }
 }
