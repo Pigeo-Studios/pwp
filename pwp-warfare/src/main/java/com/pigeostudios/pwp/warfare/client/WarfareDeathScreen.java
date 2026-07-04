@@ -79,12 +79,10 @@ public class WarfareDeathScreen extends DeathScreen {
       String mainText = hasSpecificSpawn ? "MAIN BASE" : "SPAWN";
       this.mainSpawnButton = Button.builder(Component.literal(mainText), button -> {
          PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest("MAIN"));
-         this.minecraft.player.respawn();
          this.minecraft.setScreen(null);
       }).bounds(centerX - 105, centerY + 10, 100, 20).build();
       this.rallySpawnButton = Button.builder(Component.literal("SQUAD RALLY"), button -> {
          PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest("RALLY"));
-         this.minecraft.player.respawn();
          this.minecraft.setScreen(null);
       }).bounds(centerX + 5, centerY + 10, 100, 20).build();
       this.mainSpawnButton.active = false;
@@ -161,7 +159,6 @@ public class WarfareDeathScreen extends DeathScreen {
                Button btn = Button.builder(btnTextComp, b -> {
                   String payload = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
                   PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(payload));
-                  this.minecraft.player.respawn();
                   this.minecraft.setScreen(null);
                }).bounds(centerX - 100, 0, 200, 20).build();
                if (isBlocked || notEnoughMats) {
