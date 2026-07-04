@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +31,9 @@ import net.minecraft.world.entity.player.Player;
 // Позволяет создавать/покидать отряды, назначать командиров, чат и карту
 public class SquadSelectionScreen extends Screen {
    private SquadSelectionScreen.SquadButton applyCmdButton;
+   private SquadSelectionScreen.SquadButton kitButton;
    private static final int SIDEBAR_WIDTH = 170;
+   private static final int BOTTOM_BAR_H = 38;
    private static final int TOP_BAR_HEIGHT = 30;
    private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
    private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
@@ -86,6 +89,11 @@ public class SquadSelectionScreen extends Screen {
          b.visible = false;
       });
       this.addRenderableWidget(this.applyCmdButton);
+      this.kitButton = new SquadSelectionScreen.SquadButton(10, this.height - BOTTOM_BAR_H + 8, 150, 22,
+         Component.literal("\u2694 ").append(Component.translatable("gui.pwpwarfare.squad_select.kit")),
+         b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()));
+      this.kitButton.visible = isInSquad;
+      this.addRenderableWidget(this.kitButton);
       this.nameInput = new EditBox(this.font, 10, this.height - 55, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.squad_name"));
       this.nameInput.setMaxLength(12);
       this.nameInput.setVisible(!isInSquad);
@@ -162,6 +170,10 @@ public class SquadSelectionScreen extends Screen {
          this.nameInput.setVisible(!isInSquad);
          this.createButton.visible = !isInSquad;
       }
+      if (this.kitButton != null) {
+         this.kitButton.visible = isInSquad;
+         this.kitButton.setY(this.height - BOTTOM_BAR_H + 8);
+      }
    }
 
    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -222,10 +234,19 @@ public class SquadSelectionScreen extends Screen {
    }
 
    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-      gui.fill(0, 0, 170, this.height, -872415232);
-      gui.fill(170, 0, this.width, 30, -872415232);
-      gui.fill(170, 30, this.width, this.height, -1795162112);
+      gui.fill(0, 0, SIDEBAR_WIDTH, this.height - BOTTOM_BAR_H, PWPTheme.Colors.SURFACE);
+      gui.fill(0, this.height - BOTTOM_BAR_H, SIDEBAR_WIDTH, this.height, PWPTheme.Colors.SURFACE_LIGHT);
+      gui.fill(SIDEBAR_WIDTH, 0, this.width, TOP_BAR_HEIGHT, PWPTheme.Colors.SURFACE_TOP);
+      gui.fill(SIDEBAR_WIDTH, TOP_BAR_HEIGHT, this.width, this.height, 0xCC06080A);
+
+      int clipBottom = this.height - BOTTOM_BAR_H - 2;
+      int clipTop = this.applyCmdButton.visible ? 32 : 8;
+      gui.enableScissor(0, clipTop, SIDEBAR_WIDTH, clipBottom);
       this.renderSquadList(gui, mouseX, mouseY);
+      gui.disableScissor();
+
+      gui.fill(4, this.height - BOTTOM_BAR_H, SIDEBAR_WIDTH - 4, this.height - BOTTOM_BAR_H + 1, PWPTheme.Colors.ACCENT);
+
       this.mapRenderer.render(gui, mouseX, mouseY, partialTick);
       this.renderChatHistory(gui, this.mapY, this.mapSize);
       this.renderTopBar(gui);
@@ -930,19 +951,20 @@ public class SquadSelectionScreen extends Screen {
 
       protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
          if (this.visible) {
-            int borderColor = this.isHovered() ? -1 : -6710887;
+            int borderColor = this.isHovered() ? PWPTheme.Colors.BORDER_ACCENT : PWPTheme.Colors.BORDER;
             if (!this.active) {
-               borderColor = -12303292;
+               borderColor = PWPTheme.Colors.TEXT_DIM;
             }
 
-            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -871296751);
+            int bgColor = this.isHovered() ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE;
+            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, bgColor);
             gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
-            int textColor = this.active ? -1 : -8947849;
+            int textColor = this.active ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
             gui.drawCenteredString(
                Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor
             );
             if (this.active && this.isHovered()) {
-               gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, -1);
+               gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, PWPTheme.Colors.ACCENT);
             }
          }
       }

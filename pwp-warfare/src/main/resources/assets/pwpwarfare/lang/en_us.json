@@ -134,6 +134,24 @@
     "pwpwarfare.marker.move": "Move",
     "pwpwarfare.marker.build": "Build",
     "pwpwarfare.marker.observe": "Observe",
+    "pwpwarfare.marker.supply_request": "Supply Request",
+    "pwpwarfare.marker.artillery_request": "Artillery Request",
+    "pwpwarfare.marker.infantry": "Infantry",
+    "pwpwarfare.marker.sniper": "Sniper",
+    "pwpwarfare.marker.hat": "HAT",
+    "pwpwarfare.marker.mortar": "Mortar",
+    "pwpwarfare.marker.tow": "TOW",
+    "pwpwarfare.marker.enemy_hub": "Enemy HUB",
+    "pwpwarfare.marker.enemy_rally": "Enemy Rally",
+    "pwpwarfare.marker.combat_vehicle": "Combat Vehicle",
+    "pwpwarfare.marker.infantry_vehicle": "Infantry Vehicle",
+    "pwpwarfare.marker.apc": "APC",
+    "pwpwarfare.marker.tank": "Tank",
+    "pwpwarfare.marker.helicopter": "Helicopter",
+    "pwpwarfare.marker.cas_heli": "CAS Heli",
+    "pwpwarfare.marker.cas_fighter": "CAS Fighter",
+    "pwpwarfare.marker.mobile_zu": "Mobile ZU",
+    "pwpwarfare.marker.supply_truck": "Supply Truck",
 
     "itemGroup.pwpwarfare": "PWP Warfare",
 
@@ -196,7 +214,8 @@
     "gui.pwpwarfare.squad_select.channel_team": "TEAM",
     "gui.pwpwarfare.squad_select.channel_squad": "SQUAD",
     "gui.pwpwarfare.squad_select.channel_unknown": "Unknown",
-
+    "gui.pwpwarfare.squad_select.kit": "Kit",
+ 
     "gui.pwpwarfare.map_marker.error": "Cannot place marker there!",
 
     "gui.pwpwarfare.vehicle_spawner.yaw": "Yaw",

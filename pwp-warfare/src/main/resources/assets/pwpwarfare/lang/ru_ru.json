@@ -134,6 +134,24 @@
     "pwpwarfare.marker.move": "Движение",
     "pwpwarfare.marker.build": "Строительство",
     "pwpwarfare.marker.observe": "Наблюдение",
+    "pwpwarfare.marker.supply_request": "Запрос припасов",
+    "pwpwarfare.marker.artillery_request": "Запрос артиллерии",
+    "pwpwarfare.marker.infantry": "Пехота",
+    "pwpwarfare.marker.sniper": "Снайпер",
+    "pwpwarfare.marker.hat": "ПТУР",
+    "pwpwarfare.marker.mortar": "Миномёт",
+    "pwpwarfare.marker.tow": "ПТРК",
+    "pwpwarfare.marker.enemy_hub": "Вражеский HUB",
+    "pwpwarfare.marker.enemy_rally": "Вражеский сбор",
+    "pwpwarfare.marker.combat_vehicle": "Боевая техника",
+    "pwpwarfare.marker.infantry_vehicle": "Лёгкая техника",
+    "pwpwarfare.marker.apc": "БТР",
+    "pwpwarfare.marker.tank": "Танк",
+    "pwpwarfare.marker.helicopter": "Вертолёт",
+    "pwpwarfare.marker.cas_heli": "CAS Вертолёт",
+    "pwpwarfare.marker.cas_fighter": "CAS Истребитель",
+    "pwpwarfare.marker.mobile_zu": "Мобильная ЗУ",
+    "pwpwarfare.marker.supply_truck": "Грузовик",
 
     "itemGroup.pwpwarfare": "PWP Warfare",
 
@@ -196,7 +214,8 @@
     "gui.pwpwarfare.squad_select.channel_team": "КОМАНДА",
     "gui.pwpwarfare.squad_select.channel_squad": "ОТРЯД",
     "gui.pwpwarfare.squad_select.channel_unknown": "Неизвестно",
-
+    "gui.pwpwarfare.squad_select.kit": "Снаряжение",
+ 
     "gui.pwpwarfare.map_marker.error": "Нельзя поставить метку сюда!",
 
     "gui.pwpwarfare.vehicle_spawner.yaw": "Рыскание",
