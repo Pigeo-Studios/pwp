@@ -55,16 +55,21 @@ public class ResupplyHandler {
                     }
                     if (skinData != null && !skinData.item.isEmpty()) {
                         itemToGive = skinData.item.copy();
-                        if (kitStack.getItem() != skinData.item.getItem() && kitStack.hasTag()) {
-                            net.minecraft.nbt.CompoundTag merged = kitStack.getTag().copy();
-                            if (itemToGive.hasTag()) {
-                                for (String key : itemToGive.getTag().getAllKeys()) {
-                                    if (!merged.contains(key)) {
+                        if (kitStack.hasTag()) {
+                            boolean sameItem = kitStack.getItem() == skinData.item.getItem();
+                            boolean cosmeticHasTag = itemToGive.hasTag();
+                            if (!sameItem || cosmeticHasTag) {
+                                net.minecraft.nbt.CompoundTag merged = new net.minecraft.nbt.CompoundTag();
+                                for (String key : kitStack.getTag().getAllKeys()) {
+                                    merged.put(key, kitStack.getTag().get(key).copy());
+                                }
+                                if (cosmeticHasTag) {
+                                    for (String key : itemToGive.getTag().getAllKeys()) {
                                         merged.put(key, itemToGive.getTag().get(key).copy());
                                     }
                                 }
+                                itemToGive.setTag(merged);
                             }
-                            itemToGive.setTag(merged);
                         }
                     }
                 }
