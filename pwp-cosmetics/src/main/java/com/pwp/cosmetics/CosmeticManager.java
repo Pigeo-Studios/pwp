@@ -2,13 +2,12 @@ package com.pwp.cosmetics;
 
 import net.minecraft.world.item.ItemStack;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class CosmeticManager {
 
-    private static final Map<UUID, Map<String, SkinData>> playerEquipment = new HashMap<>();
+    private static final Map<UUID, Map<String, List<SkinData>>> playerEquipment = new HashMap<>();
 
     public static class SkinData {
         public final String skinId;
@@ -21,23 +20,55 @@ public class CosmeticManager {
     }
 
     public static void setEquipment(UUID playerUuid, String slotType, String role, String skinId, ItemStack item) {
+        String key = slotType + ":" + (role != null ? role : "ALL");
         playerEquipment.computeIfAbsent(playerUuid, k -> new HashMap<>())
-                .put(slotType + ":" + role, new SkinData(skinId, item));
+                .computeIfAbsent(key, k -> new ArrayList<>())
+                .add(new SkinData(skinId, item));
+    }
+
+    public static void removeEquipment(UUID playerUuid, String slotType, String role) {
+        String key = slotType + ":" + (role != null ? role : "ALL");
+        Map<String, List<SkinData>> slots = playerEquipment.get(playerUuid);
+        if (slots != null) {
+            slots.remove(key);
+        }
+    }
+
+    public static void setEquipmentSingle(UUID playerUuid, String slotType, String role, String skinId, ItemStack item) {
+        String key = slotType + ":" + (role != null ? role : "ALL");
+        List<SkinData> list = new ArrayList<>();
+        if (skinId != null && !skinId.isEmpty()) {
+            list.add(new SkinData(skinId, item));
+        }
+        playerEquipment.computeIfAbsent(playerUuid, k -> new HashMap<>()).put(key, list);
     }
 
     public static SkinData getEquipment(UUID playerUuid, String slotType, String role) {
-        Map<String, SkinData> slots = playerEquipment.get(playerUuid);
+        Map<String, List<SkinData>> slots = playerEquipment.get(playerUuid);
         if (slots == null) return null;
-        SkinData data = slots.get(slotType + ":" + role);
-        if (data == null) data = slots.get(slotType + ":ALL");
-        return data;
+        String key = slotType + ":" + (role != null ? role : "ALL");
+        List<SkinData> list = slots.get(key);
+        if (list == null) list = slots.get(slotType + ":ALL");
+        if (list != null && !list.isEmpty()) return list.get(0);
+        return null;
+    }
+
+    public static List<SkinData> getEquipmentList(UUID playerUuid, String slotType, String role) {
+        Map<String, List<SkinData>> slots = playerEquipment.get(playerUuid);
+        if (slots == null) return Collections.emptyList();
+        String key = slotType + ":" + (role != null ? role : "ALL");
+        List<SkinData> list = slots.get(key);
+        if (list == null) list = slots.get(slotType + ":ALL");
+        return list != null ? list : Collections.emptyList();
     }
 
     public static SkinData getEquipmentBySkinId(UUID playerUuid, String skinId) {
-        Map<String, SkinData> slots = playerEquipment.get(playerUuid);
+        Map<String, List<SkinData>> slots = playerEquipment.get(playerUuid);
         if (slots == null) return null;
-        for (SkinData data : slots.values()) {
-            if (data.skinId.equals(skinId)) return data;
+        for (List<SkinData> list : slots.values()) {
+            for (SkinData data : list) {
+                if (data.skinId.equals(skinId)) return data;
+            }
         }
         return null;
     }

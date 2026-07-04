@@ -88,6 +88,17 @@ public class CosmeticsRepository {
         }
     }
 
+    public static boolean unequipItem(String uuid, String slotType, String role) throws SQLException {
+        String sql = "DELETE FROM player_equipment WHERE uuid = ? AND slot_type = ? AND role = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, uuid);
+            ps.setString(2, slotType);
+            ps.setString(3, role != null ? role : "ALL");
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     public static List<EquipmentSlot> getEquipment(String uuid) throws SQLException {
         String sql = "SELECT e.*, c.skin_id, c.slot_type AS item_slot, c.rarity " +
                 "FROM player_equipment e " +

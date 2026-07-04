@@ -31,6 +31,18 @@ public class CosmeticsController {
             }
         });
 
+        app.post("/api/v1/cosmetics/unequip", ctx -> {
+            EquipRequest req = ctx.bodyAsClass(EquipRequest.class);
+            boolean ok = CosmeticsRepository.unequipItem(req.uuid, req.slotType, req.role);
+            if (ok) {
+                LogRepository.log(req.uuid, "COSMETIC_UNEQUIP", 0,
+                        "{\"slot\":\"" + req.slotType + "\",\"role\":\"" + req.role + "\"}");
+                ctx.json(ApiResponse.ok("unequipped"));
+            } else {
+                ctx.json(ApiResponse.ok("already empty"));
+            }
+        });
+
         app.post("/api/v1/cosmetics/grant", ctx -> {
             GrantRequest req = ctx.bodyAsClass(GrantRequest.class);
 

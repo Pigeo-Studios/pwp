@@ -7,6 +7,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.PlayerData.CosmeticEntry;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.cosmetics.CosmeticsMod;
 import com.pwp.cosmetics.network.PacketSyncCosmeticEquip;
 import net.minecraft.client.Minecraft;
@@ -21,13 +22,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SkinInventoryScreen extends Screen {
@@ -45,6 +40,7 @@ public class SkinInventoryScreen extends Screen {
     private List<CosmeticEntry> filtered = new ArrayList<>();
     private Map<String, ItemStack> skinItemCache = new HashMap<>();
     private Map<String, String> skinNameCache = new HashMap<>();
+    private Set<String> ownedSkinIds = new HashSet<>();
     private String currentFilter = "ALL";
     private int scrollOffset = 0;
     private int maxScroll = 0;
@@ -52,12 +48,7 @@ public class SkinInventoryScreen extends Screen {
     private long statusTime = 0;
 
     private static final int[] RARITY_COLORS = {
-            0xFF6A6D73, // COMMON
-            0xFF3D6FA5, // UNCOMMON
-            0xFF7A4A8A, // RARE
-            0xFFC8812A, // EPIC
-            0xFFA53D3D, // LEGENDARY
-            0xFFFFD700  // MYTHIC
+            0xFF6A6D73, 0xFF3D6FA5, 0xFF7A4A8A, 0xFFC8812A, 0xFFA53D3D, 0xFFFFD700
     };
 
     public SkinInventoryScreen() {
@@ -101,11 +92,12 @@ public class SkinInventoryScreen extends Screen {
         UUID uuid = mc.player.getUUID();
         PlayerData.CachedProfile profile = PlayerData.get(uuid);
         Set<String> equippedSkinIds = new HashSet<>();
+        ownedSkinIds.clear();
         if (profile != null) {
-            equippedSkinIds = profile.getCosmetics().stream()
-                    .filter(c -> c.equipped)
-                    .map(c -> c.skinId)
-                    .collect(Collectors.toSet());
+            for (CosmeticEntry ce : profile.getCosmetics()) {
+                ownedSkinIds.add(ce.skinId);
+                if (ce.equipped) equippedSkinIds.add(ce.skinId);
+            }
         }
         loadSkinDefinitions(equippedSkinIds);
     }
@@ -116,11 +108,7 @@ public class SkinInventoryScreen extends Screen {
             skinNameCache = globalSkinNameCache;
             allCosmetics = new ArrayList<>(globalSkinEntries);
             for (CosmeticEntry ce : allCosmetics) {
-                if (equippedSkinIds.contains(ce.skinId)) {
-                    ce.equipped = true;
-                } else {
-                    ce.equipped = false;
-                }
+                ce.equipped = equippedSkinIds.contains(ce.skinId);
             }
             filterCosmetics();
             return;
@@ -146,15 +134,11 @@ public class SkinInventoryScreen extends Screen {
                             try {
                                 CompoundTag loaded = TagParser.parseTag(modelPath);
                                 ItemStack is = ItemStack.of(loaded);
-                                if (!is.isEmpty()) {
-                                    cache.put(skinId, is);
-                                }
+                                if (!is.isEmpty()) cache.put(skinId, is);
                             } catch (Exception ignored) {}
                         } else if (!modelPath.isEmpty() && modelPath.contains(":")) {
                             Item item = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(modelPath));
-                            if (item != null) {
-                                cache.put(skinId, new ItemStack(item));
-                            }
+                            if (item != null) cache.put(skinId, new ItemStack(item));
                         }
                         CosmeticEntry ce = new CosmeticEntry();
                         ce.itemUuid = skinId;
@@ -188,6 +172,16 @@ public class SkinInventoryScreen extends Screen {
                     .collect(Collectors.toList());
         }
 
+        filtered.sort((a, b) -> {
+            boolean aOwned = ownedSkinIds.contains(a.skinId);
+            boolean bOwned = ownedSkinIds.contains(b.skinId);
+            if (a.equipped && !b.equipped) return -1;
+            if (!a.equipped && b.equipped) return 1;
+            if (aOwned && !bOwned) return -1;
+            if (!aOwned && bOwned) return 1;
+            return 0;
+        });
+
         int rows = (filtered.size() + ITEMS_PER_ROW - 1) / ITEMS_PER_ROW;
         int visibleRows = (this.height - START_Y - 30) / (ITEM_SIZE + ITEM_GAP);
         maxScroll = Math.max(0, rows - visibleRows);
@@ -201,11 +195,12 @@ public class SkinInventoryScreen extends Screen {
         int totalWidth = ITEMS_PER_ROW * (ITEM_SIZE + ITEM_GAP) - ITEM_GAP;
         int startX = cx - totalWidth / 2;
 
-        gui.drawCenteredString(this.font, this.title, cx, 36, 0xFFC8CBCE);
+        gui.drawCenteredString(this.font, this.title, cx, 36, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.fill(cx - totalWidth / 2 - 8, 44, cx + totalWidth / 2 + 8, 45, PWPTheme.Colors.ACCENT);
 
         if (filtered.isEmpty()) {
             gui.drawCenteredString(this.font, Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
-                    cx, this.height / 2, 0xFF7A7D84);
+                    cx, this.height / 2, PWPTheme.Colors.TEXT_DIM);
         } else {
             RenderSystem.enableBlend();
             for (int i = scrollOffset * ITEMS_PER_ROW; i < filtered.size(); i++) {
@@ -217,32 +212,46 @@ public class SkinInventoryScreen extends Screen {
                 if (y + ITEM_SIZE > this.height) break;
 
                 CosmeticEntry entry = filtered.get(i);
+                boolean isOwned = ownedSkinIds.contains(entry.skinId);
                 int rarityColor = getRarityColor(entry.rarity);
 
-                gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, 0xCC12151A);
+                gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, PWPTheme.Colors.SURFACE);
+
                 if (entry.equipped) {
-                    gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, 0xFF00FF00);
+                    gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, PWPTheme.Colors.SUCCESS);
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
-                } else {
+                    gui.drawString(this.font, Component.literal("\u2714"), x + ITEM_SIZE - 9, y + 1, PWPTheme.Colors.SUCCESS, false);
+                } else if (isOwned) {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
+                } else {
+                    gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, 0xFF3A3D44);
+                    gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, 0x8812151A);
                 }
 
                 ItemStack stack = skinItemCache.get(entry.skinId);
                 if (stack != null && !stack.isEmpty()) {
+                    if (!isOwned) RenderSystem.setShaderColor(0.5F, 0.5F, 0.5F, 0.6F);
                     gui.renderItem(stack, x + 4, y + 4);
+                    if (!isOwned) RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                }
+
+                if (!isOwned) {
+                    gui.drawString(this.font, Component.literal("\uD83D\uDD12"), x + 2, y + ITEM_SIZE - 10, 0xFF7A7D84, false);
                 }
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
-                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, 0xFFC8812A);
+                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, PWPTheme.Colors.ACCENT);
 
                     List<Component> tooltip = new ArrayList<>();
                     String displayName = skinNameCache.getOrDefault(entry.skinId, entry.skinId);
-                    tooltip.add(Component.literal("§" + getRarityCode(entry.rarity) + displayName));
-                    tooltip.add(Component.literal("§7" + entry.slotType + " §8| §7" + entry.rarity));
+                    tooltip.add(Component.literal("\u00a7" + getRarityCode(entry.rarity) + displayName));
+                    tooltip.add(Component.literal("\u00a77" + entry.slotType + " \u00a78| \u00a77" + entry.rarity));
                     if (entry.equipped) {
-                        tooltip.add(Component.literal("§a✔ Equipped"));
+                        tooltip.add(Component.literal("\u00a7a\u2714 Equipped - Click to unequip"));
+                    } else if (isOwned) {
+                        tooltip.add(Component.literal("\u00a7eClick to equip"));
                     } else {
-                        tooltip.add(Component.literal("§eClick to equip"));
+                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Locked - Not owned"));
                     }
                     gui.renderComponentTooltip(this.font, tooltip, mx, my);
                 }
@@ -250,8 +259,13 @@ public class SkinInventoryScreen extends Screen {
             RenderSystem.disableBlend();
         }
 
+        if (currentFilter.equals("PRIMARY")) {
+            String hint = "\u00a77\u2714 Multiple PRIMARY skins can be selected";
+            gui.drawCenteredString(this.font, Component.literal(hint), cx, this.height - 28, PWPTheme.Colors.TEXT_SECONDARY);
+        }
+
         if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(this.font, statusMsg, cx, this.height - 20, 0xFFC8812A);
+            gui.drawCenteredString(this.font, Component.literal(statusMsg), cx, this.height - 16, PWPTheme.Colors.ACCENT);
 
         super.render(gui, mx, my, pt);
     }
@@ -273,8 +287,11 @@ public class SkinInventoryScreen extends Screen {
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
                     CosmeticEntry entry = filtered.get(i);
-                    toggleEquip(entry);
-                    return true;
+                    boolean isOwned = ownedSkinIds.contains(entry.skinId);
+                    if (isOwned) {
+                        toggleEquip(entry);
+                        return true;
+                    }
                 }
             }
         }
@@ -294,68 +311,95 @@ public class SkinInventoryScreen extends Screen {
 
         String uuid = mc.player.getStringUUID();
         String role = "ALL";
-        statusMsg = "§eEquipping...";
-        statusTime = System.currentTimeMillis();
+        boolean isPrimary = entry.slotType.equals("PRIMARY");
 
-        new Thread(() -> {
-            try {
-                com.pwp.coreclient.CoreAPI.grantItem(uuid, entry.skinId, "menu");
-                Thread.sleep(300);
-                JsonObject fresh = com.pwp.coreclient.CoreAPI.loadPlayer(uuid);
-                if (fresh == null || !fresh.has("data")) {
+        if (entry.equipped) {
+            statusMsg = "\u00a76Unequipping...";
+            statusTime = System.currentTimeMillis();
+            new Thread(() -> {
+                try {
+                    CoreAPI.unequipItem(uuid, entry.slotType, role);
+                    Thread.sleep(300);
+                    JsonObject fresh = CoreAPI.loadPlayer(uuid);
+                    if (fresh != null && fresh.has("data")) {
+                        PlayerData.put(mc.player.getUUID(), fresh.getAsJsonObject("data"));
+                    }
+                    CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, "", ""));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "§cAPI error (grant/load failed)";
+                        statusMsg = "\u00a7a\u2714 Unequipped (default skin)";
+                        statusTime = System.currentTimeMillis();
+                        loadCosmetics();
+                    });
+                } catch (Exception e) {
+                    Minecraft.getInstance().submit(() -> {
+                        statusMsg = "\u00a7cUnequip failed: " + e.getMessage();
                         statusTime = System.currentTimeMillis();
                     });
-                    return;
                 }
-                JsonObject data = fresh.getAsJsonObject("data");
-                PlayerData.put(mc.player.getUUID(), data);
-                boolean equipped = false;
-                if (data.has("cosmetics")) {
-                    for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
-                        JsonObject obj = e.getAsJsonObject();
-                        if (obj.get("skinId").getAsString().equals(entry.skinId)) {
-                            String realItemUuid = obj.get("itemUuid").getAsString();
-                            String slotType = obj.get("slotType").getAsString();
-                            com.pwp.coreclient.CoreAPI.equipItem(uuid, realItemUuid, slotType, role);
-                            equipped = true;
-                            break;
+            }, "PWP-Unequip-Thread").start();
+        } else {
+            statusMsg = "\u00a76Equipping...";
+            statusTime = System.currentTimeMillis();
+            new Thread(() -> {
+                try {
+                    CoreAPI.grantItem(uuid, entry.skinId, "menu");
+                    Thread.sleep(300);
+                    JsonObject fresh = CoreAPI.loadPlayer(uuid);
+                    if (fresh == null || !fresh.has("data")) {
+                        Minecraft.getInstance().submit(() -> {
+                            statusMsg = "\u00a7cAPI error (grant/load failed)";
+                            statusTime = System.currentTimeMillis();
+                        });
+                        return;
+                    }
+                    JsonObject data = fresh.getAsJsonObject("data");
+                    PlayerData.put(mc.player.getUUID(), data);
+                    boolean equipped = false;
+                    if (data.has("cosmetics")) {
+                        for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
+                            JsonObject obj = e.getAsJsonObject();
+                            if (obj.get("skinId").getAsString().equals(entry.skinId)) {
+                                String realItemUuid = obj.get("itemUuid").getAsString();
+                                String slotType = obj.get("slotType").getAsString();
+                                CoreAPI.equipItem(uuid, realItemUuid, slotType, role);
+                                equipped = true;
+                                break;
+                            }
                         }
                     }
-                }
-                if (!equipped) {
+                    if (!equipped) {
+                        Minecraft.getInstance().submit(() -> {
+                            statusMsg = "\u00a7cSkin not found in profile!";
+                            statusTime = System.currentTimeMillis();
+                        });
+                        return;
+                    }
+                    Thread.sleep(300);
+                    JsonObject fresh2 = CoreAPI.loadPlayer(uuid);
+                    if (fresh2 != null && fresh2.has("data")) {
+                        PlayerData.put(mc.player.getUUID(), fresh2.getAsJsonObject("data"));
+                    }
+                    ItemStack eqItem = skinItemCache.get(entry.skinId);
+                    String itemSnbt = "";
+                    if (eqItem != null && !eqItem.isEmpty()) {
+                        CompoundTag tag = new CompoundTag();
+                        eqItem.save(tag);
+                        itemSnbt = tag.toString();
+                    }
+                    CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, entry.skinId, itemSnbt));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "§cSkin not found in profile!";
+                        statusMsg = "\u00a7a\u2714 Equipped!";
+                        statusTime = System.currentTimeMillis();
+                        loadCosmetics();
+                    });
+                } catch (Exception e) {
+                    Minecraft.getInstance().submit(() -> {
+                        statusMsg = "\u00a7cEquip failed: " + e.getMessage();
                         statusTime = System.currentTimeMillis();
                     });
-                    return;
                 }
-                Thread.sleep(300);
-                JsonObject fresh2 = com.pwp.coreclient.CoreAPI.loadPlayer(uuid);
-                if (fresh2 != null && fresh2.has("data")) {
-                    PlayerData.put(mc.player.getUUID(), fresh2.getAsJsonObject("data"));
-                }
-                ItemStack eqItem = skinItemCache.get(entry.skinId);
-                String itemSnbt = "";
-                if (eqItem != null && !eqItem.isEmpty()) {
-                    CompoundTag tag = new CompoundTag();
-                    eqItem.save(tag);
-                    itemSnbt = tag.toString();
-                }
-                CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, "ALL", entry.skinId, itemSnbt));
-                Minecraft.getInstance().submit(() -> {
-                    statusMsg = "§a✔ Equipped!";
-                    statusTime = System.currentTimeMillis();
-                    loadCosmetics();
-                });
-            } catch (Exception e) {
-                Minecraft.getInstance().submit(() -> {
-                    statusMsg = "§cEquip failed: " + e.getMessage();
-                    statusTime = System.currentTimeMillis();
-                });
-            }
-        }, "PWP-Equip-Thread").start();
+            }, "PWP-Equip-Thread").start();
+        }
     }
 
     @Override

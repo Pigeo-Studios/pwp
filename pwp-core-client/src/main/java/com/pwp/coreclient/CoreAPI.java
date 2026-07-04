@@ -68,6 +68,10 @@ public class CoreAPI {
                 "slotType", slotType, "role", role));
     }
 
+    public static JsonObject unequipItem(String uuid, String slotType, String role) {
+        return post("/api/v1/cosmetics/unequip", map("uuid", uuid, "slotType", slotType, "role", role));
+    }
+
     // ====== SKINS ======
     public static JsonObject getSkins() {
         return get("/api/v1/skins");
