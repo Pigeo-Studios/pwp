@@ -1378,18 +1378,29 @@ public class GameLogicEvents {
                 return;
              }
            } else if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-              // Техника уничтожена — определяем кто уничтожил
-              Entity sourceEntity = event.getSource().getEntity();
-              if (sourceEntity instanceof ServerPlayer destroyer) {
-                 MatchStatsTracker.get().recordVehicleDestroyed(destroyer, entity);
-              } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                 List<Entity> passengers = sourceEntity.getPassengers();
-                 if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
-                    MatchStatsTracker.get().recordVehicleDestroyed(driver, entity);
-                 }
-              }
-              processEntityLoss(entity);
-           }
+               Entity sourceEntity = event.getSource().getEntity();
+               Entity vehicleDestroyer = null;
+
+               if (sourceEntity instanceof ServerPlayer destroyer) {
+                  vehicleDestroyer = destroyer;
+               } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                  List<Entity> passengers = sourceEntity.getPassengers();
+                  if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
+                     vehicleDestroyer = driver;
+                  }
+               } else if (sourceEntity instanceof net.minecraft.world.entity.projectile.Projectile proj) {
+                  Entity owner = proj.getOwner();
+                  if (owner instanceof ServerPlayer shooter) {
+                     vehicleDestroyer = shooter;
+                  }
+               }
+
+               if (vehicleDestroyer instanceof ServerPlayer vd) {
+                  MatchStatsTracker.get().recordVehicleDestroyed(vd, entity);
+               }
+
+               processEntityLoss(entity);
+            }
        }
     }
 
