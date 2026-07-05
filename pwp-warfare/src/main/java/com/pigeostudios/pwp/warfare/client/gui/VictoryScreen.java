@@ -115,9 +115,9 @@ public class VictoryScreen extends Screen {
 
          // Match stats panel
          int statsY = cy + 5;
-         int statsX = cx - 140;
-         int statsW = 280;
-         int panelH = 62;
+         int statsX = cx - 150;
+         int statsW = 300;
+         int panelH = 75;
          int pCol = alphaInt << 24 | 0x88181C24;
          int pBorder = alphaInt << 24 | 0xFF1E222A;
          int pText = alphaInt << 24 | 0xFFC8CBCE;
@@ -133,27 +133,31 @@ public class VictoryScreen extends Screen {
          gui.drawCenteredString(this.font, Component.literal("\u00a7lMATCH STATS").withStyle(s -> s.withColor(pAccent)),
             cx, statsY + 3, pAccent);
 
-         int row1 = statsY + 16;
-         int colGap = 70;
-         drawStat(gui, "\u2694 Kills", String.valueOf(matchKills), statsX + 6, row1, colGap, pLabel, pAccent);
-         drawStat(gui, "\u2620 Deaths", String.valueOf(matchDeaths), statsX + 6 + colGap, row1, colGap, pLabel, pText);
-         drawStat(gui, "\u2605 Revives", String.valueOf(matchRevives), statsX + 6 + colGap * 2, row1, colGap, pLabel, pText);
+         int rowY = statsY + 16;
+         int rowH = 13;
+         int cw = 100;
+         int labelW = 50;
+         int valW = 46;
 
-         int row2 = row1 + 11;
-         drawStat(gui, "\u2699 K/D", matchDeaths == 0 ? String.valueOf(matchKills) : String.format("%.2f", (double) matchKills / matchDeaths),
-            statsX + 6, row2, colGap, pLabel, pAccent);
-         drawStat(gui, "\u2691 Score", String.format("%,d", matchScore), statsX + 6 + colGap, row2, colGap, pLabel, pText);
-         drawStat(gui, "Time", formatDuration(matchDurationSec), statsX + 6 + colGap * 2, row2, colGap, pLabel, pText);
+         drawStat(gui, "\u2694 Kills", String.valueOf(matchKills), statsX + 6, rowY, labelW, valW, pLabel, pAccent);
+         drawStat(gui, "\u2620 Deaths", String.valueOf(matchDeaths), statsX + 6 + cw, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "Revives", String.valueOf(matchRevives), statsX + 6 + cw * 2, rowY, labelW, valW, pLabel, pText);
+         rowY += rowH;
 
-         int row3 = row2 + 11;
-         drawStat(gui, "\u2605 V.Kills", String.valueOf(matchVehicleKills), statsX + 6, row3, colGap, pLabel, pText);
-         drawStat(gui, "V.Destr.", String.valueOf(matchVehiclesDestroyed), statsX + 6 + colGap, row3, colGap, pLabel, pText);
-         drawStat(gui, "Air D.", String.valueOf(matchAirVehiclesDestroyed), statsX + 6 + colGap * 2, row3, colGap, pLabel, pText);
+         drawStat(gui, "K/D", matchDeaths == 0 ? String.valueOf(matchKills) : String.format("%.2f", (double) matchKills / matchDeaths),
+            statsX + 6, rowY, labelW, valW, pLabel, pAccent);
+         drawStat(gui, "Score", String.format("%,d", matchScore), statsX + 6 + cw, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "Time", formatDuration(matchDurationSec), statsX + 6 + cw * 2, rowY, labelW, valW, pLabel, pText);
+         rowY += rowH;
 
-         int row4 = row3 + 11;
-         drawStat(gui, "Captures", String.valueOf(matchCaptures), statsX + 6, row4, colGap, pLabel, pText);
-         drawStat(gui, "Revives", String.valueOf(matchRevives), statsX + 6 + colGap, row4, colGap, pLabel, pText);
-         drawStat(gui, "Headshots", String.valueOf(matchHeadshots), statsX + 6 + colGap * 2, row4, colGap, pLabel, pText);
+         drawStat(gui, "V.Kills", String.valueOf(matchVehicleKills), statsX + 6, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "V.Destr.", String.valueOf(matchVehiclesDestroyed), statsX + 6 + cw, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "Air D.", String.valueOf(matchAirVehiclesDestroyed), statsX + 6 + cw * 2, rowY, labelW, valW, pLabel, pText);
+         rowY += rowH;
+
+         drawStat(gui, "Captures", String.valueOf(matchCaptures), statsX + 6, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "Headshots", String.valueOf(matchHeadshots), statsX + 6 + cw, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "", "", statsX + 6 + cw * 2, rowY, labelW, valW, pLabel, pText);
 
          RenderSystem.disableBlend();
       }
@@ -166,9 +170,13 @@ public class VictoryScreen extends Screen {
       super.render(gui, mouseX, mouseY, partialTick);
    }
 
-   private void drawStat(GuiGraphics gui, String label, String value, int x, int y, int maxW, int labelColor, int valueColor) {
-      gui.drawString(this.font, Component.literal(label + ":"), x, y, labelColor);
-      gui.drawString(this.font, Component.literal(value), x + maxW - 35, y, valueColor);
+   private void drawStat(GuiGraphics gui, String label, String value, int x, int y, int labelW, int valW, int labelColor, int valueColor) {
+      if (!label.isEmpty()) {
+         gui.drawString(this.font, Component.literal(label + ":"), x, y, labelColor);
+      }
+      if (!value.isEmpty()) {
+         gui.drawString(this.font, Component.literal(value), x + labelW + 4, y, valueColor);
+      }
    }
 
    private String formatDuration(int secs) {

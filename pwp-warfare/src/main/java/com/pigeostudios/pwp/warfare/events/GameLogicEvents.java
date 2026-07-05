@@ -1400,6 +1400,17 @@ public class GameLogicEvents {
                   }
                }
 
+               if (vehicleDestroyer == null && entity.getPersistentData().contains("WARFARE_LastDamager")) {
+                  String lastUuid = entity.getPersistentData().getString("WARFARE_LastDamager");
+                  if (event.getEntity().level() != null) {
+                     net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) event.getEntity().level();
+                     Entity lastPlayer = sl.getEntity(java.util.UUID.fromString(lastUuid));
+                     if (lastPlayer instanceof ServerPlayer lp) {
+                        vehicleDestroyer = lp;
+                     }
+                  }
+               }
+
                if (vehicleDestroyer instanceof ServerPlayer vd) {
                   MatchStatsTracker.get().recordVehicleDestroyed(vd, entity);
                }
@@ -1483,17 +1494,27 @@ public class GameLogicEvents {
    }
 
    @SubscribeEvent
-   public static void onEntityRemove(EntityLeaveLevelEvent event) {
-      if (!event.getLevel().isClientSide) {
-         Entity entity = event.getEntity();
-         if (!(entity instanceof LivingEntity)) {
-            RemovalReason reason = entity.getRemovalReason();
-            if (reason != null && (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED)) {
-               processEntityLoss(entity);
-            }
-         }
-      }
-   }
+    public static void onEntityRemove(EntityLeaveLevelEvent event) {
+       if (!event.getLevel().isClientSide) {
+          Entity entity = event.getEntity();
+          if (!(entity instanceof LivingEntity)) {
+             RemovalReason reason = entity.getRemovalReason();
+             if (reason != null && (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED)) {
+                // Check if this was a tagged vehicle with a known last damager
+                if (entity.getPersistentData().contains("WARFARE_TicketPenalty")
+                    && entity.getPersistentData().contains("WARFARE_LastDamager")) {
+                   String lastUuid = entity.getPersistentData().getString("WARFARE_LastDamager");
+                   net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel) event.getLevel();
+                   Entity lastPlayer = sl.getEntity(java.util.UUID.fromString(lastUuid));
+                   if (lastPlayer instanceof ServerPlayer destroyer) {
+                      MatchStatsTracker.get().recordVehicleDestroyed(destroyer, entity);
+                   }
+                }
+                processEntityLoss(entity);
+             }
+          }
+       }
+    }
 
    private static void processEntityLoss(Entity entity) {
       if (entity.level() != null && entity.level().getServer() != null) {

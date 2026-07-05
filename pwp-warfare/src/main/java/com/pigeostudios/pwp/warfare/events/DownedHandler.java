@@ -44,6 +44,10 @@ public class DownedHandler {
        if (event.getSource().getEntity() instanceof ServerPlayer attacker
            && event.getSource().getEntity() != event.getEntity()) {
           MatchStatsTracker.get().recordDamage(attacker, event.getAmount());
+          // Tag vehicles with last damager for destruction tracking
+          if (event.getEntity().getPersistentData().contains("WARFARE_TicketPenalty")) {
+             event.getEntity().getPersistentData().putString("WARFARE_LastDamager", attacker.getStringUUID());
+          }
        }
 
        if (event.getEntity() instanceof ServerPlayer player) {

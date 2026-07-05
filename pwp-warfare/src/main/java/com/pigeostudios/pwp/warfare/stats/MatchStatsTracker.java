@@ -335,25 +335,25 @@ public class MatchStatsTracker {
     public static void scheduleServerShutdown(int delaySeconds) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
-            server.execute(() -> {
+            new Thread(() -> {
                 try {
-                    // Wait for players to view VictoryScreen
                     Thread.sleep(delaySeconds * 1000L);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    return;
                 }
-                // Transfer all players back to lobby
-                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                    player.sendSystemMessage(
-                            Component.literal("§e[PWP] Returning to lobby..."), false);
-                    PacketHandler.INSTANCE.send(
-                            PacketDistributor.PLAYER.with(() -> player),
-                            new ConnectToServerPacket("127.0.0.1", 25565));
-                }
-                // Small delay then shutdown
-                try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                server.halt(false);
-            });
+                server.execute(() -> {
+                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                        player.sendSystemMessage(
+                                Component.literal("§e[PWP] Returning to lobby..."), false);
+                        PacketHandler.INSTANCE.send(
+                                PacketDistributor.PLAYER.with(() -> player),
+                                new ConnectToServerPacket("127.0.0.1", 25565));
+                    }
+                    try { Thread.sleep(2000); } catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
+                    server.halt(false);
+                });
+            }, "PWPMatchShutdown").start();
         }
     }
 
