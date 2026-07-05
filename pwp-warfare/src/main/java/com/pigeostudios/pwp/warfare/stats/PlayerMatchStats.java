@@ -37,6 +37,7 @@ public class PlayerMatchStats {
     public int hubDestructions;
     public int baseDefends;
 
+    public long survivalTime;
     public double distanceTraveled;
 
     public PlayerMatchStats(String uuid, String nickname, String team) {

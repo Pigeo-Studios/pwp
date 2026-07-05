@@ -80,7 +80,11 @@ implements GeoItem {
             Player toHeal = target != null ? target : player;
             float currentHealth = toHeal.getHealth();
             if (currentHealth < 14.0f) {
-                toHeal.setHealth(Math.min(14.0f, currentHealth + 6.0f));
+                float healed = Math.min(14.0f, currentHealth + 6.0f) - currentHealth;
+                toHeal.setHealth(currentHealth + healed);
+                if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordHealing(sp, healed);
+                }
             }
             if (!player.getAbilities().instabuild) {
                 pStack.shrink(1);

@@ -72,6 +72,9 @@ implements GeoItem {
             int used = this.getUseDuration(stack) - count;
             if (used > 0 && used % applyTime == 0 && toHeal.getHealth() < toHeal.getMaxHealth()) {
                 toHeal.heal(2.0f);
+                if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordHealing(sp, 2.0f);
+                }
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.MEDKIT_APPLY.get(), SoundSource.PLAYERS, 0.6f, 1.0f);
             }
         }

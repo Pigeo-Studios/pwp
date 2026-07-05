@@ -168,9 +168,31 @@ public class MatchStatsTracker {
         getOrCreate(killer).recordBaseDefend();
     }
 
+    public void recordSuppliesDelivered(ServerPlayer deliverer, int amount) {
+        if (!active) return;
+        getOrCreate(deliverer).suppliesDelivered += amount;
+    }
+
     public void recordDistance(ServerPlayer player, double dist) {
         if (!active) return;
         getOrCreate(player).recordDistance(dist);
+    }
+
+    // Survival time tracking
+    private final Map<UUID, Long> spawnTimes = new HashMap<>();
+
+    public void recordSpawn(ServerPlayer player) {
+        if (!active) return;
+        spawnTimes.put(player.getUUID(), System.currentTimeMillis());
+    }
+
+    public void recordDeath(ServerPlayer player) {
+        if (!active) return;
+        Long spawnTime = spawnTimes.remove(player.getUUID());
+        if (spawnTime != null) {
+            long survived = System.currentTimeMillis() - spawnTime;
+            getOrCreate(player).survivalTime += survived;
+        }
     }
 
     // ====== ФИНАЛИЗАЦИЯ МАТЧА ======
@@ -221,6 +243,7 @@ public class MatchStatsTracker {
             p.addProperty("hubDestructions", ps.hubDestructions);
             p.addProperty("baseDefends", ps.baseDefends);
             p.addProperty("teamKills", ps.teamKills);
+            p.addProperty("survivalTime", ps.survivalTime);
             playersArr.add(p);
         }
         match.add("players", playersArr);
@@ -290,6 +313,7 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("matchesPlayed", 1);
                     statsDelta.addProperty("hubDestructions", ps.hubDestructions);
                     statsDelta.addProperty("baseDefends", ps.baseDefends);
+                    statsDelta.addProperty("survivalTime", ps.survivalTime);
                     statsDelta.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
                     statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
                     statsDelta.addProperty("teamKills", ps.teamKills);

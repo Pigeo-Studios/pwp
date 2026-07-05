@@ -1283,9 +1283,10 @@ public class GameLogicEvents {
     }
 
    @SubscribeEvent
-   public static void onPlayerRespawn(PlayerRespawnEvent event) {
-      if (!event.getEntity().level().isClientSide) {
-         ServerPlayer newPlayer = (ServerPlayer)event.getEntity();
+    public static void onPlayerRespawn(PlayerRespawnEvent event) {
+       if (!event.getEntity().level().isClientSide) {
+          ServerPlayer newPlayer = (ServerPlayer)event.getEntity();
+          MatchStatsTracker.get().recordSpawn(newPlayer);
           String teamName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName() : "";
           if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
              newPlayer.setGameMode(GameType.SPECTATOR);
@@ -1375,8 +1376,9 @@ public class GameLogicEvents {
                 }
              }
 
-             processEntityLoss(victim);
-             victim.getPersistentData().putBoolean("WARFARE_IsDowned", false);
+              MatchStatsTracker.get().recordDeath(victim);
+              processEntityLoss(victim);
+              victim.getPersistentData().putBoolean("WARFARE_IsDowned", false);
              if (victim.getPersistentData().getBoolean("WARFARE_GivingUp")) {
                 return;
              }

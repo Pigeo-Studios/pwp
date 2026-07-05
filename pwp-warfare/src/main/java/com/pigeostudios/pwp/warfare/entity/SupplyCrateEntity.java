@@ -309,12 +309,15 @@ public class SupplyCrateEntity extends Entity {
                      hub.addMaterials(this.getMaterials());
                      this.hasResupplied = true;
                      if (this.ownerId != null) {
-                        Player player = currentLevel.getPlayerByUUID(this.ownerId);
-                        if (player != null) {
-                           ChatFormatting color = this.getTeamOwner().equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-                           player.displayClientMessage(Component.literal("FOB Resupplied! (+" + this.getMaterials() + " Mats)").withStyle(color), true);
-                        }
-                     }
+                         Player player = currentLevel.getPlayerByUUID(this.ownerId);
+                         if (player != null) {
+                            ChatFormatting color = this.getTeamOwner().equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
+                            player.displayClientMessage(Component.literal("FOB Resupplied! (+" + this.getMaterials() + " Mats)").withStyle(color), true);
+                            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                               com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordSuppliesDelivered(sp, this.getMaterials());
+                            }
+                         }
+                      }
 
                      currentLevel.sendParticles(
                         ParticleTypes.HAPPY_VILLAGER, hubPos.getX() + 0.5, hubPos.getY() + 1.5, hubPos.getZ() + 0.5, 20, 0.5, 0.5, 0.5, 0.1
