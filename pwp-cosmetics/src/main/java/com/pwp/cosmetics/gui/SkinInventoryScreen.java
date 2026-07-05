@@ -102,6 +102,11 @@ public class SkinInventoryScreen extends Screen {
         loadSkinDefinitions(equippedSkinIds);
     }
 
+    private boolean isAdmin() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && (mc.player.isCreative() || mc.player.hasPermissions(2));
+    }
+
     private void loadSkinDefinitions(Set<String> equippedSkinIds) {
         if (globalSkinItemCache != null && globalSkinEntries != null) {
             skinItemCache = globalSkinItemCache;
@@ -212,7 +217,7 @@ public class SkinInventoryScreen extends Screen {
                 if (y + ITEM_SIZE > this.height) break;
 
                 CosmeticEntry entry = filtered.get(i);
-                boolean isOwned = ownedSkinIds.contains(entry.skinId);
+                boolean canAccess = isAdmin() || ownedSkinIds.contains(entry.skinId);
                 int rarityColor = getRarityColor(entry.rarity);
 
                 gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, PWPTheme.Colors.SURFACE);
@@ -221,7 +226,7 @@ public class SkinInventoryScreen extends Screen {
                     gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, PWPTheme.Colors.SUCCESS);
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
                     gui.drawString(this.font, Component.literal("\u2714"), x + ITEM_SIZE - 9, y + 1, PWPTheme.Colors.SUCCESS, false);
-                } else if (isOwned) {
+                } else if (canAccess) {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
                 } else {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, 0xFF3A3D44);
@@ -230,12 +235,12 @@ public class SkinInventoryScreen extends Screen {
 
                 ItemStack stack = skinItemCache.get(entry.skinId);
                 if (stack != null && !stack.isEmpty()) {
-                    if (!isOwned) RenderSystem.setShaderColor(0.5F, 0.5F, 0.5F, 0.6F);
+                    if (!canAccess) RenderSystem.setShaderColor(0.5F, 0.5F, 0.5F, 0.6F);
                     gui.renderItem(stack, x + 4, y + 4);
-                    if (!isOwned) RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                    if (!canAccess) RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                 }
 
-                if (!isOwned) {
+                if (!canAccess) {
                     gui.drawString(this.font, Component.literal("\uD83D\uDD12"), x + 2, y + ITEM_SIZE - 10, 0xFF7A7D84, false);
                 }
 
@@ -248,7 +253,7 @@ public class SkinInventoryScreen extends Screen {
                     tooltip.add(Component.literal("\u00a77" + entry.slotType + " \u00a78| \u00a77" + entry.rarity));
                     if (entry.equipped) {
                         tooltip.add(Component.literal("\u00a7a\u2714 Equipped - Click to unequip"));
-                    } else if (isOwned) {
+                    } else if (canAccess) {
                         tooltip.add(Component.literal("\u00a7eClick to equip"));
                     } else {
                         tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Locked - Not owned"));
@@ -287,8 +292,7 @@ public class SkinInventoryScreen extends Screen {
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
                     CosmeticEntry entry = filtered.get(i);
-                    boolean isOwned = ownedSkinIds.contains(entry.skinId);
-                    if (isOwned) {
+                    if (isAdmin() || ownedSkinIds.contains(entry.skinId)) {
                         toggleEquip(entry);
                         return true;
                     }
