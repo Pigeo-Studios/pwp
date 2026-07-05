@@ -292,7 +292,12 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
                     statsDelta.addProperty("teamKills", ps.teamKills);
                     statsDelta.addProperty("headshots", ps.headshots);
-                    CoreAPI.saveStats(ps.uuid, statsDelta);
+                    JsonObject saveResult = CoreAPI.saveStats(ps.uuid, statsDelta);
+                    if (saveResult != null) {
+                        log.info("Stats saved for {}: {}k/{}d/{}v/{}vd/{}ad/{}pt",
+                            ps.nickname, ps.kills, ps.deaths, ps.vehicleKills,
+                            ps.vehiclesDestroyed, ps.airVehiclesDestroyed, durationSec);
+                    }
 
                     log.info("{} earned {} XP and {} Coins", ps.nickname, xp, coins);
                 }
@@ -309,27 +314,35 @@ public class MatchStatsTracker {
 
     public static void scheduleServerShutdown(int delaySeconds) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            new Thread(() -> {
-                try {
-                    Thread.sleep(delaySeconds * 1000L);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return;
-                }
+        if (server == null) return;
+        new Thread(() -> {
+            try {
+                Thread.sleep((long) delaySeconds * 1000L);
                 server.execute(() -> {
-                    for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                        player.sendSystemMessage(
-                                Component.literal("§e[PWP] Returning to lobby..."), false);
-                        PacketHandler.INSTANCE.send(
-                                PacketDistributor.PLAYER.with(() -> player),
-                                new ConnectToServerPacket("127.0.0.1", 25565));
+                    try {
+                        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                            player.sendSystemMessage(
+                                    Component.literal("§e[PWP] Returning to lobby..."), false);
+                            PacketHandler.INSTANCE.send(
+                                    PacketDistributor.PLAYER.with(() -> player),
+                                    new ConnectToServerPacket("127.0.0.1", 25565));
+                        }
+                        Thread.sleep(2000);
+                    } catch (Exception ex) {
+                        log.warn("Transfer failed, halting anyway: {}", ex.getMessage());
                     }
-                    try { Thread.sleep(2000); } catch (InterruptedException ex) { Thread.currentThread().interrupt(); }
-                    server.halt(false);
+                    try {
+                        server.halt(false);
+                    } catch (Exception ex) {
+                        log.error("Failed to halt server: {}", ex.getMessage());
+                    }
                 });
-            }, "PWPMatchShutdown").start();
-        }
+            } catch (InterruptedException e) {
+                log.warn("Shutdown delay interrupted, halting immediately");
+                Thread.currentThread().interrupt();
+                try { server.halt(false); } catch (Exception ignored) {}
+            }
+        }, "PWPMatchShutdown").start();
     }
 
     public long getStartedAt() {
