@@ -13,7 +13,6 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 public class StatsScreen extends Screen {
 
@@ -31,8 +30,14 @@ public class StatsScreen extends Screen {
     private boolean loading = true;
     private String errorMsg = null;
 
+    private double scrollOffset = 0;
+    private double scrollMax = 0;
+
     private static final int TAB_MY_STATS = 0;
     private static final int TAB_LEADERBOARD = 1;
+
+    private static final int CONTENT_TOP = 52;
+    private static final int CONTENT_BOTTOM_OFFSET = 34;
 
     private static final String[] LB_CATEGORIES = {
         "kills", "deaths", "assists", "kd", "wins", "winrate",
@@ -42,10 +47,12 @@ public class StatsScreen extends Screen {
     };
     private static final String[] LB_CATEGORY_NAMES = {
         "Kills", "Deaths", "Assists", "K/D", "Wins", "WinRate",
-        "Vehicle Kills", "Vehicles Destr.", "Air Destr.",
+        "V.Kills", "V.Destr.", "Air Dstr.",
         "Captures", "Damage", "Healing", "Headshots",
-        "Hub Destr.", "Playtime", "Level"
+        "Hub Destr", "Playtime", "Level"
     };
+
+    private List<int[]> catBounds = new ArrayList<>();
 
     public StatsScreen() {
         super(Component.literal("STATISTICS"));
@@ -60,6 +67,7 @@ public class StatsScreen extends Screen {
     private void fetchData() {
         loading = true;
         errorMsg = null;
+        scrollOffset = 0;
         new Thread(() -> {
             try {
                 JsonObject profileResp = CoreAPI.getPlayerProfile(playerUuid);
@@ -91,8 +99,7 @@ public class StatsScreen extends Screen {
             JsonArray players = data.getAsJsonArray("players");
             if (players != null) {
                 for (int i = 0; i < players.size(); i++) {
-                    JsonObject p = players.get(i).getAsJsonObject();
-                    lbEntries.add(new LeaderboardEntry(p));
+                    lbEntries.add(new LeaderboardEntry(players.get(i).getAsJsonObject()));
                 }
             }
         }
@@ -105,12 +112,12 @@ public class StatsScreen extends Screen {
 
         addRenderableWidget(Button.builder(
                 Component.literal("My Stats"),
-                b -> { tab = TAB_MY_STATS; init(); })
+                b -> { tab = TAB_MY_STATS; scrollOffset = 0; init(); })
                 .bounds(cx - 160, 8, 80, 20).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("Leaderboard"),
-                b -> { tab = TAB_LEADERBOARD; fetchData(); init(); })
+                b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; fetchLeaderboardPage(); init(); })
                 .bounds(cx - 80, 8, 80, 20).build());
 
         addRenderableWidget(Button.builder(
@@ -121,12 +128,16 @@ public class StatsScreen extends Screen {
         if (tab == TAB_LEADERBOARD) {
             addRenderableWidget(Button.builder(
                     Component.literal("\u25C0"),
-                    b -> { if (lbPage > 0) { lbPage--; fetchLeaderboardPage(); init(); }})
-                    .bounds(cx + 80, 32, 20, 20).build());
+                    b -> { if (lbPage > 0) { lbPage--; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
+                    .bounds(cx + 80, 8, 20, 20).build());
             addRenderableWidget(Button.builder(
                     Component.literal("\u25B6"),
-                    b -> { if (lbPage < lbTotalPages - 1) { lbPage++; fetchLeaderboardPage(); init(); }})
-                    .bounds(cx + 104, 32, 20, 20).build());
+                    b -> { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
+                    .bounds(cx + 104, 8, 20, 20).build());
+            addRenderableWidget(Button.builder(
+                    Component.literal("Page " + (lbPage + 1) + "/" + lbTotalPages),
+                    b -> {})
+                    .bounds(cx - 60, 8, 90, 20).build());
         }
     }
 
@@ -136,7 +147,6 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-
         gui.drawCenteredString(font, "\u00a76\u2694 STATISTICS", cx, 34, 0xFFFFFF);
 
         if (loading) {
@@ -148,194 +158,241 @@ public class StatsScreen extends Screen {
             return;
         }
 
+        int clipY = CONTENT_TOP;
+        int clipH = height - CONTENT_TOP - CONTENT_BOTTOM_OFFSET;
+        gui.enableScissor(0, clipY, width, clipH);
+
         if (tab == TAB_MY_STATS) {
-            renderMyStats(gui, mx, my);
+            renderMyStats(gui, mx, my, clipY, clipH);
         } else {
-            renderLeaderboard(gui, mx, my);
+            renderLeaderboard(gui, mx, my, clipY, clipH);
         }
+
+        gui.disableScissor();
     }
 
-    private void renderMyStats(GuiGraphics gui, int mx, int my) {
-        if (cachedPlayerStats == null) return;
-        int cx = width / 2;
-        int leftX = Math.max(10, cx - 180);
-        int rightX = cx + 10;
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        if (delta != 0) {
+            scrollOffset -= delta * 10;
+            if (scrollOffset < 0) scrollOffset = 0;
+            if (scrollOffset > scrollMax) scrollOffset = scrollMax;
+            return true;
+        }
+        return super.mouseScrolled(mx, my, delta);
+    }
 
-        int playerData = cachedPlayerStats.has("player") ? 1 : 0;
-        if (!cachedPlayerStats.has("stats")) playerData = 0;
+    @Override
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (btn == 0 && tab == TAB_LEADERBOARD) {
+            for (int[] b : catBounds) {
+                if (mx >= b[0] && mx <= b[0] + b[2] && my >= b[1] && my <= b[1] + b[3]) {
+                    String cat = LB_CATEGORIES[b[4]];
+                    if (!lbOrderBy.equals(cat)) {
+                        lbOrderBy = cat;
+                        lbPage = 0;
+                        scrollOffset = 0;
+                        fetchLeaderboardPage();
+                        init();
+                    }
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mx, my, btn);
+    }
+
+    // ====== MY STATS TAB ======
+
+    private void renderMyStats(GuiGraphics gui, int mx, int my, int clipY, int clipH) {
+        if (cachedPlayerStats == null) return;
+        int leftX = Math.max(10, width / 2 - 180);
+        int panelW = 360;
 
         String nick = playerNickname;
-        int level = 1;
-        int prestige = 0;
-        long coins = 0;
-        long xp = 0;
-        if (cachedPlayerStats.has("player") && cachedPlayerStats.getAsJsonObject("player").has("nickname")) {
-            nick = cachedPlayerStats.getAsJsonObject("player").get("nickname").getAsString();
+        int level = 1, prestige = 0;
+        if (cachedPlayerStats.has("player")) {
+            JsonObject p = cachedPlayerStats.getAsJsonObject("player");
+            if (p.has("nickname")) nick = p.get("nickname").getAsString();
         }
         if (cachedPlayerStats.has("level")) level = cachedPlayerStats.get("level").getAsInt();
         if (cachedPlayerStats.has("prestige")) prestige = cachedPlayerStats.get("prestige").getAsInt();
-        if (cachedPlayerStats.has("coins")) coins = cachedPlayerStats.get("coins").getAsLong();
-        if (cachedPlayerStats.has("xp")) xp = cachedPlayerStats.get("xp").getAsLong();
 
         JsonObject st = cachedPlayerStats.has("stats") ? cachedPlayerStats.getAsJsonObject("stats") : cachedPlayerStats;
 
-        int rank = -1;
-        int total = 0;
+        int rank = -1, total = 0;
         if (cachedRank != null) {
             rank = cachedRank.get("rank").getAsInt();
             total = cachedRank.get("total").getAsInt();
         }
 
+        int y = clipY + 4 - (int) scrollOffset;
         String rankStr = rank > 0 ? "\u00a7e#" + rank + "\u00a77 of " + total : "\u00a77--";
-        gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e" + "\u2726" + prestige, leftX, 58, 0xFFFFFF);
-        gui.drawString(font, "\u00a77Rank: " + rankStr, leftX, 70, 0x7A7D84);
+        gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 2, y, 0xFFFFFF);
+        gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matches_played"), leftX + 2, y + 12, 0x7A7D84);
+        y += 28;
 
-        int y = 90;
-
-        // Panel 1: Combat
-        y = drawPanel(gui, leftX, y, 350, "\u2694 BATTLE STATS", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "\u2694 BATTLE", new String[][]{
             {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
             {"K/D", formatKd(st), "Assists", intVal(st, "assists")},
             {"Vehicle Kills", intVal(st, "vehicle_kills"), "Captures", intVal(st, "captures")},
-            {"Headshots", intVal(st, "headshots"), "Best KillStreak", intVal(st, "best_kill_streak")},
-            {"TeamKills", intVal(st, "team_kills"), "Hub Destructions", intVal(st, "hub_destructions")},
+            {"Headshots", intVal(st, "headshots"), "Best Streak", intVal(st, "best_kill_streak")},
+            {"TeamKills", intVal(st, "team_kills"), "Hub Destr.", intVal(st, "hub_destructions")},
             {"Base Defends", intVal(st, "base_defends"), "", ""},
-        }) + 16;
+        });
+        y += 5;
 
-        // Panel 2: Vehicles
-        y = drawPanel(gui, leftX, y, 350, PWPTheme.Icons.STAR + " VEHICLES", new String[][]{
-            {"Vehicles Destroyed", intVal(st, "vehicles_destroyed"), "Air Destroyed", intVal(st, "air_vehicles_destroyed")},
-        }) + 16;
+        y = drawPanel(gui, leftX, y, panelW, "\u2605 VEHICLES", new String[][]{
+            {"Destroyed", intVal(st, "vehicles_destroyed"), "Air Destroyed", intVal(st, "air_vehicles_destroyed")},
+        });
+        y += 5;
 
-        // Panel 3: Accuracy / Damage
-        y = drawPanel(gui, leftX, y, 350, PWPTheme.Icons.CROSSHAIR + " WEAPONS", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "\u2316 WEAPONS", new String[][]{
             {"Shots Fired", intVal(st, "shots_fired"), "Shots Hit", intVal(st, "shots_hit")},
-            {"Accuracy", formatAccuracy(st), "Damage Dealt", doubleVal(st, "damage_dealt")},
-            {"Healing Done", doubleVal(st, "healing_done"), "Supplies Delivered", intVal(st, "supplies_delivered")},
-            {"Longest Kill", doubleVal(st, "longest_kill") + "m", "Distance", doubleVal(st, "distance_traveled") + "m"},
-        }) + 16;
+            {"Accuracy", formatAccuracy(st), "Damage", doubleVal(st, "damage_dealt")},
+            {"Healing", doubleVal(st, "healing_done"), "Supplies", intVal(st, "supplies_delivered")},
+            {"Longest Kill", doubleVal(st, "longest_kill") + "m", "", ""},
+        });
+        y += 5;
 
-        // Panel 4: Matches
-        y = drawPanel(gui, leftX, y, 350, PWPTheme.Icons.FLAG + " MATCHES", new String[][]{
-            {"Matches Played", intVal(st, "matches_played"), "Wins", intVal(st, "wins")},
+        y = drawPanel(gui, leftX, y, panelW, "\u2691 MATCHES", new String[][]{
+            {"Played", intVal(st, "matches_played"), "Wins", intVal(st, "wins")},
             {"Losses", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Playtime", formatPlaytime(st), "Kills/Match", formatKpg(st)},
-            {"Best WinStreak", intVal(st, "best_win_streak"), "Current WinStreak", intVal(st, "current_win_streak")},
-            {"MVP Count", intVal(st, "match_mvp_count"), "", ""},
+            {"Best WinStreak", intVal(st, "best_win_streak"), "Curr. Streak", intVal(st, "current_win_streak")},
+            {"MVP", intVal(st, "match_mvp_count"), "", ""},
         });
+
+        scrollMax = Math.max(0, y + 20 - clipY - clipH);
     }
 
     private int drawPanel(GuiGraphics gui, int x, int y, int w, String title, String[][] rows) {
         int titleH = 14;
         int rowH = 11;
-        int h = titleH + rows.length * rowH + 8;
+        int pad = 4;
+        int h = titleH + rows.length * rowH + pad;
 
-        int bgColor = PWPTheme.Colors.SURFACE;
-        int borderColor = PWPTheme.Colors.BORDER;
-
-        gui.fill(x, y, x + w, y + h, bgColor);
-        gui.fill(x, y, x + w, y + 1, borderColor);
-        gui.fill(x, y + h - 1, x + w, y + h, borderColor);
-        gui.fill(x, y, x + 1, y + h, borderColor);
-        gui.fill(x + w - 1, y, x + w, y + h, borderColor);
+        gui.fill(x, y, x + w, y + h, PWPTheme.Colors.SURFACE);
+        gui.fill(x, y, x + w, y + 1, PWPTheme.Colors.BORDER);
+        gui.fill(x, y + h - 1, x + w, y + h, PWPTheme.Colors.BORDER);
+        gui.fill(x, y, x + 1, y + h, PWPTheme.Colors.BORDER);
+        gui.fill(x + w - 1, y, x + w, y + h, PWPTheme.Colors.BORDER);
 
         gui.fill(x + 1, y + 1, x + w - 1, y + titleH + 1, PWPTheme.Colors.SURFACE_LIGHT);
         gui.drawString(font, "\u00a7e" + title, x + 6, y + 3, 0xFFFFFF);
 
-        int ry = y + titleH + 4;
+        int ry = y + titleH + pad / 2;
+        int col2X = x + w / 2;
+        int valX1 = x + 85;
+        int valX2 = col2X + 85;
+        int maxTextW = col2X - x - 90;
+
         for (String[] row : rows) {
-            String leftLabel = row[0];
-            String leftVal = row[1];
-            String rightLabel = row[2];
-            String rightVal = row[3];
-            if (!leftLabel.isEmpty()) {
-                gui.drawString(font, "\u00a77" + leftLabel + ":", x + 6, ry, 0x7A7D84);
-                gui.drawString(font, "\u00a7f" + leftVal, x + 90, ry, 0xFFFFFF);
+            if (!row[0].isEmpty()) {
+                String label = "\u00a77" + row[0] + ":";
+                gui.drawString(font, label, x + 6, ry, 0x7A7D84);
+                String val = "\u00a7f" + truncateText(row[1], maxTextW);
+                gui.drawString(font, val, valX1, ry, 0xFFFFFF);
             }
-            if (!rightLabel.isEmpty()) {
-                int col2X = x + w / 2;
-                gui.drawString(font, "\u00a77" + rightLabel + ":", col2X + 4, ry, 0x7A7D84);
-                gui.drawString(font, "\u00a7f" + rightVal, col2X + 88, ry, 0xFFFFFF);
+            if (!row[2].isEmpty()) {
+                String label = "\u00a77" + row[2] + ":";
+                gui.drawString(font, label, col2X + 4, ry, 0x7A7D84);
+                String val = "\u00a7f" + truncateText(row[3], maxTextW);
+                gui.drawString(font, val, valX2, ry, 0xFFFFFF);
             }
             ry += rowH;
         }
-
         return y + h;
     }
 
-    private void renderLeaderboard(GuiGraphics gui, int mx, int my) {
-        int cx = width / 2;
-        int leftX = Math.max(10, cx - 180);
-        int w = 360;
+    private String truncateText(String text, int maxW) {
+        if (font.width(text) > maxW) {
+            return font.plainSubstrByWidth(text, maxW - 4) + "...";
+        }
+        return text;
+    }
 
-        // Category selector
+    // ====== LEADERBOARD TAB ======
+
+    private void renderLeaderboard(GuiGraphics gui, int mx, int my, int clipY, int clipH) {
+        int leftX = Math.max(10, width / 2 - 180);
+        int w = 360;
+        int y = clipY + 4 - (int) scrollOffset;
+
+        catBounds.clear();
+
+        catBounds.add(new int[]{leftX - 10, 0, 0, 0, -1});
         int catX = leftX;
-        int catY = 56;
+        int catY = y;
         for (int i = 0; i < LB_CATEGORIES.length; i++) {
-            int bw = font.width(LB_CATEGORY_NAMES[i]) + 8;
+            int bw = font.width(LB_CATEGORY_NAMES[i]) + 10;
             boolean isSel = lbOrderBy.equals(LB_CATEGORIES[i]);
-            int bg = isSel ? PWPTheme.Colors.ACCENT_DIM : PWPTheme.Colors.SURFACE;
-            gui.fill(catX, catY, catX + bw, catY + 14, bg);
+            boolean hover = mx >= catX && mx <= catX + bw && my >= catY && my <= catY + 16;
+            int bg = isSel ? PWPTheme.Colors.ACCENT_DIM : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
+            gui.fill(catX, catY, catX + bw, catY + 16, bg);
             if (isSel) {
                 gui.fill(catX, catY, catX + bw, catY + 1, PWPTheme.Colors.ACCENT);
-                gui.fill(catX, catY + 13, catX + bw, catY + 14, PWPTheme.Colors.ACCENT);
+                gui.fill(catX, catY + 15, catX + bw, catY + 16, PWPTheme.Colors.ACCENT);
             }
-            gui.drawString(font, (isSel ? "\u00a7e" : "\u00a77") + LB_CATEGORY_NAMES[i], catX + 4, catY + 3, 0xFFFFFF);
+            gui.drawString(font, (isSel ? "\u00a7e" : "\u00a77") + LB_CATEGORY_NAMES[i], catX + 5, catY + 4, 0xFFFFFF);
+            catBounds.add(new int[]{catX, catY, bw, 16, i});
             catX += bw + 2;
-            if (catX + 60 > leftX + w) { catX = leftX; catY += 16; }
+            if (catX + 50 > leftX + w) { catX = leftX; catY += 18; }
         }
 
-        catY += 4;
-        String pageInfo = "\u00a77Page " + (lbPage + 1) + "/" + lbTotalPages + "  Total: \u00a7e" + lbTotal;
-        gui.drawString(font, pageInfo, leftX, catY, 0x7A7D84);
-        catY += 12;
+        y = catY + 18;
 
-        int headerY = catY;
-
-        // Column headers
+        int headerY = y;
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
         gui.fill(leftX, headerY + 1, leftX + w, headerY + 13, PWPTheme.Colors.SURFACE_LIGHT);
         gui.drawString(font, "\u00a77#", leftX + 4, headerY + 3, 0x7A7D84);
         gui.drawString(font, "\u00a77Player", leftX + 26, headerY + 3, 0x7A7D84);
         gui.drawString(font, "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 3, 0x7A7D84);
-        gui.drawString(font, "\u00a77K/D", leftX + 258, headerY + 3, 0x7A7D84);
-        gui.drawString(font, "\u00a77W/R", leftX + 300, headerY + 3, 0x7A7D84);
+        gui.drawString(font, "\u00a77K/D", leftX + 270, headerY + 3, 0x7A7D84);
+        gui.drawString(font, "\u00a77W/R", leftX + 310, headerY + 3, 0x7A7D84);
 
         int rowY = headerY + 15;
         int rankOffset = lbPage * 10;
+        int rowH = 13;
+
+        int totalH = rowY + lbEntries.size() * rowH + 20;
+        scrollMax = Math.max(0, totalH - clipY - clipH);
 
         for (int i = 0; i < lbEntries.size(); i++) {
             LeaderboardEntry e = lbEntries.get(i);
             boolean isMe = e.uuid.equals(playerUuid);
             int rowBg = isMe ? 0xFF2A2010 : (i % 2 == 0 ? PWPTheme.Colors.SURFACE : 0xFF0E1117);
-            gui.fill(leftX, rowY, leftX + w, rowY + 12, rowBg);
+            gui.fill(leftX, rowY, leftX + w, rowY + rowH, rowBg);
 
             if (isMe) {
                 gui.fill(leftX, rowY, leftX + w, rowY + 1, PWPTheme.Colors.ACCENT);
-                gui.fill(leftX, rowY + 11, leftX + w, rowY + 12, PWPTheme.Colors.ACCENT);
+                gui.fill(leftX, rowY + rowH - 1, leftX + w, rowY + rowH, PWPTheme.Colors.ACCENT);
             }
 
-            String rankStr = "\u00a77#" + (rankOffset + i + 1);
-            if (rankOffset + i + 1 == 1) rankStr = "\u00a76\u265B #1";
-            else if (rankOffset + i + 1 == 2) rankStr = "\u00a77\u265B #2";
-            else if (rankOffset + i + 1 == 3) rankStr = "\u00a76\u265B #3";
+            int rn = rankOffset + i + 1;
+            String rankStr = rn == 1 ? "\u00a76#1" : rn == 2 ? "\u00a77#2" : rn == 3 ? "\u00a76#3" : "\u00a77#" + rn;
+            gui.drawString(font, rankStr, leftX + 4, rowY + 3, 0xFFFFFF);
 
-            gui.drawString(font, rankStr, leftX + 4, rowY + 2, 0xFFFFFF);
             String nameStr = e.nickname;
-            if (font.width(nameStr) > 100) nameStr = font.plainSubstrByWidth(nameStr, 98) + "...";
-            gui.drawString(font, (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 26, rowY + 2, 0xFFFFFF);
+            if (font.width(nameStr) > 120) nameStr = font.plainSubstrByWidth(nameStr, 118) + "...";
+            gui.drawString(font, (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 26, rowY + 3, 0xFFFFFF);
 
-            String colVal = getColValue(e, lbOrderBy);
-            gui.drawString(font, "\u00a7f" + colVal, leftX + 190, rowY + 2, 0xFFFFFF);
-            gui.drawString(font, "\u00a77" + e.kd, leftX + 258, rowY + 2, 0x7A7D84);
-            gui.drawString(font, "\u00a77" + e.winRate + "%", leftX + 300, rowY + 2, 0x7A7D84);
+            String colVal = truncateText(getColValue(e, lbOrderBy), 70);
+            gui.drawString(font, "\u00a7f" + colVal, leftX + 190, rowY + 3, 0xFFFFFF);
+
+            String kdStr = String.format("%.2f", e.kd);
+            gui.drawString(font, "\u00a77" + kdStr, leftX + 270, rowY + 3, 0x7A7D84);
+
+            String wrStr = String.format("%.1f%%", e.winRate);
+            gui.drawString(font, "\u00a77" + wrStr, leftX + 310, rowY + 3, 0x7A7D84);
 
             if (isMe) {
                 String meLabel = "\u00a7e\u25C0 you";
-                gui.drawString(font, meLabel, leftX + w - font.width(meLabel) - 4, rowY + 2, PWPTheme.Colors.TEXT_ACCENT);
+                int meW = font.width(meLabel);
+                gui.drawString(font, meLabel, leftX + w - meW - 4, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
             }
 
-            rowY += 12;
+            rowY += rowH;
         }
     }
 
@@ -368,9 +425,10 @@ public class StatsScreen extends Screen {
         };
     }
 
+    // ====== UTILITY ======
+
     private String intStr(int v) { return String.format("%,d", v); }
 
-    // Utility methods
     private String intVal(JsonObject obj, String key) {
         if (obj == null || !obj.has(key)) return "0";
         try { return String.format("%,d", obj.get(key).getAsInt()); } catch (Exception e) { return "0"; }
@@ -380,7 +438,8 @@ public class StatsScreen extends Screen {
         if (obj == null || !obj.has(key)) return "0";
         try {
             double v = obj.get(key).getAsDouble();
-            if (v == (long) v) return String.format("%,d", (long) v);
+            if (v >= 1000) return String.format("%,.0f", v);
+            if (v == (long) v) return String.format("%,.0f", v);
             return String.format("%,.1f", v);
         } catch (Exception e) { return "0"; }
     }
@@ -420,8 +479,7 @@ public class StatsScreen extends Screen {
 
     private String formatPlaytime(JsonObject obj) {
         if (obj == null || !obj.has("playtime_seconds")) return "0h";
-        long secs = obj.get("playtime_seconds").getAsLong();
-        return formatPlaytimeRaw(secs);
+        return formatPlaytimeRaw(obj.get("playtime_seconds").getAsLong());
     }
 
     private String formatPlaytimeRaw(long secs) {
@@ -440,7 +498,8 @@ public class StatsScreen extends Screen {
         return false;
     }
 
-    // Data holder
+    // ====== DATA ======
+
     private static class LeaderboardEntry {
         String uuid, nickname;
         int kills, deaths, assists, wins, vehicleKills, captures, headshots;
@@ -450,30 +509,30 @@ public class StatsScreen extends Screen {
         double damage, healing, kd, winRate;
 
         LeaderboardEntry(JsonObject obj) {
-            uuid = getStr(obj, "uuid");
-            nickname = getStr(obj, "nickname");
-            kills = getInt(obj, "kills");
-            deaths = getInt(obj, "deaths");
-            assists = getInt(obj, "assists");
-            wins = getInt(obj, "wins");
-            vehicleKills = getInt(obj, "vehicle_kills");
-            captures = getInt(obj, "captures");
-            headshots = getInt(obj, "headshots");
-            vehiclesDestroyed = getInt(obj, "vehicles_destroyed");
-            airVehiclesDestroyed = getInt(obj, "air_vehicles_destroyed");
-            hubDestructions = getInt(obj, "hub_destructions");
-            level = getInt(obj, "level");
-            matchesPlayed = getInt(obj, "matches_played");
+            uuid = get(obj, "uuid", "");
+            nickname = get(obj, "nickname", "");
+            kills = get(obj, "kills", 0);
+            deaths = get(obj, "deaths", 0);
+            assists = get(obj, "assists", 0);
+            wins = get(obj, "wins", 0);
+            vehicleKills = get(obj, "vehicle_kills", 0);
+            captures = get(obj, "captures", 0);
+            headshots = get(obj, "headshots", 0);
+            vehiclesDestroyed = get(obj, "vehicles_destroyed", 0);
+            airVehiclesDestroyed = get(obj, "air_vehicles_destroyed", 0);
+            hubDestructions = get(obj, "hub_destructions", 0);
+            level = get(obj, "level", 0);
+            matchesPlayed = get(obj, "matches_played", 0);
             playtime = getLong(obj, "playtime_seconds");
             damage = getDouble(obj, "damage_dealt");
             healing = getDouble(obj, "healing_done");
             kd = deaths == 0 ? kills : Math.round((double) kills / deaths * 100.0) / 100.0;
-            int totalGames = wins + getInt(obj, "losses");
+            int totalGames = wins + get(obj, "losses", 0);
             winRate = totalGames == 0 ? 0 : Math.round((double) wins / totalGames * 1000.0) / 10.0;
         }
 
-        private String getStr(JsonObject o, String k) { return o.has(k) ? o.get(k).getAsString() : ""; }
-        private int getInt(JsonObject o, String k) { return o.has(k) ? o.get(k).getAsInt() : 0; }
+        private String get(JsonObject o, String k, String d) { return o.has(k) ? o.get(k).getAsString() : d; }
+        private int get(JsonObject o, String k, int d) { return o.has(k) ? o.get(k).getAsInt() : d; }
         private long getLong(JsonObject o, String k) { return o.has(k) ? o.get(k).getAsLong() : 0; }
         private double getDouble(JsonObject o, String k) { return o.has(k) ? o.get(k).getAsDouble() : 0; }
     }

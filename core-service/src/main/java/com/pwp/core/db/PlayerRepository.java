@@ -146,7 +146,7 @@ public class PlayerRepository {
                 "ps.hub_destructions, ps.base_defends, ps.vehicles_destroyed, ps.air_vehicles_destroyed, " +
                 "ps.team_kills, ps.headshots, ps.supplies_delivered, ps.longest_kill, ps.best_kill_streak, " +
                 "ps.matches_played, ps.match_mvp_count, ps.current_win_streak, ps.best_win_streak, " +
-                "ps.survival_time, ps.distance_traveled, ps.revives, " +
+                "ps.survival_time, ps.distance_traveled, ps.shots_fired, ps.shots_hit, ps.revives, " +
                 "pc.coins, px.level, px.prestige, px.xp " +
                 "FROM players p " +
                 "JOIN player_stats ps ON p.uuid = ps.uuid " +
