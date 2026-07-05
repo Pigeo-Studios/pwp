@@ -87,7 +87,7 @@ public class StatsScreen extends Screen {
     }
 
     private void fetchLeaderboardPage() {
-        JsonObject lbResp = CoreAPI.getLeaderboard(lbOrderBy, lbPage + 1, 10);
+        JsonObject lbResp = CoreAPI.getLeaderboard(lbOrderBy, lbPage + 1, 20);
         if (lbResp != null && lbResp.has("data")) {
             JsonObject data = lbResp.getAsJsonObject("data");
             lbTotal = data.get("total").getAsInt();
@@ -113,31 +113,32 @@ public class StatsScreen extends Screen {
         addRenderableWidget(Button.builder(
                 Component.literal("My Stats"),
                 b -> { tab = TAB_MY_STATS; scrollOffset = 0; init(); })
-                .bounds(cx - 160, 8, 80, 20).build());
+                .bounds(cx - 160, 4, 80, 20).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("Leaderboard"),
                 b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; fetchLeaderboardPage(); init(); })
-                .bounds(cx - 80, 8, 80, 20).build());
+                .bounds(cx - 78, 4, 100, 20).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715 Close"),
                 b -> onClose())
                 .bounds(cx - 50, height - 28, 100, 20).build());
 
-        if (tab == TAB_LEADERBOARD) {
+        if (tab == TAB_LEADERBOARD && lbTotalPages > 1) {
+            int pageY = 28;
             addRenderableWidget(Button.builder(
                     Component.literal("\u25C0"),
                     b -> { if (lbPage > 0) { lbPage--; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
-                    .bounds(cx + 80, 8, 20, 20).build());
+                    .bounds(cx + 80, pageY, 20, 16).build());
             addRenderableWidget(Button.builder(
                     Component.literal("\u25B6"),
                     b -> { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
-                    .bounds(cx + 104, 8, 20, 20).build());
+                    .bounds(cx + 104, pageY, 20, 16).build());
             addRenderableWidget(Button.builder(
-                    Component.literal("Page " + (lbPage + 1) + "/" + lbTotalPages),
+                    Component.literal((lbPage + 1) + "/" + lbTotalPages),
                     b -> {})
-                    .bounds(cx - 60, 8, 90, 20).build());
+                    .bounds(cx + 52, pageY, 26, 16).build());
         }
     }
 
@@ -326,27 +327,30 @@ public class StatsScreen extends Screen {
         int y = clipY + 4 - (int) scrollOffset;
 
         catBounds.clear();
-
         catBounds.add(new int[]{leftX - 10, 0, 0, 0, -1});
+
         int catX = leftX;
         int catY = y;
         for (int i = 0; i < LB_CATEGORIES.length; i++) {
-            int bw = font.width(LB_CATEGORY_NAMES[i]) + 10;
+            int bw = font.width(LB_CATEGORY_NAMES[i]) + 12;
             boolean isSel = lbOrderBy.equals(LB_CATEGORIES[i]);
-            boolean hover = mx >= catX && mx <= catX + bw && my >= catY && my <= catY + 16;
+            boolean hover = mx >= catX && mx <= catX + bw && my >= catY && my <= catY + 18;
             int bg = isSel ? PWPTheme.Colors.ACCENT_DIM : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
-            gui.fill(catX, catY, catX + bw, catY + 16, bg);
-            if (isSel) {
-                gui.fill(catX, catY, catX + bw, catY + 1, PWPTheme.Colors.ACCENT);
-                gui.fill(catX, catY + 15, catX + bw, catY + 16, PWPTheme.Colors.ACCENT);
-            }
-            gui.drawString(font, (isSel ? "\u00a7e" : "\u00a77") + LB_CATEGORY_NAMES[i], catX + 5, catY + 4, 0xFFFFFF);
-            catBounds.add(new int[]{catX, catY, bw, 16, i});
-            catX += bw + 2;
-            if (catX + 50 > leftX + w) { catX = leftX; catY += 18; }
+            gui.fill(catX, catY, catX + bw, catY + 18, bg);
+            // Border
+            int borderCol = isSel ? PWPTheme.Colors.ACCENT : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
+            gui.fill(catX, catY, catX + bw, catY + 1, borderCol);
+            gui.fill(catX, catY + 17, catX + bw, catY + 18, borderCol);
+            gui.fill(catX, catY, catX + 1, catY + 18, borderCol);
+            gui.fill(catX + bw - 1, catY, catX + bw, catY + 18, borderCol);
+            String textColor = isSel ? "\u00a7e" : (hover ? "\u00a7f" : "\u00a77");
+            gui.drawString(font, textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, 0xFFFFFF);
+            catBounds.add(new int[]{catX, catY, bw, 18, i});
+            catX += bw + 3;
+            if (catX + 60 > leftX + w) { catX = leftX; catY += 20; }
         }
 
-        y = catY + 18;
+        y = catY + 20;
 
         int headerY = y;
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
