@@ -86,10 +86,14 @@ public class OpenVotingScreenPacket {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
             ctx.get().enqueueWork(() -> {
                 try {
-                    Class<?> votingScreenClass = Class.forName("com.pwp.lobby.gui.VotingScreen");
-                    votingScreenClass.getMethod("openWithPacket", OpenVotingScreenPacket.class)
-                            .invoke(null, msg);
-                } catch (Exception ignored) {}
+                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.LobbyScreen");
+                    screenClass.getMethod("openVote", OpenVotingScreenPacket.class).invoke(null, msg);
+                } catch (Exception e) {
+                    try {
+                        Class<?> fallback = Class.forName("com.pwp.lobby.gui.VotingScreen");
+                        fallback.getMethod("openWithPacket", OpenVotingScreenPacket.class).invoke(null, msg);
+                    } catch (Exception ignored) {}
+                }
             });
         }
         ctx.get().setPacketHandled(true);

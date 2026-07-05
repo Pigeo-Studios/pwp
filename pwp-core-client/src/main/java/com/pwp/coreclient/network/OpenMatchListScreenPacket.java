@@ -101,10 +101,14 @@ public class OpenMatchListScreenPacket {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
             ctx.get().enqueueWork(() -> {
                 try {
-                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.MatchListScreen");
-                    screenClass.getMethod("openWithPacket", OpenMatchListScreenPacket.class)
-                            .invoke(null, msg);
-                } catch (Exception ignored) {}
+                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.LobbyScreen");
+                    screenClass.getMethod("openList", OpenMatchListScreenPacket.class).invoke(null, msg);
+                } catch (Exception e) {
+                    try {
+                        Class<?> fallback = Class.forName("com.pwp.lobby.gui.MatchListScreen");
+                        fallback.getMethod("openWithPacket", OpenMatchListScreenPacket.class).invoke(null, msg);
+                    } catch (Exception ignored) {}
+                }
             });
         }
         ctx.get().setPacketHandled(true);

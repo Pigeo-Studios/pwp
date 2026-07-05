@@ -67,10 +67,13 @@ public class OpenMatchScreenPacket {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
             ctx.get().enqueueWork(() -> {
                 try {
-                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.MatchScreen");
-                    screenClass.getMethod("open", OpenMatchScreenPacket.class).invoke(null, msg);
+                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.LobbyScreen");
+                    screenClass.getMethod("openMatch", OpenMatchScreenPacket.class).invoke(null, msg);
                 } catch (Exception e) {
-                    System.out.println("[PWP] Failed to open MatchScreen: " + e.getMessage());
+                    try {
+                        Class<?> fallback = Class.forName("com.pwp.lobby.gui.MatchScreen");
+                        fallback.getMethod("open", OpenMatchScreenPacket.class).invoke(null, msg);
+                    } catch (Exception ignored) {}
                 }
             });
         }
