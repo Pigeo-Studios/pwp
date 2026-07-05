@@ -160,7 +160,6 @@ public class StatsScreen extends Screen {
 
         int clipY = CONTENT_TOP;
         int clipH = height - CONTENT_TOP - CONTENT_BOTTOM_OFFSET;
-        gui.enableScissor(0, clipY, width, clipH);
 
         if (tab == TAB_MY_STATS) {
             renderMyStats(gui, mx, my, clipY, clipH);
@@ -168,7 +167,16 @@ public class StatsScreen extends Screen {
             renderLeaderboard(gui, mx, my, clipY, clipH);
         }
 
-        gui.disableScissor();
+        // scrollbar
+        if (scrollMax > 0) {
+            int sbY = clipY + 2;
+            int sbH = clipH - 4;
+            int sbX = width - 6;
+            int barH = Math.max(12, (int) (sbH * clipH / (clipH + scrollMax)));
+            int barY = sbY + (int) ((scrollOffset / scrollMax) * (sbH - barH));
+            gui.fill(sbX, sbY, sbX + 4, sbY + sbH, 0x33181C24);
+            gui.fill(sbX, barY, sbX + 4, barY + barH, 0x88C8812A);
+        }
     }
 
     @Override
