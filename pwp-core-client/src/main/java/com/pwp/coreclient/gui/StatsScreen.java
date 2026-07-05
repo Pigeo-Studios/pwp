@@ -237,36 +237,36 @@ public class StatsScreen extends Screen {
         int y = clipY + 4 - (int) scrollOffset;
         String rankStr = rank > 0 ? "\u00a7e#" + rank + "\u00a77 of " + total : "\u00a77--";
         gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 2, y, 0xFFFFFF);
-        gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matches_played"), leftX + 2, y + 12, 0x7A7D84);
+        gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matchesPlayed"), leftX + 2, y + 12, 0x7A7D84);
         y += 14;
 
         y = drawPanel(gui, leftX, y, panelW, "\u2694 BATTLE", new String[][]{
             {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
             {"K/D", formatKd(st), "Revives", intVal(st, "revives")},
-            {"Vehicle Kills", intVal(st, "vehicle_kills"), "Captures", intVal(st, "captures")},
-            {"Headshots", intVal(st, "headshots"), "Best Streak", intVal(st, "best_kill_streak")},
-            {"TeamKills", intVal(st, "team_kills"), "", ""},
+            {"Vehicle Kills", intVal(st, "vehicleKills"), "Captures", intVal(st, "captures")},
+            {"Headshots", intVal(st, "headshots"), "Best Streak", intVal(st, "bestKillStreak")},
+            {"TeamKills", intVal(st, "teamKills"), "", ""},
         });
         y += 5;
 
         y = drawPanel(gui, leftX, y, panelW, "\u2605 VEHICLES", new String[][]{
-            {"Destroyed", intVal(st, "vehicles_destroyed"), "Air Destroyed", intVal(st, "air_vehicles_destroyed")},
+            {"Destroyed", intVal(st, "vehiclesDestroyed"), "Air Destroyed", intVal(st, "airVehiclesDestroyed")},
         });
         y += 5;
 
         y = drawPanel(gui, leftX, y, panelW, "\u2316 WEAPONS", new String[][]{
-            {"Shots Fired", intVal(st, "shots_fired"), "Shots Hit", intVal(st, "shots_hit")},
-            {"Accuracy", formatAccuracy(st), "Damage", doubleVal(st, "damage_dealt")},
-            {"Healing", doubleVal(st, "healing_done"), "Supplies", intVal(st, "supplies_delivered")},
-            {"Longest Kill", doubleVal(st, "longest_kill") + "m", "", ""},
+            {"Shots Fired", intVal(st, "shotsFired"), "Shots Hit", intVal(st, "shotsHit")},
+            {"Accuracy", formatAccuracy(st), "Damage", doubleVal(st, "damageDealt")},
+            {"Healing", doubleVal(st, "healingDone"), "Supplies", intVal(st, "suppliesDelivered")},
+            {"Longest Kill", doubleVal(st, "longestKill") + "m", "", ""},
         });
         y += 5;
 
         int matchesBottom = drawPanel(gui, leftX, y, panelW, "\u2691 MATCHES", new String[][]{
-            {"Played", intVal(st, "matches_played"), "Wins", intVal(st, "wins")},
+            {"Played", intVal(st, "matchesPlayed"), "Wins", intVal(st, "wins")},
             {"Losses", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Playtime", formatPlaytime(st), "Kills/Match", formatKpg(st)},
-            {"Best WinStreak", intVal(st, "best_win_streak"), "Curr. Streak", intVal(st, "current_win_streak")},
+            {"Best WinStreak", intVal(st, "bestWinStreak"), "Curr. Streak", intVal(st, "currentWinStreak")},
         });
         // content bottom at scrollOffset=0, add generous margin
         scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 8 - clipY - clipH);
@@ -459,8 +459,8 @@ public class StatsScreen extends Screen {
 
     private String formatAccuracy(JsonObject obj) {
         if (obj == null) return "0%";
-        int f = obj.has("shots_fired") ? obj.get("shots_fired").getAsInt() : 0;
-        int h = obj.has("shots_hit") ? obj.get("shots_hit").getAsInt() : 0;
+        int f = obj.has("shotsFired") ? obj.get("shotsFired").getAsInt() : 0;
+        int h = obj.has("shotsHit") ? obj.get("shotsHit").getAsInt() : 0;
         if (f == 0) return "0%";
         return String.format("%.1f%%", (double) h / f * 100);
     }
@@ -477,14 +477,14 @@ public class StatsScreen extends Screen {
     private String formatKpg(JsonObject obj) {
         if (obj == null) return "0.00";
         int k = obj.has("kills") ? obj.get("kills").getAsInt() : 0;
-        int m = obj.has("matches_played") ? obj.get("matches_played").getAsInt() : 0;
+        int m = obj.has("matchesPlayed") ? obj.get("matchesPlayed").getAsInt() : 0;
         if (m == 0) return "0.00";
         return String.format("%.2f", (double) k / m);
     }
 
     private String formatPlaytime(JsonObject obj) {
-        if (obj == null || !obj.has("playtime_seconds")) return "0h";
-        return formatPlaytimeRaw(obj.get("playtime_seconds").getAsLong());
+        if (obj == null || !obj.has("playtimeSeconds")) return "0h";
+        return formatPlaytimeRaw(obj.get("playtimeSeconds").getAsLong());
     }
 
     private String formatPlaytimeRaw(long secs) {
@@ -520,17 +520,17 @@ public class StatsScreen extends Screen {
             deaths = get(obj, "deaths", 0);
             assists = get(obj, "assists", 0);
             wins = get(obj, "wins", 0);
-            vehicleKills = get(obj, "vehicle_kills", 0);
+            vehicleKills = get(obj, "vehicleKills", 0);
             captures = get(obj, "captures", 0);
             headshots = get(obj, "headshots", 0);
-            vehiclesDestroyed = get(obj, "vehicles_destroyed", 0);
-            airVehiclesDestroyed = get(obj, "air_vehicles_destroyed", 0);
-            hubDestructions = get(obj, "hub_destructions", 0);
+            vehiclesDestroyed = get(obj, "vehiclesDestroyed", 0);
+            airVehiclesDestroyed = get(obj, "airVehiclesDestroyed", 0);
+            hubDestructions = get(obj, "hubDestructions", 0);
             level = get(obj, "level", 0);
-            matchesPlayed = get(obj, "matches_played", 0);
-            playtime = getLong(obj, "playtime_seconds");
-            damage = getDouble(obj, "damage_dealt");
-            healing = getDouble(obj, "healing_done");
+            matchesPlayed = get(obj, "matchesPlayed", 0);
+            playtime = getLong(obj, "playtimeSeconds");
+            damage = getDouble(obj, "damageDealt");
+            healing = getDouble(obj, "healingDone");
             kd = deaths == 0 ? kills : Math.round((double) kills / deaths * 100.0) / 100.0;
             int totalGames = wins + get(obj, "losses", 0);
             winRate = totalGames == 0 ? 0 : Math.round((double) wins / totalGames * 1000.0) / 10.0;
