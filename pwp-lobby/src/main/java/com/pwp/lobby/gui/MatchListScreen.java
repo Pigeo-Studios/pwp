@@ -1,5 +1,6 @@
 package com.pwp.lobby.gui;
 
+import com.pwp.coreclient.gui.StatsScreen;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.JoinMatchServerPacket;
 import com.pwp.coreclient.network.OpenMatchListScreenPacket;
@@ -106,6 +107,11 @@ public class MatchListScreen extends Screen {
                         .bounds(plX + pw + 10, navY, 38, 20).build());
             }
         }
+
+        addRenderableWidget(Button.builder(
+                Component.literal("\u2694 STATS"),
+                b -> Minecraft.getInstance().setScreen(new StatsScreen()))
+                .bounds(cx - 106, height - 28, 50, 20).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715 Close"),

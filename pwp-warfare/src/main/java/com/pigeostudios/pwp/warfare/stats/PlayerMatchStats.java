@@ -30,6 +30,15 @@ public class PlayerMatchStats {
 
     public long lastKillTime;
 
+    public int vehiclesDestroyed;
+    public int airVehiclesDestroyed;
+    public int teamKills;
+    public int headshots;
+    public int hubDestructions;
+    public int baseDefends;
+
+    public double distanceTraveled;
+
     public PlayerMatchStats(String uuid, String nickname, String team) {
         this.uuid = uuid;
         this.nickname = nickname;
@@ -79,6 +88,35 @@ public class PlayerMatchStats {
     public void recordShot(boolean hit) {
         shotsFired++;
         if (hit) shotsHit++;
+    }
+
+    public void recordVehicleDestroyed(boolean isAir) {
+        vehiclesDestroyed++;
+        if (isAir) airVehiclesDestroyed++;
+        score += 100;
+    }
+
+    public void recordTeamKillStat() {
+        teamKills++;
+    }
+
+    public void recordHeadshot() {
+        headshots++;
+        score += 25;
+    }
+
+    public void recordHubDestruction() {
+        hubDestructions++;
+        score += 300;
+    }
+
+    public void recordBaseDefend() {
+        baseDefends++;
+        score += 50;
+    }
+
+    public void recordDistance(double dist) {
+        distanceTraveled += dist;
     }
 
     public double getAccuracy() {

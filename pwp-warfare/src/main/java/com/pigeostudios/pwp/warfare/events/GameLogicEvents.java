@@ -32,6 +32,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.nbt.TagParser;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -96,6 +98,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.ServerLifecycleHooks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @EventBusSubscriber(modid = "pwpwarfare", bus = Bus.FORGE)
 // РћСЃРЅРѕРІРЅРѕР№ РѕР±СЂР°Р±РѕС‚С‡РёРє РёРіСЂРѕРІРѕР№ Р»РѕРіРёРєРё
@@ -107,6 +111,7 @@ public class GameLogicEvents {
    public static final Map<UUID, Map<Integer, CompoundTag>> PERSISTENT_NBT_STORAGE = new HashMap<>();
     private static final Map<String, Boolean> lastBlueBlockedMap = new HashMap<>();
     private static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
+    private static final Logger LOGGER = LoggerFactory.getLogger(GameLogicEvents.class);
     private static int returnToLobbyTimer = -1;
     private static MinecraftServer returnToLobbyServer = null;
 
@@ -714,24 +719,56 @@ public class GameLogicEvents {
              }
           }
 
-          if (returnToLobbyTimer > 0) {
-             returnToLobbyTimer--;
-             if (returnToLobbyTimer == 0 && returnToLobbyServer != null) {
-                String lobbyHost = "127.0.0.1";
-                int lobbyPort = 25565;
-                for (ServerPlayer player : returnToLobbyServer.getPlayerList().getPlayers()) {
-                   player.sendSystemMessage(
-                      Component.literal("§e[PWP] Returning to lobby..."), false);
-                   com.pwp.coreclient.network.PacketHandler.INSTANCE.send(
-                      net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
-                      new ConnectToServerPacket(lobbyHost, lobbyPort));
-                }
-                returnToLobbyServer.halt(false);
-                returnToLobbyServer = null;
-             }
-          }
-       }
-    }
+           if (returnToLobbyTimer > 0) {
+              returnToLobbyTimer--;
+              if (returnToLobbyTimer == 0 && returnToLobbyServer != null) {
+                 String lobbyHost = "127.0.0.1";
+                 int lobbyPort = 25565;
+                 for (ServerPlayer player : returnToLobbyServer.getPlayerList().getPlayers()) {
+                    player.sendSystemMessage(
+                       Component.literal("§e[PWP] Returning to lobby..."), false);
+                    com.pwp.coreclient.network.PacketHandler.INSTANCE.send(
+                       net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
+                       new ConnectToServerPacket(lobbyHost, lobbyPort));
+                 }
+                 returnToLobbyServer.halt(false);
+                 returnToLobbyServer = null;
+              }
+           }
+
+           // Check for admin stop signal from lobby
+           Path stopSignal = Path.of("stop.signal");
+           if (Files.exists(stopSignal)) {
+              LOGGER.info("Stop signal received, shutting down gracefully");
+              try {
+                 MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
+                 WarfareWorldData matchData = null;
+                 for (ServerLevel sl : srv.getAllLevels()) {
+                    matchData = WarfareWorldData.get(sl);
+                    break;
+                 }
+                 if (matchData != null) {
+                    if (matchData.isGameStarted) {
+                       String leader = matchData.blueTickets > matchData.redTickets ? "BLUE" :
+                              (matchData.redTickets > matchData.blueTickets ? "RED" : "NONE");
+                       MatchStatsTracker.get().finalizeMatch(leader, matchData.blueTickets, matchData.redTickets);
+                    } else {
+                       MatchStatsTracker tracker = MatchStatsTracker.get();
+                       if (tracker.isActive()) {
+                          tracker.finalizeMatch("NONE", matchData.blueTickets, matchData.redTickets);
+                       } else if (returnToLobbyTimer <= 0) {
+                          returnToLobbyTimer = 10;
+                          returnToLobbyServer = srv;
+                       }
+                    }
+                 }
+                 Files.delete(stopSignal);
+              } catch (Exception e) {
+                 LOGGER.warn("Failed to process stop signal: {}", e.getMessage());
+              }
+           }
+        }
+     }
 
    private static void spawnArtShell(ServerLevel level, BlockPos pos) {
       int rad = (Integer)WarfareConfig.ART_STRIKE_RADIUS.get();
@@ -1287,12 +1324,22 @@ public class GameLogicEvents {
                    DownedHandler.handleTeamkill(killer);
                 }
 
-                if (isTeamkill) {
-                   MatchStatsTracker.get().recordTeamKill(killer, victim);
-                } else {
-                   double dist = killer.distanceTo(victim);
-                   MatchStatsTracker.get().recordKill(killer, victim, weapon, dist);
-                }
+                 // Headshot detection
+                 if (!isTeamkill) {
+                    Entity directEntity = event.getSource().getDirectEntity();
+                    double hitY = directEntity != null ? directEntity.getY() : killer.getY();
+                    double victimHeadY = victim.getY() + victim.getEyeHeight();
+                    if (Math.abs(hitY - victimHeadY) < 0.35) {
+                       MatchStatsTracker.get().recordHeadshot(killer);
+                    }
+                 }
+
+                 if (isTeamkill) {
+                    MatchStatsTracker.get().recordTeamKill(killer, victim);
+                 } else {
+                    double dist = killer.distanceTo(victim);
+                    MatchStatsTracker.get().recordKill(killer, victim, weapon, dist);
+                 }
 
              // Убийство техникой
              } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
@@ -1315,9 +1362,19 @@ public class GameLogicEvents {
              if (victim.getPersistentData().getBoolean("WARFARE_GivingUp")) {
                 return;
              }
-          } else if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-             processEntityLoss(entity);
-          }
+           } else if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
+              // Техника уничтожена — определяем кто уничтожил
+              Entity sourceEntity = event.getSource().getEntity();
+              if (sourceEntity instanceof ServerPlayer destroyer) {
+                 MatchStatsTracker.get().recordVehicleDestroyed(destroyer, entity);
+              } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                 List<Entity> passengers = sourceEntity.getPassengers();
+                 if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
+                    MatchStatsTracker.get().recordVehicleDestroyed(driver, entity);
+                 }
+              }
+              processEntityLoss(entity);
+           }
        }
     }
 

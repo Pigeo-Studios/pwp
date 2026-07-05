@@ -12,6 +12,8 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,7 +34,7 @@ public class MatchAllocator {
 
     public static boolean hasActiveMatch() {
         return activeMatches.values().stream()
-                .anyMatch(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING);
+                .anyMatch(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING || m.phase == MatchPhase.ENDING);
     }
 
     public static MatchInfo getActiveMatch() {
@@ -113,6 +115,17 @@ public class MatchAllocator {
         ServerManager.tick();
 
         for (MatchInfo mi : activeMatches.values()) {
+            if (mi.phase == MatchPhase.ENDING) {
+                if (!ServerManager.isAlive(mi.serverId)) {
+                    log.info("Match {} stopped gracefully", mi.serverId);
+                    matchEnded(mi.serverId);
+                } else if (System.currentTimeMillis() - mi.stopRequestedAt > STOP_TIMEOUT_MS) {
+                    log.warn("Match {} stop timed out, force killing", mi.serverId);
+                    matchEnded(mi.serverId);
+                }
+                continue;
+            }
+
             if (!ServerManager.isAlive(mi.serverId)) {
                 log.warn("Match {} server is dead, cleaning up", mi.serverId);
                 LobbyMod.serverBroadcast("§e[PWP] §cМатч " + mi.displayName + " прерван из-за ошибки сервера!");
@@ -149,6 +162,26 @@ public class MatchAllocator {
         }
     }
 
+    private static final long STOP_TIMEOUT_MS = 30_000;
+
+    public static void requestMatchStop(int serverId) {
+        MatchInfo mi = activeMatches.get(serverId);
+        if (mi == null) return;
+        mi.phase = MatchPhase.ENDING;
+        mi.stopRequestedAt = System.currentTimeMillis();
+        Path dir = ServerManager.getServerDirectory(serverId);
+        if (dir != null) {
+            try {
+                Files.writeString(dir.resolve("stop.signal"), "{\"requestedAt\":" + System.currentTimeMillis() + "}");
+                log.info("Stop signal sent to match {} ({})", serverId, mi.mapName);
+            } catch (Exception e) {
+                log.error("Failed to write stop signal for match {}: {}", serverId, e.getMessage());
+            }
+        }
+        LobbyMod.serverBroadcast("§e[PWP] §fОстановка матча §e" + mi.displayName + "§f...");
+        LobbyMod.sendMatchListUpdateToAll();
+    }
+
     public static void matchEnded(int serverId) {
         MatchInfo mi = activeMatches.remove(serverId);
         if (mi != null) {
@@ -178,6 +211,7 @@ public class MatchAllocator {
         public int redTickets;
         public String worldPath;
         public long startedAt;
+        public long stopRequestedAt;
         public MatchPhase phase = MatchPhase.STARTING;
 
         public int getElapsedSeconds() {

@@ -122,6 +122,19 @@ public class CoreAPI {
                 "durationMinutes", durationMinutes));
     }
 
+    // ====== LEADERBOARD / RANK ======
+    public static JsonObject getLeaderboard(String orderBy, int page, int limit) {
+        return get("/api/v1/leaderboard?orderBy=" + orderBy + "&page=" + page + "&limit=" + limit);
+    }
+
+    public static JsonObject getPlayerRank(String uuid, String orderBy) {
+        return get("/api/v1/player/" + uuid + "/rank?orderBy=" + orderBy);
+    }
+
+    public static JsonObject getPlayerProfile(String uuid) {
+        return get("/api/v1/player/" + uuid);
+    }
+
     // ====== RANKS ======
     public static JsonObject checkRank(String uuid) {
         return post("/api/v1/ranks/check", map("uuid", uuid));

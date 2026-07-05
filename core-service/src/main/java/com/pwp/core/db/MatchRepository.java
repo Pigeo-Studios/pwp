@@ -33,16 +33,35 @@ public class MatchRepository {
 
             if (match.players != null) {
                 ps = c.prepareStatement(
-                        "INSERT INTO match_players (match_id, uuid, team, kills, deaths, score, role) " +
-                                "VALUES (?, ?, ?, ?, ?, ?, ?)");
+                        "INSERT INTO match_players (match_id, uuid, team, kills, deaths, assists, score, " +
+                                "vehicle_kills, captures, revives, shots_fired, shots_hit, " +
+                                "damage_dealt, healing_done, supplies_delivered, longest_kill, " +
+                                "role, squad_id, was_squad_leader, " +
+                                "vehicles_destroyed, air_vehicles_destroyed, headshots) " +
+                                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 for (MatchPlayer mp : match.players) {
                     ps.setLong(1, matchId);
                     ps.setString(2, mp.uuid);
                     ps.setString(3, mp.team);
                     ps.setInt(4, mp.kills);
                     ps.setInt(5, mp.deaths);
-                    ps.setInt(6, mp.score);
-                    ps.setString(7, mp.role);
+                    ps.setInt(6, mp.assists);
+                    ps.setInt(7, mp.score);
+                    ps.setInt(8, mp.vehicleKills);
+                    ps.setInt(9, mp.captures);
+                    ps.setInt(10, mp.revives);
+                    ps.setInt(11, mp.shotsFired);
+                    ps.setInt(12, mp.shotsHit);
+                    ps.setDouble(13, mp.damageDealt);
+                    ps.setDouble(14, mp.healingDone);
+                    ps.setInt(15, mp.suppliesDelivered);
+                    ps.setDouble(16, mp.longestKill);
+                    ps.setString(17, mp.role != null ? mp.role : "");
+                    ps.setInt(18, mp.squadId);
+                    ps.setBoolean(19, mp.wasSquadLeader);
+                    ps.setInt(20, mp.vehiclesDestroyed);
+                    ps.setInt(21, mp.airVehiclesDestroyed);
+                    ps.setInt(22, mp.headshots);
                     ps.addBatch();
                 }
                 ps.executeBatch();

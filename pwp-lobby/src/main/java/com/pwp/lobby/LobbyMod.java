@@ -249,16 +249,37 @@ public class LobbyMod {
                         ctx.getSource().sendFailure(Component.literal("A match is already running"));
                         return 0;
                     }
-                    String mapName = "grozny";
-                    MapConfig map = MapRegistry.get(mapName);
+                    MapConfig map = MapRegistry.getBestFit(MatchAllocator.getLobbyPlayerCount());
                     if (map == null) {
-                        ctx.getSource().sendFailure(Component.literal("Map config not found"));
+                        ctx.getSource().sendFailure(Component.literal("No maps available"));
                         return 0;
                     }
                     MatchAllocator.startMatch(map);
-                    ctx.getSource().sendSuccess(() -> Component.literal("Match started"), true);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Match started: " + map.displayName), true);
                     return Command.SINGLE_SUCCESS;
-                }))
+                })
+                .then(Commands.argument("mapname", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .suggests((ctx, builder) -> {
+                        for (MapConfig m : MapRegistry.getAll()) {
+                            builder.suggest(m.name, Component.literal(m.displayName + " (" + m.modeDisplayName + ")"));
+                        }
+                        return builder.buildFuture();
+                    })
+                    .executes(ctx -> {
+                        if (MatchAllocator.hasActiveMatch()) {
+                            ctx.getSource().sendFailure(Component.literal("A match is already running"));
+                            return 0;
+                        }
+                        String mapName = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "mapname");
+                        MapConfig map = MapRegistry.get(mapName);
+                        if (map == null) {
+                            ctx.getSource().sendFailure(Component.literal("Map not found: " + mapName));
+                            return 0;
+                        }
+                        MatchAllocator.startMatch(map);
+                        ctx.getSource().sendSuccess(() -> Component.literal("Match started: " + map.displayName), true);
+                        return Command.SINGLE_SUCCESS;
+                    })))
             .then(Commands.literal("vote")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
@@ -282,8 +303,8 @@ public class LobbyMod {
                         ctx.getSource().sendFailure(Component.literal("No active match"));
                         return 0;
                     }
-                    MatchAllocator.matchEnded(mi.serverId);
-                    ctx.getSource().sendSuccess(() -> Component.literal("Match stopped"), true);
+                    MatchAllocator.requestMatchStop(mi.serverId);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Match stopping gracefully..."), true);
                     return Command.SINGLE_SUCCESS;
                 }))
             .then(Commands.literal("status")

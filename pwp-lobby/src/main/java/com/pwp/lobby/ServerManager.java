@@ -265,6 +265,11 @@ public class ServerManager {
         return si != null ? si.port : -1;
     }
 
+    public static Path getServerDirectory(int serverId) {
+        ServerInstance si = servers.get(serverId);
+        return si != null ? si.directory : null;
+    }
+
     public static int getActiveCount() {
         return (int) servers.values().stream().filter(si -> !si.failed).count();
     }

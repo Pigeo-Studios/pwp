@@ -103,6 +103,7 @@ public class MatchStatsTracker {
         k.score -= 50;
         v.deaths++;
         v.score -= 25;
+        k.recordTeamKillStat();
 
         log.warn("TEAMKILL: {} → {}", killer.getScoreboardName(), victim.getScoreboardName());
     }
@@ -130,6 +131,36 @@ public class MatchStatsTracker {
     public void recordDamage(ServerPlayer dealer, double damage) {
         if (!active) return;
         getOrCreate(dealer).recordDamage(damage);
+    }
+
+    public void recordHeadshot(ServerPlayer shooter) {
+        if (!active) return;
+        getOrCreate(shooter).recordHeadshot();
+    }
+
+    public void recordVehicleDestroyed(ServerPlayer destroyer, Entity vehicle) {
+        if (!active) return;
+        String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+        boolean isAir = vType.equalsIgnoreCase("HELICOPTER")
+                || vType.toUpperCase().contains("CAS")
+                || vType.equalsIgnoreCase("Supply Helicopter");
+        getOrCreate(destroyer).recordVehicleDestroyed(isAir);
+        log.info("{} destroyed {} ({})", destroyer.getScoreboardName(), vType, isAir ? "AIR" : "GROUND");
+    }
+
+    public void recordHubDestruction(ServerPlayer destroyer) {
+        if (!active) return;
+        getOrCreate(destroyer).recordHubDestruction();
+    }
+
+    public void recordBaseDefend(ServerPlayer killer) {
+        if (!active) return;
+        getOrCreate(killer).recordBaseDefend();
+    }
+
+    public void recordDistance(ServerPlayer player, double dist) {
+        if (!active) return;
+        getOrCreate(player).recordDistance(dist);
     }
 
     // ====== ФИНАЛИЗАЦИЯ МАТЧА ======
@@ -174,6 +205,12 @@ public class MatchStatsTracker {
             p.addProperty("role", ps.role != null ? ps.role : "");
             p.addProperty("squadId", ps.squadId);
             p.addProperty("wasSquadLeader", ps.wasSquadLeader);
+            p.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
+            p.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
+            p.addProperty("headshots", ps.headshots);
+            p.addProperty("hubDestructions", ps.hubDestructions);
+            p.addProperty("baseDefends", ps.baseDefends);
+            p.addProperty("teamKills", ps.teamKills);
             playersArr.add(p);
         }
         match.add("players", playersArr);
@@ -191,11 +228,13 @@ public class MatchStatsTracker {
                 long xp = 0;
                 long coins = 0;
 
+                boolean isWin = ps.team.equals(winner);
+
                 // Try to calculate rewards via API, fallback to hardcoded values
                 JsonObject rewardResult = CoreAPI.calculateRewards(
                     ps.uuid, ps.team, winner,
                     ps.kills, ps.assists, ps.vehicleKills,
-                    ps.captures, ps.revives, 0,
+                    ps.captures, ps.revives, ps.headshots,
                     durationSec / 60
                 );
 
@@ -209,6 +248,7 @@ public class MatchStatsTracker {
                     xp += ps.vehicleKills * 150L;
                     xp += ps.captures * 100L;
                     xp += ps.revives * 75L;
+                    xp += ps.headshots * 25L;
                     xp += durationSec / 60 * 10L;
 
                     coins += ps.kills * 10L;
@@ -216,8 +256,9 @@ public class MatchStatsTracker {
                     coins += ps.vehicleKills * 30L;
                     coins += ps.captures * 25L;
                     coins += ps.revives * 15L;
+                    coins += ps.headshots * 5L;
 
-                    if (ps.team.equals(winner)) {
+                    if (isWin) {
                         xp += 200; coins += 50;
                     } else {
                         xp += 100; coins += 20;
@@ -226,8 +267,34 @@ public class MatchStatsTracker {
 
                 CoreAPI.addXp(ps.uuid, xp, "MATCH");
                 CoreAPI.addCurrency(ps.uuid, coins, "MATCH_REWARD");
-
                 CoreAPI.checkRank(ps.uuid);
+
+                // ====== СОХРАНЕНИЕ СТАТИСТИКИ В БД ======
+                JsonObject statsDelta = new JsonObject();
+                statsDelta.addProperty("kills", ps.kills);
+                statsDelta.addProperty("deaths", ps.deaths);
+                statsDelta.addProperty("assists", ps.assists);
+                statsDelta.addProperty("wins", isWin ? 1 : 0);
+                statsDelta.addProperty("losses", isWin ? 0 : 1);
+                statsDelta.addProperty("playtimeSeconds", durationSec);
+                statsDelta.addProperty("shotsFired", ps.shotsFired);
+                statsDelta.addProperty("shotsHit", ps.shotsHit);
+                statsDelta.addProperty("revives", ps.revives);
+                statsDelta.addProperty("vehicleKills", ps.vehicleKills);
+                statsDelta.addProperty("captures", ps.captures);
+                statsDelta.addProperty("damageDealt", ps.damageDealt);
+                statsDelta.addProperty("healingDone", ps.healingDone);
+                statsDelta.addProperty("suppliesDelivered", ps.suppliesDelivered);
+                statsDelta.addProperty("longestKill", ps.longestKill);
+                statsDelta.addProperty("bestKillStreak", ps.bestKillStreak);
+                statsDelta.addProperty("matchesPlayed", 1);
+                statsDelta.addProperty("hubDestructions", ps.hubDestructions);
+                statsDelta.addProperty("baseDefends", ps.baseDefends);
+                statsDelta.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
+                statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
+                statsDelta.addProperty("teamKills", ps.teamKills);
+                statsDelta.addProperty("headshots", ps.headshots);
+                CoreAPI.saveStats(ps.uuid, statsDelta);
 
                 log.info("{} earned {} XP and {} Coins", ps.nickname, xp, coins);
             }

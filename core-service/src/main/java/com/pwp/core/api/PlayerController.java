@@ -94,6 +94,19 @@ public class PlayerController {
             ctx.json(ApiResponse.ok(new LeaderboardResponse(list, total, page, limit)));
         });
 
+        app.get("/api/v1/player/{uuid}/rank", ctx -> {
+            String uuid = ctx.pathParam("uuid");
+            String orderBy = ctx.queryParam("orderBy") != null ? ctx.queryParam("orderBy") : "kills";
+            Player player = PlayerRepository.findByUuid(uuid);
+            if (player == null) throw new NotFoundResponse();
+
+            PlayerStats stats = PlayerRepository.getStats(uuid);
+            int rank = PlayerRepository.getPlayerRank(uuid, orderBy);
+            long total = PlayerRepository.getPlayerCount();
+
+            ctx.json(ApiResponse.ok(new RankResponse(uuid, player.nickname, rank, total, stats)));
+        });
+
         app.post("/api/v1/player/ban", ctx -> {
             BanRequest req = ctx.bodyAsClass(BanRequest.class);
             ctx.json(ApiResponse.ok("not implemented"));
@@ -108,6 +121,12 @@ public class PlayerController {
         public List<PlayerProfile> players; public long total; public int page; public int limit;
         LeaderboardResponse(List<PlayerProfile> p, long t, int pg, int lim) {
             players = p; total = t; page = pg; limit = lim;
+        }
+    }
+    private static class RankResponse {
+        public String uuid; public String nickname; public int rank; public long total; public PlayerStats stats;
+        RankResponse(String u, String n, int r, long t, PlayerStats s) {
+            uuid = u; nickname = n; rank = r; total = t; stats = s;
         }
     }
 }
