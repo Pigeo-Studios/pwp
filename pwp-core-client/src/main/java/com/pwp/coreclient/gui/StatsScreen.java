@@ -40,16 +40,16 @@ public class StatsScreen extends Screen {
     private static final int CONTENT_BOTTOM_OFFSET = 34;
 
     private static final String[] LB_CATEGORIES = {
-        "kills", "deaths", "assists", "kd", "wins", "winrate",
+        "kills", "deaths", "kd", "wins", "winrate",
         "vehicle_kills", "vehicles_destroyed", "air_destroyed",
         "captures", "damage", "healing", "headshots",
-        "hub_destructions", "playtime", "level"
+        "playtime", "level"
     };
     private static final String[] LB_CATEGORY_NAMES = {
-        "Kills", "Deaths", "Assists", "K/D", "Wins", "WinRate",
+        "Kills", "Deaths", "K/D", "Wins", "WinRate",
         "V.Kills", "V.Destr.", "Air Dstr.",
         "Captures", "Damage", "Healing", "Headshots",
-        "Hub Destr", "Playtime", "Level"
+        "Playtime", "Level"
     };
 
     private List<int[]> catBounds = new ArrayList<>();
@@ -412,7 +412,6 @@ public class StatsScreen extends Screen {
         return switch (col) {
             case "kills" -> intStr(e.kills);
             case "deaths" -> intStr(e.deaths);
-            case "assists" -> intStr(e.assists);
             case "kd" -> String.format("%.2f", e.kd);
             case "wins" -> intStr(e.wins);
             case "winrate" -> String.format("%.1f", e.winRate);
@@ -423,7 +422,6 @@ public class StatsScreen extends Screen {
             case "damage" -> intStr((int) e.damage);
             case "healing" -> intStr((int) e.healing);
             case "headshots" -> intStr(e.headshots);
-            case "hub_destructions" -> intStr(e.hubDestructions);
             case "playtime" -> formatPlaytimeRaw(e.playtime);
             case "level" -> intStr(e.level);
             default -> intStr(e.kills);
@@ -507,8 +505,8 @@ public class StatsScreen extends Screen {
 
     private static class LeaderboardEntry {
         String uuid, nickname;
-        int kills, deaths, assists, wins, vehicleKills, captures, headshots;
-        int vehiclesDestroyed, airVehiclesDestroyed, hubDestructions;
+        int kills, deaths, wins, vehicleKills, captures, headshots;
+        int vehiclesDestroyed, airVehiclesDestroyed;
         int level, matchesPlayed;
         long playtime;
         double damage, healing, kd, winRate;
@@ -520,14 +518,12 @@ public class StatsScreen extends Screen {
             nickname = get(p, "nickname", "");
             kills = get(st, "kills", 0);
             deaths = get(st, "deaths", 0);
-            assists = get(st, "assists", 0);
             wins = get(st, "wins", 0);
             vehicleKills = get(st, "vehicleKills", 0);
             captures = get(st, "captures", 0);
             headshots = get(st, "headshots", 0);
             vehiclesDestroyed = get(st, "vehiclesDestroyed", 0);
             airVehiclesDestroyed = get(st, "airVehiclesDestroyed", 0);
-            hubDestructions = get(st, "hubDestructions", 0);
             level = get(obj, "level", 0);
             matchesPlayed = get(st, "matchesPlayed", 0);
             playtime = getLong(st, "playtimeSeconds");

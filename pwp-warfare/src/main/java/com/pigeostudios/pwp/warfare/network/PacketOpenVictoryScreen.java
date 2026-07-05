@@ -14,7 +14,6 @@ public class PacketOpenVictoryScreen {
    public final boolean isBlueWinner;
    public final int matchKills;
    public final int matchDeaths;
-   public final int matchAssists;
    public final int matchVehicleKills;
    public final int matchVehiclesDestroyed;
    public final int matchAirVehiclesDestroyed;
@@ -25,7 +24,7 @@ public class PacketOpenVictoryScreen {
    public final int matchDurationSec;
 
    public PacketOpenVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner,
-                                   int matchKills, int matchDeaths, int matchAssists,
+                                   int matchKills, int matchDeaths,
                                    int matchVehicleKills, int matchVehiclesDestroyed,
                                    int matchAirVehiclesDestroyed, int matchCaptures,
                                    int matchRevives, int matchHeadshots, int matchScore,
@@ -36,7 +35,6 @@ public class PacketOpenVictoryScreen {
       this.isBlueWinner = isBlueWinner;
       this.matchKills = matchKills;
       this.matchDeaths = matchDeaths;
-      this.matchAssists = matchAssists;
       this.matchVehicleKills = matchVehicleKills;
       this.matchVehiclesDestroyed = matchVehiclesDestroyed;
       this.matchAirVehiclesDestroyed = matchAirVehiclesDestroyed;
@@ -54,7 +52,6 @@ public class PacketOpenVictoryScreen {
       buf.writeBoolean(msg.isBlueWinner);
       buf.writeInt(msg.matchKills);
       buf.writeInt(msg.matchDeaths);
-      buf.writeInt(msg.matchAssists);
       buf.writeInt(msg.matchVehicleKills);
       buf.writeInt(msg.matchVehiclesDestroyed);
       buf.writeInt(msg.matchAirVehiclesDestroyed);
@@ -68,7 +65,7 @@ public class PacketOpenVictoryScreen {
    public static PacketOpenVictoryScreen decode(FriendlyByteBuf buf) {
       return new PacketOpenVictoryScreen(
          buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readBoolean(),
-         buf.readInt(), buf.readInt(), buf.readInt(),
+         buf.readInt(), buf.readInt(),
          buf.readInt(), buf.readInt(), buf.readInt(),
          buf.readInt(), buf.readInt(), buf.readInt(),
          buf.readInt(), buf.readInt()
@@ -80,7 +77,7 @@ public class PacketOpenVictoryScreen {
          .enqueueWork(
             () -> DistExecutor.unsafeRunWhenOn(
                Dist.CLIENT, () -> () -> ClientHooks.openVictoryScreen(msg.winnerName, msg.winnerFaction, msg.subText, msg.isBlueWinner,
-                  msg.matchKills, msg.matchDeaths, msg.matchAssists,
+                  msg.matchKills, msg.matchDeaths,
                   msg.matchVehicleKills, msg.matchVehiclesDestroyed,
                   msg.matchAirVehiclesDestroyed, msg.matchCaptures,
                   msg.matchRevives, msg.matchHeadshots, msg.matchScore,

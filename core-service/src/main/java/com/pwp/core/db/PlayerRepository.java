@@ -59,7 +59,6 @@ public class PlayerRepository {
     public static void updateStats(String uuid, PlayerStats delta) throws SQLException {
         String sql = "UPDATE player_stats SET "
                 + "kills = kills + ?, deaths = deaths + ?, "
-                + "assists = assists + ?, "
                 + "wins = wins + ?, losses = losses + ?, "
                 + "playtime_seconds = playtime_seconds + ?, "
                 + "shots_fired = shots_fired + ?, shots_hit = shots_hit + ?, "
@@ -72,49 +71,40 @@ public class PlayerRepository {
                 + "longest_kill = GREATEST(longest_kill, ?), "
                 + "best_kill_streak = GREATEST(best_kill_streak, ?), "
                 + "matches_played = matches_played + ?, "
-                + "hub_destructions = hub_destructions + ?, "
-                + "base_defends = base_defends + ?, "
                 + "vehicles_destroyed = vehicles_destroyed + ?, "
                 + "air_vehicles_destroyed = air_vehicles_destroyed + ?, "
                 + "team_kills = team_kills + ?, "
-                + "match_mvp_count = match_mvp_count + ?, "
                 + "current_win_streak = CASE WHEN ? > 0 THEN current_win_streak + 1 ELSE 0 END, "
                 + "best_win_streak = GREATEST(best_win_streak, CASE WHEN ? > 0 THEN current_win_streak + 1 ELSE 0 END), "
                 + "survival_time = survival_time + ?, "
-                + "distance_traveled = distance_traveled + ?, "
                 + "headshots = headshots + ? "
                 + "WHERE uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setInt(1, delta.kills);
             ps.setInt(2, delta.deaths);
-            ps.setInt(3, delta.assists);
-            ps.setInt(4, delta.wins);
-            ps.setInt(5, delta.losses);
-            ps.setLong(6, delta.playtimeSeconds);
-            ps.setInt(7, delta.shotsFired);
-            ps.setInt(8, delta.shotsHit);
-            ps.setInt(9, delta.revives);
-            ps.setInt(10, delta.vehicleKills);
-            ps.setInt(11, delta.captures);
-            ps.setDouble(12, delta.damageDealt);
-            ps.setDouble(13, delta.healingDone);
-            ps.setInt(14, delta.suppliesDelivered);
-            ps.setDouble(15, delta.longestKill);
-            ps.setInt(16, delta.bestKillStreak);
-            ps.setInt(17, delta.matchesPlayed);
-            ps.setInt(18, delta.hubDestructions);
-            ps.setInt(19, delta.baseDefends);
-            ps.setInt(20, delta.vehiclesDestroyed);
-            ps.setInt(21, delta.airVehiclesDestroyed);
-            ps.setInt(22, delta.teamKills);
-            ps.setInt(23, delta.matchMVPCount);
-            ps.setInt(24, delta.wins);  // current_win_streak trigger
-            ps.setInt(25, delta.wins);  // best_win_streak trigger
-            ps.setLong(26, delta.survivalTime);
-            ps.setDouble(27, delta.distanceTraveled);
-            ps.setInt(28, delta.headshots);
-            ps.setString(29, uuid);
+            ps.setInt(3, delta.wins);
+            ps.setInt(4, delta.losses);
+            ps.setLong(5, delta.playtimeSeconds);
+            ps.setInt(6, delta.shotsFired);
+            ps.setInt(7, delta.shotsHit);
+            ps.setInt(8, delta.revives);
+            ps.setInt(9, delta.vehicleKills);
+            ps.setInt(10, delta.captures);
+            ps.setDouble(11, delta.damageDealt);
+            ps.setDouble(12, delta.healingDone);
+            ps.setInt(13, delta.suppliesDelivered);
+            ps.setDouble(14, delta.longestKill);
+            ps.setInt(15, delta.bestKillStreak);
+            ps.setInt(16, delta.matchesPlayed);
+            ps.setInt(17, delta.vehiclesDestroyed);
+            ps.setInt(18, delta.airVehiclesDestroyed);
+            ps.setInt(19, delta.teamKills);
+            ps.setInt(20, delta.wins);  // current_win_streak trigger
+            ps.setInt(21, delta.wins);  // best_win_streak trigger
+            ps.setLong(22, delta.survivalTime);
+            ps.setInt(23, delta.headshots);
+            ps.setString(24, uuid);
             ps.executeUpdate();
         }
     }
@@ -123,7 +113,6 @@ public class PlayerRepository {
         String column = switch (orderBy) {
             case "kills" -> "ps.kills";
             case "deaths" -> "ps.deaths";
-            case "assists" -> "ps.assists";
             case "wins" -> "ps.wins";
             case "winrate" -> "(ps.wins / GREATEST(ps.wins + ps.losses, 1))";
             case "playtime" -> "ps.playtime_seconds";
@@ -135,18 +124,17 @@ public class PlayerRepository {
             case "vehicles_destroyed" -> "ps.vehicles_destroyed";
             case "air_destroyed" -> "ps.air_vehicles_destroyed";
             case "headshots" -> "ps.headshots";
-            case "hub_destructions" -> "ps.hub_destructions";
-            case "score" -> "(ps.kills * 100 + ps.assists * 25 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)";
+            case "score" -> "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)";
             case "level" -> "px.level";
             case "prestige" -> "px.prestige";
             default -> "ps.kills";
         };
-        String sql = "SELECT p.uuid, p.nickname, ps.kills, ps.deaths, ps.assists, ps.wins, ps.losses, " +
+        String sql = "SELECT p.uuid, p.nickname, ps.kills, ps.deaths, ps.wins, ps.losses, " +
                 "ps.playtime_seconds, ps.vehicle_kills, ps.captures, ps.damage_dealt, ps.healing_done, " +
-                "ps.hub_destructions, ps.base_defends, ps.vehicles_destroyed, ps.air_vehicles_destroyed, " +
+                "ps.vehicles_destroyed, ps.air_vehicles_destroyed, " +
                 "ps.team_kills, ps.headshots, ps.supplies_delivered, ps.longest_kill, ps.best_kill_streak, " +
-                "ps.matches_played, ps.match_mvp_count, ps.current_win_streak, ps.best_win_streak, " +
-                "ps.survival_time, ps.distance_traveled, ps.shots_fired, ps.shots_hit, ps.revives, " +
+                "ps.matches_played, ps.current_win_streak, ps.best_win_streak, " +
+                "ps.survival_time, ps.shots_fired, ps.shots_hit, ps.revives, " +
                 "pc.coins, px.level, px.prestige, px.xp " +
                 "FROM players p " +
                 "JOIN player_stats ps ON p.uuid = ps.uuid " +
@@ -180,7 +168,6 @@ public class PlayerRepository {
         String column = switch (orderBy) {
             case "kills" -> "ps.kills";
             case "deaths" -> "ps.deaths";
-            case "assists" -> "ps.assists";
             case "wins" -> "ps.wins";
             case "winrate" -> "(ps.wins / GREATEST(ps.wins + ps.losses, 1))";
             case "playtime" -> "ps.playtime_seconds";
@@ -192,8 +179,7 @@ public class PlayerRepository {
             case "vehicles_destroyed" -> "ps.vehicles_destroyed";
             case "air_destroyed" -> "ps.air_vehicles_destroyed";
             case "headshots" -> "ps.headshots";
-            case "hub_destructions" -> "ps.hub_destructions";
-            case "score" -> "(ps.kills * 100 + ps.assists * 25 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)";
+            case "score" -> "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)";
             case "level" -> "px.level";
             default -> "ps.kills";
         };
@@ -238,7 +224,6 @@ public class PlayerRepository {
         s.uuid = rs.getString("uuid");
         s.kills = rs.getInt("kills");
         s.deaths = rs.getInt("deaths");
-        s.assists = rs.getInt("assists");
         s.wins = rs.getInt("wins");
         s.losses = rs.getInt("losses");
         s.playtimeSeconds = rs.getLong("playtime_seconds");
@@ -253,16 +238,12 @@ public class PlayerRepository {
         s.longestKill = rs.getDouble("longest_kill");
         s.bestKillStreak = rs.getInt("best_kill_streak");
         s.matchesPlayed = rs.getInt("matches_played");
-        s.hubDestructions = rs.getInt("hub_destructions");
-        s.baseDefends = rs.getInt("base_defends");
         s.vehiclesDestroyed = rs.getInt("vehicles_destroyed");
         s.airVehiclesDestroyed = rs.getInt("air_vehicles_destroyed");
         s.teamKills = rs.getInt("team_kills");
-        s.matchMVPCount = rs.getInt("match_mvp_count");
         s.currentWinStreak = rs.getInt("current_win_streak");
         s.bestWinStreak = rs.getInt("best_win_streak");
         s.survivalTime = rs.getLong("survival_time");
-        s.distanceTraveled = rs.getDouble("distance_traveled");
         s.headshots = rs.getInt("headshots");
         return s;
     }

@@ -274,13 +274,13 @@ public class ClientHooks {
    }
 
     public static void openVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner,
-                                          int matchKills, int matchDeaths, int matchAssists,
+                                          int matchKills, int matchDeaths,
                                           int matchVehicleKills, int matchVehiclesDestroyed,
                                           int matchAirVehiclesDestroyed, int matchCaptures,
                                           int matchRevives, int matchHeadshots, int matchScore,
                                           int matchDurationSec) {
        Minecraft.getInstance().setScreen(new VictoryScreen(winnerName, winnerFaction, subText, isBlueWinner,
-          matchKills, matchDeaths, matchAssists,
+          matchKills, matchDeaths,
           matchVehicleKills, matchVehiclesDestroyed,
           matchAirVehiclesDestroyed, matchCaptures,
           matchRevives, matchHeadshots, matchScore, matchDurationSec));

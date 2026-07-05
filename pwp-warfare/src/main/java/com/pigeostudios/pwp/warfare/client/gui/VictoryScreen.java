@@ -16,7 +16,7 @@ public class VictoryScreen extends Screen {
    private final boolean isBlueWinner;
    private final long openTime;
 
-   private final int matchKills, matchDeaths, matchAssists;
+    private final int matchKills, matchDeaths;
    private final int matchVehicleKills, matchVehiclesDestroyed, matchAirVehiclesDestroyed;
    private final int matchCaptures, matchRevives, matchHeadshots, matchScore;
    private final int matchDurationSec;
@@ -33,7 +33,7 @@ public class VictoryScreen extends Screen {
    private static final ResourceLocation FLAG_PMC = new ResourceLocation("pwpwarfare", "textures/gui/flags/pmc.png");
 
    public VictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner,
-                        int matchKills, int matchDeaths, int matchAssists,
+                        int matchKills, int matchDeaths,
                         int matchVehicleKills, int matchVehiclesDestroyed,
                         int matchAirVehiclesDestroyed, int matchCaptures,
                         int matchRevives, int matchHeadshots, int matchScore,
@@ -45,7 +45,6 @@ public class VictoryScreen extends Screen {
       this.isBlueWinner = isBlueWinner;
       this.matchKills = matchKills;
       this.matchDeaths = matchDeaths;
-      this.matchAssists = matchAssists;
       this.matchVehicleKills = matchVehicleKills;
       this.matchVehiclesDestroyed = matchVehiclesDestroyed;
       this.matchAirVehiclesDestroyed = matchAirVehiclesDestroyed;

@@ -108,11 +108,6 @@ public class MatchStatsTracker {
         log.warn("TEAMKILL: {} → {}", killer.getScoreboardName(), victim.getScoreboardName());
     }
 
-    public void recordAssist(ServerPlayer assistant, ServerPlayer victim) {
-        if (!active) return;
-        getOrCreate(assistant).recordAssist();
-    }
-
     public void recordCapture(ServerPlayer player) {
         if (!active) return;
         getOrCreate(player).recordCapture();
@@ -158,24 +153,9 @@ public class MatchStatsTracker {
         log.info("{} destroyed {} ({})", destroyer.getScoreboardName(), vType, isAir ? "AIR" : "GROUND");
     }
 
-    public void recordHubDestruction(ServerPlayer destroyer) {
-        if (!active) return;
-        getOrCreate(destroyer).recordHubDestruction();
-    }
-
-    public void recordBaseDefend(ServerPlayer killer) {
-        if (!active) return;
-        getOrCreate(killer).recordBaseDefend();
-    }
-
     public void recordSuppliesDelivered(ServerPlayer deliverer, int amount) {
         if (!active) return;
         getOrCreate(deliverer).suppliesDelivered += amount;
-    }
-
-    public void recordDistance(ServerPlayer player, double dist) {
-        if (!active) return;
-        getOrCreate(player).recordDistance(dist);
     }
 
     // Survival time tracking
@@ -223,7 +203,6 @@ public class MatchStatsTracker {
             p.addProperty("team", ps.team);
             p.addProperty("kills", ps.kills);
             p.addProperty("deaths", ps.deaths);
-            p.addProperty("assists", ps.assists);
             p.addProperty("score", ps.score);
             p.addProperty("vehicleKills", ps.vehicleKills);
             p.addProperty("captures", ps.captures);
@@ -240,8 +219,6 @@ public class MatchStatsTracker {
             p.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
             p.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
             p.addProperty("headshots", ps.headshots);
-            p.addProperty("hubDestructions", ps.hubDestructions);
-            p.addProperty("baseDefends", ps.baseDefends);
             p.addProperty("teamKills", ps.teamKills);
             p.addProperty("survivalTime", ps.survivalTime);
             playersArr.add(p);
@@ -267,7 +244,7 @@ public class MatchStatsTracker {
                     try {
                         JsonObject rewardResult = CoreAPI.calculateRewards(
                             ps.uuid, ps.team, winner,
-                            ps.kills, ps.assists, ps.vehicleKills,
+                            ps.kills, 0, ps.vehicleKills,
                             ps.captures, ps.revives, ps.headshots,
                             durationSec / 60
                         );
@@ -280,10 +257,10 @@ public class MatchStatsTracker {
                             throw new Exception("API returned null, using fallback");
                         }
                     } catch (Exception e) {
-                        xp = ps.kills * 50L + ps.assists * 25L + ps.vehicleKills * 150L
+                        xp = ps.kills * 50L + ps.vehicleKills * 150L
                             + ps.captures * 100L + ps.revives * 75L + ps.headshots * 25L
                             + durationSec / 60 * 10L;
-                        coins = ps.kills * 10L + ps.assists * 5L + ps.vehicleKills * 30L
+                        coins = ps.kills * 10L + ps.vehicleKills * 30L
                             + ps.captures * 25L + ps.revives * 15L + ps.headshots * 5L;
                         if (isWin) { xp += 200; coins += 50; }
                         else { xp += 100; coins += 20; }
@@ -296,7 +273,6 @@ public class MatchStatsTracker {
                     JsonObject statsDelta = new JsonObject();
                     statsDelta.addProperty("kills", ps.kills);
                     statsDelta.addProperty("deaths", ps.deaths);
-                    statsDelta.addProperty("assists", ps.assists);
                     statsDelta.addProperty("wins", isWin ? 1 : 0);
                     statsDelta.addProperty("losses", isWin ? 0 : 1);
                     statsDelta.addProperty("playtimeSeconds", durationSec);
@@ -311,8 +287,6 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("longestKill", ps.longestKill);
                     statsDelta.addProperty("bestKillStreak", ps.bestKillStreak);
                     statsDelta.addProperty("matchesPlayed", 1);
-                    statsDelta.addProperty("hubDestructions", ps.hubDestructions);
-                    statsDelta.addProperty("baseDefends", ps.baseDefends);
                     statsDelta.addProperty("survivalTime", ps.survivalTime);
                     statsDelta.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
                     statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);

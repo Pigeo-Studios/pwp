@@ -8,7 +8,6 @@ public class PlayerMatchStats {
 
     public int kills;
     public int deaths;
-    public int assists;
     public int score;
 
     public int vehicleKills;
@@ -34,11 +33,8 @@ public class PlayerMatchStats {
     public int airVehiclesDestroyed;
     public int teamKills;
     public int headshots;
-    public int hubDestructions;
-    public int baseDefends;
 
     public long survivalTime;
-    public double distanceTraveled;
 
     public PlayerMatchStats(String uuid, String nickname, String team) {
         this.uuid = uuid;
@@ -56,11 +52,6 @@ public class PlayerMatchStats {
     public void recordDeath() {
         deaths++;
         killStreak = 0;
-    }
-
-    public void recordAssist() {
-        assists++;
-        score += 25;
     }
 
     public void recordCapture() {
@@ -104,20 +95,6 @@ public class PlayerMatchStats {
     public void recordHeadshot() {
         headshots++;
         score += 25;
-    }
-
-    public void recordHubDestruction() {
-        hubDestructions++;
-        score += 300;
-    }
-
-    public void recordBaseDefend() {
-        baseDefends++;
-        score += 50;
-    }
-
-    public void recordDistance(double dist) {
-        distanceTraveled += dist;
     }
 
     public double getAccuracy() {

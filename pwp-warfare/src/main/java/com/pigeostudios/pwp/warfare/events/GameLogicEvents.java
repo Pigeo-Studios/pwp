@@ -1854,11 +1854,11 @@ public class GameLogicEvents {
            if (ps == null) {
                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, matchDurationSec));
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, matchDurationSec));
            } else {
                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
-                       ps.kills, ps.deaths, ps.assists,
+                       ps.kills, ps.deaths,
                        ps.vehicleKills, ps.vehiclesDestroyed, ps.airVehiclesDestroyed,
                        ps.captures, ps.revives, ps.headshots, ps.score, matchDurationSec));
            }
