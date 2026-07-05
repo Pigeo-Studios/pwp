@@ -78,6 +78,8 @@ public class WarfareWorldData extends SavedData {
     public boolean configApplied = false;
     public boolean hideDeathMessages = false;
     public boolean hideNametags = false;
+    public boolean disableHunger = false;
+    public boolean disableNaturalRegen = false;
     public List<String> getAvailableMapImages() {
        List<String> images = new ArrayList<>();
        try {
@@ -183,6 +185,8 @@ public class WarfareWorldData extends SavedData {
       tag.putString("CurrentMapImage", this.currentMapImage);
       tag.putBoolean("HideDeathMessages", this.hideDeathMessages);
       tag.putBoolean("HideNametags", this.hideNametags);
+      tag.putBoolean("DisableHunger", this.disableHunger);
+      tag.putBoolean("DisableNaturalRegen", this.disableNaturalRegen);
       tag.putLong("BlueArtCD", this.blueArtStrikeCD);
       tag.putLong("RedArtCD", this.redArtStrikeCD);
       tag.putInt("BlueCMDId", this.blueCMDId);
@@ -337,6 +341,8 @@ public class WarfareWorldData extends SavedData {
       data.currentMapImage = tag.contains("CurrentMapImage") ? tag.getString("CurrentMapImage") : "map1";
       data.hideDeathMessages = tag.contains("HideDeathMessages") && tag.getBoolean("HideDeathMessages");
       data.hideNametags = tag.contains("HideNametags") && tag.getBoolean("HideNametags");
+      data.disableHunger = tag.contains("DisableHunger") && tag.getBoolean("DisableHunger");
+      data.disableNaturalRegen = tag.contains("DisableNaturalRegen") && tag.getBoolean("DisableNaturalRegen");
       data.blueArtStrikeCD = tag.getLong("BlueArtCD");
       data.redArtStrikeCD = tag.getLong("RedArtCD");
       data.blueCMDId = tag.getInt("BlueCMDId");

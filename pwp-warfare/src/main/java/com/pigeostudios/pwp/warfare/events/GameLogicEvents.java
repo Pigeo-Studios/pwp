@@ -591,13 +591,22 @@ public class GameLogicEvents {
                      }
                   }
 
-                  if (anyMarkerRemoved) {
-                     data.setDirty();
-                     PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
-                  }
-               }
+               if (anyMarkerRemoved) {
+                      data.setDirty();
+                      PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
+                   }
+                }
 
-               if (data.countdownActive) {
+                if (data.isGameStarted && globalTick % 100 == 0) {
+                    if (data.disableHunger) {
+                      for (ServerPlayer p : level.players()) {
+                         p.getFoodData().setFoodLevel(20);
+                         p.getFoodData().setSaturation(20.0F);
+                      }
+                   }
+                }
+
+                if (data.countdownActive) {
                   if (data.countdownTicks > 0) {
                      if (data.countdownTicks % 20 == 0) {
                         int seconds = data.countdownTicks / 20;
@@ -622,12 +631,18 @@ public class GameLogicEvents {
                          if (blueTeam != null) blueTeam.setNameTagVisibility(PlayerTeam.Visibility.NEVER);
                          if (redTeam != null) redTeam.setNameTagVisibility(PlayerTeam.Visibility.NEVER);
                       }
+                      if (data.disableHunger) {
+                         for (ServerPlayer p : level.players()) {
+                            p.getFoodData().setFoodLevel(20);
+                            p.getFoodData().setSaturation(20.0F);
+                         }
+                      }
                       sendSyncPacket(level, data);
 
                       MatchStatsTracker.get().startMatch(data.currentMapImage, "AAS");
 
                       for (ServerPlayer p : level.players()) {
-                        String pending = p.getPersistentData().getString("WARFARE_PendingKit");
+                         String pending = p.getPersistentData().getString("WARFARE_PendingKit");
                         String current = p.getPersistentData().getString("WARFARE_CurrentKit");
                         String kitToApply = !pending.isEmpty() ? pending : current;
                         if (kitToApply != null && !kitToApply.isEmpty() && !kitToApply.equals("Unassigned")) {
@@ -1878,9 +1893,20 @@ public class GameLogicEvents {
          }
       }
 
+      int blueCount = 0, redCount = 0;
+      if (server != null) {
+         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            String t = p.getTeam() != null ? p.getTeam().getName() : "";
+            if (t.equalsIgnoreCase("Blue")) blueCount++;
+            else if (t.equalsIgnoreCase("Red")) redCount++;
+         }
+      }
+
       return new PacketSyncGameData(
          data.blueTickets,
          data.redTickets,
+         blueCount,
+         redCount,
          hasBlue,
          hasRed,
          blueBleed,

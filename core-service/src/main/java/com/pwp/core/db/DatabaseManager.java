@@ -155,7 +155,16 @@ public class DatabaseManager {
             + "max_per_squad INT NOT NULL DEFAULT -1, "
             + "min_squad_players INT NOT NULL DEFAULT 0, "
             + "items JSON NOT NULL, slot_skins JSON, "
-            + "PRIMARY KEY (faction, kit_name))"
+            + "PRIMARY KEY (faction, kit_name))",
+
+            "CREATE TABLE IF NOT EXISTS voice_mutes ("
+            + "uuid VARCHAR(36) PRIMARY KEY, "
+            + "muted_by_uuid VARCHAR(36) NOT NULL, "
+            + "muted_by_nickname VARCHAR(64) NOT NULL, "
+            + "reason VARCHAR(256) DEFAULT '', "
+            + "muted_at BIGINT NOT NULL, "
+            + "expires_at BIGINT NOT NULL DEFAULT 0, "
+            + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
         };
         try (Connection c = getConnection(); Statement s = c.createStatement()) {
             for (String sql : tables) {

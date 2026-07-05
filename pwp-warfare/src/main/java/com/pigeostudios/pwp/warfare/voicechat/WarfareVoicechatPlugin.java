@@ -19,6 +19,8 @@ import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.pwp.coreclient.CoreAPI;
+import com.google.gson.JsonObject;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,6 +40,9 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
    private static final String TAG_ACTIVATE = "walkietalkie.activate";
    private static final String TAG_CANAL = "walkietalkie.canal";
    private static final String TAG_MUTE = "walkietalkie.mute";
+   private static final Map<UUID, Boolean> mutedCache = new ConcurrentHashMap<>();
+   private static final Map<UUID, Long> mutedCacheTimestamp = new ConcurrentHashMap<>();
+   private static final long MUTE_CACHE_TTL_MS = 5000L;
 
    public String getPluginId() {
       return "WARFARE_voicechat";
@@ -62,9 +67,13 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             return;
          }
 
-         UUID playerUuid = event.getSenderConnection().getPlayer().getUuid();
-         long now = System.currentTimeMillis();
-         if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150L) {
+      UUID playerUuid = event.getSenderConnection().getPlayer().getUuid();
+      if (isPlayerVoiceMuted(playerUuid)) {
+         event.cancel();
+         return;
+      }
+      long now = System.currentTimeMillis();
+      if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150L) {
             lastVoiceActivity.put(playerUuid, now);
             ServerPlayer sender = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(playerUuid);
             if (sender == null) {
@@ -109,6 +118,35 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
       } catch (Exception e) {
          System.err.println("[PWP Warfare] onMicPacket failed: " + e);
       }
+   }
+
+   private static boolean isPlayerVoiceMuted(UUID playerUuid) {
+      long now = System.currentTimeMillis();
+      Long lastCheck = mutedCacheTimestamp.get(playerUuid);
+      if (lastCheck != null && now - lastCheck < MUTE_CACHE_TTL_MS) {
+         return mutedCache.getOrDefault(playerUuid, false);
+      }
+      try {
+         JsonObject result = CoreAPI.getVoiceMute(playerUuid.toString());
+         if (result != null && result.has("success") && result.get("success").getAsBoolean()
+                 && result.has("data") && !result.get("data").isJsonNull()) {
+            JsonObject data = result.getAsJsonObject("data");
+            boolean muted = data.has("muted") && data.get("muted").getAsBoolean();
+            mutedCache.put(playerUuid, muted);
+            mutedCacheTimestamp.put(playerUuid, now);
+            return muted;
+         }
+      } catch (Exception e) {
+         System.err.println("[PWP Warfare] Voice mute check failed for " + playerUuid + ": " + e);
+      }
+      mutedCache.put(playerUuid, false);
+      mutedCacheTimestamp.put(playerUuid, now);
+      return false;
+   }
+
+   public static void invalidateMuteCache(UUID playerUuid) {
+      mutedCache.remove(playerUuid);
+      mutedCacheTimestamp.remove(playerUuid);
    }
 
    private Integer getActiveWalkieTalkieCanal(ServerPlayer player) {

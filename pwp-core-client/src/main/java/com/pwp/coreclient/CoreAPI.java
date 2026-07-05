@@ -161,6 +161,29 @@ public class CoreAPI {
         return post("/api/v1/kits/faction/" + faction.toLowerCase() + "/bulk", kits);
     }
 
+    // ====== VOICE MUTE ======
+    public static JsonObject voiceMute(String uuid, String mutedByUuid, String mutedByNickname,
+                                        String reason, int durationMinutes) {
+        return post("/api/v1/voicemute", map(
+                "uuid", uuid,
+                "mutedByUuid", mutedByUuid,
+                "mutedByNickname", mutedByNickname,
+                "reason", reason != null ? reason : "",
+                "durationMinutes", durationMinutes));
+    }
+
+    public static JsonObject voiceUnmute(String uuid) {
+        return post("/api/v1/voiceunmute", map("uuid", uuid));
+    }
+
+    public static JsonObject getVoiceMute(String uuid) {
+        return get("/api/v1/voicemute/" + uuid);
+    }
+
+    public static JsonObject getVoiceMutes() {
+        return get("/api/v1/voicemutes");
+    }
+
     private static JsonObject get(String path) {
         if (!enabled) return null;
         try {

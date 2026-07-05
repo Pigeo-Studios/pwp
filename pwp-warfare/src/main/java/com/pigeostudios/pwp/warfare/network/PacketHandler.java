@@ -134,11 +134,22 @@ public class PacketHandler {
    ) {
       String bName = getFactionName(bFac, true);
       String rName = getFactionName(rFac, false);
+      int blueCount = 0, redCount = 0;
+      MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+      if (server != null) {
+         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            String t = p.getTeam() != null ? p.getTeam().getName() : "";
+            if (t.equalsIgnoreCase("Blue")) blueCount++;
+            else if (t.equalsIgnoreCase("Red")) redCount++;
+         }
+      }
       INSTANCE.send(
          PacketDistributor.ALL.noArg(),
          new PacketSyncGameData(
             blue,
             red,
+            blueCount,
+            redCount,
             hasBlue,
             hasRed,
             blueBleed,
@@ -235,9 +246,20 @@ public class PacketHandler {
       boolean hasRed = !data.redRallies.isEmpty();
       String bName = getFactionName(data.blueFaction, true);
       String rName = getFactionName(data.redFaction, false);
+      int blueCount = 0, redCount = 0;
+      MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+      if (server != null) {
+         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            String t = p.getTeam() != null ? p.getTeam().getName() : "";
+            if (t.equalsIgnoreCase("Blue")) blueCount++;
+            else if (t.equalsIgnoreCase("Red")) redCount++;
+         }
+      }
       return new PacketSyncGameData(
          data.blueTickets,
          data.redTickets,
+         blueCount,
+         redCount,
          hasBlue,
          hasRed,
          blueBleed,

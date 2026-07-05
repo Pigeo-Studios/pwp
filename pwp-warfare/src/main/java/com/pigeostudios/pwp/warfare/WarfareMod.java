@@ -131,6 +131,8 @@ public class WarfareMod {
              if (settings.has("deathTicketCost")) data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
              if (settings.has("hideDeathMessages")) data.hideDeathMessages = settings.get("hideDeathMessages").getAsBoolean();
              if (settings.has("hideNametags")) data.hideNametags = settings.get("hideNametags").getAsBoolean();
+             if (settings.has("disableHunger")) data.disableHunger = settings.get("disableHunger").getAsBoolean();
+             if (settings.has("disableNaturalRegen")) data.disableNaturalRegen = settings.get("disableNaturalRegen").getAsBoolean();
           }
 
           if (root.has("mapBounds")) {
@@ -231,6 +233,9 @@ public class WarfareMod {
 
           if (data.hideDeathMessages) {
              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES).set(false, level.getServer());
+          }
+          if (data.disableNaturalRegen) {
+             level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_NATURAL_REGENERATION).set(false, level.getServer());
           }
 
           data.configApplied = true;

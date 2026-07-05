@@ -19,6 +19,8 @@ import net.minecraft.network.chat.Component;
 public class ClientData {
    public static int BLUE_TICKETS = 800;
    public static int RED_TICKETS = 800;
+   public static int BLUE_PLAYER_COUNT = 0;
+   public static int RED_PLAYER_COUNT = 0;
    public static List<WarfareWorldData.Squad> clientSquads = new ArrayList<>();
    public static List<WarfareWorldData.HubInfo> clientHubs = new ArrayList<>();
    public static String BLUE_FACTION = "none";
@@ -84,6 +86,9 @@ public class ClientData {
    public static boolean redRallyBlocked = false;
    public static boolean blueBleeding = false;
    public static boolean redBleeding = false;
+   public static long teamScreenLastClosed = 0L;
+   public static boolean teamSelectSent = false;
+   public static long teamSelectSentTime = 0L;
    public static int RESPAWN_TIME = 10;
    public static List<Component> menuChatHistory = new ArrayList<>();
    public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();

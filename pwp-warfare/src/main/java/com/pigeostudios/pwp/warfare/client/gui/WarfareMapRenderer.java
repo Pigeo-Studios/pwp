@@ -457,41 +457,61 @@ public class WarfareMapRenderer implements AutoCloseable {
       }
    }
 
-   private void renderLatticeLines(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
-      if (ClientData.allCapturePoints != null && !ClientData.allCapturePoints.isEmpty()) {
-         if (mc.level != null) {
-            String currentDim = mc.level.dimension().location().toString();
-            List<WarfareWorldData.CapturePoint> sortedPoints = new ArrayList<>(ClientData.allCapturePoints);
-            sortedPoints.sort(Comparator.comparingInt(p -> p.bluePriority));
-            List<Vec3> path = new ArrayList<>();
-            if (ClientData.blueSpawns.containsKey(currentDim)) {
-               BlockPos bPos = ClientData.blueSpawns.get(currentDim);
-               path.add(new Vec3(bPos.getX() + 0.5, bPos.getY(), bPos.getZ() + 0.5));
-            }
+    private void renderLatticeLines(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
+       if (ClientData.allCapturePoints != null && !ClientData.allCapturePoints.isEmpty()) {
+          if (mc.level != null) {
+             String currentDim = mc.level.dimension().location().toString();
+             boolean isRed = mc.player != null && mc.player.getTeam() != null
+                && mc.player.getTeam().getName().equalsIgnoreCase("Red");
+             List<WarfareWorldData.CapturePoint> sortedPoints = new ArrayList<>(ClientData.allCapturePoints);
+             if (isRed) {
+                sortedPoints.sort(Comparator.comparingInt(p -> p.redPriority));
+             } else {
+                sortedPoints.sort(Comparator.comparingInt(p -> p.bluePriority));
+             }
+             List<Vec3> path = new ArrayList<>();
+             if (isRed) {
+                if (ClientData.redSpawns.containsKey(currentDim)) {
+                   BlockPos rPos = ClientData.redSpawns.get(currentDim);
+                   path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
+                }
+             } else {
+                if (ClientData.blueSpawns.containsKey(currentDim)) {
+                   BlockPos bPos = ClientData.blueSpawns.get(currentDim);
+                   path.add(new Vec3(bPos.getX() + 0.5, bPos.getY(), bPos.getZ() + 0.5));
+                }
+             }
 
-            for (WarfareWorldData.CapturePoint cp : sortedPoints) {
-               path.add(cp.area.getCenter());
-            }
+             for (WarfareWorldData.CapturePoint cp : sortedPoints) {
+                path.add(cp.area.getCenter());
+             }
 
-            if (ClientData.redSpawns.containsKey(currentDim)) {
-               BlockPos rPos = ClientData.redSpawns.get(currentDim);
-               path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
-            }
+             if (isRed) {
+                if (ClientData.blueSpawns.containsKey(currentDim)) {
+                   BlockPos bPos = ClientData.blueSpawns.get(currentDim);
+                   path.add(new Vec3(bPos.getX() + 0.5, bPos.getY(), bPos.getZ() + 0.5));
+                }
+             } else {
+                if (ClientData.redSpawns.containsKey(currentDim)) {
+                   BlockPos rPos = ClientData.redSpawns.get(currentDim);
+                   path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
+                }
+             }
 
-            int lineColor = 1728053247;
+             int lineColor = 1728053247;
 
-            for (int i = 0; i < path.size() - 1; i++) {
-               Vec3 p1 = path.get(i);
-               Vec3 p2 = path.get(i + 1);
-               int x1 = (int)(this.mapX + this.mapSize / 2 + (p1.x - cx) / bpp);
-               int y1 = (int)(this.mapY + this.mapSize / 2 + (p1.z - cz) / bpp);
-               int x2 = (int)(this.mapX + this.mapSize / 2 + (p2.x - cx) / bpp);
-               int y2 = (int)(this.mapY + this.mapSize / 2 + (p2.z - cz) / bpp);
-               this.drawSolidLine(gui, x1, y1, x2, y2, lineColor);
-            }
-         }
-      }
-   }
+             for (int i = 0; i < path.size() - 1; i++) {
+                Vec3 p1 = path.get(i);
+                Vec3 p2 = path.get(i + 1);
+                int x1 = (int)(this.mapX + this.mapSize / 2 + (p1.x - cx) / bpp);
+                int y1 = (int)(this.mapY + this.mapSize / 2 + (p1.z - cz) / bpp);
+                int x2 = (int)(this.mapX + this.mapSize / 2 + (p2.x - cx) / bpp);
+                int y2 = (int)(this.mapY + this.mapSize / 2 + (p2.z - cz) / bpp);
+                this.drawSolidLine(gui, x1, y1, x2, y2, lineColor);
+             }
+          }
+       }
+    }
 
    private void renderMainBases(GuiGraphics gui, Minecraft mc, double cx, double cz, double bpp) {
       if (mc.level != null) {

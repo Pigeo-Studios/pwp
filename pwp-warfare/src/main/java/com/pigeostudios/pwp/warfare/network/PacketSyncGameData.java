@@ -20,6 +20,8 @@ import net.minecraftforge.network.NetworkEvent.Context;
 public class PacketSyncGameData {
    public final int blueTickets;
    public final int redTickets;
+   public final int bluePlayerCount;
+   public final int redPlayerCount;
    public final boolean hasBlueRally;
    public final boolean hasRedRally;
    public final boolean blueBleeding;
@@ -74,6 +76,8 @@ public class PacketSyncGameData {
    public PacketSyncGameData(
       int blueTickets,
       int redTickets,
+      int bluePlayerCount,
+      int redPlayerCount,
       boolean hasBlueRally,
       boolean hasRedRally,
       boolean blueBleeding,
@@ -127,6 +131,8 @@ public class PacketSyncGameData {
    ) {
       this.blueTickets = blueTickets;
       this.redTickets = redTickets;
+      this.bluePlayerCount = bluePlayerCount;
+      this.redPlayerCount = redPlayerCount;
       this.hasBlueRally = hasBlueRally;
       this.hasRedRally = hasRedRally;
       this.blueBleeding = blueBleeding;
@@ -182,6 +188,8 @@ public class PacketSyncGameData {
    public static void encode(PacketSyncGameData msg, FriendlyByteBuf buf) {
       buf.writeInt(msg.blueTickets);
       buf.writeInt(msg.redTickets);
+      buf.writeInt(msg.bluePlayerCount);
+      buf.writeInt(msg.redPlayerCount);
       buf.writeBoolean(msg.hasBlueRally);
       buf.writeBoolean(msg.hasRedRally);
       buf.writeBoolean(msg.blueBleeding);
@@ -270,6 +278,8 @@ public class PacketSyncGameData {
    public static PacketSyncGameData decode(FriendlyByteBuf buf) {
       int bT = buf.readInt();
       int rT = buf.readInt();
+      int bPC = buf.readInt();
+      int rPC = buf.readInt();
       boolean hBR = buf.readBoolean();
       boolean hRR = buf.readBoolean();
       boolean bBl = buf.readBoolean();
@@ -344,6 +354,8 @@ public class PacketSyncGameData {
       return new PacketSyncGameData(
          bT,
          rT,
+         bPC,
+         rPC,
          hBR,
          hRR,
          bBl,

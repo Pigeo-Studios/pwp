@@ -174,9 +174,11 @@ public class ClientHooks {
       }
    }
 
-     public static void handleSyncGameData(PacketSyncGameData msg) {
-        ClientData.BLUE_TICKETS = msg.blueTickets;
-        ClientData.RED_TICKETS = msg.redTickets;
+      public static void handleSyncGameData(PacketSyncGameData msg) {
+         ClientData.BLUE_TICKETS = msg.blueTickets;
+         ClientData.RED_TICKETS = msg.redTickets;
+         ClientData.BLUE_PLAYER_COUNT = msg.bluePlayerCount;
+         ClientData.RED_PLAYER_COUNT = msg.redPlayerCount;
         ClientData.hasBlueRally = msg.hasBlueRally;
         ClientData.hasRedRally = msg.hasRedRally;
         ClientData.blueBleeding = msg.blueBleeding;
@@ -229,7 +231,10 @@ public class ClientHooks {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null && mc.screen == null) {
            String teamName = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "";
-           if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
+           if (teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red")) {
+              ClientData.teamSelectSent = false;
+           } else if (!ClientData.teamSelectSent || System.currentTimeMillis() - ClientData.teamSelectSentTime > 5000L) {
+              ClientData.teamSelectSent = false;
               mc.setScreen(new com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen());
            }
         }
