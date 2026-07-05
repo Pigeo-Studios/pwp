@@ -65,11 +65,10 @@ public class TeamSelectionScreen extends Screen {
        int blueJoinColor = blueFull ? -65536 : (isHoveringBlue ? -1 : -22016);
        String blueJoinText = blueFull ? "TOO MANY PLAYERS" : "JOIN";
        gui.drawCenteredString(this.font, Component.literal(blueJoinText).withStyle(ChatFormatting.GOLD), blueX + flagWidth / 2, blueY + flagHeight + 10, blueJoinColor);
-       gui.drawCenteredString(this.font, Component.literal(blueTeamName).withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.BLUE), blueX + flagWidth / 2, blueY - 15, blueFull ? 0x555555 : 16777215);
-       String blueCountStr = ClientData.BLUE_PLAYER_COUNT + "\u00a77/\u00a7f" + (ClientData.RED_PLAYER_COUNT + 2) + " players";
-       gui.drawCenteredString(this.font, Component.literal(ClientData.BLUE_PLAYER_COUNT + " players").withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY), blueX + flagWidth / 2, blueY + flagHeight + 24, blueFull ? 0x555555 : 0xAAAAAA);
+        gui.drawCenteredString(this.font, Component.literal(blueTeamName).withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.BLUE), blueX + flagWidth / 2, blueY - 15, blueFull ? 0x555555 : 16777215);
+        gui.drawCenteredString(this.font, Component.literal(ClientData.BLUE_PLAYER_COUNT + " players").withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY), blueX + flagWidth / 2, blueY + flagHeight + 24, blueFull ? 0x555555 : 0xAAAAAA);
 
-       int redX = centerX + offset;
+        int redX = centerX + offset;
        int redY = centerY - flagHeight / 2;
        boolean isHoveringRed = !redFull && mouseX >= redX && mouseX <= redX + flagWidth && mouseY >= redY && mouseY <= redY + flagHeight + 20;
        ResourceLocation redFlag = this.getFlagTexture(ClientData.RED_FACTION);
@@ -95,9 +94,10 @@ public class TeamSelectionScreen extends Screen {
 
        int redJoinColor = redFull ? -65536 : (isHoveringRed ? -1 : -22016);
        String redJoinText = redFull ? "TOO MANY PLAYERS" : "JOIN";
-       gui.drawCenteredString(this.font, Component.literal(redJoinText).withStyle(ChatFormatting.GOLD), redX + flagWidth / 2, redY + flagHeight + 10, redJoinColor);
-       gui.drawCenteredString(this.font, Component.literal(redTeamName).withStyle(redFull ? ChatFormatting.DARK_GRAY : ChatFormatting.RED), redX + flagWidth / 2, redY - 15, redFull ? 0x555555 : 16777215);
-       super.render(gui, mouseX, mouseY, partialTick);
+        gui.drawCenteredString(this.font, Component.literal(redJoinText).withStyle(ChatFormatting.GOLD), redX + flagWidth / 2, redY + flagHeight + 10, redJoinColor);
+        gui.drawCenteredString(this.font, Component.literal(redTeamName).withStyle(redFull ? ChatFormatting.DARK_GRAY : ChatFormatting.RED), redX + flagWidth / 2, redY - 15, redFull ? 0x555555 : 16777215);
+        gui.drawCenteredString(this.font, Component.literal(ClientData.RED_PLAYER_COUNT + " players").withStyle(redFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY), redX + flagWidth / 2, redY + flagHeight + 24, redFull ? 0x555555 : 0xAAAAAA);
+        super.render(gui, mouseX, mouseY, partialTick);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -138,7 +138,6 @@ public class TeamSelectionScreen extends Screen {
     }
 
     public void onClose() {
-       ClientData.teamScreenLastClosed = System.currentTimeMillis();
        super.onClose();
     }
 

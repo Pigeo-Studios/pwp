@@ -942,13 +942,13 @@ public class WarfareOverlay {
             gui.fill(redX, topOffset, redX + boxWidth, topOffset + boxHeight, -859032781);
          }
 
-         String redText = String.valueOf(ClientData.RED_TICKETS);
-         int redTextColor = ClientData.redBleeding ? (blinkOn ? alarmRed : normalWhite) : normalWhite;
-         int redTextX = redX + (boxWidth - mc.font.width(redText)) / 2;
-         int redTextY = topOffset + (boxHeight - 8) / 2;
-         drawOutlinedString(gui, mc, redText, redTextX, redTextY, redTextColor);
-      }
-   }
+          String redText = String.valueOf(ClientData.RED_TICKETS);
+          int redTextColor = ClientData.redBleeding ? (blinkOn ? alarmRed : normalWhite) : normalWhite;
+          int redTextX = redX + (boxWidth - mc.font.width(redText)) / 2;
+          int redTextY = topOffset + (boxHeight - 8) / 2;
+          drawOutlinedString(gui, mc, redText, redTextX, redTextY, redTextColor);
+       }
+    }
 
    private static void drawOutlinedString(GuiGraphics gui, Minecraft mc, String text, int x, int y, int color) {
       int black = -16777216;

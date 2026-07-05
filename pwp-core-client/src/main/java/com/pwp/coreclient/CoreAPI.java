@@ -40,7 +40,10 @@ public class CoreAPI {
     }
 
     public static JsonObject saveStats(String uuid, JsonObject stats) {
-        return post("/api/v1/player/save", map("uuid", uuid, "stats", stats));
+        JsonObject body = new JsonObject();
+        body.addProperty("uuid", uuid);
+        body.add("stats", stats);
+        return post("/api/v1/player/save", body);
     }
 
     public static JsonObject addCurrency(String uuid, long amount, String reason) {
