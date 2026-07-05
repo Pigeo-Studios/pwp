@@ -1774,9 +1774,10 @@ public class GameLogicEvents {
 
         String winner = blueWon ? "BLUE" : "RED";
 
-        // Capture match stats snapshot before finalizeMatch resets the tracker
+        // Capture stats snapshot + duration BEFORE finalizeMatch resets the tracker
         java.util.Map<String, com.pigeostudios.pwp.warfare.stats.PlayerMatchStats> matchStatsSnapshot
             = new java.util.HashMap<>(MatchStatsTracker.get().getAllPlayers());
+        int matchDurationSec = (int) ((System.currentTimeMillis() - MatchStatsTracker.get().getStartedAt()) / 1000);
 
         MatchStatsTracker.get().finalizeMatch(winner, data.blueTickets, data.redTickets);
 
@@ -1803,23 +1804,25 @@ public class GameLogicEvents {
        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
 
        // Send personalized victory packets with per-player match stats
-       int durationSec = (int) ((System.currentTimeMillis() - com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().getStartedAt()) / 1000);
-
        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
            String uuid = player.getStringUUID();
            com.pigeostudios.pwp.warfare.stats.PlayerMatchStats ps = matchStatsSnapshot.get(uuid);
            if (ps == null) {
                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, durationSec));
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, matchDurationSec));
            } else {
                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
                        ps.kills, ps.deaths, ps.assists,
                        ps.vehicleKills, ps.vehiclesDestroyed, ps.airVehiclesDestroyed,
-                       ps.captures, ps.revives, ps.headshots, ps.score, durationSec));
+                       ps.captures, ps.revives, ps.headshots, ps.score, matchDurationSec));
            }
        }
+
+       // Give players 3 minutes to view VictoryScreen, then transfer + shutdown
+       com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.scheduleServerShutdown(180);
+
        Scoreboard scoreboard = level.getScoreboard();
        PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
        PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");

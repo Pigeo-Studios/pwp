@@ -242,11 +242,10 @@ public class StatsScreen extends Screen {
 
         y = drawPanel(gui, leftX, y, panelW, "\u2694 BATTLE", new String[][]{
             {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
-            {"K/D", formatKd(st), "Assists", intVal(st, "assists")},
+            {"K/D", formatKd(st), "Revives", intVal(st, "revives")},
             {"Vehicle Kills", intVal(st, "vehicle_kills"), "Captures", intVal(st, "captures")},
             {"Headshots", intVal(st, "headshots"), "Best Streak", intVal(st, "best_kill_streak")},
-            {"TeamKills", intVal(st, "team_kills"), "Hub Destr.", intVal(st, "hub_destructions")},
-            {"Base Defends", intVal(st, "base_defends"), "", ""},
+            {"TeamKills", intVal(st, "team_kills"), "", ""},
         });
         y += 5;
 
@@ -268,7 +267,6 @@ public class StatsScreen extends Screen {
             {"Losses", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Playtime", formatPlaytime(st), "Kills/Match", formatKpg(st)},
             {"Best WinStreak", intVal(st, "best_win_streak"), "Curr. Streak", intVal(st, "current_win_streak")},
-            {"MVP", intVal(st, "match_mvp_count"), "", ""},
         });
         // content bottom at scrollOffset=0, add generous margin
         scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 8 - clipY - clipH);

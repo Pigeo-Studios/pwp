@@ -137,7 +137,7 @@ public class VictoryScreen extends Screen {
          int colGap = 70;
          drawStat(gui, "\u2694 Kills", String.valueOf(matchKills), statsX + 6, row1, colGap, pLabel, pAccent);
          drawStat(gui, "\u2620 Deaths", String.valueOf(matchDeaths), statsX + 6 + colGap, row1, colGap, pLabel, pText);
-         drawStat(gui, "\u2605 Assists", String.valueOf(matchAssists), statsX + 6 + colGap * 2, row1, colGap, pLabel, pText);
+         drawStat(gui, "\u2605 Revives", String.valueOf(matchRevives), statsX + 6 + colGap * 2, row1, colGap, pLabel, pText);
 
          int row2 = row1 + 11;
          drawStat(gui, "\u2699 K/D", matchDeaths == 0 ? String.valueOf(matchKills) : String.format("%.2f", (double) matchKills / matchDeaths),

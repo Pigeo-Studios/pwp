@@ -329,23 +329,32 @@ public class MatchStatsTracker {
             log.info("pwp_core_client not installed, skipping match save");
         }
 
-        // Transfer all players back to lobby then shut down
+        reset();
+    }
+
+    public static void scheduleServerShutdown(int delaySeconds) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
-            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                player.sendSystemMessage(
-                        Component.literal("§e[PWP] Returning to lobby..."), false);
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.PLAYER.with(() -> player),
-                        new ConnectToServerPacket("127.0.0.1", 25565));
-            }
             server.execute(() -> {
-                try { Thread.sleep(3000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                try {
+                    // Wait for players to view VictoryScreen
+                    Thread.sleep(delaySeconds * 1000L);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                // Transfer all players back to lobby
+                for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                    player.sendSystemMessage(
+                            Component.literal("§e[PWP] Returning to lobby..."), false);
+                    PacketHandler.INSTANCE.send(
+                            PacketDistributor.PLAYER.with(() -> player),
+                            new ConnectToServerPacket("127.0.0.1", 25565));
+                }
+                // Small delay then shutdown
+                try { Thread.sleep(2000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
                 server.halt(false);
             });
         }
-
-        reset();
     }
 
     public long getStartedAt() {
