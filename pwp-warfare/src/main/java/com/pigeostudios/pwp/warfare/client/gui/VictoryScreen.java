@@ -155,7 +155,7 @@ public class VictoryScreen extends Screen {
          rowY += rowH;
 
          drawStat(gui, "Captures", String.valueOf(matchCaptures), statsX + 6, rowY, labelW, valW, pLabel, pText);
-         drawStat(gui, "Headshots", String.valueOf(matchHeadshots), statsX + 6 + cw, rowY, labelW, valW, pLabel, pText);
+         drawStat(gui, "", "", statsX + 6 + cw, rowY, labelW, valW, pLabel, pText);
          drawStat(gui, "", "", statsX + 6 + cw * 2, rowY, labelW, valW, pLabel, pText);
 
          RenderSystem.disableBlend();

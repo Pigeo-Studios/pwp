@@ -128,19 +128,9 @@ public class MatchStatsTracker {
         getOrCreate(dealer).recordDamage(damage);
     }
 
-    public void recordShot(ServerPlayer shooter, ServerPlayer victim, boolean hit) {
-        if (!active) return;
-        getOrCreate(shooter).recordShot(hit);
-    }
-
     public void recordHealing(ServerPlayer healer, double amount) {
         if (!active) return;
         getOrCreate(healer).recordHealing(amount);
-    }
-
-    public void recordHeadshot(ServerPlayer shooter) {
-        if (!active) return;
-        getOrCreate(shooter).recordHeadshot();
     }
 
     public void recordVehicleDestroyed(ServerPlayer destroyer, Entity vehicle) {
@@ -207,8 +197,6 @@ public class MatchStatsTracker {
             p.addProperty("vehicleKills", ps.vehicleKills);
             p.addProperty("captures", ps.captures);
             p.addProperty("revives", ps.revives);
-            p.addProperty("shotsFired", ps.shotsFired);
-            p.addProperty("shotsHit", ps.shotsHit);
             p.addProperty("damageDealt", ps.damageDealt);
             p.addProperty("healingDone", ps.healingDone);
             p.addProperty("suppliesDelivered", ps.suppliesDelivered);
@@ -218,7 +206,6 @@ public class MatchStatsTracker {
             p.addProperty("wasSquadLeader", ps.wasSquadLeader);
             p.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
             p.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
-            p.addProperty("headshots", ps.headshots);
             p.addProperty("teamKills", ps.teamKills);
             p.addProperty("survivalTime", ps.survivalTime);
             playersArr.add(p);
@@ -245,7 +232,7 @@ public class MatchStatsTracker {
                         JsonObject rewardResult = CoreAPI.calculateRewards(
                             ps.uuid, ps.team, winner,
                             ps.kills, 0, ps.vehicleKills,
-                            ps.captures, ps.revives, ps.headshots,
+                            ps.captures, ps.revives, 0,
                             durationSec / 60
                         );
 
@@ -258,10 +245,10 @@ public class MatchStatsTracker {
                         }
                     } catch (Exception e) {
                         xp = ps.kills * 50L + ps.vehicleKills * 150L
-                            + ps.captures * 100L + ps.revives * 75L + ps.headshots * 25L
+                            + ps.captures * 100L + ps.revives * 75L
                             + durationSec / 60 * 10L;
                         coins = ps.kills * 10L + ps.vehicleKills * 30L
-                            + ps.captures * 25L + ps.revives * 15L + ps.headshots * 5L;
+                            + ps.captures * 25L + ps.revives * 15L;
                         if (isWin) { xp += 200; coins += 50; }
                         else { xp += 100; coins += 20; }
                     }
@@ -276,8 +263,6 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("wins", isWin ? 1 : 0);
                     statsDelta.addProperty("losses", isWin ? 0 : 1);
                     statsDelta.addProperty("playtimeSeconds", durationSec);
-                    statsDelta.addProperty("shotsFired", ps.shotsFired);
-                    statsDelta.addProperty("shotsHit", ps.shotsHit);
                     statsDelta.addProperty("revives", ps.revives);
                     statsDelta.addProperty("vehicleKills", ps.vehicleKills);
                     statsDelta.addProperty("captures", ps.captures);
@@ -291,7 +276,6 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
                     statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
                     statsDelta.addProperty("teamKills", ps.teamKills);
-                    statsDelta.addProperty("headshots", ps.headshots);
                     JsonObject saveResult = CoreAPI.saveStats(ps.uuid, statsDelta);
                     if (saveResult != null) {
                         log.info("Stats saved for {}: {}k/{}d/{}v/{}vd/{}ad/{}pt",

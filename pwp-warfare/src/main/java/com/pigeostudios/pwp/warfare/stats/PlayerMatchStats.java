@@ -13,8 +13,6 @@ public class PlayerMatchStats {
     public int vehicleKills;
     public int captures;
     public int revives;
-    public int shotsFired;
-    public int shotsHit;
     public double damageDealt;
     public double healingDone;
     public int suppliesDelivered;
@@ -32,7 +30,6 @@ public class PlayerMatchStats {
     public int vehiclesDestroyed;
     public int airVehiclesDestroyed;
     public int teamKills;
-    public int headshots;
 
     public long survivalTime;
 
@@ -77,11 +74,6 @@ public class PlayerMatchStats {
         healingDone += heal;
     }
 
-    public void recordShot(boolean hit) {
-        shotsFired++;
-        if (hit) shotsHit++;
-    }
-
     public void recordVehicleDestroyed(boolean isAir) {
         vehiclesDestroyed++;
         if (isAir) airVehiclesDestroyed++;
@@ -90,15 +82,6 @@ public class PlayerMatchStats {
 
     public void recordTeamKillStat() {
         teamKills++;
-    }
-
-    public void recordHeadshot() {
-        headshots++;
-        score += 25;
-    }
-
-    public double getAccuracy() {
-        return shotsFired == 0 ? 0 : (double) shotsHit / shotsFired;
     }
 
     public double getKD() {

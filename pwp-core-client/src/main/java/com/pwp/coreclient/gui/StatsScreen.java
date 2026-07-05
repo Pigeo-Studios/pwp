@@ -245,8 +245,7 @@ public class StatsScreen extends Screen {
             {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
             {"K/D", formatKd(st), "Revives", intVal(st, "revives")},
             {"Vehicle Kills", intVal(st, "vehicleKills"), "Captures", intVal(st, "captures")},
-            {"Headshots", intVal(st, "headshots"), "Best Streak", intVal(st, "bestKillStreak")},
-            {"TeamKills", intVal(st, "teamKills"), "", ""},
+            {"Best Streak", intVal(st, "bestKillStreak"), "TeamKills", intVal(st, "teamKills")},
         });
         y += 5;
 
@@ -256,10 +255,8 @@ public class StatsScreen extends Screen {
         y += 5;
 
         y = drawPanel(gui, leftX, y, panelW, "\u2316 WEAPONS", new String[][]{
-            {"Shots Fired", intVal(st, "shotsFired"), "Shots Hit", intVal(st, "shotsHit")},
-            {"Accuracy", formatAccuracy(st), "Damage", doubleVal(st, "damageDealt")},
-            {"Healing", doubleVal(st, "healingDone"), "Supplies", intVal(st, "suppliesDelivered")},
-            {"Longest Kill", doubleVal(st, "longestKill") + "m", "", ""},
+            {"Damage", doubleVal(st, "damageDealt"), "Healing", doubleVal(st, "healingDone")},
+            {"Supplies", intVal(st, "suppliesDelivered"), "Longest Kill", doubleVal(st, "longestKill") + "m"},
         });
         y += 5;
 
@@ -457,14 +454,6 @@ public class StatsScreen extends Screen {
         int d = obj.has("deaths") ? obj.get("deaths").getAsInt() : 0;
         if (d == 0) return String.format("%.2f", (double) k);
         return String.format("%.2f", (double) k / d);
-    }
-
-    private String formatAccuracy(JsonObject obj) {
-        if (obj == null) return "0%";
-        int f = obj.has("shotsFired") ? obj.get("shotsFired").getAsInt() : 0;
-        int h = obj.has("shotsHit") ? obj.get("shotsHit").getAsInt() : 0;
-        if (f == 0) return "0%";
-        return String.format("%.1f%%", (double) h / f * 100);
     }
 
     private String formatWins(JsonObject obj) {

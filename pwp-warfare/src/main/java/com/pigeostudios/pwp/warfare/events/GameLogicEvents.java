@@ -446,22 +446,7 @@ public class GameLogicEvents {
                    }
 
                      if (globalTick % 40 == 0) {
-                        // Track last damager for non-LivingEntity vehicles
-                        // Check if any player is looking at or near these vehicles
-                        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
-                           net.minecraft.world.phys.EntityHitResult hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
-                              player, player.getEyePosition(), player.getEyePosition().add(player.getLookAngle().scale(8)),
-                              player.getBoundingBox().inflate(8),
-                              e -> e.getPersistentData().contains("WARFARE_TicketPenalty")
-                                   && !(e instanceof LivingEntity),
-                              8.0);
-                           if (hit != null) {
-                              Entity target = hit.getEntity();
-                              target.getPersistentData().putString("WARFARE_LastDamager", player.getStringUUID());
-                           }
-                        }
-
-                        List<Entity> wrecksToProcess = new ArrayList<>();
+                         List<Entity> wrecksToProcess = new ArrayList<>();
                         for (WarfareWorldData.VehicleRecord record : data.markedVehicles) {
                            Entity vehicle = level.getEntity(record.uuid);
                            if (vehicle != null && vehicle.isAlive()
@@ -1361,21 +1346,8 @@ public class GameLogicEvents {
                         && killer.getTeam().isAlliedTo(victim.getTeam());
 
                 if (!victim.getPersistentData().getBoolean("WARFARE_IsDowned") && isTeamkill) {
-                   DownedHandler.handleTeamkill(killer);
+                    DownedHandler.handleTeamkill(killer);
                 }
-
-                 // Headshot detection
-                 if (!isTeamkill) {
-                    Entity directEntity = event.getSource().getDirectEntity();
-                    double hitY = directEntity != null ? directEntity.getY() : killer.getY();
-                    double victimHeadY = victim.getY() + victim.getEyeHeight();
-                    if (Math.abs(hitY - victimHeadY) < 0.35) {
-                       MatchStatsTracker.get().recordHeadshot(killer);
-                    }
-                 }
-
-                 // Track shot (killing blow counts as a hit)
-                 MatchStatsTracker.get().recordShot(killer, victim, true);
 
                  if (isTeamkill) {
                     MatchStatsTracker.get().recordTeamKill(killer, victim);
@@ -1860,7 +1832,7 @@ public class GameLogicEvents {
                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
                        ps.kills, ps.deaths,
                        ps.vehicleKills, ps.vehiclesDestroyed, ps.airVehiclesDestroyed,
-                       ps.captures, ps.revives, ps.headshots, ps.score, matchDurationSec));
+                       ps.captures, ps.revives, 0, ps.score, matchDurationSec));
            }
        }
        } catch (Exception e) {
