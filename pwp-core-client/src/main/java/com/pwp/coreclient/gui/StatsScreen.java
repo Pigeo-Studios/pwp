@@ -514,25 +514,27 @@ public class StatsScreen extends Screen {
         double damage, healing, kd, winRate;
 
         LeaderboardEntry(JsonObject obj) {
-            uuid = get(obj, "uuid", "");
-            nickname = get(obj, "nickname", "");
-            kills = get(obj, "kills", 0);
-            deaths = get(obj, "deaths", 0);
-            assists = get(obj, "assists", 0);
-            wins = get(obj, "wins", 0);
-            vehicleKills = get(obj, "vehicleKills", 0);
-            captures = get(obj, "captures", 0);
-            headshots = get(obj, "headshots", 0);
-            vehiclesDestroyed = get(obj, "vehiclesDestroyed", 0);
-            airVehiclesDestroyed = get(obj, "airVehiclesDestroyed", 0);
-            hubDestructions = get(obj, "hubDestructions", 0);
+            JsonObject p = obj.has("player") ? obj.getAsJsonObject("player") : obj;
+            JsonObject st = obj.has("stats") ? obj.getAsJsonObject("stats") : obj;
+            uuid = get(p, "uuid", "");
+            nickname = get(p, "nickname", "");
+            kills = get(st, "kills", 0);
+            deaths = get(st, "deaths", 0);
+            assists = get(st, "assists", 0);
+            wins = get(st, "wins", 0);
+            vehicleKills = get(st, "vehicleKills", 0);
+            captures = get(st, "captures", 0);
+            headshots = get(st, "headshots", 0);
+            vehiclesDestroyed = get(st, "vehiclesDestroyed", 0);
+            airVehiclesDestroyed = get(st, "airVehiclesDestroyed", 0);
+            hubDestructions = get(st, "hubDestructions", 0);
             level = get(obj, "level", 0);
-            matchesPlayed = get(obj, "matchesPlayed", 0);
-            playtime = getLong(obj, "playtimeSeconds");
-            damage = getDouble(obj, "damageDealt");
-            healing = getDouble(obj, "healingDone");
+            matchesPlayed = get(st, "matchesPlayed", 0);
+            playtime = getLong(st, "playtimeSeconds");
+            damage = getDouble(st, "damageDealt");
+            healing = getDouble(st, "healingDone");
+            int totalGames = wins + get(st, "losses", 0);
             kd = deaths == 0 ? kills : Math.round((double) kills / deaths * 100.0) / 100.0;
-            int totalGames = wins + get(obj, "losses", 0);
             winRate = totalGames == 0 ? 0 : Math.round((double) wins / totalGames * 1000.0) / 10.0;
         }
 

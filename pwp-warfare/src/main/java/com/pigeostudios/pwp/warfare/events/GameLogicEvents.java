@@ -1384,12 +1384,15 @@ public class GameLogicEvents {
                     MatchStatsTracker.get().recordKill(killer, victim, weapon, dist);
                  }
 
-             // Убийство техникой
-             } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                List<Entity> passengers = sourceEntity.getPassengers();
-                if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
-                   MatchStatsTracker.get().recordVehicleKill(driver);
-                }
+              // Убийство техникой
+              } else if (sourceEntity != null && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                 List<Entity> passengers = sourceEntity.getPassengers();
+                 if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
+                    MatchStatsTracker.get().recordVehicleKill(driver);
+                 }
+                 // Record victim death for vehicle kills
+                 MatchStatsTracker.get().recordDeath(victim);
+                 MatchStatsTracker.get().getOrCreate(victim).recordDeath();
 
              // Смерть через downed system (forceGiveUp/bleed out)
              } else {
