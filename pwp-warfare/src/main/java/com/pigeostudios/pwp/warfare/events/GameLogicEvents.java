@@ -445,23 +445,47 @@ public class GameLogicEvents {
                       }
                    }
 
-                    if (globalTick % 40 == 0) {
-                       List<Entity> wrecksToProcess = new ArrayList<>();
-                       for (WarfareWorldData.VehicleRecord record : data.markedVehicles) {
-                          Entity vehicle = level.getEntity(record.uuid);
-                          if (vehicle != null && vehicle.isAlive()
-                             && !(vehicle instanceof LivingEntity)
-                             && vehicle.getPersistentData().contains("WARFARE_TicketPenalty")) {
-                             float health = getVehicleHealth(vehicle);
-                             if (health <= 0.0F) {
-                                wrecksToProcess.add(vehicle);
-                             }
-                          }
-                       }
-                       for (Entity wreck : wrecksToProcess) {
-                          processWreckLoss(wreck, data, level);
-                       }
-                    }
+                     if (globalTick % 40 == 0) {
+                        // Track last damager for non-LivingEntity vehicles
+                        // Check if any player is looking at or near these vehicles
+                        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
+                           net.minecraft.world.phys.EntityHitResult hit = net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
+                              player, player.getEyePosition(), player.getEyePosition().add(player.getLookAngle().scale(8)),
+                              player.getBoundingBox().inflate(8),
+                              e -> e.getPersistentData().contains("WARFARE_TicketPenalty")
+                                   && !(e instanceof LivingEntity),
+                              8.0);
+                           if (hit != null) {
+                              Entity target = hit.getEntity();
+                              target.getPersistentData().putString("WARFARE_LastDamager", player.getStringUUID());
+                           }
+                        }
+
+                        List<Entity> wrecksToProcess = new ArrayList<>();
+                        for (WarfareWorldData.VehicleRecord record : data.markedVehicles) {
+                           Entity vehicle = level.getEntity(record.uuid);
+                           if (vehicle != null && vehicle.isAlive()
+                              && !(vehicle instanceof LivingEntity)
+                              && vehicle.getPersistentData().contains("WARFARE_TicketPenalty")) {
+                              float health = getVehicleHealth(vehicle);
+                              if (health <= 0.0F) {
+                                 wrecksToProcess.add(vehicle);
+                              }
+                           }
+                        }
+                        for (Entity wreck : wrecksToProcess) {
+                           // Try to track destruction before processing
+                           if (!(wreck instanceof LivingEntity)
+                               && wreck.getPersistentData().contains("WARFARE_LastDamager")) {
+                              String lastUuid = wreck.getPersistentData().getString("WARFARE_LastDamager");
+                              Entity lastPlayer = level.getEntity(java.util.UUID.fromString(lastUuid));
+                              if (lastPlayer instanceof ServerPlayer destroyer) {
+                                 MatchStatsTracker.get().recordVehicleDestroyed(destroyer, wreck);
+                              }
+                           }
+                           processWreckLoss(wreck, data, level);
+                        }
+                     }
                 }
 
                if (globalTick % 200 == 0) {
@@ -1790,6 +1814,7 @@ public class GameLogicEvents {
    }
 
     private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
+       try {
         data.isGameStarted = false;
         data.setDirty();
 
@@ -1806,25 +1831,20 @@ public class GameLogicEvents {
        String winnerFaction;
        if (blueWon) {
           winnerFaction = data.blueFaction;
-          winnerName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("bluefor")
-             ? formatFactionName(winnerFaction)
-             : (String)WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get();
-          if (winnerName.isEmpty()) {
-             winnerName = "BLUE TEAM";
-          }
+          String factionName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("bluefor")
+             ? formatFactionName(winnerFaction) : null;
+          winnerName = factionName != null ? factionName : WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get().toString();
+          if (winnerName.isEmpty()) winnerName = "BLUE TEAM";
        } else {
           winnerFaction = data.redFaction;
-          winnerName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("redfor")
-             ? formatFactionName(winnerFaction)
-             : (String)WarfareConfig.RED_TEAM_CUSTOM_NAME.get();
-          if (winnerName.isEmpty()) {
-             winnerName = "RED TEAM";
-          }
+          String factionName = winnerFaction != null && !winnerFaction.equals("none") && !winnerFaction.equals("redfor")
+             ? formatFactionName(winnerFaction) : null;
+          winnerName = factionName != null ? factionName : WarfareConfig.RED_TEAM_CUSTOM_NAME.get().toString();
+          if (winnerName.isEmpty()) winnerName = "RED TEAM";
        }
 
        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
 
-       // Send personalized victory packets with per-player match stats
        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
            String uuid = player.getStringUUID();
            com.pigeostudios.pwp.warfare.stats.PlayerMatchStats ps = matchStatsSnapshot.get(uuid);
@@ -1840,9 +1860,9 @@ public class GameLogicEvents {
                        ps.captures, ps.revives, ps.headshots, ps.score, matchDurationSec));
            }
        }
-
-       // Give players 3 minutes to view VictoryScreen, then transfer + shutdown
-       com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.scheduleServerShutdown(180);
+       } catch (Exception e) {
+           org.slf4j.LoggerFactory.getLogger("executeVictory").error("Error in victory sequence: {}", e.getMessage(), e);
+       }
 
        Scoreboard scoreboard = level.getScoreboard();
        PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");

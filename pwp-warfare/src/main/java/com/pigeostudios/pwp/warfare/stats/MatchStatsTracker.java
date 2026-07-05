@@ -329,6 +329,7 @@ public class MatchStatsTracker {
             log.info("pwp_core_client not installed, skipping match save");
         }
 
+        scheduleServerShutdown(180);
         reset();
     }
 
