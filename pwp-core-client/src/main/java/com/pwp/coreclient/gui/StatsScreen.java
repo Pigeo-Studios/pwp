@@ -226,11 +226,22 @@ public class StatsScreen extends Screen {
             total = cachedRank.get("total").getAsInt();
         }
 
+        // Compute total content height at scrollOffset=0
+        int headerH = 28;
+        int[] panelHs = {
+            calcPanelH(6),  // BATTLE
+            5 + calcPanelH(1),  // VEHICLES
+            5 + calcPanelH(4),  // WEAPONS
+            calcPanelH(5)   // MATCHES
+        };
+        int totalContent = 4 + headerH + panelHs[0] + panelHs[1] + panelHs[2] + panelHs[3];
+        scrollMax = Math.max(0, totalContent - clipH);
+
         int y = clipY + 4 - (int) scrollOffset;
         String rankStr = rank > 0 ? "\u00a7e#" + rank + "\u00a77 of " + total : "\u00a77--";
         gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 2, y, 0xFFFFFF);
         gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matches_played"), leftX + 2, y + 12, 0x7A7D84);
-        y += 28;
+        y += headerH;
 
         y = drawPanel(gui, leftX, y, panelW, "\u2694 BATTLE", new String[][]{
             {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
@@ -255,15 +266,17 @@ public class StatsScreen extends Screen {
         });
         y += 5;
 
-        y = drawPanel(gui, leftX, y, panelW, "\u2691 MATCHES", new String[][]{
+        drawPanel(gui, leftX, y, panelW, "\u2691 MATCHES", new String[][]{
             {"Played", intVal(st, "matches_played"), "Wins", intVal(st, "wins")},
             {"Losses", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Playtime", formatPlaytime(st), "Kills/Match", formatKpg(st)},
             {"Best WinStreak", intVal(st, "best_win_streak"), "Curr. Streak", intVal(st, "current_win_streak")},
             {"MVP", intVal(st, "match_mvp_count"), "", ""},
         });
+    }
 
-        scrollMax = Math.max(0, y + 20 - clipY - clipH);
+    private int calcPanelH(int rows) {
+        return 14 + rows * 11 + 4;
     }
 
     private int drawPanel(GuiGraphics gui, int x, int y, int w, String title, String[][] rows) {
@@ -355,8 +368,12 @@ public class StatsScreen extends Screen {
         int rankOffset = lbPage * 10;
         int rowH = 13;
 
-        int totalH = rowY + lbEntries.size() * rowH + 20;
-        scrollMax = Math.max(0, totalH - clipY - clipH);
+        // scrollMax based on content height at scrollOffset=0
+        int catsH = catY + 18 - clipY - 4;
+        int headerH = 15;
+        int listH = lbEntries.size() * rowH + 20;
+        int totalContent = 4 + catsH + headerH + listH;
+        scrollMax = Math.max(0, totalContent - clipH);
 
         for (int i = 0; i < lbEntries.size(); i++) {
             LeaderboardEntry e = lbEntries.get(i);
