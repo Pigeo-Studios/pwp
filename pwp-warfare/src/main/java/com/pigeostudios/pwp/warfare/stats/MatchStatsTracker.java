@@ -314,6 +314,10 @@ public class MatchStatsTracker {
         reset();
     }
 
+    public long getStartedAt() {
+        return startedAt;
+    }
+
     public Map<String, PlayerMatchStats> getAllPlayers() {
         return players;
     }

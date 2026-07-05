@@ -1798,13 +1798,7 @@ public class GameLogicEvents {
        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
 
        // Send personalized victory packets with per-player match stats
-       int durationSec = matchStatsSnapshot.values().stream().findFirst()
-           .map(ps -> 0).orElse(0);
-       // Calculate duration from server if possible, otherwise 0
-       try {
-           net.minecraft.server.MinecraftServer srv = level.getServer();
-           if (srv != null) durationSec = (int)(srv.overworld().getGameTime() / 20);
-       } catch (Exception ignored) {}
+       int durationSec = (int) ((System.currentTimeMillis() - com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().getStartedAt()) / 1000);
 
        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
            String uuid = player.getStringUUID();
