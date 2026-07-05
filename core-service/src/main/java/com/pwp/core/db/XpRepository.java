@@ -26,6 +26,18 @@ public class XpRepository {
         Connection c = DatabaseManager.getConnection();
         c.setAutoCommit(false);
         try {
+            // Ensure player exists (creates players + player_xp rows if missing)
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT IGNORE INTO players (uuid, nickname) VALUES (?, 'unknown')")) {
+                ps.setString(1, uuid);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = c.prepareStatement(
+                    "INSERT IGNORE INTO player_xp (uuid) VALUES (?)")) {
+                ps.setString(1, uuid);
+                ps.executeUpdate();
+            }
+
             PreparedStatement ps = c.prepareStatement(
                     "UPDATE player_xp SET xp = xp + ? WHERE uuid = ?");
             ps.setLong(1, amount);

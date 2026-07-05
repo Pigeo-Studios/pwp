@@ -17,6 +17,12 @@ public class CurrencyRepository {
     }
 
     public static boolean add(String uuid, long amount) throws SQLException {
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "INSERT IGNORE INTO player_currency (uuid) VALUES (?)")) {
+            ps.setString(1, uuid);
+            ps.executeUpdate();
+        }
         String sql = "UPDATE player_currency SET coins = coins + ?, total_earned = total_earned + ? WHERE uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {

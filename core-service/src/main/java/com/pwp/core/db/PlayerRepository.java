@@ -56,7 +56,20 @@ public class PlayerRepository {
         return null;
     }
 
+    public static void ensurePlayerExists(String uuid) throws SQLException {
+        String sql = "INSERT IGNORE INTO players (uuid, nickname) VALUES (?, 'unknown')";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, uuid);
+            ps.executeUpdate();
+        }
+        ensureRowExists(uuid, "player_stats");
+        ensureRowExists(uuid, "player_currency");
+        ensureRowExists(uuid, "player_xp");
+    }
+
     public static void updateStats(String uuid, PlayerStats delta) throws SQLException {
+        ensurePlayerExists(uuid);
         String sql = "UPDATE player_stats SET "
                 + "kills = kills + ?, deaths = deaths + ?, "
                 + "wins = wins + ?, losses = losses + ?, "
