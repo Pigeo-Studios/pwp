@@ -1757,6 +1757,11 @@ public class GameLogicEvents {
         data.setDirty();
 
         String winner = blueWon ? "BLUE" : "RED";
+
+        // Capture match stats snapshot before finalizeMatch resets the tracker
+        java.util.Map<String, com.pigeostudios.pwp.warfare.stats.PlayerMatchStats> matchStatsSnapshot
+            = new java.util.HashMap<>(MatchStatsTracker.get().getAllPlayers());
+
         MatchStatsTracker.get().finalizeMatch(winner, data.blueTickets, data.redTickets);
 
         String winnerName;
@@ -1780,7 +1785,31 @@ public class GameLogicEvents {
        }
 
        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
-       PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon));
+
+       // Send personalized victory packets with per-player match stats
+       int durationSec = matchStatsSnapshot.values().stream().findFirst()
+           .map(ps -> 0).orElse(0);
+       // Calculate duration from server if possible, otherwise 0
+       try {
+           net.minecraft.server.MinecraftServer srv = level.getServer();
+           if (srv != null) durationSec = (int)(srv.overworld().getGameTime() / 20);
+       } catch (Exception ignored) {}
+
+       for (net.minecraft.server.level.ServerPlayer player : level.players()) {
+           String uuid = player.getStringUUID();
+           com.pigeostudios.pwp.warfare.stats.PlayerMatchStats ps = matchStatsSnapshot.get(uuid);
+           if (ps == null) {
+               PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                   new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
+                       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, durationSec));
+           } else {
+               PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                   new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
+                       ps.kills, ps.deaths, ps.assists,
+                       ps.vehicleKills, ps.vehiclesDestroyed, ps.airVehiclesDestroyed,
+                       ps.captures, ps.revives, ps.headshots, ps.score, durationSec));
+           }
+       }
        Scoreboard scoreboard = level.getScoreboard();
        PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
        PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
