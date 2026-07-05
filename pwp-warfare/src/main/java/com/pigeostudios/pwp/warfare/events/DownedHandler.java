@@ -39,8 +39,14 @@ import net.minecraftforge.registries.ForgeRegistries;
 // РЈРїСЂР°РІР»СЏРµС‚ РЅРѕРєР°СѓС‚РѕРј РёРіСЂРѕРєРѕРІ, РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊСЋ РѕР¶РёРІР»РµРЅРёСЏ Рё РёСЃС‚РµС‡РµРЅРёРµРј РєСЂРѕРІРё
 public class DownedHandler {
    @SubscribeEvent
-   public static void onPlayerHurt(LivingHurtEvent event) {
-      if (event.getEntity() instanceof ServerPlayer player) {
+    public static void onPlayerHurt(LivingHurtEvent event) {
+       // Track damage dealt by a player to any living entity
+       if (event.getSource().getEntity() instanceof ServerPlayer attacker
+           && event.getSource().getEntity() != event.getEntity()) {
+          MatchStatsTracker.get().recordDamage(attacker, event.getAmount());
+       }
+
+       if (event.getEntity() instanceof ServerPlayer player) {
          if ((Boolean)WarfareConfig.ENABLE_KNOCKOUT.get()) {
             if (!event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
                if (!player.getPersistentData().getBoolean("WARFARE_GivingUp")) {

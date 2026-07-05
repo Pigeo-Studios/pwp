@@ -176,6 +176,48 @@ public class DatabaseManager {
                     + "('LOSS', 100, 20, 0), ('TIME_MINUTE', 10, 0, 0), ('HEADSHOT', 25, 5, 50), "
                     + "('TEAMKILL', -50, -10, -50)");
             log.info("Database tables verified");
+
+            // Migration: add missing columns to player_stats (safe, ignores duplicates)
+            String[] migrations = {
+                "ALTER TABLE player_stats ADD COLUMN assists INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN vehicle_kills INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN captures INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN damage_dealt DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN healing_done DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN supplies_delivered INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN longest_kill DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN best_kill_streak INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN matches_played INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN hub_destructions INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN base_defends INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN vehicles_destroyed INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN air_vehicles_destroyed INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN team_kills INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN match_mvp_count INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN current_win_streak INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN best_win_streak INT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN survival_time BIGINT NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN distance_traveled DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE player_stats ADD COLUMN headshots INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN assists INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN vehicle_kills INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN captures INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN revives INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN shots_fired INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN shots_hit INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN damage_dealt DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN healing_done DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN supplies_delivered INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN longest_kill DOUBLE NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN squad_id INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN was_squad_leader BOOLEAN NOT NULL DEFAULT FALSE",
+                "ALTER TABLE match_players ADD COLUMN vehicles_destroyed INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN air_vehicles_destroyed INT NOT NULL DEFAULT 0",
+                "ALTER TABLE match_players ADD COLUMN headshots INT NOT NULL DEFAULT 0"
+            };
+            for (String sql : migrations) {
+                try { s.execute(sql); } catch (Exception ignored) {}
+            }
         } catch (Exception e) {
             log.warn("Could not create tables (may already exist): {}", e.getMessage());
         }

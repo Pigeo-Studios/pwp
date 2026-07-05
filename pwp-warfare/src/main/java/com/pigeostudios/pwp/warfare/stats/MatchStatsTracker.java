@@ -133,6 +133,16 @@ public class MatchStatsTracker {
         getOrCreate(dealer).recordDamage(damage);
     }
 
+    public void recordShot(ServerPlayer shooter, ServerPlayer victim, boolean hit) {
+        if (!active) return;
+        getOrCreate(shooter).recordShot(hit);
+    }
+
+    public void recordHealing(ServerPlayer healer, double amount) {
+        if (!active) return;
+        getOrCreate(healer).recordHealing(amount);
+    }
+
     public void recordHeadshot(ServerPlayer shooter) {
         if (!active) return;
         getOrCreate(shooter).recordHeadshot();

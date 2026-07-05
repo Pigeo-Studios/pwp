@@ -1349,6 +1349,9 @@ public class GameLogicEvents {
                     }
                  }
 
+                 // Track shot (killing blow counts as a hit)
+                 MatchStatsTracker.get().recordShot(killer, victim, true);
+
                  if (isTeamkill) {
                     MatchStatsTracker.get().recordTeamKill(killer, victim);
                  } else {
