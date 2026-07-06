@@ -459,12 +459,27 @@ public class GameLogicEvents {
                            }
                         }
                         for (Entity wreck : wrecksToProcess) {
-                           // Try to track destruction before processing
-                           if (!(wreck instanceof LivingEntity)
-                               && wreck.getPersistentData().contains("WARFARE_LastDamager")) {
-                              String lastUuid = wreck.getPersistentData().getString("WARFARE_LastDamager");
-                              Entity lastPlayer = level.getEntity(java.util.UUID.fromString(lastUuid));
-                              if (lastPlayer instanceof ServerPlayer destroyer) {
+                           ServerPlayer destroyer = null;
+                           if (!(wreck instanceof LivingEntity)) {
+                              // Priority 1: WARFARE_LastDamager NBT tag (from ProjectileImpactEvent or LivingHurtEvent)
+                              if (wreck.getPersistentData().contains("WARFARE_LastDamager")) {
+                                 String lastUuid = wreck.getPersistentData().getString("WARFARE_LastDamager");
+                                 Entity lp = level.getEntity(java.util.UUID.fromString(lastUuid));
+                                 if (lp instanceof ServerPlayer sp) destroyer = sp;
+                              }
+                              // Priority 2: getLastDamageSource via reflection (for non-LivingEntity mod vehicles)
+                              if (destroyer == null) {
+                                 try {
+                                    Object lastSrc = wreck.getClass().getMethod("getLastDamageSource").invoke(wreck);
+                                    if (lastSrc instanceof net.minecraft.world.damagesource.DamageSource ds) {
+                                       Entity srcEnt = ds.getEntity();
+                                       if (srcEnt instanceof ServerPlayer sp) destroyer = sp;
+                                       else if (srcEnt instanceof net.minecraft.world.entity.projectile.Projectile proj
+                                                && proj.getOwner() instanceof ServerPlayer sp) destroyer = sp;
+                                    }
+                                 } catch (Exception ignored) {}
+                              }
+                              if (destroyer != null) {
                                  MatchStatsTracker.get().recordVehicleDestroyed(destroyer, wreck);
                               }
                            }
@@ -2114,6 +2129,23 @@ public class GameLogicEvents {
             playSirenForTeam(level, "Red");
             data.playedRedSiren = true;
             data.setDirty();
+         }
+      }
+   }
+
+   @SubscribeEvent
+   public static void onProjectileImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
+      if (event.getEntity().level().isClientSide) return;
+      if (event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit) {
+         Entity hitEntity = hit.getEntity();
+         if (hitEntity.getPersistentData().contains("WARFARE_TicketPenalty")) {
+            Entity projectile = event.getEntity();
+            if (projectile instanceof net.minecraft.world.entity.projectile.Projectile proj) {
+               Entity owner = proj.getOwner();
+               if (owner instanceof ServerPlayer shooter) {
+                  hitEntity.getPersistentData().putString("WARFARE_LastDamager", shooter.getStringUUID());
+               }
+            }
          }
       }
    }
