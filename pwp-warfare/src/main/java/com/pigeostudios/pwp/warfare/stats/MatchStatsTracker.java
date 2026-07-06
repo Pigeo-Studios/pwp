@@ -298,10 +298,13 @@ public class MatchStatsTracker {
 
     public static void scheduleServerShutdown(int delaySeconds) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
+        if (server == null) { log.error("scheduleServerShutdown: no server!"); return; }
+        log.info("scheduleServerShutdown: scheduling in {}s", delaySeconds);
         new Thread(() -> {
             try {
+                log.info("Shutdown thread sleeping {}s...", delaySeconds);
                 Thread.sleep((long) delaySeconds * 1000L);
+                log.info("Shutdown delay complete, transferring players...");
                 server.execute(() -> {
                     try {
                         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
