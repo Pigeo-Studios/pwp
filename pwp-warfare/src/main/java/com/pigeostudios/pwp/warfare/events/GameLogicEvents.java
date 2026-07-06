@@ -2118,23 +2118,6 @@ public class GameLogicEvents {
       }
    }
 
-   @SubscribeEvent
-   public static void onProjectileImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
-      if (event.getEntity().level().isClientSide) return;
-      if (event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit) {
-         Entity hitEntity = hit.getEntity();
-         if (hitEntity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-            Entity projectile = event.getEntity();
-            if (projectile instanceof net.minecraft.world.entity.projectile.Projectile proj) {
-               Entity owner = proj.getOwner();
-               if (owner instanceof ServerPlayer shooter) {
-                  hitEntity.getPersistentData().putString("WARFARE_LastDamager", shooter.getStringUUID());
-               }
-            }
-         }
-      }
-   }
-
    public static void enforceMortarShellLimit(PlayerTickEvent event) {
       if (event.phase == Phase.END && !event.player.level().isClientSide) {
          if (event.player.tickCount % 10 == 0) {
