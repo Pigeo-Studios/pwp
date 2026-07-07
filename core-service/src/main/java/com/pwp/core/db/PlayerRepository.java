@@ -5,6 +5,7 @@ import com.pwp.core.model.*;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.security.SecureRandom;
 
 public class PlayerRepository {
 
@@ -177,6 +178,385 @@ public class PlayerRepository {
         return list;
     }
 
+    // ── Account methods ──────────────────────────────
+
+    public static Player findByTelegramId(long telegramId) throws SQLException {
+        String sql = "SELECT * FROM players WHERE telegram_id = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, telegramId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapPlayer(rs);
+            }
+        }
+        return null;
+    }
+
+    public static Player findByLogin(String login) throws SQLException {
+        String sql = "SELECT * FROM players WHERE login = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, login);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapPlayer(rs);
+            }
+        }
+        return null;
+    }
+
+    public static Player findByEmail(String email) throws SQLException {
+        String sql = "SELECT * FROM players WHERE email = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapPlayer(rs);
+            }
+        }
+        return null;
+    }
+
+    public static Player findByNickname(String nickname) throws SQLException {
+        String sql = "SELECT * FROM players WHERE nickname = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, nickname);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapPlayer(rs);
+            }
+        }
+        return null;
+    }
+
+    public static Player register(String uuid, String nickname, String login, String email, String passwordHash, long telegramId) throws SQLException {
+        // Check if this nickname already exists — link account to existing player
+        Player existing = findByNickname(nickname);
+        if (existing != null) {
+            String sql = "UPDATE players SET login = ?, email = ?, password_hash = ?, telegram_id = ? WHERE uuid = ?";
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(sql)) {
+                ps.setString(1, login);
+                ps.setString(2, email);
+                ps.setString(3, passwordHash);
+                ps.setLong(4, telegramId);
+                ps.setString(5, existing.uuid);
+                ps.executeUpdate();
+            }
+            return findByUuid(existing.uuid);
+        }
+        String sql = "INSERT INTO players (uuid, nickname, login, email, password_hash, telegram_id) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, uuid);
+            ps.setString(2, nickname);
+            ps.setString(3, login);
+            ps.setString(4, email);
+            ps.setString(5, passwordHash);
+            ps.setLong(6, telegramId);
+            ps.executeUpdate();
+        }
+        ensureRowExists(uuid, "player_stats");
+        ensureRowExists(uuid, "player_currency");
+        ensureRowExists(uuid, "player_xp");
+        return findByUuid(uuid);
+    }
+
+    public static void updatePassword(String uuid, String newHash) throws SQLException {
+        String sql = "UPDATE players SET password_hash = ? WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, newHash);
+            ps.setString(2, uuid);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void updateLastLogin(String uuid, String ip) throws SQLException {
+        String sql = "UPDATE players SET last_join = CURRENT_TIMESTAMP, last_ip = ? WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, ip);
+            ps.setString(2, uuid);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void acceptPrivacy(String uuid) throws SQLException {
+        String sql = "UPDATE players SET privacy_policy_accepted = TRUE WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, uuid);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void toggle2fa(String uuid, boolean enabled) throws SQLException {
+        String sql = "UPDATE players SET launcher_2fa_enabled = ? WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setBoolean(1, enabled);
+            ps.setString(2, uuid);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void setBan(String uuid, boolean banned, String reason) throws SQLException {
+        String sql = "UPDATE players SET is_banned = ?, ban_reason = ? WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setBoolean(1, banned);
+            ps.setString(2, reason);
+            ps.setString(3, uuid);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void setRole(String uuid, String role) throws SQLException {
+        String sql = "UPDATE players SET role = ? WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, role);
+            ps.setString(2, uuid);
+            ps.executeUpdate();
+        }
+    }
+
+    // ── Trusted IPs ──────────────────────────────────
+
+    public static boolean isIpTrusted(String playerUuid, String ip) throws SQLException {
+        String sql = "SELECT 1 FROM trusted_ips WHERE player_uuid = ? AND ip = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, ip);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public static void trustIp(String playerUuid, String ip) throws SQLException {
+        String sql = "INSERT IGNORE INTO trusted_ips (player_uuid, ip) VALUES (?, ?)";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, ip);
+            ps.executeUpdate();
+        }
+    }
+
+    // ── Sessions ─────────────────────────────────────
+
+    public static void createSession(String playerUuid, String token, String ip) throws SQLException {
+        String sql = "INSERT INTO sessions (player_uuid, token, ip, expires_at) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 24 HOUR))";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, token);
+            ps.setString(3, ip);
+            ps.executeUpdate();
+        }
+    }
+
+    public static String findSessionPlayer(String token) throws SQLException {
+        String sql = "SELECT s.player_uuid, p.is_banned FROM sessions s JOIN players p ON s.player_uuid = p.uuid WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && !rs.getBoolean("is_banned")) {
+                    return rs.getString("player_uuid");
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void deleteSession(String token) throws SQLException {
+        String sql = "DELETE FROM sessions WHERE token = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, token);
+            ps.executeUpdate();
+        }
+    }
+
+    // ── 2FA Codes ────────────────────────────────────
+
+    private static final SecureRandom RNG = new SecureRandom();
+
+    public static String create2faCode(String playerUuid, String ip) throws SQLException {
+        int code = RNG.nextInt(1000000);
+        String codeStr = String.format("%06d", code);
+        String sql = "INSERT INTO twofa_codes (player_uuid, code, ip, expires_at) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 5 MINUTE))";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, codeStr);
+            ps.setString(3, ip);
+            ps.executeUpdate();
+        }
+        return codeStr;
+    }
+
+    public static boolean validate2faCode(String playerUuid, String code) throws SQLException {
+        String sql = "SELECT id FROM twofa_codes WHERE player_uuid = ? AND code = ? AND used = FALSE AND expires_at > CURRENT_TIMESTAMP ORDER BY id DESC LIMIT 1";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, code);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int id = rs.getInt("id");
+                    try (PreparedStatement up = c.prepareStatement("UPDATE twofa_codes SET used = TRUE WHERE id = ?")) {
+                        up.setInt(1, id);
+                        up.executeUpdate();
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // ── Password Resets ──────────────────────────────
+
+    public static int createResetRequest(String uuid) throws SQLException {
+        String sql = "INSERT INTO password_resets (player_uuid) VALUES (?)";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, uuid);
+            ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) return keys.getInt(1);
+            }
+        }
+        return -1;
+    }
+
+    public static List<PasswordResetEntry> findPendingResets() throws SQLException {
+        List<PasswordResetEntry> list = new ArrayList<>();
+        String sql = "SELECT pr.*, p.nickname, p.login FROM password_resets pr JOIN players p ON pr.player_uuid = p.uuid WHERE pr.status = 'pending' ORDER BY pr.id DESC";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) {
+                PasswordResetEntry e = new PasswordResetEntry();
+                e.id = rs.getInt("id");
+                e.playerUuid = rs.getString("player_uuid");
+                e.login = rs.getString("login");
+                e.status = rs.getString("status");
+                e.createdAt = rs.getString("created_at");
+                list.add(e);
+            }
+        }
+        return list;
+    }
+
+    public static void resolveReset(int id, String adminUuid, String status) throws SQLException {
+        String sql = "UPDATE password_resets SET admin_uuid = ?, status = ?, resolved_at = CURRENT_TIMESTAMP WHERE id = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, adminUuid);
+            ps.setString(2, status);
+            ps.setInt(3, id);
+            ps.executeUpdate();
+        }
+    }
+
+    // ── Logs ─────────────────────────────────────────
+
+    public static void log(String playerUuid, String action, String ip, String details) throws SQLException {
+        String sql = "INSERT INTO player_logs (player_uuid, action, ip, details) VALUES (?, ?, ?, ?)";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, action);
+            ps.setString(3, ip);
+            ps.setString(4, details);
+            ps.executeUpdate();
+        }
+    }
+
+    public static List<LogEntry> getLogs(int limit, int offset) throws SQLException {
+        List<LogEntry> list = new ArrayList<>();
+        String sql = "SELECT pl.*, p.login FROM player_logs pl LEFT JOIN players p ON pl.player_uuid = p.uuid ORDER BY pl.id DESC LIMIT ? OFFSET ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, Math.min(limit, 100));
+            ps.setInt(2, offset);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    LogEntry e = new LogEntry();
+                    e.id = rs.getInt("id");
+                    e.playerUuid = rs.getString("player_uuid");
+                    e.login = rs.getString("login");
+                    e.action = rs.getString("action");
+                    e.ip = rs.getString("ip");
+                    e.details = rs.getString("details");
+                    e.createdAt = rs.getString("created_at");
+                    list.add(e);
+                }
+            }
+        }
+        return list;
+    }
+
+    // ── Broadcast ────────────────────────────────────
+
+    public static List<Long> getTelegramIdsForBroadcast() throws SQLException {
+        List<Long> ids = new ArrayList<>();
+        String sql = "SELECT telegram_id FROM players WHERE is_banned = FALSE AND telegram_id IS NOT NULL";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) ids.add(rs.getLong(1));
+        }
+        return ids;
+    }
+
+    public static int countAccounts() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM players WHERE login IS NOT NULL";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    // ── Find any player by query ─────────────────────
+    public static Player findAny(String query) throws SQLException {
+        Player p = findByLogin(query);
+        if (p != null) return p;
+        p = findByUuid(query);
+        if (p != null) return p;
+        p = findByNickname(query);
+        if (p != null) return p;
+        p = findByEmail(query);
+        if (p != null) return p;
+        try { return findByTelegramId(Long.parseLong(query)); } catch (Exception ignored) {}
+        return null;
+    }
+
+    public static class PasswordResetEntry {
+        public int id;
+        public String playerUuid;
+        public String login;
+        public String status;
+        public String createdAt;
+    }
+
+    public static class LogEntry {
+        public int id;
+        public String playerUuid;
+        public String login;
+        public String action;
+        public String ip;
+        public String details;
+        public String createdAt;
+    }
+
     public static int getPlayerRank(String uuid, String orderBy) throws SQLException {
         String column = switch (orderBy) {
             case "kills" -> "ps.kills";
@@ -219,12 +599,70 @@ public class PlayerRepository {
         return 0;
     }
 
+    public static int getTodayPlayerCount() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM players WHERE DATE(last_join) = CURDATE()";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public static long getTotalPlaytimeHours() throws SQLException {
+        String sql = "SELECT COALESCE(SUM(playtime_seconds), 0) / 3600 FROM player_stats";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) return rs.getLong(1);
+        }
+        return 0;
+    }
+
+    public static long getTotalKills() throws SQLException {
+        String sql = "SELECT COALESCE(SUM(kills), 0) FROM player_stats";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) return rs.getLong(1);
+        }
+        return 0;
+    }
+
+    public static long getTotalVehiclesDestroyed() throws SQLException {
+        String sql = "SELECT COALESCE(SUM(vehicles_destroyed), 0) FROM player_stats";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) return rs.getLong(1);
+        }
+        return 0;
+    }
+
+    public static long getTotalCaptures() throws SQLException {
+        String sql = "SELECT COALESCE(SUM(captures), 0) FROM player_stats";
+        try (Connection c = DatabaseManager.getConnection();
+             Statement s = c.createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            if (rs.next()) return rs.getLong(1);
+        }
+        return 0;
+    }
+
     private static Player mapPlayer(ResultSet rs) throws SQLException {
         Player p = new Player();
         p.uuid = rs.getString("uuid");
         p.nickname = rs.getString("nickname");
+        p.login = rs.getString("login");
+        p.email = rs.getString("email");
+        p.passwordHash = rs.getString("password_hash");
+        p.telegramId = (Long) rs.getObject("telegram_id");
+        p.hwid = rs.getString("hwid");
+        p.privacyPolicyAccepted = rs.getBoolean("privacy_policy_accepted");
+        p.launcher2faEnabled = rs.getBoolean("launcher_2fa_enabled");
         p.firstJoin = rs.getString("first_join");
         p.lastJoin = rs.getString("last_join");
+        p.lastIp = rs.getString("last_ip");
         p.donateTier = rs.getString("donate_tier");
         p.role = rs.getString("role");
         p.isBanned = rs.getBoolean("is_banned");

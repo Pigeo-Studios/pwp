@@ -32,14 +32,25 @@ server-template/run/
 .env
 *.local.*
 
+# Core Service generated version files
+version.txt
+commit.txt
+changelog.txt
+
 # Bot generated files
 bots/channels.json
 bots/commands/
 bots/.env
+bots/__pycache__/
+bots/auth_handlers/__pycache__/
+core-service/sql/migration_add_accounts.sql
+bots/__pycache__/
+bots/auth_handlers/__pycache__/
 
 # Bot tokens
 bots/config.py
 bots/channels.json
+bots/dashboard.json
 bots/commands/
 
 # Server template libraries

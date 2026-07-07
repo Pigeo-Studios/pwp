@@ -43,6 +43,8 @@ async def start():
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(CommandHandler("myid", handle_command_myid))
+    app.add_handler(CommandHandler("login", handle_command_login))
+    app.add_handler(CommandHandler("logout", handle_command_logout))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 

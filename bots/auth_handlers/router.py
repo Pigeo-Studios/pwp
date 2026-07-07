@@ -2,7 +2,7 @@ import config
 from telegram import Update
 from telegram.ext import ContextTypes
 from .session import State, get_session, drop_session
-from .utils import api_get, api_call, safe_edit, typing
+from .utils import api_get, api_call, safe_edit, typing, admin_headers
 from . import menus
 from . import privacy, registration, account, security, admin
 
@@ -10,11 +10,24 @@ from . import privacy, registration, account, security, admin
 
 async def show_main_menu(msg_or_query, session, ctx):
     session.state = State.MAIN_MENU
+    msg = msg_or_query.message if hasattr(msg_or_query, "message") else msg_or_query
+
+    # No account yet — prompt registration
+    if not session.authorized:
+        await safe_edit(msg,
+            "🎮 <b>Pigeo Studios — PWP</b>\n\n"
+            "✅ Политика принята! Теперь зарегистрируйтесь.",
+            parse_mode="HTML",
+            reply_markup=menus.InlineKeyboardMarkup([
+                [menus.InlineKeyboardButton("📝 Зарегистрироваться", callback_data="start_reg")],
+                [menus.InlineKeyboardButton("❌ Отмена", callback_data="cancel")]
+            ]))
+        return
+
     text = f"🎮 <b>Pigeo Studios — PWP</b>\n"
     if session.login:
         text += f"👤 {session.login}\n"
     text += "\nВыберите раздел:"
-    msg = msg_or_query.message if hasattr(msg_or_query, "message") else msg_or_query
     await safe_edit(msg, text, parse_mode="HTML",
         reply_markup=menus.main_menu(session.is_admin() or session.telegram_id in config.ADMIN_IDS))
 
@@ -33,7 +46,7 @@ async def handle_command_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         # Try to load or create account
         r = await api_get(f"/api/v1/auth/profile-by-tg?telegram_id={uid}")
         if r.get("success") and r["data"]:
-            session.account_id = r["data"]["id"]
+            session.uuid = r["data"]["uuid"]
             session.login = r["data"]["login"]
             session.uuid = r["data"].get("uuid", "")
             session.email = r["data"].get("email", "")
@@ -54,9 +67,9 @@ async def handle_command_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 session.uuid = reg["data"].get("uuid", "")
                 prof = await api_get(f"/api/v1/auth/profile-by-tg?telegram_id={uid}")
                 if prof.get("success") and prof["data"]:
-                    session.account_id = prof["data"]["id"]
-                    await api_call("/api/v1/auth/accept-privacy", {"account_id": session.account_id})
-                    await api_call("/api/v1/admin/set-role", {"accountId": session.account_id, "role": "admin"})
+                    session.uuid = prof["data"]["uuid"]
+                    await api_call("/api/v1/auth/accept-privacy", {"uuid": session.uuid})
+                    await api_call("/api/v1/admin/set-role", {"uuid": session.uuid, "role": "admin"}, extra_headers=admin_headers(session))
                 try:
                     await ctx.bot.send_message(uid,
                         f"✅ <b>Аккаунт администратора создан!</b>\n\n"
@@ -74,7 +87,7 @@ async def handle_command_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     r = await api_get(f"/api/v1/auth/profile-by-tg?telegram_id={uid}")
     if r.get("success") and r["data"]:
         d = r["data"]
-        session.account_id = d["id"]
+        session.uuid = d["uuid"]
         session.login = d["login"]
         session.uuid = d.get("uuid", "")
         session.email = d.get("email", "")
@@ -113,8 +126,22 @@ def _reg(cb):     return f"reg:{cb}"
 def _admin(cb):   return f"admin:{cb}"
 
 async def handle_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    session = get_session(uid)
+    if session.processing:
+        try: await update.callback_query.answer()
+        except Exception: pass
+        return
+    session.processing = True
+    try:
+        await _callback(update, ctx)
+    finally:
+        session.processing = False
+
+async def _callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    try: await query.answer()
+    except Exception: pass
     await typing(update, ctx)
     uid = update.effective_user.id
     session = get_session(uid)
@@ -129,7 +156,7 @@ async def handle_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     # ── Menu navigation ───────────────────────────
     if data == _menu("account"):
         await safe_edit(query.message, "👤 <b>Аккаунт</b>\n\nУправление профилем и паролем.",
-            parse_mode="HTML", reply_markup=menus.account_menu())
+            parse_mode="HTML", reply_markup=menus.account_menu(session.authorized))
         return
 
     if data == _menu("security"):
@@ -185,6 +212,19 @@ async def handle_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await account.forgot_password(query, session, ctx)
         return
 
+    # ── Login / Logout ────────────────────────────
+    if data == _account("login"):
+        await account.start_login(query, session)
+        return
+
+    if data == _account("logout"):
+        await account.start_logout(query, session, ctx)
+        return
+
+    if data == "logout_confirm":
+        await account.confirm_logout(query, session, ctx)
+        return
+
     # ── Security ─────────────────────────────────
     if data == _security("2fa"):
         await security.show_2fa(query, session)
@@ -216,6 +256,12 @@ async def handle_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await privacy.accept(query, session, ctx)
         return
 
+    # ── Start registration from main menu ────────
+    if data == "start_reg":
+        from . import registration as reg_mod
+        await reg_mod.start(query, session)
+        return
+
     # ── Registration ─────────────────────────────
     if data == _reg("change"):
         await registration.change(query, session)
@@ -230,31 +276,25 @@ async def handle_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await admin.find_user(query, session)
         return
 
-    if data.startswith(_admin("ban_")):
-        session.admin_target_id = int(data.split("_")[1])
+    if data == _admin("ban_toggle"):
         await admin.ban(query, session)
         return
 
-    if data.startswith(_admin("unban_")):
-        session.admin_target_id = int(data.split("_")[1])
-        await admin.unban(query, session)
-        return
-
-    if data.startswith(_admin("role_")):
-        session.admin_target_id = int(data.split("_")[1])
+    if data == _admin("role"):
         await admin.show_role_buttons(query, session)
         return
 
     if data.startswith("admin:setrole_"):
-        parts = data.split("_")
-        acc_id = int(parts[2])
-        role = parts[3]
-        await admin.set_role(query, session, acc_id, role)
+        role = data.split("_", 1)[1]  # "admin:setrole_admin" -> "admin"
+        # Handle "admin:setrole_user" -> extract just "user"
+        role = role.split("_", 1)[1] if "_" in role else "user"
+        # Actually simpler: data is "admin:setrole_X"
+        role = data.split("_")[-1]
+        await admin.set_role(query, session, session.admin_target_uuid, role)
         return
 
-    if data.startswith(_admin("reset_")):
-        acc_id = int(data.split("_")[1])
-        await admin.force_reset(query, session, acc_id)
+    if data == _admin("reset"):
+        await admin.force_reset(query, session, session.admin_target_uuid)
         return
 
     if data == _admin("resets"):
@@ -288,6 +328,17 @@ async def handle_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
+    session = get_session(uid)
+    if session.processing:
+        return
+    session.processing = True
+    try:
+        await _message(update, ctx)
+    finally:
+        session.processing = False
+
+async def _message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
     text = update.message.text.strip()
     session = get_session(uid)
 
@@ -295,7 +346,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Используйте /start для начала работы.")
         return
 
-    # Get the "panel" message to edit (use last bot message or fall back to user's message)
+    # Get the "panel" message to edit, or reply new if no panel yet
     if session.last_message_id:
         class _Panel:
             def __init__(self, bot, cid, mid):
@@ -305,7 +356,10 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
                 await safe_edit_by_id(self.bot, self.chat_id, self.message_id, text, **kw)
         msg = _Panel(ctx.bot, uid, session.last_message_id)
     else:
-        msg = update.message
+        # No panel yet — send a new reply and remember it
+        reply = await update.message.reply_text("⚙️")
+        session.last_message_id = reply.message_id
+        msg = reply
 
     # Registration FSM
     if session.state == State.REG_LOGIN:
@@ -326,6 +380,12 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     elif session.state == State.PASS_CONFIRM:
         await account.handle_confirm_password(msg, session, text, ctx)
 
+    # Login FSM
+    elif session.state == State.LOGIN_LOGIN:
+        await account.handle_login_login(msg, session, text, ctx)
+    elif session.state == State.LOGIN_PASSWORD:
+        await account.handle_login_password(msg, session, text, ctx)
+
     # Reset password FSM
     elif session.state == State.RESET_NEW:
         if len(text) < 8 or not __import__('re').search(r'[A-Z]', text) or not __import__('re').search(r'[0-9]', text):
@@ -341,7 +401,7 @@ async def handle_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await safe_edit(msg, "❌ Пароли не совпадают. Попробуйте ещё раз:", reply_markup=menus.back_home())
             return
         r = await api_call("/api/v1/auth/set-password-after-reset", {
-            "account_id": session.account_id, "newPassword": text
+            "uuid": session.uuid, "newPassword": text
         })
         session.state = State.MAIN_MENU
         if r.get("success"):
@@ -372,3 +432,19 @@ async def handle_command_myid(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"🆔 <code>{uid}</code>\n👤 @{username}",
         parse_mode="HTML"
     )
+
+# ── /login /logout ────────────────────────────────
+
+async def handle_command_login(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    session = get_session(uid)
+    msg = await update.message.reply_text("🔑")
+    session.last_message_id = msg.message_id
+    await account.start_login(msg, session)
+
+async def handle_command_logout(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    session = get_session(uid)
+    msg = await update.message.reply_text("🚪")
+    session.last_message_id = msg.message_id
+    await account.start_logout(msg, session, ctx)

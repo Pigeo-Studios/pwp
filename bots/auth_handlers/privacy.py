@@ -50,8 +50,15 @@ async def back(msg_or_query, session):
 
 async def accept(msg_or_query, session, ctx):
     msg = msg_or_query.message if hasattr(msg_or_query, "message") else msg_or_query
-    if session.account_id:
-        await api_call("/api/v1/auth/accept-privacy", {"account_id": session.account_id})
+    if session.uuid:
+        await api_call("/api/v1/auth/accept-privacy", {"uuid": session.uuid})
     session.privacy_accepted = True
+
+    if not session.authorized:
+        # No account — go to registration
+        from . import registration as reg_mod
+        await reg_mod.start(msg, session)
+        return
+
     from .router import show_main_menu
     await show_main_menu(msg, session, ctx)

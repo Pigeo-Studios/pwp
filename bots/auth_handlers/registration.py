@@ -19,7 +19,11 @@ async def handle_login(msg_or_query, session, text):
             reply_markup=menus.back_home_cancel("cancel", "❌ Отмена"))
         return False
     r = await api_get("/api/v1/auth/check-login", {"login": text})
-    if r.get("success") and not r["data"].get("available", True):
+    if not r.get("success"):
+        await safe_edit(msg, "❌ Не удалось проверить логин. Сервис недоступен, попробуйте позже.",
+            reply_markup=menus.back_home_cancel("cancel", "❌ Отмена"))
+        return False
+    if not r["data"].get("available", True):
         await safe_edit(msg, "❌ Этот логин уже занят. Попробуйте другой:",
             reply_markup=menus.back_home_cancel("cancel", "❌ Отмена"))
         return False
@@ -37,7 +41,11 @@ async def handle_email(msg_or_query, session, text, ctx):
             reply_markup=menus.back_home_cancel("cancel", "⬅ Назад"))
         return False
     r = await api_get("/api/v1/auth/check-email", {"email": text})
-    if r.get("success") and not r["data"].get("available", True):
+    if not r.get("success"):
+        await safe_edit(msg, "❌ Не удалось проверить email. Сервис недоступен, попробуйте позже.",
+            reply_markup=menus.back_home_cancel("cancel", "⬅ Назад"))
+        return False
+    if not r["data"].get("available", True):
         await safe_edit(msg, "❌ Этот e-mail уже зарегистрирован. Попробуйте другой:",
             reply_markup=menus.back_home_cancel("cancel", "⬅ Назад"))
         return False
@@ -89,20 +97,24 @@ async def confirm(msg_or_query, session, ctx):
             reply_markup=menus.back_home_cancel("cancel"))
         return
 
+    login = session.reg_login
+    email = session.reg_email
     session.reset()
     session.authorized = True
     session.privacy_accepted = True
-    session.login = session.reg_login
+    session.login = login
+    session.email = email
     session.uuid = r["data"].get("uuid", "")
 
     prof = await api_get(f"/api/v1/auth/profile-by-tg?telegram_id={uid}")
     if prof.get("success") and prof["data"]:
         d = prof["data"]
-        session.account_id = d["id"]
+        session.uuid = d["uuid"]
+        session.nickname = d.get("nickname", session.login)
         session.role = d["role"]
         session.email = d.get("email", "")
         session.registered_at = d.get("registered_at", "")
-        await api_call("/api/v1/auth/accept-privacy", {"account_id": d["id"]})
+        await api_call("/api/v1/auth/accept-privacy", {"uuid": d["uuid"]})
 
     from .router import show_main_menu
     await safe_edit(msg,

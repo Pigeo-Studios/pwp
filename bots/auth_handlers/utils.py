@@ -24,10 +24,12 @@ async def typing(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
 
-async def api_call(endpoint, data=None, method="POST"):
+async def api_call(endpoint, data=None, method="POST", extra_headers=None):
     import httpx
     url = f"{config.CORE_API_URL}{endpoint}"
     headers = {"Authorization": f"Bearer {config.CORE_API_KEY}", "Content-Type": "application/json"}
+    if extra_headers:
+        headers.update(extra_headers)
     async with httpx.AsyncClient(timeout=10) as client:
         try:
             if method == "GET":
@@ -38,5 +40,8 @@ async def api_call(endpoint, data=None, method="POST"):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-async def api_get(endpoint, params=None):
-    return await api_call(endpoint, params, "GET")
+async def api_get(endpoint, params=None, extra_headers=None):
+    return await api_call(endpoint, params, "GET", extra_headers)
+
+def admin_headers(session):
+    return {"X-Admin-UUID": session.uuid} if session.uuid else {}

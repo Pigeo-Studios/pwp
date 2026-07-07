@@ -23,12 +23,17 @@ def main_menu(is_admin=False):
         kb.append([InlineKeyboardButton("⚙️ Администрирование", callback_data="menu:admin")])
     return InlineKeyboardMarkup(kb)
 
-def account_menu():
-    return InlineKeyboardMarkup([
+def account_menu(is_logged_in=False):
+    btns = [
         [InlineKeyboardButton("👤 Профиль", callback_data="account:profile"),
-         InlineKeyboardButton("🔑 Сменить пароль", callback_data="account:password")],
-        [InlineKeyboardButton("⬅ Назад", callback_data="menu:main")]
-    ])
+         InlineKeyboardButton("🔑 Пароль", callback_data="account:password")],
+    ]
+    if is_logged_in:
+        btns.append([InlineKeyboardButton("🚪 Выйти", callback_data="account:logout")])
+    else:
+        btns.append([InlineKeyboardButton("🔑 Войти", callback_data="account:login")])
+    btns.append([InlineKeyboardButton("⬅ Назад", callback_data="menu:main")])
+    return InlineKeyboardMarkup(btns)
 
 def security_menu():
     return InlineKeyboardMarkup([
@@ -84,13 +89,11 @@ def admin_menu():
         [InlineKeyboardButton("⬅ Назад", callback_data="menu:main")]
     ])
 
-def admin_user_actions(acc_id, is_banned):
+def admin_user_actions(_uuid, _is_banned):
+    # UUID is stored in session.admin_target_uuid, buttons just trigger the action
     btns = []
-    if is_banned:
-        btns.append(InlineKeyboardButton("✅ Разбанить", callback_data=f"admin:unban_{acc_id}"))
-    else:
-        btns.append(InlineKeyboardButton("⛔ Забанить", callback_data=f"admin:ban_{acc_id}"))
-    btns.append(InlineKeyboardButton("👑 Выдать права", callback_data=f"admin:role_{acc_id}"))
-    btns.append(InlineKeyboardButton("🔄 Сбросить пароль", callback_data=f"admin:reset_{acc_id}"))
+    btns.append(InlineKeyboardButton("✅ Разбанить" if _is_banned else "⛔ Забанить", callback_data="admin:ban_toggle"))
+    btns.append(InlineKeyboardButton("👑 Выдать права", callback_data="admin:role"))
+    btns.append(InlineKeyboardButton("🔄 Сбросить пароль", callback_data="admin:reset"))
     btns.append(InlineKeyboardButton("⬅ Назад", callback_data="admin:users"))
     return InlineKeyboardMarkup([btns[i:i+2] for i in range(0, len(btns), 2)])

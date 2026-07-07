@@ -508,6 +508,38 @@ public class AccountRepository {
         return pr;
     }
 
+    public static List<AccountLogEntry> getLogsAfter(int afterId, String actionFilter, int limit) throws SQLException {
+        List<AccountLogEntry> list = new ArrayList<>();
+        String sql = "SELECT al.*, a.login FROM account_logs al LEFT JOIN accounts a ON al.account_id = a.id " +
+                "WHERE al.id > ? AND (? IS NULL OR al.action = ?) ORDER BY al.id ASC LIMIT ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, afterId);
+            if (actionFilter != null) {
+                ps.setString(2, actionFilter);
+                ps.setString(3, actionFilter);
+            } else {
+                ps.setNull(2, Types.VARCHAR);
+                ps.setNull(3, Types.VARCHAR);
+            }
+            ps.setInt(4, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    AccountLogEntry e = new AccountLogEntry();
+                    e.id = rs.getInt("id");
+                    e.accountId = rs.getInt("account_id");
+                    e.login = rs.getString("login");
+                    e.action = rs.getString("action");
+                    e.ip = rs.getString("ip");
+                    e.details = rs.getString("details");
+                    e.createdAt = rs.getString("created_at");
+                    list.add(e);
+                }
+            }
+        }
+        return list;
+    }
+
     public static class AccountLogEntry {
         public int id;
         public int accountId;

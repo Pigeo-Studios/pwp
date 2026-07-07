@@ -44,3 +44,23 @@ shadowJar {
 }
 
 build.dependsOn shadowJar
+
+task writeVersionFiles {
+    doLast {
+        def gitDir = rootProject.projectDir.parentFile
+        def describe = "dev"
+        def commit = "unknown"
+        def logText = ""
+        try {
+            describe = "git describe --tags --always".execute(null, gitDir).text.trim()
+            commit = "git rev-parse --short HEAD".execute(null, gitDir).text.trim()
+            logText = "git log --oneline --no-decorate ".execute(null, gitDir).text.trim()
+        } catch (Exception ignored) {}
+        new File(projectDir, "version.txt").text = describe
+        new File(projectDir, "commit.txt").text = commit
+        new File(projectDir, "changelog.txt").text = logText
+    }
+}
+
+processResources.dependsOn writeVersionFiles
+run.dependsOn writeVersionFiles

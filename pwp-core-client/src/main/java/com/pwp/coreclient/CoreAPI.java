@@ -147,6 +147,11 @@ public class CoreAPI {
         return get("/api/v1/ranks/player/" + uuid);
     }
 
+    // ====== NETWORK ======
+    public static JsonObject sendHeartbeat(String server, int online) {
+        return post("/api/v1/network/heartbeat", map("server", server, "online", online));
+    }
+
     // ====== KITS ======
     public static JsonObject getFactions() {
         return get("/api/v1/kits/factions");

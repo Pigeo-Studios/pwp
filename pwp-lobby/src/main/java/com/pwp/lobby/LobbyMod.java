@@ -64,11 +64,23 @@ public class LobbyMod {
         });
     }
 
+    private int heartbeatTicks = 0;
+
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) return;
         VotingManager.tick();
         MatchAllocator.tick();
+
+        if (++heartbeatTicks >= 600) {
+            heartbeatTicks = 0;
+            int online = MatchAllocator.getLobbyPlayerCount();
+            try {
+                CoreAPI.sendHeartbeat("lobby", online);
+            } catch (Exception e) {
+                // silently ignore
+            }
+        }
     }
 
     public static void sendMatchListUpdateToAll() {
