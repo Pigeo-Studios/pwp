@@ -1,5 +1,6 @@
 {
     "item.pwpwarfare.kit_setup": "Настройка комплекта",
+    "item.pwpwarfare.faction_kit_setup": "Настройка комплектов фракций",
     "item.pwpwarfare.entrenching_tool": "Сапёрная лопатка",
     "item.pwpwarfare.squad_leader_radio": "Рация командира",
     "item.pwpwarfare.blue_apc": "БТР (BLUFOR)",
@@ -192,6 +193,9 @@
     "gui.pwpwarfare.kit_editor.toggle_resupply": "Вкл/Выкл пополнение",
     "gui.pwpwarfare.kit_editor.save_nbt": "Сохранить NBT",
 
+    "gui.pwpwarfare.faction_select.title": "Выбор комплектов фракции",
+    "gui.pwpwarfare.faction_select.loading": "Загрузка фракций...",
+    "gui.pwpwarfare.faction_kit_list.title_format": "Комплекты фракции - %s",
     "gui.pwpwarfare.kit_team_select.title": "Выбор комплектов",
     "gui.pwpwarfare.kit_team_select.blue": "Комплекты BLUFOR",
     "gui.pwpwarfare.kit_team_select.red": "Комплекты REDFOR",

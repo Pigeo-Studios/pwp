@@ -68,6 +68,7 @@ public class ModItems {
       "vehicle_spawner", () -> new BlockItem((Block)ModBlocks.VEHICLE_SPAWNER_BLOCK.get(), new Properties())
    );
     public static final RegistryObject<Item> KIT_SETUP_ITEM = ITEMS.register("kit_setup", () -> new KitSetupItem());
+    public static final RegistryObject<Item> FACTION_KIT_SETUP_ITEM = ITEMS.register("faction_kit_setup", () -> new FactionKitSetupItem());
     public static final RegistryObject<Item> SKIN_SETUP_ITEM = ITEMS.register("skin_setup", () -> new SkinSetupItem());
    public static final RegistryObject<Item> ENTRENCHING_TOOL = ITEMS.register("entrenching_tool", EntrenchingToolItem::new);
    public static final RegistryObject<Item> SQUAD_LEADER_RADIO = ITEMS.register("squad_leader_radio", RallyItem::new);

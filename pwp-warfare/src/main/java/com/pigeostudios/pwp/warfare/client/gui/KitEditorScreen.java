@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketSaveFactionKit;
 import com.pigeostudios.pwp.warfare.network.PacketSaveKit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -76,20 +77,24 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
       } catch (Exception var2) {
       }
 
-      PacketHandler.INSTANCE
-         .sendToServer(
-            new PacketSaveKit(
-               ((KitEditorMenu)this.menu).team,
-               ((KitEditorMenu)this.menu).kitName,
-               ((KitEditorMenu)this.menu).isLeaderOnly,
-               ((KitEditorMenu)this.menu).maxPerTeam,
-               ((KitEditorMenu)this.menu).maxPerSquad,
-               ((KitEditorMenu)this.menu).minSquadPlayers,
-               ((KitEditorMenu)this.menu).resupplyFlags,
-               ((KitEditorMenu)this.menu).saveNbtFlags,
-               ((KitEditorMenu)this.menu).slotSkins
-            )
-         );
+      String team = ((KitEditorMenu)this.menu).team;
+      if (team.equals("BLUE") || team.equals("RED")) {
+         PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
+            team, ((KitEditorMenu)this.menu).kitName,
+            ((KitEditorMenu)this.menu).isLeaderOnly, ((KitEditorMenu)this.menu).maxPerTeam,
+            ((KitEditorMenu)this.menu).maxPerSquad, ((KitEditorMenu)this.menu).minSquadPlayers,
+            ((KitEditorMenu)this.menu).resupplyFlags, ((KitEditorMenu)this.menu).saveNbtFlags,
+            ((KitEditorMenu)this.menu).slotSkins
+         ));
+      } else {
+         PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionKit(
+            team, ((KitEditorMenu)this.menu).kitName,
+            ((KitEditorMenu)this.menu).isLeaderOnly, ((KitEditorMenu)this.menu).maxPerTeam,
+            ((KitEditorMenu)this.menu).maxPerSquad, ((KitEditorMenu)this.menu).minSquadPlayers,
+            ((KitEditorMenu)this.menu).resupplyFlags, ((KitEditorMenu)this.menu).saveNbtFlags,
+            ((KitEditorMenu)this.menu).slotSkins
+         ));
+      }
       this.minecraft.player.displayClientMessage(Component.translatable("gui.pwpwarfare.kit_editor.saved"), true);
    }
 

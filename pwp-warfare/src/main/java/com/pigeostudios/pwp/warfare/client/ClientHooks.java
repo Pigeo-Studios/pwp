@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
 import com.pigeostudios.pwp.warfare.client.gui.CrateRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.FactionSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.KitTeamSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.PlayerKitSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SkinListScreen;
@@ -89,7 +90,11 @@ public class ClientHooks {
    }
 
     public static void openKitTeamSelect() {
-       Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
+        Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
+    }
+
+    public static void openFactionKitSelect() {
+        Minecraft.getInstance().setScreen(new FactionSelectScreen());
     }
 
     public static void openSkinSetup() {

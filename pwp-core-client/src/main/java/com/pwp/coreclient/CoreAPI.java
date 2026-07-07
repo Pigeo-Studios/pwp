@@ -148,6 +148,10 @@ public class CoreAPI {
     }
 
     // ====== KITS ======
+    public static JsonObject getFactions() {
+        return get("/api/v1/kits/factions");
+    }
+
     public static JsonObject getFactionKits(String faction) {
         return get("/api/v1/kits/faction/" + faction.toLowerCase());
     }

@@ -79,6 +79,8 @@ public class PacketHandler {
          id++, PacketConfirmArtStrike.class, PacketConfirmArtStrike::encode, PacketConfirmArtStrike::decode, PacketConfirmArtStrike::handle
       );
       INSTANCE.registerMessage(id++, PacketSyncMyKit.class, PacketSyncMyKit::encode, PacketSyncMyKit::decode, PacketSyncMyKit::handle);
+      INSTANCE.registerMessage(id++, PacketOpenFactionKitEditor.class, PacketOpenFactionKitEditor::encode, PacketOpenFactionKitEditor::decode, PacketOpenFactionKitEditor::handle);
+      INSTANCE.registerMessage(id++, PacketSaveFactionKit.class, PacketSaveFactionKit::encode, PacketSaveFactionKit::decode, PacketSaveFactionKit::handle);
       INSTANCE.registerMessage(id++, PacketVoiceActivity.class, PacketVoiceActivity::encode, PacketVoiceActivity::decode, PacketVoiceActivity::handle);
       INSTANCE.registerMessage(
          id++, PacketRadioVoiceActivity.class, PacketRadioVoiceActivity::encode, PacketRadioVoiceActivity::decode, PacketRadioVoiceActivity::handle
