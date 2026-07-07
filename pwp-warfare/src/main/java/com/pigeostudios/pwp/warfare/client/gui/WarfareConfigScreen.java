@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
@@ -10,8 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraftforge.client.gui.widget.ForgeSlider;
 import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
 
-// Экран глобальной конфигурации мода PWP Warfare
-// Позволяет настраивать правила игры: стоимость стройки, таймеры, названия команд
 public class WarfareConfigScreen extends Screen {
    private final Screen parentScreen;
    private EditBox hubSpawnCostBox;
@@ -40,8 +39,12 @@ public class WarfareConfigScreen extends Screen {
       super.init();
       int cx = this.width / 2;
       int y = 20;
-      int col1 = cx - 155;
-      int col2 = cx + 5;
+      int col1 = cx - 160;
+      int col2 = cx + 10;
+
+      // Section: Toggles
+      guiLabel("GAME RULES", cx - 160, y - 2);
+
       this.addToggle(col1, y, 150, "gui.pwpwarfare.config.ags_destruct", WarfareConfig.AGS_PROJECTILE_DESTRUCTION);
       this.addToggle(col2, y, 150, "gui.pwpwarfare.config.ammo_explosion", WarfareConfig.AMMO_STACK_DESTRUCTION);
       y += 22;
@@ -62,27 +65,28 @@ public class WarfareConfigScreen extends Screen {
       y += 22;
       this.addToggle(col1, y, 150, "gui.pwpwarfare.config.enable_medic", WarfareConfig.ENABLE_KNOCKOUT);
       this.addToggle(col2, y, 150, "gui.pwpwarfare.config.base_healing", WarfareConfig.MAIN_SUPPLY_HEALING);
-      y += 25;
+
+      y += 28;
+
+      // Section: Slider
+      guiLabel("MULTIPLIERS", cx - 160, y - 2);
       this.diggingSpeedSlider = new ForgeSlider(
-         cx - 155,
-         y,
-         310,
-         20,
+         cx - 160, y, 320, 20,
          Component.translatable("gui.pwpwarfare.config.dig_speed"),
          Component.literal("x"),
-         0.1,
-         5.0,
+         0.1, 5.0,
          (Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get(),
-         0.1,
-         1,
-         true
+         0.1, 1, true
       );
       this.addRenderableWidget(this.diggingSpeedSlider);
-      y += 35;
-      int x1 = cx - 170;
-      int x2 = cx - 80;
-      int x3 = cx + 10;
-      int x4 = cx + 100;
+      y += 30;
+
+      // Section: Numeric fields
+      guiLabel("NUMERIC SETTINGS", cx - 160, y - 2);
+      int x1 = cx - 175;
+      int x2 = cx - 85;
+      int x3 = cx + 5;
+      int x4 = cx + 95;
       this.hubSpawnCostBox = this.createIntBox(x1, y, (Integer)WarfareConfig.HUB_SPAWN_MATERIAL_COST.get());
       this.hubResupplyBox = this.createIntBox(x2, y, (Integer)WarfareConfig.HUB_RESUPPLY_COST.get());
       this.maxHubsBox = this.createIntBox(x3, y, (Integer)WarfareConfig.MAX_HUBS_PER_TEAM.get());
@@ -97,15 +101,23 @@ public class WarfareConfigScreen extends Screen {
       this.rallyBlockRadBox = this.createIntBox(x2, y, (Integer)WarfareConfig.RALLY_BLOCK_RADIUS.get());
       this.hubBuildRadBox = this.createIntBox(x3, y, (Integer)WarfareConfig.HUB_BUILD_RADIUS.get());
       this.votePercentBox = this.createIntBox(x4, y, (Integer)WarfareConfig.VOTE_REQUIRED_PERCENTAGE.get());
-      y += 35;
-      this.blueNameBox = this.createStringBox(cx - 155, y, 150, (String)WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get());
-      this.redNameBox = this.createStringBox(cx + 5, y, 150, (String)WarfareConfig.RED_TEAM_CUSTOM_NAME.get());
       y += 30;
-      this.reviveItemBox = this.createStringBox(cx - 155, y, 310, (String)WarfareConfig.REVIVE_ITEM.get());
+
+      // Section: Text fields
+      guiLabel("TEAM SETTINGS", cx - 160, y - 2);
+      this.blueNameBox = this.createStringBox(cx - 160, y, 145, (String)WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get());
+      this.redNameBox = this.createStringBox(cx + 10, y, 145, (String)WarfareConfig.RED_TEAM_CUSTOM_NAME.get());
+      y += 28;
+      this.reviveItemBox = this.createStringBox(cx - 160, y, 300, (String)WarfareConfig.REVIVE_ITEM.get());
+
       this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.config.save"), b -> {
          this.saveValues();
          this.onClose();
-      }).bounds(cx - 80, this.height - 25, 160, 20).build());
+      }).bounds(cx - 80, this.height - 28, 160, 22).build());
+   }
+
+   private void guiLabel(String text, int x, int y) {
+      addRenderableWidget(Button.builder(Component.literal(""), b -> {}).bounds(x, y, 0, 0).build());
    }
 
    private void addToggle(int x, int y, int w, String labelKey, BooleanValue val) {
@@ -113,7 +125,7 @@ public class WarfareConfigScreen extends Screen {
    }
 
    private EditBox createIntBox(int x, int y, int val) {
-      EditBox box = new EditBox(this.font, x, y, 60, 16, Component.empty());
+      EditBox box = new EditBox(this.font, x, y, 65, 18, Component.empty());
       box.setValue(String.valueOf(val));
       box.setFilter(s -> s.matches("\\d*"));
       this.addRenderableWidget(box);
@@ -121,7 +133,7 @@ public class WarfareConfigScreen extends Screen {
    }
 
    private EditBox createStringBox(int x, int y, int w, String val) {
-      EditBox box = new EditBox(this.font, x, y, w, 16, Component.empty());
+      EditBox box = new EditBox(this.font, x, y, w, 18, Component.empty());
       box.setValue(val);
       this.addRenderableWidget(box);
       return box;
@@ -153,15 +165,17 @@ public class WarfareConfigScreen extends Screen {
    public void render(GuiGraphics gui, int mx, int my, float pt) {
       this.renderBackground(gui);
       int cx = this.width / 2;
-      gui.drawCenteredString(this.font, this.title, cx, 8, 16776960);
-      int x1 = cx - 170;
-      int x2 = cx - 80;
-      int x3 = cx + 10;
-      int x4 = cx + 100;
-      int color = 11184810;
-      int ly1 = 184;
-      int ly2 = 214;
-      int ly3 = 244;
+      gui.drawCenteredString(this.font, PWPTheme.Icons.GEAR + " " + this.title.getString(), cx, 8, PWPTheme.Colors.TEXT_ACCENT);
+
+      int x1 = cx - 175;
+      int x2 = cx - 85;
+      int x3 = cx + 5;
+      int x4 = cx + 95;
+      int color = PWPTheme.Colors.TEXT_SECONDARY;
+      int ly1 = 158;
+      int ly2 = 188;
+      int ly3 = 218;
+
       gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.fob_mat"), x1, ly1, color);
       gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.resup"), x2, ly1, color);
       gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.max_fob"), x3, ly1, color);
@@ -174,9 +188,9 @@ public class WarfareConfigScreen extends Screen {
       gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.ral_blk"), x2, ly3, color);
       gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.bld_rad"), x3, ly3, color);
       gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.vote_percent"), x4, ly3, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.blue_team_name"), cx - 155, 275, 5592575);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.red_team_name"), cx + 5, 275, 16733525);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.revive_item_id"), cx - 155, 307, color);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.blue_team_name"), cx - 160, 248, PWPTheme.Colors.TEAM_BLUE);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.red_team_name"), cx + 10, 248, PWPTheme.Colors.TEAM_RED);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.revive_item_id"), cx - 160, 278, color);
       super.render(gui, mx, my, pt);
    }
 }

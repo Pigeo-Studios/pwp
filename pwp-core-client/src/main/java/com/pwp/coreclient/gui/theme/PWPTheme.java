@@ -47,6 +47,7 @@ public class PWPTheme {
         // --- Состояния (приглушённые) ---
         public static final int SUCCESS         = 0xFF3D7A40;  // Зелёный
         public static final int SUCCESS_DIM     = 0x553D7A40;
+        public static final int SUCCESS_LIGHT   = 0xFF4CAF50;
         public static final int WARNING         = 0xFFC8812A;  // Оранжевый = акцент
         public static final int DANGER          = 0xFFA53D3D;  // Красный
         public static final int DANGER_DIM      = 0x55A53D3D;
@@ -134,9 +135,19 @@ public class PWPTheme {
         // Размеры компонентов
         public static final int BUTTON_HEIGHT  = 24;
         public static final int BUTTON_WIDTH   = 120;
+        public static final int BUTTON_SMALL_HEIGHT = 18;
+        public static final int BUTTON_TAB_HEIGHT   = 22;
         public static final int ICON_SIZE      = 16;
+        public static final int ICON_SIZE_MED  = 24;
+        public static final int ICON_SIZE_LG   = 32;
         public static final int AVATAR_SIZE    = 32;
         public static final int ITEM_PREVIEW   = 80;
+        public static final int SCROLLBAR_WIDTH = 5;
+        public static final int PANEL_PADDING  = 12;
+        public static final int CARD_PADDING   = 10;
+        public static final int SECTION_GAP    = 24;
+        public static final int ELEMENT_GAP    = 6;
+        public static final int GRID_GAP       = 8;
 
         private Spacing() {}
     }
@@ -225,9 +236,12 @@ public class PWPTheme {
         public static final String CROSSHAIR   = "\u2316";  // ⌖
         public static final String PLUS        = "+";
         public static final String MINUS       = "-";
-        public static final String COIN        = "\u25CB";  // ○ (сделать текстурой монетки)
+        public static final String COIN        = "\u25CB";  // ○
         public static final String XP_ICON     = "\u2606";  // ☆
         public static final String LEVEL_ICON  = "\u2690";  // ⚐
+        public static final String TROPHY      = "\u265B";  // ♛
+        public static final String SWORDS      = "\u2694";  // ⚔
+        public static final String SHIELD      = "\u26E8";  // ⛨
 
         private Icons() {}
     }
@@ -244,23 +258,51 @@ public class PWPTheme {
             public static final int PRIMARY_BG       = Colors.SURFACE;
             public static final int PRIMARY_BORDER   = Colors.BORDER_ACCENT;
             public static final int PRIMARY_HOVER    = Colors.SURFACE_LIGHT;
+            public static final int PRIMARY_PRESSED  = 0xFF242A34;
             public static final int PRIMARY_TEXT     = Colors.TEXT_PRIMARY;
+            public static final int PRIMARY_DISABLED_TEXT = Colors.TEXT_DIM;
 
             // Акцентная (оранжевая — купить, улучшить, важно)
             public static final int ACCENT_BG        = Colors.ACCENT;
             public static final int ACCENT_HOVER     = Colors.ACCENT_SOFT;
+            public static final int ACCENT_PRESSED   = Colors.ACCENT_DIM;
             public static final int ACCENT_TEXT      = 0xFF0A0C0E;
+            public static final int ACCENT_DISABLED  = 0x664A4D54;
 
             // Опасная (красная)
             public static final int DANGER_BG        = Colors.DANGER;
             public static final int DANGER_HOVER     = 0xFF803030;
+            public static final int DANGER_PRESSED   = 0xFF602020;
             public static final int DANGER_TEXT      = Colors.TEXT_PRIMARY;
 
             // Тёмная (второстепенная, без обводки)
             public static final int DARK_BG          = 0xFF181C24;
             public static final int DARK_BORDER      = Colors.BORDER;
             public static final int DARK_HOVER       = Colors.SURFACE_LIGHT;
+            public static final int DARK_PRESSED     = 0xFF222834;
             public static final int DARK_TEXT        = Colors.TEXT_SECONDARY;
+        }
+
+        // Стили табов (вкладок)
+        public static class Tab {
+            public static final int BG               = Colors.SURFACE;
+            public static final int BG_HOVER         = Colors.SURFACE_LIGHT;
+            public static final int BG_ACTIVE        = 0xFF1A1E26;
+            public static final int BORDER           = Colors.BORDER;
+            public static final int BORDER_ACTIVE    = Colors.ACCENT;
+            public static final int TEXT             = Colors.TEXT_SECONDARY;
+            public static final int TEXT_ACTIVE      = Colors.TEXT_ACCENT;
+        }
+
+        // Стили карточек
+        public static class Card {
+            public static final int BG               = Colors.SURFACE;
+            public static final int BG_HOVER         = Colors.SURFACE_LIGHT;
+            public static final int BG_SELECTED      = 0xFF2A2010;
+            public static final int BORDER           = Colors.BORDER;
+            public static final int BORDER_HOVER     = Colors.BORDER_FOCUS;
+            public static final int BORDER_SELECTED  = Colors.ACCENT;
+            public static final int SHADOW           = Shadows.LEVEL_1;
         }
 
         // Стили полей ввода
@@ -290,7 +332,7 @@ public class PWPTheme {
             public static final int FILL_TICKET_BLUE = Colors.TEAM_BLUE;
             public static final int FILL_TICKET_RED  = Colors.TEAM_RED;
             public static final int FILL_LEVEL       = Colors.INFO;
-            public static final int TRACK_BG         = 0x2AC8812A;  // Трек с акцентом
+            public static final int TRACK_BG         = 0x2AC8812A;
         }
 
         // Стили уведомлений (Toast)
@@ -314,6 +356,35 @@ public class PWPTheme {
             public static final int LEGENDARY_BORDER = 0xFFC8812A;
             public static final int MYTHIC_BG    = 0x22A53D3D;
             public static final int MYTHIC_BORDER= 0xFFA53D3D;
+        }
+
+        // Стили скроллбара
+        public static class ScrollBar {
+            public static final int TRACK           = Colors.SURFACE_DIM;
+            public static final int THUMB           = Colors.ACCENT;
+            public static final int THUMB_HOVER     = Colors.ACCENT_SOFT;
+        }
+
+        // Стили бейджей/меток
+        public static class Badge {
+            public static final int BG_SUCCESS      = Colors.SUCCESS;
+            public static final int BG_DANGER       = Colors.DANGER;
+            public static final int BG_WARNING      = Colors.WARNING;
+            public static final int BG_INFO         = Colors.INFO;
+            public static final int TEXT            = Colors.TEXT_PRIMARY;
+            public static final int TEXT_DARK       = 0xFF0A0C0E;
+        }
+
+        // Стили тултипов
+        public static class Tooltip {
+            public static final int BG              = 0xCC0E1117;
+            public static final int BORDER          = Colors.BORDER_LIGHT;
+            public static final int TEXT            = Colors.TEXT_PRIMARY;
+        }
+
+        // Стили разделителей
+        public static class Divider {
+            public static final int COLOR          = Colors.BORDER;
         }
 
         private Styles() {}

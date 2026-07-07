@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketDownedAction;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -13,8 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
-// Экран состояния нокаута (подбит/ранен)
-// Показывает время до истечения крови, кнопки сдачи и вызова медика
 public class DownedScreen extends Screen {
    private static final ResourceLocation HEARTBEAT_ICON = new ResourceLocation("pwpwarfare", "textures/gui/heartbeat.png");
    private static final ResourceLocation VIGNETTE_TEXTURE = new ResourceLocation("pwpwarfare", "textures/misc/vignette.png");
@@ -29,39 +28,53 @@ public class DownedScreen extends Screen {
 
    protected void init() {
       int cx = this.width / 2;
-      int bottomY = this.height - 50;
-      this.addRenderableWidget(new DownedScreen.SquadButton(cx - 130, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.give_up"), b -> {
+      int bottomY = this.height - 55;
+      this.addRenderableWidget(new DownedButton(cx - 130, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.give_up"), b -> {
          PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(1));
          this.onClose();
-      }));
-      this.callMedicButton = (Button)this.addRenderableWidget(new DownedScreen.SquadButton(cx + 10, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.call_medic"), b -> {
+      }, PWPTheme.Colors.DANGER));
+      this.callMedicButton = this.addRenderableWidget(new DownedButton(cx + 10, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.call_medic"), b -> {
          long currentTime = System.currentTimeMillis();
          if (currentTime - this.lastMedicCallTime >= 15000L) {
             PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(0));
             this.lastMedicCallTime = currentTime;
          }
-      }));
+      }, PWPTheme.Colors.SUCCESS));
    }
 
    public void render(GuiGraphics gui, int mx, int my, float pt) {
       this.renderVignette(gui);
       int cx = this.width / 2;
-      int baseY = this.height - 150;
-      int boxW = 320;
-      int boxH = 135;
+      int baseY = this.height - 155;
+      int boxW = 340;
+      int boxH = 130;
       this.renderSquadFrame(gui, cx - boxW / 2, baseY, boxW, boxH);
       RenderSystem.enableBlend();
-      gui.blit(HEARTBEAT_ICON, cx - 18, baseY + 10, 0.0F, 0.0F, 36, 36, 36, 36);
+
+      gui.blit(HEARTBEAT_ICON, cx - 18, baseY + 12, 0.0F, 0.0F, 36, 36, 36, 36);
+
       Component allyStatus = this.getAllyDistanceStatus();
-      gui.drawCenteredString(this.font, allyStatus, cx, baseY + 55, 16777215);
+      gui.drawCenteredString(this.font, allyStatus, cx, baseY + 58, PWPTheme.Colors.TEXT_PRIMARY);
+
       int maxSeconds = (Integer)WarfareConfig.MAX_DOWNED_TIME_SECONDS.get();
       long remainingBleedout = maxSeconds - (System.currentTimeMillis() - this.screenOpenTime) / 1000L;
       if (remainingBleedout < 0L) {
          remainingBleedout = 0L;
       }
 
+      // Bleedout progress bar
+      int barW = 280;
+      int barH = 6;
+      int barX = cx - barW / 2;
+      int barY = baseY + 75;
+      float pct = (float) remainingBleedout / maxSeconds;
+      gui.fill(barX, barY, barX + barW, barY + barH, PWPTheme.Styles.Progress.BG);
+      int fillColor = pct > 0.3f ? PWPTheme.Colors.SUCCESS : (pct > 0.15f ? PWPTheme.Colors.WARNING : PWPTheme.Colors.DANGER);
+      gui.fill(barX, barY, barX + (int)(barW * pct), barY + barH, fillColor);
+
       Component bleedText = Component.translatable("gui.pwpwarfare.downed.bleeding_out", remainingBleedout);
-      gui.drawCenteredString(this.font, bleedText, cx, baseY + 72, 11184810);
+      gui.drawCenteredString(this.font, bleedText, cx, baseY + 85, PWPTheme.Colors.TEXT_SECONDARY);
+
       long remainingCooldown = 15000L - (System.currentTimeMillis() - this.lastMedicCallTime);
       if (remainingCooldown > 0L) {
          this.callMedicButton.setMessage(Component.translatable("gui.pwpwarfare.downed.call_medic_cooldown", remainingCooldown / 1000L + 1L));
@@ -104,9 +117,9 @@ public class DownedScreen extends Screen {
    }
 
    private void renderSquadFrame(GuiGraphics gui, int x, int y, int w, int h) {
-      gui.fill(x, y, x + w, y + h, -1728053248);
-      gui.renderOutline(x, y, w, h, 1157627903);
-      gui.renderOutline(x + 2, y + 2, w - 4, h - 4, -1140850689);
+      gui.fill(x, y, x + w, y + h, 0xCC0E1117);
+      gui.renderOutline(x, y, w, h, PWPTheme.Colors.BORDER_ACCENT);
+      gui.fill(x + 1, y + 1, x + w - 1, y + 2, PWPTheme.Colors.ACCENT_DIM);
    }
 
    private void renderVignette(GuiGraphics gui) {
@@ -125,28 +138,53 @@ public class DownedScreen extends Screen {
       return false;
    }
 
-   private static class SquadButton extends Button {
-      public SquadButton(int x, int y, int width, int height, Component message, OnPress onPress) {
+   private static class DownedButton extends Button {
+      private final int accentColor;
+      private float hoverAnim;
+      private long lastTick;
+
+      public DownedButton(int x, int y, int width, int height, Component message, OnPress onPress, int accent) {
          super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+         this.accentColor = accent;
+         this.hoverAnim = 0.0F;
+         this.lastTick = System.currentTimeMillis();
       }
 
       protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
-         if (this.visible) {
-            int borderColor = this.isHovered() ? -1 : -6710887;
-            if (!this.active) {
-               borderColor = -12303292;
-            }
+         if (!this.visible) return;
 
-            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -871296751);
-            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
-            int textColor = this.active ? -1 : -8947849;
-            gui.drawCenteredString(
-               Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor
-            );
-            if (this.active && this.isHovered()) {
-               gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, -1);
-            }
+         long now = System.currentTimeMillis();
+         float dt = Math.min((now - lastTick) / 50.0F, 4.0F);
+         lastTick = now;
+
+         boolean hovered = this.isHovered() && this.active;
+         float target = hovered ? 1.0F : 0.0F;
+         if (target > hoverAnim) {
+            hoverAnim = Math.min(hoverAnim + 0.15F * dt, target);
+         } else {
+            hoverAnim = Math.max(hoverAnim - 0.12F * dt, target);
          }
+
+         int bg = lerpColor(PWPTheme.Styles.Button.DARK_BG, accentColor, hoverAnim * 0.3F);
+         int border = this.active ? (hovered ? accentColor : PWPTheme.Colors.BORDER) : PWPTheme.Colors.TEXT_DIM;
+         if (!this.active) border = PWPTheme.Colors.TEXT_DIM;
+
+         gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, bg);
+         gui.renderOutline(this.getX(), this.getY(), this.width, this.height, border);
+         int textColor = this.active ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
+         gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
+            this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor);
+         if (this.active && hovered) {
+            gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, accentColor);
+         }
+      }
+
+      private int lerpColor(int from, int to, float t) {
+         if (t <= 0) return from;
+         if (t >= 1) return to;
+         int a1 = (from >> 24) & 0xFF, r1 = (from >> 16) & 0xFF, g1 = (from >> 8) & 0xFF, b1 = from & 0xFF;
+         int a2 = (to >> 24) & 0xFF, r2 = (to >> 16) & 0xFF, g2 = (to >> 8) & 0xFF, b2 = to & 0xFF;
+         return ((int)(a1 + (a2 - a1) * t) << 24) | ((int)(r1 + (r2 - r1) * t) << 16) | ((int)(g1 + (g2 - g1) * t) << 8) | (int)(b1 + (b2 - b1) * t);
       }
    }
 }

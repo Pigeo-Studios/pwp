@@ -19,19 +19,22 @@ public class ServerListScreen extends Screen {
         int cy = height / 2;
 
         addRenderableWidget(Button.builder(
-                Component.literal("No active matches"),
-                b -> {}).bounds(cx - 90, cy - 15, 180, 25).build());
+                Component.literal("No active matches available"),
+                b -> {}).bounds(cx - 100, cy - 12, 200, 24).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715 Close"),
-                b -> onClose()).bounds(cx - 40, height - 28, 80, 20).build());
+                b -> onClose()).bounds(cx - 40, height - 30, 80, 22).build());
     }
 
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
         super.render(gui, mx, my, pt);
-        gui.drawCenteredString(font, "\u2694 Active Matches", width / 2, 15, PWPTheme.Colors.TEXT_ACCENT);
+
+        int cx = width / 2;
+        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " ACTIVE MATCHES", cx, 14, PWPTheme.Colors.TEXT_ACCENT);
+        gui.fill(cx - 70, 24, cx + 70, 25, PWPTheme.Colors.ACCENT);
     }
 
     public static void open() {

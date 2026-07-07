@@ -1,16 +1,13 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestAmmo;
-import net.minecraft.client.Minecraft;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
-// Экран пополнения боеприпасов на хабе
-// Позволяет запросить патроны для АГС-30 и M2 Browning
 public class HubAmmoScreen extends Screen {
    private final BlockPos hubPos;
    private final int boxSize = 60;
@@ -40,39 +37,28 @@ public class HubAmmoScreen extends Screen {
       int leftX = centerX - 60 - 10;
       int leftY = centerY - 30;
       boolean hoverLeft = mouseX >= leftX && mouseX <= leftX + 60 && mouseY >= leftY && mouseY <= leftY + 60;
-      int colorLeft = -1;
-      if (this.cachedCdAGS > 0) {
-         colorLeft = -43691;
-      } else if (hoverLeft) {
-         colorLeft = -11141291;
-      }
+      int colorLeft = this.cachedCdAGS > 0 ? PWPTheme.Colors.DANGER : (hoverLeft ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
 
       this.renderBox(gui, leftX, leftY, 60, colorLeft, "AGS-30", this.cachedCdAGS);
       int rightX = centerX + 10;
       int rightY = centerY - 30;
       boolean hoverRight = mouseX >= rightX && mouseX <= rightX + 60 && mouseY >= rightY && mouseY <= rightY + 60;
-      int colorRight = -1;
-      if (this.cachedCdM2 > 0) {
-         colorRight = -43691;
-      } else if (hoverRight) {
-         colorRight = -11141291;
-      }
+      int colorRight = this.cachedCdM2 > 0 ? PWPTheme.Colors.DANGER : (hoverRight ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
 
       this.renderBox(gui, rightX, rightY, 60, colorRight, "M2 Ammo", this.cachedCdM2);
       super.render(gui, mouseX, mouseY, partialTick);
    }
 
    private void renderBox(GuiGraphics gui, int x, int y, int size, int color, String label, int cooldown) {
-      gui.fill(x - 2, y - 2, x + size + 2, y + size + 2, -16777216);
-      int bg = color & 16777215 | -2147483648;
-      gui.fill(x, y, x + size, y + size, bg);
+      gui.fill(x - 2, y - 2, x + size + 2, y + size + 2, PWPTheme.Colors.BORDER);
+      gui.fill(x, y, x + size, y + size, PWPTheme.Colors.SURFACE_LIGHT);
       gui.renderOutline(x, y, size, size, color);
       int labelWidth = this.font.width(label);
       gui.drawString(this.font, label, x + (size - labelWidth) / 2, y + size / 2 - 10, color, true);
       if (cooldown > 0) {
          String time = cooldown / 20 + "s";
          int timeW = this.font.width(time);
-         gui.drawString(this.font, time, x + (size - timeW) / 2, y + size / 2 + 5, -171, true);
+         gui.drawString(this.font, time, x + (size - timeW) / 2, y + size / 2 + 5, PWPTheme.Colors.TEXT_DIM, true);
       }
    }
 
@@ -89,14 +75,12 @@ public class HubAmmoScreen extends Screen {
             this.onClose();
             return true;
          }
-
          if (mouseX >= rightX && mouseX <= rightX + 60 && mouseY >= boxY && mouseY <= boxY + 60 && this.cachedCdM2 == 0) {
             PacketHandler.INSTANCE.sendToServer(new PacketRequestAmmo(this.hubPos, 1));
             this.onClose();
             return true;
          }
       }
-
       return super.mouseClicked(mouseX, mouseY, button);
    }
 }

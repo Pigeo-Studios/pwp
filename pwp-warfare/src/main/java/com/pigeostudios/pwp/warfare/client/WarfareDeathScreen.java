@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.client;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
@@ -16,8 +17,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Team;
 
-// Экран смерти
-// Позволяет игроку выбрать точку возрождения: главная база, сбор отряда или хаб
 public class WarfareDeathScreen extends DeathScreen {
    private int respawnTimeTotal = 10;
    private long deathTimestamp;
@@ -58,8 +57,8 @@ public class WarfareDeathScreen extends DeathScreen {
 
       int centerX = this.width / 2;
       int centerY = this.height / 2;
-      this.listLeft = centerX - 105;
-      this.listRight = centerX + 105;
+      this.listLeft = centerX - 115;
+      this.listRight = centerX + 115;
       this.listTop = centerY + 58;
       this.listBottom = this.listTop + 100;
       Team team = this.minecraft.player.getTeam();
@@ -81,12 +80,12 @@ public class WarfareDeathScreen extends DeathScreen {
          PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest("MAIN"));
          this.minecraft.player.respawn();
          this.minecraft.setScreen(null);
-      }).bounds(centerX - 105, centerY + 10, 100, 20).build();
+      }).bounds(centerX - 115, centerY + 5, 105, 22).build();
       this.rallySpawnButton = Button.builder(Component.literal("SQUAD RALLY"), button -> {
          PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest("RALLY"));
          this.minecraft.player.respawn();
          this.minecraft.setScreen(null);
-      }).bounds(centerX + 5, centerY + 10, 100, 20).build();
+      }).bounds(centerX + 10, centerY + 5, 105, 22).build();
       this.mainSpawnButton.active = false;
       this.addRenderableWidget(this.mainSpawnButton);
       this.rallySpawnButton.active = false;
@@ -97,7 +96,7 @@ public class WarfareDeathScreen extends DeathScreen {
          hubsExist = ClientData.clientHubs.stream().anyMatch(h -> h.team.equalsIgnoreCase(myTeam) && h.constructed && h.dimension.equals(currentDim));
       }
 
-      String hubBtnText = hubsExist ? "HUB SPAWN ▼" : "NO HUBS";
+      String hubBtnText = hubsExist ? "HUB SPAWN \u25BC" : "NO HUBS";
       this.hubSpawnButton = Button.builder(Component.literal(hubBtnText), button -> {
          this.isHubListOpen = !this.isHubListOpen;
          if (!this.isHubListOpen) {
@@ -107,13 +106,13 @@ public class WarfareDeathScreen extends DeathScreen {
          if (this.isHubListOpen) {
             this.createHubButtons();
          }
-      }).bounds(centerX - 50, centerY + 35, 100, 20).build();
+      }).bounds(centerX - 55, centerY + 32, 110, 22).build();
       this.addRenderableWidget(this.hubSpawnButton);
       this.disconnectButton = Button.builder(Component.literal("Disconnect"), button -> {
          this.minecraft.level.disconnect();
          this.minecraft.clearLevel();
          this.minecraft.setScreen(new TitleScreen());
-      }).bounds(centerX - 50, this.height - 30, 100, 20).build();
+      }).bounds(centerX - 55, this.height - 32, 110, 22).build();
       this.addRenderableWidget(this.disconnectButton);
       if (this.isHubListOpen) {
          this.createHubButtons();
@@ -127,7 +126,6 @@ public class WarfareDeathScreen extends DeathScreen {
       }
    }
 
-   // Создаёт кнопки для списка хабов, доступных для возрождения
    private void createHubButtons() {
       this.hubButtons.clear();
       Team team = this.minecraft.player.getTeam();
@@ -163,7 +161,7 @@ public class WarfareDeathScreen extends DeathScreen {
                   PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(payload));
                   this.minecraft.player.respawn();
                   this.minecraft.setScreen(null);
-               }).bounds(centerX - 100, 0, 200, 20).build();
+               }).bounds(centerX - 105, 0, 210, 22).build();
                if (isBlocked || notEnoughMats) {
                   btn.active = false;
                }
@@ -177,19 +175,33 @@ public class WarfareDeathScreen extends DeathScreen {
    }
 
    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-      gui.fill(0, 0, this.width, this.height, -16777216);
-      gui.drawCenteredString(this.font, this.title, this.width / 2, 30, 16777215);
+      gui.fill(0, 0, this.width, this.height, 0xCC06080A);
+      gui.drawCenteredString(this.font, this.title, this.width / 2, 30, PWPTheme.Colors.TEXT_PRIMARY);
       if (this.cause != null) {
-         gui.drawCenteredString(this.font, this.cause, this.width / 2, 50, 16777215);
+         gui.drawCenteredString(this.font, this.cause, this.width / 2, 48, PWPTheme.Colors.TEXT_SECONDARY);
       }
 
+      // Timer
       long secondsLeft = this.respawnTimeTotal - (System.currentTimeMillis() - this.deathTimestamp) / 1000L;
       if (secondsLeft < 0L) {
          secondsLeft = 0L;
       }
+      int timerColor = secondsLeft > 0L ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.SUCCESS_LIGHT;
+      int cx = this.width / 2;
+      int cy = this.height / 2;
 
-      int timerColor = secondsLeft > 0L ? 16755200 : 65280;
-      gui.drawCenteredString(this.font, "RESPAWN IN: " + secondsLeft, this.width / 2, this.height / 2 - 15, timerColor);
+      gui.drawCenteredString(this.font, "RESPAWN IN: " + secondsLeft, cx, cy - 25, timerColor);
+
+      // Timer bar
+      int barW = 200;
+      int barH = 5;
+      int barX = cx - barW / 2;
+      int barY = cy - 14;
+      float pct = (float) secondsLeft / respawnTimeTotal;
+      gui.fill(barX, barY, barX + barW, barY + barH, PWPTheme.Styles.Progress.BG);
+      gui.fill(barX, barY, barX + (int)(barW * pct), barY + barH,
+         secondsLeft > 0 ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.SUCCESS);
+
       boolean timerFinished = secondsLeft == 0L;
       this.mainSpawnButton.active = timerFinished;
       boolean hasAtLeastOneHub = false;
@@ -240,39 +252,34 @@ public class WarfareDeathScreen extends DeathScreen {
       }
 
       if (this.isHubListOpen && timerFinished && !this.hubButtons.isEmpty()) {
-         gui.fill(this.listLeft, this.listTop, this.listRight, this.listBottom, -1879048192);
+         gui.fill(this.listLeft, this.listTop, this.listRight, this.listBottom, 0xCC0E1117);
+         gui.renderOutline(this.listLeft, this.listTop, this.listRight - this.listLeft, this.listBottom - this.listTop, PWPTheme.Colors.BORDER);
          gui.enableScissor(this.listLeft, this.listTop, this.listRight, this.listBottom);
          int currentY = (int)(this.listTop - this.scrollAmount);
 
          for (Button btn : this.hubButtons) {
             btn.setY(currentY);
-            if (currentY + 20 >= this.listTop && currentY <= this.listBottom) {
+            if (currentY + 22 >= this.listTop && currentY <= this.listBottom) {
                btn.visible = true;
                btn.render(gui, mouseX, mouseY, partialTick);
             } else {
                btn.visible = false;
             }
-
             currentY += 25;
          }
 
          gui.disableScissor();
          int contentHeight = this.hubButtons.size() * 25;
-         if (contentHeight > 100) {
-            int scrollBarX = this.listLeft - 6;
-            int scrollBarWidth = 4;
-            int scrollBarHeight = 100;
-            gui.fill(scrollBarX, this.listTop, scrollBarX + scrollBarWidth, this.listTop + scrollBarHeight, -14671840);
-            float ratio = 100.0F / contentHeight;
-            int thumbHeight = (int)(scrollBarHeight * ratio);
-            if (thumbHeight < 10) {
-               thumbHeight = 10;
-            }
-
-            float maxScroll = contentHeight - 100;
-            int thumbY = this.listTop + (int)(this.scrollAmount / maxScroll * (scrollBarHeight - thumbHeight));
-            gui.fill(scrollBarX, thumbY, scrollBarX + scrollBarWidth, thumbY + thumbHeight, -8355712);
-            gui.fill(scrollBarX, thumbY, scrollBarX + scrollBarWidth - 1, thumbY + thumbHeight - 1, -4144960);
+         if (contentHeight > LIST_HEIGHT) {
+            int scrollBarX = this.listLeft - 7;
+            int scrollBarWidth = 5;
+            gui.fill(scrollBarX, this.listTop, scrollBarX + scrollBarWidth, this.listTop + LIST_HEIGHT, PWPTheme.Styles.ScrollBar.TRACK);
+            float ratio = (float) LIST_HEIGHT / contentHeight;
+            int thumbHeight = Math.max(10, (int)(LIST_HEIGHT * ratio));
+            float maxScroll = contentHeight - LIST_HEIGHT;
+            int thumbY = this.listTop + (int)(this.scrollAmount / maxScroll * (LIST_HEIGHT - thumbHeight));
+            gui.fill(scrollBarX, thumbY, scrollBarX + scrollBarWidth, thumbY + thumbHeight, PWPTheme.Styles.ScrollBar.THUMB);
+            gui.fill(scrollBarX, thumbY, scrollBarX + scrollBarWidth - 1, thumbY + thumbHeight - 1, PWPTheme.Styles.ScrollBar.THUMB_HOVER);
          }
       }
 
@@ -285,26 +292,24 @@ public class WarfareDeathScreen extends DeathScreen {
    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
       if (this.isHubListOpen && !this.hubButtons.isEmpty()) {
          int contentHeight = this.hubButtons.size() * 25;
-         if (contentHeight > 100) {
-            float maxScroll = contentHeight - 100;
+         if (contentHeight > LIST_HEIGHT) {
+            float maxScroll = contentHeight - LIST_HEIGHT;
             this.scrollAmount -= (float)(delta * 15.0);
             this.scrollAmount = Mth.clamp(this.scrollAmount, 0.0F, maxScroll);
             return true;
          }
       }
-
       return super.mouseScrolled(mouseX, mouseY, delta);
    }
 
    public boolean mouseClicked(double mouseX, double mouseY, int button) {
       if (this.isHubListOpen && !this.hubButtons.isEmpty()) {
-         int scrollBarX = this.listLeft - 6;
-         if (mouseX >= scrollBarX - 2 && mouseX <= scrollBarX + 8 && mouseY >= this.listTop && mouseY <= this.listBottom) {
+         int scrollBarX = this.listLeft - 7;
+         if (mouseX >= scrollBarX - 2 && mouseX <= scrollBarX + 9 && mouseY >= this.listTop && mouseY <= this.listBottom) {
             this.isScrolling = true;
             return true;
          }
       }
-
       return super.mouseClicked(mouseX, mouseY, button);
    }
 
@@ -316,34 +321,26 @@ public class WarfareDeathScreen extends DeathScreen {
    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
       if (this.isScrolling && this.isHubListOpen) {
          int contentHeight = this.hubButtons.size() * 25;
-         if (contentHeight > 100) {
-            float maxScroll = contentHeight - 100;
-            int barHeight = 100;
-            float ratio = 100.0F / contentHeight;
-            int thumbHeight = (int)(barHeight * ratio);
-            if (thumbHeight < 10) {
-               thumbHeight = 10;
-            }
-
+         if (contentHeight > LIST_HEIGHT) {
+            float maxScroll = contentHeight - LIST_HEIGHT;
+            int barHeight = LIST_HEIGHT;
+            float ratio = (float) LIST_HEIGHT / contentHeight;
+            int thumbHeight = Math.max(10, (int)(barHeight * ratio));
             float scrollPerPixel = maxScroll / (barHeight - thumbHeight);
             this.scrollAmount += (float)(dragY * scrollPerPixel);
             this.scrollAmount = Mth.clamp(this.scrollAmount, 0.0F, maxScroll);
             return true;
          }
       }
-
       return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
    }
 
-   // Возвращает название ближайшей точки захвата и расстояние до неё
    private String getNearestPointInfo(BlockPos hubPos) {
       if (ClientData.allCapturePoints.isEmpty()) {
          return "Wilderness";
       }
-
       WarfareWorldData.CapturePoint nearest = null;
       double minDistanceSq = Double.MAX_VALUE;
-
       for (WarfareWorldData.CapturePoint cp : ClientData.allCapturePoints) {
          Vec3 center = cp.area.getCenter();
          double dSq = hubPos.distToCenterSqr(center.x, center.y, center.z);
@@ -352,7 +349,6 @@ public class WarfareDeathScreen extends DeathScreen {
             nearest = cp;
          }
       }
-
       if (nearest != null) {
          int distMeters = (int)Math.sqrt(minDistanceSq);
          return nearest.name + " (" + distMeters + "m)";

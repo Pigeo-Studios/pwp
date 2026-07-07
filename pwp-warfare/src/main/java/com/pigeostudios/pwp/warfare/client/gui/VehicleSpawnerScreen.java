@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketUpdateSpawner;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -12,8 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
-// Экран настройки спавнера техники
-// Позволяет задать ID техники, время возрождения, начальную задержку и угол
 public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawnerMenu> {
    private static final ResourceLocation TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/spawner_gui.png");
    private EditBox vehicleIdField;
@@ -36,11 +35,8 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       this.yawField.setValue(String.valueOf((int)((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw));
       this.yawField.setFilter(s -> s.matches("-?\\d*"));
       this.yawField.setResponder(val -> {
-         try {
-            ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw = Float.parseFloat(val);
-            this.sendUpdatePacket();
-         } catch (Exception var3x) {
-         }
+         try { ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw = Float.parseFloat(val); this.sendUpdatePacket(); }
+         catch (Exception var3x) {}
       });
       this.addRenderableWidget(this.yawField);
       this.vehicleIdField = new EditBox(this.font, x + 35, y + 20, 80, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"));
@@ -52,9 +48,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       int rightCenterX = x + 155;
       int btnY_Respawn = y + 18;
       int btnY_Initial = y + 48;
-      this.addRenderableWidget(
-         Button.builder(Component.literal("-"), b -> this.adjustTimer(false, -5)).bounds(rightCenterX - 42, btnY_Respawn, 15, 16).build()
-      );
+      this.addRenderableWidget(Button.builder(Component.literal("-"), b -> this.adjustTimer(false, -5)).bounds(rightCenterX - 42, btnY_Respawn, 15, 16).build());
       this.respawnTimeField = new EditBox(this.font, rightCenterX - 25, btnY_Respawn + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"));
       this.respawnTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings));
       this.respawnTimeField.setResponder(val -> this.onTimeFieldChanged(val, false));
@@ -66,27 +60,19 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       this.initialTimeField.setResponder(val -> this.onTimeFieldChanged(val, true));
       this.addRenderableWidget(this.initialTimeField);
       this.addRenderableWidget(Button.builder(Component.literal("+"), b -> this.adjustTimer(true, 5)).bounds(rightCenterX + 23, btnY_Initial, 15, 16).build());
-      this.addRenderableWidget(Button.builder(Component.literal("↺"), b -> this.adjustYaw(-45.0F)).bounds(x + 77, y + 40, 18, 14).build());
-      this.addRenderableWidget(Button.builder(Component.literal("↻"), b -> this.adjustYaw(45.0F)).bounds(x + 97, y + 40, 18, 14).build());
+      this.addRenderableWidget(Button.builder(Component.literal("\u21BA"), b -> this.adjustYaw(-45.0F)).bounds(x + 77, y + 40, 18, 14).build());
+      this.addRenderableWidget(Button.builder(Component.literal("\u21BB"), b -> this.adjustYaw(45.0F)).bounds(x + 97, y + 40, 18, 14).build());
    }
 
    private void onTimeFieldChanged(String value, boolean isInitial) {
       if (!value.isEmpty()) {
          try {
             int time = Integer.parseInt(value);
-            if (time < 0) {
-               time = 0;
-            }
-
-            if (isInitial) {
-               ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings = time;
-            } else {
-               ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = time;
-            }
-
+            if (time < 0) time = 0;
+            if (isInitial) { ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings = time; }
+            else { ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = time; }
             this.sendUpdatePacket();
-         } catch (NumberFormatException var4) {
-         }
+         } catch (NumberFormatException var4) {}
       }
    }
 
@@ -100,25 +86,18 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
          ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = newVal;
          this.respawnTimeField.setValue(String.valueOf(newVal));
       }
-
       this.sendUpdatePacket();
    }
 
    private void sendUpdatePacket() {
-      if (((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString == null) {
+      if (((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString == null)
          ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString = "";
-      }
-
-      PacketHandler.INSTANCE
-         .sendToServer(
-            new PacketUpdateSpawner(
-               ((VehicleSpawnerMenu)this.menu).blockEntity.getBlockPos(),
-               ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings,
-               ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings,
-               this.vehicleIdField.getValue(),
-               ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw
-            )
-         );
+      PacketHandler.INSTANCE.sendToServer(new PacketUpdateSpawner(
+         ((VehicleSpawnerMenu)this.menu).blockEntity.getBlockPos(),
+         ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings,
+         ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings,
+         this.vehicleIdField.getValue(),
+         ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw));
    }
 
    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -127,12 +106,12 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       this.renderTooltip(gui, mouseX, mouseY);
       int x = (this.width - this.imageWidth) / 2;
       int y = (this.height - this.imageHeight) / 2;
-      gui.drawString(this.font, "ID:", x + 10, y + 23, 11184810, false);
-      gui.drawCenteredString(this.font, "Mod", x + 23, y + 35, 5636095);
+      gui.drawString(this.font, "ID:", x + 10, y + 23, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawCenteredString(this.font, "Mod", x + 23, y + 35, PWPTheme.Colors.INFO);
       int txtX = x + 155;
-      gui.drawCenteredString(this.font, "Respawn (s)", txtX, y + 8, 11184810);
-      gui.drawCenteredString(this.font, "Initial (s)", txtX, y + 38, 11184810);
-      gui.drawString(this.font, "Items (32)", x + 26, y + 64, 5635925, false);
+      gui.drawCenteredString(this.font, "Respawn (s)", txtX, y + 8, PWPTheme.Colors.TEXT_SECONDARY);
+      gui.drawCenteredString(this.font, "Initial (s)", txtX, y + 38, PWPTheme.Colors.TEXT_SECONDARY);
+      gui.drawString(this.font, "Items (32)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
    }
 
    protected void renderBg(GuiGraphics gui, float partialTick, int mouseX, int mouseY) {
@@ -141,7 +120,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       RenderSystem.enableBlend();
       RenderSystem.defaultBlendFunc();
       RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-      gui.drawString(this.font, "Yaw:", x + 10, y + 43, 11184810, false);
+      gui.drawString(this.font, "Yaw:", x + 10, y + 43, PWPTheme.Colors.TEXT_SECONDARY, false);
       gui.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
       gui.blit(TEXTURE, x + 14, y + 44, 79, 19, 18, 18);
       RenderSystem.disableBlend();
@@ -149,17 +128,9 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
 
    private void adjustYaw(float amount) {
       float current = 0.0F;
-
-      try {
-         current = Float.parseFloat(this.yawField.getValue());
-      } catch (Exception var4) {
-      }
-
+      try { current = Float.parseFloat(this.yawField.getValue()); } catch (Exception var4) {}
       float next = (current + amount) % 360.0F;
-      if (next < 0.0F) {
-         next += 360.0F;
-      }
-
+      if (next < 0.0F) next += 360.0F;
       this.yawField.setValue(String.valueOf((int)next));
    }
 }

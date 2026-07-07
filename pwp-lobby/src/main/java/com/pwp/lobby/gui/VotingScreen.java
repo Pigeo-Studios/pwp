@@ -60,15 +60,15 @@ public class VotingScreen extends Screen {
         if (packet == null || packet.mapNames.length == 0) return;
 
         int cx = width / 2;
-        int cardW = Math.min(320, width - 40);
-        int cardH = 68;
-        int cardGap = 5;
+        int cardW = Math.min(340, width - 40);
+        int cardH = 70;
+        int cardGap = 8;
 
         int start = page * CARDS_PER_PAGE;
         int end = Math.min(start + CARDS_PER_PAGE, packet.mapNames.length);
 
         int contentH = (end - start) * (cardH + cardGap);
-        int startY = 55 + (height - 55 - contentH - 40) / 2;
+        int startY = 56 + (height - 56 - contentH - 40) / 2;
 
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + cardGap) {
@@ -87,7 +87,7 @@ public class VotingScreen extends Screen {
         }
 
         int totalPages = Math.max(1, (packet.mapNames.length + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
-        int navY = startY + Math.min(CARDS_PER_PAGE, packet.mapNames.length) * (cardH + cardGap) + 8;
+        int navY = startY + Math.min(CARDS_PER_PAGE, packet.mapNames.length) * (cardH + cardGap) + 10;
 
         if (totalPages > 1) {
             String pageLabel = "Page " + (page + 1) + "/" + totalPages;
@@ -98,25 +98,25 @@ public class VotingScreen extends Screen {
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25C0"),
                         b -> { page--; init(); })
-                        .bounds(plX - 48, navY, 38, 20).build());
+                        .bounds(plX - 50, navY, 38, 20).build());
             }
             if (page < totalPages - 1) {
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25B6"),
                         b -> { page++; init(); })
-                        .bounds(plX + pw + 10, navY, 38, 20).build());
+                        .bounds(plX + pw + 12, navY, 38, 20).build());
             }
         }
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2694 STATS"),
                 b -> Minecraft.getInstance().setScreen(new StatsScreen()))
-                .bounds(cx - 106, height - 28, 50, 20).build());
+                .bounds(cx - 110, height - 30, 56, 22).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715 Close"),
                 b -> onClose())
-                .bounds(cx - 50, height - 28, 100, 20).build());
+                .bounds(cx - 50, height - 30, 100, 22).build());
     }
 
     @Override
@@ -125,33 +125,35 @@ public class VotingScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         if (packet == null || packet.mapNames.length == 0) {
-            gui.drawCenteredString(font, "\u00a7eNo maps available", width / 2, height / 2, 0xFFFFFF);
+            gui.drawCenteredString(font, "\u00a7eNo maps available", width / 2, height / 2, PWPTheme.Colors.TEXT_PRIMARY);
             return;
         }
 
         int cx = width / 2;
 
-        gui.drawCenteredString(font, "\u00a76\u2694 MAP VOTE", cx, 10, 0xFFFFFF);
+        gui.drawCenteredString(font, "\u00a76\u2694 MAP VOTE", cx, 12, PWPTheme.Colors.TEXT_ACCENT);
+        int titleW = font.width("MAP VOTE") + 24;
+        gui.fill(cx - titleW / 2, 22, cx + titleW / 2, 23, PWPTheme.Colors.ACCENT);
 
         int remaining = packet.remainingSeconds - (int)((System.currentTimeMillis() - openedAt) / 1000);
         if (remaining < 0) remaining = 0;
         String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
         String timerColor = remaining <= 10 ? "\u00a7c" : (remaining <= 30 ? "\u00a7e" : "\u00a7a");
-        gui.drawCenteredString(font, timerColor + timeStr + "\u00a77  |  \u00a7e" + packet.onlinePlayers + "\u00a77 players online", cx, 24, 0xFFFFFF);
+        gui.drawCenteredString(font, timerColor + timeStr + "\u00a77  |  \u00a7e" + packet.onlinePlayers + "\u00a77 players online", cx, 30, 0xFFFFFF);
 
         String voteInfo = votedMap != null
             ? "\u00a7a\u2714 Voted: \u00a7f" + votedMap
             : "\u00a77Click a card to vote  |  \u00a7e" + packet.totalVotes + "\u00a77/" + packet.onlinePlayers + " voted";
-        gui.drawCenteredString(font, voteInfo, cx, 38, 0xFFFFFF);
+        gui.drawCenteredString(font, voteInfo, cx, 44, 0xFFFFFF);
 
-        int cardW = Math.min(320, width - 40);
-        int cardH = 68;
-        int cardGap = 5;
+        int cardW = Math.min(340, width - 40);
+        int cardH = 70;
+        int cardGap = 8;
 
         int start = page * CARDS_PER_PAGE;
         int end = Math.min(start + CARDS_PER_PAGE, packet.mapNames.length);
         int contentH = (end - start) * (cardH + cardGap);
-        int startY = 55 + (height - 55 - contentH - 40) / 2;
+        int startY = 56 + (height - 56 - contentH - 40) / 2;
 
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + cardGap) {
@@ -160,10 +162,17 @@ public class VotingScreen extends Screen {
             boolean hover = mx >= cx - cardW / 2 && mx <= cx + cardW / 2 && my >= y && my <= y + cardH;
             int bx = cx - cardW / 2;
 
-            gui.fill(bx, y, bx + cardW, y + cardH,
-                sel ? 0xFF2A2010 : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE));
+            int cardBg;
+            if (sel) cardBg = PWPTheme.Styles.Card.BG_SELECTED;
+            else if (hover) cardBg = PWPTheme.Styles.Card.BG_HOVER;
+            else cardBg = PWPTheme.Styles.Card.BG;
+            gui.fill(bx, y, bx + cardW, y + cardH, cardBg);
 
-            int borderColor = sel ? PWPTheme.Colors.ACCENT : (isLeader ? 0xFFC8812A : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER));
+            int borderColor;
+            if (sel) borderColor = PWPTheme.Styles.Card.BORDER_SELECTED;
+            else if (isLeader) borderColor = PWPTheme.Colors.ACCENT;
+            else if (hover) borderColor = PWPTheme.Styles.Card.BORDER_HOVER;
+            else borderColor = PWPTheme.Styles.Card.BORDER;
             gui.fill(bx, y, bx + cardW, y + 1, borderColor);
             gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, borderColor);
             gui.fill(bx, y, bx + 1, y + cardH, borderColor);
@@ -182,8 +191,8 @@ public class VotingScreen extends Screen {
                 } catch (Exception ignored) {}
             }
 
-            int textX = imgX + imgSize + 12;
-            int textMaxW = bx + cardW - textX - 8;
+            int textX = imgX + imgSize + 14;
+            int textMaxW = bx + cardW - textX - 10;
 
             String nameStr = (isLeader ? "\u00a76\u265B " : (sel ? "\u00a7e\u2714 " : "\u00a7f")) + packet.mapDisplayNames[i];
             gui.drawString(font, nameStr, textX, y + 6, 0xFFFFFF);
@@ -193,7 +202,7 @@ public class VotingScreen extends Screen {
                 if (font.width(descPlain) > textMaxW) {
                     descPlain = font.plainSubstrByWidth(descPlain, textMaxW - 4) + "...";
                 }
-                gui.drawString(font, "\u00a77" + descPlain, textX, y + 18, 0x7A7D84);
+                gui.drawString(font, "\u00a77" + descPlain, textX, y + 20, PWPTheme.Colors.TEXT_SECONDARY);
             }
 
             String factionLine = "\u00a79" + formatFactionName(packet.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(packet.redFactions[i]);
@@ -201,19 +210,19 @@ public class VotingScreen extends Screen {
             if (flw > textMaxW) {
                 factionLine = font.plainSubstrByWidth(factionLine, textMaxW - 4) + "...";
             }
-            gui.drawString(font, factionLine, textX, y + 30, 0x7A7D84);
+            gui.drawString(font, factionLine, textX, y + 32, PWPTheme.Colors.TEXT_SECONDARY);
 
             int votes = packet.voteCounts[i];
             int barX = textX;
-            int barY = y + 46;
-            int barW = bx + cardW - textX - 8;
+            int barY = y + 48;
+            int barW = bx + cardW - textX - 10;
             int barH = 6;
             int maxVotes = 0;
             for (int j = 0; j < packet.voteCounts.length; j++) {
                 if (packet.voteCounts[j] > maxVotes) maxVotes = packet.voteCounts[j];
             }
 
-            gui.fill(barX, barY, barX + barW, barY + barH, 0xFF181C24);
+            gui.fill(barX, barY, barX + barW, barY + barH, PWPTheme.Styles.Progress.BG);
             if (votes > 0 && maxVotes > 0) {
                 float pct = (float) votes / maxVotes;
                 int fillW = (int) (barW * pct);
@@ -226,13 +235,13 @@ public class VotingScreen extends Screen {
                 int pct = votes * 100 / packet.totalVotes;
                 voteText += " \u00a77(" + pct + "%)";
             }
-            gui.drawString(font, voteText, barX, barY + barH + 1, 0x7A7D84);
+            gui.drawString(font, voteText, barX, barY + barH + 2, PWPTheme.Colors.TEXT_SECONDARY);
         }
 
         int totalPages = Math.max(1, (packet.mapNames.length + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
         int navY = startY + Math.min(CARDS_PER_PAGE, packet.mapNames.length) * (cardH + cardGap) + 8;
         if (totalPages > 1) {
-            gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, 0x7A7D84);
+            gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, PWPTheme.Colors.TEXT_SECONDARY);
         }
     }
 

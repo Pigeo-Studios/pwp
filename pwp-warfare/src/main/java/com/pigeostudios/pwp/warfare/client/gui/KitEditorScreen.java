@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionKit;
 import com.pigeostudios.pwp.warfare.network.PacketSaveKit;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -13,8 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
-// Экран редактора наборов экипировки
-// Позволяет настроить предметы, лимиты и флаги пополнения для каждого набора
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     private EditBox maxTeamBox;
     private EditBox maxSquadBox;
@@ -64,19 +63,13 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
    private void saveKit() {
       try {
          ((KitEditorMenu)this.menu).maxPerTeam = Integer.parseInt(this.maxTeamBox.getValue());
-      } catch (Exception var4) {
-      }
-
+      } catch (Exception var4) {}
       try {
          ((KitEditorMenu)this.menu).maxPerSquad = Integer.parseInt(this.maxSquadBox.getValue());
-      } catch (Exception var3) {
-      }
-
+      } catch (Exception var3) {}
       try {
          ((KitEditorMenu)this.menu).minSquadPlayers = Integer.parseInt(this.minPlayersBox.getValue());
-      } catch (Exception var2) {
-      }
-
+      } catch (Exception var2) {}
       String team = ((KitEditorMenu)this.menu).team;
       if (team.equals("BLUE") || team.equals("RED")) {
          PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
@@ -104,16 +97,15 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
       this.renderTooltip(gui, mx, my);
       int x = this.leftPos;
       int y = this.topPos;
-      int labelColor = 13421772;
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.max_team"), x + 98, y + 17, labelColor, false);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.max_squad"), x + 103, y + 35, labelColor, false);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.min_players"), x + 103, y + 53, labelColor, false);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.max_team"), x + 98, y + 17, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.max_squad"), x + 103, y + 35, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.min_players"), x + 103, y + 53, PWPTheme.Colors.TEXT_SECONDARY, false);
       gui.pose().pushPose();
       gui.pose().scale(0.9F, 0.9F, 1.0F);
       int scaledX = (int)((x + 8) / 0.9F);
       int scaledY = (int)((y + 36) / 0.9F);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.toggle_resupply"), scaledX, scaledY, 8454016, false);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.save_nbt"), scaledX, scaledY + 10, 8454143, false);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.toggle_resupply"), scaledX, scaledY, PWPTheme.Colors.SUCCESS, false);
+      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.save_nbt"), scaledX, scaledY + 10, PWPTheme.Colors.INFO, false);
       gui.pose().popPose();
 
       for (int i = 0; i < ((KitEditorMenu)this.menu).slots.size(); i++) {
@@ -122,21 +114,9 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             int idx = slot.getContainerSlot();
             if (idx >= 0 && idx < 49) {
                if (((KitEditorMenu)this.menu).saveNbtFlags[idx]) {
-                  gui.fill(
-                     this.leftPos + slot.x,
-                     this.topPos + slot.y,
-                     this.leftPos + slot.x + 16,
-                     this.topPos + slot.y + 16,
-                     1610612991
-                  );
+                  gui.fill(this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, 0x6000C8FF);
                } else if (((KitEditorMenu)this.menu).resupplyFlags[idx]) {
-                  gui.fill(
-                     this.leftPos + slot.x,
-                     this.topPos + slot.y,
-                     this.leftPos + slot.x + 16,
-                     this.topPos + slot.y + 16,
-                     1627389696
-                  );
+                  gui.fill(this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, 0x6000FF40);
                }
             }
          }
@@ -154,31 +134,22 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
                } else {
                   ((KitEditorMenu)this.menu).resupplyFlags[idx] = !((KitEditorMenu)this.menu).resupplyFlags[idx];
                }
-
                return true;
             }
          }
       }
-
       return super.mouseClicked(mx, my, button);
    }
 
    protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {
-      gui.fill(this.leftPos, this.topPos, this.leftPos + this.imageWidth, this.topPos + this.imageHeight, -13421773);
-      gui.fill(this.leftPos - 42, this.topPos + 62, this.leftPos - 2, this.topPos + 142, -14540254);
-      gui.renderOutline(this.leftPos - 42, this.topPos + 62, 40, 80, -16777216);
+      gui.fill(this.leftPos, this.topPos, this.leftPos + this.imageWidth, this.topPos + this.imageHeight, PWPTheme.Colors.SURFACE);
+      gui.renderOutline(this.leftPos, this.topPos, this.imageWidth, this.imageHeight, PWPTheme.Colors.BORDER);
+      gui.fill(this.leftPos - 42, this.topPos + 62, this.leftPos - 2, this.topPos + 142, PWPTheme.Colors.SURFACE_LIGHT);
+      gui.renderOutline(this.leftPos - 42, this.topPos + 62, 40, 80, PWPTheme.Colors.BORDER);
 
       for (Slot slot : ((KitEditorMenu)this.menu).slots) {
-         gui.fill(
-            this.leftPos + slot.x - 1,
-            this.topPos + slot.y - 1,
-            this.leftPos + slot.x + 17,
-            this.topPos + slot.y + 17,
-            -16777216
-         );
-         gui.fill(
-            this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, -7631989
-         );
+         gui.fill(this.leftPos + slot.x - 1, this.topPos + slot.y - 1, this.leftPos + slot.x + 17, this.topPos + slot.y + 17, PWPTheme.Colors.BORDER);
+         gui.fill(this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, 0xFF1A1E26);
       }
    }
 }

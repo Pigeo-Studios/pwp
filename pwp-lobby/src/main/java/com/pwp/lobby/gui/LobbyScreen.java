@@ -23,12 +23,11 @@ public class LobbyScreen extends Screen {
 
     private static LobbyScreen instance;
 
-    private static final int TAB_MATCH = 0;
-    private static final int TAB_VOTE = 1;
-    private static final int TAB_LIST = 2;
+    private static final int TAB_VOTE = 0;
+    private static final int TAB_LIST = 1;
 
-    private int currentTab = TAB_MATCH;
-    private int targetTab = TAB_MATCH;
+    private int currentTab = TAB_LIST;
+    private int targetTab = TAB_LIST;
     private long tabSwitchTime = 0;
     private static final long TAB_ANIM_MS = 200;
 
@@ -45,6 +44,12 @@ public class LobbyScreen extends Screen {
     private OpenMatchListScreenPacket listData;
     private int listPage = 0;
     private int confirmSid = -1;
+
+    // Scroll
+    private double scrollOffset = 0;
+    private boolean isScrolling = false;
+    private double scrollDragStartY = 0;
+    private double scrollDragStartOff = 0;
 
     private static final Map<String, ResourceLocation> imageCache = new HashMap<>();
 
@@ -63,13 +68,13 @@ public class LobbyScreen extends Screen {
         if (instance != null) {
             instance.matchData = pkt;
             if (instance.currentTab != TAB_LIST) {
-                instance.switchTab(TAB_MATCH);
+                instance.switchTab(TAB_LIST);
             }
         } else {
             LobbyScreen s = new LobbyScreen();
             s.matchData = pkt;
-            s.currentTab = TAB_MATCH;
-            s.targetTab = TAB_MATCH;
+            s.currentTab = TAB_LIST;
+            s.targetTab = TAB_LIST;
             mc.setScreen(s);
         }
     }
@@ -129,6 +134,7 @@ public class LobbyScreen extends Screen {
         if (tab != currentTab) {
             targetTab = tab;
             tabSwitchTime = System.currentTimeMillis();
+            scrollOffset = 0;
         }
     }
 
@@ -144,43 +150,43 @@ public class LobbyScreen extends Screen {
         clearWidgets();
         int cx = width / 2;
 
-        // Tab buttons
-        addRenderableWidget(Button.builder(
-                Component.literal("Match"),
-                b -> switchTab(TAB_MATCH))
-                .bounds(cx - 160, 6, 58, 20).build());
+        // Tab: Vote
         addRenderableWidget(Button.builder(
                 Component.literal("Vote"),
                 b -> { if (voteData != null) switchTab(TAB_VOTE); })
-                .bounds(cx - 100, 6, 48, 20).build());
+                .bounds(cx - 90, 6, 60, 22).build());
+
+        // Tab: Matches
         addRenderableWidget(Button.builder(
                 Component.literal("Matches"),
                 b -> switchTab(TAB_LIST))
-                .bounds(cx - 50, 6, 60, 20).build());
+                .bounds(cx - 26, 6, 68, 22).build());
 
+        // Stats button
         addRenderableWidget(Button.builder(
                 Component.literal("\u2694 Stats"),
                 b -> Minecraft.getInstance().setScreen(new StatsScreen()))
-                .bounds(cx + 12, 6, 58, 20).build());
+                .bounds(cx + 46, 6, 60, 22).build());
 
+        // Close button
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715"),
                 b -> onClose())
-                .bounds(cx + 74, 6, 22, 20).build());
+                .bounds(cx + 110, 6, 22, 22).build());
 
         // Vote tab controls
         if (voteData != null && voteData.mapNames.length > 0) {
             int totalVotePages = Math.max(1, (voteData.mapNames.length + 3) / 4);
             if (totalVotePages > 1) {
-                int pageY = 30;
+                int pageY = 32;
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25C0"),
                         b -> { if (votePage > 0) votePage--; })
-                        .bounds(cx + 52, pageY, 18, 16).build());
+                        .bounds(cx + 40, pageY, 18, 18).build());
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25B6"),
                         b -> { if (votePage < totalVotePages - 1) votePage++; })
-                        .bounds(cx + 96, pageY, 18, 16).build());
+                        .bounds(cx + 84, pageY, 18, 18).build());
             }
         }
 
@@ -188,15 +194,15 @@ public class LobbyScreen extends Screen {
         if (listData != null && listData.count > 0) {
             int totalListPages = Math.max(1, (listData.count + 3) / 4);
             if (totalListPages > 1) {
-                int pageY = 30;
+                int pageY = 32;
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25C0"),
                         b -> { if (listPage > 0) listPage--; })
-                        .bounds(cx + 52, pageY, 18, 16).build());
+                        .bounds(cx + 40, pageY, 18, 18).build());
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25B6"),
                         b -> { if (listPage < totalListPages - 1) listPage++; })
-                        .bounds(cx + 96, pageY, 18, 16).build());
+                        .bounds(cx + 84, pageY, 18, 18).build());
             }
         }
     }
@@ -214,24 +220,24 @@ public class LobbyScreen extends Screen {
         }
 
         int cx = width / 2;
-        String title = currentTab == TAB_MATCH ? "\u2694 PWP MATCH"
-                    : currentTab == TAB_VOTE ? "\u2694 MAP VOTE"
-                    : "\u2694 ACTIVE MATCHES";
-        gui.drawCenteredString(font, "\u00a76" + title, cx, 30, 0xFFFFFF);
+        String title = currentTab == TAB_VOTE ? "\u2694 MAP VOTE" : "\u2694 ACTIVE MATCHES";
+        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " " + title, cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+
+        // Draw accent line under title
+        int titleW = font.width(title) + 20;
+        gui.fill(cx - titleW / 2, 42, cx + titleW / 2, 43, PWPTheme.Colors.ACCENT);
 
         // Animate content alpha
         float alpha = currentTab == targetTab ? 1f : animProgress;
         if (currentTab != targetTab) {
-            alpha = 1f - animProgress; // fade out old tab
+            alpha = 1f - animProgress;
         }
         int a = Math.max(4, Math.min(255, (int)(alpha * 255)));
         if (a < 4) return;
 
         RenderSystem.enableBlend();
 
-        if (currentTab == TAB_MATCH) {
-            renderMatchTab(gui, mx, my, cx, a);
-        } else if (currentTab == TAB_VOTE) {
+        if (currentTab == TAB_VOTE) {
             renderVoteTab(gui, mx, my, cx, a);
         } else if (currentTab == TAB_LIST) {
             renderListTab(gui, mx, my, cx, a);
@@ -240,79 +246,11 @@ public class LobbyScreen extends Screen {
         RenderSystem.disableBlend();
     }
 
-    // ====== MATCH TAB ======
-
-    private void renderMatchTab(GuiGraphics gui, int mx, int my, int cx, int a) {
-        if (matchData == null) {
-            String msg = "\u00a77No match data available";
-            gui.drawCenteredString(font, msg, cx, height / 2, 0x7A7D84);
-            return;
-        }
-        int cy = height / 2 - 40;
-        int sw = Math.min(260, width - 40);
-
-        int bg = (a << 24) | (PWPTheme.Colors.SURFACE & 0x00FFFFFF);
-        int border = (a << 24) | (PWPTheme.Colors.BORDER_ACCENT & 0x00FFFFFF);
-
-        gui.fill(cx - sw / 2, cy - 60, cx + sw / 2, cy + 65, bg);
-        gui.fill(cx - sw / 2, cy - 60, cx + sw / 2, cy - 59, border);
-        gui.fill(cx - sw / 2, cy + 64, cx + sw / 2, cy + 65, (a << 24) | 0x1E222A);
-
-        int y = cy - 50;
-        int textColor = (a << 24) | 0xFFFFFF;
-        int secColor = (a << 24) | 0x7A7D84;
-
-        gui.drawCenteredString(font, "\u00a7fMap: \u00a7e" + matchData.mapDisplayName, cx, y, textColor);
-        y += 15;
-        gui.drawCenteredString(font, "\u00a7fMode: \u00a7e" + matchData.modeDisplayName, cx, y, textColor);
-        y += 15;
-
-        String factions = "\u00a79" + formatFactionName(matchData.blueFaction) + " \u00a77vs \u00a7c" + formatFactionName(matchData.redFaction);
-        gui.drawCenteredString(font, factions, cx, y, textColor);
-        y += 15;
-
-        String tickets = "\u00a79" + matchData.blueTickets + " \u00a77| \u00a7c" + matchData.redTickets;
-        gui.drawCenteredString(font, tickets, cx, y, textColor);
-        y += 18;
-
-        String statusText;
-        int statusColor;
-        switch (matchData.status) {
-            case "VOTING":
-                statusText = "\u25B6 Voting (" + matchData.remainingSeconds + "s)";
-                statusColor = 0xFFC040;
-                break;
-            case "STARTING":
-                statusText = "\u25B6 Starting...";
-                statusColor = 0xFFFF55;
-                break;
-            case "PLAYING":
-                statusText = "\u25CF Match in Progress";
-                statusColor = 0x55FF55;
-                break;
-            default:
-                statusText = "\u25CB No Match";
-                statusColor = 0xAAAAAA;
-                break;
-        }
-        gui.drawCenteredString(font, (a == 255 ? "\u00a7" : "") + statusText, cx, y, statusColor);
-        y += 13;
-        gui.drawCenteredString(font, "\u00a77Online: \u00a7e" + matchData.onlinePlayers, cx, y, secColor);
-        y += 16;
-
-        if ("VOTING".equals(matchData.status)) {
-            gui.drawCenteredString(font, "\u00a7eClick Vote tab to vote", cx, y + 8, secColor);
-        }
-        if (matchData.canJoin) {
-            gui.drawCenteredString(font, "\u00a7aClick Matches tab to join", cx, y + 8, secColor);
-        }
-    }
-
     // ====== VOTE TAB ======
 
     private void renderVoteTab(GuiGraphics gui, int mx, int my, int cx, int a) {
         if (voteData == null || voteData.mapNames.length == 0) {
-            gui.drawCenteredString(font, "\u00a77No vote in progress", cx, height / 2, 0x7A7D84);
+            gui.drawCenteredString(font, "\u00a77No vote in progress", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
 
@@ -326,17 +264,17 @@ public class LobbyScreen extends Screen {
         } else {
             info += "  \u00a7e" + voteData.totalVotes + "\u00a77/" + voteData.onlinePlayers + " voted";
         }
-        gui.drawCenteredString(font, info, cx, 46, 0xFFFFFF);
+        gui.drawCenteredString(font, info, cx, 54, 0xFFFFFF);
 
         int cardsPerPage = 4;
-        int cardW = Math.min(300, width - 40);
-        int cardH = 64;
-        int gap = 5;
+        int cardW = Math.min(320, width - 60);
+        int cardH = 66;
+        int gap = 8;
 
         int start = votePage * cardsPerPage;
         int end = Math.min(start + cardsPerPage, voteData.mapNames.length);
         int contentH = (end - start) * (cardH + gap);
-        int startY = 56 + (height - 56 - contentH - 40) / 2;
+        int startY = 64 + (height - 64 - contentH - 40) / 2;
 
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + gap) {
@@ -345,23 +283,26 @@ public class LobbyScreen extends Screen {
             boolean hover = mx >= cx - cardW / 2 && mx <= cx + cardW / 2 && my >= y && my <= y + cardH;
             int bx = cx - cardW / 2;
 
-            int cardBg = (a << 24) | (sel ? 0x002A2010 : (hover ? 0x001A1E26 : 0x0012151A));
-            gui.fill(bx, y, bx + cardW, y + cardH, cardBg);
+            int cardBg;
+            if (sel) cardBg = PWPTheme.Styles.Card.BG_SELECTED;
+            else if (hover) cardBg = PWPTheme.Styles.Card.BG_HOVER;
+            else cardBg = PWPTheme.Styles.Card.BG;
+            gui.fill(bx, y, bx + cardW, y + cardH, PWPTheme.Colors.withAlpha(cardBg, a));
 
             int borderCol;
-            if (sel) borderCol = (a << 24) | 0x00C8812A;
-            else if (isLeader) borderCol = (a << 24) | 0x00C8812A;
-            else if (hover) borderCol = (a << 24) | 0x00C8812A;
-            else borderCol = (a << 24) | 0x001E222A;
-            gui.fill(bx, y, bx + cardW, y + 1, borderCol);
-            gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, borderCol);
-            gui.fill(bx, y, bx + 1, y + cardH, borderCol);
-            gui.fill(bx + cardW - 1, y, bx + cardW, y + cardH, borderCol);
+            if (sel) borderCol = PWPTheme.Styles.Card.BORDER_SELECTED;
+            else if (isLeader) borderCol = PWPTheme.Colors.ACCENT;
+            else if (hover) borderCol = PWPTheme.Styles.Card.BORDER_HOVER;
+            else borderCol = PWPTheme.Styles.Card.BORDER;
+            gui.fill(bx, y, bx + cardW, y + 1, PWPTheme.Colors.withAlpha(borderCol, a));
+            gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, PWPTheme.Colors.withAlpha(borderCol, a));
+            gui.fill(bx, y, bx + 1, y + cardH, PWPTheme.Colors.withAlpha(borderCol, a));
+            gui.fill(bx + cardW - 1, y, bx + cardW, y + cardH, PWPTheme.Colors.withAlpha(borderCol, a));
 
             int imgSize = 48;
-            int imgX = bx + 6;
+            int imgX = bx + 8;
             int imgY = y + (cardH - imgSize) / 2;
-            gui.fill(imgX, imgY, imgX + imgSize, imgY + imgSize, (a << 24) | 0x00000000);
+            gui.fill(imgX, imgY, imgX + imgSize, imgY + imgSize, PWPTheme.Colors.withAlpha(0xFF000000, a));
 
             ResourceLocation tex = getTexture(voteData.mapNames[i], voteData.worldPaths[i], "vote_");
             if (tex != null) {
@@ -370,38 +311,43 @@ public class LobbyScreen extends Screen {
                 RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
             }
 
-            int textX = imgX + imgSize + 10;
+            int textX = imgX + imgSize + 12;
+            int textMaxW = bx + cardW - textX - 8;
+
             String nameStr = (isLeader ? "\u00a76\u265B " : (sel ? "\u00a7e\u2714 " : "\u00a7f")) + voteData.mapDisplayNames[i];
-            gui.drawString(font, nameStr, textX, y + 5, (a << 24) | 0xFFFFFF);
+            gui.drawString(font, nameStr, textX, y + 6, PWPTheme.Colors.withAlpha(0xFFFFFF, a));
 
             if (voteData.mapDescriptions[i] != null && !voteData.mapDescriptions[i].isEmpty()) {
                 String desc = voteData.mapDescriptions[i];
-                int textMaxW = bx + cardW - textX - 6;
                 if (font.width(desc) > textMaxW) {
                     desc = font.plainSubstrByWidth(desc, textMaxW - 4) + "...";
                 }
-                gui.drawString(font, "\u00a77" + desc, textX, y + 17, (a << 24) | 0x7A7D84);
+                gui.drawString(font, "\u00a77" + desc, textX, y + 18, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
             }
 
             String factionLine = "\u00a79" + formatFactionName(voteData.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(voteData.redFactions[i]);
-            gui.drawString(font, factionLine, textX, y + 29, (a << 24) | 0x7A7D84);
+            int flw = font.width(factionLine);
+            if (flw > textMaxW) {
+                factionLine = font.plainSubstrByWidth(factionLine, textMaxW - 4) + "...";
+            }
+            gui.drawString(font, factionLine, textX, y + 30, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
 
             int votes = voteData.voteCounts[i];
             int barX = textX;
-            int barY = y + 42;
-            int barW = bx + cardW - textX - 6;
+            int barY = y + 44;
+            int barW = bx + cardW - textX - 8;
             int barH = 5;
             int maxVotes = 0;
             for (int j = 0; j < voteData.voteCounts.length; j++) {
                 if (voteData.voteCounts[j] > maxVotes) maxVotes = voteData.voteCounts[j];
             }
 
-            gui.fill(barX, barY, barX + barW, barY + barH, (a << 24) | 0x00181C24);
+            gui.fill(barX, barY, barX + barW, barY + barH, PWPTheme.Colors.withAlpha(PWPTheme.Styles.Progress.BG, a));
             if (votes > 0 && maxVotes > 0) {
                 float pct = (float) votes / maxVotes;
                 int fillW = (int) (barW * pct);
-                int fillCol = (a << 24) | (isLeader ? 0x00C8812A : 0x008B6220);
-                gui.fill(barX, barY, barX + fillW, barY + barH, fillCol);
+                int fillCol = isLeader ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.ACCENT_DIM;
+                gui.fill(barX, barY, barX + fillW, barY + barH, PWPTheme.Colors.withAlpha(fillCol, a));
             }
 
             String voteText = "\u00a7e" + votes + "\u00a77" + (votes != 1 ? " votes" : " vote");
@@ -409,54 +355,93 @@ public class LobbyScreen extends Screen {
                 int pct = votes * 100 / voteData.totalVotes;
                 voteText += " (" + pct + "%)";
             }
-            gui.drawString(font, voteText, barX, barY + barH + 1, (a << 24) | 0x7A7D84);
+            gui.drawString(font, voteText, barX, barY + barH + 2, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
         }
     }
 
-    // ====== LIST TAB ======
+    // ====== LIST TAB (includes current match info + active matches list) ======
 
     private void renderListTab(GuiGraphics gui, int mx, int my, int cx, int a) {
+        int contentY = 50;
+        int contentW = Math.min(340, width - 60);
+        int bx = cx - contentW / 2;
+
+        // Current match info panel (if available)
+        if (matchData != null) {
+            int panelH = 76;
+            int panelBg = PWPTheme.Colors.withAlpha(PWPTheme.Styles.Panel.BG, a);
+            int panelBorder = PWPTheme.Colors.withAlpha(PWPTheme.Styles.Panel.BORDER, a);
+            int textCol = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_PRIMARY, a);
+            int secCol = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a);
+
+            gui.fill(bx, contentY, bx + contentW, contentY + panelH, panelBg);
+            gui.fill(bx, contentY, bx + contentW, contentY + 1, panelBorder);
+            gui.fill(bx, contentY + panelH - 1, bx + contentW, contentY + panelH, panelBorder);
+            gui.fill(bx, contentY, bx + 1, contentY + panelH, panelBorder);
+            gui.fill(bx + contentW - 1, contentY, bx + contentW, contentY + panelH, panelBorder);
+
+            int titleCol = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_ACCENT, a);
+            gui.drawCenteredString(font, "\u00a7lCURRENT MATCH", cx, contentY + 4, titleCol);
+
+            int ly = contentY + 18;
+            gui.drawCenteredString(font, "\u00a7fMap: \u00a7e" + matchData.mapDisplayName, cx, ly, textCol);
+            ly += 12;
+            gui.drawCenteredString(font, "\u00a7fMode: \u00a7e" + matchData.modeDisplayName, cx, ly, textCol);
+            ly += 12;
+
+            String factionStr = "\u00a79" + formatFactionName(matchData.blueFaction) + " \u00a77vs \u00a7c" + formatFactionName(matchData.redFaction);
+            String ticketsStr = "\u00a79" + matchData.blueTickets + " \u00a77| \u00a7c" + matchData.redTickets;
+            gui.drawCenteredString(font, factionStr + "  \u00a77(" + ticketsStr + ")", cx, ly, secCol);
+
+            contentY += panelH + 10;
+        }
+
+        // Active matches list
         if (listData == null || listData.count == 0) {
-            gui.drawCenteredString(font, "\u00a77No active matches", cx, height / 2, 0x7A7D84);
+            String msg = matchData == null ? "\u00a77No active matches" : "";
+            if (!msg.isEmpty()) {
+                gui.drawCenteredString(font, msg, cx, contentY + 20, PWPTheme.Colors.TEXT_SECONDARY);
+            }
             return;
         }
-        gui.drawCenteredString(font, "\u00a77Click a match to join", cx, 46, (a << 24) | 0x7A7D84);
+
+        gui.drawCenteredString(font, "\u00a77Click a match to join", cx, contentY, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+        contentY += 12;
 
         int cardsPerPage = 4;
-        int cardW = Math.min(300, width - 40);
         int cardH = 68;
-        int gap = 5;
+        int gap = 8;
 
         int start = listPage * cardsPerPage;
         int end = Math.min(start + cardsPerPage, listData.count);
-        int contentH = (end - start) * (cardH + gap);
-        int startY = 56 + (height - 56 - contentH - 40) / 2;
 
-        int y = startY;
+        int y = contentY;
         for (int i = start; i < end; i++, y += cardH + gap) {
             boolean isPlaying = "PLAYING".equals(listData.statuses[i]);
             boolean isStarting = "STARTING".equals(listData.statuses[i]);
-            boolean hover = mx >= cx - cardW / 2 && mx <= cx + cardW / 2 && my >= y && my <= y + cardH;
+            boolean hover = mx >= bx && mx <= bx + contentW && my >= y && my <= y + cardH;
             boolean isConfirm = confirmSid != -1 && listData.serverIds[i] == confirmSid;
-            int bx = cx - cardW / 2;
 
-            int cardBg = (a << 24) | (isConfirm ? 0x002A2010 : (hover ? 0x001A1E26 : 0x0012151A));
-            gui.fill(bx, y, bx + cardW, y + cardH, cardBg);
+            int cardBg;
+            if (isConfirm) cardBg = PWPTheme.Styles.Card.BG_SELECTED;
+            else if (hover) cardBg = PWPTheme.Styles.Card.BG_HOVER;
+            else cardBg = PWPTheme.Styles.Card.BG;
+            gui.fill(bx, y, bx + contentW, y + cardH, PWPTheme.Colors.withAlpha(cardBg, a));
 
             int borderCol;
-            if (isConfirm) borderCol = (a << 24) | 0x00C8812A;
-            else if (isPlaying) borderCol = (a << 24) | 0x003D7A40;
-            else if (hover) borderCol = (a << 24) | 0x00C8812A;
-            else borderCol = (a << 24) | 0x001E222A;
-            gui.fill(bx, y, bx + cardW, y + 1, borderCol);
-            gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, borderCol);
-            gui.fill(bx, y, bx + 1, y + cardH, borderCol);
-            gui.fill(bx + cardW - 1, y, bx + cardW, y + cardH, borderCol);
+            if (isConfirm) borderCol = PWPTheme.Styles.Card.BORDER_SELECTED;
+            else if (isPlaying) borderCol = PWPTheme.Colors.SUCCESS;
+            else if (hover) borderCol = PWPTheme.Styles.Card.BORDER_HOVER;
+            else borderCol = PWPTheme.Styles.Card.BORDER;
+            gui.fill(bx, y, bx + contentW, y + 1, PWPTheme.Colors.withAlpha(borderCol, a));
+            gui.fill(bx, y + cardH - 1, bx + contentW, y + cardH, PWPTheme.Colors.withAlpha(borderCol, a));
+            gui.fill(bx, y, bx + 1, y + cardH, PWPTheme.Colors.withAlpha(borderCol, a));
+            gui.fill(bx + contentW - 1, y, bx + contentW, y + cardH, PWPTheme.Colors.withAlpha(borderCol, a));
 
             int imgSize = 48;
-            int imgX = bx + 6;
+            int imgX = bx + 8;
             int imgY = y + (cardH - imgSize) / 2;
-            gui.fill(imgX, imgY, imgX + imgSize, imgY + imgSize, (a << 24) | 0x00000000);
+            gui.fill(imgX, imgY, imgX + imgSize, imgY + imgSize, PWPTheme.Colors.withAlpha(0xFF000000, a));
 
             ResourceLocation tex = getTexture(listData.mapNames[i], listData.worldPaths[i], "list_");
             if (tex != null) {
@@ -465,29 +450,36 @@ public class LobbyScreen extends Screen {
                 RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
             }
 
-            int textX = imgX + imgSize + 10;
+            int textX = imgX + imgSize + 12;
+            int textMaxW = bx + contentW - textX - 8;
+
             String nameStr = (isPlaying ? "\u00a7a\u25CF " : "\u00a7e\u25B6 ") + listData.displayNames[i];
-            gui.drawString(font, nameStr, textX, y + 5, (a << 24) | 0xFFFFFF);
+            gui.drawString(font, nameStr, textX, y + 5, PWPTheme.Colors.withAlpha(0xFFFFFF, a));
 
             String elapsed = formatDuration(listData.elapsedSeconds[i]);
             gui.drawString(font, "\u00a77" + elapsed + "  |  \u00a7e" + listData.playerCounts[i] + "\u00a77/" + listData.maxPlayers[i],
-                textX, y + 17, (a << 24) | 0x7A7D84);
+                textX, y + 17, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
 
             String factionStr = "\u00a79" + formatFactionName(listData.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(listData.redFactions[i]);
-            gui.drawString(font, factionStr, textX, y + 29, (a << 24) | 0x7A7D84);
+            if (font.width(factionStr) > textMaxW) {
+                factionStr = font.plainSubstrByWidth(factionStr, textMaxW - 4) + "...";
+            }
+            gui.drawString(font, factionStr, textX, y + 29, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
 
             String ticketStr = "\u00a79" + listData.blueTickets[i] + " \u00a77| \u00a7c" + listData.redTickets[i];
-            gui.drawString(font, ticketStr, textX, y + 41, (a << 24) | 0x7A7D84);
+            gui.drawString(font, ticketStr, textX, y + 41, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
 
-            if (isConfirm) {
-                gui.drawString(font, "\u00a7a\u2714 Click again to join", textX, y + 54, (a << 24) | 0x3D7A40);
-            } else if (isPlaying) {
-                gui.drawString(font, "\u00a7eClick to join", textX, y + 54, (a << 24) | 0x7A7D84);
-            } else {
-                gui.drawString(font, "\u00a77Starting...", textX, y + 54, (a << 24) | 0x7A7D84);
-            }
+            int actionCol = isConfirm ? PWPTheme.Colors.SUCCESS : PWPTheme.Colors.TEXT_SECONDARY;
+            String actionStr = isConfirm ? "\u00a7a\u2714 Click again to join"
+                : (isPlaying ? "\u00a7eClick to join" : "\u00a77Starting...");
+            gui.drawString(font, actionStr, textX, y + 54, PWPTheme.Colors.withAlpha(actionCol, a));
+        }
 
-            // Full card click detection (no button widget, handle in mouseClicked)
+        // Page indicator
+        int totalPages = Math.max(1, (listData.count + cardsPerPage - 1) / cardsPerPage);
+        if (totalPages > 1) {
+            int navY = y + 8;
+            gui.drawCenteredString(font, "\u00a77Page " + (listPage + 1) + "/" + totalPages, cx, navY, PWPTheme.Colors.TEXT_SECONDARY);
         }
     }
 
@@ -500,13 +492,13 @@ public class LobbyScreen extends Screen {
 
         if (currentTab == TAB_VOTE && voteData != null) {
             int cardsPerPage = 4;
-            int cardW = Math.min(300, width - 40);
-            int cardH = 64;
-            int gap = 5;
+            int cardW = Math.min(320, width - 60);
+            int cardH = 66;
+            int gap = 8;
             int start = votePage * cardsPerPage;
             int end = Math.min(start + cardsPerPage, voteData.mapNames.length);
             int contentH = (end - start) * (cardH + gap);
-            int startY = 56 + (height - 56 - contentH - 40) / 2;
+            int startY = 64 + (height - 64 - contentH - 40) / 2;
 
             int y = startY;
             for (int i = start; i < end; i++, y += cardH + gap) {
@@ -520,19 +512,21 @@ public class LobbyScreen extends Screen {
         }
 
         if (currentTab == TAB_LIST && listData != null) {
+            int contentW = Math.min(340, width - 60);
+            int bx = cx - contentW / 2;
             int cardsPerPage = 4;
-            int cardW = Math.min(300, width - 40);
             int cardH = 68;
-            int gap = 5;
+            int gap = 8;
+
+            int baseY = 50;
+            if (matchData != null) baseY += 86;
+
             int start = listPage * cardsPerPage;
             int end = Math.min(start + cardsPerPage, listData.count);
-            int contentH = (end - start) * (cardH + gap);
-            int startY = 56 + (height - 56 - contentH - 40) / 2;
 
-            int y = startY;
+            int y = baseY + 12;
             for (int i = start; i < end; i++, y += cardH + gap) {
-                int bx = cx - cardW / 2;
-                if (mx >= bx && mx <= bx + cardW && my >= y && my <= y + cardH) {
+                if (mx >= bx && mx <= bx + contentW && my >= y && my <= y + cardH) {
                     int sid = listData.serverIds[i];
                     if (confirmSid != sid) {
                         confirmSid = sid;

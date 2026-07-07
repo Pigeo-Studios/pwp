@@ -55,15 +55,15 @@ public class MatchListScreen extends Screen {
         if (packet == null || packet.count == 0) return;
 
         int cx = width / 2;
-        int cardW = Math.min(320, width - 40);
+        int cardW = Math.min(340, width - 40);
         int cardH = 72;
-        int cardGap = 5;
+        int cardGap = 8;
 
         int start = page * CARDS_PER_PAGE;
         int end = Math.min(start + CARDS_PER_PAGE, packet.count);
 
         int contentH = (end - start) * (cardH + cardGap);
-        int startY = 55 + (height - 55 - contentH - 40) / 2;
+        int startY = 56 + (height - 56 - contentH - 40) / 2;
 
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + cardGap) {
@@ -87,7 +87,7 @@ public class MatchListScreen extends Screen {
         }
 
         int totalPages = Math.max(1, (packet.count + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
-        int navY = startY + Math.min(CARDS_PER_PAGE, packet.count) * (cardH + cardGap) + 8;
+        int navY = startY + Math.min(CARDS_PER_PAGE, packet.count) * (cardH + cardGap) + 10;
 
         if (totalPages > 1) {
             String pageLabel = "Page " + (page + 1) + "/" + totalPages;
@@ -98,25 +98,25 @@ public class MatchListScreen extends Screen {
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25C0"),
                         b -> { page--; init(); })
-                        .bounds(plX - 48, navY, 38, 20).build());
+                        .bounds(plX - 50, navY, 38, 20).build());
             }
             if (page < totalPages - 1) {
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25B6"),
                         b -> { page++; init(); })
-                        .bounds(plX + pw + 10, navY, 38, 20).build());
+                        .bounds(plX + pw + 12, navY, 38, 20).build());
             }
         }
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2694 STATS"),
                 b -> Minecraft.getInstance().setScreen(new StatsScreen()))
-                .bounds(cx - 106, height - 28, 50, 20).build());
+                .bounds(cx - 110, height - 30, 56, 22).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715 Close"),
                 b -> onClose())
-                .bounds(cx - 50, height - 28, 100, 20).build());
+                .bounds(cx - 50, height - 30, 100, 22).build());
     }
 
     @Override
@@ -125,22 +125,25 @@ public class MatchListScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         if (packet == null || packet.count == 0) {
-            gui.drawCenteredString(font, "\u00a77No active matches", width / 2, height / 2, 0xFFFFFF);
+            gui.drawCenteredString(font, "\u00a77No active matches", width / 2, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
 
         int cx = width / 2;
-        gui.drawCenteredString(font, "\u00a76\u2694 ACTIVE MATCHES", cx, 10, 0xFFFFFF);
-        gui.drawCenteredString(font, "\u00a77Click a match to join", cx, 24, 0x7A7D84);
+        gui.drawCenteredString(font, "\u00a76\u2694 ACTIVE MATCHES", cx, 12, PWPTheme.Colors.TEXT_ACCENT);
+        int titleW = font.width("ACTIVE MATCHES") + 24;
+        gui.fill(cx - titleW / 2, 22, cx + titleW / 2, 23, PWPTheme.Colors.ACCENT);
 
-        int cardW = Math.min(320, width - 40);
+        gui.drawCenteredString(font, "\u00a77Click a match to join", cx, 30, PWPTheme.Colors.TEXT_SECONDARY);
+
+        int cardW = Math.min(340, width - 40);
         int cardH = 72;
-        int cardGap = 5;
+        int cardGap = 8;
 
         int start = page * CARDS_PER_PAGE;
         int end = Math.min(start + CARDS_PER_PAGE, packet.count);
         int contentH = (end - start) * (cardH + cardGap);
-        int startY = 55 + (height - 55 - contentH - 40) / 2;
+        int startY = 56 + (height - 56 - contentH - 40) / 2;
 
         int y = startY;
         for (int i = start; i < end; i++, y += cardH + cardGap) {
@@ -150,10 +153,15 @@ public class MatchListScreen extends Screen {
             boolean isConfirm = confirmSid != -1 && packet.serverIds[i] == confirmSid;
             int bx = cx - cardW / 2;
 
-            gui.fill(bx, y, bx + cardW, y + cardH,
-                isConfirm ? 0xFF2A2010 : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE));
+            int cardBg;
+            if (isConfirm) cardBg = PWPTheme.Styles.Card.BG_SELECTED;
+            else if (hover) cardBg = PWPTheme.Styles.Card.BG_HOVER;
+            else cardBg = PWPTheme.Styles.Card.BG;
+            gui.fill(bx, y, bx + cardW, y + cardH, cardBg);
 
-            int borderColor = isConfirm ? PWPTheme.Colors.ACCENT : (isPlaying ? PWPTheme.Colors.SUCCESS : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER));
+            int borderColor = isConfirm ? PWPTheme.Colors.ACCENT
+                : (isPlaying ? PWPTheme.Colors.SUCCESS
+                : (hover ? PWPTheme.Styles.Card.BORDER_HOVER : PWPTheme.Styles.Card.BORDER));
             gui.fill(bx, y, bx + cardW, y + 1, borderColor);
             gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, borderColor);
             gui.fill(bx, y, bx + 1, y + cardH, borderColor);
@@ -172,34 +180,44 @@ public class MatchListScreen extends Screen {
                 } catch (Exception ignored) {}
             }
 
-            int textX = imgX + imgSize + 12;
-            int textMaxW = bx + cardW - textX - 8;
+            int textX = imgX + imgSize + 14;
+            int textMaxW = bx + cardW - textX - 10;
 
             String nameStr = (isPlaying ? "\u00a7a\u25CF " : "\u00a7e\u25B6 ") + packet.displayNames[i];
             gui.drawString(font, nameStr, textX, y + 5, 0xFFFFFF);
 
             String elapsed = formatDuration(packet.elapsedSeconds[i]);
-            gui.drawString(font, "\u00a77" + elapsed + "  |  \u00a7e" + packet.playerCounts[i] + "\u00a77/" + packet.maxPlayers[i], textX, y + 17, 0x7A7D84);
+            gui.drawString(font, "\u00a77" + elapsed + "  |  \u00a7e" + packet.playerCounts[i] + "\u00a77/" + packet.maxPlayers[i],
+                textX, y + 17, PWPTheme.Colors.TEXT_SECONDARY);
 
             String factionStr = "\u00a79" + formatFactionName(packet.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(packet.redFactions[i]);
-            gui.drawString(font, factionStr, textX, y + 29, 0x7A7D84);
+            if (font.width(factionStr) > textMaxW) {
+                factionStr = font.plainSubstrByWidth(factionStr, textMaxW - 4) + "...";
+            }
+            gui.drawString(font, factionStr, textX, y + 29, PWPTheme.Colors.TEXT_SECONDARY);
 
             String ticketStr = "\u00a79" + packet.blueTickets[i] + " \u00a77| \u00a7c" + packet.redTickets[i];
-            gui.drawString(font, ticketStr, textX, y + 41, 0x7A7D84);
+            gui.drawString(font, ticketStr, textX, y + 41, PWPTheme.Colors.TEXT_SECONDARY);
 
+            String actionStr;
+            int actionColor;
             if (isConfirm) {
-                gui.drawString(font, "\u00a7a\u2714 Click again to join", textX, y + 56, PWPTheme.Colors.SUCCESS);
+                actionStr = "\u00a7a\u2714 Click again to join";
+                actionColor = PWPTheme.Colors.SUCCESS;
             } else if (isPlaying) {
-                gui.drawString(font, "\u00a7eClick to join", textX, y + 56, PWPTheme.Colors.TEXT_DIM);
+                actionStr = "\u00a7eClick to join";
+                actionColor = PWPTheme.Colors.TEXT_DIM;
             } else {
-                gui.drawString(font, "\u00a77Starting...", textX, y + 56, PWPTheme.Colors.TEXT_DIM);
+                actionStr = "\u00a77Starting...";
+                actionColor = PWPTheme.Colors.TEXT_DIM;
             }
+            gui.drawString(font, actionStr, textX, y + 56, actionColor);
         }
 
         int totalPages = Math.max(1, (packet.count + CARDS_PER_PAGE - 1) / CARDS_PER_PAGE);
         int navY = startY + Math.min(CARDS_PER_PAGE, packet.count) * (cardH + cardGap) + 8;
         if (totalPages > 1) {
-            gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, 0x7A7D84);
+            gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, PWPTheme.Colors.TEXT_SECONDARY);
         }
     }
 

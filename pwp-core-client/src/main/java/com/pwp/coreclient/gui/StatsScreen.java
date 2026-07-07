@@ -36,8 +36,8 @@ public class StatsScreen extends Screen {
     private static final int TAB_MY_STATS = 0;
     private static final int TAB_LEADERBOARD = 1;
 
-    private static final int CONTENT_TOP = 52;
-    private static final int CONTENT_BOTTOM_OFFSET = 34;
+    private static final int CONTENT_TOP = 54;
+    private static final int CONTENT_BOTTOM_OFFSET = 36;
 
     private static final String[] LB_CATEGORIES = {
         "kills", "deaths", "kd", "wins", "winrate",
@@ -113,32 +113,32 @@ public class StatsScreen extends Screen {
         addRenderableWidget(Button.builder(
                 Component.literal("My Stats"),
                 b -> { tab = TAB_MY_STATS; scrollOffset = 0; init(); })
-                .bounds(cx - 160, 4, 80, 20).build());
+                .bounds(cx - 160, 6, 80, 22).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("Leaderboard"),
                 b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; fetchLeaderboardPage(); init(); })
-                .bounds(cx - 78, 4, 100, 20).build());
+                .bounds(cx - 76, 6, 90, 22).build());
 
         addRenderableWidget(Button.builder(
                 Component.literal("\u2715 Close"),
                 b -> onClose())
-                .bounds(cx - 50, height - 28, 100, 20).build());
+                .bounds(cx - 50, height - 28, 100, 22).build());
 
         if (tab == TAB_LEADERBOARD && lbTotalPages > 1) {
-            int pageY = 28;
+            int pageY = 30;
             addRenderableWidget(Button.builder(
                     Component.literal("\u25C0"),
                     b -> { if (lbPage > 0) { lbPage--; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
-                    .bounds(cx + 80, pageY, 20, 16).build());
+                    .bounds(cx + 80, pageY, 20, 18).build());
             addRenderableWidget(Button.builder(
                     Component.literal("\u25B6"),
                     b -> { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
-                    .bounds(cx + 104, pageY, 20, 16).build());
+                    .bounds(cx + 104, pageY, 20, 18).build());
             addRenderableWidget(Button.builder(
                     Component.literal((lbPage + 1) + "/" + lbTotalPages),
                     b -> {})
-                    .bounds(cx + 52, pageY, 26, 16).build());
+                    .bounds(cx + 52, pageY, 26, 18).build());
         }
     }
 
@@ -148,10 +148,11 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(font, "\u00a76\u2694 STATISTICS", cx, 34, 0xFFFFFF);
+        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " STATISTICS", cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+        gui.fill(cx - 55, 42, cx + 55, 43, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(font, "\u00a77Loading...", cx, height / 2, 0x7A7D84);
+            gui.drawCenteredString(font, "\u00a77Loading...", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
         if (errorMsg != null) {
@@ -172,18 +173,19 @@ public class StatsScreen extends Screen {
         if (scrollMax > 0) {
             int sbY = clipY + 2;
             int sbH = clipH - 4;
-            int sbX = width - 6;
+            int sbX = width - 7;
             int barH = Math.max(12, (int) (sbH * clipH / (clipH + scrollMax)));
             int barY = sbY + (int) ((scrollOffset / scrollMax) * (sbH - barH));
-            gui.fill(sbX, sbY, sbX + 4, sbY + sbH, 0x33181C24);
-            gui.fill(sbX, barY, sbX + 4, barY + barH, 0x88C8812A);
+            gui.fill(sbX, sbY, sbX + 5, sbY + sbH, PWPTheme.Styles.ScrollBar.TRACK);
+            gui.fill(sbX, barY, sbX + 5, barY + barH, PWPTheme.Styles.ScrollBar.THUMB);
+            gui.fill(sbX, barY, sbX + 4, barY + barH - 1, PWPTheme.Styles.ScrollBar.THUMB_HOVER);
         }
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (delta != 0) {
-            scrollOffset -= delta * 10;
+            scrollOffset -= delta * 12;
             if (scrollOffset < 0) scrollOffset = 0;
             if (scrollOffset > scrollMax) scrollOffset = scrollMax;
             return true;
@@ -237,72 +239,73 @@ public class StatsScreen extends Screen {
 
         int y = clipY + 4 - (int) scrollOffset;
         String rankStr = rank > 0 ? "\u00a7e#" + rank + "\u00a77 of " + total : "\u00a77--";
-        gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 2, y, 0xFFFFFF);
-        gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matchesPlayed"), leftX + 2, y + 12, 0x7A7D84);
-        y += 14;
 
-        y = drawPanel(gui, leftX, y, panelW, "\u2694 BATTLE", new String[][]{
+        // Player header
+        gui.fill(leftX, y, leftX + panelW, y + 26, PWPTheme.Colors.SURFACE_LIGHT);
+        gui.fill(leftX, y + 26, leftX + panelW, y + 27, PWPTheme.Colors.BORDER);
+        gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF);
+        gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        y += 30;
+
+        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.SWORDS + " BATTLE", new String[][]{
             {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
             {"K/D", formatKd(st), "Revives", intVal(st, "revives")},
             {"Vehicle Kills", intVal(st, "vehicleKills"), "Captures", intVal(st, "captures")},
             {"Best Streak", intVal(st, "bestKillStreak"), "TeamKills", intVal(st, "teamKills")},
         });
-        y += 5;
+        y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "\u2605 VEHICLES", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.STARBURST + " VEHICLES", new String[][]{
             {"Destroyed", intVal(st, "vehiclesDestroyed"), "Air Destroyed", intVal(st, "airVehiclesDestroyed")},
         });
-        y += 5;
+        y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "\u2316 WEAPONS", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROSSHAIR + " WEAPONS", new String[][]{
             {"Damage", doubleVal(st, "damageDealt"), "Healing", doubleVal(st, "healingDone")},
             {"Supplies", intVal(st, "suppliesDelivered"), "Longest Kill", doubleVal(st, "longestKill") + "m"},
         });
-        y += 5;
+        y += 6;
 
-        int matchesBottom = drawPanel(gui, leftX, y, panelW, "\u2691 MATCHES", new String[][]{
+        int matchesBottom = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROWN + " MATCHES", new String[][]{
             {"Played", intVal(st, "matchesPlayed"), "Wins", intVal(st, "wins")},
             {"Losses", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Playtime", formatPlaytime(st), "Kills/Match", formatKpg(st)},
             {"Best WinStreak", intVal(st, "bestWinStreak"), "Curr. Streak", intVal(st, "currentWinStreak")},
         });
-        // content bottom at scrollOffset=0, add generous margin
-        scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 8 - clipY - clipH);
+        scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 12 - clipY - clipH);
     }
 
     private int drawPanel(GuiGraphics gui, int x, int y, int w, String title, String[][] rows) {
-        int titleH = 14;
-        int rowH = 11;
-        int pad = 4;
+        int titleH = 16;
+        int rowH = 12;
+        int pad = 6;
         int h = titleH + rows.length * rowH + pad;
 
-        gui.fill(x, y, x + w, y + h, PWPTheme.Colors.SURFACE);
-        gui.fill(x, y, x + w, y + 1, PWPTheme.Colors.BORDER);
-        gui.fill(x, y + h - 1, x + w, y + h, PWPTheme.Colors.BORDER);
-        gui.fill(x, y, x + 1, y + h, PWPTheme.Colors.BORDER);
-        gui.fill(x + w - 1, y, x + w, y + h, PWPTheme.Colors.BORDER);
+        gui.fill(x, y, x + w, y + h, PWPTheme.Styles.Panel.BG);
+        gui.fill(x, y, x + w, y + 1, PWPTheme.Styles.Panel.BORDER);
+        gui.fill(x, y + h - 1, x + w, y + h, PWPTheme.Styles.Panel.BORDER);
+        gui.fill(x, y, x + 1, y + h, PWPTheme.Styles.Panel.BORDER);
+        gui.fill(x + w - 1, y, x + w, y + h, PWPTheme.Styles.Panel.BORDER);
 
         gui.fill(x + 1, y + 1, x + w - 1, y + titleH + 1, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(font, "\u00a7e" + title, x + 6, y + 3, 0xFFFFFF);
+        gui.drawString(font, "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT);
 
         int ry = y + titleH + pad / 2;
         int col2X = x + w / 2;
-        int valX1 = x + 85;
-        int valX2 = col2X + 85;
-        int maxTextW = col2X - x - 90;
+        int valX1 = x + 90;
+        int valX2 = col2X + 90;
+        int maxTextW = col2X - x - 96;
 
         for (String[] row : rows) {
             if (!row[0].isEmpty()) {
-                String label = "\u00a77" + row[0] + ":";
-                gui.drawString(font, label, x + 6, ry, 0x7A7D84);
+                gui.drawString(font, "\u00a77" + row[0] + ":", x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY);
                 String val = "\u00a7f" + truncateText(row[1], maxTextW);
-                gui.drawString(font, val, valX1, ry, 0xFFFFFF);
+                gui.drawString(font, val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY);
             }
             if (!row[2].isEmpty()) {
-                String label = "\u00a77" + row[2] + ":";
-                gui.drawString(font, label, col2X + 4, ry, 0x7A7D84);
+                gui.drawString(font, "\u00a77" + row[2] + ":", col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY);
                 String val = "\u00a7f" + truncateText(row[3], maxTextW);
-                gui.drawString(font, val, valX2, ry, 0xFFFFFF);
+                gui.drawString(font, val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY);
             }
             ry += rowH;
         }
@@ -329,38 +332,39 @@ public class StatsScreen extends Screen {
         int catX = leftX;
         int catY = y;
         for (int i = 0; i < LB_CATEGORIES.length; i++) {
-            int bw = font.width(LB_CATEGORY_NAMES[i]) + 12;
+            int bw = font.width(LB_CATEGORY_NAMES[i]) + 14;
             boolean isSel = lbOrderBy.equals(LB_CATEGORIES[i]);
             boolean hover = mx >= catX && mx <= catX + bw && my >= catY && my <= catY + 18;
             int bg = isSel ? PWPTheme.Colors.ACCENT_DIM : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
             gui.fill(catX, catY, catX + bw, catY + 18, bg);
-            // Border
+
             int borderCol = isSel ? PWPTheme.Colors.ACCENT : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
             gui.fill(catX, catY, catX + bw, catY + 1, borderCol);
             gui.fill(catX, catY + 17, catX + bw, catY + 18, borderCol);
             gui.fill(catX, catY, catX + 1, catY + 18, borderCol);
             gui.fill(catX + bw - 1, catY, catX + bw, catY + 18, borderCol);
+
             String textColor = isSel ? "\u00a7e" : (hover ? "\u00a7f" : "\u00a77");
-            gui.drawString(font, textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, 0xFFFFFF);
+            gui.drawString(font, textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, PWPTheme.Colors.TEXT_PRIMARY);
             catBounds.add(new int[]{catX, catY, bw, 18, i});
-            catX += bw + 3;
+            catX += bw + 4;
             if (catX + 60 > leftX + w) { catX = leftX; catY += 20; }
         }
 
-        y = catY + 20;
+        y = catY + 22;
 
         int headerY = y;
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
-        gui.fill(leftX, headerY + 1, leftX + w, headerY + 13, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(font, "\u00a77#", leftX + 4, headerY + 3, 0x7A7D84);
-        gui.drawString(font, "\u00a77Player", leftX + 26, headerY + 3, 0x7A7D84);
-        gui.drawString(font, "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 3, 0x7A7D84);
-        gui.drawString(font, "\u00a77K/D", leftX + 270, headerY + 3, 0x7A7D84);
-        gui.drawString(font, "\u00a77W/R", leftX + 310, headerY + 3, 0x7A7D84);
+        gui.fill(leftX, headerY + 1, leftX + w, headerY + 14, PWPTheme.Colors.SURFACE_LIGHT);
+        gui.drawString(font, "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77Player", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77W/R", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
 
-        int rowY = headerY + 15;
+        int rowY = headerY + 16;
         int rankOffset = lbPage * 10;
-        int rowH = 13;
+        int rowH = 14;
 
         for (int i = 0; i < lbEntries.size(); i++) {
             LeaderboardEntry e = lbEntries.get(i);
@@ -375,31 +379,30 @@ public class StatsScreen extends Screen {
 
             int rn = rankOffset + i + 1;
             String rankStr = rn == 1 ? "\u00a76#1" : rn == 2 ? "\u00a77#2" : rn == 3 ? "\u00a76#3" : "\u00a77#" + rn;
-            gui.drawString(font, rankStr, leftX + 4, rowY + 3, 0xFFFFFF);
+            gui.drawString(font, rankStr, leftX + 6, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
 
             String nameStr = e.nickname;
             if (font.width(nameStr) > 120) nameStr = font.plainSubstrByWidth(nameStr, 118) + "...";
-            gui.drawString(font, (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 26, rowY + 3, 0xFFFFFF);
+            gui.drawString(font, (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
 
             String colVal = truncateText(getColValue(e, lbOrderBy), 70);
-            gui.drawString(font, "\u00a7f" + colVal, leftX + 190, rowY + 3, 0xFFFFFF);
+            gui.drawString(font, "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
 
             String kdStr = String.format("%.2f", e.kd);
-            gui.drawString(font, "\u00a77" + kdStr, leftX + 270, rowY + 3, 0x7A7D84);
+            gui.drawString(font, "\u00a77" + kdStr, leftX + 270, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
 
             String wrStr = String.format("%.1f%%", e.winRate);
-            gui.drawString(font, "\u00a77" + wrStr, leftX + 310, rowY + 3, 0x7A7D84);
+            gui.drawString(font, "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
 
             if (isMe) {
                 String meLabel = "\u00a7e\u25C0 you";
                 int meW = font.width(meLabel);
-                gui.drawString(font, meLabel, leftX + w - meW - 4, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
+                gui.drawString(font, meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
             }
 
             rowY += rowH;
         }
-        // content bottom at scrollOffset=0, add generous margin
-        scrollMax = Math.max(0, rowY + (int) scrollOffset + 8 - clipY - clipH);
+        scrollMax = Math.max(0, rowY + (int) scrollOffset + 12 - clipY - clipH);
     }
 
     private String getColLabel(String orderBy) {

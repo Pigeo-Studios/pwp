@@ -99,8 +99,8 @@ public class ClientHUDHandler {
         int x = (int)((float)(-width) + progress * (float)(width + 10));
         int y = 40;
         RenderSystem.enableBlend();
-        guiGraphics.fill(x, y, x + width, y + height, -1442840576);
-        guiGraphics.fill(x, y, x + 3, y + height, -10496);
+        guiGraphics.fill(x, y, x + width, y + height, 0xCC06080A);
+        guiGraphics.fill(x, y, x + 3, y + height, 0xFFA53D3D);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         guiGraphics.blit(BLEEDING_ICON, x + 8, y + 5, 0.0f, 0.0f, 16, 16, 16, 16);
         guiGraphics.drawString(mc.font, (Component)text, x + 32, y + 9, -1, true);

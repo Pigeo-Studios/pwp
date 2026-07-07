@@ -5,44 +5,38 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.NotNull;
 
-// Экран настроек мода PWP: Limits
-public class ConfigScreen
-extends Screen {
+public class ConfigScreen extends Screen {
     private final Screen lastScreen;
     private EditBox cooldownInput;
 
     public ConfigScreen(Screen lastScreen) {
-        super((Component)Component.literal((String)"PWP: Limits Settings"));
+        super(Component.literal("PWP: Limits Settings"));
         this.lastScreen = lastScreen;
     }
 
     @Override
     protected void init() {
-        int centerX = this.width / 2;
-        // Кнопка включения/отключения кулдауна прыжка
-        this.addRenderableWidget(CycleButton.onOffBuilder((Boolean)ModConfig.ENABLE_JUMP_COOLDOWN.get()).create(centerX - 100, 50, 200, 20, Component.literal("КД на прыжок"), (button, value) -> ModConfig.ENABLE_JUMP_COOLDOWN.set(value)));
-        // Поле ввода секунд кулдауна
-        this.cooldownInput = new EditBox(this.font, centerX - 100, 90, 200, 20, Component.literal("Секунды"));
+        int cx = this.width / 2;
+        this.addRenderableWidget(CycleButton.onOffBuilder((Boolean)ModConfig.ENABLE_JUMP_COOLDOWN.get())
+            .create(cx - 100, 50, 200, 20, Component.literal("Jump Cooldown"), (button, value) -> ModConfig.ENABLE_JUMP_COOLDOWN.set(value)));
+
+        this.cooldownInput = new EditBox(this.font, cx - 100, 90, 200, 20, Component.literal("Seconds"));
         this.cooldownInput.setValue(String.valueOf(ModConfig.JUMP_COOLDOWN_SECONDS.get()));
         this.cooldownInput.setFilter(s -> s.matches("^[0-9]*\\.?[0-9]*$"));
         this.addRenderableWidget(this.cooldownInput);
-        // Кнопка "Готово" — сохранить и закрыть
-        this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> this.saveAndClose()).pos(centerX - 100, 150).size(200, 20).build());
+
+        this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> this.saveAndClose())
+            .bounds(cx - 100, 150, 200, 22).build());
     }
 
     private void saveAndClose() {
         try {
             double value = Double.parseDouble(this.cooldownInput.getValue());
             ModConfig.JUMP_COOLDOWN_SECONDS.set(value);
-        }
-        catch (Exception exception) {
-            // empty catch block
-        }
+        } catch (Exception ignored) {}
         ModConfig.SPEC.save();
         if (this.minecraft != null) {
             this.minecraft.setScreen(this.lastScreen);
@@ -50,10 +44,11 @@ extends Screen {
     }
 
     @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        this.renderBackground(guiGraphics);
-        guiGraphics.drawString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
-        guiGraphics.drawString(this.font, "Секунды КД:", this.width / 2 - 100, 78, 0xAAAAAA);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(gui);
+        int cx = this.width / 2;
+        gui.drawCenteredString(this.font, "\u2699 " + this.title.getString(), cx, 20, 0xFFC8812A);
+        gui.drawString(this.font, "Cooldown seconds:", cx - 100, 78, 0xFF7A7D84);
+        super.render(gui, mouseX, mouseY, partialTick);
     }
 }

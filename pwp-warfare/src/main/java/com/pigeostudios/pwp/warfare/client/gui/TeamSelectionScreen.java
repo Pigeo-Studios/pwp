@@ -4,14 +4,13 @@ import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketTeamSelect;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-// Экран выбора команды (Синие vs Красные)
-// Отображает флаги фракций и позволяет присоединиться к одной из сторон
 public class TeamSelectionScreen extends Screen {
    private static final ResourceLocation FLAG_UKRAINE = new ResourceLocation("pwpwarfare", "textures/gui/flags/ukraine.png");
    private static final ResourceLocation FLAG_RUSSIA = new ResourceLocation("pwpwarfare", "textures/gui/flags/russia.png");
@@ -31,87 +30,117 @@ public class TeamSelectionScreen extends Screen {
        gui.fill(0, 0, this.width, this.height, Integer.MIN_VALUE);
        int centerX = this.width / 2;
        int centerY = this.height / 2;
-       int flagWidth = 64;
-       int flagHeight = 36;
-       int offset = 60;
+
+       int cardW = 160;
+       int cardH = 140;
+       int gap = 30;
 
        boolean blueFull = ClientData.BLUE_PLAYER_COUNT >= ClientData.RED_PLAYER_COUNT + 2;
        boolean redFull = ClientData.RED_PLAYER_COUNT >= ClientData.BLUE_PLAYER_COUNT + 2;
 
-       int blueX = centerX - offset - flagWidth;
-       int blueY = centerY - flagHeight / 2;
-       boolean isHoveringBlue = !blueFull && mouseX >= blueX && mouseX <= blueX + flagWidth && mouseY >= blueY && mouseY <= blueY + flagHeight + 20;
+       // Title
+       gui.drawCenteredString(this.font, PWPTheme.Icons.SWORDS + " " + Component.translatable("gui.pwpwarfare.team_select.title").getString(),
+          centerX, 20, PWPTheme.Colors.TEXT_ACCENT);
+       gui.fill(centerX - 80, 30, centerX + 80, 31, PWPTheme.Colors.ACCENT);
+
+       // Blue team card
+       int blueX = centerX - gap - cardW;
+       int blueY = centerY - cardH / 2;
+       boolean isHoveringBlue = !blueFull && mouseX >= blueX && mouseX <= blueX + cardW && mouseY >= blueY && mouseY <= blueY + cardH;
+       int blueBg = blueFull ? PWPTheme.Colors.SURFACE : (isHoveringBlue ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
+       int blueBorder = blueFull ? PWPTheme.Colors.BORDER : (isHoveringBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.BORDER_ACCENT);
+
+       gui.fill(blueX, blueY, blueX + cardW, blueY + cardH, blueBg);
+       gui.fill(blueX, blueY, blueX + cardW, blueY + 1, blueBorder);
+       gui.fill(blueX, blueY + cardH - 1, blueX + cardW, blueY + cardH, blueBorder);
+       gui.fill(blueX, blueY, blueX + 1, blueY + cardH, blueBorder);
+       gui.fill(blueX + cardW - 1, blueY, blueX + cardW, blueY + cardH, blueBorder);
+
+       String blueTeamName = ClientData.customBlueName;
+       if (ClientData.BLUE_FACTION != null && !ClientData.BLUE_FACTION.equals("none") && !ClientData.BLUE_FACTION.equals("bluefor")) {
+          blueTeamName = ClientData.BLUE_FACTION.replace("_", " ").toUpperCase();
+       }
+       gui.drawCenteredString(this.font, Component.literal(blueTeamName).withStyle(ChatFormatting.BLUE),
+          blueX + cardW / 2, blueY + 8, PWPTheme.Colors.TEAM_BLUE);
+
        ResourceLocation blueFlag = this.getFlagTexture(ClientData.BLUE_FACTION);
        if (blueFlag != null) {
           float bAlpha = blueFull ? 0.3F : 1.0F;
           RenderSystem.setShaderColor(bAlpha, bAlpha, bAlpha, bAlpha);
           RenderSystem.enableBlend();
           RenderSystem.defaultBlendFunc();
-          gui.blit(blueFlag, blueX, blueY, 0.0F, 0.0F, flagWidth, flagHeight, flagWidth, flagHeight);
+          gui.blit(blueFlag, blueX + (cardW - 80) / 2, blueY + 22, 0.0F, 0.0F, 80, 45, 80, 45);
           RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
        } else {
-          gui.fill(blueX, blueY, blueX + flagWidth, blueY + flagHeight, blueFull ? 0x66404040 : -16777046);
+          gui.fill(blueX + (cardW - 80) / 2, blueY + 22, blueX + (cardW - 80) / 2 + 80, blueY + 22 + 45,
+             blueFull ? 0x66404040 : PWPTheme.Colors.TEAM_BLUE_DARK);
        }
 
-       if (isHoveringBlue) {
-          gui.renderOutline(blueX - 1, blueY - 1, flagWidth + 2, flagHeight + 2, -1);
-       }
-
-       String blueTeamName = ClientData.customBlueName;
-       if (ClientData.BLUE_FACTION != null && !ClientData.BLUE_FACTION.equals("none") && !ClientData.BLUE_FACTION.equals("bluefor")) {
-          blueTeamName = ClientData.BLUE_FACTION.replace("_", " ").toUpperCase();
-       }
-
-       int blueJoinColor = blueFull ? -65536 : (isHoveringBlue ? -1 : -22016);
        String blueJoinText = blueFull ? "TOO MANY PLAYERS" : "JOIN";
-       gui.drawCenteredString(this.font, Component.literal(blueJoinText).withStyle(ChatFormatting.GOLD), blueX + flagWidth / 2, blueY + flagHeight + 10, blueJoinColor);
-        gui.drawCenteredString(this.font, Component.literal(blueTeamName).withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.BLUE), blueX + flagWidth / 2, blueY - 15, blueFull ? 0x555555 : 16777215);
-        gui.drawCenteredString(this.font, Component.literal(ClientData.BLUE_PLAYER_COUNT + " players").withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY), blueX + flagWidth / 2, blueY + flagHeight + 24, blueFull ? 0x555555 : 0xAAAAAA);
+       int blueJoinColor = blueFull ? PWPTheme.Colors.TEXT_DIM : (isHoveringBlue ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_ACCENT);
+       gui.drawCenteredString(this.font, Component.literal(blueJoinText).withStyle(ChatFormatting.GOLD),
+          blueX + cardW / 2, blueY + 78, blueJoinColor);
 
-        int redX = centerX + offset;
-       int redY = centerY - flagHeight / 2;
-       boolean isHoveringRed = !redFull && mouseX >= redX && mouseX <= redX + flagWidth && mouseY >= redY && mouseY <= redY + flagHeight + 20;
+       gui.drawCenteredString(this.font, Component.literal(ClientData.BLUE_PLAYER_COUNT + " players").withStyle(blueFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY),
+          blueX + cardW / 2, blueY + 92, blueFull ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.TEXT_SECONDARY);
+
+       // Red team card
+       int redX = centerX + gap;
+       int redY = centerY - cardH / 2;
+       boolean isHoveringRed = !redFull && mouseX >= redX && mouseX <= redX + cardW && mouseY >= redY && mouseY <= redY + cardH;
+       int redBg = redFull ? PWPTheme.Colors.SURFACE : (isHoveringRed ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
+       int redBorder = redFull ? PWPTheme.Colors.BORDER : (isHoveringRed ? PWPTheme.Colors.TEAM_RED : PWPTheme.Colors.BORDER_ACCENT);
+
+       gui.fill(redX, redY, redX + cardW, redY + cardH, redBg);
+       gui.fill(redX, redY, redX + cardW, redY + 1, redBorder);
+       gui.fill(redX, redY + cardH - 1, redX + cardW, redY + cardH, redBorder);
+       gui.fill(redX, redY, redX + 1, redY + cardH, redBorder);
+       gui.fill(redX + cardW - 1, redY, redX + cardW, redY + cardH, redBorder);
+
+       String redTeamName = ClientData.customRedName;
+       if (ClientData.RED_FACTION != null && !ClientData.RED_FACTION.equals("none") && !ClientData.RED_FACTION.equals("redfor")) {
+          redTeamName = ClientData.RED_FACTION.replace("_", " ").toUpperCase();
+       }
+       gui.drawCenteredString(this.font, Component.literal(redTeamName).withStyle(ChatFormatting.RED),
+          redX + cardW / 2, redY + 8, PWPTheme.Colors.TEAM_RED);
+
        ResourceLocation redFlag = this.getFlagTexture(ClientData.RED_FACTION);
        if (redFlag != null) {
           float rAlpha = redFull ? 0.3F : 1.0F;
           RenderSystem.setShaderColor(rAlpha, rAlpha, rAlpha, rAlpha);
           RenderSystem.enableBlend();
           RenderSystem.defaultBlendFunc();
-          gui.blit(redFlag, redX, redY, 0.0F, 0.0F, flagWidth, flagHeight, flagWidth, flagHeight);
+          gui.blit(redFlag, redX + (cardW - 80) / 2, redY + 22, 0.0F, 0.0F, 80, 45, 80, 45);
           RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
        } else {
-          gui.fill(redX, redY, redX + flagWidth, redY + flagHeight, redFull ? 0x66404040 : -5636096);
+          gui.fill(redX + (cardW - 80) / 2, redY + 22, redX + (cardW - 80) / 2 + 80, redY + 22 + 45,
+             redFull ? 0x66404040 : PWPTheme.Colors.TEAM_RED_DARK);
        }
 
-       if (isHoveringRed) {
-          gui.renderOutline(redX - 1, redY - 1, flagWidth + 2, flagHeight + 2, -1);
-       }
-
-       String redTeamName = ClientData.customRedName;
-       if (ClientData.RED_FACTION != null && !ClientData.RED_FACTION.equals("none") && !ClientData.RED_FACTION.equals("redfor")) {
-          redTeamName = ClientData.RED_FACTION.replace("_", " ").toUpperCase();
-       }
-
-       int redJoinColor = redFull ? -65536 : (isHoveringRed ? -1 : -22016);
        String redJoinText = redFull ? "TOO MANY PLAYERS" : "JOIN";
-        gui.drawCenteredString(this.font, Component.literal(redJoinText).withStyle(ChatFormatting.GOLD), redX + flagWidth / 2, redY + flagHeight + 10, redJoinColor);
-        gui.drawCenteredString(this.font, Component.literal(redTeamName).withStyle(redFull ? ChatFormatting.DARK_GRAY : ChatFormatting.RED), redX + flagWidth / 2, redY - 15, redFull ? 0x555555 : 16777215);
-        gui.drawCenteredString(this.font, Component.literal(ClientData.RED_PLAYER_COUNT + " players").withStyle(redFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY), redX + flagWidth / 2, redY + flagHeight + 24, redFull ? 0x555555 : 0xAAAAAA);
-        super.render(gui, mouseX, mouseY, partialTick);
+       int redJoinColor = redFull ? PWPTheme.Colors.TEXT_DIM : (isHoveringRed ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_ACCENT);
+       gui.drawCenteredString(this.font, Component.literal(redJoinText).withStyle(ChatFormatting.GOLD),
+          redX + cardW / 2, redY + 78, redJoinColor);
+
+       gui.drawCenteredString(this.font, Component.literal(ClientData.RED_PLAYER_COUNT + " players").withStyle(redFull ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY),
+          redX + cardW / 2, redY + 92, redFull ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.TEXT_SECONDARY);
+
+       super.render(gui, mouseX, mouseY, partialTick);
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
        if (button == 0) {
           int centerX = this.width / 2;
           int centerY = this.height / 2;
-          int flagWidth = 64;
-          int flagHeight = 36;
-          int offset = 60;
+          int cardW = 160;
+          int cardH = 140;
+          int gap = 30;
           boolean blueFull = ClientData.BLUE_PLAYER_COUNT >= ClientData.RED_PLAYER_COUNT + 2;
           boolean redFull = ClientData.RED_PLAYER_COUNT >= ClientData.BLUE_PLAYER_COUNT + 2;
-          int blueX = centerX - offset - flagWidth;
-          int blueY = centerY - flagHeight / 2;
-          if (!blueFull && mouseX >= blueX && mouseX <= blueX + flagWidth && mouseY >= blueY && mouseY <= blueY + flagHeight + 20) {
+
+          int blueX = centerX - gap - cardW;
+          int blueY = centerY - cardH / 2;
+          if (!blueFull && mouseX >= blueX && mouseX <= blueX + cardW && mouseY >= blueY && mouseY <= blueY + cardH) {
              ClientData.teamSelectSent = true;
              ClientData.teamSelectSentTime = System.currentTimeMillis();
              PacketHandler.INSTANCE.sendToServer(new PacketTeamSelect("BLUE"));
@@ -119,9 +148,9 @@ public class TeamSelectionScreen extends Screen {
              return true;
           }
 
-          int redX = centerX + offset;
-          int redY = centerY - flagHeight / 2;
-          if (!redFull && mouseX >= redX && mouseX <= redX + flagWidth && mouseY >= redY && mouseY <= redY + flagHeight + 20) {
+          int redX = centerX + gap;
+          int redY = centerY - cardH / 2;
+          if (!redFull && mouseX >= redX && mouseX <= redX + cardW && mouseY >= redY && mouseY <= redY + cardH) {
              ClientData.teamSelectSent = true;
              ClientData.teamSelectSentTime = System.currentTimeMillis();
              PacketHandler.INSTANCE.sendToServer(new PacketTeamSelect("RED"));
@@ -144,24 +173,15 @@ public class TeamSelectionScreen extends Screen {
    private ResourceLocation getFlagTexture(String faction) {
       if (faction != null && !faction.equals("none")) {
          switch (faction.toLowerCase()) {
-            case "ukraine":
-               return FLAG_UKRAINE;
-            case "russia":
-               return FLAG_RUSSIA;
-            case "usa":
-               return FLAG_USA;
-            case "bluefor":
-               return new ResourceLocation("pwpwarfare", "textures/gui/flags/bluefor.png");
-            case "redfor":
-               return new ResourceLocation("pwpwarfare", "textures/gui/flags/redfor.png");
-            case "nato":
-               return FLAG_NATO;
-            case "insurgency":
-               return FLAG_INSURGENCY;
-            case "pmc":
-               return FLAG_PMC;
-            default:
-               return null;
+            case "ukraine": return FLAG_UKRAINE;
+            case "russia": return FLAG_RUSSIA;
+            case "usa": return FLAG_USA;
+            case "bluefor": return FLAG_BLUEFOR;
+            case "redfor": return FLAG_REDFOR;
+            case "nato": return FLAG_NATO;
+            case "insurgency": return FLAG_INSURGENCY;
+            case "pmc": return FLAG_PMC;
+            default: return null;
          }
       } else {
          return null;

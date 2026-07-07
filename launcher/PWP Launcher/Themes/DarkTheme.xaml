@@ -13,6 +13,7 @@
     <Color x:Key="TextSecondary">#7A7F85</Color>
     <Color x:Key="TextMuted">#4A4E54</Color>
     <Color x:Key="BorderColor">#1E232B</Color>
+    <Color x:Key="BorderFocus">#C8812A</Color>
     <Color x:Key="Green">#4CAF50</Color>
     <Color x:Key="Red">#A53D3D</Color>
     <Color x:Key="Blue">#3D6FA5</Color>
@@ -30,6 +31,7 @@
     <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource TextSecondary}" />
     <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource TextMuted}" />
     <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="BrushBorderFocus" Color="{StaticResource BorderFocus}" />
     <SolidColorBrush x:Key="BrushGreen" Color="{StaticResource Green}" />
     <SolidColorBrush x:Key="BrushRed" Color="{StaticResource Red}" />
     <SolidColorBrush x:Key="BrushBlue" Color="{StaticResource Blue}" />
@@ -61,6 +63,43 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{StaticResource BrushBgCardHover}" />
                             <Setter Property="BorderBrush" Value="{StaticResource BrushAccent}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushBgInput}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BrushAccentPressed}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{StaticResource BrushBgPrimary}" />
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}" />
+                            <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Ghost button (transparent, shows border on hover) -->
+    <Style TargetType="Button" x:Key="GhostButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,4" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderThickness="0"
+                            CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushBgCardHover}" />
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Background" Value="{StaticResource BrushBgInput}" />
@@ -96,6 +135,11 @@
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Background" Value="{StaticResource BrushAccentPressed}" />
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <ScaleTransform ScaleX="0.97" ScaleY="0.97" />
+                                </Setter.Value>
+                            </Setter>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Background" Value="{StaticResource BrushTextMuted}" />
@@ -169,6 +213,32 @@
         <Setter Property="Width" Value="8" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Track x:Name="PART_Track">
+                        <Track.Thumb>
+                            <Thumb Background="{StaticResource BrushAccent}"
+                                   BorderThickness="0"
+                                   CornerRadius="4"
+                                   Width="6" />
+                        </Track.Thumb>
+                    </Track>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource BrushAccentHover}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Separator -->
+    <Style TargetType="Separator">
+        <Setter Property="Background" Value="{StaticResource BrushBorder}" />
+        <Setter Property="Margin" Value="0,16,0,16" />
+        <Setter Property="Height" Value="1" />
     </Style>
 
     <!-- Label -->

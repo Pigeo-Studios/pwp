@@ -27,10 +27,10 @@ import java.util.stream.Collectors;
 
 public class SkinInventoryScreen extends Screen {
 
-    private static final int ITEMS_PER_ROW = 6;
-    private static final int ITEM_SIZE = 24;
-    private static final int ITEM_GAP = 6;
-    private static final int START_Y = 50;
+    private static final int ITEMS_PER_ROW = 7;
+    private static final int ITEM_SIZE = 26;
+    private static final int ITEM_GAP = 7;
+    private static final int START_Y = 54;
 
     private static Map<String, ItemStack> globalSkinItemCache = null;
     private static List<CosmeticEntry> globalSkinEntries = null;
@@ -58,20 +58,20 @@ public class SkinInventoryScreen extends Screen {
     @Override
     protected void init() {
         int cx = this.width / 2;
-        int btnY = 15;
+        int btnY = 14;
 
         addRenderableWidget(Button.builder(Component.literal("All"), b -> setFilter("ALL"))
-                .bounds(cx - 160, btnY, 45, 20).build());
+                .bounds(cx - 170, btnY, 42, 22).build());
         addRenderableWidget(Button.builder(Component.literal("Primary"), b -> setFilter("PRIMARY"))
-                .bounds(cx - 110, btnY, 55, 20).build());
+                .bounds(cx - 124, btnY, 52, 22).build());
         addRenderableWidget(Button.builder(Component.literal("Secondary"), b -> setFilter("SECONDARY"))
-                .bounds(cx - 50, btnY, 60, 20).build());
+                .bounds(cx - 68, btnY, 60, 22).build());
         addRenderableWidget(Button.builder(Component.literal("Knife"), b -> setFilter("KNIFE"))
-                .bounds(cx + 15, btnY, 45, 20).build());
+                .bounds(cx - 4, btnY, 45, 22).build());
         addRenderableWidget(Button.builder(Component.literal("Melee"), b -> setFilter("MELEE"))
-                .bounds(cx + 65, btnY, 45, 20).build());
+                .bounds(cx + 45, btnY, 45, 22).build());
         addRenderableWidget(Button.builder(Component.literal("Uniform"), b -> setFilter("UNIFORM"))
-                .bounds(cx + 115, btnY, 50, 20).build());
+                .bounds(cx + 94, btnY, 52, 22).build());
 
         loadCosmetics();
     }
@@ -200,21 +200,26 @@ public class SkinInventoryScreen extends Screen {
         int totalWidth = ITEMS_PER_ROW * (ITEM_SIZE + ITEM_GAP) - ITEM_GAP;
         int startX = cx - totalWidth / 2;
 
-        gui.drawCenteredString(this.font, this.title, cx, 36, PWPTheme.Colors.TEXT_PRIMARY);
-        gui.fill(cx - totalWidth / 2 - 8, 44, cx + totalWidth / 2 + 8, 45, PWPTheme.Colors.ACCENT);
+        gui.drawCenteredString(this.font, this.title, cx, 38, PWPTheme.Colors.TEXT_ACCENT);
+        gui.fill(cx - totalWidth / 2 - 8, 46, cx + totalWidth / 2 + 8, 47, PWPTheme.Colors.ACCENT);
 
         if (filtered.isEmpty()) {
             gui.drawCenteredString(this.font, Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
                     cx, this.height / 2, PWPTheme.Colors.TEXT_DIM);
         } else {
             RenderSystem.enableBlend();
+
+            int clipY = START_Y;
+            int clipH = this.height - START_Y - 32;
+            gui.enableScissor(startX - 4, clipY, startX + totalWidth + 4, clipY + clipH);
+
             for (int i = scrollOffset * ITEMS_PER_ROW; i < filtered.size(); i++) {
                 int row = (i - scrollOffset * ITEMS_PER_ROW) / ITEMS_PER_ROW;
                 int col = (i - scrollOffset * ITEMS_PER_ROW) % ITEMS_PER_ROW;
                 int x = startX + col * (ITEM_SIZE + ITEM_GAP);
                 int y = START_Y + row * (ITEM_SIZE + ITEM_GAP);
 
-                if (y + ITEM_SIZE > this.height) break;
+                if (y + ITEM_SIZE > clipY + clipH) break;
 
                 CosmeticEntry entry = filtered.get(i);
                 boolean canAccess = isAdmin() || ownedSkinIds.contains(entry.skinId);
@@ -225,7 +230,7 @@ public class SkinInventoryScreen extends Screen {
                 if (entry.equipped) {
                     gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, PWPTheme.Colors.SUCCESS);
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
-                    gui.drawString(this.font, Component.literal("\u2714"), x + ITEM_SIZE - 9, y + 1, PWPTheme.Colors.SUCCESS, false);
+                    gui.drawString(this.font, Component.literal("\u2714"), x + ITEM_SIZE - 10, y + 1, PWPTheme.Colors.SUCCESS, false);
                 } else if (canAccess) {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
                 } else {
@@ -236,7 +241,7 @@ public class SkinInventoryScreen extends Screen {
                 ItemStack stack = skinItemCache.get(entry.skinId);
                 if (stack != null && !stack.isEmpty()) {
                     if (!canAccess) RenderSystem.setShaderColor(0.5F, 0.5F, 0.5F, 0.6F);
-                    gui.renderItem(stack, x + 4, y + 4);
+                    gui.renderItem(stack, x + 5, y + 5);
                     if (!canAccess) RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                 }
 
@@ -261,16 +266,26 @@ public class SkinInventoryScreen extends Screen {
                     gui.renderComponentTooltip(this.font, tooltip, mx, my);
                 }
             }
+
+            gui.disableScissor();
             RenderSystem.disableBlend();
+
+            // Scroll indicators
+            if (maxScroll > 0) {
+                if (scrollOffset > 0)
+                    gui.drawCenteredString(this.font, Component.literal("\u25B2"), cx, START_Y - 2, PWPTheme.Colors.TEXT_DIM);
+                if (scrollOffset < maxScroll)
+                    gui.drawCenteredString(this.font, Component.literal("\u25BC"), cx, this.height - 18, PWPTheme.Colors.TEXT_DIM);
+            }
         }
 
         if (currentFilter.equals("PRIMARY")) {
             String hint = "\u00a77\u2714 Multiple PRIMARY skins can be selected";
-            gui.drawCenteredString(this.font, Component.literal(hint), cx, this.height - 28, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(this.font, Component.literal(hint), cx, this.height - 30, PWPTheme.Colors.TEXT_SECONDARY);
         }
 
         if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(this.font, Component.literal(statusMsg), cx, this.height - 16, PWPTheme.Colors.ACCENT);
+            gui.drawCenteredString(this.font, Component.literal(statusMsg), cx, this.height - 16, PWPTheme.Colors.TEXT_ACCENT);
 
         super.render(gui, mx, my, pt);
     }
@@ -288,7 +303,8 @@ public class SkinInventoryScreen extends Screen {
                 int x = startX + col * (ITEM_SIZE + ITEM_GAP);
                 int y = START_Y + row * (ITEM_SIZE + ITEM_GAP);
 
-                if (y + ITEM_SIZE > this.height) break;
+                int clipEnd = START_Y + (this.height - START_Y - 32);
+                if (y + ITEM_SIZE > clipEnd) break;
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
                     CosmeticEntry entry = filtered.get(i);

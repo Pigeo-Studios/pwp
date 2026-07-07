@@ -14,9 +14,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class FactionSelectScreen extends Screen {
-    private static final int CARD_W = 120;
+    private static final int CARD_W = 130;
     private static final int CARD_H = 50;
-    private static final int GAP = 8;
+    private static final int GAP = 10;
 
     private List<String> factions = new ArrayList<>();
     private boolean loading = true;
@@ -31,10 +31,10 @@ public class FactionSelectScreen extends Screen {
     @Override
     protected void init() {
         cols = Math.max(1, Math.min(4, (width - 40) / (CARD_W + GAP)));
-        panelW = cols * CARD_W + (cols - 1) * GAP + 16;
+        panelW = cols * CARD_W + (cols - 1) * GAP + 20;
         panelW = Math.min(panelW, width - 20);
         int rows = Math.max(1, (factions.size() + cols - 1) / cols);
-        panelH = Math.min(height - 60, rows * CARD_H + (rows - 1) * GAP + 50);
+        panelH = Math.min(height - 60, rows * CARD_H + (rows - 1) * GAP + 56);
 
         loadFactions();
     }
@@ -76,13 +76,13 @@ public class FactionSelectScreen extends Screen {
     private void recreateWidgets() {
         clearWidgets();
         int cx = (width - panelW) / 2;
-        int py = 10 + 30;
+        int py = 10 + 34;
 
         for (int i = 0; i < factions.size(); i++) {
             String faction = factions.get(i);
             int r = i / cols;
             int c = i % cols;
-            int bx = cx + 8 + c * (CARD_W + GAP);
+            int bx = cx + 10 + c * (CARD_W + GAP);
             int by = py + r * (CARD_H + GAP);
 
             addRenderableWidget(
@@ -101,10 +101,10 @@ public class FactionSelectScreen extends Screen {
         int cx = (width - panelW) / 2;
         int py = 10;
 
-        gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Colors.SURFACE);
-        gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Colors.BORDER);
-        gui.drawCenteredString(font, title, width / 2, py + 8, PWPTheme.Colors.TEXT_PRIMARY);
-        gui.fill(cx + 8, py + 20, cx + panelW - 8, py + 21, PWPTheme.Colors.ACCENT);
+        gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Styles.Panel.BG);
+        gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Styles.Panel.BORDER);
+        gui.drawCenteredString(font, PWPTheme.Icons.FLAG + " " + title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
+        gui.fill(cx + 10, py + 22, cx + panelW - 10, py + 23, PWPTheme.Colors.ACCENT);
 
         if (loading) {
             gui.drawCenteredString(font, Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);

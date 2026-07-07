@@ -95,12 +95,13 @@ public class ClientOverlay {
         int filled = (int) (barWidth * Mth.clamp(displayHealth / maxHealth, 0.0f, 1.0f));
 
         // Frame
-        guiGraphics.fill(x - 1, y - 1, x + barWidth + 1, y + barHeight + 1, (a << 24) | 0x555555);
+        guiGraphics.fill(x - 1, y - 1, x + barWidth + 1, y + barHeight + 1, (a << 24) | 0x1E222A);
         // Background
-        guiGraphics.fill(x, y, x + barWidth, y + barHeight, (a << 24) | 0x222222);
+        guiGraphics.fill(x, y, x + barWidth, y + barHeight, (a << 24) | 0x181C24);
         // Fill
         if (filled > 0) {
-            guiGraphics.fill(x, y, x + filled, y + barHeight, (a << 24) | 0xDDDDDD);
+            int fillColor = displayHealth / maxHealth > 0.3f ? 0xFF3D7A40 : 0xFFA53D3D;
+            guiGraphics.fill(x, y, x + filled, y + barHeight, (a << 24) | (fillColor & 0x00FFFFFF));
         }
 
         // JUMP COOLDOWN BAR (only if active)
@@ -111,9 +112,9 @@ public class ClientOverlay {
         int cdFilled = (int) (barWidth * progress);
         int cdY = y + barHeight + 2;
 
-        guiGraphics.fill(x, cdY, x + barWidth, cdY + 2, (a << 24) | 0x333333);
+        guiGraphics.fill(x, cdY, x + barWidth, cdY + 2, (a << 24) | 0x181C24);
         if (cdFilled > 0) {
-            guiGraphics.fill(x, cdY, x + cdFilled, cdY + 2, (a << 24) | 0x999999);
+            guiGraphics.fill(x, cdY, x + cdFilled, cdY + 2, (a << 24) | 0xC8812A);
         }
     }
 }
