@@ -98,8 +98,8 @@ public class FactionKitListScreen extends Screen {
             kitButtons.get(idx).setHeight(20);
             kitButtons.get(idx).active = true;
 
-            kitButtons.get(idx + 1).setVisible(false);
-            kitButtons.get(idx + 2).setVisible(false);
+            kitButtons.get(idx + 1).visible = false;
+            kitButtons.get(idx + 2).visible = false;
         }
     }
 
