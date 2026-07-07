@@ -181,7 +181,7 @@ public class MatchListScreen extends Screen {
             String elapsed = formatDuration(packet.elapsedSeconds[i]);
             gui.drawString(font, "\u00a77" + elapsed + "  |  \u00a7e" + packet.playerCounts[i] + "\u00a77/" + packet.maxPlayers[i], textX, y + 17, 0x7A7D84);
 
-            String factionStr = "\u00a79" + packet.blueFactions[i] + " \u00a77vs \u00a7c" + packet.redFactions[i];
+            String factionStr = "\u00a79" + formatFactionName(packet.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(packet.redFactions[i]);
             gui.drawString(font, factionStr, textX, y + 29, 0x7A7D84);
 
             String ticketStr = "\u00a79" + packet.blueTickets[i] + " \u00a77| \u00a7c" + packet.redTickets[i];
@@ -201,6 +201,13 @@ public class MatchListScreen extends Screen {
         if (totalPages > 1) {
             gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, 0x7A7D84);
         }
+    }
+
+    private static String formatFactionName(String faction) {
+        if (faction == null || faction.isEmpty() || faction.equals("none") || faction.equals("bluefor") || faction.equals("redfor")) {
+            return faction != null ? faction.toUpperCase() : "";
+        }
+        return faction.replace("_", " ").toUpperCase();
     }
 
     private static String formatDuration(int secs) {

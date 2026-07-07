@@ -132,8 +132,12 @@ public class WarfareMod {
              if (settings.has("hideDeathMessages")) data.hideDeathMessages = settings.get("hideDeathMessages").getAsBoolean();
              if (settings.has("hideNametags")) data.hideNametags = settings.get("hideNametags").getAsBoolean();
              if (settings.has("disableHunger")) data.disableHunger = settings.get("disableHunger").getAsBoolean();
-             if (settings.has("disableNaturalRegen")) data.disableNaturalRegen = settings.get("disableNaturalRegen").getAsBoolean();
-          }
+              if (settings.has("disableNaturalRegen")) data.disableNaturalRegen = settings.get("disableNaturalRegen").getAsBoolean();
+              if (settings.has("disableBlockDrops")) data.disableBlockDrops = settings.get("disableBlockDrops").getAsBoolean();
+              if (settings.has("disableEntityDrops")) data.disableEntityDrops = settings.get("disableEntityDrops").getAsBoolean();
+              if (settings.has("disableFireSpread")) data.disableFireSpread = settings.get("disableFireSpread").getAsBoolean();
+              if (settings.has("disableWeatherCycle")) data.disableWeatherCycle = settings.get("disableWeatherCycle").getAsBoolean();
+           }
 
           if (root.has("mapBounds")) {
              JsonObject bounds = root.getAsJsonObject("mapBounds");
@@ -235,16 +239,31 @@ public class WarfareMod {
              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES).set(false, level.getServer());
           }
           if (data.disableNaturalRegen) {
-             level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_NATURAL_REGENERATION).set(false, level.getServer());
-          }
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_NATURAL_REGENERATION).set(false, level.getServer());
+           }
+           if (data.disableBlockDrops) {
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOBLOCKDROPS).set(false, level.getServer());
+           }
+           if (data.disableEntityDrops) {
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOENTITYDROPS).set(false, level.getServer());
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOMOBLOOT).set(false, level.getServer());
+           }
+           if (data.disableFireSpread) {
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOFIRETICK).set(false, level.getServer());
+           }
+           if (data.disableWeatherCycle) {
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DAYLIGHT).set(false, level.getServer());
+              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_WEATHER_CYCLE).set(false, level.getServer());
+           }
 
           data.configApplied = true;
           data.setDirty();
           LOGGER.info("Map config applied successfully for map: {}", root.get("name").getAsString());
 
-          // Auto-start voting
-          data.voteActive = true;
-          data.voteTimer = WarfareConfig.VOTE_AUTO_START_TIME.get() * 60;
+          // Start waiting phase (5 min timer), then voting
+          data.waitingActive = true;
+          data.waitingTimer = 300;
+          data.voteActive = false;
           data.votes.clear();
           PacketHandler.sendToAllClients(level, data);
       } catch (IOException e) {

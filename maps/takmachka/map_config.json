@@ -1,0 +1,177 @@
+{
+    "name": "takmachka",
+    "displayName": "Takmachka",
+    "description": "Ожесточённые бои в районе села Такмачка. Лесистая местность с полями, фермами и разрушенной деревней на юге.",
+    "maxPlayers": 80,
+    "minPlayers": 2,
+    "image": "takmachka",
+    "version": "1.0",
+    "mode": "aas",
+    "modeDisplayName": "Advance and Secure",
+    "durationMinutes": 90,
+
+    "teams": {
+        "BLUE": {
+            "faction": "insurgency",
+            "tickets": 960,
+            "spawn": {
+                "dimension": "minecraft:overworld",
+                "x": -1131,
+                "y": 67,
+                "z": -812
+            }
+        },
+        "RED": {
+            "faction": "russia",
+            "tickets": 960,
+            "spawn": {
+                "dimension": "minecraft:overworld",
+                "x": 1108,
+                "y": 67,
+                "z": 831
+            }
+        }
+    },
+
+    "settings": {
+        "respawnTimer": 15,
+        "deathTicketCost": 2,
+        "lockDurationMinutes": 0,
+        "hideDeathMessages": true,
+        "hideNametags": true,
+        "disableHunger": true,
+        "disableNaturalRegen": true
+    },
+
+    "mainZones": [
+        {
+            "team": "BLUE",
+            "shape": "cylinder",
+            "pos1": { "x": -1275, "y": -64, "z": -956 },
+            "pos2": { "x": -987, "y": 200, "z": -668 }
+        },
+        {
+            "team": "RED",
+            "shape": "cylinder",
+            "pos1": { "x": 964, "y": -64, "z": 687 },
+            "pos2": { "x": 1252, "y": 200, "z": 975 }
+        }
+    ],
+
+    "capturePoints": [
+        {
+            "name": "Southeast Bridge",
+            "shape": "cylinder",
+            "pos1": { "x": 108, "y": -64, "z": 765 },
+            "pos2": { "x": 172, "y": 100, "z": 829 },
+            "bluePriority": 9,
+            "redPriority": 1,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Southeastern City Part",
+            "shape": "cylinder",
+            "pos1": { "x": -214, "y": -64, "z": 341 },
+            "pos2": { "x": -118, "y": 100, "z": 437 },
+            "bluePriority": 8,
+            "redPriority": 2,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Western-Northern City Part",
+            "shape": "cylinder",
+            "pos1": { "x": -326, "y": -64, "z": 138 },
+            "pos2": { "x": -230, "y": 100, "z": 234 },
+            "bluePriority": 7,
+            "redPriority": 3,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Malaya Takmachka",
+            "shape": "cylinder",
+            "pos1": { "x": 483, "y": -64, "z": 229 },
+            "pos2": { "x": 547, "y": 100, "z": 293 },
+            "bluePriority": 6,
+            "redPriority": 4,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Southern City Part",
+            "shape": "cylinder",
+            "pos1": { "x": 356, "y": -64, "z": -2 },
+            "pos2": { "x": 452, "y": 100, "z": 94 },
+            "bluePriority": 5,
+            "redPriority": 5,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Central Square",
+            "shape": "cylinder",
+            "pos1": { "x": 285, "y": -64, "z": -292 },
+            "pos2": { "x": 381, "y": 100, "z": -196 },
+            "bluePriority": 4,
+            "redPriority": 6,
+            "captureTimeMinutes": 3,
+            "ticketPenalty": 80,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Northern City Part",
+            "shape": "cylinder",
+            "pos1": { "x": 371, "y": -64, "z": -522 },
+            "pos2": { "x": 467, "y": 100, "z": -426 },
+            "bluePriority": 3,
+            "redPriority": 7,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Bolshaya Takmachka",
+            "shape": "cylinder",
+            "pos1": { "x": 578, "y": -64, "z": -834 },
+            "pos2": { "x": 674, "y": 100, "z": -738 },
+            "bluePriority": 2,
+            "redPriority": 8,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Northern Village",
+            "shape": "cylinder",
+            "pos1": { "x": 280, "y": -64, "z": -952 },
+            "pos2": { "x": 376, "y": 100, "z": -856 },
+            "bluePriority": 1,
+            "redPriority": 9,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 60,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        }
+    ],
+
+    "mapBounds": {
+        "centerX": -10,
+        "centerZ": -15,
+        "sizeBlocks": 2532
+    }
+}

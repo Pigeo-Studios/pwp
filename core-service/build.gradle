@@ -23,6 +23,7 @@ dependencies {
     implementation 'com.mysql:mysql-connector-j:9.2.0'
     implementation 'ch.qos.logback:logback-classic:1.5.16'
     implementation 'org.slf4j:slf4j-api:2.0.16'
+    implementation 'org.mindrot:jbcrypt:0.4'
 }
 
 application {

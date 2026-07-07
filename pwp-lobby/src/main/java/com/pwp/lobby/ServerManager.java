@@ -111,9 +111,21 @@ public class ServerManager {
 
                 instance.phase = "config";
                 instance.phaseStartedAt = System.currentTimeMillis();
+                String voidGen = "{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biomes\":\"minecraft:the_void\",\"structures\":{\"structures\":{}}}";
                 Files.writeString(serverDir.resolve("server.properties"),
-                        "server-port=" + port + "\nlevel-name=" + mapName +
-                        "\nmax-players=" + maxPlayers + "\nonline-mode=false\n");
+                        "server-port=" + port + "\n" +
+                        "level-name=" + mapName + "\n" +
+                        "max-players=" + maxPlayers + "\n" +
+                        "online-mode=false\n" +
+                        "level-type=minecraft:superflat\n" +
+                        "generator-settings=" + voidGen + "\n" +
+                        "generate-structures=false\n" +
+                        "spawn-animals=false\n" +
+                        "spawn-monsters=false\n" +
+                        "spawn-npcs=false\n" +
+                        "difficulty=peaceful\n" +
+                        "gamemode=adventure\n" +
+                        "allow-flight=true\n");
 
                 // Unique voice chat port for each match server (avoid collision with main server)
                 Path vcConfig = serverDir.resolve("config/voicechat/voicechat-server.properties");

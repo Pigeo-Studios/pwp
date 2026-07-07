@@ -111,10 +111,10 @@ public class LobbyMod {
             var maps = MapRegistry.getVotable();
             if (!maps.isEmpty()) {
                 MapConfig cfg = maps.get(0);
-                blueFaction = cfg.BLUE.faction;
-                redFaction = cfg.RED.faction;
-                blueTickets = cfg.BLUE.tickets;
-                redTickets = cfg.RED.tickets;
+                blueFaction = cfg.teams.BLUE.faction;
+                redFaction = cfg.teams.RED.faction;
+                blueTickets = cfg.teams.BLUE.tickets;
+                redTickets = cfg.teams.RED.tickets;
             }
         } else {
             return null;
@@ -153,6 +153,8 @@ public class LobbyMod {
         int[] maxPlayers = new int[len];
         int[] voteCounts = new int[len];
         String[] worldPaths = new String[len];
+        String[] blueFactions = new String[len];
+        String[] redFactions = new String[len];
         for (int i = 0; i < len; i++) {
             com.pwp.lobby.maps.MapConfig cfg = maps.get(i);
             mapNames[i] = cfg.name;
@@ -161,6 +163,8 @@ public class LobbyMod {
             maxPlayers[i] = cfg.maxPlayers;
             voteCounts[i] = VotingManager.getVoteCountForMap(cfg.name);
             worldPaths[i] = cfg.worldPath;
+            blueFactions[i] = cfg.teams.BLUE.faction;
+            redFactions[i] = cfg.teams.RED.faction;
         }
         return new OpenVotingScreenPacket(
                 VotingManager.getRemainingSeconds(),
@@ -168,7 +172,8 @@ public class LobbyMod {
                 VotingManager.getVoteCount(),
                 VotingManager.getLeadingMap(),
                 mapNames, mapDisplayNames, mapDescriptions,
-                maxPlayers, voteCounts, worldPaths);
+                maxPlayers, voteCounts, worldPaths,
+                blueFactions, redFactions);
     }
 
     private static void broadcastVotingScreen() {
@@ -353,10 +358,10 @@ public class LobbyMod {
 
                 String mapDisplayName = mi != null ? mi.displayName : (cfg != null ? cfg.displayName : "Grozny");
                 String modeDisplayName = mi != null ? mi.modeDisplayName : (cfg != null ? cfg.modeDisplayName : "AAS");
-                String blueFaction = mi != null ? mi.blueFaction : (cfg != null ? cfg.BLUE.faction : "russia");
-                String redFaction = mi != null ? mi.redFaction : (cfg != null ? cfg.RED.faction : "insurgency");
-                int blueTickets = mi != null ? mi.blueTickets : (cfg != null ? cfg.BLUE.tickets : 600);
-                int redTickets = mi != null ? mi.redTickets : (cfg != null ? cfg.RED.tickets : 600);
+                String blueFaction = mi != null ? mi.blueFaction : (cfg != null ? cfg.teams.BLUE.faction : "russia");
+                String redFaction = mi != null ? mi.redFaction : (cfg != null ? cfg.teams.RED.faction : "insurgency");
+                int blueTickets = mi != null ? mi.blueTickets : (cfg != null ? cfg.teams.BLUE.tickets : 600);
+                int redTickets = mi != null ? mi.redTickets : (cfg != null ? cfg.teams.RED.tickets : 600);
 
                 OpenMatchScreenPacket pkt = new OpenMatchScreenPacket(
                         mapDisplayName, modeDisplayName,

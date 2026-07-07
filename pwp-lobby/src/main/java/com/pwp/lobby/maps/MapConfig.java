@@ -18,9 +18,16 @@ public class MapConfig {
 
     public String worldPath;
 
-    public TeamConfig BLUE = new TeamConfig();
-    public TeamConfig RED = new TeamConfig();
+    public Teams teams = new Teams();
     public GameSettings settings = new GameSettings();
+
+    public static class Teams {
+        public TeamConfig BLUE = new TeamConfig();
+        public TeamConfig RED = new TeamConfig();
+        {
+            RED.faction = "redfor";
+        }
+    }
     public List<MainZoneConfig> mainZones;
     public List<CapturePointConfig> capturePoints;
     public MapBoundsConfig mapBounds = new MapBoundsConfig();

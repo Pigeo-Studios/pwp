@@ -91,11 +91,11 @@ public class MatchScreen extends Screen {
         gui.drawCenteredString(font, "\u00a77Mode: \u00a7f" + data.modeDisplayName, cx, y, 0xFFFFFF);
         y += 13;
 
-        String factionStr = "\u00a79" + data.blueFaction + " \u00a77vs \u00a7c" + data.redFaction;
+        String factionStr = "\u00a79" + formatFactionName(data.blueFaction) + " \u00a77vs \u00a7c" + formatFactionName(data.redFaction);
         gui.drawCenteredString(font, factionStr, cx, y, 0xFFFFFF);
         y += 13;
 
-        String ticketStr = data.blueFaction.toUpperCase() + " " + data.blueTickets + " \u00a77| \u00a7c" + data.redTickets + " " + data.redFaction.toUpperCase();
+        String ticketStr = formatFactionName(data.blueFaction) + " " + data.blueTickets + " \u00a77| \u00a7c" + data.redTickets + " " + formatFactionName(data.redFaction);
         gui.drawCenteredString(font, ticketStr, cx, y, 0xFFFFFF);
         y += 16;
 
@@ -122,6 +122,13 @@ public class MatchScreen extends Screen {
         gui.drawCenteredString(font, statusText, cx, y, statusColor);
         y += 13;
         gui.drawCenteredString(font, "\u00a77Online: \u00a7e" + data.onlinePlayers, cx, y, 0x888888);
+    }
+
+    private static String formatFactionName(String faction) {
+        if (faction == null || faction.isEmpty() || faction.equals("none") || faction.equals("bluefor") || faction.equals("redfor")) {
+            return faction != null ? faction.toUpperCase() : "";
+        }
+        return faction.replace("_", " ").toUpperCase();
     }
 
     public static void open(OpenMatchScreenPacket data) {

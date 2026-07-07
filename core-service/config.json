@@ -17,7 +17,10 @@
             "pwp_server_key_change_me"
         ],
         "rateLimitPerMinute": 100,
-        "rateLimitPerMinuteAdmin": 10
+        "rateLimitPerMinuteAdmin": 10,
+        "rateLimitBypassKeys": [
+            "pwp_server_key_change_me"
+        ]
     },
     "logging": {
         "level": "INFO",

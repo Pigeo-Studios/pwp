@@ -67,12 +67,13 @@ public class OpenMatchScreenPacket {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
             ctx.get().enqueueWork(() -> {
                 try {
-                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.LobbyScreen");
-                    screenClass.getMethod("openMatch", OpenMatchScreenPacket.class).invoke(null, msg);
+                    Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
+                    lobbyScreen.getMethod("openMatch", OpenMatchScreenPacket.class).invoke(null, msg);
                 } catch (Exception e) {
                     try {
-                        Class<?> fallback = Class.forName("com.pwp.lobby.gui.MatchScreen");
-                        fallback.getMethod("open", OpenMatchScreenPacket.class).invoke(null, msg);
+                        Class<?> matchScreen = Class.forName("com.pwp.lobby.gui.MatchScreen");
+                        matchScreen.getMethod("resetDismissed").invoke(null);
+                        matchScreen.getMethod("open", OpenMatchScreenPacket.class).invoke(null, msg);
                     } catch (Exception ignored) {}
                 }
             });

@@ -80,6 +80,13 @@ public class WarfareWorldData extends SavedData {
     public boolean hideNametags = false;
     public boolean disableHunger = false;
     public boolean disableNaturalRegen = false;
+    public boolean disableBlockDrops = true;
+    public boolean disableEntityDrops = true;
+    public boolean disableFireSpread = true;
+    public boolean disableWeatherCycle = true;
+    public boolean isPaused = false;
+    public boolean waitingActive = false;
+    public int waitingTimer = 0;
     public List<String> getAvailableMapImages() {
        List<String> images = new ArrayList<>();
        try {
@@ -187,6 +194,13 @@ public class WarfareWorldData extends SavedData {
       tag.putBoolean("HideNametags", this.hideNametags);
       tag.putBoolean("DisableHunger", this.disableHunger);
       tag.putBoolean("DisableNaturalRegen", this.disableNaturalRegen);
+      tag.putBoolean("DisableBlockDrops", this.disableBlockDrops);
+      tag.putBoolean("DisableEntityDrops", this.disableEntityDrops);
+      tag.putBoolean("DisableFireSpread", this.disableFireSpread);
+      tag.putBoolean("DisableWeatherCycle", this.disableWeatherCycle);
+      tag.putBoolean("IsPaused", this.isPaused);
+      tag.putBoolean("WaitingActive", this.waitingActive);
+      tag.putInt("WaitingTimer", this.waitingTimer);
       tag.putLong("BlueArtCD", this.blueArtStrikeCD);
       tag.putLong("RedArtCD", this.redArtStrikeCD);
       tag.putInt("BlueCMDId", this.blueCMDId);
@@ -343,6 +357,13 @@ public class WarfareWorldData extends SavedData {
       data.hideNametags = tag.contains("HideNametags") && tag.getBoolean("HideNametags");
       data.disableHunger = tag.contains("DisableHunger") && tag.getBoolean("DisableHunger");
       data.disableNaturalRegen = tag.contains("DisableNaturalRegen") && tag.getBoolean("DisableNaturalRegen");
+      data.disableBlockDrops = !tag.contains("DisableBlockDrops") || tag.getBoolean("DisableBlockDrops");
+      data.disableEntityDrops = !tag.contains("DisableEntityDrops") || tag.getBoolean("DisableEntityDrops");
+      data.disableFireSpread = !tag.contains("DisableFireSpread") || tag.getBoolean("DisableFireSpread");
+      data.disableWeatherCycle = !tag.contains("DisableWeatherCycle") || tag.getBoolean("DisableWeatherCycle");
+      data.isPaused = tag.contains("IsPaused") && tag.getBoolean("IsPaused");
+      data.waitingActive = tag.contains("WaitingActive") && tag.getBoolean("WaitingActive");
+      data.waitingTimer = tag.contains("WaitingTimer") ? tag.getInt("WaitingTimer") : 0;
       data.blueArtStrikeCD = tag.getLong("BlueArtCD");
       data.redArtStrikeCD = tag.getLong("RedArtCD");
       data.blueCMDId = tag.getInt("BlueCMDId");

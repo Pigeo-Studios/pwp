@@ -73,10 +73,10 @@ public class MatchAllocator {
         mi.port = sr.port;
         mi.maxPlayers = map.maxPlayers;
         mi.playerCount = lobbyPlayers.size();
-        mi.blueFaction = map.BLUE.faction;
-        mi.redFaction = map.RED.faction;
-        mi.blueTickets = map.BLUE.tickets;
-        mi.redTickets = map.RED.tickets;
+        mi.blueFaction = map.teams.BLUE.faction;
+        mi.redFaction = map.teams.RED.faction;
+        mi.blueTickets = map.teams.BLUE.tickets;
+        mi.redTickets = map.teams.RED.tickets;
         mi.worldPath = map.worldPath;
         mi.startedAt = System.currentTimeMillis();
         activeMatches.put(mi.serverId, mi);

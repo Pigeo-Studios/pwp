@@ -117,11 +117,12 @@ public class GameLogicEvents {
 
    // Р—Р°РїСѓСЃРє РѕР±СЂР°С‚РЅРѕРіРѕ РѕС‚СЃС‡С‘С‚Р° РїРµСЂРµРґ РЅР°С‡Р°Р»РѕРј РёРіСЂС‹
    public static void startGameCountdown(ServerLevel level) {
-      WarfareWorldData data = WarfareWorldData.get(level);
-      data.countdownTicks = 100;
-      data.countdownActive = true;
-      data.setDirty();
-   }
+       WarfareWorldData data = WarfareWorldData.get(level);
+       data.waitingActive = false;
+       data.countdownTicks = 100;
+       data.countdownActive = true;
+       data.setDirty();
+    }
 
    public static void cancelCountdown(ServerLevel level) {
       WarfareWorldData data = WarfareWorldData.get(level);
@@ -358,7 +359,8 @@ public class GameLogicEvents {
                handleMainProtectionZones(level, data);
                boolean blueIsBleeding = false;
                boolean redIsBleeding = false;
-               if (data.blueCmdVoteActive) {
+                if (data.isPaused) continue;
+                if (data.blueCmdVoteActive) {
                   data.blueCmdVoteTimer--;
                   checkCmdVoteStatus(level, server, data, "BLUE");
                }
@@ -368,8 +370,49 @@ public class GameLogicEvents {
                   checkCmdVoteStatus(level, server, data, "RED");
                }
 
-               if (data.voteActive && !data.isGameStarted) {
-                  if (globalTick % 20 == 0 && data.voteTimer > 0) {
+                if (data.waitingActive) {
+                   if (globalTick % 20 == 0 && data.waitingTimer > 0) {
+                      data.waitingTimer--;
+                      data.setDirty();
+                      int secs = data.waitingTimer;
+                      String timeStr = formatTime(secs);
+                      String title = "\u00a76\u23F3 \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0438\u0433\u0440\u043E\u043A\u043E\u0432";
+                      String subtitle = "\u00a7e" + timeStr;
+                      for (ServerPlayer p : level.players()) {
+                         p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 25, 10));
+                         p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(title)));
+                         p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(subtitle)));
+                      }
+                      if (secs == 300 || secs == 240 || secs == 180 || secs == 120) {
+                         level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.MASTER, 1.0F, 1.0F);
+                      }
+                      if (secs == 60) {
+                         level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.MASTER, 1.0F, 2.0F);
+                         broadcastMessage(level, "\u00a7e[PWP] \u00a7f\u041C\u0430\u0442\u0447 \u043D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u00a7e1 \u043C\u0438\u043D\u0443\u0442\u0443!", ChatFormatting.GOLD);
+                      }
+                      if (secs == 30) {
+                         level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.MASTER, 1.0F, 2.0F);
+                         broadcastMessage(level, "\u00a7e[PWP] \u00a7f\u041C\u0430\u0442\u0447 \u043D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u00a7e30 \u0441\u0435\u043A\u0443\u043D\u0434!", ChatFormatting.GOLD);
+                      }
+                      if (secs <= 10 && secs > 0) {
+                         level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.MASTER, 1.0F, 1.0F);
+                      }
+                   }
+                   if (data.waitingTimer <= 0) {
+                      data.waitingActive = false;
+                      data.setDirty();
+                      for (ServerPlayer p : level.players()) {
+                         p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 0, 0));
+                         p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("")));
+                         p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
+                      }
+                      broadcastMessage(level, "\u00a7a[PWP] \u0418\u0433\u0440\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F!", ChatFormatting.GREEN);
+                      startGameCountdown(level);
+                   }
+                }
+
+                if (data.voteActive && !data.isGameStarted) {
+                   if (globalTick % 20 == 0 && data.voteTimer > 0) {
                      data.voteTimer--;
                      data.setDirty();
                      boolean bReady = isTeamReady(level, "Blue", data);
@@ -826,10 +869,12 @@ public class GameLogicEvents {
    }
 
    private static boolean isTeamReady(ServerLevel level, String teamName, WarfareWorldData data) {
-      List<ServerPlayer> teamPlayers = level.players().stream().filter(p -> p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(teamName)).toList();
-      if (teamPlayers.isEmpty()) {
-         return true;
-      }
+       List<ServerPlayer> allPlayers = level.players();
+       if (allPlayers.isEmpty()) return false;
+       List<ServerPlayer> teamPlayers = allPlayers.stream().filter(p -> p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(teamName)).toList();
+       if (teamPlayers.isEmpty()) {
+          return true;
+       }
 
       long yesVotes = teamPlayers.stream().filter(p -> data.votes.getOrDefault(p.getUUID(), false)).count();
       float percent = (float)yesVotes / teamPlayers.size() * 100.0F;
@@ -878,14 +923,15 @@ public class GameLogicEvents {
       return infoList;
    }
 
-   @SubscribeEvent
-   public static void onWorldTick(LevelTickEvent event) {
-      if (!event.level.isClientSide && event.phase == Phase.END) {
-         ServerLevel level = (ServerLevel)event.level;
-         WarfareWorldData data = WarfareWorldData.get(level);
-         Set<UUID> playersInPreciseZones = new HashSet<>();
+    @SubscribeEvent
+    public static void onWorldTick(LevelTickEvent event) {
+       if (!event.level.isClientSide && event.phase == Phase.END) {
+          ServerLevel level = (ServerLevel)event.level;
+          WarfareWorldData data = WarfareWorldData.get(level);
+          if (data.isPaused) return;
+          Set<UUID> playersInPreciseZones = new HashSet<>();
 
-         for (WarfareWorldData.CapturePoint point : data.capturePoints) {
+          for (WarfareWorldData.CapturePoint point : data.capturePoints) {
             List<ServerPlayer> playersInBox = level.getEntitiesOfClass(ServerPlayer.class, point.area);
             int blueOnPointLiving = 0;
             int redOnPointLiving = 0;
@@ -1260,9 +1306,9 @@ public class GameLogicEvents {
               player.setGameMode(GameType.SPECTATOR);
               player.sendSystemMessage(Component.literal("Choose a team to start playing!").withStyle(ChatFormatting.GOLD));
            }
-           if (!data.isGameStarted && player.hasPermissions(2)) {
-              player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
-           }
+           if (!data.isGameStarted && !data.waitingActive && player.hasPermissions(2)) {
+               player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
+            }
         }
      }
 
@@ -1910,6 +1956,13 @@ public class GameLogicEvents {
 
    private static String formatFactionName(String faction) {
       return faction.replace("_", " ").toUpperCase();
+   }
+
+   private static String formatTime(int totalSecs) {
+      int m = totalSecs / 60;
+      int s = totalSecs % 60;
+      if (m >= 1) return "\u00a7e" + m + " \u043C\u0438\u043D " + (s > 0 ? "\u00a77" + s + " \u0441" : "");
+      return "\u00a7e" + s + " \u0441";
    }
 
    private static void sendTitleToLevel(ServerLevel level, String text, ChatFormatting color) {

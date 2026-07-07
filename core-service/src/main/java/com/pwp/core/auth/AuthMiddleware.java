@@ -33,10 +33,18 @@ public class AuthMiddleware {
             throw new UnauthorizedResponse("Invalid API key");
         }
 
-        if (!checkRateLimit(token, apiConfig)) {
+        if (!isBypassKey(token, apiConfig) && !checkRateLimit(token, apiConfig)) {
             log.warn("Rate limit exceeded for key {}", token.substring(0, Math.min(8, token.length())));
             throw new TooManyRequestsResponse("Rate limit exceeded");
         }
+    }
+
+    private static boolean isBypassKey(String token, CoreApplication.ApiConfig apiConfig) {
+        if (apiConfig.rateLimitBypassKeys == null) return false;
+        for (String k : apiConfig.rateLimitBypassKeys) {
+            if (k.equals(token)) return true;
+        }
+        return false;
     }
 
     private static boolean checkRateLimit(String key, CoreApplication.ApiConfig apiConfig) {

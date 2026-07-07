@@ -27,6 +27,7 @@ import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.TickEvent.Phase;
 import net.minecraftforge.event.TickEvent.PlayerTickEvent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -40,9 +41,18 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class DownedHandler {
    @SubscribeEvent
     public static void onPlayerHurt(LivingHurtEvent event) {
-       // Track damage dealt by a player to any living entity
-       if (event.getSource().getEntity() instanceof ServerPlayer attacker
-           && event.getSource().getEntity() != event.getEntity()) {
+        if (!event.getEntity().level().isClientSide
+            && event.getEntity() instanceof ServerPlayer
+            && event.getSource().getEntity() instanceof ServerPlayer) {
+           WarfareWorldData data = WarfareWorldData.get((ServerLevel) event.getEntity().level());
+           if (data.isPaused) {
+              event.setCanceled(true);
+              return;
+           }
+        }
+        // Track damage dealt by a player to any living entity
+        if (event.getSource().getEntity() instanceof ServerPlayer attacker
+            && event.getSource().getEntity() != event.getEntity()) {
           MatchStatsTracker.get().recordDamage(attacker, event.getAmount());
           // Tag vehicles with last damager for destruction tracking
           if (event.getEntity().getPersistentData().contains("WARFARE_TicketPenalty")) {

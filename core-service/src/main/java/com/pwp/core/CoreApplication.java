@@ -45,6 +45,8 @@ public class CoreApplication {
         new RewardController(app);
         new KitController(app);
         new VoiceMuteController(app);
+        new AuthController(app, config);
+        new AdminController(app);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutting down Core Service...");
@@ -91,6 +93,8 @@ public class CoreApplication {
         public String[] keys = {"pwp_server_key_change_me"};
         public int rateLimitPerMinute = 500;
         public int rateLimitPerMinuteAdmin = 10;
+        public String adminTelegramIds = "";
+        public String[] rateLimitBypassKeys = {};
     }
 
     public static class LoggingConfig {

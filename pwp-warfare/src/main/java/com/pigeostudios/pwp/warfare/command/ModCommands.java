@@ -434,7 +434,10 @@ public class ModCommands {
                     .executes(ctx -> voiceMuteList((CommandSourceStack)ctx.getSource()))
                  )
               )
-              .then(Commands.literal("voiceunmute")
+               .then(Commands.literal("pause")
+                  .executes(ctx -> togglePause((CommandSourceStack)ctx.getSource()))
+               )
+               .then(Commands.literal("voiceunmute")
                  .then(Commands.argument("target", EntityArgument.player())
                     .executes(ctx -> voiceUnmutePlayer(
                        (CommandSourceStack)ctx.getSource(),
@@ -892,6 +895,44 @@ public class ModCommands {
    private static int clearTeamkill(CommandSourceStack source, ServerPlayer target) {
       DownedHandler.clearTeamkillPunishment(target);
       source.sendSuccess(() -> Component.literal("Cleared teamkill punishment for " + target.getScoreboardName()).withStyle(ChatFormatting.GREEN), true);
+      return 1;
+   }
+
+   private static int togglePause(CommandSourceStack source) {
+      ServerLevel level = source.getLevel();
+      WarfareWorldData data = WarfareWorldData.get(level);
+      data.isPaused = !data.isPaused;
+      data.setDirty();
+      PacketHandler.sendToAllClients(level, data);
+      if (data.isPaused) {
+         Scoreboard scoreboard = level.getScoreboard();
+         PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
+         PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
+         if (blueTeam != null) blueTeam.setAllowFriendlyFire(false);
+         if (redTeam != null) redTeam.setAllowFriendlyFire(false);
+         String title = "\u00a7c\u00a7lGAME PAUSED";
+         String subtitle = "\u00a7eUse /pwpwarfare pause to resume";
+         for (ServerPlayer p : level.players()) {
+            p.connection.send(new ClientboundSetTitlesAnimationPacket(10, 999999, 10));
+            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(subtitle)));
+            p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(title)));
+         }
+         source.sendSuccess(() -> Component.literal("\u00a7cGame Paused! Tickets, captures, PVP frozen."), true);
+         level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("\u00a7c\u00a7lGAME PAUSED by admin"), false);
+      } else {
+         Scoreboard scoreboard = level.getScoreboard();
+         PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
+         PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
+         if (blueTeam != null) blueTeam.setAllowFriendlyFire(true);
+         if (redTeam != null) redTeam.setAllowFriendlyFire(true);
+         for (ServerPlayer p : level.players()) {
+            p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 0, 0));
+            p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("")));
+            p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
+         }
+         source.sendSuccess(() -> Component.literal("\u00a7aGame Resumed!"), true);
+         level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("\u00a7a\u00a7lGAME RESUMED by admin"), false);
+      }
       return 1;
    }
 }

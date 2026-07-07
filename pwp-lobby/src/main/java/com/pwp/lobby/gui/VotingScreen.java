@@ -189,15 +189,19 @@ public class VotingScreen extends Screen {
             gui.drawString(font, nameStr, textX, y + 6, 0xFFFFFF);
 
             if (packet.mapDescriptions[i] != null && !packet.mapDescriptions[i].isEmpty()) {
-                String descStr = "\u00a77" + packet.mapDescriptions[i];
-                int descW = font.width(descStr);
-                if (descW > textMaxW) {
-                    descStr = font.plainSubstrByWidth(descStr, textMaxW - 4) + "...";
+                String descPlain = packet.mapDescriptions[i];
+                if (font.width(descPlain) > textMaxW) {
+                    descPlain = font.plainSubstrByWidth(descPlain, textMaxW - 4) + "...";
                 }
-                gui.drawString(font, descStr, textX, y + 18, 0x7A7D84);
+                gui.drawString(font, "\u00a77" + descPlain, textX, y + 18, 0x7A7D84);
             }
 
-            gui.drawString(font, "\u00a77Players: \u00a7e" + packet.maxPlayers[i], textX, y + 30, 0x7A7D84);
+            String factionLine = "\u00a79" + formatFactionName(packet.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(packet.redFactions[i]);
+            int flw = font.width(factionLine);
+            if (flw > textMaxW) {
+                factionLine = font.plainSubstrByWidth(factionLine, textMaxW - 4) + "...";
+            }
+            gui.drawString(font, factionLine, textX, y + 30, 0x7A7D84);
 
             int votes = packet.voteCounts[i];
             int barX = textX;
@@ -230,6 +234,13 @@ public class VotingScreen extends Screen {
         if (totalPages > 1) {
             gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, 0x7A7D84);
         }
+    }
+
+    private static String formatFactionName(String faction) {
+        if (faction == null || faction.isEmpty() || faction.equals("none") || faction.equals("bluefor") || faction.equals("redfor")) {
+            return faction != null ? faction.toUpperCase() : "";
+        }
+        return faction.replace("_", " ").toUpperCase();
     }
 
     private static ResourceLocation getMapTexture(String mapName, String worldPath) {

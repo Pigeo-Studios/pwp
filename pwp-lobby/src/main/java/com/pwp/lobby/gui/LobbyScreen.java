@@ -267,7 +267,7 @@ public class LobbyScreen extends Screen {
         gui.drawCenteredString(font, "\u00a7fMode: \u00a7e" + matchData.modeDisplayName, cx, y, textColor);
         y += 15;
 
-        String factions = "\u00a79" + matchData.blueFaction + " \u00a77vs \u00a7c" + matchData.redFaction;
+        String factions = "\u00a79" + formatFactionName(matchData.blueFaction) + " \u00a77vs \u00a7c" + formatFactionName(matchData.redFaction);
         gui.drawCenteredString(font, factions, cx, y, textColor);
         y += 15;
 
@@ -375,11 +375,16 @@ public class LobbyScreen extends Screen {
             gui.drawString(font, nameStr, textX, y + 5, (a << 24) | 0xFFFFFF);
 
             if (voteData.mapDescriptions[i] != null && !voteData.mapDescriptions[i].isEmpty()) {
-                String desc = "\u00a77" + voteData.mapDescriptions[i];
-                gui.drawString(font, desc, textX, y + 17, (a << 24) | 0x7A7D84);
+                String desc = voteData.mapDescriptions[i];
+                int textMaxW = bx + cardW - textX - 6;
+                if (font.width(desc) > textMaxW) {
+                    desc = font.plainSubstrByWidth(desc, textMaxW - 4) + "...";
+                }
+                gui.drawString(font, "\u00a77" + desc, textX, y + 17, (a << 24) | 0x7A7D84);
             }
 
-            gui.drawString(font, "\u00a77Players: \u00a7e" + voteData.maxPlayers[i], textX, y + 29, (a << 24) | 0x7A7D84);
+            String factionLine = "\u00a79" + formatFactionName(voteData.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(voteData.redFactions[i]);
+            gui.drawString(font, factionLine, textX, y + 29, (a << 24) | 0x7A7D84);
 
             int votes = voteData.voteCounts[i];
             int barX = textX;
@@ -468,7 +473,7 @@ public class LobbyScreen extends Screen {
             gui.drawString(font, "\u00a77" + elapsed + "  |  \u00a7e" + listData.playerCounts[i] + "\u00a77/" + listData.maxPlayers[i],
                 textX, y + 17, (a << 24) | 0x7A7D84);
 
-            String factionStr = "\u00a79" + listData.blueFactions[i] + " \u00a77vs \u00a7c" + listData.redFactions[i];
+            String factionStr = "\u00a79" + formatFactionName(listData.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(listData.redFactions[i]);
             gui.drawString(font, factionStr, textX, y + 29, (a << 24) | 0x7A7D84);
 
             String ticketStr = "\u00a79" + listData.blueTickets[i] + " \u00a77| \u00a7c" + listData.redTickets[i];
@@ -566,6 +571,13 @@ public class LobbyScreen extends Screen {
                 return null;
             }
         });
+    }
+
+    private static String formatFactionName(String faction) {
+        if (faction == null || faction.isEmpty() || faction.equals("none") || faction.equals("bluefor") || faction.equals("redfor")) {
+            return faction != null ? faction.toUpperCase() : "";
+        }
+        return faction.replace("_", " ").toUpperCase();
     }
 
     private static String formatDuration(int secs) {

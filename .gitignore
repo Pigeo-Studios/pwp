@@ -32,6 +32,16 @@ server-template/run/
 .env
 *.local.*
 
+# Bot generated files
+bots/channels.json
+bots/commands/
+bots/.env
+
+# Bot tokens
+bots/config.py
+bots/channels.json
+bots/commands/
+
 # Server template libraries
 server-template/libraries/
 server-template/run.bat
