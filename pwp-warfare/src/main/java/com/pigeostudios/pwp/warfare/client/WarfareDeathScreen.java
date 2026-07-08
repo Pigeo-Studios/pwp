@@ -60,9 +60,7 @@ public class WarfareDeathScreen extends DeathScreen {
 
     public WarfareDeathScreen(Component cause, boolean hardcore) {
         super(cause != null ? cause : Component.literal(""), hardcore);
-        if (ClientData.globalDeathTimestamp == 0L) {
-            ClientData.globalDeathTimestamp = System.currentTimeMillis();
-        }
+        ClientData.globalDeathTimestamp = System.currentTimeMillis();
         this.deathTimestamp = ClientData.globalDeathTimestamp;
         this.respawnTimeTotal = ClientData.RESPAWN_TIME > 0 ? ClientData.RESPAWN_TIME : 10;
         String myName = Minecraft.getInstance().getUser().getName();
