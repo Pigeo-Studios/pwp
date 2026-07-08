@@ -15,11 +15,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.PacketDistributor;
 
-// Сущность блока точки сбора
-// Управляет временем жизни точки сбора и привязкой к отряду
 public class RallyPointBlockEntity extends BlockEntity {
-   // Флаг естественного истечения времени (не уничтожен врагом)
    public boolean isDecay = false;
+   public boolean wasDismantled = false;
    private int squadId = -1;
    private long expiryTick = -1L;
    private Object clientSoundRef = null;
@@ -28,7 +26,6 @@ public class RallyPointBlockEntity extends BlockEntity {
       super((BlockEntityType)ModBlocks.RALLY_BE.get(), pos, state);
    }
 
-   // Устанавливает ID отряда, к которому привязана точка
    public void setSquadId(int id) {
       this.squadId = id;
       this.setChanged();
@@ -43,12 +40,10 @@ public class RallyPointBlockEntity extends BlockEntity {
       this.setChanged();
    }
 
-   // Очищает данные точки сбора из списка отряда
    public void cleanupData(ServerLevel level) {
       if (this.squadId != -1) {
          WarfareWorldData data = WarfareWorldData.get(level);
          boolean changed = false;
-
          for (WarfareWorldData.Squad s : data.squads) {
             if (s.id == this.squadId) {
                if (s.rallyPos != null && s.rallyPos.equals(this.worldPosition)) {
@@ -59,7 +54,6 @@ public class RallyPointBlockEntity extends BlockEntity {
                break;
             }
          }
-
          if (changed) {
             data.setDirty();
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
@@ -67,16 +61,14 @@ public class RallyPointBlockEntity extends BlockEntity {
       }
    }
 
-   // Проверяет, не истекло ли время жизни точки сбора
-    public void checkExpiry(Level level, BlockPos pos) {
-       if (this.expiryTick != -1L) {
-          if (level.getGameTime() >= this.expiryTick) {
-             this.isDecay = true;
-             cleanupData((ServerLevel)level);
-             level.removeBlock(pos, false);
-          }
-       }
-    }
+   public void checkExpiry(Level level, BlockPos pos) {
+      if (this.expiryTick != -1L) {
+         if (level.getGameTime() >= this.expiryTick) {
+            this.isDecay = true;
+            level.removeBlock(pos, false);
+         }
+      }
+   }
 
    public void handleSoundClient() {
       DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> this.clientSoundRef = ClientHooks.playRallySound(this, this.clientSoundRef));
@@ -86,7 +78,6 @@ public class RallyPointBlockEntity extends BlockEntity {
       if (this.level != null && this.level.isClientSide) {
          DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHooks.stopRallySound(this.clientSoundRef));
       }
-
       super.setRemoved();
    }
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import config
-from auth_handlers import handle_callback, handle_message, handle_command_start, handle_command_myid
+from auth_handlers import handle_callback, handle_message, handle_command_start, handle_command_myid, handle_command_login, handle_command_logout
 
 BASE = Path(__file__).parent.resolve()
 CMDS = BASE / config.COMMANDS_DIR
@@ -11,15 +11,11 @@ app = Application.builder().token(config.TELEGRAM_TOKEN).build()
 
 async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "/start — главное меню\n"
-        "/register — регистрация\n"
-        "/help — это сообщение\n"
-        "/ping — проверить бота\n"
-        "/myid — мой Telegram ID"
-    )
+        "/start — главное меню\n/register — регистрация\n/login — вход\n/logout — выход\n"
+        "/help — это сообщение\n/ping — проверить бота\n/myid — мой Telegram ID")
 
 async def ping(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("pong")
+    await update.message.reply_text("pong" if True else "pang")
 
 async def process_commands():
     while True:

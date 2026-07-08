@@ -25,7 +25,17 @@ public class AuthController {
         app.get("/api/v1/auth/check-login", ctx -> {
             checkRateLimit(ctx.ip(), "check", 30, config);
             String login = ctx.queryParam("login");
-            boolean taken = login != null && (PlayerRepository.findByLogin(login) != null || PlayerRepository.findByNickname(login) != null);
+            boolean taken = false;
+            Player byLogin = PlayerRepository.findByLogin(login);
+            if (byLogin != null) {
+                taken = true; // login already linked
+            } else {
+                Player byNick = PlayerRepository.findByNickname(login);
+                // nickname exists but has no launcher account — allow linking
+                if (byNick != null && byNick.passwordHash != null) {
+                    taken = true;
+                }
+            }
             ctx.json(ApiResponse.ok(Map.of("available", !taken)));
         });
 

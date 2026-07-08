@@ -39,6 +39,8 @@ import org.lwjgl.glfw.GLFW;
 // Отображает текстуру карты, игроков, точки захвата, маркеры и технику
 public class WarfareMapRenderer implements AutoCloseable {
    private static final Map<String, ResourceLocation> MAP_ICONS_CACHE = new HashMap<>();
+   private static final ResourceLocation MATS_ICON = new ResourceLocation("pwpwarfare", "textures/gui/mats_icon.png");
+   public String selectedSpawnId = "";
    private int mapX;
    private int mapY;
    private int mapSize;
@@ -57,8 +59,11 @@ public class WarfareMapRenderer implements AutoCloseable {
    private static final ResourceLocation ICON_PLAYER_SELF = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/player_self.png");
    private static final ResourceLocation MAP_GRID_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/map_grid.png");
    private static final ResourceLocation HUB_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/hub_icon.png");
+   private static final ResourceLocation HUB_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/hub_icon_selected.png");
    private static final ResourceLocation RALLY_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/rally_icon.png");
+   private static final ResourceLocation RALLY_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/rally_icon_selected.png");
    private static final ResourceLocation MAIN_BASE_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/main_base.png");
+   private static final ResourceLocation MAIN_BASE_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/main_base_selected.png");
    private static final ResourceLocation ICON_OBJ_ATTACK = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/objective_attack.png");
    private static final ResourceLocation ICON_OBJ_DEFEND = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/objective_defend.png");
    private static final Map<String, ResourceLocation> VEHICLE_ICONS = new HashMap<>();
@@ -132,8 +137,8 @@ public class WarfareMapRenderer implements AutoCloseable {
          this.renderOverlays(gui, mc, cx, cz, currentScale);
          this.renderMainBases(gui, mc, cx, cz, currentScale);
          this.renderArtilleryZones(gui, cx, cz, currentScale);
-         this.renderStructures(gui, mc, cx, cz, currentScale);
-         this.renderVehicles(gui, mc, cx, cz, currentScale);
+          this.renderStructures(gui, mc, cx, cz, currentScale);
+          this.renderVehicles(gui, mc, cx, cz, currentScale);
          this.renderAllPlayers(gui, mc, localPlayer, cx, cz, currentScale);
          this.renderSquadMarkerLogic(gui, mc, cx, cz, currentScale);
          this.renderTacticalMarkers(gui, mc, cx, cz, currentScale);
@@ -544,13 +549,15 @@ public class WarfareMapRenderer implements AutoCloseable {
             gui.fill(pX - 8, pY - 4, pX + 8, pY + 5, fallbackColor);
          }
 
-         this.setFilter(MAIN_BASE_ICON, true);
+         boolean isSelected = this.selectedSpawnId.equals("MAIN");
+         ResourceLocation mainTex = isSelected ? MAIN_BASE_ICON_SELECTED : MAIN_BASE_ICON;
+         this.setFilter(mainTex, true);
          gui.pose().pushPose();
          gui.pose().translate(pX, pY, 150.0F);
          RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-         gui.blit(MAIN_BASE_ICON, -6, -6, 12, 12, 0.0F, 0.0F, 16, 16, 16, 16);
+         gui.blit(mainTex, -6, -6, 12, 12, 0.0F, 0.0F, 16, 16, 16, 16);
          gui.pose().popPose();
-         this.setFilter(MAIN_BASE_ICON, false);
+         this.setFilter(mainTex, false);
          gui.pose().pushPose();
          gui.pose().translate(pX, pY + 7, 151.0F);
          float textScale = 0.6F;
@@ -646,14 +653,30 @@ public class WarfareMapRenderer implements AutoCloseable {
             this.drawSmoothCircle(gui, sx, sy, (float)(buildRad / bpp), teamCircleColor);
             pose.popPose();
             if (this.isPointOnMap((int)sx, (int)sy)) {
-               this.setFilter(HUB_ICON, true);
-               pose.pushPose();
-               pose.translate(sx, sy, 160.0F);
-               RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-               gui.blit(HUB_ICON, -6, -6, 12, 12, 0.0F, 0.0F, 16, 16, 16, 16);
-               pose.popPose();
-               this.setFilter(HUB_ICON, false);
-            }
+                String hubPayload = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
+                boolean isSelected = this.selectedSpawnId.equals(hubPayload);
+                ResourceLocation hubTex = isSelected ? HUB_ICON_SELECTED : HUB_ICON;
+                this.setFilter(hubTex, true);
+                pose.pushPose();
+                pose.translate(sx, sy, 160.0F);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                 gui.blit(hubTex, -6, -6, 12, 12, 0.0F, 0.0F, 16, 16, 16, 16);
+                 pose.popPose();
+                 this.setFilter(hubTex, false);
+                 String matsText = String.valueOf(hub.materials);
+                 int matsW = mc.font.width(matsText);
+                 int iconSize = 8;
+                 int matsX = (int)sx + 8;
+                 int matsY = (int)sy - 2;
+                 pose.pushPose();
+                 pose.translate(0.0F, 0.0F, 165.0F);
+                 RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                 this.setFilter(MATS_ICON, true);
+                 gui.blit(MATS_ICON, matsX, matsY, iconSize, iconSize, 0.0F, 0.0F, 16, 16, 16, 16);
+                 this.setFilter(MATS_ICON, false);
+                 gui.drawString(mc.font, matsText, matsX + iconSize + 2, matsY + 1, -22016, false);
+                 pose.popPose();
+              }
          }
       }
 
@@ -664,14 +687,16 @@ public class WarfareMapRenderer implements AutoCloseable {
             float sx = (float)(this.mapX + this.mapSize / 2.0 + dx);
             float sy = (float)(this.mapY + this.mapSize / 2.0 + dy);
             if (this.isPointOnMap((int)sx, (int)sy)) {
-               this.setFilter(RALLY_ICON, true);
-               pose.pushPose();
-               pose.translate(sx, sy, 170.0F);
-               RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-               gui.blit(RALLY_ICON, -5, -5, 10, 10, 0.0F, 0.0F, 16, 16, 16, 16);
-               pose.popPose();
-               this.setFilter(RALLY_ICON, false);
-            }
+                boolean isSelected = this.selectedSpawnId.equals("RALLY");
+                ResourceLocation rallyTex = isSelected ? RALLY_ICON_SELECTED : RALLY_ICON;
+                this.setFilter(rallyTex, true);
+                pose.pushPose();
+                pose.translate(sx, sy, 170.0F);
+                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                gui.blit(rallyTex, -5, -5, 10, 10, 0.0F, 0.0F, 16, 16, 16, 16);
+                pose.popPose();
+                this.setFilter(rallyTex, false);
+             }
          }
       }
    }
@@ -688,42 +713,26 @@ public class WarfareMapRenderer implements AutoCloseable {
             }
          }
 
-         if (mySquad != null) {
-            boolean isSL = mySquad.leader.equals(myName);
-            boolean isBravo = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
-            boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
-            if (mySquad.marker != null && mySquad.marker.type != 6) {
-               this.drawMapMarkerAndLine(
-                  gui, mc, cx, cz, bpp, mySquad.marker, this.getSquadMarkerIcon(mySquad.marker.type), this.getSquadMarkerColor(mySquad.marker.type), true
-               );
-            }
+          if (mySquad != null) {
+             if (mySquad.marker != null && mySquad.marker.type != 6) {
+                boolean withDash = mySquad.marker.type != 0;
+                this.drawMapMarkerAndLine(
+                   gui, mc, cx, cz, bpp, mySquad.marker, this.getSquadMarkerIcon(mySquad.marker.type), this.getSquadMarkerColor(mySquad.marker.type), withDash
+                );
+             }
 
-            if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6) {
-               boolean canSee = isSL || isBravo;
-               if (canSee) {
-                  boolean withDash = isSL || isBravo;
-                  this.drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker, this.getBravoMarkerIcon(mySquad.bravoMarker.type), -65281, withDash);
-               }
-            }
+             if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6) {
+                boolean withDash = mySquad.bravoMarker.type != 0;
+                this.drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker, this.getBravoMarkerIcon(mySquad.bravoMarker.type), -65281, withDash);
+             }
 
-            if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6) {
-               boolean canSee = isSL || isCharlie;
-               if (canSee) {
-                  boolean withDash = isSL || isCharlie;
-                  this.drawMapMarkerAndLine(
-                     gui, mc, cx, cz, bpp, mySquad.charlieMarker, this.getCharlieMarkerIcon(mySquad.charlieMarker.type), -16711766, withDash
-                  );
-               }
-            }
-
-            if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6 && !isSL && !isBravo) {
-               this.drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.bravoMarker, this.getBravoMarkerIcon(mySquad.bravoMarker.type), -65281, false);
-            }
-
-            if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6 && !isSL && !isCharlie) {
-               this.drawMapMarkerAndLine(gui, mc, cx, cz, bpp, mySquad.charlieMarker, this.getCharlieMarkerIcon(mySquad.charlieMarker.type), -16711766, false);
-            }
-         }
+             if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6) {
+                boolean withDash = mySquad.charlieMarker.type != 0;
+                this.drawMapMarkerAndLine(
+                   gui, mc, cx, cz, bpp, mySquad.charlieMarker, this.getCharlieMarkerIcon(mySquad.charlieMarker.type), -16711766, withDash
+                );
+             }
+          }
       }
    }
 

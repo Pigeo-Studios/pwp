@@ -231,7 +231,8 @@ public class DatabaseManager {
                 "ALTER TABLE players ADD COLUMN launcher_2fa_enabled BOOLEAN NOT NULL DEFAULT FALSE",
                 "ALTER TABLE players ADD COLUMN last_ip VARCHAR(45) DEFAULT NULL",
                     "ALTER TABLE players ADD INDEX idx_players_telegram (telegram_id)",
-                "ALTER TABLE players ADD INDEX idx_players_login (login)"
+                "ALTER TABLE players ADD INDEX idx_players_login (login)",
+                "ALTER TABLE password_resets ADD COLUMN player_uuid VARCHAR(36) NOT NULL"
             };
             for (String sql : migrations) {
                 try { s.execute(sql); } catch (Exception ignored) {}

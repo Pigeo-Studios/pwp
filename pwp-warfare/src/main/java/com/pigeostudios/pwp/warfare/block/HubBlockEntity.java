@@ -101,11 +101,11 @@ public class HubBlockEntity extends BlockEntity {
       this.constructionMaterials = Math.max(0, this.constructionMaterials - amount);
       this.setChanged();
       if (this.level != null && !this.level.isClientSide) {
+         this.syncHubMaterials();
          this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
       }
    }
 
-   // Добавляет строительные материалы (макс. 3000)
    public void addMaterials(int amount) {
       this.constructionMaterials += amount;
       if (this.constructionMaterials > 3000) {
@@ -114,7 +114,21 @@ public class HubBlockEntity extends BlockEntity {
 
       this.setChanged();
       if (this.level != null && !this.level.isClientSide) {
+         this.syncHubMaterials();
          this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+      }
+   }
+
+   private void syncHubMaterials() {
+      if (this.level instanceof ServerLevel serverLevel) {
+         WarfareWorldData data = WarfareWorldData.get(serverLevel);
+         for (WarfareWorldData.HubInfo h : data.hubs) {
+            if (h.pos.equals(this.worldPosition)) {
+               h.materials = this.constructionMaterials;
+               data.setDirty();
+               break;
+            }
+         }
       }
    }
 

@@ -17,7 +17,7 @@
             "spawn": {
                 "dimension": "minecraft:overworld",
                 "x": 954,
-                "y": -44,
+                "y": 65,
                 "z": 161
             }
         },
@@ -27,7 +27,7 @@
             "spawn": {
                 "dimension": "minecraft:overworld",
                 "x": 1608,
-                "y": -41,
+                "y": 65,
                 "z": 1662
             }
         }

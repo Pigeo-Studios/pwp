@@ -90,6 +90,11 @@ public class ClientData {
    public static boolean teamSelectSent = false;
    public static long teamSelectSentTime = 0L;
    public static int RESPAWN_TIME = 10;
+   public static long globalDeathTimestamp = 0L;
+   public static long deathFadeStartTime = 0L;
+   public static boolean deathFadePlayed = false;
+   public static long downedTimestamp = 0L;
+   public static int downedBleedoutDuration = 0;
    public static List<Component> menuChatHistory = new ArrayList<>();
    public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();
 

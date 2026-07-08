@@ -151,12 +151,12 @@ public class ClientEvents {
                }
             }
 
-            if (mySquad != null) {
-               boolean isSL = mySquad.leader.equals(myName);
-               boolean isBravo = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
-               boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
-               PoseStack poseStack = event.getPoseStack();
-               Vec3 cameraPos = event.getCamera().getPosition();
+             PoseStack poseStack = event.getPoseStack();
+             Vec3 cameraPos = event.getCamera().getPosition();
+             if (mySquad != null) {
+                boolean isSL = mySquad.leader.equals(myName);
+                boolean isBravo = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
+                boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
                long gameTime = mc.level.getGameTime();
                float blinkAlpha = 0.45F + (float)Math.sin((float)gameTime * 0.4F) * 0.25F;
                if (mySquad.pingPos != null && gameTime < mySquad.pingExpiry) {
@@ -181,14 +181,15 @@ public class ClientEvents {
                   render3DMarker(poseStack, cameraPos, mPos, MOVE_TEX_BRAVO, mc, 1.0F, 0.5);
                }
 
-               if (mySquad.charlieMarker != null && mySquad.charlieMarker.type == 0 && gameTime < mySquad.charlieMarker.expiryTick) {
-                  BlockPos mPos = new BlockPos(mySquad.charlieMarker.x, mySquad.charlieMarker.y, mySquad.charlieMarker.z);
-                  render3DMarker(poseStack, cameraPos, mPos, MOVE_TEX_CHARLIE, mc, 1.0F, 0.5);
-               }
-            }
-         }
-      }
-   }
+                if (mySquad.charlieMarker != null && mySquad.charlieMarker.type == 0 && gameTime < mySquad.charlieMarker.expiryTick) {
+                   BlockPos mPos = new BlockPos(mySquad.charlieMarker.x, mySquad.charlieMarker.y, mySquad.charlieMarker.z);
+                   render3DMarker(poseStack, cameraPos, mPos, MOVE_TEX_CHARLIE, mc, 1.0F, 0.5);
+                }
+             }
+
+          }
+       }
+    }
 
    private static void tryPlacePingLogic(Minecraft mc) {
       String myName = mc.player.getScoreboardName();
@@ -244,6 +245,8 @@ public class ClientEvents {
       RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
       poseStack.popPose();
    }
+
+
 
    @SubscribeEvent
    public static void onMouseInput(Pre event) {

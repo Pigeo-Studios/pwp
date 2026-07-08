@@ -25,10 +25,9 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
-import net.minecraft.world.level.block.state.StateDefinition.Builder;
+import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
-import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -36,16 +35,14 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
-// Р‘Р»РѕРє СЃСѓРјРєРё СЃ Р±РѕРµРїСЂРёРїР°СЃР°РјРё
-// РџСЂРё РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРё РїРѕРїРѕР»РЅСЏРµС‚ Р·Р°РїР°СЃ РїР°С‚СЂРѕРЅРѕРІ РёРіСЂРѕРєР° РёР· РІС‹Р±СЂР°РЅРЅРѕРіРѕ РЅР°Р±РѕСЂР°
 public class AmmoBagBlock extends Block {
-   // РќР°РїСЂР°РІР»РµРЅРёРµ, РІ РєРѕС‚РѕСЂРѕРј СЃРјРѕС‚СЂРёС‚ СЃСѓРјРєР°
    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+   public static final IntegerProperty USES = IntegerProperty.create("uses", 1, 4);
    protected static final VoxelShape SHAPE = Block.box(3.0, 0.0, 3.0, 13.0, 7.0, 13.0);
 
    public AmmoBagBlock() {
       super(Properties.of().mapColor(MapColor.WOOL).strength(0.5F).noOcclusion());
-      this.registerDefaultState((BlockState)((BlockState)this.stateDefinition.any()).setValue(FACING, Direction.NORTH));
+      this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(USES, 4));
    }
 
    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
@@ -66,14 +63,17 @@ public class AmmoBagBlock extends Block {
 
    @Nullable
    public BlockState getStateForPlacement(BlockPlaceContext context) {
-      return (BlockState)this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+      ItemStack stack = context.getItemInHand();
+      int usesLeft = 4 - stack.getCount();
+      if (usesLeft < 1) usesLeft = 1;
+      if (usesLeft > 4) usesLeft = 4;
+      return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite()).setValue(USES, usesLeft);
    }
 
-   protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
-      builder.add(new Property[]{FACING});
+   protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+      builder.add(FACING, USES);
    }
 
-   // РћР±СЂР°Р±РѕС‚С‡РёРє РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёСЏ: РїСЂРё С€РёС„С‚-РєР»РёРєРµ РїРѕРґР±РёСЂР°РµС‚ СЃСѓРјРєСѓ, РёРЅР°С‡Рµ РїРѕРїРѕР»РЅСЏРµС‚ Р±РѕРµРїСЂРёРїР°СЃС‹
    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
       if (hand != InteractionHand.MAIN_HAND) {
          return InteractionResult.PASS;
@@ -81,15 +81,15 @@ public class AmmoBagBlock extends Block {
 
       if (player.isShiftKeyDown()) {
          if (!level.isClientSide) {
-            ItemStack returnStack = new ItemStack((ItemLike)ModItems.AMMO_BAG.get());
+            int currentUses = state.getValue(USES);
+            ItemStack returnStack = new ItemStack(ModItems.AMMO_BAG.get());
+            returnStack.setDamageValue(4 - currentUses);
             if (!player.getInventory().add(returnStack)) {
                player.drop(returnStack, false);
             }
-
             level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 1.0F, 1.0F);
             level.removeBlock(pos, false);
          }
-
          return InteractionResult.SUCCESS;
       } else {
          if (!level.isClientSide) {
@@ -106,13 +106,17 @@ public class AmmoBagBlock extends Block {
                if (ResupplyHandler.resupplyPlayer((ServerPlayer)player, kit, true)) {
                   player.sendSystemMessage(Component.literal("Kit Resupplied! (Ammo Bags not refilled)").withStyle(ChatFormatting.GREEN));
                   level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
-                  level.removeBlock(pos, false);
+                  int currentUses = state.getValue(USES);
+                  if (currentUses <= 1) {
+                     level.removeBlock(pos, false);
+                  } else {
+                     level.setBlock(pos, state.setValue(USES, currentUses - 1), 3);
+                  }
                } else {
                   player.sendSystemMessage(Component.literal("Ammo already full!").withStyle(ChatFormatting.YELLOW));
                }
             }
          }
-
          return InteractionResult.sidedSuccess(level.isClientSide);
       }
    }

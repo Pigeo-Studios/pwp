@@ -376,10 +376,12 @@ public class PacketBuildRequest {
                && level.isLoaded(hubInfo.pos)
                && level.getBlockEntity(hubInfo.pos) instanceof HubBlockEntity hub
                && (hub.getTeam().equalsIgnoreCase(team) || hub.getTeam().equals("NEUTRAL"))) {
-               int hMats = hub.getMaterials();
-               int take = Math.min(hMats, remainingToDeduct);
-               hub.consumeMaterials(take);
-               remainingToDeduct -= take;
+                int hMats = hub.getMaterials();
+                int take = Math.min(hMats, remainingToDeduct);
+                hub.consumeMaterials(take);
+                hubInfo.materials = hub.getMaterials();
+                data.setDirty();
+                remainingToDeduct -= take;
             }
          }
       }

@@ -164,12 +164,17 @@ public class ClientHooks {
          if (isDowned) {
             ClientData.DOWNED_PLAYERS.add(entityId);
             if (mc.player != null && mc.player.getId() == entityId) {
+               ClientData.downedTimestamp = System.currentTimeMillis();
                mc.player.getPersistentData().putBoolean("WARFARE_IsDowned", true);
                mc.setScreen(new DownedScreen());
             }
          } else {
             ClientData.DOWNED_PLAYERS.remove(entityId);
             if (mc.player != null && mc.player.getId() == entityId) {
+               if (ClientData.downedTimestamp > 0L) {
+                  ClientData.downedBleedoutDuration = (int)((System.currentTimeMillis() - ClientData.downedTimestamp) / 1000L);
+               }
+               ClientData.downedTimestamp = 0L;
                mc.player.getPersistentData().putBoolean("WARFARE_IsDowned", false);
                if (mc.screen instanceof DownedScreen) {
                   mc.setScreen(null);

@@ -306,8 +306,10 @@ public class SupplyCrateEntity extends Entity {
                         data.setDirty();
                      }
 
-                     hub.addMaterials(this.getMaterials());
-                     this.hasResupplied = true;
+                      hub.addMaterials(this.getMaterials());
+                      hubInfo.materials = hub.getMaterials();
+                      data.setDirty();
+                      this.hasResupplied = true;
                      if (this.ownerId != null) {
                          Player player = currentLevel.getPlayerByUUID(this.ownerId);
                          if (player != null) {
