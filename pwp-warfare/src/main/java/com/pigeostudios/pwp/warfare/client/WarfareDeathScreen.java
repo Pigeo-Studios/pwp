@@ -10,7 +10,6 @@ import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +21,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -33,658 +33,904 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.scores.Team;
 
 public class WarfareDeathScreen extends DeathScreen {
-   private static final int SIDEBAR_WIDTH = 170;
-   private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
-   private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
-   private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
-   private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
-   private final long deathTimestamp;
-   private final int respawnTimeTotal;
-   private EditBox chatInput;
-   private Button chatModeButton;
-   private int chatMode = 1;
-   private final Set<Integer> expandedSquads = new HashSet<>();
-   private final WarfareMapRenderer mapRenderer = new WarfareMapRenderer();
-   private Button applyCmdButton;
-   private EditBox nameInput;
-   private Button createButton;
-   private boolean showContextMenu = false;
-   private int contextMenuX = 0;
-   private int contextMenuY = 0;
-   private String contextTargetPlayer = "";
-   private int contextTargetSquadId = -1;
-   private String selectedSpawnType = "";
-   private Button deployButton;
-   private String selectedDisplayName = "NONE";
+    private final long deathTimestamp;
+    private final int respawnTimeTotal;
+    private EditBox chatInput;
+    private Button chatModeButton;
+    private int chatMode = 1;
+    private final Set<Integer> expandedSquads = new HashSet<>();
+    private final WarfareMapRenderer mapRenderer = new WarfareMapRenderer();
+    private static final int SIDEBAR_WIDTH = 170;
+    private Button applyCmdButton;
+    private EditBox nameInput;
+    private Button createButton;
+    private boolean showContextMenu = false;
+    private int contextMenuX = 0;
+    private int contextMenuY = 0;
+    private String contextTargetPlayer = "";
+    private int contextTargetSquadId = -1;
+    private String selectedSpawnType = "";
+    private Button deployButton;
+    private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
+    private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
+    private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
+    private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
+    private static final ResourceLocation VOICE_ICON = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon.png");
+    private static final ResourceLocation RADIO_ICON = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
 
-   public WarfareDeathScreen(Component cause, boolean hardcore) {
-      super(cause != null ? cause : Component.literal(""), hardcore);
-      if (ClientData.globalDeathTimestamp == 0L) {
-         ClientData.globalDeathTimestamp = System.currentTimeMillis();
-      }
-      this.deathTimestamp = ClientData.globalDeathTimestamp;
-      this.respawnTimeTotal = ClientData.RESPAWN_TIME > 0 ? ClientData.RESPAWN_TIME : 10;
-      String myName = Minecraft.getInstance().getUser().getName();
-      for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-         if (s.members.contains(myName)) this.expandedSquads.add(s.id);
-      }
-   }
+    public WarfareDeathScreen(Component cause, boolean hardcore) {
+        super(cause != null ? cause : Component.literal(""), hardcore);
+        if (ClientData.globalDeathTimestamp == 0L) {
+            ClientData.globalDeathTimestamp = System.currentTimeMillis();
+        }
+        this.deathTimestamp = ClientData.globalDeathTimestamp;
+        this.respawnTimeTotal = ClientData.RESPAWN_TIME > 0 ? ClientData.RESPAWN_TIME : 10;
+        String myName = Minecraft.getInstance().getUser().getName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (!s.members.contains(myName)) continue;
+            this.expandedSquads.add(s.id);
+        }
+    }
 
-   public boolean isPauseScreen() { return false; }
+    private int getMapSize() {
+        int sidebarTarget = Math.min(310, this.width - 170);
+        sidebarTarget = Math.max(280, sidebarTarget);
+        int maxMapWidth = this.width - sidebarTarget;
+        int maxMapHeight = this.height - 80;
+        return Math.max(100, Math.min(maxMapHeight, maxMapWidth));
+    }
 
-   protected void init() {
-      super.clearWidgets();
-      int h = this.height;
-      int w = this.width;
-      int mapSize = h;
-      int mapX = w - mapSize;
-      this.mapRenderer.init(mapX, 0, mapSize);
+    private int getMapY() {
+        return 30;
+    }
 
-      this.applyCmdButton = this.addRenderableWidget(Button.builder(Component.literal("APPLY FOR CMD"), b -> {
-         PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
-         b.visible = false;
-      }).bounds(10, 10, 150, 20).build());
+    private int getMapOriginX() {
+        return this.width - this.getMapSize();
+    }
 
-      boolean isInSquad = this.isPlayerInSquad();
-      this.nameInput = new EditBox(this.font, 10, h - 90, 150, 20, Component.literal("Squad Name"));
-      this.nameInput.setMaxLength(12);
-      this.nameInput.setVisible(!isInSquad);
-      this.addRenderableWidget(this.nameInput);
+    private int getChatMaxMessages() {
+        return 3;
+    }
 
-      this.createButton = this.addRenderableWidget(Button.builder(Component.literal("Create Squad"), b -> {
-         PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()));
-      }).bounds(10, h - 65, 150, 20).build());
-      this.createButton.visible = !isInSquad;
-
-      this.deployButton = this.addRenderableWidget(Button.builder(Component.literal("DEPLOY"), b -> {
-         if (!this.selectedSpawnType.isEmpty()) {
-            ClientData.globalDeathTimestamp = 0L;
-            ClientData.deathFadeStartTime = 0L;
-            ClientData.deathFadePlayed = false;
-            PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(this.selectedSpawnType));
-            this.minecraft.player.respawn();
-            this.minecraft.setScreen(null);
-         }
-      }).bounds(10, h - 35, 100, 25).build());
-
-      int mapOriginX = w - h;
-      int chatX = 180;
-      int chatWidth = mapOriginX - chatX - 10;
-      this.chatModeButton = this.addRenderableWidget(Button.builder(this.getChatModeText(), b -> {
-         this.chatMode = (this.chatMode + 1) % 3;
-         b.setMessage(this.getChatModeText());
-      }).bounds(chatX, h - 40, 60, 20).build());
-
-      this.chatInput = new EditBox(this.font, chatX + 64, h - 40, chatWidth - 64, 20, Component.literal("Chat"));
-      this.chatInput.setMaxLength(100);
-      this.addRenderableWidget(this.chatInput);
-
-      this.addRenderableWidget(Button.builder(Component.literal("Quit"), b -> {
-         if (this.minecraft.level != null) this.minecraft.level.disconnect();
-         this.minecraft.setScreen(new TitleScreen());
-      }).bounds(w - 45, 5, 40, 20).build());
-   }
-
-   public void tick() {
-      super.tick();
-      if (this.nameInput != null) this.nameInput.tick();
-      if (this.applyCmdButton != null) this.applyCmdButton.visible = this.isApplyCmdVisible();
-      boolean isInSquad = this.isPlayerInSquad();
-      if (this.nameInput != null && this.nameInput.isVisible() == isInSquad) {
-         this.nameInput.setVisible(!isInSquad);
-         if (this.createButton != null) this.createButton.visible = !isInSquad;
-      }
-   }
-
-   public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-      if ((keyCode == 257 || keyCode == 335) && this.chatInput.isFocused()) {
-         String msg = this.chatInput.getValue().trim();
-         if (!msg.isEmpty()) {
-            PacketHandler.INSTANCE.sendToServer(new PacketSquadChat(msg, this.chatMode));
-            this.chatInput.setValue("");
-         }
-         return true;
-      }
-      if ((keyCode == 257 || keyCode == 335) && this.nameInput.isFocused() && this.nameInput.isVisible()) {
-         PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()));
-         return true;
-      }
-      return super.keyPressed(keyCode, scanCode, modifiers);
-   }
-
-   public void render(GuiGraphics gui, int mx, int my, float pt) {
-      gui.fill(0, 0, this.width, this.height, 0xFF000000);
-      this.mapRenderer.render(gui, mx, my, pt);
-      gui.fill(0, 0, 310, this.height, 0xAA0E1117);
-      gui.fill(0, 0, 170, this.height, 0x22FFFFFF);
-
-      long elapsed = (System.currentTimeMillis() - this.deathTimestamp) / 1000L;
-      int secondsLeft = (int)(this.respawnTimeTotal - elapsed);
-      if (secondsLeft > 0) {
-         this.deployButton.active = false;
-         this.deployButton.setMessage(Component.literal("WAIT " + secondsLeft + "s"));
-      } else {
-         this.deployButton.active = !this.selectedSpawnType.isEmpty();
-         this.deployButton.setMessage(Component.literal("DEPLOY"));
-      }
-
-      this.renderSquadList(gui, mx, my);
-      this.renderTeamHeader(gui);
-      this.renderSpawnSelection(gui, mx, my);
-      this.renderVoiceActivity(gui);
-      this.renderChatArea(gui);
-
-      for (var r : this.renderables) {
-         r.render(gui, mx, my, pt);
-      }
-      if (this.showContextMenu) this.renderContextMenu(gui, mx, my);
-
-      if (ClientData.deathFadeStartTime != 0L) {
-         long fadeElapsed = System.currentTimeMillis() - ClientData.deathFadeStartTime;
-         float alpha = 0.0F;
-         if (fadeElapsed < 1000L) alpha = 1.0F;
-         else if (fadeElapsed < 2000L) alpha = 1.0F - (float)(fadeElapsed - 1000L) / 1000.0F;
-         else ClientData.deathFadeStartTime = 0L;
-         if (alpha > 0.0F) {
-            int a = (int)(alpha * 255.0F);
-            gui.pose().pushPose();
-            gui.pose().translate(0.0F, 0.0F, 1000.0F);
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            gui.fill(0, 0, this.width, this.height, a << 24 | 0);
-            RenderSystem.disableBlend();
-            gui.pose().popPose();
-         }
-      }
-   }
-
-   private void renderChatArea(GuiGraphics gui) {
-      int mapOriginX = this.width - this.height;
-      int chatX = 180;
-      int chatW = mapOriginX - chatX - 10;
-      int chatBottom = this.height - 45;
-      int maxMsg = 15;
-      gui.fill(chatX, chatBottom - maxMsg * 10, chatX + chatW, chatBottom, 0x70000000);
-      gui.renderOutline(chatX, chatBottom - maxMsg * 10, chatW, maxMsg * 10, PWPTheme.Colors.BORDER);
-      int count = 0;
-      for (Component msg : ClientData.menuChatHistory) {
-         if (count >= maxMsg) break;
-         int y = chatBottom - 10 - count * 10;
-         gui.drawString(this.font, msg, chatX + 3, y, PWPTheme.Colors.TEXT_PRIMARY, true);
-         count++;
-      }
-   }
-
-   private void renderVoiceActivity(GuiGraphics gui) {
-      long now = System.currentTimeMillis();
-      int x = 5;
-      int y = this.height / 2 - 40;
-      for (Map.Entry<String, Long> e : ClientData.RADIO_SPEAKERS.entrySet()) {
-         if (now - e.getValue() >= 500L) continue;
-         this.renderSpeakerRow(gui, x, y, e.getKey(), PWPTheme.Colors.ACCENT, new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png"));
-         y += 14;
-      }
-      for (Map.Entry<String, Long> e : ClientData.SQUAD_SPEAKERS.entrySet()) {
-         if (now - e.getValue() >= 500L) continue;
-         this.renderSpeakerRow(gui, x, y, e.getKey(), PWPTheme.Colors.TEXT_SECONDARY, new ResourceLocation("pwpwarfare", "textures/gui/voice_icon.png"));
-         y += 14;
-      }
-   }
-
-   private void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, int color, ResourceLocation icon) {
-      int tw = this.font.width(name) + 15;
-      gui.fill(x, y - 2, x + tw + 4, y + 10, 0x80000000);
-      RenderSystem.enableBlend();
-      float r = (float)(color >> 16 & 0xFF) / 255.0F;
-      float g = (float)(color >> 8 & 0xFF) / 255.0F;
-      float b = (float)(color & 0xFF) / 255.0F;
-      RenderSystem.setShaderColor(r, g, b, 1.0F);
-      gui.blit(icon, x + 3, y, 0.0F, 0.0F, 8, 8, 8, 8);
-      RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-      gui.drawString(this.font, name, x + 14, y, color, false);
-   }
-
-   private void renderTeamHeader(GuiGraphics gui) {
-      int startX = 180;
-      int startY = 10;
-      String teamName = this.getPlayerTeam().toUpperCase();
-      int tickets = teamName.contains("BLUE") ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
-      String faction = teamName.contains("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
-      String customName = teamName.contains("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
-      ResourceLocation flagTex = this.getFlagTexture(faction);
-      if (flagTex != null) {
-         RenderSystem.enableBlend();
-         gui.blit(flagTex, startX, startY, 32, 18, 0.0F, 0.0F, 64, 36, 64, 36);
-      }
-      gui.drawString(this.font, customName, startX + 38, startY, teamName.contains("BLUE") ? 0x5555FF : 0xFF5555, true);
-      RenderSystem.enableBlend();
-      gui.blit(TICKET_ICON, startX + 38, startY + 11, 8, 8, 0.0F, 0.0F, 16, 16, 16, 16);
-      gui.drawString(this.font, String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, true);
-   }
-
-   private void renderSpawnSelection(GuiGraphics gui, int mx, int my) {
-      int startX = 180;
-      int startY = 55;
-      gui.drawString(this.font, "SELECT SPAWN POINT:", startX, startY - 15, 0xFFAA00, false);
-      this.drawSpawnOption(gui, startX, startY, 110, 24, "MAIN BASE", "MAIN", mx, my, true, false);
-      boolean rallyBlocked = this.isMyRallyBlocked();
-      boolean rallyValid = this.hasValidRally() && !rallyBlocked;
-      this.drawSpawnOption(gui, startX, startY += 30, 110, 24, "SQUAD RALLY", "RALLY", mx, my, rallyValid, rallyBlocked);
-      gui.drawString(this.font, "AVAILABLE HUBS:", startX, (startY += 40) - 12, 0xAAAAAA, false);
-      Team team = this.minecraft.player.getTeam();
-      if (team != null) {
-         String myTeam = team.getName();
-         String myDim = this.minecraft.level.dimension().location().toString();
-         int hubIdx = 1;
-         for (WarfareWorldData.HubInfo hub : ClientData.clientHubs) {
-            if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || !hub.dimension.equals(myDim)) continue;
-            String id = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
-            boolean hubBlocked = hub.isBlocked;
-            boolean canAfford = !ClientData.serverHubSpawnCosts || hub.materials >= ClientData.serverHubSpawnCostAmount;
-            this.drawSpawnOption(gui, startX, startY, 110, 20, "HUBS " + hubIdx, id, mx, my, !hubBlocked && canAfford, hubBlocked);
-            startY += 24;
-            hubIdx++;
-         }
-      }
-   }
-
-   private void drawSpawnOption(GuiGraphics gui, int x, int y, int w, int h, String label, String id, int mx, int my, boolean active, boolean isBlocked) {
-      boolean hovered = active && mx >= x && mx <= x + w && my >= y && my <= y + h;
-      boolean selected = this.selectedSpawnType.equals(id);
-      int color = isBlocked ? 0xFF5555 : (active ? (selected ? PWPTheme.Colors.ACCENT : (hovered ? PWPTheme.Colors.TEXT_PRIMARY : 0xBBBBBB)) : 0x555555);
-      int bg = isBlocked ? 0x60FF0000 : (selected ? 0x4455FF55 : (active ? 0x22FFFFFF : 0x11000000));
-      String finalLabel = isBlocked ? label + " BLOCKED" : label;
-      gui.fill(x, y, x + w, y + h, bg);
-      gui.renderOutline(x, y, w, h, color);
-      gui.drawCenteredString(this.font, finalLabel, x + w / 2, y + (h - 8) / 2, color);
-   }
-
-   private void renderSquadList(GuiGraphics gui, int mouseX, int mouseY) {
-      String myName = this.minecraft.player.getScoreboardName();
-      boolean amIInSquad = this.isPlayerInSquad();
-      int teamCMDId = this.getPlayerTeam().toUpperCase().contains("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
-      int currentY = this.isApplyCmdVisible() ? 35 : 10;
-      List<WarfareWorldData.Squad> squads = this.getFilteredSquads();
-      int index = 1;
-      for (WarfareWorldData.Squad squad : squads) {
-         boolean isMySquad = squad.members.contains(myName);
-         boolean amILeader = squad.leader.equals(myName);
-         boolean isExpanded = this.expandedSquads.contains(squad.id);
-         boolean isCMD = squad.id == teamCMDId && teamCMDId != -1;
-         String prefix = isCMD ? "[CMD] " : "";
-         gui.drawString(this.font, index + ".", 5, currentY, PWPTheme.Colors.TEXT_PRIMARY, false);
-         gui.drawString(this.font, prefix + squad.name + " (" + squad.members.size() + "/9)", 25, currentY, isCMD ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_SECONDARY, false);
-         String action = "";
-         int actionColor = -1;
-         boolean clickable = true;
-         if (isMySquad) { action = "LEAVE"; actionColor = PWPTheme.Colors.SUCCESS; }
-         else if (!amIInSquad) {
-            if (squad.isLocked) { action = "LOCKED"; actionColor = PWPTheme.Colors.WARNING; clickable = false; }
-            else if (squad.members.size() >= 9) { action = "FULL"; actionColor = PWPTheme.Colors.TEXT_DIM; clickable = false; }
-            else { action = "JOIN"; actionColor = PWPTheme.Colors.ACCENT; }
-         }
-         int actionX = 0;
-         if (!action.isEmpty()) {
-            int aw = this.font.width(action);
-            actionX = SIDEBAR_WIDTH - aw - 10;
-            boolean hover = mouseX >= actionX && mouseX <= actionX + aw && mouseY >= currentY && mouseY <= currentY + 9;
-            gui.drawString(this.font, action, actionX, currentY, hover && clickable ? PWPTheme.Colors.TEXT_PRIMARY : actionColor, false);
-         }
-         int arrowX = (actionX > 0 ? actionX : 160) - 12;
-         RenderSystem.enableBlend();
-         if (isExpanded) { RenderSystem.setShaderColor(1, 0.8F, 0.2F, 1); gui.blit(ARROW_DOWN, arrowX, currentY + 1, 0, 0, 8, 8, 8, 8); }
-         else { RenderSystem.setShaderColor(0.7F, 0.7F, 0.7F, 1); gui.blit(ARROW_UP, arrowX, currentY + 1, 0, 0, 8, 8, 8, 8); }
-         RenderSystem.setShaderColor(1, 1, 1, 1);
-         if (amILeader || squad.isLocked) {
-            int lockX = arrowX - 12;
-            if (squad.isLocked) RenderSystem.setShaderColor(1, 0.8F, 0.2F, 1); else RenderSystem.setShaderColor(0.6F, 0.6F, 0.6F, 1);
-            gui.blit(LOCK_ICON, lockX, currentY + 1, 0, 0, 8, 8, 8, 8);
-            RenderSystem.setShaderColor(1, 1, 1, 1);
-         }
-         currentY += 12;
-         if (isExpanded) {
-            for (String member : this.getSortedMembers(squad)) {
-               boolean isOnline = this.minecraft.getConnection().getPlayerInfo(member) != null;
-               int col = PWPTheme.Colors.TEXT_PRIMARY;
-               if (member.equals(squad.leader)) col = PWPTheme.Colors.TEXT_SECONDARY;
-               else if (member.equals(squad.bravoLeader)) col = 0x55FF55;
-               else if (squad.bravoMembers.contains(member)) col = 0x55AA55;
-               else if (member.equals(squad.charlieLeader)) col = PWPTheme.Colors.ACCENT;
-               else if (squad.charlieMembers.contains(member)) col = 0x999900;
-               if (!isOnline) col = 0x666666;
-               int xOff = 30;
-               if (isMySquad && member.equals(myName)) {
-                  boolean btnH = mouseX >= xOff && mouseX <= xOff + 10 && mouseY >= currentY && mouseY <= currentY + 10;
-                  gui.fill(xOff, currentY, xOff + 10, currentY + 10, btnH ? 0xFF666666 : 0xFF444444);
-                  gui.drawString(this.font, "K", xOff + 2, currentY + 1, PWPTheme.Colors.TEXT_PRIMARY, false);
-                  xOff += 14;
-               }
-               String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
-               if (!kName.equals("Unassigned") && !kName.isEmpty()) {
-                  ResourceLocation kitI = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
-                  gui.blit(kitI, xOff, currentY, 0, 0, 10, 10, 10, 10);
-                  xOff += 12;
-               }
-               gui.drawString(this.font, member, xOff, currentY + 1, col, false);
-               currentY += 12;
+    protected void init() {
+        this.clearWidgets();
+        int mapSize = this.getMapSize();
+        int mapX = this.getMapOriginX();
+        int mapY = this.getMapY();
+        this.mapRenderer.init(mapX, mapY, mapSize);
+        this.applyCmdButton = this.addRenderableWidget(new SquadButton(10, 10, 150, 20, Component.literal("APPLY FOR CMD"), b -> {
+            PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
+            b.visible = false;
+        }));
+        boolean isInSquad = this.isPlayerInSquad();
+        this.nameInput = new EditBox(this.font, 10, this.height - 90, 150, 20, Component.literal("Squad Name"));
+        this.nameInput.setMaxLength(12);
+        this.nameInput.setVisible(!isInSquad);
+        this.addRenderableWidget(this.nameInput);
+        this.createButton = this.addRenderableWidget(new SquadButton(10, this.height - 65, 150, 20, Component.literal("Create Squad"), b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()))));
+        this.createButton.visible = !isInSquad;
+        this.deployButton = this.addRenderableWidget(new DeployButton(10, this.height - 35, 100, 25, Component.literal("DEPLOY"), b -> {
+            if (!this.selectedSpawnType.isEmpty()) {
+                ClientData.globalDeathTimestamp = 0L;
+                ClientData.deathFadeStartTime = 0L;
+                ClientData.deathFadePlayed = false;
+                PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(this.selectedSpawnType));
+                this.minecraft.player.respawn();
+                this.minecraft.setScreen(null);
             }
-            currentY += 4;
-         }
-         currentY += 4;
-         index++;
-      }
-   }
+        }));
+        int mapOriginX = this.getMapOriginX();
+        int chatX = 180;
+        int chatAvailableWidth = Math.max(60, mapOriginX - chatX - 10);
+        int modeBtnWidth = 60;
+        int gap = 4;
+        int inputY = this.height - 25;
+        this.chatModeButton = this.addRenderableWidget(new SquadButton(chatX, inputY, modeBtnWidth, 20, this.getChatModeText(), b -> {
+            this.chatMode = (this.chatMode + 1) % 3;
+            b.setMessage(this.getChatModeText());
+        }));
+        this.chatInput = new EditBox(this.font, chatX + modeBtnWidth + gap, inputY, chatAvailableWidth - modeBtnWidth - gap, 20, Component.literal("Chat"));
+        this.chatInput.setMaxLength(100);
+        this.addRenderableWidget(this.chatInput);
+        this.addRenderableWidget(new SquadButton(this.width - 45, 5, 40, 20, Component.literal("Quit"), b -> {
+            if (this.minecraft.level != null) {
+                this.minecraft.level.disconnect();
+            }
+            this.minecraft.setScreen(new TitleScreen());
+        }));
+    }
 
-   private void renderContextMenu(GuiGraphics gui, int mx, int my) {
-      String myName = this.minecraft.player.getScoreboardName();
-      WarfareWorldData.Squad s = null;
-      for (WarfareWorldData.Squad sq : ClientData.clientSquads) { if (sq.id == this.contextTargetSquadId) { s = sq; break; } }
-      if (s == null) { this.showContextMenu = false; return; }
-      boolean amISL = s.leader.equals(myName), amIBFTL = s.bravoLeader.equals(myName), amICFTL = s.charlieLeader.equals(myName);
-      List<String> opts = new ArrayList<>();
-      if (amISL) {
-         opts.add("Promote to SL");
-         if (!s.bravoLeader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) { opts.add("Set FTL Bravo"); opts.add("Set FTL Charlie"); }
-         opts.add("Add to Bravo"); opts.add("Add to Charlie"); opts.add("Remove from FT"); opts.add("Kick from Squad");
-      } else if (amIBFTL) {
-         if (!s.leader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) opts.add("Pass FTL Bravo");
-         opts.add("Add to Bravo"); opts.add("Remove from FT");
-      } else if (amICFTL) {
-         if (!s.leader.equals(this.contextTargetPlayer) && !s.bravoLeader.equals(this.contextTargetPlayer)) opts.add("Pass FTL Charlie");
-         opts.add("Add to Charlie"); opts.add("Remove from FT");
-      }
-      if (opts.isEmpty()) { this.showContextMenu = false; return; }
-      int w = 100, h = opts.size() * 12 + 4;
-      gui.fill(this.contextMenuX, this.contextMenuY, this.contextMenuX + w, this.contextMenuY + h, 0xAA111111);
-      gui.renderOutline(this.contextMenuX, this.contextMenuY, w, h, PWPTheme.Colors.BORDER);
-      for (int i = 0; i < opts.size(); i++) {
-         int y = this.contextMenuY + 2 + i * 12;
-         boolean hover = mx >= this.contextMenuX && mx <= this.contextMenuX + w && my >= y && my < y + 12;
-         if (hover) gui.fill(this.contextMenuX + 1, y, this.contextMenuX + w - 1, y + 12, 0x44444444);
-         gui.drawString(this.font, opts.get(i), this.contextMenuX + 4, y + 2, hover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY, false);
-      }
-   }
+    private Component getChatModeText() {
+        switch (this.chatMode) {
+            case 0: {
+                return Component.literal("ALL").withStyle(ChatFormatting.LIGHT_PURPLE);
+            }
+            case 2: {
+                return Component.literal("SQUAD").withStyle(ChatFormatting.GREEN);
+            }
+        }
+        return Component.literal("TEAM").withStyle(ChatFormatting.BLUE);
+    }
 
-   public boolean mouseClicked(double mx, double my, int btn) {
-      if (this.showContextMenu) {
-         if (btn == 0) this.processContextMenuClick(mx, my);
-         this.showContextMenu = false;
-         return true;
-      }
-      if (super.mouseClicked(mx, my, btn)) {
-         this.mapRenderer.selectedSpawnId = this.selectedSpawnType;
-         return true;
-      }
-      if (mx < 170.0 && my < (double)(this.height - 100)) {
-         this.handleSquadListInteraction(mx, my, btn);
-         return true;
-      }
-      if (mx >= 180.0 && mx <= 300.0 && btn == 0 && this.handleSpawnButtons(mx, my)) return true;
-      if (this.mapRenderer.isMouseOver(mx, my)) {
-         if (btn == 0) {
-            String spawn = this.getSpawnPointUnderMouse(mx, my);
-            if (spawn != null) { this.selectedSpawnType = spawn; this.mapRenderer.selectedSpawnId = spawn; this.playClickSound(); return true; }
-         }
-         if (btn == 1) { this.handleMapRightClick(mx, my); return true; }
-         return this.mapRenderer.mouseClicked(mx, my, btn);
-      }
-      return false;
-   }
+    public void tick() {
+        super.tick();
+        if (this.nameInput != null) {
+            this.nameInput.tick();
+        }
+        if (this.applyCmdButton != null) {
+            this.applyCmdButton.visible = this.isApplyCmdVisible();
+        }
+        boolean isInSquad = this.isPlayerInSquad();
+        if (this.nameInput != null && this.nameInput.isVisible() == isInSquad) {
+            this.nameInput.setVisible(!isInSquad);
+            this.createButton.visible = !isInSquad;
+        }
+    }
 
-   private String getSpawnPointUnderMouse(double mx, double my) {
-      Minecraft mc = Minecraft.getInstance();
-      String myName = mc.player.getScoreboardName();
-      double bpp = this.mapRenderer.getBlocksPerPixel();
-      double cx = this.mapRenderer.getCenterX(mc.player);
-      double cz = this.mapRenderer.getCenterZ(mc.player);
-      String myTeam = this.getPlayerTeam().toUpperCase();
-      String cd = mc.level.dimension().location().toString();
-      BlockPos ms = myTeam.equals("BLUE") ? ClientData.blueSpawns.get(cd) : ClientData.redSpawns.get(cd);
-      if (ms != null && this.isIconHit(ms, mx, my, cx, cz, bpp)) return "MAIN";
-      for (WarfareWorldData.Squad sq : ClientData.clientSquads) {
-         if (sq.members.contains(myName) && sq.rallyPos != null && !sq.isRallyBlocked && this.isIconHit(sq.rallyPos, mx, my, cx, cz, bpp)) return "RALLY";
-      }
-      for (WarfareWorldData.HubInfo hub : ClientData.clientHubs) {
-         if (hub.team.equalsIgnoreCase(myTeam) && hub.constructed && !hub.isBlocked && this.isIconHit(hub.pos, mx, my, cx, cz, bpp))
+    private boolean isMyRallyBlocked() {
+        String myName = this.minecraft.player.getScoreboardName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (!s.members.contains(myName)) continue;
+            return s.isRallyBlocked;
+        }
+        return false;
+    }
+
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if ((keyCode == 257 || keyCode == 335) && this.chatInput.isFocused()) {
+            String msg = this.chatInput.getValue().trim();
+            if (!msg.isEmpty()) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadChat(msg, this.chatMode));
+                this.chatInput.setValue("");
+            }
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void renderChatArea(GuiGraphics gui) {
+        int mapOriginX = this.getMapOriginX();
+        int chatX = 180;
+        int chatAvailableWidth = Math.max(60, mapOriginX - chatX - 10);
+        int inputY = this.height - 25;
+        int chatBottomY = inputY - 5;
+        int maxMessages = this.getChatMaxMessages();
+        int boxLeft = chatX;
+        int boxTop = chatBottomY - maxMessages * 10;
+        int boxRight = chatX + chatAvailableWidth;
+        int boxBottom = chatBottomY;
+        gui.fill(boxLeft, boxTop, boxRight, boxBottom, 0x70000000);
+        gui.renderOutline(boxLeft, boxTop, boxRight - boxLeft, boxBottom - boxTop, 0xFFFFFFFF);
+        int count = 0;
+        for (Component msg : ClientData.menuChatHistory) {
+            if (count >= maxMessages) break;
+            int y = chatBottomY - 10 - count * 10;
+            gui.drawString(this.font, msg, chatX + 3, y, -1, true);
+            ++count;
+        }
+    }
+
+    public void render(GuiGraphics gui, int mx, int my, float pt) {
+        gui.fill(0, 0, this.width, this.height, -16777216);
+        this.mapRenderer.render(gui, mx, my, pt);
+        int sidebarEnd = this.getMapOriginX();
+        gui.fill(0, 0, sidebarEnd, this.height, -1442840576);
+        gui.fill(0, 0, 170, this.height, 0x22FFFFFF);
+        long currentTime = System.currentTimeMillis();
+        long elapsedSeconds = (currentTime - this.deathTimestamp) / 1000L;
+        int secondsLeft = (int)((long)this.respawnTimeTotal - elapsedSeconds);
+        if (secondsLeft > 0) {
+            this.deployButton.active = false;
+            this.deployButton.setMessage(Component.literal("WAIT " + secondsLeft + "s"));
+        } else {
+            this.deployButton.active = !this.selectedSpawnType.isEmpty();
+            this.deployButton.setMessage(Component.literal("DEPLOY"));
+        }
+        this.renderSquadList(gui, mx, my);
+        this.renderTeamHeader(gui);
+        this.renderSpawnSelection(gui, mx, my);
+        this.renderVoiceActivity(gui);
+        this.renderChatArea(gui);
+        for (Renderable renderable : this.renderables) {
+            renderable.render(gui, mx, my, pt);
+        }
+        if (this.showContextMenu) {
+            this.renderContextMenu(gui, mx, my);
+        }
+        if (ClientData.deathFadeStartTime != 0L) {
+            long fadeElapsed = System.currentTimeMillis() - ClientData.deathFadeStartTime;
+            float alpha = 0.0f;
+            if (fadeElapsed < 1000L) {
+                alpha = 1.0f;
+            } else if (fadeElapsed < 2000L) {
+                alpha = 1.0f - (float)(fadeElapsed - 1000L) / 1000.0f;
+            } else {
+                ClientData.deathFadeStartTime = 0L;
+            }
+            if (alpha > 0.0f) {
+                int alphaInt = (int)(alpha * 255.0f);
+                gui.pose().pushPose();
+                gui.pose().translate(0.0f, 0.0f, 1000.0f);
+                RenderSystem.enableBlend();
+                RenderSystem.defaultBlendFunc();
+                gui.fill(0, 0, this.width, this.height, alphaInt << 24 | 0);
+                RenderSystem.disableBlend();
+                gui.pose().popPose();
+            }
+        }
+    }
+
+    private void renderVoiceActivity(GuiGraphics gui) {
+        long now = System.currentTimeMillis();
+        int x = 5;
+        int y = this.height / 2 - 40;
+        for (Map.Entry<String, Long> entry : ClientData.RADIO_SPEAKERS.entrySet()) {
+            if (now - entry.getValue() >= 500L) continue;
+            this.renderSpeakerRow(gui, x, y, entry.getKey(), -256, RADIO_ICON);
+            y += 14;
+        }
+        for (Map.Entry<String, Long> entry : ClientData.SQUAD_SPEAKERS.entrySet()) {
+            if (now - entry.getValue() >= 500L) continue;
+            this.renderSpeakerRow(gui, x, y, entry.getKey(), -11141291, VOICE_ICON);
+            y += 14;
+        }
+    }
+
+    private void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, int color, ResourceLocation icon) {
+        int tw = this.font.width(name) + 15;
+        gui.fill(x, y - 2, x + tw + 4, y + 10, Integer.MIN_VALUE);
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor((float)((float)(color >> 16 & 0xFF) / 255.0f), (float)((float)(color >> 8 & 0xFF) / 255.0f), (float)((float)(color & 0xFF) / 255.0f), (float)1.0f);
+        gui.blit(icon, x + 3, y, 0.0f, 0.0f, 8, 8, 8, 8);
+        RenderSystem.setShaderColor((float)1.0f, (float)1.0f, (float)1.0f, (float)1.0f);
+        gui.drawString(this.font, name, x + 14, y, color, false);
+    }
+
+    private String getSpawnPointUnderMouse(double mouseX, double mouseY) {
+        BlockPos myMainPos;
+        Minecraft mc = Minecraft.getInstance();
+        String myName = mc.player.getScoreboardName();
+        double bpp = this.mapRenderer.getBlocksPerPixel();
+        double cx = this.mapRenderer.getCenterX(mc.player);
+        double cz = this.mapRenderer.getCenterZ(mc.player);
+        String myTeam = this.getPlayerTeam().toUpperCase();
+        String currentDim = mc.level.dimension().location().toString();
+        BlockPos blockPos = myMainPos = myTeam.equals("BLUE") ? ClientData.blueSpawns.get(currentDim) : ClientData.redSpawns.get(currentDim);
+        if (myMainPos != null && this.isIconHit(myMainPos, mouseX, mouseY, cx, cz, bpp)) {
+            return "MAIN";
+        }
+        for (WarfareWorldData.Squad squad : ClientData.clientSquads) {
+            if (!squad.members.contains(myName) || squad.rallyPos == null || squad.isRallyBlocked || !this.isIconHit(squad.rallyPos, mouseX, mouseY, cx, cz, bpp)) continue;
+            return "RALLY";
+        }
+        for (WarfareWorldData.HubInfo hub : ClientData.clientHubs) {
+            if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || hub.isBlocked || !this.isIconHit(hub.pos, mouseX, mouseY, cx, cz, bpp)) continue;
             return "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
-      }
-      return null;
-   }
+        }
+        return null;
+    }
 
-   private boolean isIconHit(BlockPos pos, double mx, double my, double cx, double cz, double bpp) {
-      int mapOriginX = this.width - this.height;
-      double dx = (pos.getX() + 0.5 - cx) / bpp;
-      int px = (int)(mapOriginX + this.height / 2.0 + dx);
-      double dz = (pos.getZ() + 0.5 - cz) / bpp;
-      int py = (int)(this.height / 2.0 + dz);
-      double distSq = (mx - px) * (mx - px) + (my - py) * (my - py);
-      return distSq < 144.0;
-   }
+    private boolean isIconHit(BlockPos pos, double mx, double my, double cx, double cz, double bpp) {
+        int mapSize = this.getMapSize();
+        int mapOriginX = this.getMapOriginX();
+        int mapY = this.getMapY();
+        double dx = ((double)pos.getX() + 0.5 - cx) / bpp;
+        int px = (int)((double)mapOriginX + (double)mapSize / 2.0 + dx);
+        double dz = ((double)pos.getZ() + 0.5 - cz) / bpp;
+        int py = (int)((double)mapY + (double)mapSize / 2.0 + dz);
+        double distSq = (mx - (double)px) * (mx - (double)px) + (my - (double)py) * (my - (double)py);
+        return distSq < 144.0;
+    }
 
-   private void handleSquadListInteraction(double mx, double my, int btn) {
-      String myName = this.minecraft.player.getScoreboardName();
-      String myTeam = this.getPlayerTeam().toUpperCase();
-      String myDim = this.minecraft.level.dimension().location().toString();
-      boolean amIInSquad = this.isPlayerInSquad();
-      int currentY = this.isApplyCmdVisible() ? 35 : 10;
-      List<WarfareWorldData.Squad> squads = this.getFilteredSquads();
-      for (WarfareWorldData.Squad squad : squads) {
-         boolean isMySquad = squad.members.contains(myName);
-         boolean amILeader = squad.leader.equals(myName);
-         boolean isExpanded = this.expandedSquads.contains(squad.id);
-         if (my >= currentY && my <= currentY + 11) {
-            if (btn == 0) {
-               int actionX = SIDEBAR_WIDTH - 50;
-               if (mx >= actionX) {
-                  if (isMySquad) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(2, squad.id, ""));
-                  else if (!squad.isLocked && squad.members.size() < 9 && !amIInSquad) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(1, squad.id, ""));
-               } else {
-                  int arrowX = 115;
-                  if (mx >= arrowX - 15 && mx <= arrowX + 15) {
-                     if (isExpanded) this.expandedSquads.remove(squad.id); else this.expandedSquads.add(squad.id);
-                  } else if (amILeader && mx >= arrowX - 30 && mx < arrowX - 15) {
-                     PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
-                  }
-               }
-               this.playClickSound();
+    private void renderTeamHeader(GuiGraphics gui) {
+        int startX = 180;
+        int startY = 10;
+        String teamName = this.getPlayerTeam().toUpperCase();
+        int tickets = teamName.contains("BLUE") ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
+        String faction = teamName.contains("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
+        String customName = teamName.contains("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
+        ResourceLocation flagTex = this.getFlagTexture(faction);
+        if (flagTex != null) {
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            gui.blit(flagTex, startX, startY, 32, 18, 0.0f, 0.0f, 64, 36, 64, 36);
+        }
+        gui.drawString(this.font, customName, startX + 38, startY, teamName.contains("BLUE") ? 0x5555FF : 0xFF5555, true);
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        gui.blit(TICKET_ICON, startX + 38, startY + 11, 0.0f, 0.0f, 8, 8, 8, 8);
+        gui.drawString(this.font, String.valueOf(tickets), startX + 50, startY + 11, 16766720, true);
+    }
+
+    private void renderSpawnSelection(GuiGraphics gui, int mx, int my) {
+        int startX = 180;
+        int startY = 55;
+        gui.drawString(this.font, "SELECT SPAWN POINT:", startX, startY - 15, 0xFFAA00, false);
+        this.drawSpawnOption(gui, startX, startY, 110, 24, "MAIN BASE", "MAIN", mx, my, true, false);
+        boolean rallyBlocked = this.isMyRallyBlocked();
+        boolean rallyValid = this.hasValidRally() && !rallyBlocked;
+        this.drawSpawnOption(gui, startX, startY += 30, 110, 24, "SQUAD RALLY", "RALLY", mx, my, rallyValid, rallyBlocked);
+        gui.drawString(this.font, "AVAILABLE HUBS:", startX, (startY += 40) - 12, 0xAAAAAA, false);
+        Team team = this.minecraft.player.getTeam();
+        if (team != null) {
+            String myTeam = team.getName();
+            String myDim = this.minecraft.level.dimension().location().toString();
+            int hubIdx = 1;
+            for (WarfareWorldData.HubInfo hub : ClientData.clientHubs) {
+                if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || !hub.dimension.equals(myDim)) continue;
+                String id = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
+                boolean hubBlocked = hub.isBlocked;
+                boolean canAfford = !ClientData.serverHubSpawnCosts || hub.materials >= ClientData.serverHubSpawnCostAmount;
+                boolean active = !hubBlocked && canAfford;
+                this.drawSpawnOption(gui, startX, startY, 110, 20, "HUBS " + hubIdx, id, mx, my, active, hubBlocked);
+                startY += 24;
+                ++hubIdx;
             }
-            return;
-         }
-         currentY += 12;
-         if (isExpanded) {
-            for (String member : this.getSortedMembers(squad)) {
-               if (my >= currentY && my <= currentY + 11) {
-                  if (btn == 1) {
-                     boolean amFTL = squad.bravoLeader.equals(myName) || squad.charlieLeader.equals(myName);
-                     if ((amILeader || amFTL) && isMySquad && !member.equals(myName)) {
-                        this.contextTargetPlayer = member; this.contextTargetSquadId = squad.id;
-                        this.contextMenuX = (int)mx; this.contextMenuY = (int)my;
-                        this.showContextMenu = true; this.playClickSound();
-                     }
-                  } else if (btn == 0 && isMySquad && member.equals(myName) && mx >= 30 && mx <= 45) {
-                     PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()); this.playClickSound();
-                  }
-                  return;
-               }
-               currentY += 12;
+        }
+    }
+
+    private void drawSpawnOption(GuiGraphics gui, int x, int y, int w, int h, String label, String id, int mx, int my, boolean active, boolean isBlocked) {
+        boolean hovered = active && mx >= x && mx <= x + w && my >= y && my <= y + h;
+        boolean selected = this.selectedSpawnType.equals(id);
+        int color = isBlocked ? -43691 : (active ? (selected ? -11141291 : (hovered ? -1 : 0xBBBBBB)) : 0x555555);
+        int bg = isBlocked ? 0x60FF0000 : (selected ? 0x4455FF55 : (active ? 0x22FFFFFF : 0x11000000));
+        String finalLabel = isBlocked ? label + " BLOCKED" : label;
+        gui.fill(x, y, x + w, y + h, bg);
+        gui.renderOutline(x, y, w, h, color);
+        gui.drawCenteredString(this.font, finalLabel, x + w / 2, y + (h - 8) / 2, color);
+    }
+
+    private boolean isApplyCmdVisible() {
+        String myName = this.minecraft.player.getScoreboardName();
+        String myTeam = this.getPlayerTeam().toUpperCase();
+        boolean isBlue = myTeam.contains("BLUE");
+        int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+        boolean myTeamVoteActive = isBlue ? ClientData.blueCmdVoteActive : ClientData.redCmdVoteActive;
+        boolean amISquadLeaderAnywhere = false;
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (!s.leader.equals(myName)) continue;
+            amISquadLeaderAnywhere = true;
+            break;
+        }
+        return amISquadLeaderAnywhere && teamCMDId == -1 && !myTeamVoteActive;
+    }
+
+    private List<WarfareWorldData.Squad> getMyTeamSquadsSorted() {
+        String myTeam = this.getPlayerTeam().toUpperCase();
+        String myDim = this.minecraft.level.dimension().location().toString();
+        boolean isBlue = myTeam.contains("BLUE");
+        int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+        List<WarfareWorldData.Squad> list = ClientData.clientSquads.stream().filter(s -> s.team.equalsIgnoreCase(myTeam)).filter(s -> s.dimension != null && s.dimension.equals(myDim)).collect(Collectors.toList());
+        list.sort((s1, s2) -> {
+            if (s1.id == teamCMDId && teamCMDId != -1) {
+                return -1;
+            }
+            if (s2.id == teamCMDId && teamCMDId != -1) {
+                return 1;
+            }
+            return Integer.compare(s1.id, s2.id);
+        });
+        return list;
+    }
+
+    private List<String> getSortedMembers(WarfareWorldData.Squad squad) {
+        ArrayList<String> sorted = new ArrayList<String>();
+        if (!squad.leader.isEmpty() && squad.members.contains(squad.leader)) {
+            sorted.add(squad.leader);
+        }
+        for (String m : squad.members) {
+            if (m.equals(squad.leader) || squad.bravoMembers.contains(m) || squad.charlieMembers.contains(m)) continue;
+            sorted.add(m);
+        }
+        if (!squad.bravoLeader.isEmpty() && squad.members.contains(squad.bravoLeader)) {
+            sorted.add(squad.bravoLeader);
+        }
+        for (String m : squad.bravoMembers) {
+            if (m.equals(squad.bravoLeader) || !squad.members.contains(m)) continue;
+            sorted.add(m);
+        }
+        if (!squad.charlieLeader.isEmpty() && squad.members.contains(squad.charlieLeader)) {
+            sorted.add(squad.charlieLeader);
+        }
+        for (String m : squad.charlieMembers) {
+            if (m.equals(squad.charlieLeader) || !squad.members.contains(m)) continue;
+            sorted.add(m);
+        }
+        return sorted;
+    }
+
+    private void renderSquadList(GuiGraphics gui, int mouseX, int mouseY) {
+        String myName = this.minecraft.player.getScoreboardName();
+        boolean amIInSquad = this.isPlayerInSquad();
+        boolean isBlue = this.getPlayerTeam().toUpperCase().contains("BLUE");
+        int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+        int currentY = this.isApplyCmdVisible() ? 35 : 10;
+        List<WarfareWorldData.Squad> myTeamSquads = this.getMyTeamSquadsSorted();
+        int index = 1;
+        for (WarfareWorldData.Squad squad : myTeamSquads) {
+            boolean isMySquad = squad.members.contains(myName);
+            boolean amILeader = squad.leader.equals(myName);
+            boolean isExpanded = this.expandedSquads.contains(squad.id);
+            boolean isCMD = squad.id == teamCMDId && teamCMDId != -1;
+            String prefix = isCMD ? "[CMD] " : "";
+            int squadNameColor = isCMD ? -11141291 : -10496;
+            gui.drawString(this.font, index + ".", 5, currentY, -1, false);
+            String squadDisplayName = prefix + squad.name + " (" + squad.members.size() + "/9)";
+            gui.drawString(this.font, squadDisplayName, 25, currentY, squadNameColor, false);
+            String actionText = "";
+            int actionColor = -1;
+            boolean clickable = true;
+            if (isMySquad) {
+                actionText = "LEAVE";
+                actionColor = -43691;
+            } else if (!amIInSquad) {
+                if (squad.isLocked) {
+                    actionText = "LOCKED";
+                    actionColor = -22016;
+                    clickable = false;
+                } else if (squad.members.size() >= 9) {
+                    actionText = "FULL";
+                    actionColor = -7829368;
+                    clickable = false;
+                } else {
+                    actionText = "JOIN";
+                    actionColor = -11141291;
+                }
+            }
+            int actionX = 0;
+            if (!actionText.isEmpty()) {
+                int actionWidth = this.font.width(actionText);
+                actionX = 170 - actionWidth - 10;
+                boolean hover = mouseX >= actionX && mouseX <= actionX + actionWidth && mouseY >= currentY && mouseY <= currentY + 9;
+                int finalColor = hover && clickable ? -1 : actionColor;
+                gui.drawString(this.font, actionText, actionX, currentY, finalColor, false);
+            }
+            int arrowX = (actionX > 0 ? actionX : 160) - 12;
+            RenderSystem.enableBlend();
+            if (isExpanded) {
+                RenderSystem.setShaderColor(1.0f, 0.8f, 0.2f, 1.0f);
+                gui.blit(ARROW_DOWN, arrowX, currentY + 1, 0.0f, 0.0f, 8, 8, 8, 8);
+            } else {
+                RenderSystem.setShaderColor(0.7f, 0.7f, 0.7f, 1.0f);
+                gui.blit(ARROW_UP, arrowX, currentY + 1, 0.0f, 0.0f, 8, 8, 8, 8);
+            }
+            RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            if (amILeader || squad.isLocked) {
+                int lockX = arrowX - 12;
+                if (squad.isLocked) {
+                    RenderSystem.setShaderColor(1.0f, 0.8f, 0.2f, 1.0f);
+                } else {
+                    RenderSystem.setShaderColor(0.6f, 0.6f, 0.6f, 1.0f);
+                }
+                gui.blit(LOCK_ICON, lockX, currentY + 1, 0.0f, 0.0f, 8, 8, 8, 8);
+                RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+            currentY += 12;
+            if (isExpanded) {
+                List<String> sortedMembers = this.getSortedMembers(squad);
+                for (String member : sortedMembers) {
+                    String kName;
+                    boolean isLeaderMember = member.equals(squad.leader);
+                    boolean isOnline = this.minecraft.getConnection().getPlayerInfo(member) != null;
+                    int col = -1;
+                    if (isLeaderMember) {
+                        col = -10496;
+                    } else if (member.equals(squad.bravoLeader)) {
+                        col = -43521;
+                    } else if (squad.bravoMembers.contains(member)) {
+                        col = -5635926;
+                    } else if (member.equals(squad.charlieLeader)) {
+                        col = -11141291;
+                    } else if (squad.charlieMembers.contains(member)) {
+                        col = -16733696;
+                    }
+                    if (!isOnline) {
+                        col = -5592406;
+                    }
+                    int xOffset = 30;
+                    if (isMySquad && member.equals(myName)) {
+                        int btnX = xOffset;
+                        boolean btnHover = mouseX >= btnX && mouseX <= btnX + 10 && mouseY >= currentY && mouseY <= currentY + 10;
+                        gui.fill(btnX, currentY, btnX + 10, currentY + 10, btnHover ? -10066330 : -12303292);
+                        gui.drawString(this.font, "K", btnX + 2, currentY + 1, -1, false);
+                        xOffset += 14;
+                    }
+                    if (!(kName = ClientData.playerKits.getOrDefault(member, "Unassigned")).equals("Unassigned") && !kName.isEmpty()) {
+                        ResourceLocation kitIcon = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
+                        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        gui.blit(kitIcon, xOffset, currentY, 0.0f, 0.0f, 10, 10, 10, 10);
+                        xOffset += 12;
+                    }
+                    gui.drawString(this.font, member, xOffset, currentY + 1, col, false);
+                    currentY += 12;
+                }
+                currentY += 4;
             }
             currentY += 4;
-         }
-         currentY += 4;
-      }
-   }
+            ++index;
+        }
+    }
 
-   private boolean handleSpawnButtons(double mx, double my) {
-      int y = 55;
-      if (my >= y && my <= y + 24) {
-         this.selectedSpawnType = "MAIN"; this.mapRenderer.selectedSpawnId = "MAIN"; this.playClickSound();
-         return true;
-      }
-      if (my >= (y += 30) && my <= y + 24) {
-         if (this.hasValidRally() && !this.isMyRallyBlocked()) {
-            this.selectedSpawnType = "RALLY"; this.mapRenderer.selectedSpawnId = "RALLY"; this.playClickSound();
-         }
-         return true;
-      }
-      y += 40;
-      Team team = this.minecraft.player.getTeam();
-      if (team != null) {
-         String myTeam = team.getName();
-         String myDim = this.minecraft.level.dimension().location().toString();
-         for (WarfareWorldData.HubInfo hub : ClientData.clientHubs) {
-            if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || !hub.dimension.equals(myDim)) continue;
-            if (my >= y && my <= y + 20) {
-               if (!hub.isBlocked) {
-                  String id = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
-                  this.selectedSpawnType = id; this.mapRenderer.selectedSpawnId = id; this.playClickSound();
-               }
-               return true;
+    private void renderContextMenu(GuiGraphics gui, int mx, int my) {
+        String myName = this.minecraft.player.getScoreboardName();
+        WarfareWorldData.Squad s = null;
+        for (WarfareWorldData.Squad sq : ClientData.clientSquads) {
+            if (sq.id != this.contextTargetSquadId) continue;
+            s = sq;
+        }
+        if (s == null) {
+            this.showContextMenu = false;
+            return;
+        }
+        boolean amISL = s.leader.equals(myName);
+        boolean amIBravoFTL = s.bravoLeader.equals(myName);
+        boolean amICharlieFTL = s.charlieLeader.equals(myName);
+        ArrayList<String> options = new ArrayList<String>();
+        if (amISL) {
+            options.add("Promote to SL");
+            if (!s.bravoLeader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) {
+                options.add("Set FTL Bravo");
+                options.add("Set FTL Charlie");
             }
-            y += 24;
-         }
-      }
-      return false;
-   }
+            options.add("Add to Bravo");
+            options.add("Add to Charlie");
+            options.add("Remove from FT");
+            options.add("Kick from Squad");
+        } else if (amIBravoFTL) {
+            if (!s.leader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) {
+                options.add("Pass FTL Bravo");
+            }
+            options.add("Add to Bravo");
+            options.add("Remove from FT");
+        } else if (amICharlieFTL) {
+            if (!s.leader.equals(this.contextTargetPlayer) && !s.bravoLeader.equals(this.contextTargetPlayer)) {
+                options.add("Pass FTL Charlie");
+            }
+            options.add("Add to Charlie");
+            options.add("Remove from FT");
+        }
+        if (options.isEmpty()) {
+            this.showContextMenu = false;
+            return;
+        }
+        int w = 100;
+        int h = options.size() * 12 + 4;
+        gui.fill(this.contextMenuX, this.contextMenuY, this.contextMenuX + w, this.contextMenuY + h, -300871407);
+        gui.renderOutline(this.contextMenuX, this.contextMenuY, w, h, -11184811);
+        for (int i = 0; i < options.size(); ++i) {
+            boolean hover;
+            int y = this.contextMenuY + 2 + i * 12;
+            boolean bl = hover = mx >= this.contextMenuX && mx <= this.contextMenuX + w && my >= y && my < y + 12;
+            if (hover) {
+                gui.fill(this.contextMenuX + 1, y, this.contextMenuX + w - 1, y + 12, -12303292);
+            }
+            gui.drawString(this.font, options.get(i), this.contextMenuX + 4, y + 2, hover ? 0xFFFFFF : 0xAAAAAA, false);
+        }
+    }
 
-   private void handleMapRightClick(double mx, double my) {
-      if (!this.isSquadLeaderOrFTL(this.minecraft.player)) return;
-      double bpp = this.mapRenderer.getBlocksPerPixel();
-      double cx = this.mapRenderer.getCenterX(this.minecraft.player);
-      double cz = this.mapRenderer.getCenterZ(this.minecraft.player);
-      int mapOriginX = this.width - this.height;
-      int wx = (int)(cx + (mx - (mapOriginX + this.height / 2.0)) * bpp);
-      int wz = (int)(cz + (my - this.height / 2.0) * bpp);
-      this.minecraft.setScreen(new TacticalMapRadialScreen(wx, wz));
-   }
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (this.showContextMenu) {
+            if (btn == 0) {
+                this.processContextMenuClick(mx, my);
+            }
+            this.showContextMenu = false;
+            return true;
+        }
+        if (super.mouseClicked(mx, my, btn)) {
+            this.mapRenderer.selectedSpawnId = this.selectedSpawnType;
+            return true;
+        }
+        if (mx < 170.0 && my < (double)(this.height - 100)) {
+            this.handleSquadListInteraction(mx, my, btn);
+            return true;
+        }
+        if (mx >= 180.0 && mx <= (double)this.getMapOriginX() && btn == 0 && this.handleSpawnButtons(mx, my)) {
+            return true;
+        }
+        if (this.mapRenderer.isMouseOver(mx, my)) {
+            String clickedSpawn;
+            if (btn == 0 && (clickedSpawn = this.getSpawnPointUnderMouse(mx, my)) != null) {
+                this.selectedSpawnType = clickedSpawn;
+                this.mapRenderer.selectedSpawnId = clickedSpawn;
+                this.playClickSound();
+                return true;
+            }
+            if (btn == 1) {
+                this.handleMapRightClick(mx, my);
+                return true;
+            }
+            return this.mapRenderer.mouseClicked(mx, my, btn);
+        }
+        return false;
+    }
 
-   private void processContextMenuClick(double mx, double my) {
-      WarfareWorldData.Squad s = null;
-      for (WarfareWorldData.Squad sq : ClientData.clientSquads) { if (sq.id == this.contextTargetSquadId) { s = sq; break; } }
-      if (s == null) return;
-      String myName = this.minecraft.player.getScoreboardName();
-      boolean amISL = s.leader.equals(myName), amIBFTL = s.bravoLeader.equals(myName), amICFTL = s.charlieLeader.equals(myName);
-      List<String> opts = new ArrayList<>();
-      if (amISL) {
-         opts.add("Promote to SL");
-         if (!s.bravoLeader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) { opts.add("Set FTL Bravo"); opts.add("Set FTL Charlie"); }
-         opts.add("Add to Bravo"); opts.add("Add to Charlie"); opts.add("Remove from FT"); opts.add("Kick from Squad");
-      } else if (amIBFTL) {
-         if (!s.leader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) opts.add("Pass FTL Bravo");
-         opts.add("Add to Bravo"); opts.add("Remove from FT");
-      } else if (amICFTL) {
-         if (!s.leader.equals(this.contextTargetPlayer) && !s.bravoLeader.equals(this.contextTargetPlayer)) opts.add("Pass FTL Charlie");
-         opts.add("Add to Charlie"); opts.add("Remove from FT");
-      }
-      int w = 100, h = opts.size() * 12 + 4;
-      if (mx < this.contextMenuX || mx > this.contextMenuX + w || my < this.contextMenuY || my > this.contextMenuY + h) return;
-      int idx = (int)((my - this.contextMenuY - 2) / 12);
-      if (idx < 0 || idx >= opts.size()) return;
-      String opt = opts.get(idx);
-      int action = 0;
-      if (opt.equals("Promote to SL")) action = 4;
-      else if (opt.equals("Set FTL Bravo") || opt.equals("Pass FTL Bravo")) action = 6;
-      else if (opt.equals("Set FTL Charlie") || opt.equals("Pass FTL Charlie")) action = 7;
-      else if (opt.equals("Add to Bravo")) action = 8;
-      else if (opt.equals("Add to Charlie")) action = 9;
-      else if (opt.equals("Remove from FT")) action = 10;
-      else if (opt.equals("Kick from Squad")) action = 3;
-      if (action > 0) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(action, s.id, this.contextTargetPlayer));
-      this.playClickSound();
-   }
+    private void handleSquadListInteraction(double mx, double my, int btn) {
+        String myName = this.minecraft.player.getScoreboardName();
+        boolean amIInSquad = this.isPlayerInSquad();
+        int currentY = this.isApplyCmdVisible() ? 35 : 10;
+        List<WarfareWorldData.Squad> squads = this.getMyTeamSquadsSorted();
+        for (WarfareWorldData.Squad squad : squads) {
+            boolean isMySquad = squad.members.contains(myName);
+            boolean amILeader = squad.leader.equals(myName);
+            boolean isExpanded = this.expandedSquads.contains(squad.id);
+            String actionText = "";
+            if (isMySquad) {
+                actionText = "LEAVE";
+            } else if (!amIInSquad) {
+                actionText = squad.isLocked ? "LOCKED" : (squad.members.size() >= 9 ? "FULL" : "JOIN");
+            }
+            int actionWidth = actionText.isEmpty() ? 0 : this.font.width(actionText);
+            int actionX = actionWidth > 0 ? 170 - actionWidth - 10 : 0;
+            int arrowX = (actionX > 0 ? actionX : 160) - 12;
+            int lockX = arrowX - 12;
+            if (my >= (double)currentY && my <= (double)(currentY + 11)) {
+                if (btn == 0) {
+                    if (actionWidth > 0 && mx >= (double)actionX && mx <= (double)(actionX + actionWidth)) {
+                        if (isMySquad) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(2, squad.id, ""));
+                        } else if (!squad.isLocked && squad.members.size() < 9) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(1, squad.id, ""));
+                        }
+                    } else if (mx >= (double)arrowX && mx <= (double)(arrowX + 10)) {
+                        if (isExpanded) {
+                            this.expandedSquads.remove(squad.id);
+                        } else {
+                            this.expandedSquads.add(squad.id);
+                        }
+                    } else if (amILeader && mx >= (double)lockX && mx <= (double)(lockX + 10)) {
+                        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
+                    } else {
+                        return;
+                    }
+                    this.playClickSound();
+                }
+                return;
+            }
+            currentY += 12;
+            if (isExpanded) {
+                List<String> sortedMembers = this.getSortedMembers(squad);
+                for (String member : sortedMembers) {
+                    if (my >= (double)currentY && my <= (double)(currentY + 11)) {
+                        if (btn == 1) {
+                            boolean amFTL = squad.bravoLeader.equals(myName) || squad.charlieLeader.equals(myName);
+                            if ((amILeader || amFTL) && isMySquad && !member.equals(myName)) {
+                                this.contextTargetPlayer = member;
+                                this.contextTargetSquadId = squad.id;
+                                this.contextMenuX = (int)mx;
+                                this.contextMenuY = (int)my;
+                                this.showContextMenu = true;
+                                this.playClickSound();
+                            }
+                        } else if (btn == 0 && isMySquad && member.equals(myName) && mx >= 30.0 && mx <= 45.0) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+                            this.playClickSound();
+                        }
+                        return;
+                    }
+                    currentY += 12;
+                }
+                currentY += 4;
+            }
+            currentY += 4;
+        }
+    }
 
-   public boolean mouseScrolled(double mx, double my, double delta) {
-      return this.mapRenderer.isMouseOver(mx, my) ? this.mapRenderer.mouseScrolled(mx, my, delta) : super.mouseScrolled(mx, my, delta);
-   }
-   public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-      return this.mapRenderer.mouseDragged(mx, my, btn, dx, dy) || super.mouseDragged(mx, my, btn, dx, dy);
-   }
-   public boolean mouseReleased(double mx, double my, int btn) {
-      this.mapRenderer.mouseReleased(btn); return super.mouseReleased(mx, my, btn);
-   }
+    private void processContextMenuClick(double mx, double my) {
+        int clickedIdx;
+        WarfareWorldData.Squad s = null;
+        for (WarfareWorldData.Squad sq : ClientData.clientSquads) {
+            if (sq.id != this.contextTargetSquadId) continue;
+            s = sq;
+            break;
+        }
+        if (s == null) {
+            return;
+        }
+        String myName = this.minecraft.player.getScoreboardName();
+        boolean amISL = s.leader.equals(myName);
+        boolean amIBravoFTL = s.bravoLeader.equals(myName);
+        boolean amICharlieFTL = s.charlieLeader.equals(myName);
+        ArrayList<String> options = new ArrayList<String>();
+        if (amISL) {
+            options.add("Promote to SL");
+            if (!s.bravoLeader.equals(this.contextTargetPlayer) && !s.charlieLeader.equals(this.contextTargetPlayer)) {
+                options.add("Set FTL Bravo");
+                options.add("Set FTL Charlie");
+            }
+            options.add("Add to Bravo");
+            options.add("Add to Charlie");
+            options.add("Remove from FT");
+            options.add("Kick from Squad");
+        } else if (amIBravoFTL) {
+            options.add("Add to Bravo");
+            options.add("Remove from FT");
+        } else if (amICharlieFTL) {
+            options.add("Add to Charlie");
+            options.add("Remove from FT");
+        }
+        int w = 100;
+        int h = options.size() * 12 + 4;
+        if (mx >= (double)this.contextMenuX && mx <= (double)(this.contextMenuX + w) && my >= (double)this.contextMenuY && my <= (double)(this.contextMenuY + h) && (clickedIdx = (int)(my - (double)this.contextMenuY - 2.0) / 12) >= 0 && clickedIdx < options.size()) {
+            String opt = options.get(clickedIdx);
+            if (opt.equals("Promote to SL")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(4, s.id, this.contextTargetPlayer));
+            } else if (opt.equals("Set FTL Bravo")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(6, s.id, this.contextTargetPlayer));
+            } else if (opt.equals("Set FTL Charlie")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(7, s.id, this.contextTargetPlayer));
+            } else if (opt.equals("Add to Bravo")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(8, s.id, this.contextTargetPlayer));
+            } else if (opt.equals("Add to Charlie")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(9, s.id, this.contextTargetPlayer));
+            } else if (opt.equals("Remove from FT")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(10, s.id, this.contextTargetPlayer));
+            } else if (opt.equals("Kick from Squad")) {
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(3, s.id, this.contextTargetPlayer));
+            }
+            this.playClickSound();
+        }
+    }
 
-   private boolean isMyRallyBlocked() {
-      String myName = this.minecraft.player.getScoreboardName();
-      for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-         if (s.members.contains(myName)) return s.isRallyBlocked;
-      }
-      return false;
-   }
+    private boolean handleSpawnButtons(double mx, double my) {
+        int y = 55;
+        if (my >= (double)y && my <= (double)(y + 24)) {
+            this.selectedSpawnType = "MAIN";
+            this.mapRenderer.selectedSpawnId = "MAIN";
+            this.playClickSound();
+            return true;
+        }
+        if (my >= (double)(y += 30) && my <= (double)(y + 24)) {
+            if (this.hasValidRally() && !this.isMyRallyBlocked()) {
+                this.selectedSpawnType = "RALLY";
+                this.mapRenderer.selectedSpawnId = "RALLY";
+                this.playClickSound();
+            }
+            return true;
+        }
+        y += 40;
+        Team team = this.minecraft.player.getTeam();
+        if (team != null) {
+            String myTeam = team.getName();
+            String myDim = this.minecraft.level.dimension().location().toString();
+            for (WarfareWorldData.HubInfo hub : ClientData.clientHubs) {
+                if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || !hub.dimension.equals(myDim)) continue;
+                if (my >= (double)y && my <= (double)(y + 20)) {
+                    if (!hub.isBlocked) {
+                        String id = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
+                        this.selectedSpawnType = id;
+                        this.mapRenderer.selectedSpawnId = id;
+                        this.playClickSound();
+                    }
+                    return true;
+                }
+                y += 24;
+            }
+        }
+        return false;
+    }
 
-   private boolean isApplyCmdVisible() {
-      String myName = this.minecraft.player.getScoreboardName();
-      String myTeam = this.getPlayerTeam().toUpperCase();
-      boolean isBlue = myTeam.contains("BLUE");
-      int cmdId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
-      boolean voteActive = isBlue ? ClientData.blueCmdVoteActive : ClientData.redCmdVoteActive;
-      boolean isLeader = ClientData.clientSquads.stream().anyMatch(s -> s.leader.equals(myName));
-      return isLeader && cmdId == -1 && !voteActive;
-   }
+    private void handleMapRightClick(double mouseX, double mouseY) {
+        if (!this.isSquadLeaderOrFTL(this.minecraft.player)) {
+            return;
+        }
+        double bpp = this.mapRenderer.getBlocksPerPixel();
+        double centerX = this.mapRenderer.getCenterX(this.minecraft.player);
+        double centerZ = this.mapRenderer.getCenterZ(this.minecraft.player);
+        int mapSize = this.getMapSize();
+        int mapOriginX = this.getMapOriginX();
+        int mapY = this.getMapY();
+        int worldX = (int)(centerX + (mouseX - ((double)mapOriginX + (double)mapSize / 2.0)) * bpp);
+        int worldZ = (int)(centerZ + (mouseY - ((double)mapY + (double)mapSize / 2.0)) * bpp);
+        this.minecraft.setScreen(new TacticalMapRadialScreen(worldX, worldZ));
+    }
 
-   private List<WarfareWorldData.Squad> getFilteredSquads() {
-      String myTeam = this.getPlayerTeam().toUpperCase();
-      String myDim = this.minecraft.level.dimension().location().toString();
-      int cmdId = myTeam.contains("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
-      List<WarfareWorldData.Squad> list = ClientData.clientSquads.stream()
-         .filter(s -> s.team.equalsIgnoreCase(myTeam) && s.dimension != null && s.dimension.equals(myDim))
-         .collect(Collectors.toList());
-      list.sort((a, b) -> {
-         if (a.id == cmdId && cmdId != -1) return -1;
-         return b.id == cmdId && cmdId != -1 ? 1 : Integer.compare(a.id, b.id);
-      });
-      return list;
-   }
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        if (this.mapRenderer.isMouseOver(mx, my)) {
+            return this.mapRenderer.mouseScrolled(mx, my, delta);
+        }
+        return super.mouseScrolled(mx, my, delta);
+    }
 
-   private List<String> getSortedMembers(WarfareWorldData.Squad squad) {
-      List<String> r = new ArrayList<>();
-      if (!squad.leader.isEmpty() && squad.members.contains(squad.leader)) r.add(squad.leader);
-      for (String m : squad.members) { if (!m.equals(squad.leader) && !squad.bravoMembers.contains(m) && !squad.charlieMembers.contains(m)) r.add(m); }
-      if (!squad.bravoLeader.isEmpty() && squad.members.contains(squad.bravoLeader)) r.add(squad.bravoLeader);
-      for (String m : squad.bravoMembers) { if (!m.equals(squad.bravoLeader) && squad.members.contains(m)) r.add(m); }
-      if (!squad.charlieLeader.isEmpty() && squad.members.contains(squad.charlieLeader)) r.add(squad.charlieLeader);
-      for (String m : squad.charlieMembers) { if (!m.equals(squad.charlieLeader) && squad.members.contains(m)) r.add(m); }
-      return r;
-   }
+    public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
+        if (this.mapRenderer.mouseDragged(mx, my, btn, dx, dy)) {
+            return true;
+        }
+        return super.mouseDragged(mx, my, btn, dx, dy);
+    }
 
-   private boolean hasValidRally() {
-      String myName = this.minecraft.player.getScoreboardName();
-      for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-         if (s.members.contains(myName)) return s.rallyPos != null && !s.isRallyBlocked;
-      }
-      return false;
-   }
+    public boolean mouseReleased(double mx, double my, int btn) {
+        this.mapRenderer.mouseReleased(btn);
+        return super.mouseReleased(mx, my, btn);
+    }
 
-   private boolean isSquadLeaderOrFTL(Player player) {
-      String n = player.getScoreboardName();
-      for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-         if (s.leader.equals(n) || s.bravoLeader.equals(n) || s.charlieLeader.equals(n)) return true;
-      }
-      return false;
-   }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
-   private boolean isPlayerInSquad() {
-      String n = this.minecraft.player.getScoreboardName();
-      for (WarfareWorldData.Squad s : ClientData.clientSquads) { if (s.members.contains(n)) return true; }
-      return false;
-   }
+    private boolean isSquadLeaderOrFTL(Player player) {
+        String pName = player.getScoreboardName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (!s.leader.equals(pName) && !s.bravoLeader.equals(pName) && !s.charlieLeader.equals(pName)) continue;
+            return true;
+        }
+        return false;
+    }
 
-   private String getPlayerTeam() {
-      return this.minecraft.player.getTeam() != null ? this.minecraft.player.getTeam().getName() : "NEUTRAL";
-   }
+    private boolean hasValidRally() {
+        String myName = this.minecraft.player.getScoreboardName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (!s.members.contains(myName)) continue;
+            return s.rallyPos != null && !s.isRallyBlocked;
+        }
+        return false;
+    }
 
-   private ResourceLocation getFlagTexture(String faction) {
-      if (faction == null || faction.equalsIgnoreCase("none")) return null;
-      return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
-   }
+    private String getPlayerTeam() {
+        if (this.minecraft.player.getTeam() != null) {
+            return this.minecraft.player.getTeam().getName();
+        }
+        return "NEUTRAL";
+    }
 
-   private Component getChatModeText() {
-      switch (this.chatMode) {
-         case 0: return Component.literal("ALL").withStyle(ChatFormatting.LIGHT_PURPLE);
-         case 2: return Component.literal("SQUAD").withStyle(ChatFormatting.GREEN);
-         default: return Component.literal("TEAM").withStyle(ChatFormatting.BLUE);
-      }
-   }
+    private boolean isPlayerInSquad() {
+        String myName = this.minecraft.player.getScoreboardName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (!s.members.contains(myName)) continue;
+            return true;
+        }
+        return false;
+    }
 
-   private void playClickSound() {
-      this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
-   }
+    private ResourceLocation getFlagTexture(String faction) {
+        if (faction == null || faction.equalsIgnoreCase("none")) {
+            return null;
+        }
+        return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
+    }
+
+    private void playClickSound() {
+        this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+    }
+
+    private static class SquadButton extends Button {
+        public SquadButton(int x, int y, int width, int height, Component message, Button.OnPress onPress) {
+            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
+        }
+
+        protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
+            int borderColor;
+            if (!this.visible) {
+                return;
+            }
+            int n = borderColor = this.isHovered() ? -1 : -6710887;
+            if (!this.active) {
+                borderColor = -12303292;
+            }
+            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -871296751);
+            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
+            int textColor = this.active ? -1 : -8947849;
+            gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor);
+            if (this.active && this.isHovered()) {
+                gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, -1);
+            }
+        }
+    }
+
+    private static class DeployButton extends Button {
+        public DeployButton(int x, int y, int w, int h, Component msg, Button.OnPress press) {
+            super(x, y, w, h, msg, press, DEFAULT_NARRATION);
+        }
+
+        protected void renderWidget(GuiGraphics gui, int mx, int my, float pt) {
+            int borderColor;
+            int n = borderColor = this.isHovered() && this.active ? -1 : -6710887;
+            if (!this.active) {
+                borderColor = -12303292;
+            }
+            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -871296751);
+            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
+            int textColor = this.active ? -1 : -8947849;
+            gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor);
+        }
+    }
 }
