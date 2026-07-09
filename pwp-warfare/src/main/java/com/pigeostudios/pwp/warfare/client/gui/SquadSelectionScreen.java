@@ -592,7 +592,7 @@ public class SquadSelectionScreen extends Screen {
          double centerZ = this.mapRenderer.getCenterZ(this.minecraft.player);
          int targetX = (int)(centerX + (mouseX - (this.mapX + this.mapSize / 2.0)) * bpp);
          int targetZ = (int)(centerZ + (mouseY - (this.mapY + this.mapSize / 2.0)) * bpp);
-         this.minecraft.setScreen(new TacticalMapRadialScreen(targetX, targetZ));
+          this.minecraft.setScreen(new TacticalMapRadialScreen(targetX, targetZ, this));
       }
    }
 

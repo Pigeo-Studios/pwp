@@ -18,6 +18,7 @@ public class MapMarkerGridScreen extends Screen {
     private final int worldZ;
     private final Map<String, ResourceLocation> markers;
     private final List<String> markerTypes = new ArrayList<>();
+    private final Screen previousScreen;
     private static final int CARD_W = 90;
     private static final int CARD_H = 82;
     private static final int GAP = 8;
@@ -31,12 +32,13 @@ public class MapMarkerGridScreen extends Screen {
     private int cx;
     private final List<Button> markerButtons = new ArrayList<>();
 
-    public MapMarkerGridScreen(int x, int z, String titleKey, Map<String, ResourceLocation> markers) {
+    public MapMarkerGridScreen(int x, int z, String titleKey, Map<String, ResourceLocation> markers, Screen previousScreen) {
         super(Component.translatable(titleKey));
         this.worldX = x;
         this.worldZ = z;
         this.markers = markers;
         this.markerTypes.addAll(markers.keySet());
+        this.previousScreen = previousScreen;
     }
 
     @Override
@@ -61,7 +63,7 @@ public class MapMarkerGridScreen extends Screen {
                 Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")),
                 b -> {
                     PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
-                    minecraft.setScreen(new SquadSelectionScreen());
+                    minecraft.setScreen(previousScreen);
                 }
             ).build();
             addRenderableWidget(btn);

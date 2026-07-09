@@ -1014,7 +1014,7 @@ public class WarfareMapRenderer implements AutoCloseable {
             double centerZ = this.getCenterZ(mc.player);
             int targetX = (int)(centerX + (mouseX - (this.mapX + this.mapSize / 2.0)) * bpp);
             int targetZ = (int)(centerZ + (mouseY - (this.mapY + this.mapSize / 2.0)) * bpp);
-            mc.setScreen(new TacticalMapRadialScreen(targetX, targetZ));
+            mc.setScreen(new TacticalMapRadialScreen(targetX, targetZ, mc.screen));
          }
       }
    }

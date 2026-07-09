@@ -16,12 +16,14 @@ public class SquadMarkerRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_4 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_4.png");
    private final int targetX;
    private final int targetZ;
+   private final Screen previousScreen;
    private int currentLayer = 1;
 
-   public SquadMarkerRadialScreen(int x, int z) {
+   public SquadMarkerRadialScreen(int x, int z, Screen previousScreen) {
       super(Component.translatable("gui.pwpwarfare.radial.markers"));
       this.targetX = x;
       this.targetZ = z;
+      this.previousScreen = previousScreen;
    }
 
    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -142,17 +144,17 @@ public class SquadMarkerRadialScreen extends Screen {
             }
 
             PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(this.targetX, this.targetZ, sel + 4));
-            this.minecraft.setScreen(new SquadSelectionScreen());
-         } else {
-            double angle = Math.toDegrees(Math.atan2(dy, dx));
-            if (angle < 0.0) {
-               angle += 360.0;
-            }
+             this.minecraft.setScreen(this.previousScreen);
+          } else {
+             double angle = Math.toDegrees(Math.atan2(dy, dx));
+             if (angle < 0.0) {
+                angle += 360.0;
+             }
 
-            int type = angle >= 45.0 && angle < 135.0 ? 1 : (angle >= 135.0 && angle < 225.0 ? 2 : (angle >= 225.0 && angle < 315.0 ? 3 : 0));
-            PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(this.targetX, this.targetZ, type));
-            this.minecraft.setScreen(new SquadSelectionScreen());
-         }
+             int type = angle >= 45.0 && angle < 135.0 ? 1 : (angle >= 135.0 && angle < 225.0 ? 2 : (angle >= 225.0 && angle < 315.0 ? 3 : 0));
+             PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(this.targetX, this.targetZ, type));
+             this.minecraft.setScreen(this.previousScreen);
+          }
 
          return true;
       } else {

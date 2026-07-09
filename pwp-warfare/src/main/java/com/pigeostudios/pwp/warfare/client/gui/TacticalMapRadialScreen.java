@@ -17,12 +17,14 @@ import net.minecraft.resources.ResourceLocation;
 public class TacticalMapRadialScreen extends Screen {
    private final int wx;
    private final int wz;
+   private final Screen previousScreen;
    private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector.png");
 
-   public TacticalMapRadialScreen(int x, int z) {
+   public TacticalMapRadialScreen(int x, int z, Screen previousScreen) {
       super(Component.translatable("gui.pwpwarfare.radial.tactical"));
       this.wx = x;
       this.wz = z;
+      this.previousScreen = previousScreen;
    }
 
    public boolean isPauseScreen() {
@@ -103,11 +105,11 @@ public class TacticalMapRadialScreen extends Screen {
          double dx = mx - centerX;
          double dy = my - centerY;
          double dist = Math.sqrt(dx * dx + dy * dy);
-         if (dist < 20.0) {
-            PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(this.wx, this.wz, 6));
-            this.minecraft.setScreen(new SquadSelectionScreen());
-            return true;
-         }
+          if (dist < 20.0) {
+             PacketHandler.INSTANCE.sendToServer(new PacketSquadMarker(this.wx, this.wz, 6));
+             this.minecraft.setScreen(this.previousScreen);
+             return true;
+          }
 
          if (dist < 10.0) {
             return false;
@@ -131,9 +133,9 @@ public class TacticalMapRadialScreen extends Screen {
             this.openGrid("gui.pwpwarfare.radial.team_markers", this.getTeamMarkers());
          } else if (action == 1) {
             this.openGrid("gui.pwpwarfare.radial.enemy_markers", this.getEnemyMarkers());
-         } else if (action == 2) {
-            this.minecraft.setScreen(new SquadMarkerRadialScreen(this.wx, this.wz));
-         }
+          } else if (action == 2) {
+             this.minecraft.setScreen(new SquadMarkerRadialScreen(this.wx, this.wz, this.previousScreen));
+          }
 
          return true;
       } else {
@@ -142,7 +144,7 @@ public class TacticalMapRadialScreen extends Screen {
    }
 
    private void openGrid(String title, Map<String, ResourceLocation> markers) {
-      this.minecraft.setScreen(new MapMarkerGridScreen(this.wx, this.wz, title, markers));
+      this.minecraft.setScreen(new MapMarkerGridScreen(this.wx, this.wz, title, markers, this.previousScreen));
    }
 
    private Map<String, ResourceLocation> getTeamMarkers() {

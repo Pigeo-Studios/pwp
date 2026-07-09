@@ -819,7 +819,7 @@ public class WarfareDeathScreen extends DeathScreen {
         int mapY = this.getMapY();
         int worldX = (int)(centerX + (mouseX - ((double)mapOriginX + (double)mapSize / 2.0)) * bpp);
         int worldZ = (int)(centerZ + (mouseY - ((double)mapY + (double)mapSize / 2.0)) * bpp);
-        this.minecraft.setScreen(new TacticalMapRadialScreen(worldX, worldZ));
+        this.minecraft.setScreen(new TacticalMapRadialScreen(worldX, worldZ, this));
     }
 
     public boolean mouseScrolled(double mx, double my, double delta) {
