@@ -198,19 +198,23 @@ public class VotingScreen extends Screen {
             gui.drawString(font, nameStr, textX, y + 6, 0xFFFFFF);
 
             if (packet.mapDescriptions[i] != null && !packet.mapDescriptions[i].isEmpty()) {
-                String descPlain = packet.mapDescriptions[i];
-                if (font.width(descPlain) > textMaxW) {
-                    descPlain = font.plainSubstrByWidth(descPlain, textMaxW - 4) + "...";
+                String desc = packet.mapDescriptions[i];
+                int maxDescW = textMaxW;
+                if (font.width(desc) > maxDescW) {
+                    String line1 = font.plainSubstrByWidth(desc, maxDescW - 4);
+                    String rest = desc.substring(line1.length()).trim();
+                    String line2;
+                    if (!rest.isEmpty()) {
+                        line2 = font.plainSubstrByWidth("\u00a77" + rest, maxDescW - 4);
+                        gui.drawString(font, "\u00a77" + line1, textX, y + 20, PWPTheme.Colors.TEXT_SECONDARY);
+                        gui.drawString(font, "\u00a77" + line2, textX, y + 32, PWPTheme.Colors.TEXT_SECONDARY);
+                    } else {
+                        gui.drawString(font, "\u00a77" + line1, textX, y + 26, PWPTheme.Colors.TEXT_SECONDARY);
+                    }
+                } else {
+                    gui.drawString(font, "\u00a77" + desc, textX, y + 26, PWPTheme.Colors.TEXT_SECONDARY);
                 }
-                gui.drawString(font, "\u00a77" + descPlain, textX, y + 20, PWPTheme.Colors.TEXT_SECONDARY);
             }
-
-            String factionLine = "\u00a79" + formatFactionName(packet.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(packet.redFactions[i]);
-            int flw = font.width(factionLine);
-            if (flw > textMaxW) {
-                factionLine = font.plainSubstrByWidth(factionLine, textMaxW - 4) + "...";
-            }
-            gui.drawString(font, factionLine, textX, y + 32, PWPTheme.Colors.TEXT_SECONDARY);
 
             int votes = packet.voteCounts[i];
             int barX = textX;
@@ -243,13 +247,6 @@ public class VotingScreen extends Screen {
         if (totalPages > 1) {
             gui.drawCenteredString(font, "\u00a77Page " + (page + 1) + "/" + totalPages, cx, navY + 4, PWPTheme.Colors.TEXT_SECONDARY);
         }
-    }
-
-    private static String formatFactionName(String faction) {
-        if (faction == null || faction.isEmpty() || faction.equals("none") || faction.equals("bluefor") || faction.equals("redfor")) {
-            return faction != null ? faction.toUpperCase() : "";
-        }
-        return faction.replace("_", " ").toUpperCase();
     }
 
     private static ResourceLocation getMapTexture(String mapName, String worldPath) {

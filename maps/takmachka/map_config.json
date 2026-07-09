@@ -10,6 +10,16 @@
     "modeDisplayName": "Advance and Secure",
     "durationMinutes": 90,
 
+    "availableFactions": ["ukraine", "russia", "usa", "nato", "insurgency", "pmc"],
+
+    "modes": {
+        "invasion": {
+            "attackerTickets": 300,
+            "defenderTickets": 1400,
+            "captureBonus": 100
+        }
+    },
+
     "teams": {
         "BLUE": {
             "faction": "insurgency",

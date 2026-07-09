@@ -10,6 +10,16 @@
     "modeDisplayName": "Advance and Secure",
     "durationMinutes": 90,
 
+    "availableFactions": ["ukraine", "russia", "usa", "nato", "insurgency", "pmc"],
+
+    "modes": {
+        "invasion": {
+            "attackerTickets": 300,
+            "defenderTickets": 1400,
+            "captureBonus": 100
+        }
+    },
+
     "teams": {
         "BLUE": {
             "faction": "usa",
@@ -121,14 +131,88 @@
         }
     ],
 
+    "capturePointPatterns": [
+        {
+            "name": "Standard",
+            "points": [
+                {
+                    "name": "Mechta Farm",
+            "shape": "cylinder",
+            "pos1": { "x": 841, "y": -64, "z": 600 },
+            "pos2": { "x": 951, "y": 100, "z": 710 },
+            "bluePriority": 1,
+            "redPriority": 4,
+            "captureTimeMinutes": 4,
+            "ticketPenalty": 80,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Community Center",
+            "shape": "cylinder",
+            "pos1": { "x": 1036, "y": -64, "z": 733 },
+            "pos2": { "x": 1086, "y": 100, "z": 783 },
+            "bluePriority": 2,
+            "redPriority": 3,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 45,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Warehouse West",
+            "shape": "cylinder",
+            "pos1": { "x": 387, "y": -64, "z": 924 },
+            "pos2": { "x": 457, "y": 100, "z": 994 },
+            "bluePriority": 3,
+            "redPriority": 5,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 45,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Sawmill",
+            "shape": "cylinder",
+            "pos1": { "x": 1428, "y": -64, "z": 995 },
+            "pos2": { "x": 1558, "y": 100, "z": 1125 },
+            "bluePriority": 4,
+            "redPriority": 1,
+            "captureTimeMinutes": 4,
+            "ticketPenalty": 80,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        },
+        {
+            "name": "Warehouse East",
+            "shape": "cylinder",
+            "pos1": { "x": 1836, "y": -64, "z": 813 },
+            "pos2": { "x": 1880, "y": 100, "z": 857 },
+            "bluePriority": 5,
+            "redPriority": 2,
+            "captureTimeMinutes": 2,
+            "ticketPenalty": 45,
+            "captureDeduction": 0,
+            "lockDurationMinutes": 0
+        }
+            ]
+        }
+    ],
+
     "mapBounds": {
         "centerX": 1090,
         "centerZ": 919,
         "sizeBlocks": 2100
     },
 
-    "vehicles": {
-        "BLUE": ["apc", "helicopter"],
-        "RED": ["apc", "helicopter"]
+    "vehicleSpawners": {
+        "BLUE": [
+            { "x": 954, "y": 65, "z": 151, "vehicleName": "apc", "yaw": 90 },
+            { "x": 954, "y": 65, "z": 171, "vehicleName": "helicopter", "yaw": 180 }
+        ],
+        "RED": [
+            { "x": 1608, "y": 65, "z": 1652, "vehicleName": "apc", "yaw": -90 },
+            { "x": 1608, "y": 65, "z": 1672, "vehicleName": "helicopter", "yaw": 0 }
+        ]
     }
 }

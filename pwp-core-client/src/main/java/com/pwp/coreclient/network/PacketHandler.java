@@ -47,5 +47,13 @@ public class PacketHandler {
                 JoinMatchServerPacket::encode,
                 JoinMatchServerPacket::decode,
                 JoinMatchServerPacket::handle);
+        INSTANCE.registerMessage(id++, VoteModePacket.class,
+                VoteModePacket::encode,
+                VoteModePacket::decode,
+                VoteModePacket::handle);
+        INSTANCE.registerMessage(id++, OpenModeVotePacket.class,
+                OpenModeVotePacket::encode,
+                OpenModeVotePacket::decode,
+                OpenModeVotePacket::handle);
     }
 }

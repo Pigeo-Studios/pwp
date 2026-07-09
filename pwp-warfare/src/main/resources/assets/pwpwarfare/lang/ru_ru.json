@@ -1,6 +1,7 @@
 {
     "item.pwpwarfare.kit_setup": "Настройка комплекта",
     "item.pwpwarfare.faction_kit_setup": "Настройка комплектов фракций",
+    "item.pwpwarfare.faction_vehicle_setup": "Настройка техники фракций",
     "item.pwpwarfare.entrenching_tool": "Сапёрная лопатка",
     "item.pwpwarfare.squad_leader_radio": "Рация командира",
     "item.pwpwarfare.blue_apc": "БТР (BLUFOR)",
@@ -243,5 +244,14 @@
     "gui.pwpwarfare.radial.tactical": "Тактика",
     "gui.pwpwarfare.radial.markers": "Метки",
 
-    "gui.pwpwarfare.map_marker_select.title": "Выберите тип метки"
+    "gui.pwpwarfare.map_marker_select.title": "Выберите тип метки",
+
+    "gui.pwpwarfare.faction_vehicle_select.title": "Выбор техники фракции",
+    "gui.pwpwarfare.faction_vehicle_list.title": "Техника - %s",
+    "gui.pwpwarfare.faction_vehicle_list.add": "+ Добавить",
+    "gui.pwpwarfare.faction_vehicle_list.empty": "Техника не определена",
+    "gui.pwpwarfare.faction_vehicle_editor.title": "Редактор техники - %s",
+    "gui.pwpwarfare.faction_vehicle_editor.save": "Сохранить",
+    "gui.pwpwarfare.faction_vehicle_editor.back": "Назад",
+    "gui.pwpwarfare.faction_vehicle.saved": "Техника сохранена!"
 }

@@ -52,7 +52,8 @@ public class ClientData {
    public static int mapCenterX = 0;
    public static int mapCenterZ = 0;
    public static int mapSizeBlocks = 2048;
-   public static String currentMapImage = "map1";
+    public static String currentMapImage = "map1";
+    public static String gameMode = "aas";
    public static boolean isMapOpen = false;
    public static float mapTransition = 0.0F;
    public static boolean isGameStarted = false;

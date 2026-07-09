@@ -12,6 +12,9 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -44,6 +47,13 @@ public class MatchAllocator {
     }
 
     public static synchronized void startMatch(MapConfig map) {
+        startMatch(map, map.teams.BLUE.faction, map.teams.RED.faction, map.mode,
+                map.teams.BLUE.tickets, map.teams.RED.tickets, true, -1);
+    }
+
+    public static synchronized void startMatch(MapConfig map, String blueFaction, String redFaction,
+                                                String mode, int blueTickets, int redTickets,
+                                                boolean invasionDefenderIsRed, int patternIndex) {
         if (lobbyPlayers.size() < minPlayersToStart) {
             LobbyMod.serverBroadcast("§e[PWP] §cНедостаточно игроков для запуска матча (" + lobbyPlayers.size() + "/" + minPlayersToStart + ")");
             log.info("Not enough players: {}/{}", lobbyPlayers.size(), minPlayersToStart);
@@ -58,7 +68,42 @@ public class MatchAllocator {
         LobbyMod.serverBroadcast("§e[PWP] §fЗапуск матча на карте §e" + map.displayName + "§f...");
         log.info("Starting match on {} with {} players", map.displayName, lobbyPlayers.size());
 
-        ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath);
+        ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath, (matchDir) -> {
+            try {
+                Path configPath = matchDir.resolve("map_config.json");
+                if (!Files.exists(configPath)) {
+                    configPath = Path.of(matchDir.toString(), map.name, "map_config.json");
+                }
+                if (Files.exists(configPath)) {
+                    Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                    String content = Files.readString(configPath);
+                    JsonObject root = gson.fromJson(content, JsonObject.class);
+
+                    // Override factions
+                    root.getAsJsonObject("teams").getAsJsonObject("BLUE").addProperty("faction", blueFaction);
+                    root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("faction", redFaction);
+                    root.getAsJsonObject("teams").getAsJsonObject("BLUE").addProperty("tickets", blueTickets);
+                    root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("tickets", redTickets);
+
+                    // Set mode
+                    root.addProperty("mode", mode);
+                    root.addProperty("modeDisplayName", mode.equals("invasion") ? "INVASION" : "Advance and Secure");
+
+                    // Invasion defender
+                    root.addProperty("invasionDefender", invasionDefenderIsRed ? "RED" : "BLUE");
+
+                    // Capture point pattern index (patterns array is already in the original config)
+                    if (patternIndex >= 0) {
+                        root.addProperty("capturePointPatternIndex", patternIndex);
+                    }
+
+                    Files.writeString(configPath, gson.toJson(root));
+                    log.info("Customized map_config.json for match (factions: {}/{}, mode: {})", blueFaction, redFaction, mode);
+                }
+            } catch (Exception e) {
+                log.error("Failed to customize map_config.json: {}", e.getMessage());
+            }
+        });
         if (sr.error != null) {
             LobbyMod.serverBroadcast("§e[PWP] §cОшибка запуска матча: " + sr.error);
             log.error("Failed to start match: {}", sr.error);
@@ -69,19 +114,21 @@ public class MatchAllocator {
         mi.serverId = sr.serverId;
         mi.mapName = map.name;
         mi.displayName = map.displayName;
-        mi.modeDisplayName = map.modeDisplayName;
+        mi.modeDisplayName = mode.equals("invasion") ? "INVASION" : map.modeDisplayName;
         mi.port = sr.port;
         mi.maxPlayers = map.maxPlayers;
         mi.playerCount = lobbyPlayers.size();
-        mi.blueFaction = map.teams.BLUE.faction;
-        mi.redFaction = map.teams.RED.faction;
-        mi.blueTickets = map.teams.BLUE.tickets;
-        mi.redTickets = map.teams.RED.tickets;
+        mi.blueFaction = blueFaction;
+        mi.redFaction = redFaction;
+        mi.blueTickets = blueTickets;
+        mi.redTickets = redTickets;
         mi.worldPath = map.worldPath;
+        mi.mode = mode;
         mi.startedAt = System.currentTimeMillis();
         activeMatches.put(mi.serverId, mi);
         LobbyMod.sendMatchListUpdateToAll();
-        log.info("Match {}: {} on port {} ({} players)", mi.serverId, map.displayName, sr.port, lobbyPlayers.size());
+        log.info("Match {}: {} ({}) on port {} ({} players, {} vs {})",
+                mi.serverId, map.displayName, mode, sr.port, lobbyPlayers.size(), blueFaction, redFaction);
     }
 
     public static void joinActiveMatch(ServerPlayer player) {
@@ -202,6 +249,7 @@ public class MatchAllocator {
         public String mapName;
         public String displayName;
         public String modeDisplayName;
+        public String mode = "aas";
         public int port;
         public int playerCount;
         public int maxPlayers;

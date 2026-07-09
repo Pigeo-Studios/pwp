@@ -12,6 +12,7 @@ import com.pigeostudios.pwp.warfare.client.gui.KitTeamSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.PlayerKitSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SkinListScreen;
 import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.VictoryScreen;
 import com.pigeostudios.pwp.warfare.client.sound.HubLoopingSound;
 import com.pigeostudios.pwp.warfare.client.sound.RallyLoopingSound;
@@ -95,6 +96,10 @@ public class ClientHooks {
 
     public static void openFactionKitSelect() {
         Minecraft.getInstance().setScreen(new FactionSelectScreen());
+    }
+
+    public static void openFactionVehicleSelect() {
+        Minecraft.getInstance().setScreen(new FactionVehicleSelectScreen());
     }
 
     public static void openSkinSetup() {
@@ -210,6 +215,7 @@ public class ClientHooks {
         ClientData.mapCenterZ = msg.mapCenterZ;
         ClientData.mapSizeBlocks = msg.mapSizeBlocks;
         ClientData.currentMapImage = msg.currentMapImage;
+        ClientData.gameMode = msg.gameMode;
         ClientData.blueReady = msg.blueReady;
         ClientData.redReady = msg.redReady;
         ClientData.clientVehicles = new ArrayList<>(msg.markedVehicles);

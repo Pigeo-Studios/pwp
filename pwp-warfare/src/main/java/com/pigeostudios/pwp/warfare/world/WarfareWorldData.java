@@ -5,6 +5,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import com.pigeostudios.pwp.warfare.block.ModBlocks;
+import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
+import com.pigeostudios.pwp.warfare.data.FactionVehicleData;
+import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import java.util.*;
 import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
@@ -64,14 +69,20 @@ public class WarfareWorldData extends SavedData {
    public int deathTicketCost = 2;
    public String blueFaction = "none";
    public String redFaction = "none";
-   public boolean isGameStarted = false;
-   public int countdownTicks = 0;
+    public boolean isGameStarted = false;
+    public int countdownTicks = 0;
+    public String gameMode = "aas";
+    public String invasionDefender = "RED";
+    public int invasionCaptureBonus = 100;
    public boolean countdownActive = false;
    public boolean playedBlueSiren = false;
    public boolean playedRedSiren = false;
-   public Map<String, WarfareWorldData.KitInfo> blueKits = new HashMap<>();
-   public Map<String, WarfareWorldData.KitInfo> redKits = new HashMap<>();
-   public int mapCenterX = 0;
+    public Map<String, WarfareWorldData.KitInfo> blueKits = new HashMap<>();
+    public Map<String, WarfareWorldData.KitInfo> redKits = new HashMap<>();
+    public Map<String, FactionVehicleData> blueFactionVehicles = new HashMap<>();
+    public Map<String, FactionVehicleData> redFactionVehicles = new HashMap<>();
+    public List<ConfigVehicleSpawner> configVehicleSpawners = new ArrayList<>();
+    public int mapCenterX = 0;
    public int mapCenterZ = 0;
    public int mapSizeBlocks = 2048;
     public String currentMapImage = "map1";
@@ -155,7 +166,98 @@ public class WarfareWorldData extends SavedData {
       } catch (Exception ignored) {}
    }
 
-       public List<BlockPos> triggerBlocks = new ArrayList<>();
+    public void loadFactionVehiclesFromApi(String team, JsonObject apiResponse) {
+        if (apiResponse == null || !apiResponse.has("data")) return;
+        JsonArray arr = apiResponse.getAsJsonArray("data");
+        Map<String, FactionVehicleData> target = team.equalsIgnoreCase("BLUE") ? this.blueFactionVehicles : this.redFactionVehicles;
+        target.clear();
+        for (int i = 0; i < arr.size(); i++) {
+            JsonObject obj = arr.get(i).getAsJsonObject();
+            FactionVehicleData veh = new FactionVehicleData();
+            veh.faction = obj.has("faction") ? obj.get("faction").getAsString() : "";
+            veh.vehicleName = obj.has("vehicleName") ? obj.get("vehicleName").getAsString() : "";
+            veh.displayName = obj.has("displayName") ? obj.get("displayName").getAsString() : "";
+            veh.vehicleId = obj.has("vehicleId") ? obj.get("vehicleId").getAsString() : "";
+            veh.yaw = obj.has("yaw") ? obj.get("yaw").getAsFloat() : 0;
+            veh.respawnTime = obj.has("respawnTime") ? obj.get("respawnTime").getAsInt() : 60;
+            veh.initialTime = obj.has("initialTime") ? obj.get("initialTime").getAsInt() : 60;
+            if (obj.has("inventory")) {
+                try {
+                    JsonArray invArr = obj.getAsJsonArray("inventory");
+                    for (int j = 0; j < invArr.size(); j++) {
+                        JsonObject itemJson = invArr.get(j).getAsJsonObject();
+                        int slot = itemJson.get("slot").getAsInt();
+                        if (slot >= 0 && slot < 32 && itemJson.has("item")) {
+                            JsonObject itemData = itemJson.getAsJsonObject("item");
+                            String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
+                            int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;
+                            if (!id.isEmpty() && !id.equals("minecraft:air")) {
+                                var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(id));
+                                if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                                    net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item, count);
+                                    if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
+                                        var tag = WarfareWorldData.KitInfo.jsonToCompound(itemData.getAsJsonObject("tag"));
+                                        if (!tag.isEmpty()) stack.setTag(tag);
+                                    }
+                                    veh.inventory.set(slot, stack);
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+            target.put(veh.vehicleName, veh);
+        }
+    }
+
+    public void parseConfigVehicleSpawners(JsonArray spawners, String team, ServerLevel level) {
+        if (spawners == null) return;
+        for (var el : spawners) {
+            JsonObject obj = el.getAsJsonObject();
+            ConfigVehicleSpawner spawner = new ConfigVehicleSpawner();
+            spawner.team = team;
+            spawner.vehicleName = obj.get("vehicleName").getAsString();
+            spawner.x = obj.get("x").getAsInt();
+            spawner.y = obj.get("y").getAsInt();
+            spawner.z = obj.get("z").getAsInt();
+            if (obj.has("yaw")) spawner.yaw = obj.get("yaw").getAsFloat();
+            spawner.fixed = obj.has("fixed") && obj.get("fixed").getAsBoolean();
+            configVehicleSpawners.add(spawner);
+        }
+    }
+
+    public void fillVehicleSpawnersFromFactionDefaults(ServerLevel level) {
+        Map<String, FactionVehicleData> blueVehicles = this.blueFactionVehicles;
+        Map<String, FactionVehicleData> redVehicles = this.redFactionVehicles;
+
+        for (ConfigVehicleSpawner cfg : configVehicleSpawners) {
+            BlockPos pos = new BlockPos(cfg.x, cfg.y, cfg.z);
+            Map<String, FactionVehicleData> factionData = cfg.team.equalsIgnoreCase("BLUE") ? blueVehicles : redVehicles;
+            FactionVehicleData veh = factionData.get(cfg.vehicleName);
+            if (veh == null) continue;
+
+            if (level.isLoaded(pos)) {
+                var be = level.getBlockEntity(pos);
+                if (be instanceof VehicleSpawnerBlockEntity spawner) {
+                    if (!cfg.fixed) {
+                        spawner.vehicleName = cfg.vehicleName;
+                        spawner.loadDefaultsFromFactionVehicle(veh);
+                        if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
+                    }
+                } else {
+                    level.setBlock(pos, com.pigeostudios.pwp.warfare.block.ModBlocks.VEHICLE_SPAWNER_BLOCK.get().defaultBlockState(), 3);
+                    be = level.getBlockEntity(pos);
+                    if (be instanceof VehicleSpawnerBlockEntity spawner) {
+                        spawner.vehicleName = cfg.vehicleName;
+                        spawner.loadDefaultsFromFactionVehicle(veh);
+                        if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
+                    }
+                }
+            }
+        }
+    }
+
+        public List<BlockPos> triggerBlocks = new ArrayList<>();
    public WarfareWorldData.ArtStrikeRequest blueArtRequest = null;
    public WarfareWorldData.ArtStrikeRequest redArtRequest = null;
    public List<WarfareWorldData.ActiveStrike> activeStrikes = new ArrayList<>();
@@ -184,6 +286,9 @@ public class WarfareWorldData extends SavedData {
       tag.putBoolean("IsGameStarted", this.isGameStarted);
       tag.putInt("CountdownTicks", this.countdownTicks);
       tag.putBoolean("CountdownActive", this.countdownActive);
+      tag.putString("GameMode", this.gameMode != null ? this.gameMode : "aas");
+      tag.putString("InvasionDefender", this.invasionDefender != null ? this.invasionDefender : "RED");
+      tag.putInt("InvasionCapBonus", this.invasionCaptureBonus);
       tag.putBoolean("PlayedBlueSiren", this.playedBlueSiren);
       tag.putBoolean("PlayedRedSiren", this.playedRedSiren);
       tag.putInt("MapCenterX", this.mapCenterX);
@@ -347,6 +452,9 @@ public class WarfareWorldData extends SavedData {
       data.isGameStarted = tag.getBoolean("IsGameStarted");
       data.countdownTicks = tag.getInt("CountdownTicks");
       data.countdownActive = tag.getBoolean("CountdownActive");
+      data.gameMode = tag.contains("GameMode") ? tag.getString("GameMode") : "aas";
+      data.invasionDefender = tag.contains("InvasionDefender") ? tag.getString("InvasionDefender") : "RED";
+      data.invasionCaptureBonus = tag.contains("InvasionCapBonus") ? tag.getInt("InvasionCapBonus") : 100;
       data.playedBlueSiren = tag.getBoolean("PlayedBlueSiren");
       data.playedRedSiren = tag.getBoolean("PlayedRedSiren");
       data.mapCenterX = tag.getInt("MapCenterX");
@@ -569,6 +677,7 @@ public class WarfareWorldData extends SavedData {
       public String shapeType = "CUBE";
       public int lockDurationMinutes = 0;
       public long lockedUntilTick = 0L;
+      public boolean invLocked = false;
 
       public CapturePoint(String name, AABB area, int bp, int rp, int time, int penalty, int deduct, String shape, int lockMin) {
          this.name = name;
@@ -599,10 +708,11 @@ public class WarfareWorldData extends SavedData {
          tag.putString("Owner", this.owner);
          tag.putFloat("Progress", this.progress);
          tag.putString("CapturingTeam", this.capturingTeam);
-         tag.putString("Shape", this.shapeType);
-         tag.putInt("LockMin", this.lockDurationMinutes);
-         tag.putLong("LockedUntil", this.lockedUntilTick);
-         return tag;
+          tag.putString("Shape", this.shapeType);
+          tag.putInt("LockMin", this.lockDurationMinutes);
+          tag.putLong("LockedUntil", this.lockedUntilTick);
+          tag.putBoolean("InvLocked", this.invLocked);
+          return tag;
       }
 
       public static WarfareWorldData.CapturePoint load(CompoundTag tag) {
@@ -632,11 +742,15 @@ public class WarfareWorldData extends SavedData {
             point.capturingTeam = tag.getString("CapturingTeam");
          }
 
-         if (tag.contains("LockedUntil")) {
-            point.lockedUntilTick = tag.getLong("LockedUntil");
-         }
+          if (tag.contains("LockedUntil")) {
+             point.lockedUntilTick = tag.getLong("LockedUntil");
+          }
 
-         return point;
+          if (tag.contains("InvLocked")) {
+             point.invLocked = tag.getBoolean("InvLocked");
+          }
+
+          return point;
       }
 
       public boolean isInside(Vec3 pos) {
@@ -835,7 +949,7 @@ public class WarfareWorldData extends SavedData {
          return k;
       }
 
-      private static CompoundTag jsonToCompound(JsonObject json) {
+      public static CompoundTag jsonToCompound(JsonObject json) {
          CompoundTag tag = new CompoundTag();
          for (String key : json.keySet()) {
             try {
@@ -1212,7 +1326,15 @@ public class WarfareWorldData extends SavedData {
       }
    }
 
-   public static class VehicleRecord {
+    public static class ConfigVehicleSpawner {
+        public String team;
+        public String vehicleName;
+        public int x, y, z;
+        public float yaw;
+        public boolean fixed;
+    }
+
+    public static class VehicleRecord {
       public UUID uuid;
       public String team;
       public String type;

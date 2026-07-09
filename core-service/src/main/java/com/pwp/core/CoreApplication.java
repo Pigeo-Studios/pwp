@@ -53,6 +53,7 @@ public class CoreApplication {
         new RankController(app);
         new RewardController(app);
         new KitController(app);
+        new FactionVehicleController(app);
         new VoiceMuteController(app);
         new AuthController(app, config);
         new AdminController(app);

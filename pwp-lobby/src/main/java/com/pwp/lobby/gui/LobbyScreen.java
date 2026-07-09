@@ -88,6 +88,18 @@ public class LobbyScreen extends Screen {
         }
     }
 
+    public static void openModeVote(OpenModeVotePacket pkt) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        if (instance != null) {
+            if (instance.voteData != null) {
+                instance.currentTab = TAB_VOTE;
+                instance.targetTab = TAB_VOTE;
+            }
+        }
+        ModeVoteScreen.openWithPacket(pkt);
+    }
+
     public static void openVote(OpenVotingScreenPacket pkt) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
@@ -319,18 +331,21 @@ public class LobbyScreen extends Screen {
 
             if (voteData.mapDescriptions[i] != null && !voteData.mapDescriptions[i].isEmpty()) {
                 String desc = voteData.mapDescriptions[i];
-                if (font.width(desc) > textMaxW) {
-                    desc = font.plainSubstrByWidth(desc, textMaxW - 4) + "...";
+                int maxDescW = textMaxW;
+                if (font.width(desc) > maxDescW) {
+                    String line1 = font.plainSubstrByWidth(desc, maxDescW - 4);
+                    String rest = desc.substring(line1.length()).trim();
+                    if (!rest.isEmpty()) {
+                        String line2 = font.plainSubstrByWidth("\u00a77" + rest, maxDescW - 4);
+                        gui.drawString(font, "\u00a77" + line1, textX, y + 18, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                        gui.drawString(font, "\u00a77" + line2, textX, y + 30, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                    } else {
+                        gui.drawString(font, "\u00a77" + line1, textX, y + 24, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                    }
+                } else {
+                    gui.drawString(font, "\u00a77" + desc, textX, y + 24, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
                 }
-                gui.drawString(font, "\u00a77" + desc, textX, y + 18, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
             }
-
-            String factionLine = "\u00a79" + formatFactionName(voteData.blueFactions[i]) + " \u00a77vs \u00a7c" + formatFactionName(voteData.redFactions[i]);
-            int flw = font.width(factionLine);
-            if (flw > textMaxW) {
-                factionLine = font.plainSubstrByWidth(factionLine, textMaxW - 4) + "...";
-            }
-            gui.drawString(font, factionLine, textX, y + 30, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
 
             int votes = voteData.voteCounts[i];
             int barX = textX;

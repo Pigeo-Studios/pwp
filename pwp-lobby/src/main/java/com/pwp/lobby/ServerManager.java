@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 
 public class ServerManager {
 
@@ -61,6 +62,11 @@ public class ServerManager {
     }
 
     public static StartResult startMatchServer(String mapName, int maxPlayers, String mapWorldPath) {
+        return startMatchServer(mapName, maxPlayers, mapWorldPath, null);
+    }
+
+    public static StartResult startMatchServer(String mapName, int maxPlayers, String mapWorldPath,
+                                                Consumer<Path> configCustomizer) {
         StartResult result = new StartResult();
 
         Path templatePath = Paths.get(TEMPLATE_PATH).toAbsolutePath().normalize();
@@ -111,6 +117,16 @@ public class ServerManager {
 
                 instance.phase = "config";
                 instance.phaseStartedAt = System.currentTimeMillis();
+
+                // Apply custom config overrides (factions, mode, etc.)
+                if (configCustomizer != null) {
+                    try {
+                        configCustomizer.accept(serverDir);
+                    } catch (Exception e) {
+                        log.error("Config customization failed for match {}: {}", serverId, e.getMessage());
+                    }
+                }
+
                 String voidGen = "{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biomes\":\"minecraft:the_void\",\"structures\":{\"structures\":{}}}";
                 Files.writeString(serverDir.resolve("server.properties"),
                         "server-port=" + port + "\n" +

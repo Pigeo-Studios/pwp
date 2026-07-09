@@ -448,12 +448,14 @@ public class WarfareMapRenderer implements AutoCloseable {
                if (this.isPointOnMap(screenX, screenY)) {
                   ResourceLocation icon = VEHICLE_ICONS.getOrDefault(record.type, VEHICLE_ICONS.get("DEFAULT"));
                   this.setFilter(icon, true);
-                  pose.pushPose();
-                  pose.translate(screenX, screenY, 150.0F);
-                  pose.mulPose(Axis.ZP.rotationDegrees(record.yaw + 180.0F));
-                  RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                  RenderSystem.enableBlend();
-                  gui.blit(icon, -6, -6, 12, 12, 0.0F, 0.0F, 16, 16, 16, 16);
+                   pose.pushPose();
+                   pose.translate(screenX, screenY, 150.0F);
+                   if (!record.type.equals("Mine")) {
+                      pose.mulPose(Axis.ZP.rotationDegrees(record.yaw + 180.0F));
+                   }
+                   RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                   RenderSystem.enableBlend();
+                   gui.blit(icon, -6, -6, 12, 12, 0.0F, 0.0F, 16, 16, 16, 16);
                   pose.popPose();
                   this.setFilter(icon, false);
                }
@@ -1078,5 +1080,6 @@ public class WarfareMapRenderer implements AutoCloseable {
       VEHICLE_ICONS.put("BOAT", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/boat.png"));
       VEHICLE_ICONS.put("Motorcycle", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/motorcycle.png"));
       VEHICLE_ICONS.put("Light Supply", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/light_supply.png"));
+      VEHICLE_ICONS.put("Mine", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/skull_marker.png"));
    }
 }

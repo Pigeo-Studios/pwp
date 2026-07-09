@@ -81,6 +81,7 @@ public class PacketHandler {
       INSTANCE.registerMessage(id++, PacketSyncMyKit.class, PacketSyncMyKit::encode, PacketSyncMyKit::decode, PacketSyncMyKit::handle);
       INSTANCE.registerMessage(id++, PacketOpenFactionKitEditor.class, PacketOpenFactionKitEditor::encode, PacketOpenFactionKitEditor::decode, PacketOpenFactionKitEditor::handle);
       INSTANCE.registerMessage(id++, PacketSaveFactionKit.class, PacketSaveFactionKit::encode, PacketSaveFactionKit::decode, PacketSaveFactionKit::handle);
+      INSTANCE.registerMessage(id++, PacketSaveFactionVehicle.class, PacketSaveFactionVehicle::encode, PacketSaveFactionVehicle::decode, PacketSaveFactionVehicle::handle);
       INSTANCE.registerMessage(id++, PacketVoiceActivity.class, PacketVoiceActivity::encode, PacketVoiceActivity::decode, PacketVoiceActivity::handle);
       INSTANCE.registerMessage(
          id++, PacketRadioVoiceActivity.class, PacketRadioVoiceActivity::encode, PacketRadioVoiceActivity::decode, PacketRadioVoiceActivity::handle
@@ -169,9 +170,10 @@ public class PacketHandler {
             hubs,
             bFac,
             rFac,
-            bName,
-            rName,
-            false,
+             bName,
+             rName,
+             "aas",
+             false,
             new ArrayList<>(),
             new HashMap<>(),
             new HashMap<>(),
@@ -277,11 +279,12 @@ public class PacketHandler {
          data.currentMapImage,
          data.markedVehicles,
          data.hubs,
-         data.blueFaction,
-         data.redFaction,
-         bName,
-         rName,
-         data.isGameStarted,
+          data.blueFaction,
+          data.redFaction,
+          bName,
+          rName,
+          data.gameMode != null ? data.gameMode : "aas",
+          data.isGameStarted,
          data.capturePoints,
          data.blueSpawns,
          data.redSpawns,

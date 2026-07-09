@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pwp.coreclient.CoreAPI;
@@ -169,28 +170,30 @@ public class WarfareMod {
             }
          }
 
-         if (root.has("capturePoints")) {
-            data.capturePoints.clear();
-            var points = root.getAsJsonArray("capturePoints");
-            for (var el : points) {
-               JsonObject cp = el.getAsJsonObject();
-               String name = cp.get("name").getAsString();
-               String shape = cp.has("shape") ? cp.get("shape").getAsString() : "cylinder";
-               JsonObject p1 = cp.getAsJsonObject("pos1");
-               JsonObject p2 = cp.getAsJsonObject("pos2");
-               AABB aabb = new AABB(
-                  p1.get("x").getAsInt(), p1.get("y").getAsInt(), p1.get("z").getAsInt(),
-                  p2.get("x").getAsInt(), p2.get("y").getAsInt(), p2.get("z").getAsInt()
-               );
-               int bp = cp.has("bluePriority") ? cp.get("bluePriority").getAsInt() : 10;
-               int rp = cp.has("redPriority") ? cp.get("redPriority").getAsInt() : 10;
-               int ctm = cp.has("captureTimeMinutes") ? cp.get("captureTimeMinutes").getAsInt() : 2;
-               int pen = cp.has("ticketPenalty") ? cp.get("ticketPenalty").getAsInt() : 60;
-               int deduct = cp.has("captureDeduction") ? cp.get("captureDeduction").getAsInt() : 0;
-               int lockMin = cp.has("lockDurationMinutes") ? cp.get("lockDurationMinutes").getAsInt() : 0;
-               data.capturePoints.add(new WarfareWorldData.CapturePoint(name, aabb, bp, rp, ctm, pen, deduct, shape, lockMin));
-            }
-         }
+          if (root.has("capturePointPatterns") && root.has("capturePointPatternIndex")) {
+             int patternIdx = root.get("capturePointPatternIndex").getAsInt();
+             JsonArray patterns = root.getAsJsonArray("capturePointPatterns");
+             if (patternIdx >= 0 && patternIdx < patterns.size()) {
+                JsonObject chosen = patterns.get(patternIdx).getAsJsonObject();
+                String patternName = chosen.has("name") ? chosen.get("name").getAsString() : "Pattern " + patternIdx;
+                JsonArray points = chosen.getAsJsonArray("points");
+                data.capturePoints.clear();
+                for (var el : points) {
+                   data.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
+                }
+                LOGGER.info("Loaded capture point pattern: {} ({} points)", patternName, data.capturePoints.size());
+             } else {
+                LOGGER.warn("Invalid capture point pattern index {}, falling back to default", patternIdx);
+             }
+          }
+
+          if (root.has("capturePoints") && data.capturePoints.isEmpty()) {
+             data.capturePoints.clear();
+             var points = root.getAsJsonArray("capturePoints");
+             for (var el : points) {
+                data.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
+             }
+          }
 
          if (root.has("teams")) {
             JsonObject teams = root.getAsJsonObject("teams");
@@ -214,26 +217,41 @@ public class WarfareMod {
             }
          }
 
-         if (ModList.get().isLoaded("pwp_core_client") && CoreAPI.isEnabled()) {
-            try {
-               String[] factions = {data.blueFaction, data.redFaction};
-               String[] teams = {"BLUE", "RED"};
-               for (int i = 0; i < 2; i++) {
-                  String faction = factions[i];
-                  if (faction == null || faction.isEmpty() || faction.equals("none")) continue;
-                  JsonObject response = CoreAPI.getFactionKits(faction);
-                  if (response != null && response.has("data")) {
-                     data.loadKitsFromApi(teams[i], response);
-                     LOGGER.info("Loaded {} kits from API for faction {} on team {}",
-                        response.getAsJsonArray("data").size(), faction, teams[i]);
-                  }
-               }
-            } catch (Exception e) {
-               LOGGER.warn("Failed to load kits from API, using NBT kits: {}", e.getMessage());
-            }
-         } else {
-            LOGGER.info("Core API not available, using NBT-based kits");
-         }
+          if (ModList.get().isLoaded("pwp_core_client") && CoreAPI.isEnabled()) {
+             try {
+                String[] factions = {data.blueFaction, data.redFaction};
+                String[] teams = {"BLUE", "RED"};
+                for (int i = 0; i < 2; i++) {
+                   String faction = factions[i];
+                   if (faction == null || faction.isEmpty() || faction.equals("none")) continue;
+                   JsonObject response = CoreAPI.getFactionKits(faction);
+                   if (response != null && response.has("data")) {
+                      data.loadKitsFromApi(teams[i], response);
+                      LOGGER.info("Loaded {} kits from API for faction {} on team {}",
+                         response.getAsJsonArray("data").size(), faction, teams[i]);
+                   }
+                   JsonObject vehResponse = CoreAPI.getFactionVehicles(faction);
+                   if (vehResponse != null && vehResponse.has("data")) {
+                      data.loadFactionVehiclesFromApi(teams[i], vehResponse);
+                      LOGGER.info("Loaded faction vehicles from API for faction {} on team {}", faction, teams[i]);
+                   }
+                }
+             } catch (Exception e) {
+                LOGGER.warn("Failed to load kits/vehicles from API: {}", e.getMessage());
+             }
+          } else {
+             LOGGER.info("Core API not available, using NBT-based kits/vehicles");
+          }
+
+          if (root.has("vehicleSpawners")) {
+             JsonObject vsObj = root.getAsJsonObject("vehicleSpawners");
+             if (vsObj.has("BLUE")) {
+                data.parseConfigVehicleSpawners(vsObj.getAsJsonArray("BLUE"), "BLUE", level);
+             }
+             if (vsObj.has("RED")) {
+                data.parseConfigVehicleSpawners(vsObj.getAsJsonArray("RED"), "RED", level);
+             }
+          }
 
           if (data.hideDeathMessages) {
              level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES).set(false, level.getServer());
@@ -260,14 +278,55 @@ public class WarfareMod {
           data.setDirty();
           LOGGER.info("Map config applied successfully for map: {}", root.get("name").getAsString());
 
+          // INVASION mode: set all points to defender, adjust tickets
+          String mode = root.has("mode") ? root.get("mode").getAsString() : "aas";
+          data.gameMode = mode;
+          if (mode.equals("invasion") && !data.capturePoints.isEmpty()) {
+             String defender = root.has("invasionDefender") ? root.get("invasionDefender").getAsString() : "RED";
+             data.invasionDefender = defender;
+             for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+                cp.owner = defender;
+                cp.progress = 1.0F;
+                cp.capturingTeam = "NONE";
+             }
+             if (root.has("modes")) {
+                JsonObject modes = root.getAsJsonObject("modes");
+                if (modes.has("invasion")) {
+                   JsonObject inv = modes.getAsJsonObject("invasion");
+                   if (inv.has("captureBonus")) {
+                      data.invasionCaptureBonus = inv.get("captureBonus").getAsInt();
+                   }
+                }
+             }
+             LOGGER.info("INVASION mode: all points set to defender {}, capture bonus={}", defender, data.invasionCaptureBonus);
+          }
+
           // Start waiting phase (5 min timer), then voting
           data.waitingActive = true;
           data.waitingTimer = 300;
           data.voteActive = false;
           data.votes.clear();
           PacketHandler.sendToAllClients(level, data);
-      } catch (IOException e) {
-         LOGGER.error("Failed to read map_config.json", e);
-      }
-   }
+       } catch (IOException e) {
+          LOGGER.error("Failed to read map_config.json", e);
+       }
+    }
+
+    private static WarfareWorldData.CapturePoint parseCapturePoint(JsonObject cp) {
+       String name = cp.get("name").getAsString();
+       String shape = cp.has("shape") ? cp.get("shape").getAsString() : "cylinder";
+       JsonObject p1 = cp.getAsJsonObject("pos1");
+       JsonObject p2 = cp.getAsJsonObject("pos2");
+       AABB aabb = new AABB(
+          p1.get("x").getAsInt(), p1.get("y").getAsInt(), p1.get("z").getAsInt(),
+          p2.get("x").getAsInt(), p2.get("y").getAsInt(), p2.get("z").getAsInt()
+       );
+       int bp = cp.has("bluePriority") ? cp.get("bluePriority").getAsInt() : 10;
+       int rp = cp.has("redPriority") ? cp.get("redPriority").getAsInt() : 10;
+       int ctm = cp.has("captureTimeMinutes") ? cp.get("captureTimeMinutes").getAsInt() : 2;
+       int pen = cp.has("ticketPenalty") ? cp.get("ticketPenalty").getAsInt() : 60;
+       int deduct = cp.has("captureDeduction") ? cp.get("captureDeduction").getAsInt() : 0;
+       int lockMin = cp.has("lockDurationMinutes") ? cp.get("lockDurationMinutes").getAsInt() : 0;
+       return new WarfareWorldData.CapturePoint(name, aabb, bp, rp, ctm, pen, deduct, shape, lockMin);
+    }
 }

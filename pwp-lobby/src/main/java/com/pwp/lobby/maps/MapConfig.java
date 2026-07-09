@@ -21,6 +21,21 @@ public class MapConfig {
     public Teams teams = new Teams();
     public GameSettings settings = new GameSettings();
 
+    public List<String> availableFactions;
+    public Map<String, ModeConfig> modes;
+    public List<CapturePointPattern> capturePointPatterns;
+
+    public static class ModeConfig {
+        public int attackerTickets = 300;
+        public int defenderTickets = 1400;
+        public int captureBonus = 100;
+    }
+
+    public static class CapturePointPattern {
+        public String name;
+        public List<CapturePointConfig> points;
+    }
+
     public static class Teams {
         public TeamConfig BLUE = new TeamConfig();
         public TeamConfig RED = new TeamConfig();

@@ -1,6 +1,7 @@
 {
     "item.pwpwarfare.kit_setup": "Kit Setup",
     "item.pwpwarfare.faction_kit_setup": "Faction Kit Setup",
+    "item.pwpwarfare.faction_vehicle_setup": "Faction Vehicle Setup",
     "item.pwpwarfare.entrenching_tool": "Entrenching Tool",
     "item.pwpwarfare.squad_leader_radio": "Squad Leader Radio",
     "item.pwpwarfare.blue_apc": "APC (BLUFOR)",
@@ -262,5 +263,14 @@
     "gui.pwpwarfare.skin_editor.slot_type": "Slot Type",
     "gui.pwpwarfare.skin_editor.weapon_tag": "Weapon Tag",
     "gui.pwpwarfare.skin_editor.rarity": "Rarity",
-    "gui.pwpwarfare.skin_editor.model_path": "Model Path"
+    "gui.pwpwarfare.skin_editor.model_path": "Model Path",
+
+    "gui.pwpwarfare.faction_vehicle_select.title": "Select Faction Vehicles",
+    "gui.pwpwarfare.faction_vehicle_list.title": "Vehicles - %s",
+    "gui.pwpwarfare.faction_vehicle_list.add": "+ Add",
+    "gui.pwpwarfare.faction_vehicle_list.empty": "No vehicles defined",
+    "gui.pwpwarfare.faction_vehicle_editor.title": "Vehicle Editor - %s",
+    "gui.pwpwarfare.faction_vehicle_editor.save": "Save",
+    "gui.pwpwarfare.faction_vehicle_editor.back": "Back",
+    "gui.pwpwarfare.faction_vehicle.saved": "Vehicle saved!"
 }

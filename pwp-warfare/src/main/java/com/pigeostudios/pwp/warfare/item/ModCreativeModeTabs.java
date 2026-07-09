@@ -25,6 +25,7 @@ public class ModCreativeModeTabs {
             pOutput.accept((ItemLike)ModItems.MAIN_SUPPLY_ITEM.get());
             pOutput.accept((ItemLike)ModItems.KIT_SETUP_ITEM.get());
             pOutput.accept((ItemLike)ModItems.FACTION_KIT_SETUP_ITEM.get());
+            pOutput.accept((ItemLike)ModItems.FACTION_VEHICLE_SETUP_ITEM.get());
             pOutput.accept((ItemLike)ModItems.SKIN_SETUP_ITEM.get());
             pOutput.accept((ItemLike)ModItems.GAME_START_TRIGGER_ITEM.get());
             pOutput.accept((ItemLike)ModItems.M2_AMMO.get());

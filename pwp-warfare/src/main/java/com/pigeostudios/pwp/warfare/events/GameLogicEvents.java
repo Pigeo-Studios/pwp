@@ -84,6 +84,7 @@ import net.minecraftforge.event.TickEvent.Phase;
 import net.minecraftforge.event.TickEvent.PlayerTickEvent;
 import net.minecraftforge.event.TickEvent.ServerTickEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -706,7 +707,7 @@ public class GameLogicEvents {
                       }
                       sendSyncPacket(level, data);
 
-                      MatchStatsTracker.get().startMatch(data.currentMapImage, "AAS");
+                      MatchStatsTracker.get().startMatch(data.currentMapImage, data.gameMode != null ? data.gameMode : "AAS");
 
                       for (ServerPlayer p : level.players()) {
                          String pending = p.getPersistentData().getString("WARFARE_PendingKit");
@@ -717,17 +718,19 @@ public class GameLogicEvents {
                         }
                      }
 
-                     for (BlockPos p : data.triggerBlocks) {
-                        if (level.isLoaded(p)) {
-                           BlockState st = level.getBlockState(p);
-                           if (st.is((Block)ModBlocks.GAME_START_TRIGGER.get())) {
-                              level.setBlock(p, (BlockState)st.setValue(GameStartTriggerBlock.POWERED, true), 3);
-                              level.scheduleTick(p, (Block)ModBlocks.GAME_START_TRIGGER.get(), 20);
-                           }
-                        }
-                     }
+                      for (BlockPos p : data.triggerBlocks) {
+                         if (level.isLoaded(p)) {
+                            BlockState st = level.getBlockState(p);
+                            if (st.is((Block)ModBlocks.GAME_START_TRIGGER.get())) {
+                               level.setBlock(p, (BlockState)st.setValue(GameStartTriggerBlock.POWERED, true), 3);
+                               level.scheduleTick(p, (Block)ModBlocks.GAME_START_TRIGGER.get(), 20);
+                            }
+                         }
+                      }
 
-                     sendSyncPacket(level, data);
+                      data.fillVehicleSpawnersFromFactionDefaults(level);
+
+                      sendSyncPacket(level, data);
                   }
                }
 
@@ -745,31 +748,39 @@ public class GameLogicEvents {
                   }
                }
 
-               boolean gameEnded = data.blueTickets <= 0 || data.redTickets <= 0;
-               if (data.isGameStarted && !gameEnded && !data.capturePoints.isEmpty()) {
-                  int totalPoints = data.capturePoints.size();
-                  long blueOwned = data.capturePoints.stream().filter(p -> p.owner.equalsIgnoreCase("BLUE")).count();
-                  long redOwned = data.capturePoints.stream().filter(p -> p.owner.equalsIgnoreCase("RED")).count();
-                  blueIsBleeding = blueOwned == 0L && redOwned >= totalPoints - 1 && totalPoints > 0;
-                  redIsBleeding = redOwned == 0L && blueOwned >= totalPoints - 1 && totalPoints > 0;
-                  if (globalTick % 40 == 0) {
-                     boolean changed = false;
-                     if (blueIsBleeding) {
-                        data.blueTickets--;
-                        changed = true;
-                     }
+                boolean gameEnded = data.blueTickets <= 0 || data.redTickets <= 0;
+                if (data.isGameStarted && !gameEnded && !data.capturePoints.isEmpty()) {
+                   int totalPoints = data.capturePoints.size();
+                   long blueOwned = data.capturePoints.stream().filter(p -> p.owner.equalsIgnoreCase("BLUE")).count();
+                   long redOwned = data.capturePoints.stream().filter(p -> p.owner.equalsIgnoreCase("RED")).count();
 
-                     if (redIsBleeding) {
-                        data.redTickets--;
-                        changed = true;
-                     }
+                   if ("invasion".equals(data.gameMode)) {
+                      // No ticket bleed in INVASION for either team
+                      blueIsBleeding = false;
+                      redIsBleeding = false;
+                   } else {
+                      // Standard AAS bleed
+                      blueIsBleeding = blueOwned == 0L && redOwned >= totalPoints - 1 && totalPoints > 0;
+                      redIsBleeding = redOwned == 0L && blueOwned >= totalPoints - 1 && totalPoints > 0;
+                      if (globalTick % 40 == 0) {
+                         boolean changed = false;
+                         if (blueIsBleeding) {
+                            data.blueTickets--;
+                            changed = true;
+                         }
 
-                     if (changed) {
-                        checkGameOver(level, data);
-                        data.setDirty();
-                     }
-                  }
-               }
+                         if (redIsBleeding) {
+                            data.redTickets--;
+                            changed = true;
+                         }
+
+                         if (changed) {
+                            checkGameOver(level, data);
+                            data.setDirty();
+                         }
+                      }
+                   }
+                }
 
                if (globalTick % 20 == 0) {
                   validateAndSync(level, false, blueIsBleeding, redIsBleeding);
@@ -1262,6 +1273,34 @@ public class GameLogicEvents {
    }
 
    @SubscribeEvent
+   public static void onEntityJoin(EntityJoinLevelEvent event) {
+      if (event.getLevel().isClientSide) return;
+      Entity entity = event.getEntity();
+      ResourceLocation rl = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
+      if (rl != null && (rl.toString().equals("superbwarfare:tm_62") || rl.toString().equals("superbwarfare:claymore"))) {
+         ServerLevel serverLevel = (ServerLevel) event.getLevel();
+         WarfareWorldData data = WarfareWorldData.get(serverLevel);
+         if (data.markedVehicles.stream().anyMatch(v -> v.uuid.equals(entity.getUUID()))) return;
+         String team = "NEUTRAL";
+         if (entity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+            team = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+         } else {
+            Player owner = serverLevel.getNearestPlayer(entity, 10.0);
+            if (owner != null && owner.getTeam() != null) {
+               team = owner.getTeam().getName().toUpperCase();
+               entity.getPersistentData().putString("WARFARE_VehicleTeam", team);
+               entity.getPersistentData().putString("WARFARE_VehicleType", "Mine");
+            }
+         }
+         if (!team.equals("NEUTRAL")) {
+            data.markedVehicles.add(new WarfareWorldData.VehicleRecord(entity.getUUID(), team, "Mine", entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), null));
+            data.setDirty();
+            PacketHandler.sendToAllClients(serverLevel, data);
+         }
+      }
+   }
+
+   @SubscribeEvent
    public static void onPlayerChangeDimension(EntityTravelToDimensionEvent event) {
       if (event.getEntity() instanceof ServerPlayer player) {
          ServerLevel level = player.serverLevel();
@@ -1691,13 +1730,41 @@ public class GameLogicEvents {
                point.progress = 1.0F;
                point.owner = attackingTeam;
                PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketCaptureNotification(point.name, attackingTeam, false));
-               if (point.captureDeduction > 0) {
+
+               boolean isInvasion = "invasion".equals(data.gameMode);
+               if (isInvasion) {
+                  point.invLocked = true;
+                  // INVASION: attackers get captureBonus instead of captureDeduction
+                  int bonus = data.invasionCaptureBonus > 0 ? data.invasionCaptureBonus : 100;
+                  if (attackingTeam.equals("BLUE")) {
+                     data.blueTickets += bonus;
+                  } else {
+                     data.redTickets += bonus;
+                  }
+                  // Check if defender lost all points
+                  String defenderTeam = attackingTeam.equals("BLUE") ? "RED" : "BLUE";
+                  boolean defenderHasPoints = false;
+                  for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+                     if (cp.owner.equals(defenderTeam)) {
+                        defenderHasPoints = true;
+                        break;
+                     }
+                  }
+                  if (!defenderHasPoints) {
+                     // Defenders lost last point → lose all tickets
+                     if (defenderTeam.equals("BLUE")) {
+                        data.blueTickets = 0;
+                     } else {
+                        data.redTickets = 0;
+                     }
+                  }
+                  checkGameOver(level, data);
+               } else if (point.captureDeduction > 0) {
                   if (attackingTeam.equals("BLUE")) {
                      data.redTickets = data.redTickets - point.captureDeduction;
                   } else {
                      data.blueTickets = data.blueTickets - point.captureDeduction;
                   }
-
                   checkGameOver(level, data);
                }
 
@@ -1716,13 +1783,17 @@ public class GameLogicEvents {
          point.progress -= speedBoosted;
          if (point.progress <= 0.0F) {
             String oldOwnerName = point.owner;
-            if (point.owner.equals("BLUE")) {
-               data.blueTickets = data.blueTickets - point.ticketPenalty;
-            } else {
-               data.redTickets = data.redTickets - point.ticketPenalty;
+
+            // INVASION: no ticketPenalty on neutralization (only last-point check on capture)
+            if (!"invasion".equals(data.gameMode)) {
+               if (point.owner.equals("BLUE")) {
+                  data.blueTickets = data.blueTickets - point.ticketPenalty;
+               } else {
+                  data.redTickets = data.redTickets - point.ticketPenalty;
+               }
+               checkGameOver(level, data);
             }
 
-            checkGameOver(level, data);
             point.owner = "NEUTRAL";
             point.progress = 0.0F;
             point.capturingTeam = "NONE";
@@ -2048,11 +2119,12 @@ public class GameLogicEvents {
          data.currentMapImage,
          data.markedVehicles,
          data.hubs,
-         data.blueFaction,
-         data.redFaction,
-         bName,
-         rName,
-         data.isGameStarted,
+          data.blueFaction,
+          data.redFaction,
+          bName,
+          rName,
+          data.gameMode != null ? data.gameMode : "aas",
+          data.isGameStarted,
          data.capturePoints,
          data.blueSpawns,
          data.redSpawns,
@@ -2087,6 +2159,11 @@ public class GameLogicEvents {
    }
 
    private static boolean canCapture(WarfareWorldData.CapturePoint target, String team, WarfareWorldData data) {
+      // Invasion locked points cannot be recaptured by the former owner
+      if ("invasion".equals(data.gameMode) && target.invLocked && !team.equals(target.owner)) {
+         return false;
+      }
+
       int currentPriority = team.equals("BLUE") ? target.bluePriority : target.redPriority;
       if (currentPriority <= 1) {
          return true;

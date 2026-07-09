@@ -178,7 +178,7 @@ public class PacketSaveFactionKit {
       ctx.get().setPacketHandled(true);
    }
 
-   private static JsonObject nbtToJson(CompoundTag tag) {
+   public static JsonObject nbtToJson(CompoundTag tag) {
       if (tag == null || tag.isEmpty()) return null;
       JsonObject json = new JsonObject();
       for (String key : tag.getAllKeys()) {

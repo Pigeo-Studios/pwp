@@ -1,6 +1,10 @@
 package com.pigeostudios.pwp.warfare.block;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.FactionVehicleData;
 import com.pigeostudios.pwp.warfare.item.SupplyTruckMarkerItem;
 import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
 import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
@@ -43,23 +47,39 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
          VehicleSpawnerBlockEntity.this.setChanged();
       }
    };
-   public float vehicleYaw = 0.0F;
-   public int respawnTimeSettings = 60;
-   public int initialTimeSettings = 60;
-   public String vehicleIdString = "";
-   public long targetSpawnTick = 0L;
-   public boolean hasSpawnedOnce = false;
-   private UUID lastVehicleUUID = null;
+    public float vehicleYaw = 0.0F;
+    public int respawnTimeSettings = 60;
+    public int initialTimeSettings = 60;
+    public String vehicleIdString = "";
+    public String vehicleName = "";
+    public long targetSpawnTick = 0L;
+    public boolean hasSpawnedOnce = false;
+    private UUID lastVehicleUUID = null;
    private int loadTimer = 60;
 
    public VehicleSpawnerBlockEntity(BlockPos pos, BlockState state) {
       super((BlockEntityType)ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
    }
 
-   public void onLoad() {
-      super.onLoad();
-      this.loadTimer = 60;
-   }
+    public void onLoad() {
+       super.onLoad();
+       this.loadTimer = 60;
+    }
+
+    public void loadDefaultsFromFactionVehicle(FactionVehicleData veh) {
+       if (veh == null) return;
+       if (!veh.vehicleId.isEmpty()) this.vehicleIdString = veh.vehicleId;
+       this.vehicleYaw = veh.yaw;
+       this.respawnTimeSettings = veh.respawnTime;
+       this.initialTimeSettings = veh.initialTime;
+       for (int i = 0; i < 32 && i < veh.inventory.size(); i++) {
+          if (!veh.inventory.get(i).isEmpty()) {
+             this.inventory.setStackInSlot(i + 1, veh.inventory.get(i).copy());
+          }
+       }
+       this.setChanged();
+       syncToClient();
+    }
 
    // РўРёРє СЃРїР°СѓРЅРµСЂР°: СѓРїСЂР°РІР»СЏРµС‚ С‚Р°Р№РјРµСЂР°РјРё РІРѕР·СЂРѕР¶РґРµРЅРёСЏ Рё СЃРїР°СѓРЅРёС‚ С‚РµС…РЅРёРєСѓ
    public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
@@ -222,6 +242,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
       this.targetSpawnTick = tag.getLong("TargetSpawnTick");
       this.hasSpawnedOnce = tag.getBoolean("HasSpawnedOnce");
       this.vehicleIdString = tag.getString("VehicleID");
+      this.vehicleName = tag.getString("VehicleName");
       this.vehicleYaw = tag.getFloat("VehicleYaw");
       if (tag.hasUUID("LastVehicle")) {
          this.lastVehicleUUID = tag.getUUID("LastVehicle");
@@ -236,6 +257,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
       tag.putLong("TargetSpawnTick", this.targetSpawnTick);
       tag.putBoolean("HasSpawnedOnce", this.hasSpawnedOnce);
       tag.putString("VehicleID", this.vehicleIdString);
+      tag.putString("VehicleName", this.vehicleName);
       tag.putFloat("VehicleYaw", this.vehicleYaw);
       if (this.lastVehicleUUID != null) {
          tag.putUUID("LastVehicle", this.lastVehicleUUID);

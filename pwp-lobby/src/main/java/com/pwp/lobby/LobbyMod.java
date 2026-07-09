@@ -4,6 +4,7 @@ import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.PermissionHelper;
 import com.pwp.coreclient.network.OpenMatchListScreenPacket;
 import com.pwp.coreclient.network.OpenMatchScreenPacket;
+import com.pwp.coreclient.network.OpenModeVotePacket;
 import com.pwp.coreclient.network.OpenVotingScreenPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
@@ -26,12 +27,31 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Mod("pwp_lobby")
 public class LobbyMod {
 
     private static boolean isMatchServer = false;
+
+    // Mode voting state
+    private static boolean modeVoteActive = false;
+    private static boolean modeVoteFinished = false;
+    private static long modeVoteStartTime = 0;
+    private static int modeVoteDurationSec = 120;
+    private static final Map<UUID, String> modeVotes = new HashMap<>();
+    private static String modeVoteWinner = null;
+    private static String pendingMapName = null;
+    private static long modeVoteLastTimerBroadcast = 0;
+    private static int modeVoteLastBroadcastedRemaining = -1;
+
+    private static final String[] MODE_NAMES = {"aas", "invasion"};
+    private static final String[] MODE_DISPLAY_NAMES = {"Advance and Secure", "INVASION"};
+    private static final String[] MODE_DESCRIPTIONS = {
+        "Обе команды на равных. Захватывайте точки в порядке очереди, чтобы обнулить тикеты противника. Есть ticket bleed — команда без точек теряет тикеты.",
+        "Одна команда защищает все точки, вторая штурмует. Захваченные точки блокируются. Нет ticket bleed. Атакующие получают +100 билетов за захват, защитники теряют всё при потере последней точки."
+    };
 
     public LobbyMod() {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
@@ -70,6 +90,7 @@ public class LobbyMod {
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) return;
         VotingManager.tick();
+        tickModeVote();
         MatchAllocator.tick();
 
         if (++heartbeatTicks >= 600) {
@@ -229,14 +250,20 @@ public class LobbyMod {
         }
 
         if (VotingManager.isActive()) {
-            serverBroadcast("§7[PWP] Идёт голосование! §e/votemap §7<карта> — осталось §e" + VotingManager.getRemainingSeconds() + "с");
+            serverBroadcast("§7[PWP] Идёт голосование за карту! §e/votemap §7<карта> — осталось §e" + VotingManager.getRemainingSeconds() + "с");
             OpenVotingScreenPacket pkt = buildVotingPacket();
+            if (pkt != null) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
+            }
+        } else if (modeVoteActive) {
+            serverBroadcast("§7[PWP] Идёт голосование за режим! §e/votemode §7<aas/invasion> — осталось §e" + getModeVoteRemainingSeconds() + "с");
+            OpenModeVotePacket pkt = buildModeVotePacket();
             if (pkt != null) {
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
             }
         }
 
-        if (!MatchAllocator.hasActiveMatch() && !VotingManager.isActive()) {
+        if (!MatchAllocator.hasActiveMatch() && !VotingManager.isActive() && !modeVoteActive) {
             VotingManager.startVoting();
         }
     }
@@ -345,46 +372,26 @@ public class LobbyMod {
                 }))
             .executes(ctx -> {
                 ServerPlayer player = ctx.getSource().getPlayerOrException();
-                MatchInfo mi = MatchAllocator.getActiveMatch();
-                int online = MatchAllocator.getLobbyPlayerCount();
 
-                String status;
-                boolean canJoin = false;
-                int remainingSec = 0;
-                if (mi != null) {
-                    switch (mi.phase) {
-                        case STARTING: status = "STARTING"; break;
-                        case PLAYING: status = "PLAYING"; canJoin = true; break;
-                        default: status = "NONE";
+                if (modeVoteActive) {
+                    OpenModeVotePacket mvPkt = buildModeVotePacket();
+                    if (mvPkt != null) {
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), mvPkt);
                     }
                 } else if (VotingManager.isActive()) {
-                    status = "VOTING";
-                    remainingSec = VotingManager.getRemainingSeconds();
+                    OpenVotingScreenPacket vPkt = buildVotingPacket();
+                    if (vPkt != null) {
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), vPkt);
+                    }
+                } else if (MatchAllocator.hasActiveMatch()) {
+                    sendMatchListToPlayer(player);
                 } else {
-                    status = "NONE";
+                    VotingManager.startVoting();
+                    OpenVotingScreenPacket vPkt = buildVotingPacket();
+                    if (vPkt != null) {
+                        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), vPkt);
+                    }
                 }
-
-                String firstMap = "grozny";
-                MapConfig cfg = MapRegistry.get(firstMap);
-                if (cfg == null) cfg = MapRegistry.getVotable().isEmpty() ? null : MapRegistry.getVotable().get(0);
-
-                String mapDisplayName = mi != null ? mi.displayName : (cfg != null ? cfg.displayName : "Grozny");
-                String modeDisplayName = mi != null ? mi.modeDisplayName : (cfg != null ? cfg.modeDisplayName : "AAS");
-                String blueFaction = mi != null ? mi.blueFaction : (cfg != null ? cfg.teams.BLUE.faction : "russia");
-                String redFaction = mi != null ? mi.redFaction : (cfg != null ? cfg.teams.RED.faction : "insurgency");
-                int blueTickets = mi != null ? mi.blueTickets : (cfg != null ? cfg.teams.BLUE.tickets : 600);
-                int redTickets = mi != null ? mi.redTickets : (cfg != null ? cfg.teams.RED.tickets : 600);
-
-                OpenMatchScreenPacket pkt = new OpenMatchScreenPacket(
-                        mapDisplayName, modeDisplayName,
-                        blueFaction, redFaction,
-                        blueTickets, redTickets,
-                        remainingSec, status, online, canJoin);
-
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.PLAYER.with(() -> player),
-                        pkt);
-
                 return Command.SINGLE_SUCCESS;
             }));
 
@@ -412,6 +419,26 @@ public class LobbyMod {
                         return 0;
                     }
                     ctx.getSource().sendSuccess(() -> Component.literal("§aVoted for " + mapName), false);
+                    return Command.SINGLE_SUCCESS;
+                })));
+
+        dispatcher.register(Commands.literal("votemode")
+            .then(Commands.argument("mode", com.mojang.brigadier.arguments.StringArgumentType.word())
+                .suggests((ctx, builder) -> {
+                    for (String m : MODE_NAMES) {
+                        builder.suggest(m);
+                    }
+                    return builder.buildFuture();
+                })
+                .executes(ctx -> {
+                    String modeName = ctx.getArgument("mode", String.class);
+                    if (!modeVoteActive) {
+                        ctx.getSource().sendFailure(Component.literal("No active mode voting"));
+                        return 0;
+                    }
+                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    voteMode(player.getUUID(), modeName);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§aVoted for " + modeName), false);
                     return Command.SINGLE_SUCCESS;
                 })));
     }
@@ -493,6 +520,172 @@ public class LobbyMod {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
-        MatchAllocator.startMatch(map);
+        pendingMapName = mapName;
+        startModeVoting();
+    }
+
+    // ====== MODE VOTING ======
+
+    public static void startModeVoting() {
+        if (MatchAllocator.hasActiveMatch()) {
+            return;
+        }
+        if (pendingMapName == null) return;
+
+        modeVoteActive = true;
+        modeVoteFinished = false;
+        modeVoteWinner = null;
+        modeVotes.clear();
+        modeVoteStartTime = System.currentTimeMillis();
+        modeVoteLastTimerBroadcast = 0;
+        modeVoteLastBroadcastedRemaining = -1;
+
+        String modeList = String.join("§7, §e", MODE_DISPLAY_NAMES);
+        serverBroadcast("§e[PWP] §fГолосование за режим! §7Режимы: §e" + modeList);
+        serverBroadcast("§7Напишите §e/votemode <название> §7чтобы проголосовать");
+        broadcastModeVoteUpdate();
+    }
+
+    public static void voteMode(UUID playerUuid, String modeName) {
+        if (!modeVoteActive || modeVoteFinished) return;
+        boolean valid = false;
+        for (String m : MODE_NAMES) {
+            if (m.equals(modeName)) { valid = true; break; }
+        }
+        if (!valid) return;
+        String current = modeVotes.get(playerUuid);
+        if (modeName.equals(current)) return;
+        modeVotes.put(playerUuid, modeName);
+        broadcastModeVoteUpdate();
+    }
+
+    private static void tickModeVote() {
+        if (!modeVoteActive || modeVoteFinished) return;
+        long now = System.currentTimeMillis();
+        long elapsed = now - modeVoteStartTime;
+        int remaining = modeVoteDurationSec - (int)(elapsed / 1000);
+
+        if (remaining != modeVoteLastBroadcastedRemaining && now - modeVoteLastTimerBroadcast > 1000) {
+            if (remaining <= 5 || remaining == 10 || remaining == 15 || remaining == 30 || remaining == 60 || (remaining <= 120 && remaining % 60 == 0)) {
+                if (remaining > 0) {
+                    serverBroadcast("§e[PWP] §fГолосование за режим закончится через §e" + remaining + "с");
+                }
+                modeVoteLastTimerBroadcast = now;
+                modeVoteLastBroadcastedRemaining = remaining;
+            }
+        }
+
+        if (elapsed >= modeVoteDurationSec * 1000L) {
+            finishModeVote();
+        }
+    }
+
+    private static void finishModeVote() {
+        if (modeVoteFinished) return;
+        modeVoteFinished = true;
+        modeVoteActive = false;
+
+        Map<String, Integer> counts = new HashMap<>();
+        for (String vote : modeVotes.values()) {
+            counts.merge(vote, 1, Integer::sum);
+        }
+
+        if (!counts.isEmpty()) {
+            String results = counts.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .map(e -> "§e" + e.getKey() + " §7(" + e.getValue() + "гол.)")
+                    .collect(Collectors.joining(" §8| "));
+            serverBroadcast("§e[PWP] §fРезультаты голосования за режим: " + results);
+        }
+
+        modeVoteWinner = counts.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("aas");
+
+        serverBroadcast("§e[PWP] §aРежим: §e" + modeVoteWinner.toUpperCase() + " §a— запуск матча!");
+
+        if (pendingMapName != null) {
+            MapConfig map = MapRegistry.get(pendingMapName);
+            if (map != null) {
+                // Randomize factions
+                String blueFaction, redFaction;
+                List<String> available = (map.availableFactions != null && !map.availableFactions.isEmpty())
+                        ? new ArrayList<>(map.availableFactions)
+                        : new ArrayList<>(Arrays.asList("ukraine", "russia", "usa", "nato", "insurgency", "pmc"));
+                if (available.size() < 2) {
+                    blueFaction = "usa";
+                    redFaction = "russia";
+                } else {
+                    Collections.shuffle(available);
+                    blueFaction = available.get(0);
+                    redFaction = available.get(1);
+                }
+
+                boolean isInvasion = modeVoteWinner.equals("invasion");
+                boolean invasionDefenderIsRed = true;
+                if (isInvasion) {
+                    invasionDefenderIsRed = new Random().nextBoolean();
+                }
+
+                // Resolve tickets per mode
+                int blueTickets = map.teams.BLUE.tickets;
+                int redTickets = map.teams.RED.tickets;
+                if (isInvasion && map.modes != null && map.modes.containsKey("invasion")) {
+                    MapConfig.ModeConfig invConfig = map.modes.get("invasion");
+                    if (invasionDefenderIsRed) {
+                        blueTickets = invConfig.attackerTickets;
+                        redTickets = invConfig.defenderTickets;
+                    } else {
+                        blueTickets = invConfig.defenderTickets;
+                        redTickets = invConfig.attackerTickets;
+                    }
+                }
+
+                // Randomize capture point pattern
+                int patternIndex = -1;
+                if (map.capturePointPatterns != null && !map.capturePointPatterns.isEmpty()) {
+                    patternIndex = new Random().nextInt(map.capturePointPatterns.size());
+                    serverBroadcast("§7[PWP] Выбран паттерн точек: §e" + map.capturePointPatterns.get(patternIndex).name);
+                }
+
+                MatchAllocator.startMatch(map, blueFaction, redFaction, modeVoteWinner, blueTickets, redTickets, invasionDefenderIsRed, patternIndex);
+            }
+        }
+
+        pendingMapName = null;
+        modeVotes.clear();
+    }
+
+    private static OpenModeVotePacket buildModeVotePacket() {
+        if (!modeVoteActive) return null;
+        int len = MODE_NAMES.length;
+        int[] voteCounts = new int[len];
+        for (int i = 0; i < len; i++) {
+            String mn = MODE_NAMES[i];
+            voteCounts[i] = (int) modeVotes.values().stream().filter(v -> v.equals(mn)).count();
+        }
+        return new OpenModeVotePacket(
+                getModeVoteRemainingSeconds(),
+                MatchAllocator.getLobbyPlayerCount(),
+                modeVotes.size(),
+                MODE_NAMES, MODE_DISPLAY_NAMES, MODE_DESCRIPTIONS,
+                voteCounts);
+    }
+
+    private static int getModeVoteRemainingSeconds() {
+        if (!modeVoteActive) return 0;
+        long elapsed = System.currentTimeMillis() - modeVoteStartTime;
+        int remaining = modeVoteDurationSec - (int)(elapsed / 1000);
+        return Math.max(0, remaining);
+    }
+
+    public static void broadcastModeVoteUpdate() {
+        OpenModeVotePacket pkt = buildModeVotePacket();
+        if (pkt == null) return;
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.getPlayerList().getPlayers().forEach(p ->
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
     }
 }

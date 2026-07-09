@@ -173,6 +173,48 @@ public class CoreAPI {
         return post("/api/v1/kits/faction/" + faction.toLowerCase() + "/bulk", kits);
     }
 
+    // ====== FACTION VEHICLES ======
+    public static JsonObject getFactionVehicles(String faction) {
+        return get("/api/v1/factions/" + faction.toLowerCase() + "/vehicles");
+    }
+
+    public static JsonObject getFactionVehicle(String faction, String vehicleName) {
+        return get("/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName);
+    }
+
+    public static JsonObject saveFactionVehicle(String faction, String vehicleName, JsonObject data) {
+        return put("/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName, data);
+    }
+
+    public static JsonObject deleteFactionVehicle(String faction, String vehicleName) {
+        HttpURLConnection conn = null;
+        try {
+            URI uri = new URI(baseUrl + "/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName);
+            conn = (HttpURLConnection) uri.toURL().openConnection();
+            conn.setRequestMethod("DELETE");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            int code = conn.getResponseCode();
+            if (code == 200 || code == 201) {
+                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                try (InputStream is = conn.getInputStream()) {
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = is.read(buf)) != -1) buffer.write(buf, 0, n);
+                }
+                conn.disconnect();
+                return GSON.fromJson(buffer.toString(StandardCharsets.UTF_8.name()), JsonObject.class);
+            }
+            conn.disconnect();
+        } catch (Exception e) {
+            log.warn("Core API delete failed: {}", e.getMessage());
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return null;
+    }
+
     // ====== VOICE MUTE ======
     public static JsonObject voiceMute(String uuid, String mutedByUuid, String mutedByNickname,
                                         String reason, int durationMinutes) {
