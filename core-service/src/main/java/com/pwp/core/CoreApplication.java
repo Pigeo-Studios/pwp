@@ -39,7 +39,7 @@ public class CoreApplication {
 
         app.before("/api/*", ctx -> AuthMiddleware.handle(ctx, config.api));
 
-        app.get("/api/v1/health", ctx -> ctx.json("{\"status\":\"ok\"}"));
+        app.get("/api/v1/health", ctx -> ctx.json(java.util.Map.of("status", "ok")));
 
         new PlayerController(app, config);
         new CurrencyController(app);
@@ -58,6 +58,9 @@ public class CoreApplication {
         new AuthController(app, config);
         new AdminController(app);
         new NetworkController(app);
+        new LauncherController(app);
+        new HWIDBanController(app);
+        new SecurityController(app, config);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutting down Core Service...");
@@ -117,6 +120,19 @@ public class CoreApplication {
         public DatabaseConfig database = new DatabaseConfig();
         public ApiConfig api = new ApiConfig();
         public LoggingConfig logging = new LoggingConfig();
+        public LauncherConfig launcher = new LauncherConfig();
+
+        public String getLauncherSecret() {
+            if (launcher != null && launcher.secret != null && !launcher.secret.isEmpty())
+                return launcher.secret;
+            return "pwp_launcher_default_secret_change_me";
+        }
+    }
+
+    public static class LauncherConfig {
+        public String filesDir = "C:/Users/maska/OneDrive/Desktop/SERVER";
+        public String downloadBaseUrl = "/launcher/files";
+        public String secret = "pwp_launcher_secret_2024";
     }
 
     public static class ServerConfig {

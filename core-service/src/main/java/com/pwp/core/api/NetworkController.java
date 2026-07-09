@@ -1,7 +1,6 @@
 package com.pwp.core.api;
 
 import com.pwp.core.CoreApplication;
-import com.pwp.core.db.AccountRepository;
 import com.pwp.core.db.PlayerRepository;
 import com.pwp.core.model.ApiResponse;
 import com.pwp.core.model.PlayerProfile;
@@ -28,7 +27,7 @@ public class NetworkController {
                 ctx.json(ApiResponse.error("server name required"));
                 return;
             }
-            heartbeats.put(req.server, new ServerHeartbeat(req.server, req.online, System.currentTimeMillis()));
+            heartbeats.put(req.server, new ServerHeartbeat(req.server, req.online, req.ip, req.port, System.currentTimeMillis()));
             int total = currentTotalOnline();
             if (total > recordOnline) {
                 recordOnline = total;
@@ -47,13 +46,20 @@ public class NetworkController {
             services.put("launcher", false);
             services.put("telegram", false);
             services.put("discord", false);
+            List<Map<String, Object>> serverList = new ArrayList<>();
             for (ServerHeartbeat h : heartbeats.values()) {
                 if (System.currentTimeMillis() - h.lastSeen < 120_000) {
                     services.put(h.server, true);
+                    Map<String, Object> srv = new HashMap<>();
+                    srv.put("name", h.server);
+                    srv.put("online", h.online);
+                    srv.put("ip", h.ip != null ? h.ip : "");
+                    srv.put("port", h.port > 0 ? h.port : 0);
+                    serverList.add(srv);
                 }
             }
-
             Map<String, Object> data = new LinkedHashMap<>();
+            data.put("servers", serverList);
             data.put("online", totalOnline);
             data.put("uptime", uptime);
             data.put("version", CoreApplication.projectVersion);
@@ -62,7 +68,7 @@ public class NetworkController {
         });
 
         app.get("/api/v1/network/statistics", ctx -> {
-            int accounts = AccountRepository.count();
+            int accounts = PlayerRepository.countAccounts();
             int todayPlayers = 0;
             long playtimeHours = 0;
             long totalKills = 0;
@@ -127,7 +133,7 @@ public class NetworkController {
             int after = parseInt(ctx.queryParam("after"), 0);
             String action = ctx.queryParam("action");
             try {
-                var logs = AccountRepository.getLogsAfter(after, action, Math.min(limit, 100));
+                var logs = PlayerRepository.getLogs(Math.min(limit, 100), after);
                 ctx.json(ApiResponse.ok(logs));
             } catch (SQLException e) {
                 ctx.json(ApiResponse.error("db error"));
@@ -158,14 +164,18 @@ public class NetworkController {
     public static class HeartbeatReq {
         public String server;
         public int online;
+        public String ip;
+        public int port;
     }
 
     private static class ServerHeartbeat {
         final String server;
         final int online;
+        final String ip;
+        final int port;
         final long lastSeen;
-        ServerHeartbeat(String server, int online, long lastSeen) {
-            this.server = server; this.online = online; this.lastSeen = lastSeen;
+        ServerHeartbeat(String server, int online, String ip, int port, long lastSeen) {
+            this.server = server; this.online = online; this.ip = ip; this.port = port; this.lastSeen = lastSeen;
         }
     }
 }

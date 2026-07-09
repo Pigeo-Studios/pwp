@@ -24,9 +24,18 @@ async def process_commands():
                 data = json.loads(f.read_text(encoding="utf-8"))
                 action = data.get("action")
                 if action == "send":
-                    await app.bot.send_message(chat_id=int(data["chat_id"]), text=data["text"])
+                    await app.bot.send_message(chat_id=int(data["chat_id"]), text=data["text"], parse_mode="HTML")
                 elif action == "send_photo":
                     await app.bot.send_photo(chat_id=int(data["chat_id"]), photo=data["url"], caption=data.get("text"))
+                elif action == "send_keyboard":
+                    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+                    kb = InlineKeyboardMarkup([
+                        [InlineKeyboardButton(btn["text"], callback_data=btn["callback_data"])
+                         for btn in row]
+                        for row in data["keyboard"]
+                    ])
+                    await app.bot.send_message(chat_id=int(data["chat_id"]), text=data["text"],
+                                               parse_mode="HTML", reply_markup=kb)
                 f.unlink()
             except Exception as e:
                 print(f"[TG] cmd error: {e}")

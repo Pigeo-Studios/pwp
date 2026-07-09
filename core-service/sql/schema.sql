@@ -417,3 +417,26 @@ CREATE INDEX idx_combat_log_victim ON combat_log(victim_uuid);
 CREATE INDEX idx_player_achievements_completed ON player_achievements(uuid, completed);
 CREATE INDEX idx_player_ranks_player ON player_ranks(uuid);
 CREATE INDEX idx_player_season ON player_season_progress(uuid, season_id);
+
+-- ============================================================
+-- 9. IP ВЕРИФИКАЦИЯ
+-- ============================================================
+CREATE TABLE ip_confirmations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    player_uuid VARCHAR(36) NOT NULL,
+    new_ip VARCHAR(45) NOT NULL,
+    status ENUM('pending','allowed','denied') NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    responded_at DATETIME NULL,
+    FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE
+);
+
+CREATE TABLE ip_blocks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip VARCHAR(45) NOT NULL,
+    blocked_until DATETIME NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ip_conf_player ON ip_confirmations(player_uuid, status);
+CREATE INDEX idx_ip_blocks_ip ON ip_blocks(ip, blocked_until);

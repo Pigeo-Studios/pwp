@@ -1,29 +1,35 @@
 {
-    "server": {
-        "port": 8080,
-        "host": "0.0.0.0"
-    },
-    "database": {
-        "host": "127.0.0.1",
-        "port": 3306,
-        "name": "pwp_core",
-        "user": "root",
-        "password": "",
-        "poolSize": 10,
-        "maxLifetimeMs": 1800000
-    },
-    "api": {
-        "keys": [
-            "pwp_server_key_change_me"
-        ],
-        "rateLimitPerMinute": 100,
-        "rateLimitPerMinuteAdmin": 10,
-        "rateLimitBypassKeys": [
-            "pwp_server_key_change_me"
-        ]
-    },
-    "logging": {
-        "level": "INFO",
-        "file": "logs/core-service.log"
-    }
+    "server":  {
+                   "port":  8080,
+                   "host":  "0.0.0.0"
+               },
+    "database":  {
+                     "host":  "127.0.0.1",
+                     "port":  3306,
+                     "name":  "pwp_core",
+                     "user":  "root",
+                     "password":  "",
+                     "poolSize":  10,
+                     "maxLifetimeMs":  1800000
+                 },
+    "api":  {
+                "keys":  [
+                             "RUhL8HO9bBAoaG1NDpCc57W6tuSkwvKVsPingEmer2QTdZ3zFlxjXyYq0fMIJ4"
+                         ],
+                "rateLimitPerMinute":  100,
+                "rateLimitPerMinuteAdmin":  10,
+                "rateLimitBypassKeys":  [
+
+                                        ]
+            },
+    "launcher":  {
+                     "filesDir":  "C:/Users/maska/OneDrive/Desktop/launcherfiles",
+                     "downloadBaseUrl":  "/launcher/files",
+                     "secret":  "pwp_launcher_secret_2024"
+                 },
+    "logging":  {
+                    "level":  "INFO",
+                    "file":  "logs/core-service.log"
+                }
 }
+

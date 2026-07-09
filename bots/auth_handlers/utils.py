@@ -1,6 +1,19 @@
 import config
+import hashlib
+import hmac
+import time
 from telegram import Update
 from telegram.ext import ContextTypes
+
+LAUNCHER_SECRET = b"pwp_launcher_secret_2024"
+
+def launcher_sign(path):
+    ts = str(int(time.time() * 1000))
+    # Strip query params from path for signing
+    clean_path = path.split("?")[0]
+    data = (ts + ":" + clean_path).encode()
+    sig = hmac.new(LAUNCHER_SECRET, data, hashlib.sha256).hexdigest()
+    return f"{ts}:{sig}"
 
 async def safe_edit(msg, text, **kwargs):
     try:
@@ -34,6 +47,7 @@ async def api_call(endpoint, data=None, method="POST", extra_headers=None):
     import httpx
     url = f"{config.CORE_API_URL}{endpoint}"
     headers = {"Authorization": f"Bearer {config.CORE_API_KEY}", "Content-Type": "application/json"}
+    headers["X-PWP-Sign"] = launcher_sign(endpoint)
     if extra_headers:
         headers.update(extra_headers)
     async with httpx.AsyncClient(timeout=10) as client:

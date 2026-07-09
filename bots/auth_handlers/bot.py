@@ -11,6 +11,16 @@ class ScreenRouter:
     def register(self, s: Screen):
         self._screens[s.name] = s
     def get(self, name: str) -> Screen | None:
+        if not name:
+            return None
+        if name.startswith("reg_"):
+            return self._screens.get("reg_login")
+        if name.startswith("security_"):
+            return self._screens.get("security")
+        if name.startswith("admin_"):
+            return self._screens.get("admin")
+        if name.startswith("pass_") or name.startswith("login_") or name.startswith("reset_"):
+            return self._screens.get("account")
         return self._screens.get(name)
 from .screens.main import MainScreen
 from .screens.privacy import PrivacyScreen
@@ -176,6 +186,19 @@ async def _callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     msg = q.message
     ctx.last_msg = msg
 
+    # ── IP confirmation callbacks ──────────────────
+    if data.startswith("ip_confirm_"):
+        parts = data.split("_")
+        confirm_id = parts[2]
+        action = parts[3]  # allow / deny
+        resp = api_call("POST", "/api/v1/auth/confirm-ip",
+                        {"confirmId": int(confirm_id), "action": action})
+        if action == "allow":
+            await q.edit_message_text("\u2705 IP подтвержд\u0451н. Игрок может зайти.")
+        else:
+            await q.edit_message_text("\u274C IP отклон\u0451н, заблокирован на 1 час.")
+        return
+
     # ── Navigation actions ─────────────────────────
     if data == NAV_BACK:
         screen = router.get(session.state.value)
@@ -203,6 +226,8 @@ async def _callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     current = router.get(session.state.value)
     if current:
         result = current.on_callback(data, session, ctx)
+        if hasattr(result, '__await__'):
+            result = await result
         await _handle_result(result, session, ctx, msg)
 
 async def _handle_result(result, session, ctx, msg):
@@ -217,8 +242,15 @@ async def _handle_result(result, session, ctx, msg):
             await safe_edit(msg, text, parse_mode="HTML")
             await _navigate(second, session, ctx, msg)
         else:
-            mk = __import__('telegram').InlineKeyboardMarkup(second) if second else None
-            await safe_edit(msg, text, parse_mode="HTML", reply_markup=mk)
+            try:
+                # Ensure keyboard is list of lists (wrap single rows)
+                if second and not isinstance(second[0], (list, tuple)):
+                    second = [second]
+                mk = __import__('telegram').InlineKeyboardMarkup(second) if second else None
+                await safe_edit(msg, text, parse_mode="HTML", reply_markup=mk)
+            except Exception as e:
+                print(f"[BOT] invalid keyboard: {e}")
+                await safe_edit(msg, text, parse_mode="HTML")
 
 # ── Text dispatcher ───────────────────────────────
 
@@ -254,4 +286,6 @@ async def _message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             msg = await update.message.reply_text("⚙️")
             session.panel_id = msg.message_id
         result = current.on_text(text, session, ctx)
+        if hasattr(result, '__await__'):
+            result = await result
         await _handle_result(result, session, ctx, msg)

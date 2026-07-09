@@ -36,12 +36,12 @@ class PrivacyScreen(Screen):
         session.state = State.PRIVACY
         return TEXT, [row(btn("📜 Читать политику", "privacy:read"), btn("✅ Принимаю", "privacy:accept"))]
 
-    def on_callback(self, data, session, ctx):
+    async def on_callback(self, data, session, ctx):
         if data == "privacy:read":
             return FULL, [row(btn("✅ Принимаю", "privacy:accept"), btn("⬅ Назад", "screen:privacy")),
                           row(btn("❌ Отмена", NAV_CANCEL))]
         if data == "privacy:accept":
-            return self._accept(session, ctx)
+            return await self._accept(session, ctx)
         return None
 
     async def _accept(self, session, ctx):

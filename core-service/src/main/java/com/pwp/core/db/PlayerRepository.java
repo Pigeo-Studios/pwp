@@ -4,7 +4,9 @@ import com.pwp.core.model.*;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.security.SecureRandom;
 
 public class PlayerRepository {
@@ -123,26 +125,27 @@ public class PlayerRepository {
         }
     }
 
+    private static final Map<String, String> ORDER_BY_COLUMNS = Map.ofEntries(
+        Map.entry("kills", "ps.kills"),
+        Map.entry("deaths", "ps.deaths"),
+        Map.entry("wins", "ps.wins"),
+        Map.entry("winrate", "(ps.wins / GREATEST(ps.wins + ps.losses, 1))"),
+        Map.entry("playtime", "ps.playtime_seconds"),
+        Map.entry("kd", "(ps.kills / GREATEST(ps.deaths, 1))"),
+        Map.entry("vehicle_kills", "ps.vehicle_kills"),
+        Map.entry("captures", "ps.captures"),
+        Map.entry("damage", "ps.damage_dealt"),
+        Map.entry("healing", "ps.healing_done"),
+        Map.entry("vehicles_destroyed", "ps.vehicles_destroyed"),
+        Map.entry("air_destroyed", "ps.air_vehicles_destroyed"),
+        Map.entry("headshots", "ps.headshots"),
+        Map.entry("score", "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)"),
+        Map.entry("level", "px.level"),
+        Map.entry("prestige", "px.prestige")
+    );
+
     public static List<PlayerProfile> getLeaderboard(String orderBy, int limit, int offset) throws SQLException {
-        String column = switch (orderBy) {
-            case "kills" -> "ps.kills";
-            case "deaths" -> "ps.deaths";
-            case "wins" -> "ps.wins";
-            case "winrate" -> "(ps.wins / GREATEST(ps.wins + ps.losses, 1))";
-            case "playtime" -> "ps.playtime_seconds";
-            case "kd" -> "(ps.kills / GREATEST(ps.deaths, 1))";
-            case "vehicle_kills" -> "ps.vehicle_kills";
-            case "captures" -> "ps.captures";
-            case "damage" -> "ps.damage_dealt";
-            case "healing" -> "ps.healing_done";
-            case "vehicles_destroyed" -> "ps.vehicles_destroyed";
-            case "air_destroyed" -> "ps.air_vehicles_destroyed";
-            case "headshots" -> "ps.headshots";
-            case "score" -> "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)";
-            case "level" -> "px.level";
-            case "prestige" -> "px.prestige";
-            default -> "ps.kills";
-        };
+        String column = ORDER_BY_COLUMNS.getOrDefault(orderBy, "ps.kills");
         String sql = "SELECT p.uuid, p.nickname, ps.kills, ps.deaths, ps.wins, ps.losses, " +
                 "ps.playtime_seconds, ps.vehicle_kills, ps.captures, ps.damage_dealt, ps.healing_done, " +
                 "ps.vehicles_destroyed, ps.air_vehicles_destroyed, " +
@@ -345,10 +348,10 @@ public class PlayerRepository {
         }
     }
 
-    // ── Sessions ─────────────────────────────────────
+    // ── Sessions (v1) ────────────────────────────────
 
     public static void createSession(String playerUuid, String token, String ip) throws SQLException {
-        String sql = "INSERT INTO sessions (player_uuid, token, ip, expires_at) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 24 HOUR))";
+        String sql = "INSERT INTO sessions (player_uuid, token, ip, expires_at) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, playerUuid);
@@ -377,6 +380,96 @@ public class PlayerRepository {
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, token);
+            ps.executeUpdate();
+        }
+    }
+
+    // ── Sessions (v2: access/refresh tokens) ─────────
+    private static final SecureRandom SESSION_RNG = new SecureRandom();
+
+    public static String generateSessionKey() {
+        byte[] key = new byte[32];
+        SESSION_RNG.nextBytes(key);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(key);
+    }
+
+    public static String generateTokenPart() {
+        byte[] bytes = new byte[48];
+        SESSION_RNG.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    public static void createSessionV2(String playerUuid, String accessToken, String refreshToken, String sessionKey, String ip) throws SQLException {
+        String sql = "INSERT INTO sessions (player_uuid, token, access_token, refresh_token, session_key, ip, expires_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY))";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
+            ps.setString(2, accessToken); // token column for backward compat
+            ps.setString(3, accessToken);
+            ps.setString(4, refreshToken);
+            ps.setString(5, sessionKey);
+            ps.setString(6, ip);
+            ps.executeUpdate();
+        }
+    }
+
+    public static String findUuidByAccessToken(String accessToken) throws SQLException {
+        String sql = "SELECT s.player_uuid, p.is_banned FROM sessions s JOIN players p ON s.player_uuid = p.uuid "
+                    + "WHERE s.access_token = ? AND s.expires_at > CURRENT_TIMESTAMP";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, accessToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && !rs.getBoolean("is_banned")) {
+                    return rs.getString("player_uuid");
+                }
+            }
+        }
+        return null;
+    }
+
+    public static String findSessionKeyByAccessToken(String accessToken) throws SQLException {
+        String sql = "SELECT session_key FROM sessions WHERE access_token = ? AND expires_at > CURRENT_TIMESTAMP";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, accessToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("session_key");
+            }
+        }
+        return null;
+    }
+
+    public static boolean refreshSession(String refreshToken, String newAccessToken, String newRefreshToken, String newSessionKey) throws SQLException {
+        String sql = "UPDATE sessions SET access_token = ?, refresh_token = ?, session_key = ?, "
+                    + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) "
+                    + "WHERE refresh_token = ? AND expires_at > CURRENT_TIMESTAMP";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, newAccessToken);
+            ps.setString(2, newRefreshToken);
+            ps.setString(3, newSessionKey);
+            ps.setString(4, refreshToken);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public static boolean updateHeartbeat(String accessToken) throws SQLException {
+        String sql = "UPDATE sessions SET last_heartbeat = CURRENT_TIMESTAMP, "
+                    + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) WHERE access_token = ? AND expires_at > CURRENT_TIMESTAMP";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, accessToken);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public static void deleteSessionsByUuid(String playerUuid) throws SQLException {
+        String sql = "DELETE FROM sessions WHERE player_uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, playerUuid);
             ps.executeUpdate();
         }
     }
@@ -558,24 +651,7 @@ public class PlayerRepository {
     }
 
     public static int getPlayerRank(String uuid, String orderBy) throws SQLException {
-        String column = switch (orderBy) {
-            case "kills" -> "ps.kills";
-            case "deaths" -> "ps.deaths";
-            case "wins" -> "ps.wins";
-            case "winrate" -> "(ps.wins / GREATEST(ps.wins + ps.losses, 1))";
-            case "playtime" -> "ps.playtime_seconds";
-            case "kd" -> "(ps.kills / GREATEST(ps.deaths, 1))";
-            case "vehicle_kills" -> "ps.vehicle_kills";
-            case "captures" -> "ps.captures";
-            case "damage" -> "ps.damage_dealt";
-            case "healing" -> "ps.healing_done";
-            case "vehicles_destroyed" -> "ps.vehicles_destroyed";
-            case "air_destroyed" -> "ps.air_vehicles_destroyed";
-            case "headshots" -> "ps.headshots";
-            case "score" -> "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)";
-            case "level" -> "px.level";
-            default -> "ps.kills";
-        };
+        String column = ORDER_BY_COLUMNS.getOrDefault(orderBy, "ps.kills");
         String sql = "SELECT 1 + COUNT(*) AS rank FROM player_stats ps "
                 + "JOIN player_xp px ON ps.uuid = px.uuid "
                 + "WHERE " + column + " > (SELECT " + column + " FROM player_stats WHERE uuid = ?)";

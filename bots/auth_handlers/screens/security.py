@@ -11,12 +11,12 @@ class SecurityScreen(Screen):
         return ("🛡 <b>Безопасность</b>",
                 [row(btn("🛡 2FA", "security:2fa")), back_kb().inline_keyboard[0]])
 
-    def on_callback(self, data, session, ctx):
+    async def on_callback(self, data, session, ctx):
         if data == "security:2fa":
             session.state = State.SECURITY_2FA
             return self._show_2fa(session)
         if data == "security:2fa_toggle":
-            return self._toggle_2fa(session, ctx)
+            return await self._toggle_2fa(session, ctx)
         return None
 
     def _show_2fa(self, session):

@@ -5,7 +5,10 @@ import com.pwp.core.db.*;
 import com.pwp.core.model.*;
 import io.javalin.Javalin;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
+import java.util.Base64;
 
 public class DonationController {
 
@@ -13,14 +16,14 @@ public class DonationController {
         app.post("/api/v1/donate/process", ctx -> {
             DonateRequest req = ctx.bodyAsClass(DonateRequest.class);
 
-            // Validate signature (simple HMAC-like check using API keys)
+            // Validate signature (HMAC-SHA256)
             if (req.signature == null || req.signature.isEmpty()) {
                 ctx.json(ApiResponse.error("missing signature"));
                 return;
             }
             boolean sigValid = false;
             for (String key : CoreApplication.config.api.keys) {
-                String expected = hash(req.uuid + req.itemId + req.amount + req.currency + key);
+                String expected = hmacSha256(req.uuid + req.itemId + req.amount + req.currency, key);
                 if (expected.equals(req.signature)) {
                     sigValid = true;
                     break;
@@ -72,11 +75,15 @@ public class DonationController {
         });
     }
 
-    private static String hash(String input) {
-        // Simple hash for donation signature validation
-        // In production, replace with HMAC-SHA256
-        int h = input.hashCode();
-        return Integer.toHexString(h);
+    private static String hmacSha256(String data, String secret) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec key = new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA256");
+            mac.init(key);
+            return Base64.getEncoder().encodeToString(mac.doFinal(data.getBytes("UTF-8")));
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private static class DonateRequest {

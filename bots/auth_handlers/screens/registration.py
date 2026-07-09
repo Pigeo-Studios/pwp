@@ -14,22 +14,22 @@ class RegistrationScreen(Screen):
                 "Введите желаемый логин:\n• 3-32 символа, латиница, цифры, _",
                 [[btn("❌ Отмена", "nav:cancel")]])
 
-    def on_text(self, text, session, ctx):
+    async def on_text(self, text, session, ctx):
         if session.state == State.REG_LOGIN:
-            return self._login(text, session, ctx)
+            return await self._login(text, session, ctx)
         elif session.state == State.REG_EMAIL:
-            return self._email(text, session, ctx)
+            return await self._email(text, session, ctx)
         elif session.state == State.REG_PASSWORD:
-            return self._password(text, session, ctx)
+            return await self._password(text, session, ctx)
         return None
 
-    def on_callback(self, data, session, ctx):
+    async def on_callback(self, data, session, ctx):
         if data == "reg:change":
             session.state = State.REG_LOGIN
             return ("📝 <b>Регистрация</b>  —  Шаг 1 из 4\n\nВведите желаемый логин:",
                     [[btn("❌ Отмена", "nav:cancel")]])
         if data == "reg:confirm":
-            return self._confirm(session, ctx)
+            return await self._confirm(session, ctx)
         return None
 
     async def _login(self, text, session, ctx):

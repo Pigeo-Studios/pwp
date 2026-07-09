@@ -190,6 +190,20 @@ public class DatabaseManager {
                 d.execute("DROP TABLE IF EXISTS accounts");
             } catch (Exception ignored) {}
 
+            // Migration: sessions v2 columns
+            String[] sessionMigrations = {
+                "ALTER TABLE sessions ADD COLUMN access_token VARCHAR(128) DEFAULT NULL",
+                "ALTER TABLE sessions ADD COLUMN refresh_token VARCHAR(128) DEFAULT NULL",
+                "ALTER TABLE sessions ADD COLUMN session_key VARCHAR(64) DEFAULT NULL",
+                "ALTER TABLE sessions ADD COLUMN hwid VARCHAR(64) DEFAULT NULL",
+                "ALTER TABLE sessions ADD COLUMN last_heartbeat DATETIME DEFAULT NULL",
+                "ALTER TABLE sessions ADD INDEX idx_access_token (access_token)",
+                "ALTER TABLE sessions ADD INDEX idx_refresh_token (refresh_token)"
+            };
+            for (String sql : sessionMigrations) {
+                try { s.execute(sql); } catch (Exception ignored) {}
+            }
+
             // Migration: add missing columns to player_stats (safe, ignores duplicates)
             String[] migrations = {
                 "ALTER TABLE player_stats ADD COLUMN vehicle_kills INT NOT NULL DEFAULT 0",
@@ -248,7 +262,13 @@ public class DatabaseManager {
 
                 "CREATE TABLE IF NOT EXISTS sessions ("
                 + "id INT AUTO_INCREMENT PRIMARY KEY, player_uuid VARCHAR(36) NOT NULL, "
-                + "token VARCHAR(128) NOT NULL UNIQUE, ip VARCHAR(45) DEFAULT NULL, "
+                + "token VARCHAR(128) NOT NULL UNIQUE, "
+                + "access_token VARCHAR(128) DEFAULT NULL UNIQUE, "
+                + "refresh_token VARCHAR(128) DEFAULT NULL UNIQUE, "
+                + "session_key VARCHAR(64) DEFAULT NULL, "
+                + "hwid VARCHAR(64) DEFAULT NULL, "
+                + "ip VARCHAR(45) DEFAULT NULL, "
+                + "last_heartbeat DATETIME DEFAULT NULL, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, expires_at DATETIME NOT NULL, "
                 + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
 
@@ -280,6 +300,57 @@ public class DatabaseManager {
                 + "FOREIGN KEY (admin_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
             };
             for (String sql : accountTables) {
+                try { s.execute(sql); } catch (Exception ignored) {}
+            }
+
+            // Launcher tables
+            String[] launcherTables = {
+                "CREATE TABLE IF NOT EXISTS launcher_versions ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, version VARCHAR(16) NOT NULL, "
+                + "url VARCHAR(512) NOT NULL, sha256 VARCHAR(64) NOT NULL, "
+                + "changelog TEXT, mandatory BOOLEAN NOT NULL DEFAULT TRUE, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+
+                "CREATE TABLE IF NOT EXISTS file_manifests ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, file_path VARCHAR(512) NOT NULL, "
+                + "file_size BIGINT NOT NULL, sha256 VARCHAR(64) NOT NULL, "
+                + "version VARCHAR(32) NOT NULL DEFAULT 'latest', "
+                + "category VARCHAR(32) NOT NULL DEFAULT 'game', "
+                + "mod_name VARCHAR(128) DEFAULT NULL, "
+                + "mod_description TEXT DEFAULT NULL, "
+                + "mod_optional BOOLEAN NOT NULL DEFAULT FALSE, "
+                + "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
+                + "UNIQUE KEY uk_file_version (file_path(255), version(32), category(32)))",
+
+                "CREATE TABLE IF NOT EXISTS hwid_bans ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, hwid VARCHAR(64) NOT NULL, "
+                + "reason TEXT, banned_by VARCHAR(36), "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "INDEX idx_hwid (hwid))",
+
+                "CREATE TABLE IF NOT EXISTS hwid_history ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, account_uuid VARCHAR(36) NOT NULL, "
+                + "hwid VARCHAR(64) NOT NULL, hwid_components TEXT, "
+                + "pc_name VARCHAR(128), ip VARCHAR(45), "
+                + "flags INT NOT NULL DEFAULT 0, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "FOREIGN KEY (account_uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
+
+                "CREATE TABLE IF NOT EXISTS launcher_logs ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, account_uuid VARCHAR(36) DEFAULT NULL, "
+                + "level VARCHAR(8) NOT NULL DEFAULT 'INFO', message TEXT NOT NULL, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "FOREIGN KEY (account_uuid) REFERENCES players(uuid) ON DELETE SET NULL)",
+
+                "CREATE TABLE IF NOT EXISTS server_tokens ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, token VARCHAR(64) NOT NULL UNIQUE, "
+                + "account_uuid VARCHAR(36) NOT NULL, hwid VARCHAR(64) DEFAULT NULL, "
+                + "ip VARCHAR(45) DEFAULT NULL, used BOOLEAN NOT NULL DEFAULT FALSE, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "expires_at DATETIME NOT NULL, "
+                + "FOREIGN KEY (account_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
+            };
+            for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) {}
             }
         } catch (Exception e) {

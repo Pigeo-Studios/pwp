@@ -72,9 +72,14 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
        this.vehicleYaw = veh.yaw;
        this.respawnTimeSettings = veh.respawnTime;
        this.initialTimeSettings = veh.initialTime;
-       for (int i = 0; i < 32 && i < veh.inventory.size(); i++) {
+       // slot 0 = modifier/marker
+       if (!veh.inventory.get(0).isEmpty()) {
+          this.inventory.setStackInSlot(0, veh.inventory.get(0).copy());
+       }
+       // slots 1-32 = vehicle contents
+       for (int i = 1; i < 33 && i < veh.inventory.size(); i++) {
           if (!veh.inventory.get(i).isEmpty()) {
-             this.inventory.setStackInSlot(i + 1, veh.inventory.get(i).copy());
+             this.inventory.setStackInSlot(i, veh.inventory.get(i).copy());
           }
        }
        this.setChanged();

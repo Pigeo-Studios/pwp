@@ -1,5 +1,6 @@
 package com.pwp.core.api;
 
+import com.pwp.core.CoreApplication;
 import com.pwp.core.db.PlayerRepository;
 import com.pwp.core.model.ApiResponse;
 import com.pwp.core.model.Player;
@@ -122,20 +123,36 @@ public class AdminController {
         });
     }
 
-    private static void verifyAdmin(io.javalin.http.Context ctx) {
-        String adminUuid = ctx.header("X-Admin-UUID");
-        if (adminUuid == null || adminUuid.isEmpty()) {
-            throw new io.javalin.http.UnauthorizedResponse("X-Admin-UUID header required");
+    public static void verifyAdmin(io.javalin.http.Context ctx) {
+        String authHeader = ctx.header("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new io.javalin.http.UnauthorizedResponse("Missing or invalid Authorization header");
         }
+        String token = authHeader.substring("Bearer ".length());
+
+        // Try session token first (for web/launcher admins)
         try {
-            Player admin = PlayerRepository.findByUuid(adminUuid);
-            if (admin == null || (!"admin".equals(admin.role) && !"owner".equals(admin.role))) {
-                throw new io.javalin.http.UnauthorizedResponse("not an admin");
+            String playerUuid = PlayerRepository.findSessionPlayer(token);
+            if (playerUuid != null) {
+                Player admin = PlayerRepository.findByUuid(playerUuid);
+                if (admin == null || (!"admin".equals(admin.role) && !"owner".equals(admin.role))) {
+                    throw new io.javalin.http.UnauthorizedResponse("not an admin");
+                }
+                ctx.attribute("adminUuid", playerUuid);
+                return;
             }
-        } catch (Exception e) {
-            if (e instanceof io.javalin.http.UnauthorizedResponse) throw (io.javalin.http.UnauthorizedResponse) e;
+        } catch (java.sql.SQLException e) {
             throw new io.javalin.http.UnauthorizedResponse("admin verification failed");
         }
+
+        // Fallback: check API key (for bot/admin scripts)
+        if (CoreApplication.config != null && CoreApplication.config.api.keys != null) {
+            for (String key : CoreApplication.config.api.keys) {
+                if (key.equals(token)) return;
+            }
+        }
+
+        throw new io.javalin.http.UnauthorizedResponse("unauthorized");
     }
 
     private static String maskEmail(String email) {
