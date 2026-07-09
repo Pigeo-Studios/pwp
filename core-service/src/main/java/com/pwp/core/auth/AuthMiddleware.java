@@ -59,18 +59,19 @@ public class AuthMiddleware {
             throw new UnauthorizedResponse("Access denied: invalid timestamp");
         }
 
-        // Determine HMAC secret: session_key if session token present, else static key
+        // Determine HMAC secret: session_key if available, else static key
         String secret;
         if (sessionAccessToken != null && !sessionAccessToken.isEmpty()) {
             try {
                 String sessionKey = PlayerRepository.findSessionKeyByAccessToken(sessionAccessToken);
-                if (sessionKey == null) {
-                    log.warn("Invalid session token from {}", ctx.ip());
-                    throw new UnauthorizedResponse("Access denied: invalid session");
+                if (sessionKey != null) {
+                    secret = sessionKey;
+                } else {
+                    // Old v1 session without session_key — fall back to static key
+                    secret = CoreApplication.config.getLauncherSecret();
                 }
-                secret = sessionKey;
             } catch (Exception e) {
-                throw new UnauthorizedResponse("Access denied: session lookup failed");
+                secret = CoreApplication.config.getLauncherSecret();
             }
         } else {
             secret = CoreApplication.config.getLauncherSecret();
