@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Map;
@@ -77,23 +76,11 @@ public class AuthMiddleware {
             secret = CoreApplication.config.getLauncherSecret();
         }
 
-        // Verify HMAC — format: timestamp:method:path:bodyHash (matches LauncherSigner.cs)
-        String method = ctx.method().toString();
-        String body = ctx.body();
-        String bodyHash = "";
-        if (body != null && !body.isEmpty()) {
-            try {
-                MessageDigest md = MessageDigest.getInstance("SHA-256");
-                byte[] hash = md.digest(body.getBytes("UTF-8"));
-                StringBuilder sb = new StringBuilder();
-                for (byte b : hash) sb.append(String.format("%02x", b));
-                bodyHash = sb.toString();
-            } catch (Exception ignored) {}
-        }
-        String signData = timestamp + ":" + method + ":" + path + ":" + bodyHash;
+        // Verify HMAC — format: timestamp:path
+        String signData = timestamp + ":" + path;
         String expected = hmacSha256(signData, secret);
         if (!signature.equals(expected)) {
-            log.warn("Invalid launcher signature from {} (expected={}, got={})", ctx.ip(), expected, signature);
+            log.warn("Invalid launcher signature from {}", ctx.ip());
             throw new UnauthorizedResponse("Access denied: invalid signature");
         }
 
