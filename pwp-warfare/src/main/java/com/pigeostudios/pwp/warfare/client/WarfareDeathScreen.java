@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client;
 
+import com.pigeostudios.pwp.warfare.client.gui.SquadButton;
 import com.pigeostudios.pwp.warfare.client.gui.TacticalMapRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.WarfareMapRenderer;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -107,6 +108,9 @@ public class WarfareDeathScreen extends DeathScreen {
         this.addRenderableWidget(this.nameInput);
         this.createButton = this.addRenderableWidget(new SquadButton(10, this.height - 65, 150, 20, Component.literal("Create Squad"), b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()))));
         this.createButton.visible = !isInSquad;
+        this.addRenderableWidget(new SquadButton(10, this.height - 60, 150, 20, Component.literal("\u2694 Kit"), b -> {
+            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+        }));
         this.deployButton = this.addRenderableWidget(new DeployButton(10, this.height - 35, 100, 25, Component.literal("DEPLOY"), b -> {
             if (!this.selectedSpawnType.isEmpty()) {
                 ClientData.globalDeathTimestamp = 0L;
@@ -888,30 +892,6 @@ public class WarfareDeathScreen extends DeathScreen {
 
     private void playClickSound() {
         this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
-    }
-
-    private static class SquadButton extends Button {
-        public SquadButton(int x, int y, int width, int height, Component message, Button.OnPress onPress) {
-            super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
-        }
-
-        protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
-            int borderColor;
-            if (!this.visible) {
-                return;
-            }
-            int n = borderColor = this.isHovered() ? -1 : -6710887;
-            if (!this.active) {
-                borderColor = -12303292;
-            }
-            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -871296751);
-            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
-            int textColor = this.active ? -1 : -8947849;
-            gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor);
-            if (this.active && this.isHovered()) {
-                gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, -1);
-            }
-        }
     }
 
     private static class DeployButton extends Button {

@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.gui.SquadButton;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
@@ -19,7 +20,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Button.OnPress;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
@@ -30,8 +30,8 @@ import net.minecraft.world.entity.player.Player;
 // Экран управления отрядами и картой
 // Позволяет создавать/покидать отряды, назначать командиров, чат и карту
 public class SquadSelectionScreen extends Screen {
-   private SquadSelectionScreen.SquadButton applyCmdButton;
-   private SquadSelectionScreen.SquadButton kitButton;
+   private SquadButton applyCmdButton;
+   private SquadButton kitButton;
    private static final int SIDEBAR_WIDTH = 170;
    private static final int BOTTOM_BAR_H = 38;
    private static final int TOP_BAR_HEIGHT = 30;
@@ -84,12 +84,12 @@ public class SquadSelectionScreen extends Screen {
       }
 
       int teamCMDId_init = myTeam.contains("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
-      this.applyCmdButton = new SquadSelectionScreen.SquadButton(10, 10, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.apply_cmd"), b -> {
+      this.applyCmdButton = new SquadButton(10, 10, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.apply_cmd"), b -> {
          PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
          b.visible = false;
       });
       this.addRenderableWidget(this.applyCmdButton);
-      this.kitButton = new SquadSelectionScreen.SquadButton(10, this.height - BOTTOM_BAR_H + 8, 150, 22,
+      this.kitButton = new SquadButton(10, this.height - BOTTOM_BAR_H + 8, 150, 22,
          Component.literal("\u2694 ").append(Component.translatable("gui.pwpwarfare.squad_select.kit")),
          b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()));
       this.kitButton.visible = isInSquad;
@@ -98,11 +98,9 @@ public class SquadSelectionScreen extends Screen {
       this.nameInput.setMaxLength(12);
       this.nameInput.setVisible(!isInSquad);
       this.addRenderableWidget(this.nameInput);
-      this.createButton = Button.builder(
-            Component.translatable("gui.pwpwarfare.squad_select.create"), button -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()))
-         )
-         .bounds(10, this.height - 30, 150, 20)
-         .build();
+      this.createButton = new SquadButton(10, this.height - 30, 150, 20,
+         Component.translatable("gui.pwpwarfare.squad_select.create"),
+         button -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue())));
       this.createButton.visible = !isInSquad;
       this.addRenderableWidget(this.createButton);
       int rightAreaWidth = this.width - 170;
@@ -115,14 +113,14 @@ public class SquadSelectionScreen extends Screen {
       int inputY = this.height - 25;
       int chatX = 175;
       int chatWidth = this.width - 170 - 10;
-      this.chatModeButton = Button.builder(this.getChatModeText(), button -> {
+      this.chatModeButton = new SquadButton(chatX, inputY, 50, 20, this.getChatModeText(), button -> {
          this.chatMode++;
          if (this.chatMode > 2) {
             this.chatMode = 0;
          }
 
          button.setMessage(this.getChatModeText());
-      }).bounds(chatX, inputY, 50, 20).build();
+      });
       this.addRenderableWidget(this.chatModeButton);
       this.chatInput = new EditBox(this.font, chatX + 55, inputY, chatWidth - 55, 20, Component.translatable("gui.pwpwarfare.squad_select.chat"));
       this.chatInput.setMaxLength(256);
@@ -944,29 +942,4 @@ public class SquadSelectionScreen extends Screen {
       return false;
    }
 
-   private static class SquadButton extends Button {
-      public SquadButton(int x, int y, int width, int height, Component message, OnPress onPress) {
-         super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
-      }
-
-      protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
-         if (this.visible) {
-            int borderColor = this.isHovered() ? PWPTheme.Colors.BORDER_ACCENT : PWPTheme.Colors.BORDER;
-            if (!this.active) {
-               borderColor = PWPTheme.Colors.TEXT_DIM;
-            }
-
-            int bgColor = this.isHovered() ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE;
-            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, bgColor);
-            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
-            int textColor = this.active ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
-            gui.drawCenteredString(
-               Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor
-            );
-            if (this.active && this.isHovered()) {
-               gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, PWPTheme.Colors.ACCENT);
-            }
-         }
-      }
-   }
 }

@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pigeostudios.pwp.warfare.client.gui.SquadButton;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
@@ -60,17 +61,17 @@ public class PlayerKitSelectScreen extends Screen {
                 ? Component.literal("✔ " + kit.name)
                 : Component.literal(kit.name);
 
-            Button btn = Button.builder(label, b -> {
+            SquadButton btn = new SquadButton(0, 0, 0, 0, label, b -> {
                 PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit.name));
                 onClose();
-            }).build();
+            });
             btn.active = kit.available;
             addRenderableWidget(btn);
             kitButtons.add(btn);
 
-            Button eyeBtn = Button.builder(EYE, b ->
+            SquadButton eyeBtn = new SquadButton(0, 0, 0, 0, EYE, b ->
                 minecraft.setScreen(new KitPreviewScreen(this, kit.name, kit.items))
-            ).build();
+            );
             addRenderableWidget(eyeBtn);
             eyeButtons.add(eyeBtn);
         }
