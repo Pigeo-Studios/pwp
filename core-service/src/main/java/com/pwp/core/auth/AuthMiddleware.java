@@ -1,7 +1,6 @@
 package com.pwp.core.auth;
 
 import com.pwp.core.CoreApplication;
-import com.pwp.core.db.PlayerRepository;
 import io.javalin.http.Context;
 import io.javalin.http.TooManyRequestsResponse;
 import io.javalin.http.UnauthorizedResponse;
@@ -46,7 +45,6 @@ public class AuthMiddleware {
 
         String timestamp = parts[0];
         String signature = parts[1];
-        String sessionAccessToken = ctx.header("X-PWP-Access-Token");
 
         // Reject requests older than 30 seconds
         try {
@@ -59,27 +57,9 @@ public class AuthMiddleware {
             throw new UnauthorizedResponse("Access denied: invalid timestamp");
         }
 
-        // Determine HMAC secret: session_key if available, else static key
-        String secret;
-        if (sessionAccessToken != null && !sessionAccessToken.isEmpty()) {
-            try {
-                String sessionKey = PlayerRepository.findSessionKeyByAccessToken(sessionAccessToken);
-                if (sessionKey != null) {
-                    secret = sessionKey;
-                } else {
-                    // Old v1 session without session_key — fall back to static key
-                    secret = CoreApplication.config.getLauncherSecret();
-                }
-            } catch (Exception e) {
-                secret = CoreApplication.config.getLauncherSecret();
-            }
-        } else {
-            secret = CoreApplication.config.getLauncherSecret();
-        }
-
-        // Verify HMAC — format: timestamp:path
+        // Verify HMAC — format: timestamp:path, always with static key
         String signData = timestamp + ":" + path;
-        String expected = hmacSha256(signData, secret);
+        String expected = hmacSha256(signData, CoreApplication.config.getLauncherSecret());
         if (!signature.equals(expected)) {
             log.warn("Invalid launcher signature from {}", ctx.ip());
             throw new UnauthorizedResponse("Access denied: invalid signature");
