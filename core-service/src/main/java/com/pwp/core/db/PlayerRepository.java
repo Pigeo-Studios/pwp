@@ -401,7 +401,7 @@ public class PlayerRepository {
 
     public static void createSessionV2(String playerUuid, String accessToken, String refreshToken, String sessionKey, String ip) throws SQLException {
         String sql = "INSERT INTO sessions (player_uuid, token, access_token, refresh_token, session_key, ip, expires_at) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY))";
+                    + "VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, playerUuid);
@@ -443,7 +443,7 @@ public class PlayerRepository {
 
     public static boolean refreshSession(String refreshToken, String newAccessToken, String newRefreshToken, String newSessionKey) throws SQLException {
         String sql = "UPDATE sessions SET access_token = ?, refresh_token = ?, session_key = ?, "
-                    + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) "
+                    + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY) "
                     + "WHERE refresh_token = ? AND expires_at > CURRENT_TIMESTAMP";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -457,7 +457,7 @@ public class PlayerRepository {
 
     public static boolean updateHeartbeat(String accessToken) throws SQLException {
         String sql = "UPDATE sessions SET last_heartbeat = CURRENT_TIMESTAMP, "
-                    + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) WHERE access_token = ? AND expires_at > CURRENT_TIMESTAMP";
+                    + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY) WHERE access_token = ? AND expires_at > CURRENT_TIMESTAMP";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, accessToken);
