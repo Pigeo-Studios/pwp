@@ -10,3 +10,9 @@ authors="Pigeo Studios"
 description='''
 Lobby server mod for PWP. Player hub, map voting, server management.
 '''
+[[dependencies.pwp_lobby]]
+    modId="pwpcore"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="NONE"
+    side="SERVER"

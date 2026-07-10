@@ -10,3 +10,9 @@ authors="Pigeo Studios"
 description='''
 Core client mod for PWP. Connects to PWP Core Service for player data.
 '''
+[[dependencies.pwp_core_client]]
+    modId="pwpcore"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="NONE"
+    side="SERVER"

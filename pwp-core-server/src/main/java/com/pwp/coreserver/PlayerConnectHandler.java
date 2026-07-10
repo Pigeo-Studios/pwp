@@ -30,50 +30,32 @@ public class PlayerConnectHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         String uuid = player.getStringUUID();
-        String rawIp = player.connection.connection.getRemoteAddress().toString();
-        if (rawIp.startsWith("/")) rawIp = rawIp.substring(1);
-        int colon = rawIp.lastIndexOf(':');
-        final String ip = colon > 0 ? rawIp.substring(0, colon) : rawIp;
+        String name = player.getScoreboardName();
 
         new Thread(() -> {
             try {
-                String result = verifyIp(uuid, ip);
+                String serverToken = System.getenv("PWP_SERVER_TOKEN");
+                if (serverToken == null || serverToken.isEmpty()) {
+                    log.warn("Kicking {} ({}): no PWP_SERVER_TOKEN env", name, uuid);
+                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043B\u0430\u0443\u043D\u0447\u0435\u0440 PWP"));
+                    return;
+                }
+
+                String result = verifyToken(serverToken, uuid);
                 JsonObject json = JsonParser.parseString(result).getAsJsonObject();
 
-                boolean success = json.get("success").getAsBoolean();
-
-                if (!success) {
-                    String error = json.has("error") ? json.get("error").getAsString() : "IP not verified";
-                    log.warn("Kicking {} ({}) reason: {}", player.getScoreboardName(), uuid, error);
+                if (!json.get("success").getAsBoolean()) {
+                    String error = json.has("error") ? json.get("error").getAsString() : "Invalid token";
+                    log.warn("Kicking {} ({}): {}", name, uuid, error);
                     player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + error));
                     return;
                 }
 
-                Long confirmId = json.has("confirmId") && !json.get("confirmId").isJsonNull()
-                    ? json.get("confirmId").getAsLong() : null;
-
-                if (confirmId != null) {
-                    log.info("IP verification pending for {} (confirmId={}), polling...", player.getScoreboardName(), confirmId);
-                    for (int i = 0; i < 30; i++) {
-                        Thread.sleep(1000);
-                        String pollResult = pollConfirm(confirmId);
-                        JsonObject pollJson = JsonParser.parseString(pollResult).getAsJsonObject();
-                        if (!pollJson.get("success").getAsBoolean()) {
-                            String pollError = pollJson.has("error") ? pollJson.get("error").getAsString() : "";
-                            if ("pending".equals(pollError)) continue;
-                            log.warn("Kicking {} reason: {}", player.getScoreboardName(), pollError);
-                            player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + pollError));
-                            return;
-                        }
-                        log.info("IP verified for {} (allow)", player.getScoreboardName());
-                        return;
-                    }
-                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0412\u0440\u0435\u043C\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u0438\u0441\u0442\u0435\u043A\u043B\u043E\n\n\u00A77\u041F\u043E\u043F\u0440\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435"));
-                }
+                log.info("Player {} ({}) authenticated via launcher", name, uuid);
             } catch (Exception e) {
-                log.error("IP verification error for {}: {}", player.getScoreboardName(), e.getMessage());
+                log.error("Auth error for {}: {}", name, e.getMessage());
             }
-        }, "PWP-IP-Verify").start();
+        }, "PWP-Auth").start();
     }
 
     private static String hmacSign(String path) {
@@ -92,8 +74,8 @@ public class PlayerConnectHandler {
         }
     }
 
-    private static String verifyIp(String uuid, String ip) throws Exception {
-        String path = "/api/v1/auth/verify-ip";
+    private static String verifyToken(String token, String uuid) throws Exception {
+        String path = "/api/v1/launcher/verify-server-token?token=" + token;
         URL url = new URL(CoreServerMod.API_BASE + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
@@ -103,24 +85,9 @@ public class PlayerConnectHandler {
         conn.setDoOutput(true);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
-        String body = String.format("{\"uuid\":\"%s\",\"ip\":\"%s\"}", uuid, ip);
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(body.getBytes());
+            os.write(("{\"uuid\":\"" + uuid + "\"}").getBytes());
         }
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-            return r.lines().collect(Collectors.joining("\n"));
-        }
-    }
-
-    private static String pollConfirm(long confirmId) throws Exception {
-        String path = "/api/v1/auth/check-ip-confirm?id=" + confirmId;
-        URL url = new URL(CoreServerMod.API_BASE + path);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
-        conn.setRequestProperty("X-PWP-Sign", hmacSign(path));
-        conn.setConnectTimeout(5000);
-        conn.setReadTimeout(5000);
         try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             return r.lines().collect(Collectors.joining("\n"));
         }
