@@ -6,7 +6,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,24 +32,34 @@ public class PlayerConnectHandler {
 
         new Thread(() -> {
             try {
+                // Try server-token verification first (env is set by launcher for client process)
                 String serverToken = System.getenv("PWP_SERVER_TOKEN");
-                if (serverToken == null || serverToken.isEmpty()) {
-                    log.warn("Kicking {} ({}): no PWP_SERVER_TOKEN env", name, uuid);
-                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77\u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043B\u0430\u0443\u043D\u0447\u0435\u0440 PWP"));
-                    return;
+                if (serverToken != null && !serverToken.isEmpty()) {
+                    String result = postJson("/api/v1/launcher/verify-server-token?token=" + serverToken, uuid);
+                    JsonObject json = JsonParser.parseString(result).getAsJsonObject();
+                    if (json.get("success").getAsBoolean()) {
+                        log.info("{} authenticated via server token", name);
+                        return; // allowed
+                    }
+                    log.warn("{} has invalid server token", name);
                 }
 
-                String result = verifyToken(serverToken, uuid);
+                // Try IP verification fallback
+                String rawIp = player.connection.connection.getRemoteAddress().toString();
+                if (rawIp.startsWith("/")) rawIp = rawIp.substring(1);
+                int colon = rawIp.lastIndexOf(':');
+                String ip = colon > 0 ? rawIp.substring(0, colon) : rawIp;
+
+                String result = postJson("/api/v1/auth/verify-ip", "{\"uuid\":\"" + uuid + "\",\"ip\":\"" + ip + "\"}");
                 JsonObject json = JsonParser.parseString(result).getAsJsonObject();
 
                 if (!json.get("success").getAsBoolean()) {
-                    String error = json.has("error") ? json.get("error").getAsString() : "Invalid token";
-                    log.warn("Kicking {} ({}): {}", name, uuid, error);
+                    String error = json.has("error") ? json.get("error").getAsString() : "IP not verified";
                     player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + error));
                     return;
                 }
 
-                log.info("Player {} ({}) authenticated via launcher", name, uuid);
+                log.info("{} ({}) IP verified, allowed", name, uuid);
             } catch (Exception e) {
                 log.error("Auth error for {}: {}", name, e.getMessage());
             }
@@ -73,19 +82,18 @@ public class PlayerConnectHandler {
         }
     }
 
-    private static String verifyToken(String token, String uuid) throws Exception {
-        String path = "/api/v1/launcher/verify-server-token?token=" + token;
+    private static String postJson(String path, String body) throws Exception {
         URL url = new URL(CoreServerMod.API_BASE + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
-        conn.setRequestProperty("X-PWP-Sign", hmacSign(path));
+        conn.setRequestProperty("X-PWP-Sign", hmacSign(path.contains("?") ? path.substring(0, path.indexOf('?')) : path));
         conn.setDoOutput(true);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(("{\"uuid\":\"" + uuid + "\"}").getBytes());
+            os.write(body.getBytes());
         }
         try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             return r.lines().collect(Collectors.joining("\n"));
