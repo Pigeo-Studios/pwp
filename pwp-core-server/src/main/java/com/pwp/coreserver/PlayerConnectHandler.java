@@ -19,7 +19,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.stream.Collectors;
 
-@Mod.EventBusSubscriber(modid = CoreServerMod.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class PlayerConnectHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerConnectHandler.class);
