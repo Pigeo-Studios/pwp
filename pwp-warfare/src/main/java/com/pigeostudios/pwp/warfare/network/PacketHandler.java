@@ -95,6 +95,9 @@ public class PacketHandler {
       INSTANCE.registerMessage(
          id++, PacketSyncPlayerSkin.class, PacketSyncPlayerSkin::encode, PacketSyncPlayerSkin::decode, PacketSyncPlayerSkin::handle
       );
+      INSTANCE.registerMessage(id++, PacketRequestData.class, PacketRequestData::encode, PacketRequestData::decode, PacketRequestData::handle);
+      INSTANCE.registerMessage(id++, PacketSendData.class, PacketSendData::encode, PacketSendData::decode, PacketSendData::handle);
+      INSTANCE.registerMessage(id++, PacketApiAction.class, PacketApiAction::encode, PacketApiAction::decode, PacketApiAction::handle);
    }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {

@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -98,7 +98,7 @@ public class PacketSaveFactionVehicle {
                 payload.addProperty("initialTime", msg.initialTime);
                 payload.add("inventory", itemsArray);
 
-                CoreAPI.saveFactionVehicle(msg.faction, msg.vehicleName, payload);
+                CoreServerApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload);
                 player.displayClientMessage(Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
             }
         });

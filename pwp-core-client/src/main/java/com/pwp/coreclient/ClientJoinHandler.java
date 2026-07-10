@@ -1,6 +1,7 @@
 package com.pwp.coreclient;
 
-import com.google.gson.JsonObject;
+import com.pwp.coreclient.network.PacketDataRequest;
+import com.pwp.coreclient.network.PacketHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -20,30 +21,13 @@ public class ClientJoinHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        String uuid = mc.player.getStringUUID();
-
         new Thread(() -> {
             try {
-                Thread.sleep(1000);
-                JsonObject profile = CoreAPI.loadPlayer(uuid);
-                if (profile != null && profile.has("success") && profile.get("success").getAsBoolean() && profile.has("data")) {
-                    JsonObject data = profile.getAsJsonObject("data");
-                    PlayerData.put(mc.player.getUUID(), data);
-                    log.info("Player profile cached for {}", uuid);
-                } else {
-                    log.warn("Player not found, creating...");
-                    JsonObject created = CoreAPI.createPlayer(uuid, mc.player.getScoreboardName());
-                    if (created != null && created.has("success") && created.get("success").getAsBoolean()) {
-                        Thread.sleep(500);
-                        JsonObject retry = CoreAPI.loadPlayer(uuid);
-                        if (retry != null && retry.has("data")) {
-                            PlayerData.put(mc.player.getUUID(), retry.getAsJsonObject("data"));
-                            log.info("Player created and cached for {}", uuid);
-                        }
-                    }
-                }
+                Thread.sleep(2000);
+                PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("profile", ""));
+                log.info("Profile request sent for {}", mc.player.getStringUUID());
             } catch (Exception e) {
-                log.warn("Could not load player profile: {}", e.getMessage());
+                log.warn("Could not request profile: {}", e.getMessage());
             }
         }, "PWP-Profile-Loader").start();
     }

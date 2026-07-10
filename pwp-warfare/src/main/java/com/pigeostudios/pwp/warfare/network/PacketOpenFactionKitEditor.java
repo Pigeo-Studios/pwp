@@ -6,7 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -124,7 +124,7 @@ public class PacketOpenFactionKitEditor {
 
    private static WarfareWorldData.KitInfo loadFromApi(String faction, String kitName) {
       try {
-         JsonObject response = CoreAPI.getFactionKit(faction, kitName);
+         JsonObject response = CoreServerApi.getFactionKit(faction, kitName);
          if (response != null && response.has("data")) {
             JsonObject data = response.getAsJsonObject("data");
             if (data != null && data.has("kitName")) {

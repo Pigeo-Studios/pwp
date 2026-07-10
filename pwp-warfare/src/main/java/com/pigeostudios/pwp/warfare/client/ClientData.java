@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
@@ -17,6 +19,11 @@ import net.minecraft.network.chat.Component;
 // Центральное хранилище клиентских данных, синхронизируемых с сервером
 // Содержит информацию об игроках, отрядах, точках захвата, хабах и маркерах
 public class ClientData {
+   public static JsonObject leaderboardData = null;
+   public static JsonArray skinsData = null;
+   public static JsonArray factionsData = null;
+   public static JsonArray factionVehiclesData = null;
+   public static JsonObject factionVehicleDetail = null;
    public static int BLUE_TICKETS = 800;
    public static int RED_TICKETS = 800;
    public static int BLUE_PLAYER_COUNT = 0;

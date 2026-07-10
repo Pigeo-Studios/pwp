@@ -1,7 +1,8 @@
 package com.pwp.lobby;
 
-import com.pwp.coreclient.CoreAPI;
-import com.pwp.coreclient.PermissionHelper;
+import com.google.gson.JsonObject;
+import com.pwp.coreserver.CoreServerApi;
+
 import com.pwp.coreclient.network.OpenMatchListScreenPacket;
 import com.pwp.coreclient.network.OpenMatchScreenPacket;
 import com.pwp.coreclient.network.OpenModeVotePacket;
@@ -97,7 +98,7 @@ public class LobbyMod {
             heartbeatTicks = 0;
             int online = MatchAllocator.getLobbyPlayerCount();
             try {
-                CoreAPI.sendHeartbeat("lobby", online);
+                CoreServerApi.sendHeartbeat("lobby", online);
             } catch (Exception e) {
                 // silently ignore
             }
@@ -222,7 +223,7 @@ public class LobbyMod {
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
-        PermissionHelper.autoOpIfAdmin(player);
+        autoOpIfAdmin(player);
 
         if (isMatchServer) return;
 
@@ -230,9 +231,9 @@ public class LobbyMod {
         String name = player.getScoreboardName();
 
         try {
-            var playerData = CoreAPI.loadPlayer(uuid);
+            var playerData = CoreServerApi.loadPlayer(uuid);
             if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
-                CoreAPI.createPlayer(uuid, name);
+                CoreServerApi.createPlayer(uuid, name);
             }
         } catch (Exception e) {
             System.out.println("[PWP] Core API unavailable (DB down?), proceeding without registration: " + e.getMessage());
@@ -687,5 +688,20 @@ public class LobbyMod {
         if (server == null) return;
         server.getPlayerList().getPlayers().forEach(p ->
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+    }
+
+    private static void autoOpIfAdmin(ServerPlayer player) {
+        try {
+            JsonObject data = CoreServerApi.loadPlayer(player.getStringUUID());
+            if (data == null || !data.has("data")) return;
+            JsonObject profile = data.getAsJsonObject("data");
+            if (!profile.has("player")) return;
+            String role = profile.getAsJsonObject("player").get("role").getAsString();
+            if ("admin".equalsIgnoreCase(role)) {
+                player.server.getPlayerList().op(player.getGameProfile());
+            }
+        } catch (Exception e) {
+            System.err.println("[PWP] autoOpIfAdmin failed: " + e.getMessage());
+        }
     }
 }

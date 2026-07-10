@@ -13,6 +13,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
+@Deprecated
 public class CoreAPI {
 
     private static final Logger log = LoggerFactory.getLogger(CoreAPI.class);

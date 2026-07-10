@@ -24,8 +24,7 @@ import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pwp.coreclient.CoreAPI;
-import com.pwp.coreclient.PermissionHelper;
+import com.pwp.coreserver.CoreServerApi;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.cosmetics.CosmeticManager;
 import com.google.gson.JsonArray;
@@ -1332,7 +1331,7 @@ public class GameLogicEvents {
      public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
          if (!event.getEntity().level().isClientSide) {
             ServerPlayer player = (ServerPlayer)event.getEntity();
-            PermissionHelper.autoOpIfAdmin(player);
+            autoOpIfAdmin(player);
             loadCosmeticsForPlayer(player);
             PacketHandler.broadcastPlayerSkin(player);
             ServerLevel level = player.serverLevel();
@@ -1354,12 +1353,12 @@ public class GameLogicEvents {
     private static void loadCosmeticsForPlayer(ServerPlayer player) {
         try {
             UUID uuid = player.getUUID();
-            JsonObject profile = CoreAPI.loadPlayer(uuid.toString());
+            JsonObject profile = CoreServerApi.loadPlayer(uuid.toString());
             if (profile == null || !profile.has("data")) return;
             JsonObject data = profile.getAsJsonObject("data");
             if (!data.has("cosmetics")) return;
 
-            JsonObject skinsResult = CoreAPI.getSkins();
+            JsonObject skinsResult = CoreServerApi.getSkins();
             Map<String, String> skinModels = new HashMap<>();
             if (skinsResult != null && skinsResult.has("data")) {
                 for (JsonElement e : skinsResult.get("data").getAsJsonArray()) {
@@ -2376,6 +2375,21 @@ public class GameLogicEvents {
          if (player.getTeam() != null && player.getTeam().getName().equalsIgnoreCase(team)) {
             player.sendSystemMessage(message);
          }
+      }
+   }
+
+   private static void autoOpIfAdmin(ServerPlayer player) {
+      try {
+         JsonObject data = CoreServerApi.loadPlayer(player.getStringUUID());
+         if (data == null || !data.has("data")) return;
+         JsonObject profile = data.getAsJsonObject("data");
+         if (!profile.has("player")) return;
+         String role = profile.getAsJsonObject("player").get("role").getAsString();
+         if ("admin".equalsIgnoreCase(role)) {
+            player.server.getPlayerList().op(player.getGameProfile());
+         }
+      } catch (Exception e) {
+         System.err.println("[PWP] autoOpIfAdmin failed: " + e.getMessage());
       }
    }
 }

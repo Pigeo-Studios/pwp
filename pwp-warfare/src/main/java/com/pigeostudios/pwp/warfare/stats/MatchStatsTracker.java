@@ -3,7 +3,7 @@ package com.pigeostudios.pwp.warfare.stats;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import net.minecraft.network.chat.Component;
@@ -212,10 +212,10 @@ public class MatchStatsTracker {
         }
         match.add("players", playersArr);
 
-        if (ModList.get().isLoaded("pwp_core_client")) {
+        if (ModList.get().isLoaded("pwpcore")) {
             log.info("Saving match result to Core API...");
             try {
-                JsonObject response = CoreAPI.saveMatch(match);
+                JsonObject response = CoreServerApi.saveMatch(match);
                 if (response != null) {
                     log.info("Match saved successfully");
                 } else {
@@ -229,7 +229,7 @@ public class MatchStatsTracker {
                     boolean isWin = ps.team.equals(winner);
 
                     try {
-                        JsonObject rewardResult = CoreAPI.calculateRewards(
+                        JsonObject rewardResult = CoreServerApi.calculateRewards(
                             ps.uuid, ps.team, winner,
                             ps.kills, 0, ps.vehicleKills,
                             ps.captures, ps.revives, 0,
@@ -253,9 +253,9 @@ public class MatchStatsTracker {
                         else { xp += 100; coins += 20; }
                     }
 
-                    CoreAPI.addXp(ps.uuid, xp, "MATCH");
-                    CoreAPI.addCurrency(ps.uuid, coins, "MATCH_REWARD");
-                    CoreAPI.checkRank(ps.uuid);
+                    CoreServerApi.addXp(ps.uuid, xp, "MATCH");
+                    CoreServerApi.addCurrency(ps.uuid, coins, "MATCH_REWARD");
+                    CoreServerApi.checkRank(ps.uuid);
 
                     JsonObject statsDelta = new JsonObject();
                     statsDelta.addProperty("kills", ps.kills);
@@ -276,7 +276,7 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
                     statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
                     statsDelta.addProperty("teamKills", ps.teamKills);
-                    JsonObject saveResult = CoreAPI.saveStats(ps.uuid, statsDelta);
+                    JsonObject saveResult = CoreServerApi.saveStats(ps.uuid, statsDelta);
                     if (saveResult != null) {
                         log.info("Stats saved for {}: {}k/{}d/{}v/{}vd/{}ad/{}pt",
                             ps.nickname, ps.kills, ps.deaths, ps.vehicleKills,

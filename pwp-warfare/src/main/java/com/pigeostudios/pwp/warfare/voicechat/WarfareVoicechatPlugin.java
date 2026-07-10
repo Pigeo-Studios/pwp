@@ -19,7 +19,7 @@ import de.maxhenkel.voicechat.api.events.VoicechatServerStartedEvent;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import com.google.gson.JsonObject;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
@@ -127,7 +127,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
          return mutedCache.getOrDefault(playerUuid, false);
       }
       try {
-         JsonObject result = CoreAPI.getVoiceMute(playerUuid.toString());
+          JsonObject result = CoreServerApi.getVoiceMute(playerUuid.toString());
          if (result != null && result.has("success") && result.get("success").getAsBoolean()
                  && result.has("data") && !result.get("data").isJsonNull()) {
             JsonObject data = result.getAsJsonObject("data");

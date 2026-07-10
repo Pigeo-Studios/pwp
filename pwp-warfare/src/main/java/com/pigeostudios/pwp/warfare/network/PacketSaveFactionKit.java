@@ -5,7 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
@@ -148,7 +148,7 @@ public class PacketSaveFactionKit {
             kitPayload.addProperty("items", itemsArray.toString());
             kitPayload.addProperty("slotSkins", slotSkinsJson.toString());
 
-            CoreAPI.saveFactionKit(msg.faction, msg.kitName, kitPayload);
+            CoreServerApi.saveFactionKit(msg.faction, msg.kitName, kitPayload);
 
             WarfareWorldData.KitInfo kit = null;
             if (msg.faction.equalsIgnoreCase(data.blueFaction)) {

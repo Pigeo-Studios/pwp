@@ -55,5 +55,17 @@ public class PacketHandler {
                 OpenModeVotePacket::encode,
                 OpenModeVotePacket::decode,
                 OpenModeVotePacket::handle);
+        INSTANCE.registerMessage(id++, PacketDataRequest.class,
+                PacketDataRequest::encode,
+                PacketDataRequest::decode,
+                PacketDataRequest::handle);
+        INSTANCE.registerMessage(id++, PacketDataResponse.class,
+                PacketDataResponse::encode,
+                PacketDataResponse::decode,
+                PacketDataResponse::handle);
+        INSTANCE.registerMessage(id++, PacketAction.class,
+                PacketAction::encode,
+                PacketAction::decode,
+                PacketAction::handle);
     }
 }

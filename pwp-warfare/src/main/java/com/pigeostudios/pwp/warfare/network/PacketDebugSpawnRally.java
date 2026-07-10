@@ -33,8 +33,8 @@ public class PacketDebugSpawnRally {
    // Создаёт точку сбора в ногах игрока и назначает его в указанную команду
    public static void handle(PacketDebugSpawnRally msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
-         ServerPlayer player = ctx.get().getSender();
-         if (player != null) {
+          ServerPlayer player = ctx.get().getSender();
+          if (player != null && player.isCreative() && player.hasPermissions(2)) {
             BlockPos pos = player.blockPosition();
             WarfareWorldData data = WarfareWorldData.get(player.serverLevel().getServer().overworld());
             Scoreboard scoreboard = player.getServer().getScoreboard();

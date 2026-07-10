@@ -42,7 +42,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import net.minecraftforge.network.PacketDistributor;
 
 public class ModCommands {
@@ -726,7 +726,7 @@ public class ModCommands {
          return 0;
       }
       try {
-         JsonObject result = CoreAPI.voiceMute(
+          JsonObject result = CoreServerApi.voiceMute(
             target.getUUID().toString(),
             admin.getUUID().toString(),
             admin.getScoreboardName(),
@@ -756,7 +756,7 @@ public class ModCommands {
 
    private static int voiceUnmutePlayer(CommandSourceStack source, ServerPlayer target) {
       try {
-         JsonObject result = CoreAPI.voiceUnmute(target.getUUID().toString());
+                   JsonObject result = CoreServerApi.voiceUnmute(target.getUUID().toString());
          if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
             WarfareVoicechatPlugin.invalidateMuteCache(target.getUUID());
             target.sendSystemMessage(
@@ -778,7 +778,7 @@ public class ModCommands {
 
    private static int voiceMuteList(CommandSourceStack source) {
       try {
-         JsonObject result = CoreAPI.getVoiceMutes();
+          JsonObject result = CoreServerApi.getVoiceMutes();
          if (result != null && result.has("success") && result.get("success").getAsBoolean()
                  && result.has("data") && !result.get("data").isJsonNull()) {
             JsonArray list = result.getAsJsonArray("data");

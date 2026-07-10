@@ -10,6 +10,8 @@ import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 public class PlayerConnectHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerConnectHandler.class);
+    private static final String HMAC_SECRET = "pwp_launcher_secret_2024";
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -65,7 +68,7 @@ public class PlayerConnectHandler {
                         log.info("IP verified for {} (allow)", player.getScoreboardName());
                         return;
                     }
-                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0412\u0440\u0435\u043C\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u0438\u0441\u0442\u0435\u043A\u043B\u043E\n\n\u00A77\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435"));
+                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0412\u0440\u0435\u043C\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u0438\u0441\u0442\u0435\u043A\u043B\u043E\n\n\u00A77\u041F\u043E\u043F\u0440\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435"));
                 }
             } catch (Exception e) {
                 log.error("IP verification error for {}: {}", player.getScoreboardName(), e.getMessage());
@@ -73,11 +76,30 @@ public class PlayerConnectHandler {
         }, "PWP-IP-Verify").start();
     }
 
+    private static String hmacSign(String path) {
+        try {
+            long timestamp = System.currentTimeMillis();
+            String data = timestamp + ":" + path;
+            Mac mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec key = new SecretKeySpec(HMAC_SECRET.getBytes("UTF-8"), "HmacSHA256");
+            mac.init(key);
+            byte[] hash = mac.doFinal(data.getBytes("UTF-8"));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) hex.append(String.format("%02x", b));
+            return timestamp + ":" + hex.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     private static String verifyIp(String uuid, String ip) throws Exception {
-        URL url = new URL(CoreServerMod.API_BASE + "/api/v1/auth/verify-ip");
+        String path = "/api/v1/auth/verify-ip";
+        URL url = new URL(CoreServerMod.API_BASE + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
+        conn.setRequestProperty("X-PWP-Sign", hmacSign(path));
         conn.setDoOutput(true);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
@@ -91,9 +113,12 @@ public class PlayerConnectHandler {
     }
 
     private static String pollConfirm(long confirmId) throws Exception {
-        URL url = new URL(CoreServerMod.API_BASE + "/api/v1/auth/check-ip-confirm?id=" + confirmId);
+        String path = "/api/v1/auth/check-ip-confirm?id=" + confirmId;
+        URL url = new URL(CoreServerMod.API_BASE + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
+        conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
+        conn.setRequestProperty("X-PWP-Sign", hmacSign(path));
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
         try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {

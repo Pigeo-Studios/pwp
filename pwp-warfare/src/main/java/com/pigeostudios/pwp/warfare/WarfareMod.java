@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreserver.CoreServerApi;
 import net.minecraftforge.fml.ModList;
 import com.pigeostudios.pwp.warfare.client.ClientConfigRegistry;
 import com.pigeostudios.pwp.warfare.command.ModCommands;
@@ -217,20 +217,20 @@ public class WarfareMod {
             }
          }
 
-          if (ModList.get().isLoaded("pwp_core_client") && CoreAPI.isEnabled()) {
+           if (ModList.get().isLoaded("pwpcore")) {
              try {
                 String[] factions = {data.blueFaction, data.redFaction};
                 String[] teams = {"BLUE", "RED"};
                 for (int i = 0; i < 2; i++) {
                    String faction = factions[i];
                    if (faction == null || faction.isEmpty() || faction.equals("none")) continue;
-                   JsonObject response = CoreAPI.getFactionKits(faction);
+                    JsonObject response = CoreServerApi.getFactionKits(faction);
                    if (response != null && response.has("data")) {
                       data.loadKitsFromApi(teams[i], response);
                       LOGGER.info("Loaded {} kits from API for faction {} on team {}",
                          response.getAsJsonArray("data").size(), faction, teams[i]);
                    }
-                   JsonObject vehResponse = CoreAPI.getFactionVehicles(faction);
+                    JsonObject vehResponse = CoreServerApi.getFactionVehicles(faction);
                    if (vehResponse != null && vehResponse.has("data")) {
                       data.loadFactionVehiclesFromApi(teams[i], vehResponse);
                       LOGGER.info("Loaded faction vehicles from API for faction {} on team {}", faction, teams[i]);

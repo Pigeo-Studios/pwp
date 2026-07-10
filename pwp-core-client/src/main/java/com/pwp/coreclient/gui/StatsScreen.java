@@ -2,8 +2,11 @@ package com.pwp.coreclient.gui;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.network.ClientResponseCache;
+import com.pwp.coreclient.network.PacketDataRequest;
+import com.pwp.coreclient.network.PacketHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -13,6 +16,7 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class StatsScreen extends Screen {
 
@@ -23,12 +27,14 @@ public class StatsScreen extends Screen {
     private List<LeaderboardEntry> lbEntries = new ArrayList<>();
     private int lbTotal = 0;
     private String playerUuid;
+    private UUID playerUuidObj;
     private String playerNickname;
 
     private JsonObject cachedPlayerStats;
-    private JsonObject cachedRank;
     private boolean loading = true;
     private String errorMsg = null;
+    private boolean profileRequested = false;
+    private boolean leaderboardRequested = false;
 
     private double scrollOffset = 0;
     private double scrollMax = 0;
@@ -59,49 +65,53 @@ public class StatsScreen extends Screen {
         Player p = Minecraft.getInstance().player;
         if (p != null) {
             playerUuid = p.getStringUUID();
+            playerUuidObj = p.getUUID();
             playerNickname = p.getScoreboardName();
         }
-        fetchData();
+        requestProfile();
     }
 
-    private void fetchData() {
+    private void requestProfile() {
         loading = true;
         errorMsg = null;
         scrollOffset = 0;
-        new Thread(() -> {
-            try {
-                JsonObject profileResp = CoreAPI.getPlayerProfile(playerUuid);
-                if (profileResp != null && profileResp.has("data")) {
-                    cachedPlayerStats = profileResp.getAsJsonObject("data");
-                }
-                JsonObject rankResp = CoreAPI.getPlayerRank(playerUuid, lbOrderBy);
-                if (rankResp != null && rankResp.has("data")) {
-                    cachedRank = rankResp.getAsJsonObject("data");
-                }
-                fetchLeaderboardPage();
-            } catch (Exception e) {
-                errorMsg = "Failed to load stats";
-            }
-            loading = false;
-        }).start();
+        profileRequested = true;
+        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("profile", ""));
     }
 
-    private void fetchLeaderboardPage() {
-        JsonObject lbResp = CoreAPI.getLeaderboard(lbOrderBy, lbPage + 1, 20);
-        if (lbResp != null && lbResp.has("data")) {
-            JsonObject data = lbResp.getAsJsonObject("data");
-            lbTotal = data.get("total").getAsInt();
-            int limit = data.get("limit").getAsInt();
-            int page = data.get("page").getAsInt();
-            lbTotalPages = Math.max(1, (lbTotal + limit - 1) / limit);
+    private void requestLeaderboard() {
+        leaderboardRequested = false;
+        ClientResponseCache.leaderboardData = null;
+        String params = "{\"orderBy\":\"" + lbOrderBy + "\",\"page\":" + (lbPage + 1) + "}";
+        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("leaderboard", params));
+    }
 
+    @Override
+    public void tick() {
+        if (profileRequested && playerUuidObj != null) {
+            PlayerData.CachedProfile profile = PlayerData.get(playerUuidObj);
+            if (profile != null && profile.data != null) {
+                cachedPlayerStats = profile.data;
+                profileRequested = false;
+                if (tab == TAB_MY_STATS) loading = false;
+            }
+        }
+        if (tab == TAB_LEADERBOARD && !leaderboardRequested && ClientResponseCache.leaderboardData != null) {
+            JsonObject data = ClientResponseCache.leaderboardData;
+            lbTotal = data.has("total") ? data.get("total").getAsInt() : 0;
+            int limit = data.has("limit") ? data.get("limit").getAsInt() : 20;
+            int page = data.has("page") ? data.get("page").getAsInt() : 1;
+            lbTotalPages = Math.max(1, (lbTotal + limit - 1) / limit);
+            lbPage = page - 1;
             lbEntries.clear();
-            JsonArray players = data.getAsJsonArray("players");
-            if (players != null) {
+            if (data.has("players")) {
+                JsonArray players = data.getAsJsonArray("players");
                 for (int i = 0; i < players.size(); i++) {
                     lbEntries.add(new LeaderboardEntry(players.get(i).getAsJsonObject()));
                 }
             }
+            leaderboardRequested = true;
+            loading = false;
         }
     }
 
@@ -117,7 +127,7 @@ public class StatsScreen extends Screen {
 
         addRenderableWidget(Button.builder(
                 Component.literal("Leaderboard"),
-                b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; fetchLeaderboardPage(); init(); })
+                b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; loading = true; requestLeaderboard(); init(); })
                 .bounds(cx - 76, 6, 90, 22).build());
 
         addRenderableWidget(Button.builder(
@@ -129,11 +139,11 @@ public class StatsScreen extends Screen {
             int pageY = 30;
             addRenderableWidget(Button.builder(
                     Component.literal("\u25C0"),
-                    b -> { if (lbPage > 0) { lbPage--; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
+                    b -> { if (lbPage > 0) { lbPage--; scrollOffset = 0; loading = true; requestLeaderboard(); init(); }})
                     .bounds(cx + 80, pageY, 20, 18).build());
             addRenderableWidget(Button.builder(
                     Component.literal("\u25B6"),
-                    b -> { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; fetchLeaderboardPage(); init(); }})
+                    b -> { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; loading = true; requestLeaderboard(); init(); }})
                     .bounds(cx + 104, pageY, 20, 18).build());
             addRenderableWidget(Button.builder(
                     Component.literal((lbPage + 1) + "/" + lbTotalPages),
@@ -160,6 +170,8 @@ public class StatsScreen extends Screen {
             return;
         }
 
+        if (cachedPlayerStats == null && tab == TAB_MY_STATS) return;
+
         int clipY = CONTENT_TOP;
         int clipH = height - CONTENT_TOP - CONTENT_BOTTOM_OFFSET;
 
@@ -169,7 +181,6 @@ public class StatsScreen extends Screen {
             renderLeaderboard(gui, mx, my, clipY, clipH);
         }
 
-        // scrollbar
         if (scrollMax > 0) {
             int sbY = clipY + 2;
             int sbH = clipH - 4;
@@ -203,7 +214,8 @@ public class StatsScreen extends Screen {
                         lbOrderBy = cat;
                         lbPage = 0;
                         scrollOffset = 0;
-                        fetchLeaderboardPage();
+                        loading = true;
+                        requestLeaderboard();
                         init();
                     }
                     return true;
@@ -212,8 +224,6 @@ public class StatsScreen extends Screen {
         }
         return super.mouseClicked(mx, my, btn);
     }
-
-    // ====== MY STATS TAB ======
 
     private void renderMyStats(GuiGraphics gui, int mx, int my, int clipY, int clipH) {
         if (cachedPlayerStats == null) return;
@@ -231,20 +241,12 @@ public class StatsScreen extends Screen {
 
         JsonObject st = cachedPlayerStats.has("stats") ? cachedPlayerStats.getAsJsonObject("stats") : cachedPlayerStats;
 
-        int rank = -1, total = 0;
-        if (cachedRank != null) {
-            rank = cachedRank.get("rank").getAsInt();
-            total = cachedRank.get("total").getAsInt();
-        }
-
         int y = clipY + 4 - (int) scrollOffset;
-        String rankStr = rank > 0 ? "\u00a7e#" + rank + "\u00a77 of " + total : "\u00a77--";
 
-        // Player header
         gui.fill(leftX, y, leftX + panelW, y + 26, PWPTheme.Colors.SURFACE_LIGHT);
         gui.fill(leftX, y + 26, leftX + panelW, y + 27, PWPTheme.Colors.BORDER);
         gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF);
-        gui.drawString(font, "\u00a77Rank: " + rankStr + "  \u00a77Matches: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77Matches: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
         y += 30;
 
         y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.SWORDS + " BATTLE", new String[][]{
@@ -318,8 +320,6 @@ public class StatsScreen extends Screen {
         }
         return text;
     }
-
-    // ====== LEADERBOARD TAB ======
 
     private void renderLeaderboard(GuiGraphics gui, int mx, int my, int clipY, int clipH) {
         int leftX = Math.max(10, width / 2 - 180);
@@ -432,8 +432,6 @@ public class StatsScreen extends Screen {
         };
     }
 
-    // ====== UTILITY ======
-
     private String intStr(int v) { return String.format("%,d", v); }
 
     private String intVal(JsonObject obj, String key) {
@@ -496,8 +494,6 @@ public class StatsScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
-
-    // ====== DATA ======
 
     private static class LeaderboardEntry {
         String uuid, nickname;
