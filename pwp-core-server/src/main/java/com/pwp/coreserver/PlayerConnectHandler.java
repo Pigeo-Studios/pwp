@@ -22,6 +22,7 @@ public class PlayerConnectHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerConnectHandler.class);
     private static final String HMAC_SECRET = "pwp_launcher_secret_2024";
+    private static final int IP_CONFIRM_TIMEOUT_SEC = 300; // 5 минут
 
     @SubscribeEvent
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -32,19 +33,19 @@ public class PlayerConnectHandler {
 
         new Thread(() -> {
             try {
-                // Try server-token verification first (env is set by launcher for client process)
+                // Try server-token verification first
                 String serverToken = System.getenv("PWP_SERVER_TOKEN");
                 if (serverToken != null && !serverToken.isEmpty()) {
-                    String result = postJson("/api/v1/launcher/verify-server-token?token=" + serverToken, uuid);
+                    String result = postJson("/api/v1/launcher/verify-server-token?token=" + serverToken, "{\"uuid\":\"" + uuid + "\"}");
                     JsonObject json = JsonParser.parseString(result).getAsJsonObject();
                     if (json.get("success").getAsBoolean()) {
                         log.info("{} authenticated via server token", name);
-                        return; // allowed
+                        return;
                     }
                     log.warn("{} has invalid server token", name);
                 }
 
-                // Try IP verification fallback
+                // IP verification
                 String rawIp = player.connection.connection.getRemoteAddress().toString();
                 if (rawIp.startsWith("/")) rawIp = rawIp.substring(1);
                 int colon = rawIp.lastIndexOf(':');
@@ -53,13 +54,36 @@ public class PlayerConnectHandler {
                 String result = postJson("/api/v1/auth/verify-ip", "{\"uuid\":\"" + uuid + "\",\"ip\":\"" + ip + "\"}");
                 JsonObject json = JsonParser.parseString(result).getAsJsonObject();
 
-                if (!json.get("success").getAsBoolean()) {
-                    String error = json.has("error") ? json.get("error").getAsString() : "IP not verified";
-                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + error));
+                if (json.get("success").getAsBoolean()) {
+                    log.info("{} IP verified, allowed", name);
                     return;
                 }
 
-                log.info("{} ({}) IP verified, allowed", name, uuid);
+                // Check if there's a pending confirmId
+                Long confirmId = json.has("confirmId") && !json.get("confirmId").isJsonNull()
+                    ? json.get("confirmId").getAsLong() : null;
+
+                if (confirmId != null) {
+                    log.info("IP confirm pending for {} (confirmId={}), polling {}s...", name, confirmId, IP_CONFIRM_TIMEOUT_SEC);
+                    for (int i = 0; i < IP_CONFIRM_TIMEOUT_SEC; i++) {
+                        Thread.sleep(1000);
+                        String pollResult = getJson("/api/v1/auth/check-ip-confirm?id=" + confirmId);
+                        JsonObject pollJson = JsonParser.parseString(pollResult).getAsJsonObject();
+                        if (!pollJson.get("success").getAsBoolean()) {
+                            String pollError = pollJson.has("error") ? pollJson.get("error").getAsString() : "";
+                            if ("pending".equals(pollError)) continue;
+                            log.warn("Kicking {}: {}", name, pollError);
+                            player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + pollError));
+                            return;
+                        }
+                        log.info("IP confirmed for {} (allow)", name);
+                        return;
+                    }
+                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0412\u0440\u0435\u043C\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u0438\u0441\u0442\u0435\u043A\u043B\u043E\n\n\u00A77\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435"));
+                } else {
+                    String error = json.has("error") ? json.get("error").getAsString() : "Access denied";
+                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + error));
+                }
             } catch (Exception e) {
                 log.error("Auth error for {}: {}", name, e.getMessage());
             }
@@ -95,6 +119,19 @@ public class PlayerConnectHandler {
         try (OutputStream os = conn.getOutputStream()) {
             os.write(body.getBytes());
         }
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+            return r.lines().collect(Collectors.joining("\n"));
+        }
+    }
+
+    private static String getJson(String path) throws Exception {
+        URL url = new URL(CoreServerMod.API_BASE + path);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
+        conn.setRequestProperty("X-PWP-Sign", hmacSign(path.contains("?") ? path.substring(0, path.indexOf('?')) : path));
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(10000);
         try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             return r.lines().collect(Collectors.joining("\n"));
         }

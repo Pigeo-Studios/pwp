@@ -75,6 +75,8 @@ public class AuthMiddleware {
             path.startsWith("/api/v1/auth/refresh") ||
             path.startsWith("/api/v1/auth/heartbeat") ||
             path.startsWith("/api/v1/auth/revoke-sessions") ||
+            path.startsWith("/api/v1/auth/confirm-ip") ||
+            path.startsWith("/api/v1/auth/check-ip-confirm") ||
             path.startsWith("/api/v1/launcher/") ||
             path.startsWith("/launcher/files/")) {
             return; // launcher-only endpoints — sign check already passed
