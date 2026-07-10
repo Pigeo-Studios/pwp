@@ -61,7 +61,7 @@ public class AuthMiddleware {
         String signData = timestamp + ":" + path;
         String expected = hmacSha256(signData, CoreApplication.config.getLauncherSecret());
         if (!signature.equals(expected)) {
-            log.warn("Invalid launcher signature from {}", ctx.ip());
+            log.warn("Invalid launcher signature from {} (path={}, expected={}, got={})", ctx.ip(), path, expected, signature);
             throw new UnauthorizedResponse("Access denied: invalid signature");
         }
 
