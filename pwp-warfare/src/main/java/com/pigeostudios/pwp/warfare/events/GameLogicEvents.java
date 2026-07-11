@@ -814,7 +814,7 @@ public class GameLogicEvents {
            if (returnToLobbyTimer > 0) {
               returnToLobbyTimer--;
               if (returnToLobbyTimer == 0 && returnToLobbyServer != null) {
-                 String lobbyHost = "127.0.0.1";
+                  String lobbyHost = "pigeo.asuscomm.com";
                  int lobbyPort = 25565;
                  for (ServerPlayer player : returnToLobbyServer.getPlayerList().getPlayers()) {
                     player.sendSystemMessage(

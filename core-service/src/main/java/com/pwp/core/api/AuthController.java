@@ -133,12 +133,19 @@ public class AuthController {
                 send2faToTelegram(pl.telegramId, code);
                 ctx.json(ApiResponse.ok(Map.of("2fa_required", true, "uuid", pl.uuid, "telegram_id", pl.telegramId)));
             } else {
+                String accessToken = PlayerRepository.generateTokenPart();
+                String refreshToken = PlayerRepository.generateTokenPart();
+                String sessionKey = PlayerRepository.generateSessionKey();
+                PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp);
                 String authToken = PlayerRepository.createAuthToken(pl.accountId);
                 PlayerRepository.trustIp(pl.uuid, clientIp);
                 PlayerRepository.updateLastLogin(pl.uuid, clientIp);
                 PlayerRepository.log(pl.uuid, "login", clientIp, "login from ip");
                 ctx.json(ApiResponse.ok(Map.of(
                     "authToken", authToken,
+                    "access_token", accessToken,
+                    "refresh_token", refreshToken,
+                    "session_key", sessionKey,
                     "expiresIn", 604800,
                     "accountId", pl.accountId,
                     "uuid", pl.uuid,
@@ -164,12 +171,19 @@ public class AuthController {
                 ctx.json(ApiResponse.error("player not found or banned")); return;
             }
             String clientIp = ctx.ip();
+            String accessToken = PlayerRepository.generateTokenPart();
+            String refreshToken = PlayerRepository.generateTokenPart();
+            String sessionKey = PlayerRepository.generateSessionKey();
+            PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp);
             String authToken = PlayerRepository.createAuthToken(pl.accountId);
             PlayerRepository.trustIp(pl.uuid, clientIp);
             PlayerRepository.updateLastLogin(pl.uuid, clientIp);
             PlayerRepository.log(pl.uuid, "login_2fa", clientIp, "login via 2fa");
             ctx.json(ApiResponse.ok(Map.of(
                 "authToken", authToken,
+                "access_token", accessToken,
+                "refresh_token", refreshToken,
+                "session_key", sessionKey,
                 "expiresIn", 604800,
                 "accountId", pl.accountId,
                 "uuid", pl.uuid,

@@ -6,12 +6,15 @@ import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 @Deprecated
 public class CoreAPI {
@@ -20,7 +23,7 @@ public class CoreAPI {
     private static final Gson GSON = new Gson();
 
     private static boolean enabled = true;
-    private static String baseUrl = "http://localhost:8080";
+    private static String baseUrl = "http://pigeo.asuscomm.com:8080";
     private static String apiKey = "pwp_server_key_change_me";
 
     public static void configure(String url, String key) {
@@ -197,6 +200,7 @@ public class CoreAPI {
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
             int code = conn.getResponseCode();
+            logApiCall("DELETE", "/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName, conn, code);
             if (code == 200 || code == 201) {
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 try (InputStream is = conn.getInputStream()) {
@@ -249,6 +253,7 @@ public class CoreAPI {
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
             int code = conn.getResponseCode();
+            logApiCall("GET", path, conn, code);
             if (code == 200 || code == 201) {
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 try (InputStream is = conn.getInputStream()) {
@@ -264,6 +269,21 @@ public class CoreAPI {
             log.warn("Core API get {} failed: {}", path, e.getMessage());
         }
         return null;
+    }
+
+    private static void logApiCall(String method, String path, HttpURLConnection conn, int code) {
+        log.warn("[CoreAPI] {} {} (Bearer: {})", method, baseUrl + path, apiKey);
+        log.warn("[CoreAPI] HTTP {}", code);
+        if (code >= 400) {
+            try {
+                InputStream err = conn.getErrorStream();
+                if (err != null) {
+                    String body = new BufferedReader(new InputStreamReader(err, StandardCharsets.UTF_8))
+                        .lines().collect(Collectors.joining("\n"));
+                    log.warn("[CoreAPI] Error body: {}", body);
+                }
+            } catch (Exception ignored) {}
+        }
     }
 
     private static JsonObject put(String path, Object body) {
@@ -283,6 +303,7 @@ public class CoreAPI {
             }
 
             int code = conn.getResponseCode();
+            logApiCall("PUT", path, conn, code);
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             try (InputStream is = code < 400 ? conn.getInputStream() : conn.getErrorStream()) {
                 byte[] buf = new byte[4096];
@@ -318,6 +339,7 @@ public class CoreAPI {
             }
 
             int code = conn.getResponseCode();
+            logApiCall("POST", path, conn, code);
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             try (InputStream is = code < 400 ? conn.getInputStream() : conn.getErrorStream()) {
                 byte[] buf = new byte[4096];

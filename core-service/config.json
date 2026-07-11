@@ -14,7 +14,8 @@
                  },
     "api":  {
                 "keys":  [
-                             "RUhL8HO9bBAoaG1NDpCc57W6tuSkwvKVsPingEmer2QTdZ3zFlxjXyYq0fMIJ4"
+                             "RUhL8HO9bBAoaG1NDpCc57W6tuSkwvKVsPingEmer2QTdZ3zFlxjXyYq0fMIJ4",
+                             "pwp_server_key_change_me"
                          ],
                 "rateLimitPerMinute":  100,
                 "rateLimitPerMinuteAdmin":  10,

@@ -141,7 +141,7 @@ public class MatchAllocator {
             player.sendSystemMessage(Component.literal("§cNo active match available to join"), false);
             return;
         }
-        connectPlayerToMatch(player, mi, "127.0.0.1");
+        connectPlayerToMatch(player, mi, "pigeo.asuscomm.com");
     }
 
     public static void joinMatchById(int serverId, ServerPlayer player) {
@@ -150,7 +150,7 @@ public class MatchAllocator {
             player.sendSystemMessage(Component.literal("§cMatch not available to join"), false);
             return;
         }
-        connectPlayerToMatch(player, mi, "127.0.0.1");
+        connectPlayerToMatch(player, mi, "pigeo.asuscomm.com");
     }
 
     private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
@@ -199,7 +199,7 @@ public class MatchAllocator {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
-        String host = "127.0.0.1";
+        String host = "pigeo.asuscomm.com";
         log.info("Transferring players to {}:{} for match {}", host, mi.port, mi.mapName);
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {

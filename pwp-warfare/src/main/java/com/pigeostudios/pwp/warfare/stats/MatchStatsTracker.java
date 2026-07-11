@@ -312,7 +312,7 @@ public class MatchStatsTracker {
                                     Component.literal("§e[PWP] Returning to lobby..."), false);
                             PacketHandler.INSTANCE.send(
                                     PacketDistributor.PLAYER.with(() -> player),
-                                    new ConnectToServerPacket("127.0.0.1", 25565));
+                                    new ConnectToServerPacket("pigeo.asuscomm.com", 25565));
                         }
                         Thread.sleep(2000);
                     } catch (Exception ex) {
