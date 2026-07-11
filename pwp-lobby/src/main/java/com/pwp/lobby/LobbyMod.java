@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 @Mod("pwp_lobby")
 public class LobbyMod {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LobbyMod.class);
     private static boolean isMatchServer = false;
 
     // Mode voting state
@@ -230,14 +231,7 @@ public class LobbyMod {
         String uuid = player.getStringUUID();
         String name = player.getScoreboardName();
 
-        try {
-            var playerData = CoreServerApi.loadPlayer(uuid);
-            if (playerData == null || !playerData.has("success") || !playerData.get("success").getAsBoolean()) {
-                CoreServerApi.createPlayer(uuid, name);
-            }
-        } catch (Exception e) {
-            System.out.println("[PWP] Core API unavailable (DB down?), proceeding without registration: " + e.getMessage());
-        }
+        // Игрок уже создан в БД через Telegram бота — ничего дополнительно не делаем
 
         MatchAllocator.playerJoined(uuid);
         int online = MatchAllocator.getLobbyPlayerCount();

@@ -96,7 +96,7 @@ public class PacketSaveFactionVehicle {
                 payload.addProperty("yaw", msg.yaw);
                 payload.addProperty("respawnTime", msg.respawnTime);
                 payload.addProperty("initialTime", msg.initialTime);
-                payload.add("inventory", itemsArray);
+                payload.addProperty("inventory", itemsArray.toString());
 
                 CoreServerApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload);
                 player.displayClientMessage(Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);

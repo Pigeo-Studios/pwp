@@ -191,8 +191,8 @@ async def _callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         parts = data.split("_")
         confirm_id = parts[2]
         action = parts[3]  # allow / deny
-        resp = api_call("POST", "/api/v1/auth/confirm-ip",
-                        {"confirmId": int(confirm_id), "action": action})
+        resp = await api_call("POST", "/api/v1/auth/confirm-ip",
+                              {"confirmId": int(confirm_id), "action": action})
         if action == "allow":
             await q.edit_message_text("\u2705 IP подтвержд\u0451н. Игрок может зайти.")
         else:

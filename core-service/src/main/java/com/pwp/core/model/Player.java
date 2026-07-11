@@ -1,6 +1,7 @@
 package com.pwp.core.model;
 
 public class Player {
+    public long accountId;
     public String uuid;
     public String nickname;
     public String login;

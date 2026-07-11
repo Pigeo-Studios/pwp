@@ -166,7 +166,27 @@ public class DatabaseManager {
             + "reason VARCHAR(256) DEFAULT '', "
             + "muted_at BIGINT NOT NULL, "
             + "expires_at BIGINT NOT NULL DEFAULT 0, "
-            + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
+            + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
+
+            "CREATE TABLE IF NOT EXISTS ip_confirmations ("
+            + "id INT AUTO_INCREMENT PRIMARY KEY, "
+            + "player_uuid VARCHAR(36) NOT NULL, "
+            + "new_ip VARCHAR(45) NOT NULL, "
+            + "status ENUM('pending','allow','deny') NOT NULL DEFAULT 'pending', "
+            + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+            + "responded_at DATETIME NULL, "
+            + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
+
+            "CREATE TABLE IF NOT EXISTS ip_blocks ("
+            + "id INT AUTO_INCREMENT PRIMARY KEY, "
+            + "ip VARCHAR(45) NOT NULL, "
+            + "blocked_until DATETIME NOT NULL, "
+            + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+
+            "CREATE TABLE IF NOT EXISTS hwid_bans ("
+            + "hwid VARCHAR(255) PRIMARY KEY, "
+            + "reason VARCHAR(256), "
+            + "banned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"
         };
         try (Connection c = getConnection(); Statement s = c.createStatement()) {
             for (String sql : tables) {
@@ -185,7 +205,7 @@ public class DatabaseManager {
                 d.execute("DROP TABLE IF EXISTS player_logs");
                 d.execute("DROP TABLE IF EXISTS password_resets");
                 d.execute("DROP TABLE IF EXISTS twofa_codes");
-                d.execute("DROP TABLE IF EXISTS sessions");
+                // d.execute("DROP TABLE IF EXISTS sessions"); // НЕ ДРОПАТЬ — теряются сессии
                 d.execute("DROP TABLE IF EXISTS trusted_ips");
                 d.execute("DROP TABLE IF EXISTS accounts");
             } catch (Exception ignored) {}
@@ -203,6 +223,11 @@ public class DatabaseManager {
             for (String sql : sessionMigrations) {
                 try { s.execute(sql); } catch (Exception ignored) {}
             }
+
+            // Migration: drop server_tokens table (replaced by auth_tokens)
+            try { s.execute("DROP TABLE IF EXISTS server_tokens"); } catch (Exception ignored) {}
+            // Migration: add accountId as permanent player identity
+            try { s.execute("ALTER TABLE players ADD COLUMN id BIGINT AUTO_INCREMENT UNIQUE FIRST"); } catch (Exception ignored) {}
 
             // Migration: add missing columns to player_stats (safe, ignores duplicates)
             String[] migrations = {
@@ -246,7 +271,10 @@ public class DatabaseManager {
                 "ALTER TABLE players ADD COLUMN last_ip VARCHAR(45) DEFAULT NULL",
                     "ALTER TABLE players ADD INDEX idx_players_telegram (telegram_id)",
                 "ALTER TABLE players ADD INDEX idx_players_login (login)",
-                "ALTER TABLE password_resets ADD COLUMN player_uuid VARCHAR(36) NOT NULL"
+                "ALTER TABLE password_resets ADD COLUMN player_uuid VARCHAR(36) NOT NULL",
+                "ALTER TABLE players ADD COLUMN banned_until DATETIME DEFAULT NULL",
+                "ALTER TABLE hwid_bans ADD COLUMN banned_until DATETIME DEFAULT NULL",
+                "ALTER TABLE ip_blocks ADD COLUMN reason VARCHAR(256) DEFAULT NULL"
             };
             for (String sql : migrations) {
                 try { s.execute(sql); } catch (Exception ignored) {}
@@ -342,13 +370,15 @@ public class DatabaseManager {
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                 + "FOREIGN KEY (account_uuid) REFERENCES players(uuid) ON DELETE SET NULL)",
 
-                "CREATE TABLE IF NOT EXISTS server_tokens ("
-                + "id INT AUTO_INCREMENT PRIMARY KEY, token VARCHAR(64) NOT NULL UNIQUE, "
-                + "account_uuid VARCHAR(36) NOT NULL, hwid VARCHAR(64) DEFAULT NULL, "
-                + "ip VARCHAR(45) DEFAULT NULL, used BOOLEAN NOT NULL DEFAULT FALSE, "
+                "CREATE TABLE IF NOT EXISTS auth_tokens ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "account_id BIGINT NOT NULL, "
+                + "token VARCHAR(64) NOT NULL UNIQUE, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                 + "expires_at DATETIME NOT NULL, "
-                + "FOREIGN KEY (account_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
+                + "revoked BOOLEAN NOT NULL DEFAULT FALSE, "
+                + "last_used_at DATETIME DEFAULT NULL, "
+                + "FOREIGN KEY (account_id) REFERENCES players(id) ON DELETE CASCADE)"
             };
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) {}

@@ -193,9 +193,24 @@ public class ServerManager {
             }
             if (si.process == null) continue; // still starting (copying template/map)
             if (!si.process.isAlive() && !si.failed) {
-                log.warn("Server {} process died prematurely", si.serverId);
+                int exitCode = -1;
+                try { exitCode = si.process.exitValue(); } catch (Exception ignored) {}
+                log.warn("Server {} process died prematurely (exitCode={})", si.serverId, exitCode);
+                // Read last lines of match server log for diagnostics
+                Path logFile = si.directory.resolve("logs/latest.log");
+                if (Files.exists(logFile)) {
+                    try (BufferedReader br = new BufferedReader(new FileReader(logFile.toFile()))) {
+                        java.util.List<String> lines = br.lines().toList();
+                        int start = Math.max(0, lines.size() - 30);
+                        for (int i = start; i < lines.size(); i++) {
+                            log.warn("MATCH_LOG[{}]: {}", si.serverId, lines.get(i));
+                        }
+                    } catch (Exception ignored) {}
+                } else {
+                    log.warn("MATCH_LOG[{}]: logs/latest.log not found", si.serverId);
+                }
                 si.failed = true;
-                si.error = "process died";
+                si.error = "process died (exit=" + exitCode + ")";
             }
         }
 
@@ -309,7 +324,7 @@ public class ServerManager {
         String src = source.toAbsolutePath() + "\\";
         String dst = target.toAbsolutePath() + "\\";
         ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "robocopy", src, dst,
-                "/E", "/MT:8", "/NFL", "/NDL", "/NJH", "/NJS", "/R:0", "/W:0");
+                "/E", "/MT:2", "/NFL", "/NDL", "/NJH", "/NJS", "/R:0", "/W:0");
         Process p = pb.start();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
             while (br.readLine() != null) {}

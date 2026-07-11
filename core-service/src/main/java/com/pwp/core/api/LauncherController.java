@@ -4,8 +4,12 @@ import com.pwp.core.CoreApplication;
 import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerRepository;
 import com.pwp.core.model.ApiResponse;
+import com.pwp.core.model.Player;
 import io.javalin.Javalin;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.Connection;
@@ -124,15 +128,13 @@ public class LauncherController {
             ctx.json(ApiResponse.ok("hwid saved"));
         });
 
-        // ── Get server token (launcher → server auth) ──────
+        // ── Get auth token (launcher → Minecraft, backward compat) ──
         app.post("/api/v1/launcher/server-token", ctx -> {
             ServerTokenReq req = ctx.bodyAsClass(ServerTokenReq.class);
-            if ((req.sessionToken == null && req.accessToken == null) && req.hwid == null) {
-                ctx.json(ApiResponse.error("session_token or access_token and hwid required"));
+            if (req.accessToken == null && req.sessionToken == null) {
+                ctx.json(ApiResponse.error("access_token required"));
                 return;
             }
-
-            // Validate session
             String playerUuid = req.accessToken != null
                 ? PlayerRepository.findUuidByAccessToken(req.accessToken)
                 : PlayerRepository.findSessionPlayer(req.sessionToken);
@@ -140,85 +142,46 @@ public class LauncherController {
                 ctx.json(ApiResponse.error("invalid or expired session"));
                 return;
             }
-
-            // Check ban
-            var pl = PlayerRepository.findByUuid(playerUuid);
+            Player pl = PlayerRepository.findByUuid(playerUuid);
             if (pl == null || pl.isBanned) {
                 ctx.json(ApiResponse.error("account is banned"));
                 return;
             }
-
-            // Check HWID ban (check using launcher's last known HWID)
-            // Generate one-time server token (valid 2 minutes)
-            String serverToken = generateToken();
-            String sql = "INSERT INTO server_tokens (token, account_uuid, ip, expires_at) " +
-                         "VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 2 MINUTE))";
-            try (Connection c = DatabaseManager.getConnection();
-                 PreparedStatement ps = c.prepareStatement(sql)) {
-                ps.setString(1, serverToken);
-                ps.setString(2, playerUuid);
-                ps.setString(3, ctx.ip());
-                ps.executeUpdate();
-            } catch (Exception e) {
-                ctx.json(ApiResponse.error("token generation failed"));
-                return;
-            }
-
-            PlayerRepository.log(playerUuid, "server_token", ctx.ip(), "token issued");
-
+            // Create auth token (7 days)
+            String authToken = PlayerRepository.createAuthToken(pl.accountId);
             ctx.json(ApiResponse.ok(Map.of(
-                "server_token", serverToken,
-                "username", pl.nickname,
+                "server_token", authToken,
+                "accountId", pl.accountId,
                 "uuid", playerUuid,
+                "username", pl.nickname,
                 "role", pl.role,
-                "expires_in", 120
+                "expires_in", 604800
             )));
         });
 
-        // ── Verify server token (server-side check) ────────
-        app.post("/api/v1/launcher/verify-server-token", ctx -> {
-            String token = ctx.queryParam("token");
-            if (token == null) {
+        // ── Verify auth token (server-to-server) ──────
+        app.post("/api/v1/launcher/verify", ctx -> {
+            VerifyReq req = ctx.bodyAsClass(VerifyReq.class);
+            if (req.token == null) {
                 ctx.json(ApiResponse.error("token required"));
                 return;
             }
-
-            String sql = "SELECT st.account_uuid, st.hwid, st.used, p.nickname, p.role, p.is_banned " +
-                         "FROM server_tokens st JOIN players p ON st.account_uuid = p.uuid " +
-                         "WHERE st.token = ? AND st.expires_at > CURRENT_TIMESTAMP";
-            try (Connection c = DatabaseManager.getConnection();
-                 PreparedStatement ps = c.prepareStatement(sql)) {
-                ps.setString(1, token);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        if (rs.getBoolean("used")) {
-                            ctx.json(ApiResponse.error("token already used"));
-                            return;
-                        }
-                        if (rs.getBoolean("is_banned")) {
-                            ctx.json(ApiResponse.error("account is banned"));
-                            return;
-                        }
-                        // Mark as used
-                        try (PreparedStatement up = c.prepareStatement(
-                                "UPDATE server_tokens SET used = TRUE WHERE token = ?")) {
-                            up.setString(1, token);
-                            up.executeUpdate();
-                        }
-                        ctx.json(ApiResponse.ok(Map.of(
-                            "valid", true,
-                            "uuid", rs.getString("account_uuid"),
-                            "username", rs.getString("nickname"),
-                            "role", rs.getString("role"),
-                            "hwid", rs.getString("hwid")
-                        )));
-                    } else {
-                        ctx.json(ApiResponse.error("invalid or expired token"));
-                    }
-                }
-            } catch (Exception e) {
-                ctx.json(ApiResponse.error("verification failed"));
+            Player pl = PlayerRepository.findByAuthToken(req.token);
+            if (pl == null) {
+                ctx.json(ApiResponse.error("INVALID_TOKEN"));
+                return;
             }
+            if (pl.isBanned) {
+                ctx.json(ApiResponse.error("ACCOUNT_BANNED"));
+                return;
+            }
+            ctx.json(ApiResponse.ok(Map.of(
+                "valid", true,
+                "accountId", pl.accountId,
+                "uuid", pl.uuid,
+                "nickname", pl.nickname,
+                "role", pl.role
+            )));
         });
 
         // ── Upload launcher logs ────────────────────────────
@@ -272,6 +235,63 @@ public class LauncherController {
             log.info("Served: {} ({} bytes)", relPath, file.length());
         });
 
+        // ── Check session by UUID (только UUID, без nickname fallback) ─
+        app.post("/api/v1/launcher/check-session", ctx -> {
+            CheckSessionReq req = ctx.bodyAsClass(CheckSessionReq.class);
+            if (req.uuid == null) {
+                ctx.json(ApiResponse.error("uuid required"));
+                return;
+            }
+            boolean valid = false;
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(
+                     "SELECT 1 FROM sessions WHERE player_uuid = ? AND expires_at > CURRENT_TIMESTAMP LIMIT 1")) {
+                ps.setString(1, req.uuid);
+                try (ResultSet rs = ps.executeQuery()) {
+                    valid = rs.next();
+                }
+            } catch (Exception e) {
+                log.warn("check-session error: {}", e.getMessage());
+            }
+            ctx.json(Map.of("valid", valid));
+        });
+
+        // ── Check ban by UUID ─────────────────────────────
+        app.post("/api/v1/launcher/check-ban", ctx -> {
+            CheckBanReq req = ctx.bodyAsClass(CheckBanReq.class);
+            if (req.uuid == null) {
+                ctx.json(ApiResponse.error("uuid required"));
+                return;
+            }
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(
+                     "SELECT is_banned, ban_reason, banned_until FROM players WHERE uuid = ?")) {
+                ps.setString(1, req.uuid);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        java.sql.Timestamp until = rs.getTimestamp("banned_until");
+                        boolean timedOut = until != null && until.before(new java.util.Date());
+                        if (timedOut) {
+                            try (PreparedStatement up = c.prepareStatement(
+                                "UPDATE players SET is_banned = FALSE, ban_reason = NULL, banned_until = NULL WHERE uuid = ?")) {
+                                up.setString(1, req.uuid);
+                                up.executeUpdate();
+                            }
+                            ctx.json(Map.of("banned", false));
+                        } else if (rs.getBoolean("is_banned")) {
+                            ctx.json(Map.of("banned", true, "reason", rs.getString("ban_reason")));
+                        } else {
+                            ctx.json(Map.of("banned", false));
+                        }
+                    } else {
+                        ctx.json(Map.of("banned", false));
+                    }
+                }
+            } catch (Exception e) {
+                ctx.json(ApiResponse.error(e.getMessage()));
+            }
+        });
+
         // ── HWID ban check ──────────────────────────────────
         app.post("/api/v1/launcher/check-hwid-ban", ctx -> {
             HwidCheckReq req = ctx.bodyAsClass(HwidCheckReq.class);
@@ -282,6 +302,199 @@ public class LauncherController {
             boolean banned = isHwidBanned(req.hwid);
             ctx.json(ApiResponse.ok(Map.of("banned", banned)));
         });
+
+        // ── Ban player ──────────────────────────────────────
+        app.post("/api/v1/launcher/ban", ctx -> {
+            BanReq req = ctx.bodyAsClass(BanReq.class);
+            if (req.target == null || req.reason == null) {
+                ctx.json(ApiResponse.error("target and reason required"));
+                return;
+            }
+
+            try (Connection c = DatabaseManager.getConnection()) {
+                // Parse duration
+                String durationStr = req.duration;
+                String expiresClause = "NULL";
+                String displayDuration = "\u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430";
+                if (durationStr != null && !durationStr.isEmpty() && !"perm".equals(durationStr) && !"0".equals(durationStr)) {
+                    try {
+                        int minutes = parseDuration(durationStr);
+                        expiresClause = "DATE_ADD(NOW(), INTERVAL " + minutes + " MINUTE)";
+                        displayDuration = formatDuration(minutes);
+                    } catch (Exception ignored) {}
+                }
+
+                // Lookup target by UUID or nickname
+                String uuid = null;
+                String nickname = null;
+                String hwid = null;
+                String lastIp = null;
+                Long telegramId = null;
+
+                String lookupSql = "SELECT uuid, nickname, hwid, last_ip, telegram_id FROM players WHERE uuid = ? OR nickname = ?";
+                try (PreparedStatement ps = c.prepareStatement(lookupSql)) {
+                    ps.setString(1, req.target);
+                    ps.setString(2, req.target);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            uuid = rs.getString("uuid");
+                            nickname = rs.getString("nickname");
+                            hwid = rs.getString("hwid");
+                            lastIp = rs.getString("last_ip");
+                            telegramId = rs.getLong("telegram_id");
+                        }
+                    }
+                }
+
+                if (uuid == null) {
+                    ctx.json(ApiResponse.error("player not found"));
+                    return;
+                }
+
+                // Ban account
+                try (PreparedStatement ps = c.prepareStatement(
+                    "UPDATE players SET is_banned = TRUE, ban_reason = ?, banned_until = " + expiresClause + " WHERE uuid = ?")) {
+                    ps.setString(1, req.reason);
+                    ps.setString(2, uuid);
+                    ps.executeUpdate();
+                }
+
+                // Ban HWID
+                if (hwid != null && !hwid.isEmpty()) {
+                    try (PreparedStatement ps = c.prepareStatement(
+                        "INSERT IGNORE INTO hwid_bans (hwid, reason, banned_until, banned_at) VALUES (?, ?, " + expiresClause + ", NOW())")) {
+                        ps.setString(1, hwid);
+                        ps.setString(2, req.reason);
+                        if (expiresClause.contains("?")) ps.setString(3, expiresClause); // fallback
+                        ps.executeUpdate();
+                    }
+                }
+
+                // Ban IP (if exists)
+                if (lastIp != null && !lastIp.isEmpty()) {
+                    try (PreparedStatement ps = c.prepareStatement(
+                        "INSERT INTO ip_blocks (ip, blocked_until, reason) VALUES (?, " + expiresClause + ", ?)")) {
+                        ps.setString(1, lastIp);
+                        ps.setString(2, req.reason);
+                        ps.executeUpdate();
+                    }
+                }
+
+                // Notify via Telegram
+                if (telegramId != null && telegramId > 0) {
+                    sendBanTelegram(telegramId, nickname, req.reason, displayDuration);
+                }
+
+                log.info("Player {} ({}) banned ({}): {}", nickname, uuid, displayDuration, req.reason);
+                ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname, "duration", displayDuration)));
+            } catch (Exception e) {
+                log.error("Ban error", e);
+                ctx.status(500).json(ApiResponse.error(e.getMessage()));
+            }
+        });
+
+        // ── Unban player ────────────────────────────────────
+        app.post("/api/v1/launcher/unban", ctx -> {
+            UnbanReq req = ctx.bodyAsClass(UnbanReq.class);
+            if (req.target == null) {
+                ctx.json(ApiResponse.error("target required"));
+                return;
+            }
+
+            try (Connection c = DatabaseManager.getConnection()) {
+                String lookupSql = "SELECT uuid, nickname, hwid, last_ip, telegram_id FROM players WHERE uuid = ? OR nickname = ?";
+                String uuid = null;
+                String nickname = null;
+                try (PreparedStatement ps = c.prepareStatement(lookupSql)) {
+                    ps.setString(1, req.target);
+                    ps.setString(2, req.target);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            uuid = rs.getString("uuid");
+                            nickname = rs.getString("nickname");
+                        }
+                    }
+                }
+                if (uuid == null) {
+                    ctx.json(ApiResponse.error("player not found"));
+                    return;
+                }
+
+                // Get telegramId for notification
+                Long tgId = null;
+                try (PreparedStatement ps = c.prepareStatement("SELECT telegram_id FROM players WHERE uuid = ?")) {
+                    ps.setString(1, uuid);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) tgId = rs.getLong("telegram_id");
+                    }
+                }
+
+                try (PreparedStatement ps = c.prepareStatement(
+                    "UPDATE players SET is_banned = FALSE, ban_reason = NULL, banned_until = NULL WHERE uuid = ?")) {
+                    ps.setString(1, uuid);
+                    ps.executeUpdate();
+                }
+
+                if (tgId != null && tgId > 0) {
+                    sendUnbanTelegram(tgId, nickname);
+                }
+
+                log.info("Player {} ({}) unbanned", nickname, uuid);
+                ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname)));
+            } catch (Exception e) {
+                log.error("Unban error", e);
+                ctx.status(500).json(ApiResponse.error(e.getMessage()));
+            }
+        });
+    }
+
+    private static final String TG_COMMANDS_DIR = "C:/Users/maska/OneDrive/Desktop/PWP/bots/commands";
+
+    private static void sendBanTelegram(Long telegramId, String nickname, String reason, String duration) {
+        try {
+            File dir = new File(TG_COMMANDS_DIR);
+            dir.mkdirs();
+            String fileName = "tg_ban_" + System.currentTimeMillis() + ".json";
+            String text = "\u26D4 <b>\u0412\u042B \u0417\u0410\u0411\u041B\u041E\u041A\u0418\u0420\u041E\u0412\u0410\u041D\u042B</b>\n\n"
+                + "\u041F\u0440\u0438\u0447\u0438\u043D\u0430: " + reason + "\n"
+                + "\u0421\u0440\u043E\u043A: " + duration;
+            String escaped = text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+            String json = "{\"action\":\"send\",\"chat_id\":\"" + telegramId + "\",\"text\":\"" + escaped + "\",\"parse_mode\":\"HTML\"}";
+            Files.writeString(new File(dir, fileName).toPath(), json, StandardCharsets.UTF_8);
+            log.info("Ban notification sent to tg {}", telegramId);
+        } catch (Exception e) {
+            log.warn("Failed to send ban Telegram: {}", e.getMessage());
+        }
+    }
+
+    private static void sendUnbanTelegram(Long telegramId, String nickname) {
+        try {
+            File dir = new File(TG_COMMANDS_DIR);
+            dir.mkdirs();
+            String fileName = "tg_unban_" + System.currentTimeMillis() + ".json";
+            String text = "\u2705 <b>\u0412\u042B \u0420\u0410\u0417\u0411\u041B\u041E\u041A\u0418\u0420\u041E\u0412\u0410\u041D\u042B</b>\n\n"
+                + "\u041F\u0440\u0438\u044F\u0442\u043D\u043E\u0439 \u0438\u0433\u0440\u044B!";
+            String escaped = text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+            String json = "{\"action\":\"send\",\"chat_id\":\"" + telegramId + "\",\"text\":\"" + escaped + "\",\"parse_mode\":\"HTML\"}";
+            Files.writeString(new File(dir, fileName).toPath(), json, StandardCharsets.UTF_8);
+            log.info("Unban notification sent to tg {}", telegramId);
+        } catch (Exception e) {
+            log.warn("Failed to send unban Telegram: {}", e.getMessage());
+        }
+    }
+
+    private static int parseDuration(String s) {
+        s = s.trim().toLowerCase();
+        if (s.endsWith("m")) return Integer.parseInt(s.substring(0, s.length() - 1));
+        if (s.endsWith("h")) return Integer.parseInt(s.substring(0, s.length() - 1)) * 60;
+        if (s.endsWith("d")) return Integer.parseInt(s.substring(0, s.length() - 1)) * 1440;
+        return Integer.parseInt(s) * 60; // default: hours
+    }
+
+    private static String formatDuration(int minutes) {
+        if (minutes < 60) return minutes + " \u043C\u0438\u043D";
+        if (minutes < 1440) return (minutes / 60) + " \u0447";
+        return (minutes / 1440) + " \u0434\u043D\u0435\u0439";
     }
 
     private static boolean isHwidBanned(String hwid) {
@@ -326,10 +539,10 @@ public class LauncherController {
         return "application/octet-stream";
     }
 
-    private static String generateToken() {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    private static class ServerTokenReq {
+        public String sessionToken;
+        public String accessToken;
+        public String hwid;
     }
 
     private static class SubmitHwidReq {
@@ -339,12 +552,6 @@ public class LauncherController {
         public String hwidComponents;
         public String pcName;
         public int flags;
-    }
-
-    private static class ServerTokenReq {
-        public String sessionToken;
-        public String accessToken;
-        public String hwid;
     }
 
     private static class HwidCheckReq {
@@ -359,5 +566,28 @@ public class LauncherController {
     private static class LogEntry {
         public String level;
         public String message;
+    }
+
+    public static class BanReq {
+        public String target;
+        public String reason;
+        public String duration; // "30m", "2h", "7d", "perm"
+    }
+
+    public static class UnbanReq {
+        public String target;
+    }
+
+    public static class CheckBanReq {
+        public String uuid;
+    }
+
+    public static class CheckSessionReq {
+        public String uuid;
+        public String nickname;
+    }
+
+    public static class VerifyReq {
+        public String token;
     }
 }

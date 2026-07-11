@@ -17,8 +17,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
+
 
 public class CoreServerApi {
 
@@ -201,11 +203,11 @@ public class CoreServerApi {
     }
 
     public static JsonObject getFactionKit(String faction, String kitName) {
-        return get("/api/v1/kits/faction/" + faction.toLowerCase() + "/" + kitName);
+        return get("/api/v1/kits/faction/" + faction.toLowerCase() + "/" + enc(kitName));
     }
 
     public static JsonObject saveFactionKit(String faction, String kitName, JsonObject kitData) {
-        return put("/api/v1/kits/faction/" + faction.toLowerCase() + "/" + kitName, kitData);
+        return put("/api/v1/kits/faction/" + faction.toLowerCase() + "/" + enc(kitName), kitData);
     }
 
     public static JsonObject bulkSaveFactionKits(String faction, JsonArray kits) {
@@ -219,20 +221,21 @@ public class CoreServerApi {
     }
 
     public static JsonObject getFactionVehicle(String faction, String vehicleName) {
-        return get("/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName);
+        return get("/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + enc(vehicleName));
     }
 
     public static JsonObject saveFactionVehicle(String faction, String vehicleName, JsonObject data) {
-        return put("/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName, data);
+        return put("/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + enc(vehicleName), data);
     }
 
     public static JsonObject deleteFactionVehicle(String faction, String vehicleName) {
         HttpURLConnection conn = null;
         try {
-            URI uri = new URI(baseUrl + "/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName);
+            String path = "/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + enc(vehicleName);
+            URI uri = new URI(baseUrl + path);
             conn = (HttpURLConnection) uri.toURL().openConnection();
             conn.setRequestMethod("DELETE");
-            addAuthHeaders(conn, "/api/v1/factions/" + faction.toLowerCase() + "/vehicles/" + vehicleName);
+            addAuthHeaders(conn, path);
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
             int code = conn.getResponseCode();
@@ -378,8 +381,10 @@ public class CoreServerApi {
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
 
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(GSON.toJson(body).getBytes(StandardCharsets.UTF_8));
+            if (body != null) {
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(GSON.toJson(body).getBytes(StandardCharsets.UTF_8));
+                }
             }
 
             int code = conn.getResponseCode();
@@ -399,6 +404,10 @@ public class CoreServerApi {
             log.warn("Core API call {} failed: {}", path, e.getMessage());
         }
         return null;
+    }
+
+    private static String enc(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private static JsonObject map(Object... keysValues) {

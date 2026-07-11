@@ -14,9 +14,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -126,6 +129,7 @@ public class MatchAllocator {
         mi.mode = mode;
         mi.startedAt = System.currentTimeMillis();
         activeMatches.put(mi.serverId, mi);
+
         LobbyMod.sendMatchListUpdateToAll();
         log.info("Match {}: {} ({}) on port {} ({} players, {} vs {})",
                 mi.serverId, map.displayName, mode, sr.port, lobbyPlayers.size(), blueFaction, redFaction);

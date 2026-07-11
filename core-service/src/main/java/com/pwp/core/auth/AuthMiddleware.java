@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,13 +25,30 @@ public class AuthMiddleware {
         // Health check — always allowed
         if (path.startsWith("/api/v1/health")) return;
 
-        // IP-based rate limiting (100 req/min per IP)
-        if (!checkIpRateLimit(ctx.ip(), 100)) {
+
+
+        // IP-based rate limiting (300 req/min per IP)
+        if (!checkIpRateLimit(ctx.ip(), 300)) {
             log.warn("IP rate limit exceeded: {}", ctx.ip());
             throw new TooManyRequestsResponse("Rate limit exceeded");
         }
 
-        // ── Launcher-only verification ─────────────────────
+        // ── API key auth (skip HMAC if valid Bearer token) ──
+        String authHeader = ctx.header("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring("Bearer ".length());
+            if (apiConfig.keys != null && Arrays.asList(apiConfig.keys).contains(token)) {
+                // Valid API key — skip HMAC, check rate limit only
+                if (!isBypassKey(token, apiConfig) && !checkRateLimit(token, apiConfig)) {
+                    log.warn("Rate limit exceeded for a key");
+                    throw new TooManyRequestsResponse("Rate limit exceeded");
+                }
+                return;
+            }
+            // Invalid API key — fall through to HMAC check (launcher may still pass)
+        }
+
+        // ── Launcher-only HMAC verification ────────────────
         String signHeader = ctx.header("X-PWP-Sign");
         if (signHeader == null || !signHeader.contains(":")) {
             throw new UnauthorizedResponse("Access denied: launcher required");
@@ -46,7 +62,6 @@ public class AuthMiddleware {
         String timestamp = parts[0];
         String signature = parts[1];
 
-        // Reject requests older than 30 seconds
         try {
             long ts = Long.parseLong(timestamp);
             long now = System.currentTimeMillis();
@@ -57,7 +72,6 @@ public class AuthMiddleware {
             throw new UnauthorizedResponse("Access denied: invalid timestamp");
         }
 
-        // Verify HMAC — format: timestamp:path, always with static key
         String signData = timestamp + ":" + path;
         String expected = hmacSha256(signData, CoreApplication.config.getLauncherSecret());
         if (!signature.equals(expected)) {
@@ -65,13 +79,9 @@ public class AuthMiddleware {
             throw new UnauthorizedResponse("Access denied: invalid signature");
         }
 
-        // ── API key auth for internal endpoints ────────────
+        // Launcher-only endpoints — HMAC is enough
         if (path.startsWith("/api/v1/auth/login") ||
-            path.startsWith("/api/v1/auth/register") ||
             path.startsWith("/api/v1/auth/verify-2fa") ||
-            path.startsWith("/api/v1/auth/check-") ||
-            path.startsWith("/api/v1/auth/send-2fa") ||
-            path.startsWith("/api/v1/auth/validate-session") ||
             path.startsWith("/api/v1/auth/refresh") ||
             path.startsWith("/api/v1/auth/heartbeat") ||
             path.startsWith("/api/v1/auth/revoke-sessions") ||
@@ -79,20 +89,17 @@ public class AuthMiddleware {
             path.startsWith("/api/v1/auth/check-ip-confirm") ||
             path.startsWith("/api/v1/launcher/") ||
             path.startsWith("/launcher/files/")) {
-            return; // launcher-only endpoints — sign check already passed
+            return;
         }
 
-        // Internal endpoints require API key
-        String authHeader = ctx.header("Authorization");
+        // All other endpoints (register, admin, etc.) require API key
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new UnauthorizedResponse("Missing or invalid Authorization header");
+            throw new UnauthorizedResponse("Missing Authorization header");
         }
-
         String token = authHeader.substring("Bearer ".length());
         if (apiConfig.keys == null || !Arrays.asList(apiConfig.keys).contains(token)) {
             throw new UnauthorizedResponse("Invalid API key");
         }
-
         if (!isBypassKey(token, apiConfig) && !checkRateLimit(token, apiConfig)) {
             log.warn("Rate limit exceeded for a key");
             throw new TooManyRequestsResponse("Rate limit exceeded");

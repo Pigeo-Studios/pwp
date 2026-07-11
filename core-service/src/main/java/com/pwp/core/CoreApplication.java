@@ -5,6 +5,7 @@ import com.pwp.core.auth.AuthMiddleware;
 import com.pwp.core.db.DatabaseManager;
 import io.javalin.Javalin;
 import org.slf4j.Logger;
+import java.sql.Statement;
 import org.slf4j.LoggerFactory;
 
 import java.io.FileReader;
@@ -31,6 +32,12 @@ public class CoreApplication {
 
         DatabaseManager.init(config.database);
 
+        // Cleanup просроченных токенов при старте
+        cleanupExpiredTokens();
+        // И раз в час
+        java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+            .scheduleAtFixedRate(() -> cleanupExpiredTokens(), 1, 1, java.util.concurrent.TimeUnit.HOURS);
+
         int port = config.server.port;
         Javalin app = Javalin.create(cfg -> {
             cfg.showJavalinBanner = false;
@@ -40,6 +47,12 @@ public class CoreApplication {
         app.before("/api/*", ctx -> AuthMiddleware.handle(ctx, config.api));
 
         app.get("/api/v1/health", ctx -> ctx.json(java.util.Map.of("status", "ok")));
+        app.get("/api/v1/version", ctx -> ctx.json(java.util.Map.of(
+            "launcher", projectVersion,
+            "server", projectVersion,
+            "manifest", "1",
+            "maintenance", false
+        )));
 
         new PlayerController(app, config);
         new CurrencyController(app);
@@ -148,6 +161,16 @@ public class CoreApplication {
         public String password = "";
         public int poolSize = 10;
         public long maxLifetimeMs = 1800000;
+    }
+
+    private static void cleanupExpiredTokens() {
+        try (java.sql.Connection c = DatabaseManager.getConnection();
+             var ps = c.prepareStatement("DELETE FROM server_tokens WHERE expires_at < NOW()")) {
+            int deleted = ps.executeUpdate();
+            if (deleted > 0) log.info("Cleaned up {} expired server tokens", deleted);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup expired tokens: {}", e.getMessage());
+        }
     }
 
     public static class ApiConfig {

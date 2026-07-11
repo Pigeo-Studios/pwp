@@ -23,6 +23,18 @@ public class PlayerRepository {
         return null;
     }
 
+    public static Player findByAccountId(long accountId) throws SQLException {
+        String sql = "SELECT * FROM players WHERE id = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, accountId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return mapPlayer(rs);
+            }
+        }
+        return null;
+    }
+
     public static Player createOrUpdate(String uuid, String nickname) throws SQLException {
         String sql = "INSERT INTO players (uuid, nickname) VALUES (?, ?) " +
                 "ON DUPLICATE KEY UPDATE nickname = VALUES(nickname), last_join = CURRENT_TIMESTAMP";
@@ -35,7 +47,17 @@ public class PlayerRepository {
         ensureRowExists(uuid, "player_stats");
         ensureRowExists(uuid, "player_currency");
         ensureRowExists(uuid, "player_xp");
-        return findByUuid(uuid);
+        Player p = findByUuid(uuid);
+        if (p != null) {
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement("SELECT id FROM players WHERE uuid = ?")) {
+                ps.setString(1, uuid);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) p.accountId = rs.getLong("id");
+                }
+            }
+        }
+        return p;
     }
 
     private static void ensureRowExists(String uuid, String table) throws SQLException {
@@ -561,6 +583,69 @@ public class PlayerRepository {
 
     // ── Logs ─────────────────────────────────────────
 
+    // ── Auth Tokens (v2) ────────────────────────────
+    private static final SecureRandom TOKEN_RNG = new SecureRandom();
+
+    public static String createAuthToken(long accountId) throws SQLException {
+        byte[] bytes = new byte[32];
+        TOKEN_RNG.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        // Revoke any existing tokens for this account
+        revokeAllForAccount(accountId);
+        // Insert new token
+        String sql = "INSERT INTO auth_tokens (account_id, token, expires_at) VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, accountId);
+            ps.setString(2, token);
+            ps.executeUpdate();
+        }
+        return token;
+    }
+
+    public static Player findByAuthToken(String token) throws SQLException {
+        String sql = "SELECT p.*, a.id as aid, a.expires_at, a.revoked FROM auth_tokens a "
+                + "JOIN players p ON a.account_id = p.id "
+                + "WHERE a.token = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    boolean revoked = rs.getBoolean("revoked");
+                    boolean expired = rs.getTimestamp("expires_at").before(new java.util.Date());
+                    if (revoked || expired) return null;
+                    // Update last_used
+                    try (PreparedStatement up = c.prepareStatement(
+                            "UPDATE auth_tokens SET last_used_at = CURRENT_TIMESTAMP WHERE token = ?")) {
+                        up.setString(1, token);
+                        up.executeUpdate();
+                    }
+                    return mapPlayer(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    public static void revokeAllForAccount(long accountId) throws SQLException {
+        String sql = "UPDATE auth_tokens SET revoked = TRUE WHERE account_id = ? AND revoked = FALSE";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, accountId);
+            ps.executeUpdate();
+        }
+    }
+
+    public static void revokeToken(String token) throws SQLException {
+        String sql = "UPDATE auth_tokens SET revoked = TRUE WHERE token = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, token);
+            ps.executeUpdate();
+        }
+    }
+
     public static void log(String playerUuid, String action, String ip, String details) throws SQLException {
         String sql = "INSERT INTO player_logs (player_uuid, action, ip, details) VALUES (?, ?, ?, ?)";
         try (Connection c = DatabaseManager.getConnection();
@@ -729,6 +814,7 @@ public class PlayerRepository {
 
     private static Player mapPlayer(ResultSet rs) throws SQLException {
         Player p = new Player();
+        p.accountId = rs.getLong("id");
         p.uuid = rs.getString("uuid");
         p.nickname = rs.getString("nickname");
         p.login = rs.getString("login");

@@ -66,23 +66,9 @@ public class SecurityController {
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) {
                         String status = rs.getString("status");
-                        if ("allowed".equals(status)) {
-                            // Update player's lastIp
-                            String confirmedUuid = uuidByConfirmId(id);
-                            if (confirmedUuid != null) {
-                                try (PreparedStatement ps2 = c.prepareStatement(
-                                    "SELECT new_ip FROM ip_confirmations WHERE id = ?")) {
-                                    ps2.setLong(1, id);
-                                    try (ResultSet rs2 = ps2.executeQuery()) {
-                                        if (rs2.next()) {
-                                            String newIp = rs2.getString("new_ip");
-                                            PlayerRepository.updateLastLogin(confirmedUuid, newIp);
-                                        }
-                                    }
-                                }
-                            }
+                        if ("allow".equals(status)) {
                             ctx.json(new VerifyIpResp(true, null, null));
-                        } else if ("denied".equals(status)) {
+                        } else if ("deny".equals(status)) {
                             ctx.json(new VerifyIpResp(false, "IP denied", null));
                         } else {
                             ctx.json(new VerifyIpResp(false, "pending", id));
@@ -106,16 +92,32 @@ public class SecurityController {
                 ps.setLong(2, body.confirmId);
                 int updated = ps.executeUpdate();
 
-                if (updated > 0 && "denied".equals(body.action)) {
-                    try (PreparedStatement ps2 = c.prepareStatement(
-                        "SELECT new_ip FROM ip_confirmations WHERE id = ?")) {
-                        ps2.setLong(1, body.confirmId);
-                        try (ResultSet rs = ps2.executeQuery()) {
-                            if (rs.next()) {
-                                String ip = rs.getString("new_ip");
-                                blockIp(ip);
-                            }
+                // Get player_uuid and new_ip for later use
+                String confirmedUuid = null;
+                String newIp = null;
+                try (PreparedStatement psGet = c.prepareStatement(
+                    "SELECT player_uuid, new_ip FROM ip_confirmations WHERE id = ?")) {
+                    psGet.setLong(1, body.confirmId);
+                    try (ResultSet rs = psGet.executeQuery()) {
+                        if (rs.next()) {
+                            confirmedUuid = rs.getString("player_uuid");
+                            newIp = rs.getString("new_ip");
                         }
+                    }
+                }
+
+                if (updated > 0) {
+                    if ("allow".equals(body.action) && confirmedUuid != null && newIp != null) {
+                        // Update player's lastIp so next login matches
+                        try (PreparedStatement psUpdate = c.prepareStatement(
+                            "UPDATE players SET last_ip = ? WHERE uuid = ?")) {
+                            psUpdate.setString(1, newIp);
+                            psUpdate.setString(2, confirmedUuid);
+                            psUpdate.executeUpdate();
+                            log.info("IP confirmed for {}: set last_ip = {}", confirmedUuid, newIp);
+                        }
+                    } else if ("deny".equals(body.action) && newIp != null) {
+                        blockIp(newIp);
                     }
                 }
 
@@ -196,11 +198,12 @@ public class SecurityController {
                 "\uD83D\uDCCD <code>%s</code>\n\n" +
                 "Это вы?", nickname, ip);
 
+            String escaped = text.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
             String json = String.format(
                 "{\"action\":\"send_keyboard\",\"chat_id\":\"%d\",\"text\":\"%s\"," +
                 "\"keyboard\":[[{\"text\":\"\u2705 Разрешить\",\"callback_data\":\"ip_confirm_%d_allow\"}," +
                 "{\"text\":\"\u274C Запретить на час\",\"callback_data\":\"ip_confirm_%d_deny\"}]]}",
-                telegramId, text.replace("\"", "\\\""), confirmId, confirmId);
+                telegramId, escaped, confirmId, confirmId);
 
             Files.writeString(new File(dir, fileName).toPath(), json, StandardCharsets.UTF_8);
             log.info("IP confirm sent to tg {} (confirmId={})", telegramId, confirmId);

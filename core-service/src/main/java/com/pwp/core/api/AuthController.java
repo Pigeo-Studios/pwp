@@ -1,6 +1,7 @@
 package com.pwp.core.api;
 
 import com.pwp.core.CoreApplication;
+import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerRepository;
 import com.pwp.core.model.Player;
 import com.pwp.core.model.ApiResponse;
@@ -10,6 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -129,19 +133,17 @@ public class AuthController {
                 send2faToTelegram(pl.telegramId, code);
                 ctx.json(ApiResponse.ok(Map.of("2fa_required", true, "uuid", pl.uuid, "telegram_id", pl.telegramId)));
             } else {
-                String accessToken = PlayerRepository.generateTokenPart();
-                String refreshToken = PlayerRepository.generateTokenPart();
-                String sessionKey = PlayerRepository.generateSessionKey();
-                PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp);
+                String authToken = PlayerRepository.createAuthToken(pl.accountId);
                 PlayerRepository.trustIp(pl.uuid, clientIp);
                 PlayerRepository.updateLastLogin(pl.uuid, clientIp);
                 PlayerRepository.log(pl.uuid, "login", clientIp, "login from ip");
                 ctx.json(ApiResponse.ok(Map.of(
-                    "session_key", sessionKey,
-                    "access_token", accessToken,
-                    "refresh_token", refreshToken,
+                    "authToken", authToken,
+                    "expiresIn", 604800,
+                    "accountId", pl.accountId,
                     "uuid", pl.uuid,
                     "login", pl.login,
+                    "nickname", pl.nickname,
                     "role", pl.role
                 )));
             }
@@ -162,19 +164,17 @@ public class AuthController {
                 ctx.json(ApiResponse.error("player not found or banned")); return;
             }
             String clientIp = ctx.ip();
-            String accessToken = PlayerRepository.generateTokenPart();
-            String refreshToken = PlayerRepository.generateTokenPart();
-            String sessionKey = PlayerRepository.generateSessionKey();
-            PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp);
+            String authToken = PlayerRepository.createAuthToken(pl.accountId);
             PlayerRepository.trustIp(pl.uuid, clientIp);
             PlayerRepository.updateLastLogin(pl.uuid, clientIp);
             PlayerRepository.log(pl.uuid, "login_2fa", clientIp, "login via 2fa");
             ctx.json(ApiResponse.ok(Map.of(
-                "session_key", sessionKey,
-                "access_token", accessToken,
-                "refresh_token", refreshToken,
+                "authToken", authToken,
+                "expiresIn", 604800,
+                "accountId", pl.accountId,
                 "uuid", pl.uuid,
                 "login", pl.login,
+                "nickname", pl.nickname,
                 "role", pl.role
             )));
         });
@@ -464,6 +464,38 @@ public class AuthController {
             }
         });
 
+        // ── Verify auth token (server-to-server) ─────────
+        app.post("/api/v1/auth/verify", ctx -> {
+            VerifyTokenReq req = ctx.bodyAsClass(VerifyTokenReq.class);
+            if (req.token == null) {
+                ctx.json(ApiResponse.error("token required")); return;
+            }
+            Player pl = PlayerRepository.findByAuthToken(req.token);
+            if (pl == null) {
+                ctx.json(ApiResponse.error("INVALID_TOKEN")); return;
+            }
+            if (pl.isBanned) {
+                ctx.json(ApiResponse.error("ACCOUNT_BANNED")); return;
+            }
+            ctx.json(ApiResponse.ok(Map.of(
+                "valid", true,
+                "accountId", pl.accountId,
+                "uuid", pl.uuid,
+                "nickname", pl.nickname,
+                "role", pl.role
+            )));
+        });
+
+        // ── Logout (revoke token) ─────────────────────────
+        app.post("/api/v1/auth/logout", ctx -> {
+            LogoutReq req = ctx.bodyAsClass(LogoutReq.class);
+            if (req.token == null) {
+                ctx.json(ApiResponse.error("token required")); return;
+            }
+            PlayerRepository.revokeToken(req.token);
+            ctx.json(ApiResponse.ok("logged out"));
+        });
+
         // ── Send 2FA (internal, no code in response) ─────
         app.post("/api/v1/auth/send-2fa", ctx -> {
             Send2faReq req = ctx.bodyAsClass(Send2faReq.class);
@@ -479,6 +511,8 @@ public class AuthController {
             send2faToTelegram(pl.telegramId, code);
             ctx.json(ApiResponse.ok(Map.of("sent", true)));
         });
+
+
     }
 
     private static void checkRateLimit(String key, String prefix, int max, CoreApplication.Config cfg) {
@@ -539,6 +573,8 @@ public class AuthController {
     public static class Toggle2faReq { public String uuid; public boolean enabled; }
     public static class Send2faReq { public String uuid; }
     public static class LinkTelegramReq { public String login, password; public long telegramId; }
+    public static class VerifyTokenReq { public String token; }
+    public static class LogoutReq { public String token; }
     public static class UnlinkTelegramReq { public String uuid; public long telegramId; }
     public static class RefreshReq { public String refreshToken; }
     public static class HeartbeatReq { public String accessToken; public String hwid; }

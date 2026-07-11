@@ -1,11 +1,13 @@
 package com.pwp.coreserver;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,87 +18,175 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class PlayerConnectHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerConnectHandler.class);
-    private static final String HMAC_SECRET = "pwp_launcher_secret_2024";
-    private static final int IP_CONFIRM_TIMEOUT_SEC = 300; // 5 минут
+    private static final long AUTH_TIMEOUT_MS = 3000;
 
-    @SubscribeEvent
+    private static final Map<String, Long> pendingAuth = new ConcurrentHashMap<>();
+
+    // Cache for Core verify results on match servers (token → expiry)
+    private static final Map<String, Long> authCache = new ConcurrentHashMap<>();
+    private static final long CACHE_TTL_MS = 10_000;
+
+    // Allowed token hashes loaded from allowed_tokens.json (match servers only)
+    public static Set<String> allowedTokenHashes = ConcurrentHashMap.newKeySet();
+    public static Map<String, Long> allowedTokenAccounts = new ConcurrentHashMap<>(); // tokenHash → accountId
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
 
         String uuid = player.getStringUUID();
         String name = player.getScoreboardName();
+        log.info("PLAYER LOGIN EVENT — uuid={}, name={}", uuid, name);
 
-        new Thread(() -> {
-            try {
-                // Try server-token verification first
-                String serverToken = System.getenv("PWP_SERVER_TOKEN");
-                if (serverToken != null && !serverToken.isEmpty()) {
-                    String result = postJson("/api/v1/launcher/verify-server-token?token=" + serverToken, "{\"uuid\":\"" + uuid + "\"}");
-                    JsonObject json = JsonParser.parseString(result).getAsJsonObject();
-                    if (json.get("success").getAsBoolean()) {
-                        log.info("{} authenticated via server token", name);
-                        return;
-                    }
-                    log.warn("{} has invalid server token", name);
-                }
+        if (CoreServerMod.isMatchServer && !allowedTokenHashes.isEmpty()) {
+            log.info("Match server mode — will verify via token hash or Core");
+        }
 
-                // IP verification
-                String rawIp = player.connection.connection.getRemoteAddress().toString();
-                if (rawIp.startsWith("/")) rawIp = rawIp.substring(1);
-                int colon = rawIp.lastIndexOf(':');
-                String ip = colon > 0 ? rawIp.substring(0, colon) : rawIp;
-
-                String result = postJson("/api/v1/auth/verify-ip", "{\"uuid\":\"" + uuid + "\",\"ip\":\"" + ip + "\"}");
-                JsonObject json = JsonParser.parseString(result).getAsJsonObject();
-
-                if (json.get("success").getAsBoolean()) {
-                    log.info("{} IP verified, allowed", name);
-                    return;
-                }
-
-                // Check if there's a pending confirmId
-                Long confirmId = json.has("confirmId") && !json.get("confirmId").isJsonNull()
-                    ? json.get("confirmId").getAsLong() : null;
-
-                if (confirmId != null) {
-                    log.info("IP confirm pending for {} (confirmId={}), polling {}s...", name, confirmId, IP_CONFIRM_TIMEOUT_SEC);
-                    for (int i = 0; i < IP_CONFIRM_TIMEOUT_SEC; i++) {
-                        Thread.sleep(1000);
-                        String pollResult = getJson("/api/v1/auth/check-ip-confirm?id=" + confirmId);
-                        JsonObject pollJson = JsonParser.parseString(pollResult).getAsJsonObject();
-                        if (!pollJson.get("success").getAsBoolean()) {
-                            String pollError = pollJson.has("error") ? pollJson.get("error").getAsString() : "";
-                            if ("pending".equals(pollError)) continue;
-                            log.warn("Kicking {}: {}", name, pollError);
-                            player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + pollError));
-                            return;
-                        }
-                        log.info("IP confirmed for {} (allow)", name);
-                        return;
-                    }
-                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0412\u0440\u0435\u043C\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F \u0438\u0441\u0442\u0435\u043A\u043B\u043E\n\n\u00A77\u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043F\u043E\u0437\u0436\u0435"));
-                } else {
-                    String error = json.has("error") ? json.get("error").getAsString() : "Access denied";
-                    player.connection.disconnect(Component.literal("\u00A7c\u00A7l\u0414\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D\n\n\u00A77" + error));
-                }
-            } catch (Exception e) {
-                log.error("Auth error for {}: {}", name, e.getMessage());
-            }
-        }, "PWP-Auth").start();
+        pendingAuth.put(uuid, System.currentTimeMillis());
+        log.info("AUTH PENDING - {} added to queue", name);
     }
+
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (pendingAuth.isEmpty()) return;
+
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+
+        long now = System.currentTimeMillis();
+        Set<String> toRemove = new HashSet<>();
+
+        for (var entry : pendingAuth.entrySet()) {
+            String uuid = entry.getKey();
+            long joinMs = entry.getValue();
+
+            if (now - joinMs >= AUTH_TIMEOUT_MS) {
+                ServerPlayer player = server.getPlayerList().getPlayer(java.util.UUID.fromString(uuid));
+                if (player != null && player.connection != null) {
+                    log.warn("AUTH TIMEOUT - {} (uuid={}), elapsedMs={}", player.getScoreboardName(), uuid, now - joinMs);
+                    disconnectNow(player, "Войдите через лаунчер");
+                }
+                toRemove.add(uuid);
+            }
+        }
+
+        for (String uuid : toRemove) pendingAuth.remove(uuid);
+    }
+
+    public static void handleToken(String uuid, String token) {
+        if (uuid == null || token == null || token.isEmpty()) {
+            log.warn("HANDLE TOKEN — invalid input");
+            return;
+        }
+
+        log.info("AUTH — uuid={}, tokenLen={}", uuid, token.length());
+
+        // 1. Check local token hash cache (match servers)
+        if (CoreServerMod.isMatchServer && checkLocalHash(token, uuid)) {
+            pendingAuth.remove(uuid);
+            log.info("AUTH ACCEPTED (local hash) — uuid={}", uuid);
+            return;
+        }
+
+        // 2. Check in-memory auth cache (recent Core verifications)
+        Long cached = authCache.get(token);
+        if (cached != null && System.currentTimeMillis() < cached) {
+            pendingAuth.remove(uuid);
+            log.info("AUTH ACCEPTED (cache) — uuid={}", uuid);
+            return;
+        }
+
+        // 3. Call Core Service /api/v1/launcher/verify
+        verifyWithCore(uuid, token);
+    }
+
+    private static boolean checkLocalHash(String token, String uuid) {
+        try {
+            String hash = sha256(token);
+            if (allowedTokenHashes.contains(hash)) {
+                return true;
+            }
+        } catch (Exception e) {
+            log.warn("Local hash check failed: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    private static void verifyWithCore(String uuid, String token) {
+        try {
+            String body = "{\"token\":\"" + token + "\"}";
+            log.info("REST CALL /api/v1/launcher/verify — body length={}", body.length());
+            String result = postJson("/api/v1/launcher/verify", body);
+            log.info("REST RESPONSE — resultLength={}", result.length());
+
+            var json = com.google.gson.JsonParser.parseString(result).getAsJsonObject();
+            if (!json.has("success") || !json.get("success").getAsBoolean()) {
+                String err = json.has("error") ? json.get("error").getAsString() : "unknown";
+                log.warn("VERIFY FAILED — {}", err);
+                return;
+            }
+
+            var data = json.getAsJsonObject("data");
+            long accountId = data.has("accountId") ? data.get("accountId").getAsLong() : 0;
+            String nickname = data.has("nickname") ? data.get("nickname").getAsString() : "?";
+            String role = data.has("role") ? data.get("role").getAsString() : "?";
+
+            // Cache the successful verification
+            authCache.put(token, System.currentTimeMillis() + CACHE_TTL_MS);
+
+            pendingAuth.remove(uuid);
+            log.info("AUTH ACCEPTED (Core) — accountId={}, uuid={}, nickname={}, role={}", accountId, uuid, nickname, role);
+        } catch (Exception e) {
+            log.error("VERIFY EXCEPTION — {}: {}", e.getClass().getSimpleName(), e.getMessage());
+        }
+    }
+
+    private static String sha256(String input) throws Exception {
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        byte[] hash = md.digest(input.getBytes("UTF-8"));
+        StringBuilder hex = new StringBuilder();
+        for (byte b : hash) hex.append(String.format("%02x", b));
+        return hex.toString();
+    }
+
+    private static ServerPlayer findPlayer(String uuid) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return null;
+        try {
+            return server.getPlayerList().getPlayer(java.util.UUID.fromString(uuid));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static void disconnectNow(ServerPlayer player, String message) {
+        try {
+            if (player.connection != null) {
+                player.connection.disconnect(Component.literal(message));
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private static final String HMAC_SECRET = "pwp_launcher_secret_2024";
 
     private static String hmacSign(String path) {
         try {
             long timestamp = System.currentTimeMillis();
-            String data = timestamp + ":" + path;
             Mac mac = Mac.getInstance("HmacSHA256");
             SecretKeySpec key = new SecretKeySpec(HMAC_SECRET.getBytes("UTF-8"), "HmacSHA256");
             mac.init(key);
+            String data = timestamp + ":" + path;
             byte[] hash = mac.doFinal(data.getBytes("UTF-8"));
             StringBuilder hex = new StringBuilder();
             for (byte b : hash) hex.append(String.format("%02x", b));
@@ -106,32 +196,24 @@ public class PlayerConnectHandler {
         }
     }
 
-    private static String postJson(String path, String body) throws Exception {
+    private static HttpURLConnection openConnection(String path) throws Exception {
         URL url = new URL(CoreServerMod.API_BASE + path);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
         conn.setRequestProperty("X-PWP-Sign", hmacSign(path.contains("?") ? path.substring(0, path.indexOf('?')) : path));
-        conn.setDoOutput(true);
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(body.getBytes());
-        }
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-            return r.lines().collect(Collectors.joining("\n"));
-        }
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
+        return conn;
     }
 
-    private static String getJson(String path) throws Exception {
-        URL url = new URL(CoreServerMod.API_BASE + path);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
-        conn.setRequestProperty("X-PWP-Sign", hmacSign(path.contains("?") ? path.substring(0, path.indexOf('?')) : path));
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
+    private static String postJson(String path, String body) throws Exception {
+        HttpURLConnection conn = openConnection(path);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(body.getBytes("UTF-8"));
+        }
         try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             return r.lines().collect(Collectors.joining("\n"));
         }
