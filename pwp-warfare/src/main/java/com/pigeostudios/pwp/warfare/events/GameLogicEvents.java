@@ -424,12 +424,12 @@ public class GameLogicEvents {
                      }
                   }
 
-                  if (data.blueReady && data.redReady || data.voteTimer <= 0) {
-                     data.voteActive = false;
-                     data.setDirty();
-                     startGameCountdown(level);
-                     PacketHandler.sendToAllClients(level, data);
-                  }
+                   if (data.blueReady && data.redReady || data.voteTimer <= 0) {
+                      data.voteActive = false;
+                      data.setDirty();
+                       startGameCountdown(level);
+                      PacketHandler.sendToAllClients(level, data);
+                   }
                }
 
                if (globalTick % 2 == 0) {
@@ -673,16 +673,16 @@ public class GameLogicEvents {
                    }
                 }
 
-                if (data.countdownActive) {
-                  if (data.countdownTicks > 0) {
-                     if (data.countdownTicks % 20 == 0) {
-                        int seconds = data.countdownTicks / 20;
-                        sendTitleToLevel(level, String.valueOf(seconds), ChatFormatting.YELLOW);
-                        level.playSound(null, new BlockPos(0, 100, 0), (SoundEvent)SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.MASTER, 1.0F, 1.0F);
-                     }
+                 if (data.countdownActive) {
+                   if (data.countdownTicks > 0) {
+                      if (data.countdownTicks % 20 == 0) {
+                         int seconds = data.countdownTicks / 20;
+                             sendTitleToLevel(level, String.valueOf(seconds), ChatFormatting.YELLOW);
+                             level.playSound(null, new BlockPos(0, 100, 0), (SoundEvent)SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.MASTER, 1.0F, 1.0F);
+                      }
 
-                     data.countdownTicks--;
-                     data.setDirty();
+                      data.countdownTicks--;
+                      data.setDirty();
                   } else {
                       data.countdownActive = false;
                       sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
@@ -1327,12 +1327,11 @@ public class GameLogicEvents {
       return "Unknown";
    }
 
-    @SubscribeEvent
-     public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-         if (!event.getEntity().level().isClientSide) {
-            ServerPlayer player = (ServerPlayer)event.getEntity();
-            autoOpIfAdmin(player);
-            loadCosmeticsForPlayer(player);
+     @SubscribeEvent
+      public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
+          if (!event.getEntity().level().isClientSide) {
+             ServerPlayer player = (ServerPlayer)event.getEntity();
+             loadCosmeticsForPlayer(player);
             PacketHandler.broadcastPlayerSkin(player);
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
@@ -1341,7 +1340,7 @@ public class GameLogicEvents {
            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
            String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
            if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
-              player.setGameMode(GameType.SPECTATOR);
+               player.setGameMode(GameType.ADVENTURE);
               player.sendSystemMessage(Component.literal("Choose a team to start playing!").withStyle(ChatFormatting.GOLD));
            }
            if (!data.isGameStarted && !data.waitingActive && player.hasPermissions(2)) {
@@ -1397,7 +1396,7 @@ public class GameLogicEvents {
           MatchStatsTracker.get().recordSpawn(newPlayer);
           String teamName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName() : "";
           if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
-             newPlayer.setGameMode(GameType.SPECTATOR);
+             newPlayer.setGameMode(GameType.ADVENTURE);
           } else if (newPlayer.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
              newPlayer.setGameMode(GameType.SURVIVAL);
           }
@@ -1887,7 +1886,7 @@ public class GameLogicEvents {
       int count = 0;
 
       for (ServerPlayer p : enemies) {
-         if (!p.isSpectator() && (p.getTeam() == null || !p.getTeam().getName().equalsIgnoreCase(allyTeamName))) {
+         if (!p.isSpectator() && p.getTeam() != null && !p.getTeam().getName().equalsIgnoreCase(allyTeamName)) {
             count++;
          }
       }
@@ -1901,7 +1900,7 @@ public class GameLogicEvents {
       int count = 0;
 
       for (ServerPlayer p : enemies) {
-         if (!p.isSpectator() && (p.getTeam() == null || !p.getTeam().getName().equalsIgnoreCase(allyTeamName))) {
+         if (!p.isSpectator() && p.getTeam() != null && !p.getTeam().getName().equalsIgnoreCase(allyTeamName)) {
             count++;
          }
       }
@@ -2159,8 +2158,14 @@ public class GameLogicEvents {
 
    private static boolean canCapture(WarfareWorldData.CapturePoint target, String team, WarfareWorldData data) {
       // Invasion locked points cannot be recaptured by the former owner
-      if ("invasion".equals(data.gameMode) && target.invLocked && !team.equals(target.owner)) {
-         return false;
+      if ("invasion".equals(data.gameMode)) {
+         if (target.invLocked && !team.equals(target.owner)) {
+            return false;
+         }
+         // Neutral points cannot be captured by the defender
+         if (target.owner.equals("NEUTRAL") && team.equals(data.invasionDefender)) {
+            return false;
+         }
       }
 
       int currentPriority = team.equals("BLUE") ? target.bluePriority : target.redPriority;
@@ -2378,18 +2383,4 @@ public class GameLogicEvents {
       }
    }
 
-   private static void autoOpIfAdmin(ServerPlayer player) {
-      try {
-         JsonObject data = CoreServerApi.loadPlayer(player.getStringUUID());
-         if (data == null || !data.has("data")) return;
-         JsonObject profile = data.getAsJsonObject("data");
-         if (!profile.has("player")) return;
-         String role = profile.getAsJsonObject("player").get("role").getAsString();
-         if ("admin".equalsIgnoreCase(role)) {
-            player.server.getPlayerList().op(player.getGameProfile());
-         }
-      } catch (Exception e) {
-         System.err.println("[PWP] autoOpIfAdmin failed: " + e.getMessage());
-      }
-   }
 }

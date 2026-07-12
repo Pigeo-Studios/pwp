@@ -176,11 +176,12 @@ public class InteractionEvents {
 
          Level level = event.getLevel();
          boolean isStarted = false;
-         if (level instanceof ServerLevel serverLevel) {
-            isStarted = WarfareWorldData.get(serverLevel).isGameStarted;
-         } else if (level.isClientSide) {
-            isStarted = ClientData.isGameStarted;
-         }
+          if (level instanceof ServerLevel serverLevel) {
+             WarfareWorldData data = WarfareWorldData.get(serverLevel);
+             isStarted = data.isGameStarted || data.waitingActive;
+          } else if (level.isClientSide) {
+             isStarted = ClientData.isGameStarted;
+          }
 
          if (isStarted) {
             BlockState state = level.getBlockState(event.getPos());
@@ -209,8 +210,9 @@ public class InteractionEvents {
       if ((Boolean)WarfareConfig.PREVENT_BLOCK_BREAKING.get()) {
          Player player = event.getPlayer();
          if (!player.isCreative() && event.getLevel() instanceof ServerLevel serverLevel) {
-            boolean isStarted = WarfareWorldData.get(serverLevel).isGameStarted;
-            if (isStarted && !isBlockWhitelisted(event.getState())) {
+             WarfareWorldData data = WarfareWorldData.get(serverLevel);
+             boolean isStarted = data.isGameStarted || data.waitingActive;
+             if (isStarted && !isBlockWhitelisted(event.getState())) {
                event.setCanceled(true);
             }
          }
