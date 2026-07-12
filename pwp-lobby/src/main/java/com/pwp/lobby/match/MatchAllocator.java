@@ -4,6 +4,7 @@ import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerManager;
+import com.pwp.lobby.VotingManager;
 import com.pwp.lobby.maps.MapConfig;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -180,8 +181,7 @@ public class MatchAllocator {
             if (!ServerManager.isAlive(mi.serverId)) {
                 log.warn("Match {} server is dead, cleaning up", mi.serverId);
                 LobbyMod.serverBroadcast("§e[PWP] §cМатч " + mi.displayName + " прерван из-за ошибки сервера!");
-                activeMatches.remove(mi.serverId);
-                ServerManager.stopServer(mi.serverId);
+                matchEnded(mi.serverId);
                 continue;
             }
 
@@ -241,6 +241,9 @@ public class MatchAllocator {
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
         LobbyMod.sendMatchListUpdateToAll();
+        if (!hasActiveMatch() && !lobbyPlayers.isEmpty() && !VotingManager.isActive()) {
+            VotingManager.startVoting();
+        }
     }
 
     public static Map<Integer, MatchInfo> getActiveMatches() { return activeMatches; }
