@@ -1,11 +1,11 @@
 modLoader="javafml"
 loaderVersion="[47,)"
+license="All Rights Reserved"
 
 [[mods]]
 modId="pwpblast"
 version="1.0.0"
 displayName="PWP Blast Protection"
-license="All Rights Reserved"
 credits="PWP"
 authors="PWP"
 description='''
