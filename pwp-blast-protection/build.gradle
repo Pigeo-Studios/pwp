@@ -11,6 +11,15 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += [
+        "-AoutRefMapFile=${projectDir}/build/resources/main/pwpblast.mixins.refmap.json"
+    ]
+}
+
+compileJava {
+    doFirst {
+        mkdir "${projectDir}/build/resources/main"
+    }
 }
 
 minecraft {
@@ -47,6 +56,7 @@ repositories {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 jar {
