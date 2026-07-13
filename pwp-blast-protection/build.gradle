@@ -9,32 +9,9 @@ java {
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-    options.compilerArgs += [
-        "-AoutRefMapFile=${projectDir}/build/resources/main/pwpblast.mixins.refmap.json"
-    ]
-}
-
-compileJava {
-    doFirst {
-        mkdir "${projectDir}/build/resources/main"
-    }
-}
-
 minecraft {
     mappings channel: 'official', version: '1.20.1'
     runs {
-        client {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            mods {
-                pwpblast {
-                    source sourceSets.main
-                }
-            }
-        }
         server {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
@@ -56,7 +33,6 @@ repositories {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 jar {
@@ -68,7 +44,6 @@ jar {
                 "Implementation-Title": project.name,
                 "Implementation-Version": project.version,
                 "Implementation-Vendor": "pwp",
-                "MixinConnector": "com.pwp.blastprotection.MixinConnector",
         ])
     }
 }
