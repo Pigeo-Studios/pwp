@@ -58,6 +58,7 @@ jar {
                 "Implementation-Title": project.name,
                 "Implementation-Version": project.version,
                 "Implementation-Vendor": "pwp",
+                "MixinConnector": "com.pwp.blastprotection.MixinConnector",
         ])
     }
 }
