@@ -1,13 +1,21 @@
-import asyncio, json
+import asyncio, json, httpx
 from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import config
 from auth_handlers import handle_callback, handle_message, handle_command_start, handle_command_myid, handle_command_login, handle_command_logout
+from auth_handlers.utils import launcher_sign
 
 BASE = Path(__file__).parent.resolve()
 CMDS = BASE / config.COMMANDS_DIR
 app = Application.builder().token(config.TELEGRAM_TOKEN).build()
+
+async def _bot_heartbeat():
+    try:
+        headers = {"Authorization": f"Bearer {config.CORE_API_KEY}", "Content-Type": "application/json", "X-PWP-Sign": launcher_sign("/api/v1/network/bot-heartbeat")}
+        async with httpx.AsyncClient(timeout=5) as h:
+            await h.post(f"{config.CORE_API_URL}/api/v1/network/bot-heartbeat", headers=headers, json={"name": "telegram"})
+    except: pass
 
 async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -18,6 +26,7 @@ async def ping(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("pong" if True else "pang")
 
 async def process_commands():
+    hb_ticks = 0
     while True:
         for f in sorted(CMDS.glob("tg_*.json")):
             try:
@@ -40,6 +49,10 @@ async def process_commands():
             except Exception as e:
                 print(f"[TG] cmd error: {e}")
                 f.unlink()
+        hb_ticks += 1
+        if hb_ticks >= 30:
+            hb_ticks = 0
+            await _bot_heartbeat()
         await asyncio.sleep(config.POLL_INTERVAL)
 
 async def start():

@@ -22,13 +22,14 @@ import java.security.MessageDigest;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class PlayerConnectHandler {
 
     private static final Logger log = LoggerFactory.getLogger(PlayerConnectHandler.class);
-    private static final long AUTH_TIMEOUT_MS = 3000;
+    private static final long AUTH_TIMEOUT_MS = 1000;
 
     private static final Map<String, Long> pendingAuth = new ConcurrentHashMap<>();
 
@@ -38,7 +39,30 @@ public class PlayerConnectHandler {
 
     // Allowed token hashes loaded from allowed_tokens.json (match servers only)
     public static Set<String> allowedTokenHashes = ConcurrentHashMap.newKeySet();
-    public static Map<String, Long> allowedTokenAccounts = new ConcurrentHashMap<>(); // tokenHash → accountId
+
+    // Players who have passed auth
+    private static final Set<UUID> AUTHENTICATED = ConcurrentHashMap.newKeySet();
+
+    public static boolean isAuthenticated(ServerPlayer player) {
+        return AUTHENTICATED.contains(player.getUUID());
+    }
+
+    public static boolean reject(ServerPlayer player) {
+        if (AUTHENTICATED.contains(player.getUUID()))
+            return false;
+        player.displayClientMessage(Component.literal("§cОжидайте авторизацию лаунчера..."), true);
+        return true;
+    }
+
+    private static void finishAuthentication(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        AUTHENTICATED.add(uuid);
+        pendingAuth.remove(player.getStringUUID());
+
+        PlayerPermissions.autoOpIfAdmin(player);
+
+        log.info("AUTH OK — uuid={}, name={}", uuid, player.getScoreboardName());
+    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -46,14 +70,27 @@ public class PlayerConnectHandler {
 
         String uuid = player.getStringUUID();
         String name = player.getScoreboardName();
-        log.info("PLAYER LOGIN EVENT — uuid={}, name={}", uuid, name);
+
+        log.info("AUTH PENDING — uuid={}, name={}", uuid, name);
 
         if (CoreServerMod.isMatchServer && !allowedTokenHashes.isEmpty()) {
             log.info("Match server mode — will verify via token hash or Core");
         }
 
         pendingAuth.put(uuid, System.currentTimeMillis());
-        log.info("AUTH PENDING - {} added to queue", name);
+    }
+
+    @SubscribeEvent
+    public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+
+        UUID uuid = player.getUUID();
+        String suuid = player.getStringUUID();
+        String name = player.getScoreboardName();
+
+        AUTHENTICATED.remove(uuid);
+        pendingAuth.remove(suuid);
+        log.info("AUTH CLEANUP — uuid={}, name={}", uuid, name);
     }
 
     @SubscribeEvent
@@ -68,20 +105,22 @@ public class PlayerConnectHandler {
         Set<String> toRemove = new HashSet<>();
 
         for (var entry : pendingAuth.entrySet()) {
-            String uuid = entry.getKey();
+            String suuid = entry.getKey();
             long joinMs = entry.getValue();
 
             if (now - joinMs >= AUTH_TIMEOUT_MS) {
-                ServerPlayer player = server.getPlayerList().getPlayer(java.util.UUID.fromString(uuid));
+                ServerPlayer player = server.getPlayerList().getPlayer(UUID.fromString(suuid));
                 if (player != null && player.connection != null) {
-                    log.warn("AUTH TIMEOUT - {} (uuid={}), elapsedMs={}", player.getScoreboardName(), uuid, now - joinMs);
+                    log.warn("AUTH FAIL — uuid={}, name={}, reason=TIMEOUT", suuid, player.getScoreboardName());
                     disconnectNow(player, "Войдите через лаунчер");
                 }
-                toRemove.add(uuid);
+                toRemove.add(suuid);
             }
         }
 
-        for (String uuid : toRemove) pendingAuth.remove(uuid);
+        for (String suuid : toRemove) {
+            pendingAuth.remove(suuid);
+        }
     }
 
     public static void handleToken(String uuid, String token) {
@@ -92,18 +131,31 @@ public class PlayerConnectHandler {
 
         log.info("AUTH — uuid={}, tokenLen={}", uuid, token.length());
 
+        ServerPlayer player = findPlayer(uuid);
+        if (player != null && isAuthenticated(player)) return;
+
         // 1. Check local token hash cache (match servers)
         if (CoreServerMod.isMatchServer && checkLocalHash(token, uuid)) {
-            pendingAuth.remove(uuid);
-            log.info("AUTH ACCEPTED (local hash) — uuid={}", uuid);
+            if (player != null) {
+                finishAuthentication(player);
+                log.info("AUTH OK — uuid={}, source=LOCAL_HASH", uuid);
+            } else {
+                pendingAuth.remove(uuid);
+                log.info("AUTH OK — uuid={}, source=LOCAL_HASH (player not found)", uuid);
+            }
             return;
         }
 
         // 2. Check in-memory auth cache (recent Core verifications)
         Long cached = authCache.get(token);
         if (cached != null && System.currentTimeMillis() < cached) {
-            pendingAuth.remove(uuid);
-            log.info("AUTH ACCEPTED (cache) — uuid={}", uuid);
+            if (player != null) {
+                finishAuthentication(player);
+                log.info("AUTH OK — uuid={}, source=CACHE", uuid);
+            } else {
+                pendingAuth.remove(uuid);
+                log.info("AUTH OK — uuid={}, source=CACHE (player not found)", uuid);
+            }
             return;
         }
 
@@ -133,7 +185,7 @@ public class PlayerConnectHandler {
             var json = com.google.gson.JsonParser.parseString(result).getAsJsonObject();
             if (!json.has("success") || !json.get("success").getAsBoolean()) {
                 String err = json.has("error") ? json.get("error").getAsString() : "unknown";
-                log.warn("VERIFY FAILED — {}", err);
+                log.warn("AUTH FAIL — uuid={}, reason=TOKEN_MISMATCH, error={}", uuid, err);
                 return;
             }
 
@@ -142,11 +194,16 @@ public class PlayerConnectHandler {
             String nickname = data.has("nickname") ? data.get("nickname").getAsString() : "?";
             String role = data.has("role") ? data.get("role").getAsString() : "?";
 
-            // Cache the successful verification
             authCache.put(token, System.currentTimeMillis() + CACHE_TTL_MS);
 
-            pendingAuth.remove(uuid);
-            log.info("AUTH ACCEPTED (Core) — accountId={}, uuid={}, nickname={}, role={}", accountId, uuid, nickname, role);
+            ServerPlayer player = findPlayer(uuid);
+            if (player != null) {
+                finishAuthentication(player);
+                log.info("AUTH OK — uuid={}, name={}, source=CORE, accountId={}, role={}", uuid, nickname, accountId, role);
+            } else {
+                pendingAuth.remove(uuid);
+                log.info("AUTH OK — uuid={}, source=CORE (player not found), accountId={}", uuid, accountId);
+            }
         } catch (Exception e) {
             log.error("VERIFY EXCEPTION — {}: {}", e.getClass().getSimpleName(), e.getMessage());
         }
@@ -164,7 +221,7 @@ public class PlayerConnectHandler {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return null;
         try {
-            return server.getPlayerList().getPlayer(java.util.UUID.fromString(uuid));
+            return server.getPlayerList().getPlayer(UUID.fromString(uuid));
         } catch (Exception e) {
             return null;
         }

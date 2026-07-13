@@ -6,6 +6,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -127,21 +128,43 @@ public class ServerManager {
                     }
                 }
 
+                // Read match_config.json for server and SBW settings
+                Path matchConfigPath = serverDir.resolve("match_config.json");
+                ServerMatchConfig matchConfig = null;
+                if (Files.exists(matchConfigPath)) {
+                    try {
+                        matchConfig = new Gson().fromJson(Files.readString(matchConfigPath), ServerMatchConfig.class);
+                    } catch (Exception e) {
+                        log.warn("Failed to parse match_config.json: {}", e.getMessage());
+                    }
+                }
+
                 String voidGen = "{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biomes\":\"minecraft:the_void\",\"structures\":{\"structures\":{}}}";
-                Files.writeString(serverDir.resolve("server.properties"),
-                        "server-port=" + port + "\n" +
-                        "level-name=" + mapName + "\n" +
-                        "max-players=" + maxPlayers + "\n" +
-                        "online-mode=false\n" +
-                        "level-type=minecraft:superflat\n" +
-                        "generator-settings=" + voidGen + "\n" +
-                        "generate-structures=false\n" +
-                        "spawn-animals=false\n" +
-                        "spawn-monsters=false\n" +
-                        "spawn-npcs=false\n" +
-                        "difficulty=peaceful\n" +
-                        "gamemode=adventure\n" +
-                        "allow-flight=true\n");
+                StringBuilder props = new StringBuilder();
+                props.append("server-port=").append(port).append("\n");
+                props.append("level-name=").append(mapName).append("\n");
+                props.append("max-players=").append(maxPlayers).append("\n");
+                props.append("online-mode=false\n");
+                props.append("level-type=minecraft:superflat\n");
+                props.append("generator-settings=").append(voidGen).append("\n");
+                props.append("generate-structures=false\n");
+                props.append("spawn-animals=false\n");
+                props.append("spawn-monsters=false\n");
+                props.append("spawn-npcs=false\n");
+                props.append("difficulty=peaceful\n");
+                props.append("gamemode=adventure\n");
+                props.append("allow-flight=true\n");
+                if (matchConfig != null && matchConfig.server != null) {
+                    props.append("view-distance=").append(matchConfig.server.viewDistance).append("\n");
+                    props.append("simulation-distance=").append(matchConfig.server.simulationDistance).append("\n");
+                    props.append("entity-broadcast-range-percentage=").append(matchConfig.server.entityBroadcastRange).append("\n");
+                }
+                Files.writeString(serverDir.resolve("server.properties"), props.toString());
+
+                // Generate superbwarfare-server.toml from match_config.json
+                if (matchConfig != null && matchConfig.superbwarfare != null) {
+                    writeSBWServerConfig(serverDir, mapName, matchConfig.superbwarfare);
+                }
 
                 // Unique voice chat port for each match server (avoid collision with main server)
                 Path vcConfig = serverDir.resolve("config/voicechat/voicechat-server.properties");
@@ -318,6 +341,34 @@ public class ServerManager {
     }
 
     // --- private helpers ---
+
+    private static void writeSBWServerConfig(Path serverDir, String levelName, ServerMatchConfig.Superbwarfare cfg) throws IOException {
+        Path scDir = serverDir.resolve(levelName).resolve("serverconfig");
+        Files.createDirectories(scDir);
+        String toml = "[vehicle]\n\tvehicle_info_display_distance = " + cfg.vehicleInfoDisplayDistance
+                + "\n\tvehicle_chunk_loading = " + cfg.vehicleChunkLoading
+                + "\n\n[projectile]\n\tprojectile_chunk_loading = " + cfg.projectileChunkLoading + "\n";
+        Files.writeString(scDir.resolve("superbwarfare-server.toml"), toml);
+        log.info("Generated superbwarfare-server.toml for {}", levelName);
+    }
+
+    /** Lightweight DTO for match_config.json fields used by ServerManager */
+    public static class ServerMatchConfig {
+        public Server server;
+        public Superbwarfare superbwarfare;
+
+        public static class Server {
+            public int viewDistance = 8;
+            public int simulationDistance = 6;
+            public int entityBroadcastRange = 50;
+        }
+
+        public static class Superbwarfare {
+            public int vehicleInfoDisplayDistance = 0;
+            public boolean vehicleChunkLoading = true;
+            public boolean projectileChunkLoading = true;
+        }
+    }
 
     private static void robocopy(Path source, Path target) throws IOException {
         Files.createDirectories(target);

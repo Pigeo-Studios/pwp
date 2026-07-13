@@ -14,12 +14,12 @@ public class PWPBlastConfig {
         .define("enabled", true);
 
     public static final DoubleValue SOFT_MULTIPLIER = BUILDER
-        .comment("Blast resistance multiplier for soft terrain (dirt, sand, gravel, snow)")
-        .defineInRange("softMultiplier", 8.0, 1.0, 100.0);
+        .comment("Block survival chance for soft terrain (dirt, sand, gravel, snow). Higher = more blocks survive.")
+        .defineInRange("softMultiplier", 2.67, 1.0, 100.0);
 
     public static final DoubleValue HARD_MULTIPLIER = BUILDER
-        .comment("Blast resistance multiplier for stone, wood, and building materials")
-        .defineInRange("hardMultiplier", 4.0, 1.0, 100.0);
+        .comment("Block survival chance for stone, wood, and building materials. Higher = more blocks survive.")
+        .defineInRange("hardMultiplier", 2.0, 1.0, 100.0);
 
     static {
         SPEC = BUILDER.build();

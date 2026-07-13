@@ -192,6 +192,28 @@ public class CoreServerApi {
         return post("/api/v1/network/heartbeat", map("server", server, "online", online));
     }
 
+    public static JsonObject sendHeartbeat(String server, int online,
+                                           String mapName, String mode,
+                                           String blueFaction, String redFaction,
+                                           int blueScore, int redScore,
+                                           String phase, int maxPlayers,
+                                           long matchStartedAt, int matchPlayers) {
+        JsonObject body = map("server", server, "online", online);
+        if (mapName != null) {
+            body.addProperty("mapName", mapName);
+            body.addProperty("mode", mode != null ? mode : "");
+            body.addProperty("blueFaction", blueFaction != null ? blueFaction : "");
+            body.addProperty("redFaction", redFaction != null ? redFaction : "");
+            body.addProperty("blueScore", blueScore);
+            body.addProperty("redScore", redScore);
+            body.addProperty("phase", phase != null ? phase : "");
+            body.addProperty("maxPlayers", maxPlayers);
+            body.addProperty("matchStartedAt", matchStartedAt);
+            body.addProperty("matchPlayers", matchPlayers);
+        }
+        return post("/api/v1/network/heartbeat", body);
+    }
+
     // ====== KITS ======
 
     public static JsonObject getFactions() {

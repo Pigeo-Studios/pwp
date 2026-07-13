@@ -1,0 +1,21 @@
+{
+  "refmap": "explosionoverhaul.mixins.refmap.json",
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.vinlanx.explosionoverhaul.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ExplosionMixin"
+  ],
+  "client": [
+    "GameRendererBlurMixin",
+    "ChannelAccessor",
+    "ChannelLowpassMixin",
+    "SoundEngineAudioQueueMixin",
+    "SoundPhysicsEnvironmentMixin"
+  ],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

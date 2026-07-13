@@ -1,6 +1,7 @@
 package com.pwp.core.api;
 
 import com.pwp.core.CoreApplication;
+import com.pwp.core.db.MatchRepository;
 import com.pwp.core.db.PlayerRepository;
 import com.pwp.core.model.ApiResponse;
 import com.pwp.core.model.PlayerProfile;
@@ -14,7 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NetworkController {
 
     private static final ConcurrentHashMap<String, ServerHeartbeat> heartbeats = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Long> botHeartbeats = new ConcurrentHashMap<>();
     private static int recordOnline = 0;
+    @SuppressWarnings("unused")
     private static String recordOnlineDate = "";
 
     public static int recordOnline() { return recordOnline; }
@@ -27,7 +30,11 @@ public class NetworkController {
                 ctx.json(ApiResponse.error("server name required"));
                 return;
             }
-            heartbeats.put(req.server, new ServerHeartbeat(req.server, req.online, req.ip, req.port, System.currentTimeMillis()));
+            heartbeats.put(req.server, new ServerHeartbeat(req.server, req.online, req.ip, req.port,
+                    req.mapName, req.mode, req.blueFaction, req.redFaction,
+                    req.blueScore, req.redScore, req.phase, req.maxPlayers,
+                    req.matchStartedAt, req.matchPlayers,
+                    System.currentTimeMillis()));
             int total = currentTotalOnline();
             if (total > recordOnline) {
                 recordOnline = total;
@@ -36,34 +43,81 @@ public class NetworkController {
             ctx.json(ApiResponse.ok(Map.of("total_online", total)));
         });
 
+        app.post("/api/v1/network/bot-heartbeat", ctx -> {
+            BotHeartbeatReq req = ctx.bodyAsClass(BotHeartbeatReq.class);
+            if (req.name == null || req.name.isEmpty()) {
+                ctx.json(ApiResponse.error("bot name required"));
+                return;
+            }
+            botHeartbeats.put(req.name, System.currentTimeMillis());
+            ctx.json(ApiResponse.ok(Map.of("status", "ok")));
+        });
+
         app.get("/api/v1/network/status", ctx -> {
             long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
             String uptime = formatUptime(uptimeMs);
             int totalOnline = currentTotalOnline();
 
-            Map<String, Object> services = new LinkedHashMap<>();
-            services.put("core", true);
-            services.put("launcher", false);
-            services.put("telegram", false);
-            services.put("discord", false);
+            long now = System.currentTimeMillis();
+            long heartbeatTimeout = 120_000;
+
+            Map<String, Object> bots = new LinkedHashMap<>();
+            for (Map.Entry<String, Long> e : botHeartbeats.entrySet()) {
+                long age = now - e.getValue();
+                if (age < heartbeatTimeout) {
+                    bots.put(e.getKey(), formatUptime(age));
+                }
+            }
+
             List<Map<String, Object>> serverList = new ArrayList<>();
             for (ServerHeartbeat h : heartbeats.values()) {
-                if (System.currentTimeMillis() - h.lastSeen < 120_000) {
-                    services.put(h.server, true);
-                    Map<String, Object> srv = new HashMap<>();
+                if (now - h.lastSeen < heartbeatTimeout) {
+                    Map<String, Object> srv = new LinkedHashMap<>();
                     srv.put("name", h.server);
                     srv.put("online", h.online);
                     srv.put("ip", h.ip != null ? h.ip : "");
                     srv.put("port", h.port > 0 ? h.port : 0);
+                    if (h.mapName != null) {
+                        Map<String, Object> match = new LinkedHashMap<>();
+                        match.put("active", true);
+                        match.put("map", h.mapName);
+                        match.put("mode", h.mode);
+                        match.put("blue", h.blueFaction);
+                        match.put("red", h.redFaction);
+                        match.put("blueScore", h.blueScore);
+                        match.put("redScore", h.redScore);
+                        match.put("phase", h.phase);
+                        match.put("players", h.matchPlayers);
+                        match.put("maxPlayers", h.maxPlayers);
+                        match.put("duration", h.matchStartedAt > 0 ? formatUptime(now - h.matchStartedAt) : "");
+                        srv.put("match", match);
+                    }
                     serverList.add(srv);
                 }
             }
+
+            Map<String, Object> lastMatch = null;
+            try {
+                com.pwp.core.model.MatchResult last = MatchRepository.getLastMatch();
+                if (last != null) {
+                    lastMatch = new LinkedHashMap<>();
+                    lastMatch.put("map", last.mapName);
+                    lastMatch.put("mode", last.mode);
+                    lastMatch.put("blueScore", last.teamBlueScore);
+                    lastMatch.put("redScore", last.teamRedScore);
+                    lastMatch.put("winner", last.winner);
+                    lastMatch.put("duration", last.durationSeconds);
+                    lastMatch.put("endedAt", last.endedAt);
+                }
+            } catch (SQLException ignored) {}
+
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("servers", serverList);
             data.put("online", totalOnline);
             data.put("uptime", uptime);
             data.put("version", CoreApplication.projectVersion);
-            data.put("services", services);
+            data.put("bots", bots);
+            if (lastMatch != null) data.put("lastMatch", lastMatch);
             ctx.json(ApiResponse.ok(data));
         });
 
@@ -149,12 +203,14 @@ public class NetworkController {
     }
 
     private static String formatUptime(long ms) {
-        long days = ms / 86_400_000;
-        long hours = (ms % 86_400_000) / 3_600_000;
-        long minutes = (ms % 3_600_000) / 60_000;
-        if (days > 0) return days + "д " + hours + "ч";
-        if (hours > 0) return hours + "ч " + minutes + "м";
-        return minutes + "м";
+        long seconds = ms / 1000;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        long days = hours / 24;
+        if (days > 0) return days + "д " + (hours % 24) + "ч";
+        if (hours > 0) return (hours % 24) + "ч " + (minutes % 60) + "м";
+        if (minutes > 0) return minutes + "м";
+        return seconds + "с";
     }
 
     private static int parseInt(String s, int def) {
@@ -166,6 +222,20 @@ public class NetworkController {
         public int online;
         public String ip;
         public int port;
+        public String mapName;
+        public String mode;
+        public String blueFaction;
+        public String redFaction;
+        public int blueScore;
+        public int redScore;
+        public String phase;
+        public int maxPlayers;
+        public long matchStartedAt;
+        public int matchPlayers;
+    }
+
+    public static class BotHeartbeatReq {
+        public String name;
     }
 
     private static class ServerHeartbeat {
@@ -173,9 +243,28 @@ public class NetworkController {
         final int online;
         final String ip;
         final int port;
+        final String mapName;
+        final String mode;
+        final String blueFaction;
+        final String redFaction;
+        final int blueScore;
+        final int redScore;
+        final String phase;
+        final int maxPlayers;
+        final long matchStartedAt;
+        final int matchPlayers;
         final long lastSeen;
-        ServerHeartbeat(String server, int online, String ip, int port, long lastSeen) {
-            this.server = server; this.online = online; this.ip = ip; this.port = port; this.lastSeen = lastSeen;
+        ServerHeartbeat(String server, int online, String ip, int port,
+                        String mapName, String mode, String blueFaction, String redFaction,
+                        int blueScore, int redScore, String phase, int maxPlayers,
+                        long matchStartedAt, int matchPlayers,
+                        long lastSeen) {
+            this.server = server; this.online = online; this.ip = ip; this.port = port;
+            this.mapName = mapName; this.mode = mode; this.blueFaction = blueFaction; this.redFaction = redFaction;
+            this.blueScore = blueScore; this.redScore = redScore; this.phase = phase; this.maxPlayers = maxPlayers;
+            this.matchStartedAt = matchStartedAt;
+            this.matchPlayers = matchPlayers;
+            this.lastSeen = lastSeen;
         }
     }
 }

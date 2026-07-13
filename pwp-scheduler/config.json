@@ -1,0 +1,25 @@
+{
+    "core_api_url": "http://127.0.0.1:8080",
+    "core_api_key": "RUhL8HO9bBAoaG1NDpCc57W6tuSkwvKVsPingEmer2QTdZ3zFlxjXyYq0fMIJ4",
+    "discord_bot_token": "",
+    "discord_channel_id": "1526107903730122953",
+    "message_id_file": "C:\\Users\\maska\\OneDrive\\Desktop\\PWP\\bots\\.scheduler_msg_id.json",
+    "start_command": "C:\\Users\\maska\\OneDrive\\Desktop\\start.bat",
+    "stop_command": "taskkill /f /fi \"WINDOWTITLE eq PWP Minecraft Server\"",
+    "check_interval": 5,
+    "schedule": {
+        "monday": [{"start": "19:00", "end": "23:00"}],
+        "tuesday": [{"start": "19:00", "end": "23:00"}],
+        "wednesday": [{"start": "19:00", "end": "23:00"}],
+        "thursday": [{"start": "19:00", "end": "23:00"}],
+        "friday": [{"start": "19:00", "end": "01:00"}],
+        "saturday": [
+            {"start": "14:00", "end": "17:00"},
+            {"start": "19:00", "end": "01:00"}
+        ],
+        "sunday": [
+            {"start": "14:00", "end": "17:00"},
+            {"start": "18:00", "end": "01:00"}
+        ]
+    }
+}

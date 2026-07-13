@@ -16,6 +16,7 @@ import com.pigeostudios.pwp.warfare.menu.ModMenuTypes;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pigeostudios.pwp.warfare.config.MatchConfigLoader;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -67,11 +68,12 @@ public class WarfareMod {
    private void clientSetup(FMLClientSetupEvent event) {
    }
 
-   @SubscribeEvent
-   public void onServerStarting(ServerStartingEvent event) {
-      LOGGER.info("PWP Warfare Server starting...");
-      applyMapConfig(event.getServer().overworld());
-   }
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+       LOGGER.info("PWP Warfare Server starting...");
+       applyMapConfig(event.getServer().overworld());
+       MatchConfigLoader.load(event.getServer().overworld());
+    }
 
    @SubscribeEvent
    public void onRegisterCommands(RegisterCommandsEvent event) {
@@ -128,16 +130,8 @@ public class WarfareMod {
 
           if (root.has("settings")) {
              JsonObject settings = root.getAsJsonObject("settings");
-             if (settings.has("respawnTimer")) data.respawnTimer = settings.get("respawnTimer").getAsInt();
-             if (settings.has("deathTicketCost")) data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
-             if (settings.has("hideDeathMessages")) data.hideDeathMessages = settings.get("hideDeathMessages").getAsBoolean();
-             if (settings.has("hideNametags")) data.hideNametags = settings.get("hideNametags").getAsBoolean();
-             if (settings.has("disableHunger")) data.disableHunger = settings.get("disableHunger").getAsBoolean();
-              if (settings.has("disableNaturalRegen")) data.disableNaturalRegen = settings.get("disableNaturalRegen").getAsBoolean();
-              if (settings.has("disableBlockDrops")) data.disableBlockDrops = settings.get("disableBlockDrops").getAsBoolean();
-              if (settings.has("disableEntityDrops")) data.disableEntityDrops = settings.get("disableEntityDrops").getAsBoolean();
-              if (settings.has("disableFireSpread")) data.disableFireSpread = settings.get("disableFireSpread").getAsBoolean();
-              if (settings.has("disableWeatherCycle")) data.disableWeatherCycle = settings.get("disableWeatherCycle").getAsBoolean();
+              if (settings.has("respawnTimer")) data.respawnTimer = settings.get("respawnTimer").getAsInt();
+              if (settings.has("deathTicketCost")) data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
            }
 
           if (root.has("mapBounds")) {
@@ -284,11 +278,12 @@ public class WarfareMod {
           if (mode.equals("invasion") && !data.capturePoints.isEmpty()) {
              String defender = root.has("invasionDefender") ? root.get("invasionDefender").getAsString() : "RED";
              data.invasionDefender = defender;
-             for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
-                cp.owner = defender;
-                cp.progress = 1.0F;
-                cp.capturingTeam = "NONE";
-             }
+              for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+                 cp.owner = defender;
+                 cp.progress = 1.0F;
+                 cp.capturingTeam = "NONE";
+                 cp.invLocked = false;
+              }
              if (root.has("modes")) {
                 JsonObject modes = root.getAsJsonObject("modes");
                 if (modes.has("invasion")) {

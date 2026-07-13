@@ -51,6 +51,7 @@ public class WarfareDeathScreen extends DeathScreen {
     private String contextTargetPlayer = "";
     private int contextTargetSquadId = -1;
     private String selectedSpawnType = "";
+    private Button kitButton;
     private Button deployButton;
     private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
     private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
@@ -108,7 +109,7 @@ public class WarfareDeathScreen extends DeathScreen {
         this.addRenderableWidget(this.nameInput);
         this.createButton = this.addRenderableWidget(new SquadButton(10, this.height - 65, 150, 20, Component.literal("Create Squad"), b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()))));
         this.createButton.visible = !isInSquad;
-        this.addRenderableWidget(new SquadButton(10, this.height - 60, 150, 20, Component.literal("\u2694 Kit"), b -> {
+        this.kitButton = this.addRenderableWidget(new SquadButton(10, this.height - 60, 150, 20, Component.literal("\u2694 Kit"), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
         }));
         this.deployButton = this.addRenderableWidget(new DeployButton(10, this.height - 35, 100, 25, Component.literal("DEPLOY"), b -> {
@@ -166,6 +167,7 @@ public class WarfareDeathScreen extends DeathScreen {
         if (this.nameInput != null && this.nameInput.isVisible() == isInSquad) {
             this.nameInput.setVisible(!isInSquad);
             this.createButton.visible = !isInSquad;
+            this.kitButton.visible = isInSquad;
         }
     }
 

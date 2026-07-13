@@ -41,11 +41,16 @@ changelog.txt
 bots/channels.json
 bots/commands/
 bots/.env
-bots/__pycache__/
-bots/auth_handlers/__pycache__/
 core-service/sql/migration_add_accounts.sql
-bots/__pycache__/
-bots/auth_handlers/__pycache__/
+
+# Bytecode cache (all languages)
+__pycache__/
+*.pyc
+*.class
+
+# Bot runtime state
+bots/scheduler_status.json
+bots/.scheduler_*
 
 # Bot tokens
 bots/config.py

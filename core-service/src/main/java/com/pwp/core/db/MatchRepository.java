@@ -77,4 +77,30 @@ public class MatchRepository {
             c.close();
         }
     }
+
+    public static MatchResult getLastMatch() throws SQLException {
+        Connection c = DatabaseManager.getConnection();
+        try {
+            PreparedStatement ps = c.prepareStatement(
+                    "SELECT map_name, mode, team_blue_score, team_red_score, " +
+                    "winner, duration_seconds, started_at, ended_at " +
+                    "FROM match_history ORDER BY ended_at DESC LIMIT 1");
+            ResultSet rs = ps.executeQuery();
+            if (!rs.next()) return null;
+            MatchResult m = new MatchResult();
+            m.mapName = rs.getString("map_name");
+            m.mode = rs.getString("mode");
+            m.teamBlueScore = rs.getInt("team_blue_score");
+            m.teamRedScore = rs.getInt("team_red_score");
+            m.winner = rs.getString("winner");
+            m.durationSeconds = rs.getInt("duration_seconds");
+            m.startedAt = rs.getString("started_at");
+            m.endedAt = rs.getString("ended_at");
+            rs.close();
+            ps.close();
+            return m;
+        } finally {
+            c.close();
+        }
+    }
 }

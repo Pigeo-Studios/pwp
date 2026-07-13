@@ -99,7 +99,17 @@ public class LobbyMod {
             heartbeatTicks = 0;
             int online = MatchAllocator.getLobbyPlayerCount();
             try {
-                CoreServerApi.sendHeartbeat("lobby", online);
+                MatchInfo mi = MatchAllocator.getActiveMatch();
+                if (mi != null) {
+                    CoreServerApi.sendHeartbeat("lobby", online,
+                        mi.mapName, mi.mode,
+                        mi.blueFaction, mi.redFaction,
+                        mi.blueTickets, mi.redTickets,
+                        mi.phase.name(), mi.maxPlayers,
+                        mi.startedAt, mi.playerCount);
+                } else {
+                    CoreServerApi.sendHeartbeat("lobby", online);
+                }
             } catch (Exception e) {
                 // silently ignore
             }
@@ -223,8 +233,6 @@ public class LobbyMod {
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-
-        autoOpIfAdmin(player);
 
         if (isMatchServer) return;
 
@@ -684,18 +692,4 @@ public class LobbyMod {
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
     }
 
-    private static void autoOpIfAdmin(ServerPlayer player) {
-        try {
-            JsonObject data = CoreServerApi.loadPlayer(player.getStringUUID());
-            if (data == null || !data.has("data")) return;
-            JsonObject profile = data.getAsJsonObject("data");
-            if (!profile.has("player")) return;
-            String role = profile.getAsJsonObject("player").get("role").getAsString();
-            if ("admin".equalsIgnoreCase(role)) {
-                player.server.getPlayerList().op(player.getGameProfile());
-            }
-        } catch (Exception e) {
-            System.err.println("[PWP] autoOpIfAdmin failed: " + e.getMessage());
-        }
-    }
 }
