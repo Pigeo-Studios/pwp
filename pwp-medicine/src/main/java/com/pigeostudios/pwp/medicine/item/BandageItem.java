@@ -47,7 +47,7 @@ implements GeoItem {
     }
 
     public int getUseDuration(ItemStack pStack) {
-        return 40;
+        return 60;
     }
 
     public UseAnim getUseAnimation(ItemStack pStack) {
@@ -55,9 +55,17 @@ implements GeoItem {
     }
 
     public InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, InteractionHand pUsedHand) {
-        Player toHeal;
         Player target = this.getTargetPlayer(pPlayer);
-        Player player = toHeal = target != null ? target : pPlayer;
+        Player toHeal = target != null ? target : pPlayer;
+        if (target != null && target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+            if (!pLevel.isClientSide && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
+                pPlayer.sendSystemMessage(Component.literal("§cYou cannot revive an ENEMY!"));
+                return InteractionResultHolder.fail(pPlayer.getItemInHand(pUsedHand));
+            }
+            pLevel.playSound(null, pPlayer.getX(), pPlayer.getY(), pPlayer.getZ(), ModSounds.BANDAGE_START.get(), SoundSource.PLAYERS, 0.7f, 1.0f);
+            pPlayer.startUsingItem(pUsedHand);
+            return InteractionResultHolder.success(pPlayer.getItemInHand(pUsedHand));
+        }
         if (toHeal.getHealth() >= 14.0f && !toHeal.hasEffect(ModEffects.BLEEDING.get())) {
             if (!pLevel.isClientSide) {
                 if (toHeal == pPlayer) {
@@ -78,12 +86,18 @@ implements GeoItem {
             Player player = (Player)pEntityLiving;
             Player target = this.getTargetPlayer(player);
             Player toHeal = target != null ? target : player;
-            float currentHealth = toHeal.getHealth();
-            if (currentHealth < 14.0f) {
-                float healed = Math.min(14.0f, currentHealth + 6.0f) - currentHealth;
-                toHeal.setHealth(currentHealth + healed);
-                if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-                    com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordHealing(sp, healed);
+            if (target != null && target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                com.pigeostudios.pwp.warfare.events.DownedHandler.revivePlayer((net.minecraft.server.level.ServerPlayer)target);
+                com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordRevive((net.minecraft.server.level.ServerPlayer)player);
+                player.sendSystemMessage(Component.literal("§aTeammate revived!"));
+            } else {
+                float currentHealth = toHeal.getHealth();
+                if (currentHealth < 14.0f) {
+                    float healed = Math.min(14.0f, currentHealth + 6.0f) - currentHealth;
+                    toHeal.setHealth(currentHealth + healed);
+                    if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                        com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordHealing(sp, healed);
+                    }
                 }
             }
             if (!player.getAbilities().instabuild) {
@@ -121,12 +135,22 @@ implements GeoItem {
 
     public InteractionResult interactLivingEntity(ItemStack pStack, Player pPlayer, LivingEntity pInteractionTarget, InteractionHand pUsedHand) {
         if (pInteractionTarget instanceof Player target) {
+            if (target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                if (!pPlayer.level().isClientSide && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
+                    pPlayer.sendSystemMessage(Component.literal("§cYou cannot revive an ENEMY!"));
+                    return InteractionResult.FAIL;
+                }
+                pPlayer.level().playSound(null, pPlayer.getX(), pPlayer.getY(), pPlayer.getZ(), ModSounds.BANDAGE_START.get(), SoundSource.PLAYERS, 0.7f, 1.0f);
+                pPlayer.startUsingItem(pUsedHand);
+                return InteractionResult.SUCCESS;
+            }
             if (target.getHealth() >= 14.0f && !target.hasEffect(ModEffects.BLEEDING.get())) {
                 if (!pPlayer.level().isClientSide) {
                     pPlayer.sendSystemMessage(Component.literal("§cPlayer doesn't need a bandage"));
                 }
                 return InteractionResult.FAIL;
             }
+            pPlayer.level().playSound(null, pPlayer.getX(), pPlayer.getY(), pPlayer.getZ(), ModSounds.BANDAGE_START.get(), SoundSource.PLAYERS, 0.7f, 1.0f);
             pPlayer.startUsingItem(pUsedHand);
             return InteractionResult.SUCCESS;
         }
