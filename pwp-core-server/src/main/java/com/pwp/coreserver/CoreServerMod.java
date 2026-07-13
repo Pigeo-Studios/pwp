@@ -6,6 +6,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,20 +23,27 @@ public class CoreServerMod {
     public static boolean isMatchServer = false;
 
     public CoreServerMod() {
-        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
-        MinecraftForge.EVENT_BUS.register(new PlayerConnectHandler());
-        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
-        log.info("PWP Core Server initialized");
+        if (FMLEnvironment.dist.isDedicatedServer()) {
+            FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
+            MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+            log.info("PWP Core Server initialized");
+        } else {
+            log.info("PWP Core Server loaded on client — skipping server setup");
+        }
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
+        if (API_KEY.isEmpty()) {
+            log.error("PWP Core Server cannot start: No API key configured.");
+            log.error("Set PWP_API_KEY environment variable or create config/pwpcore.txt");
+            return;
+        }
         CoreServerApi.configure(API_BASE, API_KEY);
         log.info("CoreServerApi configured with base: {}", API_BASE);
 
-        // Detect match server by working directory name
         String dirName = Path.of("").toAbsolutePath().getFileName().toString();
         isMatchServer = dirName.startsWith("match_");
-        log.info(isMatchServer ? "Match server mode — auth via Core verify" : "Lobby server mode");
+        log.info(isMatchServer ? "Match server mode" : "Lobby server mode");
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
@@ -46,7 +54,7 @@ public class CoreServerMod {
 
     private static String loadApiKey() {
         String envKey = System.getenv("PWP_API_KEY");
-        if (envKey != null && !envKey.isEmpty() && !envKey.equals("pwp_server_key_change_me")) {
+        if (envKey != null && !envKey.isEmpty()) {
             log.info("Using PWP_API_KEY from environment");
             return envKey;
         }
@@ -54,7 +62,7 @@ public class CoreServerMod {
             var configPath = Path.of("config", "pwpcore.txt");
             if (Files.exists(configPath)) {
                 String key = Files.readString(configPath).trim();
-                if (!key.isEmpty() && !key.equals("pwp_server_key_change_me")) {
+                if (!key.isEmpty()) {
                     log.info("Using API key from config/pwpcore.txt");
                     return key;
                 }
@@ -62,12 +70,13 @@ public class CoreServerMod {
         } catch (Exception e) {
             log.warn("Failed to read config/pwpcore.txt: {}", e.getMessage());
         }
-        log.error("========================================================");
-        log.error("HARDCODED API KEY IN USE! Server -> CoreService calls");
-        log.error("will FAIL with 401 Unauthorized.");
-        log.error("Set env var PWP_API_KEY to the key from core-service's");
-        log.error("config.json api.keys[0] and restart the server.");
-        log.error("========================================================");
-        return "pwp_server_key_change_me";
+        if (FMLEnvironment.dist.isDedicatedServer()) {
+            throw new RuntimeException(
+                "PWP Core Server cannot start: No API key configured.\n" +
+                "Set the PWP_API_KEY environment variable or create config/pwpcore.txt\n" +
+                "with the API key from core-service's config.json api.keys[0]."
+            );
+        }
+        return "";
     }
 }

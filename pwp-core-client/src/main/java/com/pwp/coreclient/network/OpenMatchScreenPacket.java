@@ -69,13 +69,7 @@ public class OpenMatchScreenPacket {
                 try {
                     Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
                     lobbyScreen.getMethod("openMatch", OpenMatchScreenPacket.class).invoke(null, msg);
-                } catch (Exception e) {
-                    try {
-                        Class<?> matchScreen = Class.forName("com.pwp.lobby.gui.MatchScreen");
-                        matchScreen.getMethod("resetDismissed").invoke(null);
-                        matchScreen.getMethod("open", OpenMatchScreenPacket.class).invoke(null, msg);
-                    } catch (Exception ignored) {}
-                }
+                } catch (Exception ignored) {}
             });
         }
         ctx.get().setPacketHandled(true);

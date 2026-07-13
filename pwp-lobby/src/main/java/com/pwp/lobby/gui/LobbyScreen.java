@@ -23,27 +23,37 @@ public class LobbyScreen extends Screen {
 
     private static LobbyScreen instance;
 
-    private static final int TAB_VOTE = 0;
-    private static final int TAB_LIST = 1;
+    private static final int TAB_MATCHES = 0;
+    private static final int TAB_VOTING = 1;
+    private static final int TAB_STATS = 2;
 
-    private int currentTab = TAB_LIST;
-    private int targetTab = TAB_LIST;
+    private int currentTab = TAB_MATCHES;
+    private int targetTab = TAB_MATCHES;
     private long tabSwitchTime = 0;
     private static final long TAB_ANIM_MS = 200;
 
     // Match info data
     private OpenMatchScreenPacket matchData;
 
-    // Vote data
+    // Map vote data
     private OpenVotingScreenPacket voteData;
     private int votePage = 0;
     private String votedMap = null;
     private long voteOpenedAt;
 
+    // Mode vote data
+    private OpenModeVotePacket modeVoteData;
+    private String votedMode = null;
+    private long modeVoteOpenedAt;
+
     // Match list data
     private OpenMatchListScreenPacket listData;
     private int listPage = 0;
     private int confirmSid = -1;
+
+    // Stats integration
+    private StatsScreen statsRenderer;
+    private int statsSubTab = 0;
 
     // Scroll
     private double scrollOffset = 0;
@@ -53,9 +63,18 @@ public class LobbyScreen extends Screen {
 
     private static final Map<String, ResourceLocation> imageCache = new HashMap<>();
 
+    @Override
+    public void tick() {
+        super.tick();
+        if (statsRenderer != null) {
+            statsRenderer.tick();
+        }
+    }
+
     public LobbyScreen() {
         super(Component.literal("PWP"));
         instance = this;
+        statsRenderer = new StatsScreen();
     }
 
     public static LobbyScreen get() { return instance; }
@@ -67,14 +86,14 @@ public class LobbyScreen extends Screen {
         if (mc.player == null) return;
         if (instance != null) {
             instance.matchData = pkt;
-            if (instance.currentTab != TAB_LIST) {
-                instance.switchTab(TAB_LIST);
+            if (instance.currentTab != TAB_MATCHES) {
+                instance.switchTab(TAB_MATCHES);
             }
         } else {
             LobbyScreen s = new LobbyScreen();
             s.matchData = pkt;
-            s.currentTab = TAB_LIST;
-            s.targetTab = TAB_LIST;
+            s.currentTab = TAB_MATCHES;
+            s.targetTab = TAB_MATCHES;
             mc.setScreen(s);
         }
     }
@@ -83,7 +102,7 @@ public class LobbyScreen extends Screen {
         if (instance == null) return;
         instance.voteData = pkt;
         instance.voteOpenedAt = System.currentTimeMillis();
-        if (instance.currentTab == TAB_VOTE) {
+        if (instance.currentTab == TAB_VOTING) {
             instance.votePage = 0;
         }
     }
@@ -92,27 +111,35 @@ public class LobbyScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         if (instance != null) {
-            if (instance.voteData != null) {
-                instance.currentTab = TAB_VOTE;
-                instance.targetTab = TAB_VOTE;
-            }
+            instance.modeVoteData = pkt;
+            instance.modeVoteOpenedAt = System.currentTimeMillis();
+            instance.votedMode = null;
+            instance.switchTab(TAB_VOTING);
+        } else {
+            LobbyScreen s = new LobbyScreen();
+            s.modeVoteData = pkt;
+            s.modeVoteOpenedAt = System.currentTimeMillis();
+            s.currentTab = TAB_VOTING;
+            s.targetTab = TAB_VOTING;
+            mc.setScreen(s);
         }
-        ModeVoteScreen.openWithPacket(pkt);
     }
 
     public static void openVote(OpenVotingScreenPacket pkt) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         if (instance != null) {
+            instance.modeVoteData = null;
             instance.voteData = pkt;
             instance.voteOpenedAt = System.currentTimeMillis();
-            instance.switchTab(TAB_VOTE);
+            instance.switchTab(TAB_VOTING);
         } else {
             LobbyScreen s = new LobbyScreen();
+            s.modeVoteData = null;
             s.voteData = pkt;
             s.voteOpenedAt = System.currentTimeMillis();
-            s.currentTab = TAB_VOTE;
-            s.targetTab = TAB_VOTE;
+            s.currentTab = TAB_VOTING;
+            s.targetTab = TAB_VOTING;
             mc.setScreen(s);
         }
     }
@@ -122,13 +149,13 @@ public class LobbyScreen extends Screen {
         if (mc.player == null) return;
         if (instance != null) {
             instance.listData = pkt;
-            if (instance.currentTab == TAB_LIST) instance.listPage = 0;
-            instance.switchTab(TAB_LIST);
+            if (instance.currentTab == TAB_MATCHES) instance.listPage = 0;
+            instance.switchTab(TAB_MATCHES);
         } else {
             LobbyScreen s = new LobbyScreen();
             s.listData = pkt;
-            s.currentTab = TAB_LIST;
-            s.targetTab = TAB_LIST;
+            s.currentTab = TAB_MATCHES;
+            s.targetTab = TAB_MATCHES;
             mc.setScreen(s);
         }
     }
@@ -160,61 +187,106 @@ public class LobbyScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
-        int cx = width / 2;
-
-        // Tab: Vote
-        addRenderableWidget(Button.builder(
-                Component.literal("Vote"),
-                b -> { if (voteData != null) switchTab(TAB_VOTE); })
-                .bounds(cx - 90, 6, 60, 22).build());
-
-        // Tab: Matches
-        addRenderableWidget(Button.builder(
-                Component.literal("Matches"),
-                b -> switchTab(TAB_LIST))
-                .bounds(cx - 26, 6, 68, 22).build());
-
-        // Stats button
-        addRenderableWidget(Button.builder(
-                Component.literal("\u2694 Stats"),
-                b -> Minecraft.getInstance().setScreen(new StatsScreen()))
-                .bounds(cx + 46, 6, 60, 22).build());
-
-        // Close button
-        addRenderableWidget(Button.builder(
-                Component.literal("\u2715"),
-                b -> onClose())
-                .bounds(cx + 110, 6, 22, 22).build());
-
-        // Vote tab controls
-        if (voteData != null && voteData.mapNames.length > 0) {
-            int totalVotePages = Math.max(1, (voteData.mapNames.length + 3) / 4);
-            if (totalVotePages > 1) {
-                int pageY = 32;
-                addRenderableWidget(Button.builder(
-                        Component.literal("\u25C0"),
-                        b -> { if (votePage > 0) votePage--; })
-                        .bounds(cx + 40, pageY, 18, 18).build());
-                addRenderableWidget(Button.builder(
-                        Component.literal("\u25B6"),
-                        b -> { if (votePage < totalVotePages - 1) votePage++; })
-                        .bounds(cx + 84, pageY, 18, 18).build());
-            }
+        if (statsRenderer != null) {
+            statsRenderer.setPanelSize(width, height);
         }
+        int cx = width / 2;
+        int navY = 6;
+        int btnH = 22;
+        int gap = 4;
 
-        // List tab controls
-        if (listData != null && listData.count > 0) {
-            int totalListPages = Math.max(1, (listData.count + 3) / 4);
-            if (totalListPages > 1) {
-                int pageY = 32;
+        if (currentTab == TAB_STATS) {
+            addRenderableWidget(Button.builder(
+                    Component.literal("\u25C0 Lobby"),
+                    b -> { statsSubTab = statsRenderer.getStatsTab(); switchTab(TAB_MATCHES); })
+                    .bounds(cx - 150, navY, 64, btnH).build());
+
+            addRenderableWidget(Button.builder(
+                    Component.literal("My Stats"),
+                    b -> { statsRenderer.setStatsTab(0); statsSubTab = 0; scrollOffset = 0; init(); })
+                    .bounds(cx - 82, navY, 68, btnH).build());
+
+            addRenderableWidget(Button.builder(
+                    Component.literal("Leaderboard"),
+                    b -> { statsRenderer.setStatsTab(1); statsSubTab = 1; scrollOffset = 0; statsRenderer.requestLeaderboard(); init(); })
+                    .bounds(cx - 10, navY, 86, btnH).build());
+
+            addRenderableWidget(Button.builder(
+                    Component.literal("\u2715"),
+                    b -> onClose())
+                    .bounds(cx + 126, navY, 22, btnH).build());
+
+            if (statsSubTab == 1 && statsRenderer.getLbTotalPages() > 1) {
+                int pageY = 30;
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25C0"),
-                        b -> { if (listPage > 0) listPage--; })
-                        .bounds(cx + 40, pageY, 18, 18).build());
+                        b -> statsRenderer.lbPagePrev())
+                        .bounds(cx + 80, pageY, 20, 18).build());
                 addRenderableWidget(Button.builder(
                         Component.literal("\u25B6"),
-                        b -> { if (listPage < totalListPages - 1) listPage++; })
-                        .bounds(cx + 84, pageY, 18, 18).build());
+                        b -> statsRenderer.lbPageNext())
+                        .bounds(cx + 104, pageY, 20, 18).build());
+                addRenderableWidget(Button.builder(
+                        Component.literal((statsRenderer.getLbPage() + 1) + "/" + statsRenderer.getLbTotalPages()),
+                        b -> {})
+                        .bounds(cx + 52, pageY, 26, 18).build());
+            }
+        } else {
+            int tabX = cx - 110;
+            int tabW = 66;
+            boolean matchesActive = currentTab == TAB_MATCHES;
+            boolean votingActive = currentTab == TAB_VOTING;
+
+            addRenderableWidget(Button.builder(
+                    Component.literal((matchesActive ? "\u00a7e" : "\u00a77") + "Matches"),
+                    b -> switchTab(TAB_MATCHES))
+                    .bounds(tabX, navY, tabW, btnH).build());
+
+            addRenderableWidget(Button.builder(
+                    Component.literal((votingActive ? "\u00a7e" : "\u00a77") + "Voting"),
+                    b -> switchTab(TAB_VOTING))
+                    .bounds(tabX + tabW + gap, navY, tabW, btnH).build());
+
+            addRenderableWidget(Button.builder(
+                    Component.literal("\u00a77" + "Stats"),
+                    b -> { switchTab(TAB_STATS); })
+                    .bounds(tabX + (tabW + gap) * 2, navY, tabW, btnH).build());
+
+            addRenderableWidget(Button.builder(
+                    Component.literal("\u2715"),
+                    b -> onClose())
+                    .bounds(tabX + (tabW + gap) * 3 + 10, navY, 22, btnH).build());
+
+            // Vote tab pagination
+            if (currentTab == TAB_VOTING && voteData != null && voteData.mapNames.length > 0) {
+                int totalVotePages = Math.max(1, (voteData.mapNames.length + 3) / 4);
+                if (totalVotePages > 1) {
+                    int pageY = 32;
+                    addRenderableWidget(Button.builder(
+                            Component.literal("\u25C0"),
+                            b -> { if (votePage > 0) votePage--; })
+                            .bounds(cx + 40, pageY, 18, 18).build());
+                    addRenderableWidget(Button.builder(
+                            Component.literal("\u25B6"),
+                            b -> { if (votePage < totalVotePages - 1) votePage++; })
+                            .bounds(cx + 84, pageY, 18, 18).build());
+                }
+            }
+
+            // List tab pagination
+            if (currentTab == TAB_MATCHES && listData != null && listData.count > 0) {
+                int totalListPages = Math.max(1, (listData.count + 3) / 4);
+                if (totalListPages > 1) {
+                    int pageY = 32;
+                    addRenderableWidget(Button.builder(
+                            Component.literal("\u25C0"),
+                            b -> { if (listPage > 0) listPage--; })
+                            .bounds(cx + 40, pageY, 18, 18).build());
+                    addRenderableWidget(Button.builder(
+                            Component.literal("\u25B6"),
+                            b -> { if (listPage < totalListPages - 1) listPage++; })
+                            .bounds(cx + 84, pageY, 18, 18).build());
+                }
             }
         }
     }
@@ -232,7 +304,15 @@ public class LobbyScreen extends Screen {
         }
 
         int cx = width / 2;
-        String title = currentTab == TAB_VOTE ? "\u2694 MAP VOTE" : "\u2694 ACTIVE MATCHES";
+
+        if (currentTab == TAB_STATS) {
+            int clipY = 48;
+            int clipH = height - clipY - 36;
+            statsRenderer.renderContent(gui, mx, my, clipY, clipH);
+            return;
+        }
+
+        String title = currentTab == TAB_VOTING ? "\u2694 VOTING" : "\u2694 ACTIVE MATCHES";
         gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " " + title, cx, 32, PWPTheme.Colors.TEXT_ACCENT);
 
         // Draw accent line under title
@@ -249,9 +329,13 @@ public class LobbyScreen extends Screen {
 
         RenderSystem.enableBlend();
 
-        if (currentTab == TAB_VOTE) {
-            renderVoteTab(gui, mx, my, cx, a);
-        } else if (currentTab == TAB_LIST) {
+        if (currentTab == TAB_VOTING) {
+            if (modeVoteData != null) {
+                renderModeVoteTab(gui, mx, my, cx, a);
+            } else {
+                renderVoteTab(gui, mx, my, cx, a);
+            }
+        } else if (currentTab == TAB_MATCHES) {
             renderListTab(gui, mx, my, cx, a);
         }
 
@@ -498,6 +582,104 @@ public class LobbyScreen extends Screen {
         }
     }
 
+    // ====== MODE VOTE TAB ======
+
+    private void renderModeVoteTab(GuiGraphics gui, int mx, int my, int cx, int a) {
+        if (modeVoteData == null || modeVoteData.modeNames.length == 0) {
+            gui.drawCenteredString(font, "\u00a77No mode vote in progress", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
+            return;
+        }
+
+        int remaining = modeVoteData.remainingSeconds - (int)((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
+        if (remaining < 0) remaining = 0;
+        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
+        String timerColor = remaining <= 10 ? "\u00a7c" : (remaining <= 30 ? "\u00a7e" : "\u00a7a");
+        String info = timerColor + timeStr + "\u00a77  |  \u00a7e" + modeVoteData.onlinePlayers + "\u00a77 online";
+        if (votedMode != null) {
+            info += "  \u00a7a\u2714 " + votedMode;
+        } else {
+            info += "  \u00a7e" + modeVoteData.totalVotes + "\u00a77/" + modeVoteData.onlinePlayers + " voted";
+        }
+        gui.drawCenteredString(font, info, cx, 54, 0xFFFFFF);
+
+        int cardW = Math.min(340, width - 40);
+        int cardH = 80;
+        int cardGap = 12;
+        int totalH = modeVoteData.modeNames.length * (cardH + cardGap);
+        int startY = 64 + (height - 64 - totalH - 40) / 2;
+
+        int y = startY;
+        for (int i = 0; i < modeVoteData.modeNames.length; i++, y += cardH + cardGap) {
+            boolean sel = modeVoteData.modeNames[i].equals(votedMode);
+            boolean hover = mx >= cx - cardW / 2 && mx <= cx + cardW / 2 && my >= y && my <= y + cardH;
+            int bx = cx - cardW / 2;
+
+            int cardBg;
+            if (sel) cardBg = PWPTheme.Styles.Card.BG_SELECTED;
+            else if (hover) cardBg = PWPTheme.Styles.Card.BG_HOVER;
+            else cardBg = PWPTheme.Styles.Card.BG;
+            gui.fill(bx, y, bx + cardW, y + cardH, PWPTheme.Colors.withAlpha(cardBg, a));
+
+            int borderColor;
+            if (sel) borderColor = PWPTheme.Styles.Card.BORDER_SELECTED;
+            else if (hover) borderColor = PWPTheme.Styles.Card.BORDER_HOVER;
+            else borderColor = PWPTheme.Styles.Card.BORDER;
+            gui.fill(bx, y, bx + cardW, y + 1, PWPTheme.Colors.withAlpha(borderColor, a));
+            gui.fill(bx, y + cardH - 1, bx + cardW, y + cardH, PWPTheme.Colors.withAlpha(borderColor, a));
+            gui.fill(bx, y, bx + 1, y + cardH, PWPTheme.Colors.withAlpha(borderColor, a));
+            gui.fill(bx + cardW - 1, y, bx + cardW, y + cardH, PWPTheme.Colors.withAlpha(borderColor, a));
+
+            int textX = bx + 14;
+            int textMaxW = bx + cardW - textX - 10;
+
+            String nameStr = (sel ? "\u00a7e\u2714 " : "\u00a7f") + modeVoteData.modeDisplayNames[i];
+            gui.drawString(font, nameStr, textX, y + 8, PWPTheme.Colors.withAlpha(0xFFFFFF, a));
+
+            if (modeVoteData.modeDescriptions[i] != null && !modeVoteData.modeDescriptions[i].isEmpty()) {
+                String desc = modeVoteData.modeDescriptions[i];
+                int maxDescW = textMaxW;
+                if (font.width(desc) > maxDescW) {
+                    String line1 = font.plainSubstrByWidth(desc, maxDescW - 4);
+                    String rest = desc.substring(line1.length()).trim();
+                    if (!rest.isEmpty()) {
+                        String line2 = font.plainSubstrByWidth("\u00a77" + rest, maxDescW - 4);
+                        gui.drawString(font, "\u00a77" + line1, textX, y + 22, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                        gui.drawString(font, "\u00a77" + line2, textX, y + 34, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                    } else {
+                        gui.drawString(font, "\u00a77" + line1, textX, y + 28, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                    }
+                } else {
+                    gui.drawString(font, "\u00a77" + desc, textX, y + 28, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+                }
+            }
+
+            int votes = modeVoteData.voteCounts[i];
+            int barX = textX;
+            int barY = y + 52;
+            int barW = bx + cardW - textX - 10;
+            int barH = 6;
+            int maxVotes = 0;
+            for (int j = 0; j < modeVoteData.voteCounts.length; j++) {
+                if (modeVoteData.voteCounts[j] > maxVotes) maxVotes = modeVoteData.voteCounts[j];
+            }
+
+            gui.fill(barX, barY, barX + barW, barY + barH, PWPTheme.Colors.withAlpha(PWPTheme.Styles.Progress.BG, a));
+            if (votes > 0 && maxVotes > 0) {
+                float pct = (float) votes / maxVotes;
+                int fillW = (int) (barW * pct);
+                int fillColor = (votes == maxVotes && modeVoteData.totalVotes > 0) ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.ACCENT_DIM;
+                gui.fill(barX, barY, barX + fillW, barY + barH, PWPTheme.Colors.withAlpha(fillColor, a));
+            }
+
+            String voteText = "\u00a7e" + votes + "\u00a77 vote" + (votes != 1 ? "s" : "");
+            if (modeVoteData.totalVotes > 0) {
+                int pct = votes * 100 / modeVoteData.totalVotes;
+                voteText += " \u00a77(" + pct + "%)";
+            }
+            gui.drawString(font, voteText, barX, barY + barH + 2, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+        }
+    }
+
     // ====== CLICK HANDLING ======
 
     @Override
@@ -505,28 +687,50 @@ public class LobbyScreen extends Screen {
         if (btn != 0) return super.mouseClicked(mx, my, btn);
         int cx = width / 2;
 
-        if (currentTab == TAB_VOTE && voteData != null) {
-            int cardsPerPage = 4;
-            int cardW = Math.min(320, width - 60);
-            int cardH = 66;
-            int gap = 8;
-            int start = votePage * cardsPerPage;
-            int end = Math.min(start + cardsPerPage, voteData.mapNames.length);
-            int contentH = (end - start) * (cardH + gap);
-            int startY = 64 + (height - 64 - contentH - 40) / 2;
+        if (currentTab == TAB_STATS) {
+            return statsRenderer.mouseClickedContent(mx, my, btn) || super.mouseClicked(mx, my, btn);
+        }
 
-            int y = startY;
-            for (int i = start; i < end; i++, y += cardH + gap) {
-                int bx = cx - cardW / 2;
-                if (mx >= bx && mx <= bx + cardW && my >= y && my <= y + cardH) {
-                    votedMap = voteData.mapNames[i];
-                    PacketHandler.INSTANCE.sendToServer(new VoteMapPacket(voteData.mapNames[i]));
-                    return true;
+        if (currentTab == TAB_VOTING) {
+            if (modeVoteData != null) {
+                int cardW = Math.min(340, width - 40);
+                int cardH = 80;
+                int cardGap = 12;
+                int totalH = modeVoteData.modeNames.length * (cardH + cardGap);
+                int startY = 64 + (height - 64 - totalH - 40) / 2;
+
+                int y = startY;
+                for (int i = 0; i < modeVoteData.modeNames.length; i++, y += cardH + cardGap) {
+                    int bx = cx - cardW / 2;
+                    if (mx >= bx && mx <= bx + cardW && my >= y && my <= y + cardH) {
+                        votedMode = modeVoteData.modeNames[i];
+                        PacketHandler.INSTANCE.sendToServer(new VoteModePacket(modeVoteData.modeNames[i]));
+                        return true;
+                    }
+                }
+            } else if (voteData != null) {
+                int cardsPerPage = 4;
+                int cardW = Math.min(320, width - 60);
+                int cardH = 66;
+                int gap = 8;
+                int start = votePage * cardsPerPage;
+                int end = Math.min(start + cardsPerPage, voteData.mapNames.length);
+                int contentH = (end - start) * (cardH + gap);
+                int startY = 64 + (height - 64 - contentH - 40) / 2;
+
+                int y = startY;
+                for (int i = start; i < end; i++, y += cardH + gap) {
+                    int bx = cx - cardW / 2;
+                    if (mx >= bx && mx <= bx + cardW && my >= y && my <= y + cardH) {
+                        votedMap = voteData.mapNames[i];
+                        PacketHandler.INSTANCE.sendToServer(new VoteMapPacket(voteData.mapNames[i]));
+                        return true;
+                    }
                 }
             }
         }
 
-        if (currentTab == TAB_LIST && listData != null) {
+        if (currentTab == TAB_MATCHES && listData != null) {
             int contentW = Math.min(340, width - 60);
             int bx = cx - contentW / 2;
             int cardsPerPage = 4;

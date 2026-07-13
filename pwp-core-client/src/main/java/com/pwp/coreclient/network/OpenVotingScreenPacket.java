@@ -99,13 +99,7 @@ public class OpenVotingScreenPacket {
                 try {
                     Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
                     lobbyScreen.getMethod("openVote", OpenVotingScreenPacket.class).invoke(null, msg);
-                } catch (Exception e) {
-                    try {
-                        Class<?> votingScreen = Class.forName("com.pwp.lobby.gui.VotingScreen");
-                        votingScreen.getMethod("resetVoteSession").invoke(null);
-                        votingScreen.getMethod("openWithPacket", OpenVotingScreenPacket.class).invoke(null, msg);
-                    } catch (Exception ignored) {}
-                }
+                } catch (Exception ignored) {}
             });
         }
         ctx.get().setPacketHandled(true);

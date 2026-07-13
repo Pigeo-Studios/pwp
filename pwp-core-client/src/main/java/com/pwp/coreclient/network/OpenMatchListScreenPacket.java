@@ -103,12 +103,7 @@ public class OpenMatchListScreenPacket {
                 try {
                     Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
                     lobbyScreen.getMethod("openList", OpenMatchListScreenPacket.class).invoke(null, msg);
-                } catch (Exception e) {
-                    try {
-                        Class<?> listScreen = Class.forName("com.pwp.lobby.gui.MatchListScreen");
-                        listScreen.getMethod("openWithPacket", OpenMatchListScreenPacket.class).invoke(null, msg);
-                    } catch (Exception ignored) {}
-                }
+                } catch (Exception ignored) {}
             });
         }
         ctx.get().setPacketHandled(true);

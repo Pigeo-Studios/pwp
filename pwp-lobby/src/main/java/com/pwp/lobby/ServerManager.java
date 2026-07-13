@@ -144,7 +144,7 @@ public class ServerManager {
                 props.append("server-port=").append(port).append("\n");
                 props.append("level-name=").append(mapName).append("\n");
                 props.append("max-players=").append(maxPlayers).append("\n");
-                props.append("online-mode=false\n");
+                props.append("online-mode=true\n");
                 props.append("level-type=minecraft:superflat\n");
                 props.append("generator-settings=").append(voidGen).append("\n");
                 props.append("generate-structures=false\n");

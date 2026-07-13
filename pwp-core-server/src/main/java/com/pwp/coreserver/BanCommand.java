@@ -9,8 +9,6 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -19,8 +17,6 @@ import java.net.URL;
 import java.util.stream.Collectors;
 
 public class BanCommand {
-
-    private static final String HMAC_SECRET = "pwp_launcher_secret_2024";
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("pwpban")
@@ -72,7 +68,6 @@ public class BanCommand {
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
-        conn.setRequestProperty("X-PWP-Sign", sign(path));
         conn.setDoOutput(true);
         conn.setConnectTimeout(10000);
         conn.setReadTimeout(10000);
@@ -81,21 +76,6 @@ public class BanCommand {
         }
         try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             return r.lines().collect(Collectors.joining("\n"));
-        }
-    }
-
-    static String sign(String path) {
-        try {
-            long ts = System.currentTimeMillis();
-            String data = ts + ":" + path;
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(HMAC_SECRET.getBytes("UTF-8"), "HmacSHA256"));
-            byte[] hash = mac.doFinal(data.getBytes("UTF-8"));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hash) hex.append(String.format("%02x", b));
-            return ts + ":" + hex.toString();
-        } catch (Exception e) {
-            return "";
         }
     }
 }

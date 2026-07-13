@@ -1,6 +1,9 @@
 package com.pwp.core.auth;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.pwp.core.CoreApplication;
+import com.pwp.core.db.PlayerRepository;
 import io.javalin.http.Context;
 import io.javalin.http.TooManyRequestsResponse;
 import io.javalin.http.UnauthorizedResponse;
@@ -19,36 +22,48 @@ public class AuthMiddleware {
     private static final Map<String, RateBucket> rateBuckets = new ConcurrentHashMap<>();
     private static long lastCleanup = System.currentTimeMillis();
 
+    private static final String[] PUBLIC_PATHS = {
+        "/api/v1/health",
+        "/api/v1/auth/login",
+        "/api/v1/auth/register",
+        "/api/v1/auth/verify-2fa",
+        "/api/v1/launcher/version",
+        "/api/v1/launcher/manifest",
+        "/api/v1/launcher/logs",
+        "/authlib/",
+        "/authlib/authserver/",
+        "/authlib/sessionserver/",
+        "/launcher/files/"
+    };
+
     public static void handle(Context ctx, CoreApplication.ApiConfig apiConfig) {
         String path = ctx.path();
 
-        // Health check — always allowed
-        if (path.startsWith("/api/v1/health")) return;
+        // Public endpoints — no auth required (rate limit only)
+        for (String p : PUBLIC_PATHS) {
+            if (path.startsWith(p)) return;
+        }
 
-
-
-        // IP-based rate limiting (300 req/min per IP)
+        // IP-based rate limiting
         if (!checkIpRateLimit(ctx.ip(), 300)) {
             log.warn("IP rate limit exceeded: {}", ctx.ip());
             throw new TooManyRequestsResponse("Rate limit exceeded");
         }
 
-        // ── API key auth (skip HMAC if valid Bearer token) ──
+        // ── API key auth (server-to-server) ──
         String authHeader = ctx.header("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring("Bearer ".length());
             if (apiConfig.keys != null && Arrays.asList(apiConfig.keys).contains(token)) {
-                // Valid API key — skip HMAC, check rate limit only
                 if (!isBypassKey(token, apiConfig) && !checkRateLimit(token, apiConfig)) {
-                    log.warn("Rate limit exceeded for a key");
+                    log.warn("Rate limit exceeded for key");
                     throw new TooManyRequestsResponse("Rate limit exceeded");
                 }
                 return;
             }
-            // Invalid API key — fall through to HMAC check (launcher may still pass)
         }
 
-        // ── Launcher-only HMAC verification ────────────────
+        // ── Launcher session HMAC ──
         String signHeader = ctx.header("X-PWP-Sign");
         if (signHeader == null || !signHeader.contains(":")) {
             throw new UnauthorizedResponse("Access denied: launcher required");
@@ -73,36 +88,16 @@ public class AuthMiddleware {
         }
 
         String signData = timestamp + ":" + path;
-        String expected = hmacSha256(signData, CoreApplication.config.getLauncherSecret());
-        if (!signature.equals(expected)) {
-            log.warn("Invalid launcher signature from {} (path={}, expected={}, got={})", ctx.ip(), path, expected, signature);
+        String sessionSecret = findSessionSecret(ctx);
+
+        if (sessionSecret == null) {
+            log.warn("No session secret for {} from {} (path={})", ctx.method(), ctx.ip(), path);
+            throw new UnauthorizedResponse("Access denied: no valid session");
+        }
+
+        if (!hmacVerify(signData, signature, sessionSecret)) {
+            log.warn("Invalid signature for {} from {} (path={})", ctx.method(), ctx.ip(), path);
             throw new UnauthorizedResponse("Access denied: invalid signature");
-        }
-
-        // Launcher-only endpoints — HMAC is enough
-        if (path.startsWith("/api/v1/auth/login") ||
-            path.startsWith("/api/v1/auth/verify-2fa") ||
-            path.startsWith("/api/v1/auth/refresh") ||
-            path.startsWith("/api/v1/auth/heartbeat") ||
-            path.startsWith("/api/v1/auth/revoke-sessions") ||
-            path.startsWith("/api/v1/auth/confirm-ip") ||
-            path.startsWith("/api/v1/auth/check-ip-confirm") ||
-            path.startsWith("/api/v1/launcher/") ||
-            path.startsWith("/launcher/files/")) {
-            return;
-        }
-
-        // All other endpoints (register, admin, etc.) require API key
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new UnauthorizedResponse("Missing Authorization header");
-        }
-        String token = authHeader.substring("Bearer ".length());
-        if (apiConfig.keys == null || !Arrays.asList(apiConfig.keys).contains(token)) {
-            throw new UnauthorizedResponse("Invalid API key");
-        }
-        if (!isBypassKey(token, apiConfig) && !checkRateLimit(token, apiConfig)) {
-            log.warn("Rate limit exceeded for a key");
-            throw new TooManyRequestsResponse("Rate limit exceeded");
         }
     }
 
@@ -156,6 +151,50 @@ public class AuthMiddleware {
             bucket.count++;
             return bucket.count <= maxPerMinute;
         }
+    }
+
+    private static boolean hmacVerify(String data, String signature, String secret) {
+        String expected = hmacSha256(data, secret);
+        return constantTimeEquals(expected, signature);
+    }
+
+    private static boolean constantTimeEquals(String a, String b) {
+        if (a.length() != b.length()) return false;
+        int result = 0;
+        for (int i = 0; i < a.length(); i++) {
+            result |= a.charAt(i) ^ b.charAt(i);
+        }
+        return result == 0;
+    }
+
+    private static final Gson GSON = new Gson();
+
+    private static String findSessionSecret(Context ctx) {
+        try {
+            String body = ctx.body();
+            if (body != null && !body.isBlank()) {
+                JsonObject json = GSON.fromJson(body, JsonObject.class);
+                if (json.has("accessToken")) {
+                    return PlayerRepository.findHmacSecretByAccessToken(json.get("accessToken").getAsString());
+                }
+                if (json.has("access_token")) {
+                    return PlayerRepository.findHmacSecretByAccessToken(json.get("access_token").getAsString());
+                }
+                if (json.has("refreshToken")) {
+                    return PlayerRepository.findHmacSecretByRefreshToken(json.get("refreshToken").getAsString());
+                }
+                if (json.has("refresh_token")) {
+                    return PlayerRepository.findHmacSecretByRefreshToken(json.get("refresh_token").getAsString());
+                }
+            }
+            String token = ctx.queryParam("accessToken");
+            if (token == null) token = ctx.queryParam("access_token");
+            if (token == null) token = ctx.queryParam("token");
+            if (token != null) return PlayerRepository.findHmacSecretByAccessToken(token);
+        } catch (Exception e) {
+            log.debug("Failed to find session secret: {}", e.getMessage());
+        }
+        return null;
     }
 
     private static class RateBucket {

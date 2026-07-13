@@ -216,6 +216,7 @@ public class DatabaseManager {
                 "ALTER TABLE sessions ADD COLUMN refresh_token VARCHAR(128) DEFAULT NULL",
                 "ALTER TABLE sessions ADD COLUMN session_key VARCHAR(64) DEFAULT NULL",
                 "ALTER TABLE sessions ADD COLUMN hwid VARCHAR(64) DEFAULT NULL",
+                "ALTER TABLE sessions ADD COLUMN hmac_secret VARCHAR(64) DEFAULT NULL",
                 "ALTER TABLE sessions ADD COLUMN last_heartbeat DATETIME DEFAULT NULL",
                 "ALTER TABLE sessions ADD INDEX idx_access_token (access_token)",
                 "ALTER TABLE sessions ADD INDEX idx_refresh_token (refresh_token)"
@@ -295,6 +296,7 @@ public class DatabaseManager {
                 + "refresh_token VARCHAR(128) DEFAULT NULL UNIQUE, "
                 + "session_key VARCHAR(64) DEFAULT NULL, "
                 + "hwid VARCHAR(64) DEFAULT NULL, "
+                + "hmac_secret VARCHAR(64) DEFAULT NULL, "
                 + "ip VARCHAR(45) DEFAULT NULL, "
                 + "last_heartbeat DATETIME DEFAULT NULL, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, expires_at DATETIME NOT NULL, "

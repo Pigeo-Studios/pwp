@@ -64,14 +64,9 @@ public class OpenModeVotePacket {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
             ctx.get().enqueueWork(() -> {
                 try {
-                    Class<?> screenClass = Class.forName("com.pwp.lobby.gui.ModeVoteScreen");
-                    screenClass.getMethod("openWithPacket", OpenModeVotePacket.class).invoke(null, msg);
-                } catch (Exception e) {
-                    try {
-                        Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
-                        lobbyScreen.getMethod("openModeVote", OpenModeVotePacket.class).invoke(null, msg);
-                    } catch (Exception ignored) {}
-                }
+                    Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
+                    lobbyScreen.getMethod("openModeVote", OpenModeVotePacket.class).invoke(null, msg);
+                } catch (Exception ignored) {}
             });
         }
         ctx.get().setPacketHandled(true);

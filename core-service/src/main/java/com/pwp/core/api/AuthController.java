@@ -136,23 +136,25 @@ public class AuthController {
                 String accessToken = PlayerRepository.generateTokenPart();
                 String refreshToken = PlayerRepository.generateTokenPart();
                 String sessionKey = PlayerRepository.generateSessionKey();
-                PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp);
+                String hmacSecret = generateHmacSecret();
+                PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp, hmacSecret);
                 String authToken = PlayerRepository.createAuthToken(pl.accountId);
                 PlayerRepository.trustIp(pl.uuid, clientIp);
                 PlayerRepository.updateLastLogin(pl.uuid, clientIp);
                 PlayerRepository.log(pl.uuid, "login", clientIp, "login from ip");
-                ctx.json(ApiResponse.ok(Map.of(
-                    "authToken", authToken,
-                    "access_token", accessToken,
-                    "refresh_token", refreshToken,
-                    "session_key", sessionKey,
-                    "expiresIn", 604800,
-                    "accountId", pl.accountId,
-                    "uuid", pl.uuid,
-                    "login", pl.login,
-                    "nickname", pl.nickname,
-                    "role", pl.role
-                )));
+                java.util.Map<String, Object> resp = new java.util.HashMap<>();
+                resp.put("authToken", authToken);
+                resp.put("access_token", accessToken);
+                resp.put("refresh_token", refreshToken);
+                resp.put("session_key", sessionKey);
+                resp.put("hmac_secret", hmacSecret);
+                resp.put("expiresIn", 604800);
+                resp.put("accountId", pl.accountId);
+                resp.put("uuid", pl.uuid);
+                resp.put("login", pl.login);
+                resp.put("nickname", pl.nickname);
+                resp.put("role", pl.role);
+                ctx.json(ApiResponse.ok(resp));
             }
         });
 
@@ -174,23 +176,25 @@ public class AuthController {
             String accessToken = PlayerRepository.generateTokenPart();
             String refreshToken = PlayerRepository.generateTokenPart();
             String sessionKey = PlayerRepository.generateSessionKey();
-            PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp);
+            String hmacSecret = generateHmacSecret();
+            PlayerRepository.createSessionV2(pl.uuid, accessToken, refreshToken, sessionKey, clientIp, hmacSecret);
             String authToken = PlayerRepository.createAuthToken(pl.accountId);
             PlayerRepository.trustIp(pl.uuid, clientIp);
             PlayerRepository.updateLastLogin(pl.uuid, clientIp);
             PlayerRepository.log(pl.uuid, "login_2fa", clientIp, "login via 2fa");
-            ctx.json(ApiResponse.ok(Map.of(
-                "authToken", authToken,
-                "access_token", accessToken,
-                "refresh_token", refreshToken,
-                "session_key", sessionKey,
-                "expiresIn", 604800,
-                "accountId", pl.accountId,
-                "uuid", pl.uuid,
-                "login", pl.login,
-                "nickname", pl.nickname,
-                "role", pl.role
-            )));
+            java.util.Map<String, Object> resp = new java.util.HashMap<>();
+            resp.put("authToken", authToken);
+            resp.put("access_token", accessToken);
+            resp.put("refresh_token", refreshToken);
+            resp.put("session_key", sessionKey);
+            resp.put("hmac_secret", hmacSecret);
+            resp.put("expiresIn", 604800);
+            resp.put("accountId", pl.accountId);
+            resp.put("uuid", pl.uuid);
+            resp.put("login", pl.login);
+            resp.put("nickname", pl.nickname);
+            resp.put("role", pl.role);
+            ctx.json(ApiResponse.ok(resp));
         });
 
         // ── Confirm login from TG ─────────────────────────
@@ -546,6 +550,12 @@ public class AuthController {
         byte[] bytes = new byte[48];
         RANDOM.nextBytes(bytes);
         return UUID.randomUUID().toString().replace("-", "") + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private static String generateHmacSecret() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private static String maskEmail(String email) {

@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'application'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
@@ -24,10 +23,6 @@ dependencies {
     implementation 'ch.qos.logback:logback-classic:1.5.16'
     implementation 'org.slf4j:slf4j-api:2.0.16'
     implementation 'org.mindrot:jbcrypt:0.4'
-}
-
-application {
-    mainClass = 'com.pwp.core.CoreApplication'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -63,4 +58,3 @@ task writeVersionFiles {
 }
 
 processResources.dependsOn writeVersionFiles
-run.dependsOn writeVersionFiles

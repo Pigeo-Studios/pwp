@@ -422,8 +422,12 @@ public class PlayerRepository {
     }
 
     public static void createSessionV2(String playerUuid, String accessToken, String refreshToken, String sessionKey, String ip) throws SQLException {
-        String sql = "INSERT INTO sessions (player_uuid, token, access_token, refresh_token, session_key, ip, expires_at) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))";
+        createSessionV2(playerUuid, accessToken, refreshToken, sessionKey, ip, null);
+    }
+
+    public static void createSessionV2(String playerUuid, String accessToken, String refreshToken, String sessionKey, String ip, String hmacSecret) throws SQLException {
+        String sql = "INSERT INTO sessions (player_uuid, token, access_token, refresh_token, session_key, hmac_secret, ip, expires_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, playerUuid);
@@ -431,9 +435,35 @@ public class PlayerRepository {
             ps.setString(3, accessToken);
             ps.setString(4, refreshToken);
             ps.setString(5, sessionKey);
-            ps.setString(6, ip);
+            ps.setString(6, hmacSecret);
+            ps.setString(7, ip);
             ps.executeUpdate();
         }
+    }
+
+    public static String findHmacSecretByAccessToken(String accessToken) throws SQLException {
+        String sql = "SELECT hmac_secret FROM sessions WHERE (access_token = ? OR token = ?) AND expires_at > CURRENT_TIMESTAMP AND hmac_secret IS NOT NULL";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, accessToken);
+            ps.setString(2, accessToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("hmac_secret");
+            }
+        }
+        return null;
+    }
+
+    public static String findHmacSecretByRefreshToken(String refreshToken) throws SQLException {
+        String sql = "SELECT hmac_secret FROM sessions WHERE refresh_token = ? AND expires_at > CURRENT_TIMESTAMP AND hmac_secret IS NOT NULL";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, refreshToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getString("hmac_secret");
+            }
+        }
+        return null;
     }
 
     public static String findUuidByAccessToken(String accessToken) throws SQLException {

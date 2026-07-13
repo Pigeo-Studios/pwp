@@ -67,13 +67,6 @@ public class PacketHandler {
                 PacketAction::encode,
                 PacketAction::decode,
                 PacketAction::handle);
-        INSTANCE.registerMessage(id++, LobbyAuthPacket.class,
-                LobbyAuthPacket::encode,
-                LobbyAuthPacket::decode,
-                LobbyAuthPacket::handle);
-        INSTANCE.registerMessage(id++, MatchAuthPacket.class,
-                MatchAuthPacket::encode,
-                MatchAuthPacket::decode,
-                MatchAuthPacket::handle);
+
     }
 }

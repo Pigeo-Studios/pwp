@@ -24,7 +24,7 @@ public class CoreAPI {
 
     private static boolean enabled = true;
     private static String baseUrl = "http://pigeo.asuscomm.com:8080";
-    private static String apiKey = "pwp_server_key_change_me";
+    private static String apiKey = System.getProperty("pwp.apiKey", "");
 
     public static void configure(String url, String key) {
         baseUrl = url;

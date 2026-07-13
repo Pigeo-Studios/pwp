@@ -6,8 +6,6 @@ import com.google.gson.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -28,7 +26,7 @@ public class CoreServerApi {
     private static final Gson GSON = new Gson();
 
     private static String baseUrl = "http://pigeo.asuscomm.com:8080";
-    private static String apiKey = "pwp_server_key_change_me";
+    private static String apiKey = "";
     private static boolean trustAllCerts = false;
 
     static {
@@ -304,30 +302,8 @@ public class CoreServerApi {
         return get("/api/v1/voicemutes");
     }
 
-    // ====== HMAC-SHA256 SIGNING (matches LauncherSigner.cs) ======
-
-    private static final String HMAC_SECRET = "pwp_launcher_secret_2024";
-
-    private static String sign(String path) {
-        try {
-            long timestamp = System.currentTimeMillis();
-            String data = timestamp + ":" + path;
-            Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec key = new SecretKeySpec(HMAC_SECRET.getBytes("UTF-8"), "HmacSHA256");
-            mac.init(key);
-            byte[] hash = mac.doFinal(data.getBytes("UTF-8"));
-            StringBuilder hex = new StringBuilder();
-            for (byte b : hash) hex.append(String.format("%02x", b));
-            return timestamp + ":" + hex.toString();
-        } catch (Exception e) {
-            log.warn("HMAC signing failed: {}", e.getMessage());
-            return "";
-        }
-    }
-
     private static void addAuthHeaders(HttpURLConnection conn, String path) {
         conn.setRequestProperty("Authorization", "Bearer " + apiKey);
-        conn.setRequestProperty("X-PWP-Sign", sign(path));
     }
 
     // ====== HTTP HELPERS ======

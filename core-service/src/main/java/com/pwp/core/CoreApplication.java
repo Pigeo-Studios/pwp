@@ -72,6 +72,7 @@ public class CoreApplication {
         new AdminController(app);
         new NetworkController(app);
         new LauncherController(app);
+        new AuthLibController(app);
         new HWIDBanController(app);
         new SecurityController(app, config);
 
@@ -135,17 +136,11 @@ public class CoreApplication {
         public LoggingConfig logging = new LoggingConfig();
         public LauncherConfig launcher = new LauncherConfig();
 
-        public String getLauncherSecret() {
-            if (launcher != null && launcher.secret != null && !launcher.secret.isEmpty())
-                return launcher.secret;
-            return "pwp_launcher_default_secret_change_me";
-        }
     }
 
     public static class LauncherConfig {
         public String filesDir = "C:/Users/maska/OneDrive/Desktop/SERVER";
         public String downloadBaseUrl = "/launcher/files";
-        public String secret = "pwp_launcher_secret_2024";
     }
 
     public static class ServerConfig {
@@ -174,7 +169,7 @@ public class CoreApplication {
     }
 
     public static class ApiConfig {
-        public String[] keys = {"pwp_server_key_change_me"};
+        public String[] keys = {};
         public int rateLimitPerMinute = 500;
         public int rateLimitPerMinuteAdmin = 10;
         public String adminTelegramIds = "";

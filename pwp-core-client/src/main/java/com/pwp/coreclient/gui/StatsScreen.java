@@ -79,7 +79,7 @@ public class StatsScreen extends Screen {
         PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("profile", ""));
     }
 
-    private void requestLeaderboard() {
+    public void requestLeaderboard() {
         leaderboardRequested = false;
         ClientResponseCache.leaderboardData = null;
         String params = "{\"orderBy\":\"" + lbOrderBy + "\",\"page\":" + (lbPage + 1) + "}";
@@ -150,6 +150,78 @@ public class StatsScreen extends Screen {
                     b -> {})
                     .bounds(cx + 52, pageY, 26, 18).build());
         }
+    }
+
+    public int getStatsTab() { return tab; }
+    public void setStatsTab(int t) { tab = t; }
+
+    public void setPanelSize(int w, int h) {
+        this.width = w;
+        this.height = h;
+        if (this.minecraft == null) {
+            this.minecraft = Minecraft.getInstance();
+        }
+        if (this.font == null && this.minecraft != null) {
+            this.font = this.minecraft.font;
+        }
+    }
+
+    public boolean isLbPagePrevEnabled() { return lbPage > 0; }
+    public boolean isLbPageNextEnabled() { return lbPage < lbTotalPages - 1; }
+    public int getLbPage() { return lbPage; }
+    public int getLbTotalPages() { return lbTotalPages; }
+    public void lbPagePrev() { if (lbPage > 0) { lbPage--; scrollOffset = 0; loading = true; requestLeaderboard(); } }
+    public void lbPageNext() { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; loading = true; requestLeaderboard(); } }
+
+    public void renderContent(GuiGraphics gui, int mx, int my, int clipY, int clipH) {
+        int cx = width / 2;
+
+        if (loading) {
+            gui.drawCenteredString(font, "\u00a77Loading...", cx, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY);
+            return;
+        }
+        if (errorMsg != null) {
+            gui.drawCenteredString(font, "\u00a7c" + errorMsg, cx, clipY + 40, 0xFF5555);
+            return;
+        }
+
+        if (cachedPlayerStats == null && tab == TAB_MY_STATS) return;
+
+        if (tab == TAB_MY_STATS) {
+            renderMyStats(gui, mx, my, clipY, clipH);
+        } else {
+            renderLeaderboard(gui, mx, my, clipY, clipH);
+        }
+
+        if (scrollMax > 0) {
+            int sbY = clipY + 2;
+            int sbH = clipH - 4;
+            int sbX = width - 7;
+            int barH = Math.max(12, (int) (sbH * clipH / (clipH + scrollMax)));
+            int barY = sbY + (int) ((scrollOffset / scrollMax) * (sbH - barH));
+            gui.fill(sbX, sbY, sbX + 5, sbY + sbH, PWPTheme.Styles.ScrollBar.TRACK);
+            gui.fill(sbX, barY, sbX + 5, barY + barH, PWPTheme.Styles.ScrollBar.THUMB);
+            gui.fill(sbX, barY, sbX + 4, barY + barH - 1, PWPTheme.Styles.ScrollBar.THUMB_HOVER);
+        }
+    }
+
+    public boolean mouseClickedContent(double mx, double my, int btn) {
+        if (btn == 0 && tab == TAB_LEADERBOARD) {
+            for (int[] b : catBounds) {
+                if (mx >= b[0] && mx <= b[0] + b[2] && my >= b[1] && my <= b[1] + b[3]) {
+                    String cat = LB_CATEGORIES[b[4]];
+                    if (!lbOrderBy.equals(cat)) {
+                        lbOrderBy = cat;
+                        lbPage = 0;
+                        scrollOffset = 0;
+                        loading = true;
+                        requestLeaderboard();
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override

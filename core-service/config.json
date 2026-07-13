@@ -14,8 +14,7 @@
                  },
     "api":  {
                 "keys":  [
-                             "RUhL8HO9bBAoaG1NDpCc57W6tuSkwvKVsPingEmer2QTdZ3zFlxjXyYq0fMIJ4",
-                             "pwp_server_key_change_me"
+                             "RUhL8HO9bBAoaG1NDpCc57W6tuSkwvKVsPingEmer2QTdZ3zFlxjXyYq0fMIJ4"
                          ],
                 "rateLimitPerMinute":  100,
                 "rateLimitPerMinuteAdmin":  10,
@@ -25,8 +24,7 @@
             },
     "launcher":  {
                      "filesDir":  "C:/Users/maska/OneDrive/Desktop/launcherfiles",
-                     "downloadBaseUrl":  "/launcher/files",
-                     "secret":  "pwp_launcher_secret_2024"
+                     "downloadBaseUrl":  "/launcher/files"
                  },
     "logging":  {
                     "level":  "INFO",

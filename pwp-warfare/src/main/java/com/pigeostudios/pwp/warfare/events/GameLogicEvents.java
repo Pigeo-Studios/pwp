@@ -72,12 +72,15 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.entity.PartEntity;
+import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.event.TickEvent.Phase;
 import net.minecraftforge.event.TickEvent.PlayerTickEvent;
@@ -1089,6 +1092,21 @@ public class GameLogicEvents {
             }
          }
       }
+   }
+
+   @SubscribeEvent
+   public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
+      Level level = event.getLevel();
+      if (level.isClientSide) return;
+
+      if (!(level instanceof ServerLevel serverLevel)) return;
+
+      WarfareWorldData data = WarfareWorldData.get(serverLevel);
+      if (data.mainZones.isEmpty()) return;
+
+      event.getAffectedBlocks().removeIf(pos ->
+         data.mainZones.stream().anyMatch(zone -> zone.isInside(Vec3.atCenterOf(pos)))
+      );
    }
 
    private static void handleMainProtectionZones(ServerLevel level, WarfareWorldData data) {

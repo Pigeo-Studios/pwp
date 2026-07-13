@@ -11,8 +11,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class ClientConnectHandler {
 
-    public static String pendingSessionId;
-
     public static void connect(String host, int port) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
