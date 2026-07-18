@@ -52,16 +52,16 @@ public class StatsScreen extends Screen {
         "playtime", "level"
     };
     private static final String[] LB_CATEGORY_NAMES = {
-        "Kills", "Deaths", "K/D", "Wins", "WinRate",
-        "V.Kills", "V.Destr.", "Air Dstr.",
-        "Captures", "Damage", "Healing", "Headshots",
-        "Playtime", "Level"
+        "Убийства", "Смерти", "У/С", "Победы", "П/П",
+        "Тех.уб", "Тех.уничт", "Возд.уничт",
+        "Захваты", "Урон", "Лечение", "Хэдшоты",
+        "Время", "Уровень"
     };
 
     private List<int[]> catBounds = new ArrayList<>();
 
     public StatsScreen() {
-        super(Component.literal("STATISTICS"));
+        super(Component.literal("СТАТИСТИКА"));
         Player p = Minecraft.getInstance().player;
         if (p != null) {
             playerUuid = p.getStringUUID();
@@ -121,17 +121,17 @@ public class StatsScreen extends Screen {
         int cx = width / 2;
 
         addRenderableWidget(Button.builder(
-                Component.literal("My Stats"),
+                Component.literal("Моя статистика"),
                 b -> { tab = TAB_MY_STATS; scrollOffset = 0; init(); })
                 .bounds(cx - 160, 6, 80, 22).build());
 
         addRenderableWidget(Button.builder(
-                Component.literal("Leaderboard"),
+                Component.literal("Лидеры"),
                 b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; loading = true; requestLeaderboard(); init(); })
                 .bounds(cx - 76, 6, 90, 22).build());
 
         addRenderableWidget(Button.builder(
-                Component.literal("\u2715 Close"),
+                Component.literal("\u2715 Закрыть"),
                 b -> onClose())
                 .bounds(cx - 50, height - 28, 100, 22).build());
 
@@ -177,7 +177,7 @@ public class StatsScreen extends Screen {
         int cx = width / 2;
 
         if (loading) {
-            gui.drawCenteredString(font, "\u00a77Loading...", cx, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(font, "\u00a77Загрузка...", cx, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
         if (errorMsg != null) {
@@ -230,11 +230,11 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " STATISTICS", cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " СТАТИСТИКА", cx, 32, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx - 55, 42, cx + 55, 43, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(font, "\u00a77Loading...", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(font, "\u00a77Загрузка...", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
         if (errorMsg != null) {
@@ -318,33 +318,33 @@ public class StatsScreen extends Screen {
         gui.fill(leftX, y, leftX + panelW, y + 26, PWPTheme.Colors.SURFACE_LIGHT);
         gui.fill(leftX, y + 26, leftX + panelW, y + 27, PWPTheme.Colors.BORDER);
         gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF);
-        gui.drawString(font, "\u00a77Matches: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77Матчи: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
         y += 30;
 
-        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.SWORDS + " BATTLE", new String[][]{
-            {"Kills", intVal(st, "kills"), "Deaths", intVal(st, "deaths")},
-            {"K/D", formatKd(st), "Revives", intVal(st, "revives")},
-            {"Vehicle Kills", intVal(st, "vehicleKills"), "Captures", intVal(st, "captures")},
-            {"Best Streak", intVal(st, "bestKillStreak"), "TeamKills", intVal(st, "teamKills")},
+        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.SWORDS + " БОЙ", new String[][]{
+            {"Убийства", intVal(st, "kills"), "Смерти", intVal(st, "deaths")},
+            {"У/С", formatKd(st), "Спасения", intVal(st, "revives")},
+            {"Техника убита", intVal(st, "vehicleKills"), "Захваты", intVal(st, "captures")},
+            {"Лучшая серия", intVal(st, "bestKillStreak"), "Тимкиллы", intVal(st, "teamKills")},
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.STARBURST + " VEHICLES", new String[][]{
-            {"Destroyed", intVal(st, "vehiclesDestroyed"), "Air Destroyed", intVal(st, "airVehiclesDestroyed")},
+        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.STARBURST + " ТЕХНИКА", new String[][]{
+            {"Уничтожено", intVal(st, "vehiclesDestroyed"), "Воздух", intVal(st, "airVehiclesDestroyed")},
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROSSHAIR + " WEAPONS", new String[][]{
-            {"Damage", doubleVal(st, "damageDealt"), "Healing", doubleVal(st, "healingDone")},
-            {"Supplies", intVal(st, "suppliesDelivered"), "Longest Kill", doubleVal(st, "longestKill") + "m"},
+        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROSSHAIR + " ОРУЖИЕ", new String[][]{
+            {"Урон", doubleVal(st, "damageDealt"), "Лечение", doubleVal(st, "healingDone")},
+            {"Припасы", intVal(st, "suppliesDelivered"), "Дальнее убийство", doubleVal(st, "longestKill") + "м"},
         });
         y += 6;
 
-        int matchesBottom = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROWN + " MATCHES", new String[][]{
-            {"Played", intVal(st, "matchesPlayed"), "Wins", intVal(st, "wins")},
-            {"Losses", intVal(st, "losses"), "WinRate", formatWins(st)},
-            {"Playtime", formatPlaytime(st), "Kills/Match", formatKpg(st)},
-            {"Best WinStreak", intVal(st, "bestWinStreak"), "Curr. Streak", intVal(st, "currentWinStreak")},
+        int matchesBottom = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROWN + " МАТЧИ", new String[][]{
+            {"Сыграно", intVal(st, "matchesPlayed"), "Победы", intVal(st, "wins")},
+            {"Поражения", intVal(st, "losses"), "П/П", formatWins(st)},
+            {"Время", formatPlaytime(st), "Уб./матч", formatKpg(st)},
+            {"Лучшая серия побед", intVal(st, "bestWinStreak"), "Тек. серия", intVal(st, "currentWinStreak")},
         });
         scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 12 - clipY - clipH);
     }
@@ -429,10 +429,10 @@ public class StatsScreen extends Screen {
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
         gui.fill(leftX, headerY + 1, leftX + w, headerY + 14, PWPTheme.Colors.SURFACE_LIGHT);
         gui.drawString(font, "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77Player", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77Игрок", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
         gui.drawString(font, "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77W/R", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77У/С", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77П/П", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
 
         int rowY = headerY + 16;
         int rankOffset = lbPage * 10;
@@ -467,7 +467,7 @@ public class StatsScreen extends Screen {
             gui.drawString(font, "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
 
             if (isMe) {
-                String meLabel = "\u00a7e\u25C0 you";
+                String meLabel = "\u00a7e\u25C0 вы";
                 int meW = font.width(meLabel);
                 gui.drawString(font, meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
             }
@@ -481,7 +481,7 @@ public class StatsScreen extends Screen {
         for (int i = 0; i < LB_CATEGORIES.length; i++) {
             if (LB_CATEGORIES[i].equals(orderBy)) return LB_CATEGORY_NAMES[i];
         }
-        return "Kills";
+        return "Убийства";
     }
 
     private String getColValue(LeaderboardEntry e, String col) {

@@ -293,12 +293,12 @@ public class LobbyMod {
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
                     if (MatchAllocator.hasActiveMatch()) {
-                        ctx.getSource().sendFailure(Component.literal("A match is already running"));
+                        ctx.getSource().sendFailure(Component.literal("Матч уже запущен"));
                         return 0;
                     }
                     MapConfig map = MapRegistry.getBestFit(MatchAllocator.getLobbyPlayerCount());
                     if (map == null) {
-                        ctx.getSource().sendFailure(Component.literal("No maps available"));
+                        ctx.getSource().sendFailure(Component.literal("Нет доступных карт"));
                         return 0;
                     }
                     MatchAllocator.startMatch(map);
@@ -314,29 +314,29 @@ public class LobbyMod {
                     })
                     .executes(ctx -> {
                         if (MatchAllocator.hasActiveMatch()) {
-                            ctx.getSource().sendFailure(Component.literal("A match is already running"));
+                            ctx.getSource().sendFailure(Component.literal("Матч уже запущен"));
                             return 0;
                         }
                         String mapName = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "mapname");
                         MapConfig map = MapRegistry.get(mapName);
                         if (map == null) {
-                            ctx.getSource().sendFailure(Component.literal("Map not found: " + mapName));
+                            ctx.getSource().sendFailure(Component.literal("Карта не найдена: " + mapName));
                             return 0;
                         }
                         MatchAllocator.startMatch(map);
-                        ctx.getSource().sendSuccess(() -> Component.literal("Match started: " + map.displayName), true);
+                        ctx.getSource().sendSuccess(() -> Component.literal("Матч запущен: " + map.displayName), true);
                         return Command.SINGLE_SUCCESS;
                     })))
             .then(Commands.literal("vote")
                 .requires(s -> s.hasPermission(2))
                 .executes(ctx -> {
                     if (VotingManager.isActive()) {
-                        ctx.getSource().sendFailure(Component.literal("Voting already active"));
+                        ctx.getSource().sendFailure(Component.literal("Голосование уже активно"));
                         return 0;
                     }
                     List<MapConfig> votable = MapRegistry.getVotable();
                     if (votable.isEmpty()) {
-                        ctx.getSource().sendFailure(Component.literal("§cNo maps available for voting! Check maps directory."));
+                        ctx.getSource().sendFailure(Component.literal("§cНет карт для голосования! Проверьте папку maps."));
                         return 0;
                     }
                     VotingManager.startVoting();
@@ -347,11 +347,11 @@ public class LobbyMod {
                 .executes(ctx -> {
                     MatchInfo mi = MatchAllocator.getActiveMatch();
                     if (mi == null) {
-                        ctx.getSource().sendFailure(Component.literal("No active match"));
+                        ctx.getSource().sendFailure(Component.literal("Нет активного матча"));
                         return 0;
                     }
                     MatchAllocator.requestMatchStop(mi.serverId);
-                    ctx.getSource().sendSuccess(() -> Component.literal("Match stopping gracefully..."), true);
+                        ctx.getSource().sendSuccess(() -> Component.literal("Остановка матча..."), true);
                     return Command.SINGLE_SUCCESS;
                 }))
             .then(Commands.literal("status")
@@ -360,16 +360,16 @@ public class LobbyMod {
                     MatchInfo mi = MatchAllocator.getActiveMatch();
                     if (mi != null) {
                         ctx.getSource().sendSuccess(() -> Component.literal(
-                            "§eMatch: " + mi.displayName + " | " + mi.modeDisplayName +
+                            "§eМатч: " + mi.displayName + " | " + mi.modeDisplayName +
                             " | " + mi.blueFaction + " vs " + mi.redFaction +
-                            " | Tickets: " + mi.blueTickets + "/" + mi.redTickets +
-                            " | Phase: " + mi.phase +
-                            " | Players: " + mi.playerCount + "/" + mi.maxPlayers), false);
+                            " | Билеты: " + mi.blueTickets + "/" + mi.redTickets +
+                            " | Фаза: " + mi.phase +
+                            " | Игроки: " + mi.playerCount + "/" + mi.maxPlayers), false);
                     } else if (VotingManager.isActive()) {
                         ctx.getSource().sendSuccess(() -> Component.literal(
-                            "§eVoting active: " + VotingManager.getRemainingSeconds() + "s remaining"), false);
+                            "§eГолосование активно: " + VotingManager.getRemainingSeconds() + "с осталось"), false);
                     } else {
-                        ctx.getSource().sendSuccess(() -> Component.literal("§eNo active match or voting"), false);
+                        ctx.getSource().sendSuccess(() -> Component.literal("§eНет активного матча или голосования"), false);
                     }
                     return Command.SINGLE_SUCCESS;
                 }))

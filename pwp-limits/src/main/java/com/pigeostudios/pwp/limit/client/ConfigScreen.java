@@ -13,7 +13,7 @@ public class ConfigScreen extends Screen {
     private EditBox cooldownInput;
 
     public ConfigScreen(Screen lastScreen) {
-        super(Component.literal("PWP: Limits Settings"));
+        super(Component.literal("PWP: Настройки лимитов"));
         this.lastScreen = lastScreen;
     }
 
@@ -21,9 +21,9 @@ public class ConfigScreen extends Screen {
     protected void init() {
         int cx = this.width / 2;
         this.addRenderableWidget(CycleButton.onOffBuilder((Boolean)ModConfig.ENABLE_JUMP_COOLDOWN.get())
-            .create(cx - 100, 50, 200, 20, Component.literal("Jump Cooldown"), (button, value) -> ModConfig.ENABLE_JUMP_COOLDOWN.set(value)));
+            .create(cx - 100, 50, 200, 20, Component.literal("КД прыжка"), (button, value) -> ModConfig.ENABLE_JUMP_COOLDOWN.set(value)));
 
-        this.cooldownInput = new EditBox(this.font, cx - 100, 90, 200, 20, Component.literal("Seconds"));
+        this.cooldownInput = new EditBox(this.font, cx - 100, 90, 200, 20, Component.literal("Секунды"));
         this.cooldownInput.setValue(String.valueOf(ModConfig.JUMP_COOLDOWN_SECONDS.get()));
         this.cooldownInput.setFilter(s -> s.matches("^[0-9]*\\.?[0-9]*$"));
         this.addRenderableWidget(this.cooldownInput);
@@ -48,7 +48,7 @@ public class ConfigScreen extends Screen {
         this.renderBackground(gui);
         int cx = this.width / 2;
         gui.drawCenteredString(this.font, "\u2699 " + this.title.getString(), cx, 20, 0xFFC8812A);
-        gui.drawString(this.font, "Cooldown seconds:", cx - 100, 78, 0xFF7A7D84);
+        gui.drawString(this.font, "КД в секундах:", cx - 100, 78, 0xFF7A7D84);
         super.render(gui, mouseX, mouseY, partialTick);
     }
 }

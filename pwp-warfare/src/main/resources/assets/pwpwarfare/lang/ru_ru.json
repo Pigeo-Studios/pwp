@@ -246,6 +246,24 @@
 
     "gui.pwpwarfare.map_marker_select.title": "Выберите тип метки",
 
+    "gui.pwpwarfare.kit_editor.skins": "Скины",
+    "gui.pwpwarfare.kit_skin_select.title": "Скины оружия",
+
+    "gui.pwpwarfare.skin_list.title": "Настройка скинов",
+    "gui.pwpwarfare.skin_list.add": "+ Добавить скин",
+    "gui.pwpwarfare.skin_list.refresh": "Обновить",
+
+    "gui.pwpwarfare.skin_editor.add": "Добавить скин",
+    "gui.pwpwarfare.skin_editor.edit": "Редактировать скин",
+    "gui.pwpwarfare.skin_editor.save": "Сохранить",
+    "gui.pwpwarfare.skin_editor.cancel": "Отмена",
+    "gui.pwpwarfare.skin_editor.name": "Название",
+    "gui.pwpwarfare.skin_editor.skin_id": "ID скина",
+    "gui.pwpwarfare.skin_editor.slot_type": "Тип слота",
+    "gui.pwpwarfare.skin_editor.weapon_tag": "Тег оружия",
+    "gui.pwpwarfare.skin_editor.rarity": "Редкость",
+    "gui.pwpwarfare.skin_editor.model_path": "Путь модели",
+
     "gui.pwpwarfare.faction_vehicle_select.title": "Выбор техники фракции",
     "gui.pwpwarfare.faction_vehicle_list.title": "Техника - %s",
     "gui.pwpwarfare.faction_vehicle_list.add": "+ Добавить",

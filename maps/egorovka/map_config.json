@@ -1,13 +1,13 @@
 {
     "name": "egorovka",
-    "displayName": "Egorovka",
-    "description": "Rural combat in the Donetsk region. Open fields with scattered farmsteads and a central village.",
+    "displayName": "Егоровка",
+    "description": "Бои в сельской местности Донецкой области. Открытые поля с разбросанными хуторами и центральной деревней.",
     "maxPlayers": 80,
     "minPlayers": 2,
     "image": "egorovka",
     "version": "1.0",
     "mode": "aas",
-    "modeDisplayName": "Advance and Secure",
+    "modeDisplayName": "Наступление и оборона",
     "durationMinutes": 90,
 
     "availableFactions": ["ukraine", "russia", "usa", "nato", "insurgency", "pmc"],
@@ -70,7 +70,7 @@
 
     "capturePoints": [
         {
-            "name": "Mechta Farm",
+            "name": "Ферма Мечта",
             "shape": "cylinder",
             "pos1": { "x": 841, "y": -64, "z": 600 },
             "pos2": { "x": 951, "y": 100, "z": 710 },
@@ -82,7 +82,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Community Center",
+            "name": "Дом культуры",
             "shape": "cylinder",
             "pos1": { "x": 1036, "y": -64, "z": 733 },
             "pos2": { "x": 1086, "y": 100, "z": 783 },
@@ -94,7 +94,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Warehouse West",
+            "name": "Склад Западный",
             "shape": "cylinder",
             "pos1": { "x": 387, "y": -64, "z": 924 },
             "pos2": { "x": 457, "y": 100, "z": 994 },
@@ -106,7 +106,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Sawmill",
+            "name": "Лесопилка",
             "shape": "cylinder",
             "pos1": { "x": 1428, "y": -64, "z": 995 },
             "pos2": { "x": 1558, "y": 100, "z": 1125 },
@@ -118,7 +118,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Warehouse East",
+            "name": "Склад Восточный",
             "shape": "cylinder",
             "pos1": { "x": 1836, "y": -64, "z": 813 },
             "pos2": { "x": 1880, "y": 100, "z": 857 },
@@ -136,7 +136,7 @@
             "name": "Standard",
             "points": [
                 {
-                    "name": "Mechta Farm",
+                    "name": "Ферма Мечта",
             "shape": "cylinder",
             "pos1": { "x": 841, "y": -64, "z": 600 },
             "pos2": { "x": 951, "y": 100, "z": 710 },
@@ -148,7 +148,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Community Center",
+            "name": "Дом культуры",
             "shape": "cylinder",
             "pos1": { "x": 1036, "y": -64, "z": 733 },
             "pos2": { "x": 1086, "y": 100, "z": 783 },
@@ -160,7 +160,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Warehouse West",
+            "name": "Склад Западный",
             "shape": "cylinder",
             "pos1": { "x": 387, "y": -64, "z": 924 },
             "pos2": { "x": 457, "y": 100, "z": 994 },
@@ -172,7 +172,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Sawmill",
+            "name": "Лесопилка",
             "shape": "cylinder",
             "pos1": { "x": 1428, "y": -64, "z": 995 },
             "pos2": { "x": 1558, "y": 100, "z": 1125 },
@@ -184,7 +184,7 @@
             "lockDurationMinutes": 0
         },
         {
-            "name": "Warehouse East",
+            "name": "Склад Восточный",
             "shape": "cylinder",
             "pos1": { "x": 1836, "y": -64, "z": 813 },
             "pos2": { "x": 1880, "y": 100, "z": 857 },

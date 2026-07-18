@@ -60,17 +60,17 @@ public class SkinInventoryScreen extends Screen {
         int cx = this.width / 2;
         int btnY = 14;
 
-        addRenderableWidget(Button.builder(Component.literal("All"), b -> setFilter("ALL"))
+        addRenderableWidget(Button.builder(Component.literal("Все"), b -> setFilter("ALL"))
                 .bounds(cx - 170, btnY, 42, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Primary"), b -> setFilter("PRIMARY"))
+        addRenderableWidget(Button.builder(Component.literal("Основное"), b -> setFilter("PRIMARY"))
                 .bounds(cx - 124, btnY, 52, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Secondary"), b -> setFilter("SECONDARY"))
+        addRenderableWidget(Button.builder(Component.literal("Вторичное"), b -> setFilter("SECONDARY"))
                 .bounds(cx - 68, btnY, 60, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Knife"), b -> setFilter("KNIFE"))
+        addRenderableWidget(Button.builder(Component.literal("Нож"), b -> setFilter("KNIFE"))
                 .bounds(cx - 4, btnY, 45, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Melee"), b -> setFilter("MELEE"))
+        addRenderableWidget(Button.builder(Component.literal("Холодное"), b -> setFilter("MELEE"))
                 .bounds(cx + 45, btnY, 45, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Uniform"), b -> setFilter("UNIFORM"))
+        addRenderableWidget(Button.builder(Component.literal("Униформа"), b -> setFilter("UNIFORM"))
                 .bounds(cx + 94, btnY, 52, 22).build());
 
         loadCosmetics();
@@ -257,11 +257,11 @@ public class SkinInventoryScreen extends Screen {
                     tooltip.add(Component.literal("\u00a7" + getRarityCode(entry.rarity) + displayName));
                     tooltip.add(Component.literal("\u00a77" + entry.slotType + " \u00a78| \u00a77" + entry.rarity));
                     if (entry.equipped) {
-                        tooltip.add(Component.literal("\u00a7a\u2714 Equipped - Click to unequip"));
+                        tooltip.add(Component.literal("\u00a7a\u2714 Надето - нажмите чтобы снять"));
                     } else if (canAccess) {
-                        tooltip.add(Component.literal("\u00a7eClick to equip"));
+                        tooltip.add(Component.literal("\u00a7eНажмите чтобы надеть"));
                     } else {
-                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Locked - Not owned"));
+                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Заблокировано - нет в наличии"));
                     }
                     gui.renderComponentTooltip(this.font, tooltip, mx, my);
                 }
@@ -280,7 +280,7 @@ public class SkinInventoryScreen extends Screen {
         }
 
         if (currentFilter.equals("PRIMARY")) {
-            String hint = "\u00a77\u2714 Multiple PRIMARY skins can be selected";
+            String hint = "\u00a77\u2714 Можно выбрать несколько основных скинов";
             gui.drawCenteredString(this.font, Component.literal(hint), cx, this.height - 30, PWPTheme.Colors.TEXT_SECONDARY);
         }
 
@@ -334,7 +334,7 @@ public class SkinInventoryScreen extends Screen {
         boolean isPrimary = entry.slotType.equals("PRIMARY");
 
         if (entry.equipped) {
-            statusMsg = "\u00a76Unequipping...";
+            statusMsg = "\u00a76Снятие...";
             statusTime = System.currentTimeMillis();
             new Thread(() -> {
                 try {
@@ -346,19 +346,19 @@ public class SkinInventoryScreen extends Screen {
                     }
                     CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, "", ""));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 Unequipped (default skin)";
+                        statusMsg = "\u00a7a\u2714 Снято (стандартный скин)";
                         statusTime = System.currentTimeMillis();
                         loadCosmetics();
                     });
                 } catch (Exception e) {
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7cUnequip failed: " + e.getMessage();
+                        statusMsg = "\u00a7cОшибка снятия: " + e.getMessage();
                         statusTime = System.currentTimeMillis();
                     });
                 }
             }, "PWP-Unequip-Thread").start();
         } else {
-            statusMsg = "\u00a76Equipping...";
+            statusMsg = "\u00a76Экипировка...";
             statusTime = System.currentTimeMillis();
             new Thread(() -> {
                 try {
@@ -367,7 +367,7 @@ public class SkinInventoryScreen extends Screen {
                     JsonObject fresh = CoreAPI.loadPlayer(uuid);
                     if (fresh == null || !fresh.has("data")) {
                         Minecraft.getInstance().submit(() -> {
-                            statusMsg = "\u00a7cAPI error (grant/load failed)";
+                            statusMsg = "\u00a7cОшибка API";
                             statusTime = System.currentTimeMillis();
                         });
                         return;
@@ -389,7 +389,7 @@ public class SkinInventoryScreen extends Screen {
                     }
                     if (!equipped) {
                         Minecraft.getInstance().submit(() -> {
-                            statusMsg = "\u00a7cSkin not found in profile!";
+                            statusMsg = "\u00a7cСкин не найден в профиле!";
                             statusTime = System.currentTimeMillis();
                         });
                         return;
@@ -408,13 +408,13 @@ public class SkinInventoryScreen extends Screen {
                     }
                     CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, entry.skinId, itemSnbt));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 Equipped!";
+                        statusMsg = "\u00a7a\u2714 Надето!";
                         statusTime = System.currentTimeMillis();
                         loadCosmetics();
                     });
                 } catch (Exception e) {
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7cEquip failed: " + e.getMessage();
+                        statusMsg = "\u00a7cОшибка надевания: " + e.getMessage();
                         statusTime = System.currentTimeMillis();
                     });
                 }

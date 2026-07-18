@@ -56,5 +56,8 @@
 
     "pwp_cosmetics.tooltip.rarity": "Редкость: %s",
     "pwp_cosmetics.tooltip.slot": "Слот: %s",
-    "pwp_cosmetics.tooltip.source": "Источник: %s"
+    "pwp_cosmetics.tooltip.source": "Источник: %s",
+
+    "gui.pwp_cosmetics.skin_inventory.title": "Инвентарь скинов",
+    "gui.pwp_cosmetics.skin_inventory.empty": "Скины не найдены"
 }

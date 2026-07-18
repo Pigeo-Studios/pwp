@@ -238,17 +238,17 @@ public class LobbyScreen extends Screen {
             boolean votingActive = currentTab == TAB_VOTING;
 
             addRenderableWidget(Button.builder(
-                    Component.literal((matchesActive ? "\u00a7e" : "\u00a77") + "Matches"),
+                    Component.literal((matchesActive ? "\u00a7e" : "\u00a77") + "Матчи"),
                     b -> switchTab(TAB_MATCHES))
                     .bounds(tabX, navY, tabW, btnH).build());
 
             addRenderableWidget(Button.builder(
-                    Component.literal((votingActive ? "\u00a7e" : "\u00a77") + "Voting"),
+                    Component.literal((votingActive ? "\u00a7e" : "\u00a77") + "Голосование"),
                     b -> switchTab(TAB_VOTING))
                     .bounds(tabX + tabW + gap, navY, tabW, btnH).build());
 
             addRenderableWidget(Button.builder(
-                    Component.literal("\u00a77" + "Stats"),
+                    Component.literal("\u00a77" + "Статистика"),
                     b -> { switchTab(TAB_STATS); })
                     .bounds(tabX + (tabW + gap) * 2, navY, tabW, btnH).build());
 
@@ -312,7 +312,7 @@ public class LobbyScreen extends Screen {
             return;
         }
 
-        String title = currentTab == TAB_VOTING ? "\u2694 VOTING" : "\u2694 ACTIVE MATCHES";
+        String title = currentTab == TAB_VOTING ? "\u2694 ГОЛОСОВАНИЕ" : "\u2694 АКТИВНЫЕ МАТЧИ";
         gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " " + title, cx, 32, PWPTheme.Colors.TEXT_ACCENT);
 
         // Draw accent line under title
@@ -346,7 +346,7 @@ public class LobbyScreen extends Screen {
 
     private void renderVoteTab(GuiGraphics gui, int mx, int my, int cx, int a) {
         if (voteData == null || voteData.mapNames.length == 0) {
-            gui.drawCenteredString(font, "\u00a77No vote in progress", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(font, "\u00a77Голосование не активно", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
 
@@ -354,11 +354,11 @@ public class LobbyScreen extends Screen {
         if (remaining < 0) remaining = 0;
         String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
         String timerColor = remaining <= 10 ? "\u00a7c" : (remaining <= 30 ? "\u00a7e" : "\u00a7a");
-        String info = timerColor + timeStr + "\u00a77  |  \u00a7e" + voteData.onlinePlayers + "\u00a77 online";
+        String info = timerColor + timeStr + "\u00a77  |  \u00a7e" + voteData.onlinePlayers + "\u00a77 онлайн";
         if (votedMap != null) {
             info += "  \u00a7a\u2714 " + votedMap;
         } else {
-            info += "  \u00a7e" + voteData.totalVotes + "\u00a77/" + voteData.onlinePlayers + " voted";
+            info += "  \u00a7e" + voteData.totalVotes + "\u00a77/" + voteData.onlinePlayers + " проголосовало";
         }
         gui.drawCenteredString(font, info, cx, 54, 0xFFFFFF);
 
@@ -449,7 +449,7 @@ public class LobbyScreen extends Screen {
                 gui.fill(barX, barY, barX + fillW, barY + barH, PWPTheme.Colors.withAlpha(fillCol, a));
             }
 
-            String voteText = "\u00a7e" + votes + "\u00a77" + (votes != 1 ? " votes" : " vote");
+            String voteText = "\u00a7e" + votes + "\u00a77 голосов";
             if (voteData.totalVotes > 0) {
                 int pct = votes * 100 / voteData.totalVotes;
                 voteText += " (" + pct + "%)";
@@ -480,7 +480,7 @@ public class LobbyScreen extends Screen {
             gui.fill(bx + contentW - 1, contentY, bx + contentW, contentY + panelH, panelBorder);
 
             int titleCol = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_ACCENT, a);
-            gui.drawCenteredString(font, "\u00a7lCURRENT MATCH", cx, contentY + 4, titleCol);
+            gui.drawCenteredString(font, "\u00a7lТЕКУЩИЙ МАТЧ", cx, contentY + 4, titleCol);
 
             int ly = contentY + 18;
             gui.drawCenteredString(font, "\u00a7fMap: \u00a7e" + matchData.mapDisplayName, cx, ly, textCol);
@@ -497,14 +497,14 @@ public class LobbyScreen extends Screen {
 
         // Active matches list
         if (listData == null || listData.count == 0) {
-            String msg = matchData == null ? "\u00a77No active matches" : "";
+            String msg = matchData == null ? "\u00a77Нет активных матчей" : "";
             if (!msg.isEmpty()) {
                 gui.drawCenteredString(font, msg, cx, contentY + 20, PWPTheme.Colors.TEXT_SECONDARY);
             }
             return;
         }
 
-        gui.drawCenteredString(font, "\u00a77Click a match to join", cx, contentY, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
+        gui.drawCenteredString(font, "\u00a77Нажмите на матч для подключения", cx, contentY, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
         contentY += 12;
 
         int cardsPerPage = 4;
@@ -569,8 +569,8 @@ public class LobbyScreen extends Screen {
             gui.drawString(font, ticketStr, textX, y + 41, PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a));
 
             int actionCol = isConfirm ? PWPTheme.Colors.SUCCESS : PWPTheme.Colors.TEXT_SECONDARY;
-            String actionStr = isConfirm ? "\u00a7a\u2714 Click again to join"
-                : (isPlaying ? "\u00a7eClick to join" : "\u00a77Starting...");
+            String actionStr = isConfirm ? "\u00a7a\u2714 Нажмите ещё раз для входа"
+                : (isPlaying ? "\u00a7eНажмите для входа" : "\u00a77Запуск...");
             gui.drawString(font, actionStr, textX, y + 54, PWPTheme.Colors.withAlpha(actionCol, a));
         }
 
@@ -578,7 +578,7 @@ public class LobbyScreen extends Screen {
         int totalPages = Math.max(1, (listData.count + cardsPerPage - 1) / cardsPerPage);
         if (totalPages > 1) {
             int navY = y + 8;
-            gui.drawCenteredString(font, "\u00a77Page " + (listPage + 1) + "/" + totalPages, cx, navY, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(font, "\u00a77Стр. " + (listPage + 1) + "/" + totalPages, cx, navY, PWPTheme.Colors.TEXT_SECONDARY);
         }
     }
 
@@ -586,7 +586,7 @@ public class LobbyScreen extends Screen {
 
     private void renderModeVoteTab(GuiGraphics gui, int mx, int my, int cx, int a) {
         if (modeVoteData == null || modeVoteData.modeNames.length == 0) {
-            gui.drawCenteredString(font, "\u00a77No mode vote in progress", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(font, "\u00a77Голосование за режим не активно", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
 
@@ -594,11 +594,11 @@ public class LobbyScreen extends Screen {
         if (remaining < 0) remaining = 0;
         String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
         String timerColor = remaining <= 10 ? "\u00a7c" : (remaining <= 30 ? "\u00a7e" : "\u00a7a");
-        String info = timerColor + timeStr + "\u00a77  |  \u00a7e" + modeVoteData.onlinePlayers + "\u00a77 online";
+        String info = timerColor + timeStr + "\u00a77  |  \u00a7e" + modeVoteData.onlinePlayers + "\u00a77 онлайн";
         if (votedMode != null) {
             info += "  \u00a7a\u2714 " + votedMode;
         } else {
-            info += "  \u00a7e" + modeVoteData.totalVotes + "\u00a77/" + modeVoteData.onlinePlayers + " voted";
+            info += "  \u00a7e" + modeVoteData.totalVotes + "\u00a77/" + modeVoteData.onlinePlayers + " проголосовало";
         }
         gui.drawCenteredString(font, info, cx, 54, 0xFFFFFF);
 

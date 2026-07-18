@@ -139,7 +139,7 @@ public class MatchAllocator {
     public static void joinActiveMatch(ServerPlayer player) {
         MatchInfo mi = getActiveMatch();
         if (mi == null || mi.phase != MatchPhase.PLAYING) {
-            player.sendSystemMessage(Component.literal("§cNo active match available to join"), false);
+            player.sendSystemMessage(Component.literal("§cНет активного матча для подключения"), false);
             return;
         }
         connectPlayerToMatch(player, mi, "pigeo.asuscomm.com");
@@ -148,7 +148,7 @@ public class MatchAllocator {
     public static void joinMatchById(int serverId, ServerPlayer player) {
         MatchInfo mi = activeMatches.get(serverId);
         if (mi == null || mi.phase != MatchPhase.PLAYING) {
-            player.sendSystemMessage(Component.literal("§cMatch not available to join"), false);
+            player.sendSystemMessage(Component.literal("§cМатч недоступен для подключения"), false);
             return;
         }
         connectPlayerToMatch(player, mi, "pigeo.asuscomm.com");
@@ -156,7 +156,7 @@ public class MatchAllocator {
 
     private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
         player.sendSystemMessage(
-                Component.literal("§e[PWP] Joining match on " + host + ":" + mi.port + "..."),
+                Component.literal("§e[PWP] Подключение к матчу на " + host + ":" + mi.port + "..."),
                 false);
         PacketHandler.INSTANCE.send(
                 PacketDistributor.PLAYER.with(() -> player),

@@ -2,6 +2,7 @@ package com.pwp.core.api;
 
 import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerRepository;
+import com.pwp.core.model.Player;
 import io.javalin.Javalin;
 
 import java.sql.Connection;
@@ -12,6 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+class BanException extends RuntimeException {
+    BanException(String msg) { super(msg); }
+}
 
 public class AuthLibController {
 
@@ -54,7 +59,7 @@ public class AuthLibController {
             String uuid = PlayerRepository.findUuidByAccessToken(body.password);
             if (uuid == null) { ctx.status(403).json(err("Invalid credentials")); return; }
             var pl = PlayerRepository.findByUuid(uuid);
-            if (pl == null || pl.isBanned) { ctx.status(403).json(err("Banned")); return; }
+            checkBan(pl);
             String ct = body.clientToken != null ? body.clientToken : UUID.randomUUID().toString().replace("-", "");
             ctx.json(Map.of(
                 "accessToken", body.password, "clientToken", ct,
@@ -62,6 +67,8 @@ public class AuthLibController {
                 "selectedProfile", mkProfile(pl.uuid, pl.nickname),
                 "user", Map.of("id", pl.accountId, "properties", java.util.List.of())
             ));
+        } catch (BanException e) {
+            ctx.status(403).json(err(e.getMessage()));
         } catch (Exception e) { ctx.status(500).json(err(e.getMessage())); }
     }
 
@@ -72,13 +79,15 @@ public class AuthLibController {
             String uuid = PlayerRepository.findUuidByAccessToken(body.accessToken);
             if (uuid == null) { ctx.status(403).json(err("Invalid token")); return; }
             var pl = PlayerRepository.findByUuid(uuid);
-            if (pl == null || pl.isBanned) { ctx.status(403).json(err("Banned")); return; }
+            checkBan(pl);
             String ct = body.clientToken != null ? body.clientToken : UUID.randomUUID().toString().replace("-", "");
             ctx.json(Map.of(
                 "accessToken", body.accessToken, "clientToken", ct,
                 "selectedProfile", mkProfile(pl.uuid, pl.nickname),
                 "user", Map.of("id", pl.accountId, "properties", java.util.List.of())
             ));
+        } catch (BanException e) {
+            ctx.status(403).json(err(e.getMessage()));
         } catch (Exception e) { ctx.status(500).json(err(e.getMessage())); }
     }
 
@@ -103,10 +112,12 @@ public class AuthLibController {
             String pu = body.selectedProfile.replaceAll("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5");
             if (!pu.equalsIgnoreCase(uuid)) { ctx.status(403).json(err("UUID mismatch")); return; }
             var pl = PlayerRepository.findByUuid(uuid);
-            if (pl == null || pl.isBanned) { ctx.status(403).json(err("Banned")); return; }
+            checkBan(pl);
             joinCache.put(body.serverId, new JoinEntry(uuid, pl.nickname, System.currentTimeMillis()));
             log.info("JOIN: uuid={}, name={}, serverId={}", uuid, pl.nickname, body.serverId);
             ctx.status(204).result("");
+        } catch (BanException e) {
+            ctx.status(403).json(err(e.getMessage()));
         } catch (Exception e) { ctx.status(500).json(err(e.getMessage())); }
     }
 
@@ -160,6 +171,21 @@ public class AuthLibController {
                 + ",\"textures\":{\"SKIN\":{\"url\":\"http://pigeo.asuscomm.com:8080/authlib/textures/steve.png\"}}}";
             return Base64.getEncoder().encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         } catch (Exception e) { return ""; }
+    }
+
+    private static boolean isHwidBanned(String hwid) {
+        String sql = "SELECT 1 FROM hwid_bans WHERE hwid = ? LIMIT 1";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, hwid);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        } catch (Exception e) { return false; }
+    }
+
+    private void checkBan(Player pl) {
+        if (pl == null || pl.isBanned) throw new BanException("Banned");
+        if (pl.hwid != null && !pl.hwid.isEmpty() && isHwidBanned(pl.hwid))
+            throw new BanException("Banned");
     }
 
     private Map<String, Object> err(String msg) {

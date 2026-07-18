@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 public class ServerListScreen extends Screen {
 
     public ServerListScreen() {
-        super(Component.literal("Active Matches"));
+        super(Component.literal("Активные матчи"));
     }
 
     @Override
@@ -19,11 +19,11 @@ public class ServerListScreen extends Screen {
         int cy = height / 2;
 
         addRenderableWidget(Button.builder(
-                Component.literal("No active matches available"),
+                Component.literal("Нет активных матчей"),
                 b -> {}).bounds(cx - 100, cy - 12, 200, 24).build());
 
         addRenderableWidget(Button.builder(
-                Component.literal("\u2715 Close"),
+                Component.literal("\u2715 Закрыть"),
                 b -> onClose()).bounds(cx - 40, height - 30, 80, 22).build());
     }
 
@@ -33,7 +33,7 @@ public class ServerListScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " ACTIVE MATCHES", cx, 14, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " АКТИВНЫЕ МАТЧИ", cx, 14, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx - 70, 24, cx + 70, 25, PWPTheme.Colors.ACCENT);
     }
 
