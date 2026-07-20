@@ -25,7 +25,7 @@ public class CoreServerApi {
     private static final Logger log = LoggerFactory.getLogger(CoreServerApi.class);
     private static final Gson GSON = new Gson();
 
-    private static String baseUrl = "http://pigeo.asuscomm.com:8080";
+    private static String baseUrl = "http://localhost:8080";
     private static String apiKey = "";
     private static boolean trustAllCerts = false;
 

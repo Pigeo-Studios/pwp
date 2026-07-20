@@ -21,5 +21,15 @@
 
     "pwp_core.gui.title": "PWP",
     "pwp_core.gui.loading_profile": "Загрузка профиля...",
-    "pwp_core.gui.saving": "Сохранение..."
+    "pwp_core.gui.saving": "Сохранение...",
+
+    "pwp_core.main_menu.welcome": "Добро пожаловать, %s",
+    "pwp_core.main_menu.subtitle": "Pigeo Warfare Project",
+    "pwp_core.main_menu.play": "ИГРАТЬ",
+    "pwp_core.main_menu.singleplayer": "ОДИНОЧНАЯ ИГРА",
+    "pwp_core.main_menu.settings": "НАСТРОЙКИ",
+    "pwp_core.main_menu.quit": "ВЫХОД",
+
+    "pwp_core.loading.title": "Загрузка мира",
+    "pwp_core.loading.subtitle": "Переход между мирами"
 }

@@ -1,0 +1,20 @@
+{
+    "schedule": {
+        "monday": [{"start": "19:00", "end": "23:00"}],
+        "tuesday": [{"start": "19:00", "end": "23:00"}],
+        "wednesday": [{"start": "19:00", "end": "23:00"}],
+        "thursday": [{"start": "19:00", "end": "23:00"}],
+        "friday": [{"start": "19:00", "end": "01:00"}],
+        "saturday": [
+            {"start": "14:00", "end": "17:00"},
+            {"start": "19:00", "end": "01:00"}
+        ],
+        "sunday": [
+            {"start": "14:00", "end": "17:00"},
+            {"start": "18:00", "end": "01:00"}
+        ]
+    },
+    "start_command": "start \"PWP Minecraft Server\" cmd /c \"C:\\Users\\maska\\OneDrive\\Desktop\\PWP-Server\\run_loop.bat\"",
+    "stop_command": "taskkill /f /fi \"WINDOWTITLE eq PWP Minecraft Server\"",
+    "check_interval": 5
+}

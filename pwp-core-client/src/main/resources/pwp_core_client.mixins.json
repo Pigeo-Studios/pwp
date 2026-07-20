@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.pwp.coreclient.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "TitleScreenMixin",
+    "WindowIconMixin",
+    "LevelLoadingScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "pwp_core_client.refmap.json"
+}

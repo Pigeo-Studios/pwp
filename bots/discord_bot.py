@@ -279,28 +279,6 @@ async def update_match_loop():
         await asyncio.sleep(30)
 
 # ── Scheduler integration ──
-def _load_scheduler_status():
-    if not os.path.exists(config.SCHEDULER_STATUS_FILE):
-        return None
-    try:
-        with open(config.SCHEDULER_STATUS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return None
-
-def _load_bot_flags():
-    try:
-        if os.path.exists(config.SCHEDULER_BOT_FLAGS_FILE):
-            with open(config.SCHEDULER_BOT_FLAGS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except:
-        pass
-    return {}
-
-def _save_bot_flags(flags):
-    with open(config.SCHEDULER_BOT_FLAGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(flags, f, ensure_ascii=False)
-
 def _build_scheduler_embed(status):
     if not status:
         return discord.Embed(title="\u23f3 \u041e\u0436\u0438\u0434\u0430\u043d\u0438\u0435...", color=0x808080)
@@ -334,11 +312,11 @@ async def _send_sched_ping(channel, text):
     except Exception as e:
         print(f"[DS] sched ping error: {e}")
 
-async def update_scheduler_loop():
+async def update_scheduler_loop(shared_state):
     await bot.wait_until_ready()
     while not bot.is_closed():
         try:
-            status = _load_scheduler_status()
+            status = await shared_state.get_status()
             if not status:
                 await asyncio.sleep(10)
                 continue
@@ -358,7 +336,7 @@ async def update_scheduler_loop():
             else:
                 await ch.send(embed=embed)
 
-            bot_flags = _load_bot_flags()
+            bot_flags = await shared_state.get_flags()
             sid = status.get("session_id", "")
             needs_save = False
 
@@ -382,7 +360,7 @@ async def update_scheduler_loop():
                 needs_save = True
 
             if needs_save:
-                _save_bot_flags(bot_flags)
+                await shared_state.set_flags(bot_flags)
 
         except Exception as e:
             print(f"[DS] scheduler loop error: {e}")
@@ -412,9 +390,9 @@ async def process_commands():
                 f.unlink()
         await asyncio.sleep(config.POLL_INTERVAL)
 
-async def start():
+async def start(shared_state):
     asyncio.create_task(process_commands())
     asyncio.create_task(update_dashboard_loop())
     asyncio.create_task(update_match_loop())
-    asyncio.create_task(update_scheduler_loop())
+    asyncio.create_task(update_scheduler_loop(shared_state))
     await bot.start(config.DISCORD_TOKEN)

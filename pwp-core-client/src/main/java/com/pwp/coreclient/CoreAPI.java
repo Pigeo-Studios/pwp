@@ -23,7 +23,7 @@ public class CoreAPI {
     private static final Gson GSON = new Gson();
 
     private static boolean enabled = true;
-    private static String baseUrl = "http://pigeo.asuscomm.com:8080";
+    private static String baseUrl = "http://localhost:8080";
     private static String apiKey = System.getProperty("pwp.apiKey", "");
 
     public static void configure(String url, String key) {

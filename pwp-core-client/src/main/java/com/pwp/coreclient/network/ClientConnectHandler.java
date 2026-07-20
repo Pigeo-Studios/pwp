@@ -2,7 +2,7 @@ package com.pwp.coreclient.network;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
-import net.minecraft.client.gui.screens.TitleScreen;
+import com.pwp.coreclient.gui.screens.PWPMainMenuScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraftforge.api.distmarker.Dist;
@@ -19,6 +19,6 @@ public class ClientConnectHandler {
         }
         ServerAddress address = new ServerAddress(host, port);
         ServerData data = new ServerData("PWP Match", host + ":" + port, false);
-        ConnectScreen.startConnecting(new TitleScreen(), mc, address, data, false);
+        ConnectScreen.startConnecting(new PWPMainMenuScreen(), mc, address, data, false);
     }
 }

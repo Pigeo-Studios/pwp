@@ -168,7 +168,7 @@ public class AuthLibController {
             String json = "{\"timestamp\":" + System.currentTimeMillis()
                 + ",\"profileId\":\"" + uuid.replace("-", "") + "\""
                 + ",\"profileName\":\"" + name + "\""
-                + ",\"textures\":{\"SKIN\":{\"url\":\"http://pigeo.asuscomm.com:8080/authlib/textures/steve.png\"}}}";
+                + ",\"textures\":{\"SKIN\":{\"url\":\"https://pigeo.asuscomm.com/authlib/textures/steve.png\"}}}";
             return Base64.getEncoder().encodeToString(json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         } catch (Exception e) { return ""; }
     }

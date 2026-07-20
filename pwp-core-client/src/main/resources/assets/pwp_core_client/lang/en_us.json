@@ -21,5 +21,15 @@
 
     "pwp_core.gui.title": "PWP",
     "pwp_core.gui.loading_profile": "Loading your profile...",
-    "pwp_core.gui.saving": "Saving..."
+    "pwp_core.gui.saving": "Saving...",
+
+    "pwp_core.main_menu.welcome": "Welcome, %s",
+    "pwp_core.main_menu.subtitle": "Pigeo Warfare Project",
+    "pwp_core.main_menu.play": "PLAY",
+    "pwp_core.main_menu.singleplayer": "SINGLEPLAYER",
+    "pwp_core.main_menu.settings": "SETTINGS",
+    "pwp_core.main_menu.quit": "QUIT",
+
+    "pwp_core.loading.title": "Loading World",
+    "pwp_core.loading.subtitle": "Traveling between worlds"
 }

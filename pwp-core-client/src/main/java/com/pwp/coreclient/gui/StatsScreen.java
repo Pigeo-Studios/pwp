@@ -52,10 +52,10 @@ public class StatsScreen extends Screen {
         "playtime", "level"
     };
     private static final String[] LB_CATEGORY_NAMES = {
-        "Убийства", "Смерти", "У/С", "Победы", "П/П",
-        "Тех.уб", "Тех.уничт", "Возд.уничт",
+        "Убийства", "Смерти", "K/D", "Победы", "WinRate",
+        "Уб.техникой", "Тех.уничт", "В возд.",
         "Захваты", "Урон", "Лечение", "Хэдшоты",
-        "Время", "Уровень"
+        "Наиграно", "Уровень"
     };
 
     private List<int[]> catBounds = new ArrayList<>();
@@ -323,8 +323,8 @@ public class StatsScreen extends Screen {
 
         y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.SWORDS + " БОЙ", new String[][]{
             {"Убийства", intVal(st, "kills"), "Смерти", intVal(st, "deaths")},
-            {"У/С", formatKd(st), "Спасения", intVal(st, "revives")},
-            {"Техника убита", intVal(st, "vehicleKills"), "Захваты", intVal(st, "captures")},
+            {"K/D", formatKd(st), "Спасения", intVal(st, "revives")},
+            {"Убито техникой", intVal(st, "vehicleKills"), "Захваты", intVal(st, "captures")},
             {"Лучшая серия", intVal(st, "bestKillStreak"), "Тимкиллы", intVal(st, "teamKills")},
         });
         y += 6;
@@ -342,7 +342,7 @@ public class StatsScreen extends Screen {
 
         int matchesBottom = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROWN + " МАТЧИ", new String[][]{
             {"Сыграно", intVal(st, "matchesPlayed"), "Победы", intVal(st, "wins")},
-            {"Поражения", intVal(st, "losses"), "П/П", formatWins(st)},
+            {"Поражения", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Время", formatPlaytime(st), "Уб./матч", formatKpg(st)},
             {"Лучшая серия побед", intVal(st, "bestWinStreak"), "Тек. серия", intVal(st, "currentWinStreak")},
         });
@@ -431,8 +431,8 @@ public class StatsScreen extends Screen {
         gui.drawString(font, "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
         gui.drawString(font, "\u00a77Игрок", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
         gui.drawString(font, "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77У/С", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77П/П", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "\u00a77WinRate", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
 
         int rowY = headerY + 16;
         int rankOffset = lbPage * 10;

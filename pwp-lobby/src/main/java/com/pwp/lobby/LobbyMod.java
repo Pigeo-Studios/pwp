@@ -409,19 +409,19 @@ public class LobbyMod {
                 .executes(ctx -> {
                     String mapName = ctx.getArgument("name", String.class);
                     if (MapRegistry.get(mapName) == null) {
-                        ctx.getSource().sendFailure(Component.literal("Unknown map: " + mapName));
+                        ctx.getSource().sendFailure(Component.literal("Неизвестная карта: " + mapName));
                         return 0;
                     }
                     if (!VotingManager.isActive()) {
-                        ctx.getSource().sendFailure(Component.literal("No active voting"));
+                        ctx.getSource().sendFailure(Component.literal("Голосование не активно"));
                         return 0;
                     }
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     if (!VotingManager.vote(player.getUUID(), mapName)) {
-                        ctx.getSource().sendFailure(Component.literal("§cVote not accepted (already voted?)"));
+                        ctx.getSource().sendFailure(Component.literal("§cГолос не принят (уже голосовали?)"));
                         return 0;
                     }
-                    ctx.getSource().sendSuccess(() -> Component.literal("§aVoted for " + mapName), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + mapName), false);
                     return Command.SINGLE_SUCCESS;
                 })));
 
@@ -436,12 +436,12 @@ public class LobbyMod {
                 .executes(ctx -> {
                     String modeName = ctx.getArgument("mode", String.class);
                     if (!modeVoteActive) {
-                        ctx.getSource().sendFailure(Component.literal("No active mode voting"));
+                        ctx.getSource().sendFailure(Component.literal("Голосование за режим не активно"));
                         return 0;
                     }
                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                     voteMode(player.getUUID(), modeName);
-                    ctx.getSource().sendSuccess(() -> Component.literal("§aVoted for " + modeName), false);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + modeName), false);
                     return Command.SINGLE_SUCCESS;
                 })));
     }

@@ -17,7 +17,7 @@ import java.nio.file.Path;
 public class CoreServerMod {
     public static final String MODID = "pwpcore";
     public static final Logger log = LoggerFactory.getLogger(CoreServerMod.class);
-    public static final String API_BASE = "http://pigeo.asuscomm.com:8080";
+    public static final String API_BASE = "http://localhost:8080";
     public static final String API_KEY = loadApiKey();
 
     public static boolean isMatchServer = false;

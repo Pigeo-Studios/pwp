@@ -3,13 +3,29 @@ loaderVersion="[47,)"
 license="All rights reserved"
 [[mods]]
 modId="pwp_core_client"
-version="1.0.0"
+version="1.0.1"
 displayName="PWP Core Client"
 credits="Pigeo Studios"
 authors="Pigeo Studios"
 description='''
-Core client mod for PWP. Connects to PWP Core Service for player data.
+Core client mod for PWP. Custom main menu, loading screen, and client utilities.
 '''
+side="CLIENT"
+
+[[dependencies.pwp_core_client]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.pwp_core_client]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="CLIENT"
+
 [[dependencies.pwp_core_client]]
     modId="pwpcore"
     mandatory=true
