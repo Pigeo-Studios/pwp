@@ -160,9 +160,9 @@ public class CoreApplication {
 
     private static void cleanupExpiredTokens() {
         try (java.sql.Connection c = DatabaseManager.getConnection();
-             var ps = c.prepareStatement("DELETE FROM server_tokens WHERE expires_at < NOW()")) {
+             var ps = c.prepareStatement("DELETE FROM auth_tokens WHERE expires_at < NOW()")) {
             int deleted = ps.executeUpdate();
-            if (deleted > 0) log.info("Cleaned up {} expired server tokens", deleted);
+            if (deleted > 0) log.info("Cleaned up {} expired auth tokens", deleted);
         } catch (Exception e) {
             log.warn("Failed to cleanup expired tokens: {}", e.getMessage());
         }
