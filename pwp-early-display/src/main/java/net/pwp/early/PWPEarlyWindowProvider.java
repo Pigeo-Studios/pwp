@@ -127,7 +127,6 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
     @Override
     @SuppressWarnings("unchecked")
     public <T> Supplier<T> loadingOverlay(Supplier<?> mc, Supplier<?> ri, Consumer<Optional<Throwable>> ex, boolean fade) {
-        if (loadingOverlay == null) return () -> null;
         try {
             return (Supplier<T>) loadingOverlay.invoke(null, mc, ri, ex, this);
         } catch (Throwable e) {
@@ -143,9 +142,10 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
         }
 
         try {
+            ClassLoader cl = ImmediateWindowProvider.class.getClassLoader();
             Class<?> clz = forgeModule.isPresent()
                 ? Class.forName(forgeModule.get(), "net.minecraftforge.client.loading.ForgeLoadingOverlay")
-                : Class.forName("net.minecraftforge.client.loading.ForgeLoadingOverlay");
+                : Class.forName("net.minecraftforge.client.loading.ForgeLoadingOverlay", false, cl);
             for (Method mtd : clz.getDeclaredMethods()) {
                 if (Modifier.isStatic(mtd.getModifiers()) && "newInstance".equals(mtd.getName())) {
                     loadingOverlay = mtd;
