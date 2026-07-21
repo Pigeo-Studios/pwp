@@ -127,6 +127,7 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
     @Override
     @SuppressWarnings("unchecked")
     public <T> Supplier<T> loadingOverlay(Supplier<?> mc, Supplier<?> ri, Consumer<Optional<Throwable>> ex, boolean fade) {
+        if (loadingOverlay == null) return null;
         try {
             return (Supplier<T>) loadingOverlay.invoke(null, mc, ri, ex, this);
         } catch (Throwable e) {
