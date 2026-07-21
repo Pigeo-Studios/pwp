@@ -1,5 +1,6 @@
 package com.pwp.coreclient.gui.components;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,6 +16,7 @@ public class PWPButton extends Button {
     private Style style;
     private float hoverAnim;
     private long lastTick;
+    private float animAlpha = 1.0F;
 
     public PWPButton(int x, int y, int width, int height, Component message, OnPress onPress) {
         this(x, y, width, height, message, onPress, Style.PRIMARY);
@@ -31,9 +33,20 @@ public class PWPButton extends Button {
         this.style = style;
     }
 
+    public void setAnimAlpha(float alpha) {
+        this.animAlpha = Math.max(0, Math.min(1, alpha));
+    }
+
+    public float getAnimAlpha() {
+        return this.animAlpha;
+    }
+
     @Override
     protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         if (!this.visible) return;
+        if (this.animAlpha < 0.01F) return;
+
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.animAlpha);
 
         long now = System.currentTimeMillis();
         float dt = Math.min((now - lastTick) / 50.0F, 4.0F);
@@ -66,18 +79,18 @@ public class PWPButton extends Button {
                 break;
             case DARK:
                 bg = lerpColor(PWPTheme.Styles.Button.DARK_BG, PWPTheme.Styles.Button.DARK_HOVER, hoverAnim);
-                border = PWPTheme.Styles.Button.DARK_BORDER;
-                textColor = PWPTheme.Styles.Button.DARK_TEXT;
+                border = hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
+                textColor = hovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_PRIMARY;
                 break;
             case GHOST:
                 bg = hoverAnim > 0.01F ? lerpColor(0x00000000, PWPTheme.Colors.SURFACE_LIGHT, hoverAnim) : 0x00000000;
                 border = hoverAnim > 0.01F ? lerpColor(0x00000000, PWPTheme.Colors.BORDER_FOCUS, hoverAnim) : 0x00000000;
-                textColor = hoverAnim > 0.01F ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
+                textColor = hoverAnim > 0.01F ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
                 break;
             default: // PRIMARY
                 bg = lerpColor(PWPTheme.Styles.Button.PRIMARY_BG, PWPTheme.Styles.Button.PRIMARY_HOVER, hoverAnim);
                 border = active ? (hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.PRIMARY_BORDER) : PWPTheme.Colors.BORDER;
-                textColor = active ? PWPTheme.Styles.Button.PRIMARY_TEXT : PWPTheme.Colors.TEXT_DIM;
+                textColor = active ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
                 break;
         }
 
@@ -109,15 +122,23 @@ public class PWPButton extends Button {
         var mcFont = Minecraft.getInstance().font;
         String msgStr = this.getMessage().getString();
         int textW = mcFont.width(msgStr);
+
+        int shadowColor = (64 << 24) | (0x000000 & 0x00FFFFFF);
+
         if (textW > w - 10) {
-            gui.drawString(mcFont, mcFont.plainSubstrByWidth(msgStr, w - 14) + "...", x + 5, textY, textColor);
+            String shortText = mcFont.plainSubstrByWidth(msgStr, w - 14) + "...";
+            gui.drawString(mcFont, shortText, x + 5, textY + 1, shadowColor);
+            gui.drawString(mcFont, shortText, x + 5, textY, textColor);
         } else {
+            gui.drawCenteredString(mcFont, this.getMessage(), x + w / 2, textY + 1, shadowColor);
             gui.drawCenteredString(mcFont, this.getMessage(), x + w / 2, textY, textColor);
         }
 
         if (active && pressed) {
             gui.fill(x + 1, y + h - 1, x + w - 1, y + h, PWPTheme.Colors.ACCENT_DIM);
         }
+
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
     private int lerpColor(int from, int to, float t) {

@@ -2,9 +2,11 @@ package com.pwp.cosmetics;
 
 import com.pwp.cosmetics.network.PacketSyncCosmeticEquip;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
@@ -17,8 +19,9 @@ public class CosmeticsMod {
 
     public CosmeticsMod() {
         SkinRegistry.initDefaults();
-        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        initNetwork();
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            initNetwork();
+        }
     }
 
     private void initNetwork() {

@@ -6,7 +6,8 @@
   "client": [
     "TitleScreenMixin",
     "WindowIconMixin",
-    "LevelLoadingScreenMixin"
+    "LevelLoadingScreenMixin",
+    "LevelTransitionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

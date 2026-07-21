@@ -1,5 +1,7 @@
 package com.pwp.coreclient.mixin;
 
+import com.pwp.coreclient.gui.screens.PWPTipsWidget;
+import com.pwp.coreclient.gui.screens.PWPUtils;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -22,6 +24,12 @@ public class LevelLoadingScreenMixin {
     @Unique
     private long pwp_openTime;
 
+    @Unique
+    private PWPTipsWidget pwp_tips;
+
+    @Unique
+    private int pwp_lastWidth;
+
     @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
     private void pwp_customBackground(GuiGraphics gui, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         ci.cancel();
@@ -37,6 +45,11 @@ public class LevelLoadingScreenMixin {
         if (pwp_openTime == 0) {
             pwp_openTime = System.currentTimeMillis();
         }
+        int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        if (pwp_tips == null || w != pwp_lastWidth) {
+            pwp_lastWidth = w;
+            pwp_tips = new PWPTipsWidget((int) (w * 0.6f));
+        }
     }
 
     @Inject(method = "render", at = @At("TAIL"))
@@ -49,37 +62,14 @@ public class LevelLoadingScreenMixin {
         int cy = h / 2;
 
         long elapsed = System.currentTimeMillis() - pwp_openTime;
-        float pulse = (float) (0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2 / 1200.0));
 
-        int dots = ((int) (elapsed / 400) % 4);
-        String dotStr = ".".repeat(dots);
+        PWPUtils.renderLogo(gui, cx, (int) (h * 0.16f));
+        PWPUtils.renderSpinner(gui, cx, cy - 30, elapsed);
+        PWPUtils.renderStatusText(gui, "Загрузка мира...", cx, cy - 10, elapsed);
+        PWPUtils.renderProgressBar(gui, cx, cy + 30, (int) (w * 0.3f), 4, elapsed);
 
-        Component title = Component.translatable("pwp_core.loading.title");
-        Component subtitle = Component.literal(
-            Component.translatable("pwp_core.loading.subtitle").getString() + dotStr
-        );
-
-        var font = mc.font;
-        gui.drawCenteredString(font, title, cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
-        gui.drawCenteredString(font, subtitle, cx, cy - 12, PWPTheme.Colors.TEXT_SECONDARY);
-
-        int barWidth = 180;
-        int barHeight = 4;
-        int barX = cx - barWidth / 2;
-        int barY = cy + 4;
-
-        float progress = (float) ((elapsed % 3000) / 3000.0);
-        int fillW = (int) (barWidth * progress);
-
-        gui.fill(barX, barY, barX + barWidth, barY + barHeight, PWPTheme.Colors.SURFACE_DIM);
-        gui.fill(barX, barY, barX + fillW, barY + barHeight, PWPTheme.Colors.ACCENT);
-
-        int glowAlpha = (int) (50 + 30 * pulse);
-        int glowColor = (Math.min(255, glowAlpha) << 24) | (PWPTheme.Colors.ACCENT & 0x00FFFFFF);
-        gui.fill(barX, barY - 1, barX + barWidth, barY, glowColor);
-        gui.fill(barX, barY + barHeight, barX + barWidth, barY + barHeight + 1, glowColor);
-
-        String info = (int)(progress * 100) + "%";
-        gui.drawCenteredString(font, Component.literal(info), cx, barY + barHeight + 6, PWPTheme.Colors.TEXT_DIM);
+        if (pwp_tips != null) {
+            pwp_tips.render(gui, cx, cy + 55);
+        }
     }
 }

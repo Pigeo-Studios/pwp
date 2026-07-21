@@ -243,6 +243,9 @@ async def update_dashboard_loop():
     while not bot.is_closed():
         try:
             await api_post("/api/v1/network/bot-heartbeat", {"name": "discord"})
+            if not hasattr(bot, "dash_data"):
+                await asyncio.sleep(5)
+                continue
             dash_ch = bot.get_channel(int(bot.dash_data.get("channel_📊-статус", 0)))
             if dash_ch:
                 embed = await _build_status_embed()
@@ -264,6 +267,9 @@ async def update_match_loop():
     await bot.wait_until_ready()
     while not bot.is_closed():
         try:
+            if not hasattr(bot, "dash_data"):
+                await asyncio.sleep(5)
+                continue
             match_ch = bot.get_channel(int(bot.dash_data.get("channel_match-status", 0)))
             if match_ch:
                 embed = await update_match_embed()

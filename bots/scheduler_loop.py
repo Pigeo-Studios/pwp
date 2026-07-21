@@ -32,7 +32,7 @@ def fmt_duration(d):
 def is_server_process_alive():
     try:
         r = subprocess.run(
-            'tasklist /v /fo csv /nh 2>nul | findstr /i "PWP Minecraft Server" >nul 2>nul',
+            'netstat -ano 2>nul | findstr ":25565 " | findstr "LISTENING" >nul 2>&1',
             shell=True, timeout=5,
         )
         return r.returncode == 0
@@ -40,6 +40,10 @@ def is_server_process_alive():
         return False
 
 def start_server(cfg):
+    subprocess.run(
+        'taskkill /f /fi "WINDOWTITLE eq PWP Minecraft Server" 2>nul',
+        shell=True, timeout=5, capture_output=True,
+    )
     cmd = cfg["start_command"]
     print(f"[SCHEDULER] Starting MC server: {cmd}")
     subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -156,7 +160,7 @@ async def run(shared_state: SharedState):
                 if not server_alive:
                     if last_state != "STARTING" or (
                         start_attempt_time
-                        and (now - start_attempt_time).total_seconds() > 60
+                        and (now - start_attempt_time).total_seconds() > 120
                     ):
                         start_server(cfg)
                         scheduler_started = True
@@ -168,16 +172,16 @@ async def run(shared_state: SharedState):
                 else:
                     state = "ACTIVE"
                     scheduler_started = True
-                    total_sec = (sess_end - sess_start).total_seconds()
-                    elapsed_sec = (now - sess_start).total_seconds()
-                    pct = min(int(elapsed_sec / total_sec * 100), 99)
+                    total = sess_end - sess_start
+                    elapsed = now - sess_start
+                    pct = min(int(elapsed.total_seconds() / total.total_seconds() * 100), 99)
                     bar_blocks = pct // 10
                     bar = "\u2588" * bar_blocks + "\u2591" * (10 - bar_blocks)
                     online = get_online_count(cfg)
                     title = "\U0001f7e2 Статус: СЕССИЯ АКТИВНА"
                     desc = (
                         f"\U0001f465 Онлайн: {online}\n"
-                        f"\u23f1 {fmt_duration(elapsed_sec)} / {fmt_duration(total_sec)}\n"
+                        f"\u23f1 {fmt_duration(elapsed)} / {fmt_duration(total)}\n"
                         f"\u23f3 До конца: {fmt_duration(sess_end - now)}"
                     )
                     ping_online = True

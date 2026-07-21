@@ -4,6 +4,7 @@ import com.pwp.coreclient.gui.animations.Easing;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientConnectHandler;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -11,120 +12,101 @@ import net.minecraft.client.gui.screens.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 public class PWPMainMenuScreen extends Screen {
 
     private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/main_menu.png");
 
-    private static final int BTN_WIDTH = 240;
     private static final int BTN_HEIGHT = 34;
-    private static final int BTN_GAP = 10;
-    private static final int ANIM_DELAY_PER_BTN = 100;
-    private static final long ANIM_START_DELAY = 300;
+    private static final int BTN_GAP = 8;
+    private static final int ANIM_DELAY_PER_MS = 80;
+    private static final int ANIM_BTN_DURATION = 250;
+    private static final int ANIM_WELCOME_DURATION = 300;
+    private static final int ANIM_LOGO_DURATION = 300;
 
-    private long openTime;
+    private final long openTime;
+    private boolean connecting;
+
+    private int btnWidth;
+    private int startY;
 
     private PWPButton playBtn;
     private PWPButton singleBtn;
     private PWPButton optionsBtn;
     private PWPButton quitBtn;
-    private PWPButton langBtn;
 
     public PWPMainMenuScreen() {
         super(Component.literal("PWP"));
+        openTime = System.currentTimeMillis();
     }
 
     @Override
     protected void init() {
         super.init();
-        openTime = System.currentTimeMillis();
 
         int cx = width / 2;
-        int startY = height / 2 + 6;
+        btnWidth = Mth.clamp(width / 4, 200, 240);
+
+        int totalBlock = 4 * BTN_HEIGHT + 3 * BTN_GAP;
+        int footerReserve = 30;
+        startY = (int) (height * 0.52f);
+        if (startY + totalBlock > height - footerReserve) {
+            startY = height - footerReserve - totalBlock;
+        }
 
         playBtn = addRenderableWidget(new PWPButton(
-            cx - BTN_WIDTH / 2, startY, BTN_WIDTH, BTN_HEIGHT,
+            cx - btnWidth / 2, startY, btnWidth, BTN_HEIGHT,
             Component.translatable("pwp_core.main_menu.play"),
-            btn -> ClientConnectHandler.connect("pigeo.asuscomm.com", 25565),
+            btn -> {
+                if (connecting) return;
+                connecting = true;
+                Minecraft.getInstance().setScreen(new PWPConnectingScreen());
+                ClientConnectHandler.connect("pigeo.asuscomm.com", 25565);
+            },
             PWPButton.Style.ACCENT
         ));
 
         singleBtn = addRenderableWidget(new PWPButton(
-            cx - BTN_WIDTH / 2, startY + BTN_HEIGHT + BTN_GAP, BTN_WIDTH, BTN_HEIGHT,
+            cx - btnWidth / 2, startY + BTN_HEIGHT + BTN_GAP, btnWidth, BTN_HEIGHT,
             Component.translatable("pwp_core.main_menu.singleplayer"),
             btn -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)),
             PWPButton.Style.PRIMARY
         ));
 
         optionsBtn = addRenderableWidget(new PWPButton(
-            cx - BTN_WIDTH / 2, startY + (BTN_HEIGHT + BTN_GAP) * 2, BTN_WIDTH, BTN_HEIGHT,
+            cx - btnWidth / 2, startY + (BTN_HEIGHT + BTN_GAP) * 2, btnWidth, BTN_HEIGHT,
             Component.translatable("pwp_core.main_menu.settings"),
             btn -> Minecraft.getInstance().setScreen(new OptionsScreen(this, Minecraft.getInstance().options)),
             PWPButton.Style.DARK
         ));
 
         quitBtn = addRenderableWidget(new PWPButton(
-            cx - BTN_WIDTH / 2, startY + (BTN_HEIGHT + BTN_GAP) * 3, BTN_WIDTH, BTN_HEIGHT,
+            cx - btnWidth / 2, startY + (BTN_HEIGHT + BTN_GAP) * 3, btnWidth, BTN_HEIGHT,
             Component.translatable("pwp_core.main_menu.quit"),
             btn -> Minecraft.getInstance().stop(),
             PWPButton.Style.DANGER
         ));
-
-        langBtn = addRenderableWidget(new PWPButton(
-            cx - 30, height - 24, 60, 14,
-            Component.literal(""),
-            btn -> {
-                Minecraft mc = Minecraft.getInstance();
-                String curr = mc.options.languageCode;
-                mc.options.languageCode = curr.equals("ru_ru") ? "en_us" : "ru_ru";
-                mc.options.save();
-                mc.getLanguageManager().onResourceManagerReload(mc.getResourceManager());
-                mc.setScreen(new PWPMainMenuScreen());
-            },
-            PWPButton.Style.GHOST
-        ));
-
-        playBtn.visible = false;
-        singleBtn.visible = false;
-        optionsBtn.visible = false;
-        quitBtn.visible = false;
-        langBtn.visible = true;
     }
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        renderBackground(gui);
+
         float elapsed = (float) (System.currentTimeMillis() - openTime);
         int cx = width / 2;
         int cy = height / 2;
 
-        float titleFade = animProgress(elapsed, ANIM_START_DELAY, 500);
-        if (titleFade > 0) {
-            renderWelcome(gui, cx, cy - 78, Easing.easeOutCubic(Math.min(titleFade, 1)));
-        }
+        renderElement(gui, elapsed, 0, ANIM_LOGO_DURATION, (fade) -> {
+            PWPUtils.renderLogo(gui, cx, (int) (height * 0.16f));
+        });
 
-        float sepFade = animProgress(elapsed, ANIM_START_DELAY + 300, 300);
-        if (sepFade > 0) {
-            renderSeparator(gui, cx, cy - 36, Easing.easeOutCubic(Math.min(sepFade, 1)));
-        }
+        renderElement(gui, elapsed, 100, ANIM_WELCOME_DURATION, (fade) -> {
+            renderWelcome(gui, cx, cy, fade);
+        });
 
-        float[] btnFades = new float[4];
-        for (int i = 0; i < 4; i++) {
-            btnFades[i] = animProgress(elapsed, ANIM_START_DELAY + 450 + i * ANIM_DELAY_PER_BTN, 350);
-        }
-
-        playBtn.visible = btnFades[0] >= 1;
-        singleBtn.visible = btnFades[1] >= 1;
-        optionsBtn.visible = btnFades[2] >= 1;
-        quitBtn.visible = btnFades[3] >= 1;
-
-        super.render(gui, mouseX, mouseY, partialTick);
-
-        float vFade = animProgress(elapsed, ANIM_START_DELAY + 450 + 4 * ANIM_DELAY_PER_BTN + 150, 300);
-        if (vFade > 0) {
-            renderFooter(gui, Easing.easeOutCubic(Math.min(vFade, 1)));
-        }
-
-        renderLogo(gui, cx, 32, titleFade);
+        renderButtons(gui, mouseX, mouseY, partialTick, elapsed);
+        renderFooter(gui, elapsed);
     }
 
     @Override
@@ -135,42 +117,82 @@ public class PWPMainMenuScreen extends Screen {
         gui.fill(0, 0, w, h, PWPTheme.Colors.BACKGROUND_DIM);
     }
 
-    private void renderLogo(GuiGraphics gui, int cx, int y, float fade) {
-        if (fade <= 0) return;
-        int alpha = (int) (Math.min(fade, 1) * 220);
-        int color = (alpha << 24) | (PWPTheme.Colors.ACCENT & 0x00FFFFFF);
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return false;
+    }
+
+    private void renderWelcome(GuiGraphics gui, int cx, int cy, float fade) {
         var font = Minecraft.getInstance().font;
-        gui.drawCenteredString(font, Component.literal("PWP"), cx, y, color);
-    }
-
-    private void renderWelcome(GuiGraphics gui, int cx, int y, float fade) {
         Minecraft mc = Minecraft.getInstance();
-        var font = mc.font;
 
-        String nickname = mc.player != null ? mc.player.getScoreboardName() : "";
-        Component welcome = Component.translatable("pwp_core.main_menu.welcome", nickname);
+        String nickname = mc.player != null ? mc.player.getScoreboardName() : null;
+        String welcome = nickname != null
+            ? Component.translatable("pwp_core.main_menu.welcome", nickname).getString()
+            : "Добро пожаловать!";
 
-        int color = withAlpha(PWPTheme.Colors.TEXT_PRIMARY, (int) (fade * 255));
-        gui.drawCenteredString(font, welcome, cx, y, color);
+        int welcomeY = (int) (height * 0.34f);
+        int slideY = (int) ((1 - fade) * 6);
 
-        Component subtitle = Component.translatable("pwp_core.main_menu.subtitle");
-        int subColor = withAlpha(PWPTheme.Colors.TEXT_SECONDARY, (int) (fade * 180));
-        gui.drawCenteredString(font, subtitle, cx, y + 22, subColor);
+        PoseStack pose = gui.pose();
+        pose.pushPose();
+        pose.translate(0, slideY, 0);
+
+        int textColor = PWPUtils.withAlpha(PWPTheme.Colors.TEXT_PRIMARY, (int) (fade * 255));
+        int subColor = PWPUtils.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, (int) (fade * 180));
+
+        gui.drawCenteredString(font, Component.literal(welcome), cx, welcomeY, textColor);
+        gui.drawCenteredString(font, Component.translatable("pwp_core.main_menu.subtitle"), cx, welcomeY + 16, subColor);
+
+        pose.popPose();
     }
 
-    private void renderSeparator(GuiGraphics gui, int cx, int y, float fade) {
-        int w = 80;
-        int alpha = (int) (fade * 160);
-        int color = (alpha << 24) | (PWPTheme.Colors.ACCENT & 0x00FFFFFF);
-        gui.fill(cx - w / 2, y, cx + w / 2, y + 1, color);
+    private void renderButtons(GuiGraphics gui, int mouseX, int mouseY, float partialTick, float elapsed) {
+        PWPButton[] btns = { playBtn, singleBtn, optionsBtn, quitBtn };
+
+        for (int i = 0; i < btns.length; i++) {
+            float progress = animProgress(elapsed, 300 + i * ANIM_DELAY_PER_MS, ANIM_BTN_DURATION);
+
+            if (progress <= 0) {
+                btns[i].visible = false;
+                continue;
+            }
+
+            float t = Math.min(progress, 1);
+            float eased = Easing.easeOutBack(t);
+            int slideY = (int) ((1 - eased) * 14);
+
+            btns[i].setAnimAlpha(eased);
+            btns[i].visible = true;
+
+            PoseStack pose = gui.pose();
+            pose.pushPose();
+            pose.translate(0, slideY, 0);
+            btns[i].render(gui, mouseX, mouseY, partialTick);
+            pose.popPose();
+        }
+
+        playBtn.setAnimAlpha(1.0F);
+        singleBtn.setAnimAlpha(1.0F);
+        optionsBtn.setAnimAlpha(1.0F);
+        quitBtn.setAnimAlpha(1.0F);
     }
 
-    private void renderFooter(GuiGraphics gui, float fade) {
-        Minecraft mc = Minecraft.getInstance();
-        var font = mc.font;
-        String text = "PWP v1.0.1";
-        int color = withAlpha(PWPTheme.Colors.TEXT_DIM, (int) (fade * 140));
-        gui.drawCenteredString(font, Component.literal(text), width / 2, height - 14, color);
+    private void renderFooter(GuiGraphics gui, float elapsed) {
+        float progress = animProgress(elapsed, 300 + 4 * ANIM_DELAY_PER_MS + 100, 300);
+        if (progress <= 0) return;
+        float fade = Easing.easeOutCubic(Math.min(progress, 1));
+
+        var font = Minecraft.getInstance().font;
+        int color = PWPUtils.withAlpha(PWPTheme.Colors.TEXT_DIM, (int) (fade * 140));
+        gui.drawCenteredString(font, Component.literal("PWP v1.0.1"), width / 2, height - 12, color);
+    }
+
+    private void renderElement(GuiGraphics gui, float elapsed, long delay, long duration, ElementRenderer renderer) {
+        float progress = animProgress(elapsed, delay, duration);
+        if (progress <= 0) return;
+        float fade = Easing.easeOutCubic(Math.min(progress, 1));
+        renderer.render(fade);
     }
 
     private float animProgress(float elapsed, long delay, long duration) {
@@ -178,7 +200,8 @@ public class PWPMainMenuScreen extends Screen {
         return Math.min(t, 1);
     }
 
-    private int withAlpha(int color, int alpha) {
-        return (Math.min(255, Math.max(0, alpha)) << 24) | (color & 0x00FFFFFF);
+    @FunctionalInterface
+    private interface ElementRenderer {
+        void render(float fade);
     }
 }
