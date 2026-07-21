@@ -105,15 +105,12 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
         GLFW.glfwSetWindowTitle(window, title.get());
         GLFW.glfwSwapInterval(0);
 
-        if (GLFW.glfwSetFramebufferSizeCallback(window, null) != null) {
-            GLFW.glfwSetFramebufferSizeCallback(window, null).free();
-        }
-        if (GLFW.glfwSetWindowPosCallback(window, null) != null) {
-            GLFW.glfwSetWindowPosCallback(window, null).free();
-        }
-        if (GLFW.glfwSetWindowSizeCallback(window, null) != null) {
-            GLFW.glfwSetWindowSizeCallback(window, null).free();
-        }
+        var fbCallback = GLFW.glfwSetFramebufferSizeCallback(window, null);
+        if (fbCallback != null) fbCallback.free();
+        var wpCallback = GLFW.glfwSetWindowPosCallback(window, null);
+        if (wpCallback != null) wpCallback.free();
+        var wsCallback = GLFW.glfwSetWindowSizeCallback(window, null);
+        if (wsCallback != null) wsCallback.free();
 
         return window;
     }
