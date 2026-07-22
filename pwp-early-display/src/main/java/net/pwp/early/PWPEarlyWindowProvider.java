@@ -136,7 +136,7 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
 
     @Override
     public void updateModuleReads(ModuleLayer layer) {
-        Optional<Module> forgeModule = layer.findModule("net.minecraftforge.forge");
+        Optional<Module> forgeModule = layer.findModule("forge");
         if (forgeModule.isPresent()) {
             getClass().getModule().addReads(forgeModule.get());
         }
