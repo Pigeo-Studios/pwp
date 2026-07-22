@@ -66,6 +66,8 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
         glVersion = org.lwjgl.opengl.GL11C.glGetString(org.lwjgl.opengl.GL11C.GL_VERSION);
 
         org.lwjgl.opengl.GL11C.glClearColor(0.05f, 0.07f, 0.09f, 1.0f);
+        org.lwjgl.opengl.GL11C.glClear(org.lwjgl.opengl.GL11C.GL_COLOR_BUFFER_BIT);
+        GLFW.glfwSwapBuffers(window);
 
         GLFWVidMode vidmode = GLFW.glfwGetVideoMode(GLFW.glfwGetPrimaryMonitor());
         if (vidmode != null) {
@@ -75,7 +77,6 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
         }
 
         GLFW.glfwShowWindow(window);
-        GLFW.glfwMakeContextCurrent(0);
 
         GLFW.glfwSetFramebufferSizeCallback(window, (w, width, height) -> {
             fbWidth = width;
