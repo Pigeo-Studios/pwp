@@ -137,28 +137,42 @@ public class PWPEarlyWindowProvider implements ImmediateWindowProvider {
 
     @Override
     public void updateModuleReads(ModuleLayer layer) {
-        Optional<Module> forgeModule = layer.findModule("forge");
+        Optional<Module> forgeModule = layer.findModule("net.minecraftforge.forge");
         if (forgeModule.isPresent()) {
             getClass().getModule().addReads(forgeModule.get());
+            try {
+                findOverlay(Class.forName(forgeModule.get(), "net.minecraftforge.client.loading.ForgeLoadingOverlay"));
+                return;
+            } catch (Exception e) {
+                throw new IllegalStateException("Could not find ForgeLoadingOverlay via forge module", e);
+            }
+        }
+
+        for (Module m : layer.modules()) {
+            getClass().getModule().addReads(m);
+            try {
+                findOverlay(Class.forName(m, "net.minecraftforge.client.loading.ForgeLoadingOverlay"));
+                return;
+            } catch (Exception ignored) {
+            }
         }
 
         try {
-            ClassLoader cl = ImmediateWindowProvider.class.getClassLoader();
-            Class<?> clz = forgeModule.isPresent()
-                ? Class.forName(forgeModule.get(), "net.minecraftforge.client.loading.ForgeLoadingOverlay")
-                : Class.forName("net.minecraftforge.client.loading.ForgeLoadingOverlay", false, cl);
-            for (Method mtd : clz.getDeclaredMethods()) {
-                if (Modifier.isStatic(mtd.getModifiers()) && "newInstance".equals(mtd.getName())) {
-                    loadingOverlay = mtd;
-                    break;
-                }
-            }
-            if (loadingOverlay == null) {
-                LOGGER.warn("ForgeLoadingOverlay.newInstance not found");
-            }
+            findOverlay(Class.forName("net.minecraftforge.client.loading.ForgeLoadingOverlay"));
         } catch (Exception e) {
-            LOGGER.error("Failed to find ForgeLoadingOverlay", e);
+            throw new IllegalStateException("Could not find ForgeLoadingOverlay in any module", e);
         }
+    }
+
+    private void findOverlay(Class<?> clz) {
+        for (Method mtd : clz.getDeclaredMethods()) {
+            if (Modifier.isStatic(mtd.getModifiers()) && "newInstance".equals(mtd.getName())) {
+                loadingOverlay = mtd;
+                break;
+            }
+        }
+        if (loadingOverlay == null)
+            throw new IllegalStateException("ForgeLoadingOverlay.newInstance not found in " + clz.getName());
     }
 
     @Override
