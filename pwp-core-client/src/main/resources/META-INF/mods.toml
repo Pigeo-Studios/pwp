@@ -10,7 +10,6 @@ authors="Pigeo Studios"
 description='''
 Core client mod for PWP. Custom main menu, loading screen, and client utilities.
 '''
-side="CLIENT"
 
 [[dependencies.pwp_core_client]]
     modId="minecraft"
