@@ -1,5 +1,6 @@
 package com.pwp.coreserver;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -7,6 +8,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
+import net.minecraftforge.network.NetworkRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,17 @@ public class CoreServerMod {
         }
         CoreServerApi.configure(API_BASE, API_KEY);
         log.info("CoreServerApi configured with base: {}", API_BASE);
+
+        // Register dummy channels for client-only mods to satisfy Forge handshake
+        NetworkRegistry.newSimpleChannel(
+            new ResourceLocation("pwp_core_client", "network"),
+            () -> "1", "1"::equals, "1"::equals
+        );
+        NetworkRegistry.newSimpleChannel(
+            new ResourceLocation("pwp_cosmetics", "main"),
+            () -> "1", "1"::equals, "1"::equals
+        );
+        log.info("Registered dummy channels for client-only mods");
 
         String dirName = Path.of("").toAbsolutePath().getFileName().toString();
         isMatchServer = dirName.startsWith("match_");
