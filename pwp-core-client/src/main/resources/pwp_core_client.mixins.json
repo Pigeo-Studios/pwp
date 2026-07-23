@@ -6,7 +6,6 @@
   "client": [
     "TitleScreenMixin",
     "WindowIconMixin",
-    "ForgeLoadingOverlayMixin",
     "LevelLoadingScreenMixin",
     "LevelTransitionMixin"
   ],
