@@ -8,9 +8,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,11 +28,9 @@ public class CoreClientMod {
     private void commonSetup(FMLCommonSetupEvent event) {
         log.error("CORE CLIENT MOD commonSetup CALLED");
         event.enqueueWork(() -> {
-            if (FMLEnvironment.dist == Dist.CLIENT) {
-                log.error("PACKET HANDLER REGISTRATION START");
-                PacketHandler.register();
-                log.error("PACKET HANDLER REGISTRATION COMPLETE");
-            }
+            log.error("PACKET HANDLER REGISTRATION START");
+            PacketHandler.register();
+            log.error("PACKET HANDLER REGISTRATION COMPLETE");
         });
     }
 
