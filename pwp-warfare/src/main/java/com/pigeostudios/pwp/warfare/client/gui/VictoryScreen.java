@@ -1,10 +1,10 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -22,7 +22,7 @@ public class VictoryScreen extends Screen {
    private final int matchCaptures, matchRevives, matchHeadshots, matchScore;
    private final int matchDurationSec;
 
-   private ContinueButton continueButton;
+   private PWPButton continueButton;
 
    private static final ResourceLocation FLAG_UKRAINE = new ResourceLocation("pwpwarfare", "textures/gui/flags/ukraine.png");
    private static final ResourceLocation FLAG_RUSSIA = new ResourceLocation("pwpwarfare", "textures/gui/flags/russia.png");
@@ -61,8 +61,9 @@ public class VictoryScreen extends Screen {
    protected void init() {
       int cx = this.width / 2;
       int cy = this.height / 2;
-      this.continueButton = new ContinueButton(cx - 70, cy + 90, 140, 24,
-         Component.translatable("gui.pwpwarfare.victory.continue"), b -> this.onClose());
+      this.continueButton = new PWPButton(cx - 70, cy + 90, 140, 24,
+         Component.translatable("gui.pwpwarfare.victory.continue"), b -> this.onClose(), PWPButton.Style.DARK);
+      this.continueButton.setAnimAlpha(0.0F);
       this.continueButton.active = false;
       this.addRenderableWidget(this.continueButton);
    }
@@ -137,8 +138,8 @@ public class VictoryScreen extends Screen {
          int rowH = 13;
          int cw = 106;
 
-         drawStat(gui, PWPTheme.Icons.SWORDS + " Kills", String.valueOf(matchKills), statsX + 8, rowY, pLabel, pAccent);
-         drawStat(gui, PWPTheme.Icons.SKULL + " Deaths", String.valueOf(matchDeaths), statsX + 8 + cw, rowY, pLabel, pText);
+         drawStat(gui, "Kills", String.valueOf(matchKills), statsX + 8, rowY, pLabel, pAccent);
+         drawStat(gui, "Deaths", String.valueOf(matchDeaths), statsX + 8 + cw, rowY, pLabel, pText);
          drawStat(gui, "Revives", String.valueOf(matchRevives), statsX + 8 + cw * 2, rowY, pLabel, pText);
          rowY += rowH;
 
@@ -159,7 +160,7 @@ public class VictoryScreen extends Screen {
          RenderSystem.disableBlend();
       }
 
-      this.continueButton.currentAlpha = contentAlpha;
+      this.continueButton.setAnimAlpha(contentAlpha);
       if (contentAlpha >= 1.0F && !this.continueButton.active) {
          this.continueButton.active = true;
       }
@@ -202,38 +203,5 @@ public class VictoryScreen extends Screen {
       return null;
    }
 
-   private static class ContinueButton extends Button {
-      public float currentAlpha = 0.0F;
 
-      public ContinueButton(int x, int y, int width, int height, Component message, OnPress onPress) {
-         super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
-      }
-
-      @Override
-      protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
-         if (this.visible && !(this.currentAlpha <= 0.02F)) {
-            int a = (int)(this.currentAlpha * 255.0F);
-            int bgCol = a << 24 | PWPTheme.Styles.Button.PRIMARY_BG;
-            int borderCol;
-            if (!this.active) {
-               borderCol = a << 24 | PWPTheme.Colors.BORDER;
-            } else if (this.isHovered()) {
-               borderCol = a << 24 | PWPTheme.Colors.BORDER_FOCUS;
-            } else {
-               borderCol = a << 24 | PWPTheme.Styles.Button.PRIMARY_BORDER;
-            }
-            RenderSystem.enableBlend();
-            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, bgCol);
-            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderCol);
-            int textCol = a << 24 | (this.active ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM);
-            gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
-               this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textCol);
-            if (this.active && this.isHovered()) {
-               gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height,
-                  a << 24 | PWPTheme.Colors.ACCENT);
-            }
-            RenderSystem.disableBlend();
-         }
-      }
-   }
 }

@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -124,10 +125,11 @@ public class FactionVehicleListScreen extends Screen {
             if (maxScroll == 0) scrollOff = 0;
             if (scrollOff > maxScroll) scrollOff = maxScroll;
 
-            Button addBtn = Button.builder(
+            PWPButton addBtn = new PWPButton(cx + panelW - 80, 8, 70, 20,
                 Component.translatable("gui.pwpwarfare.faction_vehicle_list.add"),
-                b -> minecraft.setScreen(new FactionVehicleEditorScreen(faction, null))
-            ).bounds(cx + panelW - 80, 8, 70, 20).build();
+                b -> minecraft.setScreen(new FactionVehicleEditorScreen(faction, null)),
+                PWPButton.Style.PRIMARY
+            );
             addRenderableWidget(addBtn);
 
             repositionButtons();
@@ -138,26 +140,29 @@ public class FactionVehicleListScreen extends Screen {
         clearWidgets();
         addRenderableWidget(searchField);
 
-        Button addBtn = Button.builder(
+        PWPButton addBtn = new PWPButton(cx + panelW - 80, 8, 70, 20,
             Component.translatable("gui.pwpwarfare.faction_vehicle_list.add"),
-                b -> minecraft.setScreen(new FactionVehicleEditorScreen(faction, null))
-        ).bounds(cx + panelW - 80, 8, 70, 20).build();
+                b -> minecraft.setScreen(new FactionVehicleEditorScreen(faction, null)),
+                PWPButton.Style.PRIMARY
+        );
         addRenderableWidget(addBtn);
 
         for (int i = 0; i < filtered.size(); i++) {
             VehicleEntry entry = filtered.get(i);
             int by = 56 + i * (CARD_H + GAP) - scrollOff;
 
-            Button editBtn = Button.builder(
+            PWPButton editBtn = new PWPButton(cx + panelW - 70, by + 6, 50, 22,
                 Component.literal("Edit"),
-                b -> minecraft.setScreen(new FactionVehicleEditorScreen(faction, entry.vehicleName))
-            ).bounds(cx + panelW - 70, by + 6, 50, 22).build();
+                b -> minecraft.setScreen(new FactionVehicleEditorScreen(faction, entry.vehicleName)),
+                PWPButton.Style.PRIMARY
+            );
             addRenderableWidget(editBtn);
 
-            Button delBtn = Button.builder(
+            PWPButton delBtn = new PWPButton(cx + panelW - 24, by + 6, 16, 22,
                 Component.literal("X"),
-                b -> deleteVehicle(entry.vehicleName)
-            ).bounds(cx + panelW - 24, by + 6, 16, 22).build();
+                b -> deleteVehicle(entry.vehicleName),
+                PWPButton.Style.DANGER
+            );
             addRenderableWidget(delBtn);
         }
     }
@@ -180,8 +185,7 @@ public class FactionVehicleListScreen extends Screen {
         renderBackground(gui);
 
         int py = 8;
-        gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Styles.Panel.BG);
-        gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Styles.Panel.BORDER);
+        PWPPanel.render(gui, cx, py, panelW, panelH);
         gui.drawCenteredString(font, title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
 
         int clipY = py + 52;

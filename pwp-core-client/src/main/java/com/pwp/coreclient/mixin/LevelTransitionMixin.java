@@ -1,6 +1,6 @@
 package com.pwp.coreclient.mixin;
 
-import com.pwp.coreclient.gui.screens.PWPLevelLoadingScreen;
+import com.pwp.coreclient.gui.screens.PWPLoadingScreen;
 import net.minecraft.client.Minecraft;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -14,7 +14,7 @@ public class LevelTransitionMixin {
     private void pwp_onLevelChange(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.screen == null) {
-            mc.setScreen(new PWPLevelLoadingScreen());
+            mc.setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.LOADING_WORLD));
         }
     }
 }

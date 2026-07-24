@@ -33,7 +33,7 @@ public class ServerListScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " АКТИВНЫЕ МАТЧИ", cx, 14, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(font, Component.literal("АКТИВНЫЕ МАТЧИ"), cx, 14, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx - 70, 24, cx + 70, 25, PWPTheme.Colors.ACCENT);
     }
 

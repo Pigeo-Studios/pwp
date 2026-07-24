@@ -8,7 +8,8 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -26,7 +27,7 @@ public class FactionKitListScreen extends Screen {
     private int scrollOff;
     private int maxScroll;
     private int cx;
-    private final List<Button> kitButtons = new ArrayList<>();
+    private final List<PWPButton> kitButtons = new ArrayList<>();
 
     public FactionKitListScreen(String faction) {
         super(Component.translatable("gui.pwpwarfare.faction_kit_list.title_format", faction.toUpperCase()));
@@ -54,25 +55,28 @@ public class FactionKitListScreen extends Screen {
         for (int i = 0; i < WarfareWorldData.KIT_NAMES.length; i++) {
             String kitName = WarfareWorldData.KIT_NAMES[i];
 
-            Button editBtn = Button.builder(
+            PWPButton editBtn = new PWPButton(0, 0, 0, 0,
                 Component.literal(kitName),
-                b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName))
-            ).build();
+                b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName)),
+                PWPButton.Style.PRIMARY
+            );
             addRenderableWidget(editBtn);
             kitButtons.add(editBtn);
 
-            Button copyBtn = Button.builder(
+            PWPButton copyBtn = new PWPButton(0, 0, 0, 0,
                 Component.translatable("gui.pwpwarfare.kit_list.copy"),
-                b -> {}
-            ).build();
+                b -> {},
+                PWPButton.Style.PRIMARY
+            );
             copyBtn.active = false;
             addRenderableWidget(copyBtn);
             kitButtons.add(copyBtn);
 
-            Button pBtn = Button.builder(
+            PWPButton pBtn = new PWPButton(0, 0, 0, 0,
                 Component.translatable("gui.pwpwarfare.kit_list.paste"),
-                b -> {}
-            ).build();
+                b -> {},
+                PWPButton.Style.PRIMARY
+            );
             pBtn.active = false;
             addRenderableWidget(pBtn);
             kitButtons.add(pBtn);
@@ -107,10 +111,9 @@ public class FactionKitListScreen extends Screen {
         renderBackground(gui);
 
         int py = 10;
-        gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Styles.Panel.BG);
-        gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Styles.Panel.BORDER);
+        PWPPanel.render(gui, cx, py, panelW, panelH);
 
-        gui.drawCenteredString(font, PWPTheme.Icons.FLAG + " " + title.getString(), width / 2, py + 4, PWPTheme.Colors.ACCENT);
+        gui.drawCenteredString(font, Component.literal(title.getString()), width / 2, py + 4, PWPTheme.Colors.ACCENT);
         gui.fill(cx + 6, py + 14, cx + panelW - 6, py + 15, PWPTheme.Colors.ACCENT);
 
         int clipY = py + 28;

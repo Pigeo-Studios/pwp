@@ -1,5 +1,6 @@
 package com.pwp.coreclient;
 
+import com.pwp.coreclient.gui.hud.PWPHudOverlay;
 import com.pwp.coreclient.network.PacketHandler;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.common.Mod;
@@ -21,6 +22,7 @@ public class CoreClientMod {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ClientScreenHandler.init();
+            PWPHudOverlay.init();
         }
     }
 

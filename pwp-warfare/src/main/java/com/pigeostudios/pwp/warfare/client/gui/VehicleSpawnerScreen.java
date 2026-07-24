@@ -4,9 +4,9 @@ import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketUpdateSpawner;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -48,20 +48,20 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       int rightCenterX = x + 155;
       int btnY_Respawn = y + 18;
       int btnY_Initial = y + 48;
-      this.addRenderableWidget(Button.builder(Component.literal("-"), b -> this.adjustTimer(false, -5)).bounds(rightCenterX - 42, btnY_Respawn, 15, 16).build());
+      this.addRenderableWidget(new PWPButton(rightCenterX - 42, btnY_Respawn, 15, 16, Component.literal("-"), b -> this.adjustTimer(false, -5), PWPButton.Style.PRIMARY));
       this.respawnTimeField = new EditBox(this.font, rightCenterX - 25, btnY_Respawn + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"));
       this.respawnTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings));
       this.respawnTimeField.setResponder(val -> this.onTimeFieldChanged(val, false));
       this.addRenderableWidget(this.respawnTimeField);
-      this.addRenderableWidget(Button.builder(Component.literal("+"), b -> this.adjustTimer(false, 5)).bounds(rightCenterX + 23, btnY_Respawn, 15, 16).build());
-      this.addRenderableWidget(Button.builder(Component.literal("-"), b -> this.adjustTimer(true, -5)).bounds(rightCenterX - 42, btnY_Initial, 15, 16).build());
+      this.addRenderableWidget(new PWPButton(rightCenterX + 23, btnY_Respawn, 15, 16, Component.literal("+"), b -> this.adjustTimer(false, 5), PWPButton.Style.PRIMARY));
+      this.addRenderableWidget(new PWPButton(rightCenterX - 42, btnY_Initial, 15, 16, Component.literal("-"), b -> this.adjustTimer(true, -5), PWPButton.Style.PRIMARY));
       this.initialTimeField = new EditBox(this.font, rightCenterX - 25, btnY_Initial + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.initial_time"));
       this.initialTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings));
       this.initialTimeField.setResponder(val -> this.onTimeFieldChanged(val, true));
       this.addRenderableWidget(this.initialTimeField);
-      this.addRenderableWidget(Button.builder(Component.literal("+"), b -> this.adjustTimer(true, 5)).bounds(rightCenterX + 23, btnY_Initial, 15, 16).build());
-      this.addRenderableWidget(Button.builder(Component.literal("\u21BA"), b -> this.adjustYaw(-45.0F)).bounds(x + 77, y + 40, 18, 14).build());
-      this.addRenderableWidget(Button.builder(Component.literal("\u21BB"), b -> this.adjustYaw(45.0F)).bounds(x + 97, y + 40, 18, 14).build());
+      this.addRenderableWidget(new PWPButton(rightCenterX + 23, btnY_Initial, 15, 16, Component.literal("+"), b -> this.adjustTimer(true, 5), PWPButton.Style.PRIMARY));
+      this.addRenderableWidget(new PWPButton(x + 77, y + 40, 18, 14, Component.literal("\u21BA"), b -> this.adjustYaw(-45.0F), PWPButton.Style.PRIMARY));
+      this.addRenderableWidget(new PWPButton(x + 97, y + 40, 18, 14, Component.literal("\u21BB"), b -> this.adjustYaw(45.0F), PWPButton.Style.PRIMARY));
    }
 
    private void onTimeFieldChanged(String value, boolean isInitial) {

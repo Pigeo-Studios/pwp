@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -83,10 +84,11 @@ public class FactionVehicleSelectScreen extends Screen {
             int by = py + r * (CARD_H + GAP);
 
             addRenderableWidget(
-                Button.builder(
+                new PWPButton(bx, by, CARD_W, CARD_H,
                     Component.literal(faction.toUpperCase()),
-                    b -> minecraft.setScreen(new FactionVehicleListScreen(faction))
-                ).bounds(bx, by, CARD_W, CARD_H).build()
+                    b -> minecraft.setScreen(new FactionVehicleListScreen(faction)),
+                    PWPButton.Style.PRIMARY
+                )
             );
         }
     }
@@ -98,8 +100,7 @@ public class FactionVehicleSelectScreen extends Screen {
         int cx = (width - panelW) / 2;
         int py = 10;
 
-        gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Styles.Panel.BG);
-        gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Styles.Panel.BORDER);
+        PWPPanel.render(gui, cx, py, panelW, panelH);
         gui.drawCenteredString(font, title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx + 10, py + 22, cx + panelW - 10, py + 23, PWPTheme.Colors.ACCENT);
 

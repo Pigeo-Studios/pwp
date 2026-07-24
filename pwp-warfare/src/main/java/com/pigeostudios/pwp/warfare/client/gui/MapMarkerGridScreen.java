@@ -8,7 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -30,7 +31,7 @@ public class MapMarkerGridScreen extends Screen {
     private int scrollOff;
     private int maxScroll;
     private int cx;
-    private final List<Button> markerButtons = new ArrayList<>();
+    private final List<PWPButton> markerButtons = new ArrayList<>();
 
     public MapMarkerGridScreen(int x, int z, String titleKey, Map<String, ResourceLocation> markers, Screen previousScreen) {
         super(Component.translatable(titleKey));
@@ -59,13 +60,14 @@ public class MapMarkerGridScreen extends Screen {
         markerButtons.clear();
         for (int i = 0; i < markerTypes.size(); i++) {
             String type = markerTypes.get(i);
-            Button btn = Button.builder(
+            PWPButton btn = new PWPButton(0, 0, 0, 0,
                 Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")),
                 b -> {
                     PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
                     minecraft.setScreen(previousScreen);
-                }
-            ).build();
+                },
+                PWPButton.Style.PRIMARY
+            );
             addRenderableWidget(btn);
             markerButtons.add(btn);
         }
@@ -92,8 +94,7 @@ public class MapMarkerGridScreen extends Screen {
         renderBackground(gui);
 
         int py = 10;
-        gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Colors.SURFACE);
-        gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Colors.BORDER);
+        PWPPanel.render(gui, cx, py, panelW, panelH);
 
         gui.drawCenteredString(font, title, width / 2, py + 4, PWPTheme.Colors.TEXT_PRIMARY);
         gui.fill(cx + 4, py + 14, cx + panelW - 4, py + 15, PWPTheme.Colors.ACCENT);

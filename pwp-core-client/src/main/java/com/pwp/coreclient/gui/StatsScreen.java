@@ -230,7 +230,7 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " СТАТИСТИКА", cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(font, Component.literal("СТАТИСТИКА"), cx, 32, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx - 55, 42, cx + 55, 43, PWPTheme.Colors.ACCENT);
 
         if (loading) {
@@ -321,7 +321,7 @@ public class StatsScreen extends Screen {
         gui.drawString(font, "\u00a77Матчи: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
         y += 30;
 
-        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.SWORDS + " БОЙ", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "БОЙ", new String[][]{
             {"Убийства", intVal(st, "kills"), "Смерти", intVal(st, "deaths")},
             {"K/D", formatKd(st), "Спасения", intVal(st, "revives")},
             {"Убито техникой", intVal(st, "vehicleKills"), "Захваты", intVal(st, "captures")},
@@ -329,18 +329,18 @@ public class StatsScreen extends Screen {
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.STARBURST + " ТЕХНИКА", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "ТЕХНИКА", new String[][]{
             {"Уничтожено", intVal(st, "vehiclesDestroyed"), "Воздух", intVal(st, "airVehiclesDestroyed")},
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROSSHAIR + " ОРУЖИЕ", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "ОРУЖИЕ", new String[][]{
             {"Урон", doubleVal(st, "damageDealt"), "Лечение", doubleVal(st, "healingDone")},
             {"Припасы", intVal(st, "suppliesDelivered"), "Дальнее убийство", doubleVal(st, "longestKill") + "м"},
         });
         y += 6;
 
-        int matchesBottom = drawPanel(gui, leftX, y, panelW, PWPTheme.Icons.CROWN + " МАТЧИ", new String[][]{
+        int matchesBottom = drawPanel(gui, leftX, y, panelW, "МАТЧИ", new String[][]{
             {"Сыграно", intVal(st, "matchesPlayed"), "Победы", intVal(st, "wins")},
             {"Поражения", intVal(st, "losses"), "WinRate", formatWins(st)},
             {"Время", formatPlaytime(st), "Уб./матч", formatKpg(st)},

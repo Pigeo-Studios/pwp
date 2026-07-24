@@ -2,11 +2,14 @@ package com.pwp.lobby.gui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.StatsScreen;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPCard;
+import com.pwp.coreclient.gui.components.PWPLayout;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
@@ -196,80 +199,76 @@ public class LobbyScreen extends Screen {
         int gap = 4;
 
         if (currentTab == TAB_STATS) {
-            addRenderableWidget(Button.builder(
-                    Component.literal("\u25C0 Lobby"),
-                    b -> { statsSubTab = statsRenderer.getStatsTab(); switchTab(TAB_MATCHES); })
-                    .bounds(cx - 150, navY, 64, btnH).build());
+            addRenderableWidget(new PWPButton(cx - 150, navY, 64, btnH,
+                    Component.literal("Lobby"),
+                    b -> { statsSubTab = statsRenderer.getStatsTab(); switchTab(TAB_MATCHES); },
+                    PWPButton.Style.DARK));
 
-            addRenderableWidget(Button.builder(
+            addRenderableWidget(new PWPButton(cx - 82, navY, 68, btnH,
                     Component.literal("My Stats"),
-                    b -> { statsRenderer.setStatsTab(0); statsSubTab = 0; scrollOffset = 0; init(); })
-                    .bounds(cx - 82, navY, 68, btnH).build());
+                    b -> { statsRenderer.setStatsTab(0); statsSubTab = 0; scrollOffset = 0; init(); },
+                    PWPButton.Style.PRIMARY));
 
-            addRenderableWidget(Button.builder(
+            addRenderableWidget(new PWPButton(cx - 10, navY, 86, btnH,
                     Component.literal("Leaderboard"),
-                    b -> { statsRenderer.setStatsTab(1); statsSubTab = 1; scrollOffset = 0; statsRenderer.requestLeaderboard(); init(); })
-                    .bounds(cx - 10, navY, 86, btnH).build());
+                    b -> { statsRenderer.setStatsTab(1); statsSubTab = 1; scrollOffset = 0; statsRenderer.requestLeaderboard(); init(); },
+                    PWPButton.Style.PRIMARY));
 
-            addRenderableWidget(Button.builder(
+            addRenderableWidget(new PWPButton(cx + 126, navY, 22, btnH,
                     Component.literal("\u2715"),
-                    b -> onClose())
-                    .bounds(cx + 126, navY, 22, btnH).build());
+                    b -> onClose(),
+                    PWPButton.Style.GHOST));
 
             if (statsSubTab == 1 && statsRenderer.getLbTotalPages() > 1) {
                 int pageY = 30;
-                addRenderableWidget(Button.builder(
-                        Component.literal("\u25C0"),
-                        b -> statsRenderer.lbPagePrev())
-                        .bounds(cx + 80, pageY, 20, 18).build());
-                addRenderableWidget(Button.builder(
+                addRenderableWidget(new PWPButton(cx + 80, pageY, 20, 18,
+                        Component.literal("<"),
+                        b -> statsRenderer.lbPagePrev(),
+                        PWPButton.Style.GHOST));
+                addRenderableWidget(new PWPButton(cx + 104, pageY, 20, 18,
                         Component.literal("\u25B6"),
-                        b -> statsRenderer.lbPageNext())
-                        .bounds(cx + 104, pageY, 20, 18).build());
-                addRenderableWidget(Button.builder(
-                        Component.literal((statsRenderer.getLbPage() + 1) + "/" + statsRenderer.getLbTotalPages()),
-                        b -> {})
-                        .bounds(cx + 52, pageY, 26, 18).build());
+                        b -> statsRenderer.lbPageNext(),
+                        PWPButton.Style.GHOST));
             }
         } else {
             int tabX = cx - 110;
             int tabW = 66;
             boolean matchesActive = currentTab == TAB_MATCHES;
+
+            addRenderableWidget(new PWPButton(tabX, navY, tabW, btnH,
+                    Component.literal("Матчи"),
+                    b -> switchTab(TAB_MATCHES),
+                    matchesActive ? PWPButton.Style.ACCENT : PWPButton.Style.DARK));
+
             boolean votingActive = currentTab == TAB_VOTING;
+            addRenderableWidget(new PWPButton(tabX + tabW + gap, navY, tabW, btnH,
+                    Component.literal("Голосование"),
+                    b -> switchTab(TAB_VOTING),
+                    votingActive ? PWPButton.Style.ACCENT : PWPButton.Style.DARK));
 
-            addRenderableWidget(Button.builder(
-                    Component.literal((matchesActive ? "\u00a7e" : "\u00a77") + "Матчи"),
-                    b -> switchTab(TAB_MATCHES))
-                    .bounds(tabX, navY, tabW, btnH).build());
+            addRenderableWidget(new PWPButton(tabX + (tabW + gap) * 2, navY, tabW, btnH,
+                    Component.literal("Статистика"),
+                    b -> { switchTab(TAB_STATS); },
+                    currentTab == TAB_STATS ? PWPButton.Style.ACCENT : PWPButton.Style.DARK));
 
-            addRenderableWidget(Button.builder(
-                    Component.literal((votingActive ? "\u00a7e" : "\u00a77") + "Голосование"),
-                    b -> switchTab(TAB_VOTING))
-                    .bounds(tabX + tabW + gap, navY, tabW, btnH).build());
-
-            addRenderableWidget(Button.builder(
-                    Component.literal("\u00a77" + "Статистика"),
-                    b -> { switchTab(TAB_STATS); })
-                    .bounds(tabX + (tabW + gap) * 2, navY, tabW, btnH).build());
-
-            addRenderableWidget(Button.builder(
-                    Component.literal("\u2715"),
-                    b -> onClose())
-                    .bounds(tabX + (tabW + gap) * 3 + 10, navY, 22, btnH).build());
+            addRenderableWidget(new PWPButton(tabX + (tabW + gap) * 3 + 10, navY, 22, btnH,
+                    Component.literal("X"),
+                    b -> onClose(),
+                    PWPButton.Style.GHOST));
 
             // Vote tab pagination
             if (currentTab == TAB_VOTING && voteData != null && voteData.mapNames.length > 0) {
                 int totalVotePages = Math.max(1, (voteData.mapNames.length + 3) / 4);
                 if (totalVotePages > 1) {
                     int pageY = 32;
-                    addRenderableWidget(Button.builder(
-                            Component.literal("\u25C0"),
-                            b -> { if (votePage > 0) votePage--; })
-                            .bounds(cx + 40, pageY, 18, 18).build());
-                    addRenderableWidget(Button.builder(
-                            Component.literal("\u25B6"),
-                            b -> { if (votePage < totalVotePages - 1) votePage++; })
-                            .bounds(cx + 84, pageY, 18, 18).build());
+                    addRenderableWidget(new PWPButton(cx + 40, pageY, 18, 18,
+                            Component.literal("<"),
+                            b -> { if (votePage > 0) votePage--; },
+                            PWPButton.Style.GHOST));
+                    addRenderableWidget(new PWPButton(cx + 84, pageY, 18, 18,
+                            Component.literal(">"),
+                            b -> { if (votePage < totalVotePages - 1) votePage++; },
+                            PWPButton.Style.GHOST));
                 }
             }
 
@@ -278,14 +277,14 @@ public class LobbyScreen extends Screen {
                 int totalListPages = Math.max(1, (listData.count + 3) / 4);
                 if (totalListPages > 1) {
                     int pageY = 32;
-                    addRenderableWidget(Button.builder(
-                            Component.literal("\u25C0"),
-                            b -> { if (listPage > 0) listPage--; })
-                            .bounds(cx + 40, pageY, 18, 18).build());
-                    addRenderableWidget(Button.builder(
-                            Component.literal("\u25B6"),
-                            b -> { if (listPage < totalListPages - 1) listPage++; })
-                            .bounds(cx + 84, pageY, 18, 18).build());
+                    addRenderableWidget(new PWPButton(cx + 40, pageY, 18, 18,
+                            Component.literal("<"),
+                            b -> { if (listPage > 0) listPage--; },
+                            PWPButton.Style.GHOST));
+                    addRenderableWidget(new PWPButton(cx + 84, pageY, 18, 18,
+                            Component.literal(">"),
+                            b -> { if (listPage < totalListPages - 1) listPage++; },
+                            PWPButton.Style.GHOST));
                 }
             }
         }
@@ -294,7 +293,6 @@ public class LobbyScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
-        super.render(gui, mx, my, pt);
 
         // Animate tab switch
         long elapsed = System.currentTimeMillis() - tabSwitchTime;
@@ -308,16 +306,20 @@ public class LobbyScreen extends Screen {
         if (currentTab == TAB_STATS) {
             int clipY = 48;
             int clipH = height - clipY - 36;
+            PWPLayout.renderHeader(gui, "СТАТИСТИКА", width);
             statsRenderer.renderContent(gui, mx, my, clipY, clipH);
+            super.render(gui, mx, my, pt);
             return;
         }
 
-        String title = currentTab == TAB_VOTING ? "\u2694 ГОЛОСОВАНИЕ" : "\u2694 АКТИВНЫЕ МАТЧИ";
-        gui.drawCenteredString(font, PWPTheme.Icons.SWORDS + " " + title, cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+        int contentW = PWPLayout.contentWidth(width);
+        int contentX = PWPLayout.centerX(width, contentW);
+        int panelY = 48;
+        int panelH = height - panelY - 20;
 
-        // Draw accent line under title
-        int titleW = font.width(title) + 20;
-        gui.fill(cx - titleW / 2, 42, cx + titleW / 2, 43, PWPTheme.Colors.ACCENT);
+        PWPLayout.renderHeader(gui, currentTab == TAB_VOTING ? "ГОЛОСОВАНИЕ" : "МАТЧИ", width);
+
+        PWPPanel.render(gui, contentX, panelY, contentW, panelH);
 
         // Animate content alpha
         float alpha = currentTab == targetTab ? 1f : animProgress;
@@ -339,6 +341,7 @@ public class LobbyScreen extends Screen {
             renderListTab(gui, mx, my, cx, a);
         }
 
+        super.render(gui, mx, my, pt);
         RenderSystem.disableBlend();
     }
 

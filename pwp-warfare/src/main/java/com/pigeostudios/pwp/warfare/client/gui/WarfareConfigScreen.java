@@ -3,7 +3,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -110,14 +110,14 @@ public class WarfareConfigScreen extends Screen {
       y += 28;
       this.reviveItemBox = this.createStringBox(cx - 160, y, 300, (String)WarfareConfig.REVIVE_ITEM.get());
 
-      this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.config.save"), b -> {
+      this.addRenderableWidget(new PWPButton(cx - 80, this.height - 28, 160, 22, Component.translatable("gui.pwpwarfare.config.save"), b -> {
          this.saveValues();
          this.onClose();
-      }).bounds(cx - 80, this.height - 28, 160, 22).build());
+      }, PWPButton.Style.ACCENT));
    }
 
    private void guiLabel(String text, int x, int y) {
-      addRenderableWidget(Button.builder(Component.literal(""), b -> {}).bounds(x, y, 0, 0).build());
+      addRenderableWidget(new PWPButton(x, y, 1, 1, Component.literal(""), b -> {}, PWPButton.Style.PRIMARY));
    }
 
    private void addToggle(int x, int y, int w, String labelKey, BooleanValue val) {
@@ -165,7 +165,7 @@ public class WarfareConfigScreen extends Screen {
    public void render(GuiGraphics gui, int mx, int my, float pt) {
       this.renderBackground(gui);
       int cx = this.width / 2;
-      gui.drawCenteredString(this.font, PWPTheme.Icons.GEAR + " " + this.title.getString(), cx, 8, PWPTheme.Colors.TEXT_ACCENT);
+      gui.drawCenteredString(this.font, Component.literal(this.title.getString()), cx, 8, PWPTheme.Colors.TEXT_ACCENT);
 
       int x1 = cx - 175;
       int x2 = cx - 85;

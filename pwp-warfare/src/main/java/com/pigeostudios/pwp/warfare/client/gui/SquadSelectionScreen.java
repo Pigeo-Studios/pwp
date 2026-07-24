@@ -1,7 +1,7 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pigeostudios.pwp.warfare.client.gui.SquadButton;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
@@ -30,8 +30,8 @@ import net.minecraft.world.entity.player.Player;
 // Экран управления отрядами и картой
 // Позволяет создавать/покидать отряды, назначать командиров, чат и карту
 public class SquadSelectionScreen extends Screen {
-   private SquadButton applyCmdButton;
-   private SquadButton kitButton;
+   private PWPButton applyCmdButton;
+   private PWPButton kitButton;
    private static final int SIDEBAR_WIDTH = 170;
    private static final int BOTTOM_BAR_H = 38;
    private static final int TOP_BAR_HEIGHT = 30;
@@ -48,9 +48,9 @@ public class SquadSelectionScreen extends Screen {
    private static final ResourceLocation FLAG_INSURGENCY = new ResourceLocation("pwpwarfare", "textures/gui/flags/insurgency.png");
    private static final ResourceLocation FLAG_PMC = new ResourceLocation("pwpwarfare", "textures/gui/flags/pmc.png");
    private EditBox nameInput;
-   private Button createButton;
+    private PWPButton createButton;
    private EditBox chatInput;
-   private Button chatModeButton;
+    private PWPButton chatModeButton;
    private int chatMode = 1;
    private boolean showContextMenu = false;
    private int contextMenuX = 0;
@@ -84,23 +84,25 @@ public class SquadSelectionScreen extends Screen {
       }
 
       int teamCMDId_init = myTeam.contains("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
-      this.applyCmdButton = new SquadButton(10, 10, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.apply_cmd"), b -> {
+      this.applyCmdButton = new PWPButton(10, 10, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.apply_cmd"), b -> {
          PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
          b.visible = false;
-      });
+      }, PWPButton.Style.DARK);
       this.addRenderableWidget(this.applyCmdButton);
-      this.kitButton = new SquadButton(10, this.height - BOTTOM_BAR_H + 8, 150, 22,
+      this.kitButton = new PWPButton(10, this.height - BOTTOM_BAR_H + 8, 150, 22,
          Component.literal("\u2694 ").append(Component.translatable("gui.pwpwarfare.squad_select.kit")),
-         b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()));
+         b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
+         PWPButton.Style.DARK);
       this.kitButton.visible = isInSquad;
       this.addRenderableWidget(this.kitButton);
       this.nameInput = new EditBox(this.font, 10, this.height - 55, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.squad_name"));
       this.nameInput.setMaxLength(12);
       this.nameInput.setVisible(!isInSquad);
       this.addRenderableWidget(this.nameInput);
-      this.createButton = new SquadButton(10, this.height - 30, 150, 20,
+      this.createButton = new PWPButton(10, this.height - 30, 150, 20,
          Component.translatable("gui.pwpwarfare.squad_select.create"),
-         button -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue())));
+         button -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue())),
+         PWPButton.Style.DARK);
       this.createButton.visible = !isInSquad;
       this.addRenderableWidget(this.createButton);
       int rightAreaWidth = this.width - 170;
@@ -113,14 +115,14 @@ public class SquadSelectionScreen extends Screen {
       int inputY = this.height - 25;
       int chatX = 175;
       int chatWidth = this.width - 170 - 10;
-      this.chatModeButton = new SquadButton(chatX, inputY, 50, 20, this.getChatModeText(), button -> {
+      this.chatModeButton = new PWPButton(chatX, inputY, 50, 20, this.getChatModeText(), button -> {
          this.chatMode++;
          if (this.chatMode > 2) {
             this.chatMode = 0;
          }
 
          button.setMessage(this.getChatModeText());
-      });
+      }, PWPButton.Style.DARK);
       this.addRenderableWidget(this.chatModeButton);
       this.chatInput = new EditBox(this.font, chatX + 55, inputY, chatWidth - 55, 20, Component.translatable("gui.pwpwarfare.squad_select.chat"));
       this.chatInput.setMaxLength(256);

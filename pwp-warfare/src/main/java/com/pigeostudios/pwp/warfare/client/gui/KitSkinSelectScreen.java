@@ -5,9 +5,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -54,8 +54,7 @@ public class KitSkinSelectScreen extends Screen {
 
     @Override
     protected void init() {
-        addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
-            .bounds(this.width - 100, 8, 80, 20).build());
+        addRenderableWidget(new PWPButton(this.width - 100, 8, 80, 20, Component.literal("Done"), b -> saveAndClose(), PWPButton.Style.PRIMARY));
         loadSkins();
     }
 

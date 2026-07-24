@@ -4,10 +4,10 @@ import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionKit;
 import com.pigeostudios.pwp.warfare.network.PacketSaveKit;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -40,10 +40,10 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
        this.keepContainerOpen = false;
        int x = this.leftPos;
       int y = this.topPos;
-      this.addRenderableWidget(Button.builder(((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"), b -> {
+      this.addRenderableWidget(new PWPButton(x + 8, y + 14, 90, 18, ((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"), b -> {
          ((KitEditorMenu)this.menu).isLeaderOnly = !((KitEditorMenu)this.menu).isLeaderOnly;
          b.setMessage(((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"));
-      }).bounds(x + 8, y + 14, 90, 18).build());
+      }, PWPButton.Style.PRIMARY));
       this.maxTeamBox = new EditBox(this.font, x + 144, y + 14, 24, 14, Component.empty());
       this.maxTeamBox.setValue(String.valueOf(((KitEditorMenu)this.menu).maxPerTeam));
       this.addRenderableWidget(this.maxTeamBox);
@@ -53,11 +53,11 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
       this.minPlayersBox = new EditBox(this.font, x + 144, y + 50, 24, 14, Component.empty());
       this.minPlayersBox.setValue(String.valueOf(((KitEditorMenu)this.menu).minSquadPlayers));
       this.addRenderableWidget(this.minPlayersBox);
-      this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.kit_editor.save"), b -> this.saveKit()).bounds(x + 120, y + 148, 48, 20).build());
-      this.addRenderableWidget(Button.builder(Component.translatable("gui.pwpwarfare.kit_editor.skins"), b -> {
+      this.addRenderableWidget(new PWPButton(x + 120, y + 148, 48, 20, Component.translatable("gui.pwpwarfare.kit_editor.save"), b -> this.saveKit(), PWPButton.Style.ACCENT));
+      this.addRenderableWidget(new PWPButton(x + 74, y + 148, 44, 20, Component.translatable("gui.pwpwarfare.kit_editor.skins"), b -> {
           keepContainerOpen = true;
           Minecraft.getInstance().setScreen(new KitSkinSelectScreen((KitEditorMenu) this.menu, this));
-       }).bounds(x + 74, y + 148, 44, 20).build());
+       }, PWPButton.Style.PRIMARY));
    }
 
    private void saveKit() {

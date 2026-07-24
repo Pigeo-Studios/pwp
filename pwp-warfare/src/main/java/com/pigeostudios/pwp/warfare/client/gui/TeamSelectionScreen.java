@@ -4,6 +4,8 @@ import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketTeamSelect;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -39,7 +41,7 @@ public class TeamSelectionScreen extends Screen {
        boolean redFull = ClientData.RED_PLAYER_COUNT >= ClientData.BLUE_PLAYER_COUNT + 2;
 
        // Title
-       gui.drawCenteredString(this.font, PWPTheme.Icons.SWORDS + " " + Component.translatable("gui.pwpwarfare.team_select.title").getString(),
+       gui.drawCenteredString(this.font, Component.translatable("gui.pwpwarfare.team_select.title"),
           centerX, 20, PWPTheme.Colors.TEXT_ACCENT);
        gui.fill(centerX - 80, 30, centerX + 80, 31, PWPTheme.Colors.ACCENT);
 
@@ -47,14 +49,8 @@ public class TeamSelectionScreen extends Screen {
        int blueX = centerX - gap - cardW;
        int blueY = centerY - cardH / 2;
        boolean isHoveringBlue = !blueFull && mouseX >= blueX && mouseX <= blueX + cardW && mouseY >= blueY && mouseY <= blueY + cardH;
-       int blueBg = blueFull ? PWPTheme.Colors.SURFACE : (isHoveringBlue ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
-       int blueBorder = blueFull ? PWPTheme.Colors.BORDER : (isHoveringBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.BORDER_ACCENT);
-
-       gui.fill(blueX, blueY, blueX + cardW, blueY + cardH, blueBg);
-       gui.fill(blueX, blueY, blueX + cardW, blueY + 1, blueBorder);
-       gui.fill(blueX, blueY + cardH - 1, blueX + cardW, blueY + cardH, blueBorder);
-       gui.fill(blueX, blueY, blueX + 1, blueY + cardH, blueBorder);
-       gui.fill(blueX + cardW - 1, blueY, blueX + cardW, blueY + cardH, blueBorder);
+       PWPPanel.Variant blueVariant = blueFull ? PWPPanel.Variant.SURFACE_DIM : (isHoveringBlue ? PWPPanel.Variant.ACCENT_BORDER : PWPPanel.Variant.SURFACE);
+       PWPPanel.render(gui, blueX, blueY, cardW, cardH, blueVariant);
 
        String blueTeamName = ClientData.customBlueName;
        if (ClientData.BLUE_FACTION != null && !ClientData.BLUE_FACTION.equals("none") && !ClientData.BLUE_FACTION.equals("bluefor")) {
@@ -88,14 +84,8 @@ public class TeamSelectionScreen extends Screen {
        int redX = centerX + gap;
        int redY = centerY - cardH / 2;
        boolean isHoveringRed = !redFull && mouseX >= redX && mouseX <= redX + cardW && mouseY >= redY && mouseY <= redY + cardH;
-       int redBg = redFull ? PWPTheme.Colors.SURFACE : (isHoveringRed ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
-       int redBorder = redFull ? PWPTheme.Colors.BORDER : (isHoveringRed ? PWPTheme.Colors.TEAM_RED : PWPTheme.Colors.BORDER_ACCENT);
-
-       gui.fill(redX, redY, redX + cardW, redY + cardH, redBg);
-       gui.fill(redX, redY, redX + cardW, redY + 1, redBorder);
-       gui.fill(redX, redY + cardH - 1, redX + cardW, redY + cardH, redBorder);
-       gui.fill(redX, redY, redX + 1, redY + cardH, redBorder);
-       gui.fill(redX + cardW - 1, redY, redX + cardW, redY + cardH, redBorder);
+       PWPPanel.Variant redVariant = redFull ? PWPPanel.Variant.SURFACE_DIM : (isHoveringRed ? PWPPanel.Variant.ACCENT_BORDER : PWPPanel.Variant.SURFACE);
+       PWPPanel.render(gui, redX, redY, cardW, cardH, redVariant);
 
        String redTeamName = ClientData.customRedName;
        if (ClientData.RED_FACTION != null && !ClientData.RED_FACTION.equals("none") && !ClientData.RED_FACTION.equals("redfor")) {

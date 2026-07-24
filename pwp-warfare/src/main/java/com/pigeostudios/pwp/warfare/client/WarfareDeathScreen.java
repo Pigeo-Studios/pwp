@@ -1,7 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
-import com.pigeostudios.pwp.warfare.client.gui.SquadButton;
 import com.pigeostudios.pwp.warfare.client.gui.TacticalMapRadialScreen;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pigeostudios.pwp.warfare.client.gui.WarfareMapRenderer;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.screens.DeathScreen;
@@ -37,22 +36,22 @@ public class WarfareDeathScreen extends DeathScreen {
     private final long deathTimestamp;
     private final int respawnTimeTotal;
     private EditBox chatInput;
-    private Button chatModeButton;
+    private PWPButton chatModeButton;
     private int chatMode = 1;
     private final Set<Integer> expandedSquads = new HashSet<>();
     private final WarfareMapRenderer mapRenderer = new WarfareMapRenderer();
     private static final int SIDEBAR_WIDTH = 170;
-    private Button applyCmdButton;
+    private PWPButton applyCmdButton;
     private EditBox nameInput;
-    private Button createButton;
+    private PWPButton createButton;
     private boolean showContextMenu = false;
     private int contextMenuX = 0;
     private int contextMenuY = 0;
     private String contextTargetPlayer = "";
     private int contextTargetSquadId = -1;
     private String selectedSpawnType = "";
-    private Button kitButton;
-    private Button deployButton;
+    private PWPButton kitButton;
+    private PWPButton deployButton;
     private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
     private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
     private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
@@ -98,21 +97,21 @@ public class WarfareDeathScreen extends DeathScreen {
         int mapX = this.getMapOriginX();
         int mapY = this.getMapY();
         this.mapRenderer.init(mapX, mapY, mapSize);
-        this.applyCmdButton = this.addRenderableWidget(new SquadButton(10, 10, 150, 20, Component.literal("APPLY FOR CMD"), b -> {
+        this.applyCmdButton = this.addRenderableWidget(new PWPButton(10, 10, 150, 20, Component.literal("APPLY FOR CMD"), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
             b.visible = false;
-        }));
+        }, PWPButton.Style.DARK));
         boolean isInSquad = this.isPlayerInSquad();
         this.nameInput = new EditBox(this.font, 10, this.height - 90, 150, 20, Component.literal("Squad Name"));
         this.nameInput.setMaxLength(12);
         this.nameInput.setVisible(!isInSquad);
         this.addRenderableWidget(this.nameInput);
-        this.createButton = this.addRenderableWidget(new SquadButton(10, this.height - 65, 150, 20, Component.literal("Create Squad"), b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue()))));
+        this.createButton = this.addRenderableWidget(new PWPButton(10, this.height - 65, 150, 20, Component.literal("Create Squad"), b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, this.nameInput.getValue())), PWPButton.Style.DARK));
         this.createButton.visible = !isInSquad;
-        this.kitButton = this.addRenderableWidget(new SquadButton(10, this.height - 60, 150, 20, Component.literal("\u2694 Kit"), b -> {
+        this.kitButton = this.addRenderableWidget(new PWPButton(10, this.height - 60, 150, 20, Component.literal("\u2694 Kit"), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
-        }));
-        this.deployButton = this.addRenderableWidget(new DeployButton(10, this.height - 35, 100, 25, Component.literal("DEPLOY"), b -> {
+        }, PWPButton.Style.DARK));
+        this.deployButton = this.addRenderableWidget(new PWPButton(10, this.height - 35, 100, 25, Component.literal("DEPLOY"), b -> {
             if (!this.selectedSpawnType.isEmpty()) {
                 ClientData.globalDeathTimestamp = 0L;
                 ClientData.deathFadeStartTime = 0L;
@@ -121,26 +120,26 @@ public class WarfareDeathScreen extends DeathScreen {
                 this.minecraft.player.respawn();
                 this.minecraft.setScreen(null);
             }
-        }));
+        }, PWPButton.Style.ACCENT));
         int mapOriginX = this.getMapOriginX();
         int chatX = 180;
         int chatAvailableWidth = Math.max(60, mapOriginX - chatX - 10);
         int modeBtnWidth = 60;
         int gap = 4;
         int inputY = this.height - 25;
-        this.chatModeButton = this.addRenderableWidget(new SquadButton(chatX, inputY, modeBtnWidth, 20, this.getChatModeText(), b -> {
+        this.chatModeButton = this.addRenderableWidget(new PWPButton(chatX, inputY, modeBtnWidth, 20, this.getChatModeText(), b -> {
             this.chatMode = (this.chatMode + 1) % 3;
             b.setMessage(this.getChatModeText());
-        }));
+        }, PWPButton.Style.DARK));
         this.chatInput = new EditBox(this.font, chatX + modeBtnWidth + gap, inputY, chatAvailableWidth - modeBtnWidth - gap, 20, Component.literal("Chat"));
         this.chatInput.setMaxLength(100);
         this.addRenderableWidget(this.chatInput);
-        this.addRenderableWidget(new SquadButton(this.width - 45, 5, 40, 20, Component.literal("Quit"), b -> {
+        this.addRenderableWidget(new PWPButton(this.width - 45, 5, 40, 20, Component.literal("Quit"), b -> {
             if (this.minecraft.level != null) {
                 this.minecraft.level.disconnect();
             }
             this.minecraft.setScreen(new TitleScreen());
-        }));
+        }, PWPButton.Style.DARK));
     }
 
     private Component getChatModeText() {
@@ -894,23 +893,5 @@ public class WarfareDeathScreen extends DeathScreen {
 
     private void playClickSound() {
         this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
-    }
-
-    private static class DeployButton extends Button {
-        public DeployButton(int x, int y, int w, int h, Component msg, Button.OnPress press) {
-            super(x, y, w, h, msg, press, DEFAULT_NARRATION);
-        }
-
-        protected void renderWidget(GuiGraphics gui, int mx, int my, float pt) {
-            int borderColor;
-            int n = borderColor = this.isHovered() && this.active ? -1 : -6710887;
-            if (!this.active) {
-                borderColor = -12303292;
-            }
-            gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, -871296751);
-            gui.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
-            int textColor = this.active ? -1 : -8947849;
-            gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(), this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor);
-        }
     }
 }

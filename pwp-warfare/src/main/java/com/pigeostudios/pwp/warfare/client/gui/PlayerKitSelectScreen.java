@@ -1,6 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pigeostudios.pwp.warfare.client.gui.SquadButton;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
@@ -29,8 +29,8 @@ public class PlayerKitSelectScreen extends Screen {
     private int scrollOff;
     private int maxScroll;
     private int cx;
-    private final List<Button> kitButtons = new ArrayList<>();
-    private final List<Button> eyeButtons = new ArrayList<>();
+    private final List<PWPButton> kitButtons = new ArrayList<>();
+    private final List<PWPButton> eyeButtons = new ArrayList<>();
 
     public PlayerKitSelectScreen(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
         super(Component.translatable("gui.pwpwarfare.kit_select.title"));
@@ -61,17 +61,17 @@ public class PlayerKitSelectScreen extends Screen {
                 ? Component.literal("✔ " + kit.name)
                 : Component.literal(kit.name);
 
-            SquadButton btn = new SquadButton(0, 0, 0, 0, label, b -> {
+            PWPButton btn = new PWPButton(0, 0, 0, 0, label, b -> {
                 PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit.name));
                 onClose();
-            });
+            }, PWPButton.Style.PRIMARY);
             btn.active = kit.available;
             addRenderableWidget(btn);
             kitButtons.add(btn);
 
-            SquadButton eyeBtn = new SquadButton(0, 0, 0, 0, EYE, b ->
+            PWPButton eyeBtn = new PWPButton(0, 0, 0, 0, EYE, b ->
                 minecraft.setScreen(new KitPreviewScreen(this, kit.name, kit.items))
-            );
+            , PWPButton.Style.GHOST);
             addRenderableWidget(eyeBtn);
             eyeButtons.add(eyeBtn);
         }

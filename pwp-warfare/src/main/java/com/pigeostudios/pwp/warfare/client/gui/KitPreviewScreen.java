@@ -3,7 +3,8 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -25,10 +26,11 @@ public class KitPreviewScreen extends Screen {
     @Override
     protected void init() {
         addRenderableWidget(
-            Button.builder(
+            new PWPButton(width / 2 - 40, height - 30, 80, 20,
                 Component.translatable("gui.pwpwarfare.kit_preview.back"),
-                b -> minecraft.setScreen(parent)
-            ).bounds(width / 2 - 40, height - 30, 80, 20).build()
+                b -> minecraft.setScreen(parent),
+                PWPButton.Style.PRIMARY
+            )
         );
     }
 
@@ -43,8 +45,7 @@ public class KitPreviewScreen extends Screen {
         int cx = (width - panelW) / 2;
         int cy = (height - panelH) / 2;
 
-        gui.fill(cx, cy, cx + panelW, cy + panelH, PWPTheme.Colors.SURFACE);
-        gui.renderOutline(cx, cy, panelW, panelH, PWPTheme.Colors.BORDER);
+        PWPPanel.render(gui, cx, cy, panelW, panelH);
         gui.drawCenteredString(font, title, width / 2, cy + 4, PWPTheme.Colors.TEXT_PRIMARY);
         gui.fill(cx + 4, cy + 14, cx + panelW - 4, cy + 15, PWPTheme.Colors.ACCENT);
 

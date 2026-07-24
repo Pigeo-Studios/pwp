@@ -9,7 +9,8 @@ import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -105,32 +106,34 @@ public class FactionVehicleEditorScreen extends Screen {
         yawField.setResponder(val -> { try { yaw = Float.parseFloat(val); } catch (Exception ignored) {} });
         addRenderableWidget(yawField);
 
-        addRenderableWidget(Button.builder(Component.literal("\u21BA"), b -> adjustYaw(-45.0F)).bounds(fieldLeft + 334, 50, 16, 16).build());
-        addRenderableWidget(Button.builder(Component.literal("\u21BB"), b -> adjustYaw(45.0F)).bounds(fieldLeft + 352, 50, 16, 16).build());
+        addRenderableWidget(new PWPButton(fieldLeft + 334, 50, 16, 16, Component.literal("\u21BA"), b -> adjustYaw(-45.0F), PWPButton.Style.PRIMARY));
+        addRenderableWidget(new PWPButton(fieldLeft + 352, 50, 16, 16, Component.literal("\u21BB"), b -> adjustYaw(45.0F), PWPButton.Style.PRIMARY));
 
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustTimer(false, -5)).bounds(fieldLeft + 62, 74, 16, 16).build());
+        addRenderableWidget(new PWPButton(fieldLeft + 62, 74, 16, 16, Component.literal("-"), b -> adjustTimer(false, -5), PWPButton.Style.PRIMARY));
         respawnTimeField = new EditBox(font, fieldLeft + 80, 74, 50, 16, Component.literal(""));
         respawnTimeField.setValue(String.valueOf(respawnTime));
         respawnTimeField.setResponder(val -> { try { respawnTime = Math.max(0, Integer.parseInt(val)); } catch (Exception ignored) {} });
         addRenderableWidget(respawnTimeField);
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustTimer(false, 5)).bounds(fieldLeft + 132, 74, 16, 16).build());
+        addRenderableWidget(new PWPButton(fieldLeft + 132, 74, 16, 16, Component.literal("+"), b -> adjustTimer(false, 5), PWPButton.Style.PRIMARY));
 
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> adjustTimer(true, -5)).bounds(fieldLeft + 202, 74, 16, 16).build());
+        addRenderableWidget(new PWPButton(fieldLeft + 202, 74, 16, 16, Component.literal("-"), b -> adjustTimer(true, -5), PWPButton.Style.PRIMARY));
         initialTimeField = new EditBox(font, fieldLeft + 220, 74, 50, 16, Component.literal(""));
         initialTimeField.setValue(String.valueOf(initialTime));
         initialTimeField.setResponder(val -> { try { initialTime = Math.max(0, Integer.parseInt(val)); } catch (Exception ignored) {} });
         addRenderableWidget(initialTimeField);
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> adjustTimer(true, 5)).bounds(fieldLeft + 272, 74, 16, 16).build());
+        addRenderableWidget(new PWPButton(fieldLeft + 272, 74, 16, 16, Component.literal("+"), b -> adjustTimer(true, 5), PWPButton.Style.PRIMARY));
 
-        addRenderableWidget(Button.builder(
+        addRenderableWidget(new PWPButton(cx + panelW - 120, panelH - 28, 100, 20,
             Component.translatable("gui.pwpwarfare.faction_vehicle_editor.save"),
-            b -> saveVehicle()
-        ).bounds(cx + panelW - 120, panelH - 28, 100, 20).build());
+            b -> saveVehicle(),
+            PWPButton.Style.ACCENT
+        ));
 
-        addRenderableWidget(Button.builder(
+        addRenderableWidget(new PWPButton(cx + 12, panelH - 28, 100, 20,
             Component.literal("< " + Component.translatable("gui.pwpwarfare.faction_vehicle_editor.back").getString()),
-            b -> minecraft.setScreen(new FactionVehicleListScreen(faction))
-        ).bounds(cx + 12, panelH - 28, 100, 20).build());
+            b -> minecraft.setScreen(new FactionVehicleListScreen(faction)),
+            PWPButton.Style.PRIMARY
+        ));
 
         if (!isNew) loadVehicle();
         else loading = false;
@@ -225,8 +228,7 @@ public class FactionVehicleEditorScreen extends Screen {
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
 
-        gui.fill(cx, 8, cx + panelW, 8 + panelH, PWPTheme.Styles.Panel.BG);
-        gui.renderOutline(cx, 8, panelW, panelH, PWPTheme.Styles.Panel.BORDER);
+        PWPPanel.render(gui, cx, 8, panelW, panelH);
         gui.drawCenteredString(font, title.getString(), width / 2, 12, PWPTheme.Colors.TEXT_ACCENT);
 
         if (loading) {

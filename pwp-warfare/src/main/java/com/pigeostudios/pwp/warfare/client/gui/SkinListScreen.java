@@ -7,7 +7,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.CoreAPI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -30,12 +30,11 @@ public class SkinListScreen extends Screen {
     @Override
     protected void init() {
         int cx = this.width / 2;
-        addRenderableWidget(Button.builder(Component.literal("+ Add Skin"), b -> {
+        addRenderableWidget(new PWPButton(cx - 40, 10, 90, 20, Component.literal("+ Add Skin"), b -> {
             Minecraft.getInstance().setScreen(new SkinEditorScreen(this));
-        }).bounds(cx - 40, 10, 90, 20).build());
+        }, PWPButton.Style.PRIMARY));
 
-        addRenderableWidget(Button.builder(Component.literal("Refresh"), b -> loadSkins())
-                .bounds(cx + 55, 10, 55, 20).build());
+        addRenderableWidget(new PWPButton(cx + 55, 10, 55, 20, Component.literal("Refresh"), b -> loadSkins(), PWPButton.Style.PRIMARY));
 
         loadSkins();
     }

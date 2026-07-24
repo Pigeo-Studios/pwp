@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 import com.pwp.coreclient.CoreAPI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
@@ -78,31 +78,26 @@ public class SkinEditorScreen extends Screen {
         for (int i = 0; i < SLOT_TYPES.length; i++) {
             int bx = cx - 160 + i * 64;
             final int fi = i;
-            Button btn = Button.builder(Component.literal(SLOT_TYPES[i]), b -> {
+            addRenderableWidget(new PWPButton(bx, 56, 60, 18, Component.literal(SLOT_TYPES[i]), b -> {
                 slotType = SLOT_TYPES[fi];
                 rebuildButtons();
-            }).bounds(bx, 56, 60, 18).build();
-            addRenderableWidget(btn);
+            }, PWPButton.Style.PRIMARY));
         }
 
         for (int i = 0; i < RARITIES.length; i++) {
             int bx = cx - 170 + i * 57;
             final int fi = i;
-            Button btn = Button.builder(Component.literal(RARITIES[i].substring(0, 3)), b -> {
+            addRenderableWidget(new PWPButton(bx, 78, 53, 16, Component.literal(RARITIES[i].substring(0, 3)), b -> {
                 rarity = RARITIES[fi];
                 rebuildButtons();
-            }).bounds(bx, 78, 53, 16).build();
-            addRenderableWidget(btn);
+            }, PWPButton.Style.PRIMARY));
         }
 
-        addRenderableWidget(Button.builder(Component.literal("Save"), b -> save())
-            .bounds(cx - 60, 230, 50, 20).build());
-        Button delBtn = Button.builder(Component.literal("Delete"), b -> delete())
-            .bounds(cx - 5, 230, 50, 20).build();
+        addRenderableWidget(new PWPButton(cx - 60, 230, 50, 20, Component.literal("Save"), b -> save(), PWPButton.Style.ACCENT));
+        PWPButton delBtn = new PWPButton(cx - 5, 230, 50, 20, Component.literal("Delete"), b -> delete(), PWPButton.Style.DANGER);
         delBtn.active = editSkinId != null;
         addRenderableWidget(delBtn);
-        addRenderableWidget(Button.builder(Component.literal("Back"), b -> close())
-            .bounds(cx + 50, 230, 50, 20).build());
+        addRenderableWidget(new PWPButton(cx + 50, 230, 50, 20, Component.literal("Back"), b -> close(), PWPButton.Style.PRIMARY));
 
         rebuildButtons();
     }
@@ -110,7 +105,7 @@ public class SkinEditorScreen extends Screen {
     private void rebuildButtons() {
         int idx = 0;
         for (Object w : renderables) {
-            if (w instanceof Button btn) {
+            if (w instanceof PWPButton btn) {
                 if (idx < SLOT_TYPES.length) {
                     boolean sel = slotType.equals(SLOT_TYPES[idx]);
                     btn.setMessage(Component.literal(sel ? "\u25b6 " + SLOT_TYPES[idx] : "   " + SLOT_TYPES[idx]));

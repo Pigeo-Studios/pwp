@@ -4,8 +4,6 @@ import java.awt.Color;
 
 public class PWPTheme {
 
-    private PWPTheme() {}
-
     // ============================================================
     //  ЦВЕТА
     // ============================================================
@@ -129,7 +127,6 @@ public class PWPTheme {
         public static final int RADIUS_NONE    = 0;
         public static final int RADIUS_SMALL   = 3;
         public static final int RADIUS_MEDIUM  = 6;
-        public static final int RADIUS_LARGE   = 10;
         public static final int RADIUS_ROUND   = 999;
 
         // Размеры компонентов
@@ -205,46 +202,7 @@ public class PWPTheme {
         private Shadows() {}
     }
 
-    // ============================================================
-    //  ИКОНКИ (Unicode / символы)
-    // ============================================================
-
-    public static class Icons {
-
-        public static final String STAR        = "\u2605";  // ★
-        public static final String STAR_OUTLINE= "\u2606";  // ☆
-        public static final String HEART       = "\u2764";  // ❤
-        public static final String CROSS       = "\u2716";  // ✖
-        public static final String CHECK       = "\u2714";  // ✔
-        public static final String ARROW_UP    = "\u25B2";  // ▲
-        public static final String ARROW_DOWN  = "\u25BC";  // ▼
-        public static final String ARROW_LEFT  = "\u25C0";  // ◀
-        public static final String ARROW_RIGHT = "\u25B6";  // ▶
-        public static final String TRIANGLE    = "\u25B6";  // ▶
-        public static final String CIRCLE      = "\u25CF";  // ●
-        public static final String SQUARE      = "\u25A0";  // ■
-        public static final String DIAMOND     = "\u25C6";  // ◆
-        public static final String SKULL       = "\u2620";  // ☠
-        public static final String STARBURST   = "\u2726";  // ✦
-        public static final String DAGGER      = "\u2020";  // †
-        public static final String CROWN       = "\u265B";  // ♛
-        public static final String BULLET      = "\u2022";  // •
-        public static final String INFINITY    = "\u221E";  // ∞
-        public static final String LIGHTNING   = "\u26A1";  // ⚡
-        public static final String GEAR        = "\u2699";  // ⚙
-        public static final String FLAG        = "\u2691";  // ⚑
-        public static final String CROSSHAIR   = "\u2316";  // ⌖
-        public static final String PLUS        = "+";
-        public static final String MINUS       = "-";
-        public static final String COIN        = "\u25CB";  // ○
-        public static final String XP_ICON     = "\u2606";  // ☆
-        public static final String LEVEL_ICON  = "\u2690";  // ⚐
-        public static final String TROPHY      = "\u265B";  // ♛
-        public static final String SWORDS      = "\u2694";  // ⚔
-        public static final String SHIELD      = "\u26E8";  // ⛨
-
-        private Icons() {}
-    }
+    private PWPTheme() {}
 
     // ============================================================
     //  СТИЛИ КОМПОНЕНТОВ

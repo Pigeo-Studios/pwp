@@ -4,11 +4,10 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketDownedAction;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Button.OnPress;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -17,7 +16,7 @@ import net.minecraft.world.entity.player.Player;
 public class DownedScreen extends Screen {
    private static final ResourceLocation HEARTBEAT_ICON = new ResourceLocation("pwpwarfare", "textures/gui/heartbeat.png");
    private static final ResourceLocation VIGNETTE_TEXTURE = new ResourceLocation("pwpwarfare", "textures/misc/vignette.png");
-   private Button callMedicButton;
+    private PWPButton callMedicButton;
    private final long screenOpenTime;
    private long lastMedicCallTime = 0L;
 
@@ -29,17 +28,17 @@ public class DownedScreen extends Screen {
    protected void init() {
       int cx = this.width / 2;
       int bottomY = this.height - 55;
-      this.addRenderableWidget(new DownedButton(cx - 130, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.give_up"), b -> {
+      this.addRenderableWidget(new PWPButton(cx - 130, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.give_up"), b -> {
          PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(1));
          this.onClose();
-      }, PWPTheme.Colors.DANGER));
-      this.callMedicButton = this.addRenderableWidget(new DownedButton(cx + 10, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.call_medic"), b -> {
+      }, PWPButton.Style.DANGER));
+      this.callMedicButton = this.addRenderableWidget(new PWPButton(cx + 10, bottomY, 120, 24, Component.translatable("gui.pwpwarfare.downed.call_medic"), b -> {
          long currentTime = System.currentTimeMillis();
          if (currentTime - this.lastMedicCallTime >= 15000L) {
             PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(0));
             this.lastMedicCallTime = currentTime;
          }
-      }, PWPTheme.Colors.SUCCESS));
+      }, PWPButton.Style.PRIMARY));
    }
 
    public void render(GuiGraphics gui, int mx, int my, float pt) {
@@ -138,53 +137,5 @@ public class DownedScreen extends Screen {
       return false;
    }
 
-   private static class DownedButton extends Button {
-      private final int accentColor;
-      private float hoverAnim;
-      private long lastTick;
 
-      public DownedButton(int x, int y, int width, int height, Component message, OnPress onPress, int accent) {
-         super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
-         this.accentColor = accent;
-         this.hoverAnim = 0.0F;
-         this.lastTick = System.currentTimeMillis();
-      }
-
-      protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTicks) {
-         if (!this.visible) return;
-
-         long now = System.currentTimeMillis();
-         float dt = Math.min((now - lastTick) / 50.0F, 4.0F);
-         lastTick = now;
-
-         boolean hovered = this.isHovered() && this.active;
-         float target = hovered ? 1.0F : 0.0F;
-         if (target > hoverAnim) {
-            hoverAnim = Math.min(hoverAnim + 0.15F * dt, target);
-         } else {
-            hoverAnim = Math.max(hoverAnim - 0.12F * dt, target);
-         }
-
-         int bg = lerpColor(PWPTheme.Styles.Button.DARK_BG, accentColor, hoverAnim * 0.3F);
-         int border = this.active ? (hovered ? accentColor : PWPTheme.Colors.BORDER) : PWPTheme.Colors.TEXT_DIM;
-         if (!this.active) border = PWPTheme.Colors.TEXT_DIM;
-
-         gui.fill(this.getX(), this.getY(), this.getX() + this.width, this.getY() + this.height, bg);
-         gui.renderOutline(this.getX(), this.getY(), this.width, this.height, border);
-         int textColor = this.active ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
-         gui.drawCenteredString(Minecraft.getInstance().font, this.getMessage(),
-            this.getX() + this.width / 2, this.getY() + (this.height - 8) / 2, textColor);
-         if (this.active && hovered) {
-            gui.fill(this.getX(), this.getY() + this.height - 2, this.getX() + 2, this.getY() + this.height, accentColor);
-         }
-      }
-
-      private int lerpColor(int from, int to, float t) {
-         if (t <= 0) return from;
-         if (t >= 1) return to;
-         int a1 = (from >> 24) & 0xFF, r1 = (from >> 16) & 0xFF, g1 = (from >> 8) & 0xFF, b1 = from & 0xFF;
-         int a2 = (to >> 24) & 0xFF, r2 = (to >> 16) & 0xFF, g2 = (to >> 8) & 0xFF, b2 = to & 0xFF;
-         return ((int)(a1 + (a2 - a1) * t) << 24) | ((int)(r1 + (r2 - r1) * t) << 16) | ((int)(g1 + (g2 - g1) * t) << 8) | (int)(b1 + (b2 - b1) * t);
-      }
-   }
 }

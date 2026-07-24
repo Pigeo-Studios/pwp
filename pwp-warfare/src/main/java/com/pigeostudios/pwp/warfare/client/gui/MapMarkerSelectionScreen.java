@@ -6,7 +6,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -32,10 +32,10 @@ public class MapMarkerSelectionScreen extends Screen {
          int col = i % 4;
          int x = startX + col * 85;
          int y = startY + row * 80;
-          this.addRenderableWidget(Button.builder(Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")), b -> {
+           this.addRenderableWidget(new PWPButton(x, y + 35, 80, 20, Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")), b -> {
             PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(this.targetPos.getX(), this.targetPos.getZ(), type));
             this.onClose();
-         }).bounds(x, y + 35, 80, 20).build());
+         }, PWPButton.Style.PRIMARY));
          i++;
       }
    }
