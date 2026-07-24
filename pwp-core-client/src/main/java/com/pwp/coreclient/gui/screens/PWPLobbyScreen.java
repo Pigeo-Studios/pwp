@@ -3,21 +3,9 @@ package com.pwp.coreclient.gui.screens;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.pwp.coreclient.gui.StatsScreen;
 import com.pwp.coreclient.gui.animations.Easing;
-import com.pwp.coreclient.gui.components.PWPCard;
-import com.pwp.coreclient.gui.components.PWPLayout;
-import com.pwp.coreclient.gui.components.PWPPanel;
-import com.pwp.coreclient.gui.components.PWPScrollPanel;
-import com.pwp.coreclient.gui.components.PWPTabs;
-import com.pwp.coreclient.gui.components.PWPToastManager;
-import com.pwp.coreclient.gui.components.RoundedRect;
+import com.pwp.coreclient.gui.components.*;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.network.OpenMatchListScreenPacket;
-import com.pwp.coreclient.network.OpenMatchScreenPacket;
-import com.pwp.coreclient.network.OpenModeVotePacket;
-import com.pwp.coreclient.network.OpenVotingScreenPacket;
-import com.pwp.coreclient.network.PacketHandler;
-import com.pwp.coreclient.network.VoteMapPacket;
-import com.pwp.coreclient.network.VoteModePacket;
+import com.pwp.coreclient.network.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -42,7 +30,6 @@ public class PWPLobbyScreen extends Screen {
     private static final int TAB_STATS = 2;
 
     private int selectedTab;
-
     private PWPTabs tabs;
     private PWPScrollPanel scrollPanel;
     private PWPToastManager toastManager;
@@ -62,8 +49,10 @@ public class PWPLobbyScreen extends Screen {
     private long modeVoteOpenedAt;
 
     private StatsScreen statsRenderer;
-    private int statsTab;
     private boolean statsInitDone;
+
+    private boolean listLoadFailed;
+    private boolean listLoading;
 
     private static final Map<String, ResourceLocation> imageCache = new HashMap<>();
 
@@ -71,18 +60,17 @@ public class PWPLobbyScreen extends Screen {
         super(Component.literal("ЛОББИ"));
         this.openTime = System.currentTimeMillis();
         instance = this;
+        if (listData == null) {
+            listLoading = true;
+        }
     }
-
-    // ====== STATIC PACKET HANDLERS ======
 
     public static void openMatch(OpenMatchScreenPacket pkt) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         if (instance != null) {
             instance.matchData = pkt;
-            if (instance.selectedTab != TAB_MATCHES) {
-                instance.selectedTab = TAB_MATCHES;
-            }
+            instance.selectedTab = TAB_MATCHES;
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.matchData = pkt;
@@ -137,10 +125,14 @@ public class PWPLobbyScreen extends Screen {
         if (mc.player == null) return;
         if (instance != null) {
             instance.listData = pkt;
+            instance.listLoading = false;
+            instance.listLoadFailed = false;
             instance.selectedTab = TAB_MATCHES;
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.listData = pkt;
+            s.listLoading = false;
+            s.listLoadFailed = false;
             s.selectedTab = TAB_MATCHES;
             mc.setScreen(s);
         }
@@ -149,14 +141,14 @@ public class PWPLobbyScreen extends Screen {
     public static void updateList(OpenMatchListScreenPacket pkt) {
         if (instance == null) return;
         instance.listData = pkt;
+        instance.listLoading = false;
+        instance.listLoadFailed = false;
     }
 
     public static void resetInstance() {
         instance = null;
         imageCache.clear();
     }
-
-    // ====== LIFECYCLE ======
 
     @Override
     protected void init() {
@@ -230,7 +222,6 @@ public class PWPLobbyScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         renderBackground(gui);
-
         PWPLayout.renderHeader(gui, "ЛОББИ", width);
 
         if (tabs != null) {
@@ -243,7 +234,6 @@ public class PWPLobbyScreen extends Screen {
         int panelH = height - panelY - 30;
 
         PWPPanel.render(gui, cx - contentW / 2, panelY, contentW, panelH);
-
         gui.enableScissor(cx - contentW / 2, panelY, cx + contentW / 2, panelY + panelH);
 
         switch (selectedTab) {
@@ -260,6 +250,17 @@ public class PWPLobbyScreen extends Screen {
 
         PWPToastManager.render(gui);
 
+        renderOverlayFade(gui);
+
+        int navY = height - 26;
+        boolean backHovered = mouseX >= width / 2 - 40 && mouseX <= width / 2 + 40 && mouseY >= navY && mouseY <= navY + 20;
+        int backColor = backHovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
+        gui.drawCenteredString(font, Component.literal("< Назад"), width / 2, navY + 6, backColor);
+
+        super.render(gui, mouseX, mouseY, partialTick);
+    }
+
+    private void renderOverlayFade(GuiGraphics gui) {
         if (closing) {
             long elapsed = System.currentTimeMillis() - closeStartTime;
             float t = Math.min(elapsed / 150.0F, 1);
@@ -273,132 +274,118 @@ public class PWPLobbyScreen extends Screen {
                 gui.fill(0, 0, width, height, PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BACKGROUND, 1.0F - alpha));
             }
         }
-
-        int navY = height - 26;
-        boolean backHovered = mouseX >= width / 2 - 40 && mouseX <= width / 2 + 40 && mouseY >= navY && mouseY <= navY + 20;
-        int backColor = backHovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
-        gui.drawCenteredString(font, Component.literal("< Назад"), width / 2, navY + 6, backColor);
-
-        super.render(gui, mouseX, mouseY, partialTick);
     }
 
-    // ====== MATCHES TAB ======
-
     private void renderMatchesTab(GuiGraphics gui, int mx, int my, int cx, int panelY, int contentW, int panelH) {
-        int bx = cx - contentW / 2;
-        int scrollOff = scrollPanel != null ? (int) -scrollPanel.getScrollOffset() : 0;
-        int startY = panelY + 4 + scrollOff;
-        int y = startY;
-
-        int headerH = 0;
-        if (matchData != null) {
-            y = renderCurrentMatch(gui, bx, y, contentW, mx, my);
-            y += 8;
-            headerH = 72 + 8;
-        }
-
-        if (listData == null || listData.count == 0) {
-            String msg = matchData == null ? "Нет активных матчей" : "";
-            if (!msg.isEmpty()) {
-                gui.drawCenteredString(font, Component.literal(msg), cx, y + 20, PWPTheme.Colors.TEXT_DIM);
-            }
-            if (scrollPanel != null) scrollPanel.setContentHeight(0);
+        if (listLoading && listData == null) {
+            renderSkeletons(gui, cx, panelY, contentW, panelH);
             return;
         }
 
-        int entryH = 68;
+        if (listLoadFailed) {
+            PWPErrorState.render(gui, "Ошибка загрузки", "Проверьте подключение к серверу", cx, panelY + panelH / 2);
+            return;
+        }
+
+        int bx = cx - contentW / 2;
+        int scrollOff = scrollPanel != null ? (int) -scrollPanel.getScrollOffset() : 0;
+        int y = panelY + 4 + scrollOff;
+
+        if (matchData != null) {
+            y = renderCurrentMatch(gui, bx, y, contentW, mx, my);
+            y += 8;
+        }
+
+        if (listData == null || listData.count == 0) {
+            if (scrollPanel != null) scrollPanel.setContentHeight(0);
+            if (matchData == null) {
+                String msg = "Нет активных матчей";
+                PWPEmptyState.render(gui, msg, "Попробуйте позже или переключитесь на вкладку голосования", cx, panelY + panelH / 2);
+            }
+            return;
+        }
+
+        int entryH = PWPMatchCard.cardHeight();
         int gap = 8;
-        int totalEntries = listData.count;
-        int totalH = headerH + entryH * totalEntries + gap * (totalEntries - 1);
+        int totalH = entryH * listData.count + gap * (listData.count - 1);
         if (scrollPanel != null) {
             scrollPanel.setContentHeight(totalH + 12);
         }
 
-        for (int i = 0; i < totalEntries; i++) {
+        for (int i = 0; i < listData.count; i++) {
             y = renderMatchEntry(gui, bx, y, contentW, entryH, i, mx, my);
             y += gap;
         }
     }
 
+    private void renderSkeletons(GuiGraphics gui, int cx, int panelY, int contentW, int panelH) {
+        long now = System.currentTimeMillis();
+        int cardW = Math.min(360, contentW - 16);
+        int cardH = PWPMatchCard.cardHeight();
+        int gap = 8;
+        int cols = Math.max(1, (contentW + gap) / (cardW + gap));
+        int gridW = cols * cardW + (cols - 1) * gap;
+        int gridX = cx - gridW / 2;
+        int limit = 4;
+
+        for (int i = 0; i < limit; i++) {
+            int row = i / cols;
+            int col = i % cols;
+            int sx = gridX + col * (cardW + gap);
+            int sy = panelY + 4 + row * (cardH + gap);
+            PWPSkeleton.render(gui, sx, sy, cardW, cardH, now + i * 200);
+        }
+    }
+
     private int renderCurrentMatch(GuiGraphics gui, int bx, int y, int w, int mx, int my) {
         int h = 72;
-        PWPPanel.render(gui, bx, y, w, h, PWPPanel.Variant.ACCENT_BORDER, false);
-
-        var f = Minecraft.getInstance().font;
-        gui.drawCenteredString(f, Component.literal("ТЕКУЩИЙ МАТЧ").withStyle(s -> s.withBold(true)),
-            bx + w / 2, y + 4, PWPTheme.Colors.TEXT_ACCENT);
-
-        int ly = y + 18;
-        gui.drawCenteredString(f, Component.literal("\u00a77Карта: \u00a7e" + matchData.mapDisplayName), bx + w / 2, ly, PWPTheme.Colors.TEXT_PRIMARY);
-        ly += 12;
-        gui.drawCenteredString(f, Component.literal("\u00a77Режим: \u00a7e" + matchData.modeDisplayName), bx + w / 2, ly, PWPTheme.Colors.TEXT_PRIMARY);
-        ly += 12;
-        String fStr = "\u00a79" + formatFaction(matchData.blueFaction) + " \u00a77vs \u00a7c" + formatFaction(matchData.redFaction);
-        String tStr = "\u00a79" + matchData.blueTickets + " \u00a77| \u00a7c" + matchData.redTickets;
-        gui.drawCenteredString(f, Component.literal(fStr + "  \u00a77(" + tStr + ")"), bx + w / 2, ly, PWPTheme.Colors.TEXT_SECONDARY);
-
+        boolean hovered = PWPCard.isHovered(bx, y, w, h, mx, my);
+        ResourceLocation preview = getTexture(matchData.mapDisplayName, null, "current_");
+        PWPMatchCard.render(gui, bx, y, w, h,
+            matchData.mapDisplayName, matchData.modeDisplayName,
+            formatDuration(matchData.remainingSeconds),
+            matchData.onlinePlayers, 50,
+            formatFaction(matchData.blueFaction), formatFaction(matchData.redFaction),
+            matchData.blueTickets, matchData.redTickets,
+            "PLAYING".equals(matchData.status) ? PWPMatchCard.Status.PLAYING : PWPMatchCard.Status.WAITING,
+            preview, true, hovered);
         return y + h;
     }
 
     private int renderMatchEntry(GuiGraphics gui, int bx, int y, int w, int h, int index, int mx, int my) {
-        boolean hover = mx >= bx && mx <= bx + w && my >= y && my <= y + h;
+        boolean hovered = PWPMatchCard.isHovered(bx, y, w, h, mx, my);
         boolean isPlaying = "PLAYING".equals(listData.statuses[index]);
         boolean isStarting = "STARTING".equals(listData.statuses[index]);
+        int max = listData.maxPlayers[index];
+        int cur = listData.playerCounts[index];
+        boolean isFull = cur >= max;
 
-        int r = PWPTheme.Spacing.RADIUS_MEDIUM;
-        int bg = hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE;
-        int border = isPlaying ? PWPTheme.Colors.SUCCESS
-            : hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER;
+        PWPMatchCard.Status status;
+        if (isPlaying && isFull) status = PWPMatchCard.Status.FULL;
+        else if (isPlaying) status = PWPMatchCard.Status.PLAYING;
+        else if (isStarting) status = PWPMatchCard.Status.STARTING;
+        else status = PWPMatchCard.Status.WAITING;
 
-        RoundedRect.fill(gui, bx, y, w, h, r, bg);
-        RoundedRect.border(gui, bx, y, w, h, r, 1, border);
+        ResourceLocation preview = getTexture(listData.mapNames[index], listData.worldPaths[index], "match_");
 
-        int imgSize = 48;
-        int imgX = bx + 8;
-        int imgY = y + (h - imgSize) / 2;
-        gui.fill(imgX, imgY, imgX + imgSize, imgY + imgSize, 0xFF000000);
-
-        ResourceLocation tex = getTexture(listData.mapNames[index], listData.worldPaths[index], "list_");
-        if (tex != null) {
-            gui.blit(tex, imgX + 1, imgY + 1, 0, 0, imgSize - 2, imgSize - 2, imgSize - 2, imgSize - 2);
-        }
-
-        var f = Minecraft.getInstance().font;
-        int textX = imgX + imgSize + 12;
-        int textMaxW = bx + w - textX - 8;
-
-        String nameStr = (isPlaying ? "\u00a7a\u25CF " : "\u00a7e\u25B6 ") + listData.displayNames[index];
-        gui.drawString(f, nameStr, textX, y + 5, 0xFFFFFF);
-
-        String elapsed = formatDuration(listData.elapsedSeconds[index]);
-        gui.drawString(f, "\u00a77" + elapsed + "  |  \u00a7e" + listData.playerCounts[index] + "\u00a77/" + listData.maxPlayers[index],
-            textX, y + 17, PWPTheme.Colors.TEXT_SECONDARY);
-
-        String factionStr = "\u00a79" + formatFaction(listData.blueFactions[index]) + " \u00a77vs \u00a7c" + formatFaction(listData.redFactions[index]);
-        if (f.width(factionStr) > textMaxW) {
-            factionStr = f.plainSubstrByWidth(factionStr, textMaxW - 4) + "...";
-        }
-        gui.drawString(f, factionStr, textX, y + 29, PWPTheme.Colors.TEXT_SECONDARY);
-
-        String ticketStr = "\u00a79" + listData.blueTickets[index] + " \u00a77| \u00a7c" + listData.redTickets[index];
-        gui.drawString(f, ticketStr, textX, y + 41, PWPTheme.Colors.TEXT_SECONDARY);
-
-        String actionStr = isPlaying ? "\u00a7e\u25B6 Войти" : "\u00a77Запуск...";
-        int actionCol = isPlaying ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_DIM;
-        gui.drawString(f, actionStr, textX, y + 54, actionCol);
-
+        PWPMatchCard.render(gui, bx, y, w, h,
+            listData.displayNames[index], "",
+            formatDuration(listData.elapsedSeconds[index]),
+            cur, max,
+            formatFaction(listData.blueFactions[index]), formatFaction(listData.redFactions[index]),
+            listData.blueTickets[index], listData.redTickets[index],
+            status, preview, false, hovered);
         return y + h;
     }
 
-    // ====== VOTING TAB ======
-
     private void renderVotingTab(GuiGraphics gui, int mx, int my, int cx, int panelY, int contentW, int panelH) {
-        if (modeVoteData != null) {
-            renderModeVote(gui, mx, my, cx, panelY, contentW, panelH);
+        if (modeVoteData != null && modeVoteData.modeNames.length > 0) {
+            renderModeVotePanel(gui, mx, my, cx, panelY, contentW, panelH);
             return;
         }
+
         if (voteData == null || voteData.mapNames.length == 0) {
-            gui.drawCenteredString(font, Component.literal("Голосование не активно"), cx, panelY + panelH / 2, PWPTheme.Colors.TEXT_DIM);
+            PWPEmptyState.render(gui, "Голосование не активно", null, cx, panelY + panelH / 2);
             return;
         }
 
@@ -420,6 +407,7 @@ public class PWPLobbyScreen extends Screen {
         int gridW = cols * cardW + (cols - 1) * gap;
         int gridX = cx - gridW / 2;
         int gridY = panelY + 22;
+        boolean voteFinished = remaining <= 0;
 
         for (int i = 0; i < voteData.mapNames.length; i++) {
             int row = i / cols;
@@ -430,8 +418,10 @@ public class PWPLobbyScreen extends Screen {
             boolean sel = voteData.mapNames[i].equals(votedMap);
             boolean isLeader = voteData.mapNames[i].equals(voteData.leaderName) && voteData.totalVotes > 0;
             boolean hover = mx >= ix && mx <= ix + cardW && my >= iy && my <= iy + cardH;
+            boolean disabled = voteFinished || (votedMap != null && !sel);
 
-            PWPCard.State state = PWPCard.getState(sel, hover || isLeader);
+            PWPCard.State state = disabled ? PWPCard.State.DISABLED
+                : PWPCard.getState(sel, hover || isLeader);
             PWPCard.render(gui, ix, iy, cardW, cardH, state);
 
             int imgSize = 48;
@@ -451,10 +441,9 @@ public class PWPLobbyScreen extends Screen {
             String nameStr = (sel ? "\u00a7e\u2714 " : isLeader ? "\u00a76\u265B " : "") + voteData.mapDisplayNames[i];
             gui.drawString(f, nameStr, textX, iy + 4, 0xFFFFFF);
 
-            String desc = voteData.mapDescriptions[i];
-            if (desc != null && !desc.isEmpty()) {
-                String descDisp = f.plainSubstrByWidth(desc, textMaxW);
-                gui.drawString(f, "\u00a77" + descDisp, textX, iy + 16, PWPTheme.Colors.TEXT_SECONDARY);
+            if (voteData.mapDescriptions[i] != null && !voteData.mapDescriptions[i].isEmpty()) {
+                String desc = f.plainSubstrByWidth(voteData.mapDescriptions[i], textMaxW);
+                gui.drawString(f, "\u00a77" + desc, textX, iy + 16, PWPTheme.Colors.TEXT_SECONDARY);
             }
 
             int votes = voteData.voteCounts[i];
@@ -480,9 +469,9 @@ public class PWPLobbyScreen extends Screen {
         }
     }
 
-    private void renderModeVote(GuiGraphics gui, int mx, int my, int cx, int panelY, int contentW, int panelH) {
+    private void renderModeVotePanel(GuiGraphics gui, int mx, int my, int cx, int panelY, int contentW, int panelH) {
         if (modeVoteData == null || modeVoteData.modeNames.length == 0) {
-            gui.drawCenteredString(font, Component.literal("Голосование за режим не активно"), cx, panelY + panelH / 2, PWPTheme.Colors.TEXT_DIM);
+            PWPEmptyState.render(gui, "Голосование за режим не активно", null, cx, panelY + panelH / 2);
             return;
         }
 
@@ -502,6 +491,7 @@ public class PWPLobbyScreen extends Screen {
         int gap = 12;
         int totalH = modeVoteData.modeNames.length * (cardH + gap);
         int startY = panelY + 22 + (panelH - 22 - totalH) / 2;
+        boolean voteFinished = remaining <= 0;
 
         for (int i = 0; i < modeVoteData.modeNames.length; i++) {
             int iy = startY + i * (cardH + gap);
@@ -509,8 +499,9 @@ public class PWPLobbyScreen extends Screen {
 
             boolean sel = modeVoteData.modeNames[i].equals(votedMode);
             boolean hover = mx >= ix && mx <= ix + cardW && my >= iy && my <= iy + cardH;
+            boolean disabled = voteFinished || (votedMode != null && !sel);
 
-            PWPCard.State state = PWPCard.getState(sel, hover);
+            PWPCard.State state = disabled ? PWPCard.State.DISABLED : PWPCard.getState(sel, hover);
             PWPCard.render(gui, ix, iy, cardW, cardH, state);
 
             var f = Minecraft.getInstance().font;
@@ -545,23 +536,18 @@ public class PWPLobbyScreen extends Screen {
         }
     }
 
-    // ====== STATS TAB ======
-
     private void renderStatsTab(GuiGraphics gui, int mx, int my, int cx, int panelY, int contentW, int panelH) {
         if (statsRenderer == null) {
-            gui.drawCenteredString(font, Component.literal("Загрузка..."), cx, panelY + panelH / 2, PWPTheme.Colors.TEXT_DIM);
+            PWPEmptyState.render(gui, "Загрузка...", null, cx, panelY + panelH / 2);
             return;
         }
         statsRenderer.renderContent(gui, mx, my, panelY + 2, panelH - 4);
     }
 
-    // ====== CLICK HANDLING ======
-
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (button != 0) return super.mouseClicked(mx, my, button);
 
-        // Check "Назад" button area
         int navY = height - 26;
         if (mx >= width / 2 - 40 && mx <= width / 2 + 40 && my >= navY && my <= navY + 20) {
             startClose();
@@ -623,7 +609,7 @@ public class PWPLobbyScreen extends Screen {
         if (listData == null || listData.count == 0) return false;
 
         int bx = cx - contentW / 2;
-        int entryH = 68;
+        int entryH = PWPMatchCard.cardHeight();
         int gap = 8;
 
         double scrollOff = scrollPanel != null ? scrollPanel.getScrollOffset() : 0;
@@ -634,8 +620,12 @@ public class PWPLobbyScreen extends Screen {
             int y = startY + i * (entryH + gap) - (int) scrollOff;
             if (mx >= bx && mx <= bx + contentW && my >= y && my <= y + entryH) {
                 if ("PLAYING".equals(listData.statuses[i])) {
-                    PacketHandler.INSTANCE.sendToServer(
-                        new com.pwp.coreclient.network.JoinMatchServerPacket(listData.serverIds[i]));
+                    int max = listData.maxPlayers[i];
+                    int cur = listData.playerCounts[i];
+                    if (cur < max) {
+                        PacketHandler.INSTANCE.sendToServer(
+                            new JoinMatchServerPacket(listData.serverIds[i]));
+                    }
                 }
                 return true;
             }
@@ -644,7 +634,10 @@ public class PWPLobbyScreen extends Screen {
     }
 
     private boolean handleVotingClick(double mx, double my, int cx, int panelY, int contentW, int panelH) {
-        if (modeVoteData != null) {
+        if (modeVoteData != null && modeVoteData.modeNames.length > 0) {
+            int remaining = modeVoteData.remainingSeconds - (int) ((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
+            if (remaining <= 0 || votedMode != null) return false;
+
             int cardW = Math.min(340, width - 40);
             int cardH = 80;
             int gap = 12;
@@ -665,6 +658,9 @@ public class PWPLobbyScreen extends Screen {
         }
 
         if (voteData == null || voteData.mapNames.length == 0) return false;
+
+        int remaining = voteData.remainingSeconds - (int) ((System.currentTimeMillis() - voteOpenedAt) / 1000);
+        if (remaining <= 0 || votedMap != null) return false;
 
         int cardW = Math.min(320, width - 60);
         int cardH = 66;
@@ -689,8 +685,6 @@ public class PWPLobbyScreen extends Screen {
         }
         return false;
     }
-
-    // ====== CLOSE ======
 
     private void startClose() {
         if (closing) return;
@@ -719,8 +713,6 @@ public class PWPLobbyScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
-
-    // ====== UTILITY ======
 
     private int panelTop() {
         return PWPPanel.titleHeight() + 34;

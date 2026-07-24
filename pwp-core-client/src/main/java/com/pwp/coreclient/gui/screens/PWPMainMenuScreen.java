@@ -1,6 +1,7 @@
 package com.pwp.coreclient.gui.screens;
 
 import com.pwp.coreclient.gui.animations.Easing;
+import com.pwp.coreclient.gui.components.PWPBadge;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPLayout;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -22,14 +23,18 @@ public class PWPMainMenuScreen extends Screen {
     private final long openTime;
     private boolean connecting;
 
+    private enum ServerStatus { UNKNOWN, ONLINE, OFFLINE, MAINTENANCE }
+    private ServerStatus serverStatus = ServerStatus.UNKNOWN;
+
     private PWPButton playBtn;
-    private PWPButton singleBtn;
-    private PWPButton optionsBtn;
-    private PWPButton quitBtn;
 
     public PWPMainMenuScreen() {
         super(Component.literal("PWP"));
         openTime = System.currentTimeMillis();
+    }
+
+    public void setServerStatus(ServerStatus status) {
+        this.serverStatus = status;
     }
 
     @Override
@@ -43,42 +48,54 @@ public class PWPMainMenuScreen extends Screen {
 
         int totalBtnH = 4 * btnH + 3 * gap;
         int startY = (int) (height * 0.52f);
-        if (startY + totalBtnH > height - 40) {
-            startY = height - 40 - totalBtnH;
+        if (startY + totalBtnH > height - 60) {
+            startY = height - 60 - totalBtnH;
         }
+
+        boolean canPlay = serverStatus != ServerStatus.OFFLINE && serverStatus != ServerStatus.MAINTENANCE;
 
         playBtn = addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY, btnW, btnH,
-            Component.translatable("pwp_core.main_menu.play"),
+            getPlayButtonText(),
             btn -> {
-                if (connecting) return;
+                if (connecting || !canPlay) return;
                 connecting = true;
                 Minecraft.getInstance().setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
                 ClientConnectHandler.connect("pigeo.asuscomm.com", 25565);
             },
-            PWPButton.Style.ACCENT
+            canPlay ? PWPButton.Style.ACCENT : PWPButton.Style.DARK
         ));
+        playBtn.active = canPlay;
 
-        singleBtn = addRenderableWidget(new PWPButton(
+        addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY + btnH + gap, btnW, btnH,
             Component.translatable("pwp_core.main_menu.singleplayer"),
             btn -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)),
             PWPButton.Style.PRIMARY
         ));
 
-        optionsBtn = addRenderableWidget(new PWPButton(
+        addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY + (btnH + gap) * 2, btnW, btnH,
             Component.translatable("pwp_core.main_menu.settings"),
             btn -> Minecraft.getInstance().setScreen(new OptionsScreen(this, Minecraft.getInstance().options)),
             PWPButton.Style.DARK
         ));
 
-        quitBtn = addRenderableWidget(new PWPButton(
+        addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY + (btnH + gap) * 3, btnW, btnH,
             Component.translatable("pwp_core.main_menu.quit"),
             btn -> Minecraft.getInstance().stop(),
             PWPButton.Style.DANGER
         ));
+    }
+
+    private Component getPlayButtonText() {
+        return switch (serverStatus) {
+            case OFFLINE -> Component.literal("Сервер недоступен");
+            case MAINTENANCE -> Component.literal("Технические работы");
+            case ONLINE -> Component.translatable("pwp_core.main_menu.play");
+            default -> Component.translatable("pwp_core.main_menu.play");
+        };
     }
 
     @Override
@@ -100,12 +117,39 @@ public class PWPMainMenuScreen extends Screen {
 
         renderButtons(gui, mouseX, mouseY, partialTick, elapsed);
 
+        float statusFade = animFade(elapsed, 600, 300);
+        if (statusFade > 0) {
+            renderServerStatus(gui, cx, statusFade);
+        }
+
         float footerFade = animFade(elapsed, 500, 300);
         if (footerFade > 0) {
             gui.setColor(1, 1, 1, footerFade);
             PWPLayout.renderFooter(gui, "PWP v1.0.1", width, height);
             gui.setColor(1, 1, 1, 1);
         }
+    }
+
+    private void renderServerStatus(GuiGraphics gui, int cx, float fade) {
+        int y = (int) (height * 0.72f);
+        gui.setColor(1, 1, 1, fade);
+
+        String text;
+        int color;
+        switch (serverStatus) {
+            case ONLINE -> { text = "Сервер: ONLINE"; color = PWPTheme.Colors.SUCCESS; }
+            case OFFLINE -> { text = "Сервер недоступен"; color = PWPTheme.Colors.DANGER; }
+            case MAINTENANCE -> { text = "Технические работы"; color = PWPTheme.Colors.WARNING; }
+            default -> { text = "Проверка подключения..."; color = PWPTheme.Colors.TEXT_DIM; }
+        }
+
+        gui.drawCenteredString(font, Component.literal(text), cx, y, color);
+
+        if (serverStatus == ServerStatus.OFFLINE || serverStatus == ServerStatus.MAINTENANCE) {
+            gui.drawCenteredString(font, Component.literal("Попробуйте позже"), cx, y + 12, PWPTheme.Colors.TEXT_DIM);
+        }
+
+        gui.setColor(1, 1, 1, 1);
     }
 
     @Override
@@ -164,27 +208,25 @@ public class PWPMainMenuScreen extends Screen {
     }
 
     private void renderButtons(GuiGraphics gui, int mouseX, int mouseY, float partialTick, float elapsed) {
-        PWPButton[] btns = { playBtn, singleBtn, optionsBtn, quitBtn };
+        var btns = renderables;
         int startDelay = 300;
 
-        for (int i = 0; i < btns.length; i++) {
-            float progress = animFade(elapsed, startDelay + i * 50, 250);
+        for (int i = 0; i < btns.size(); i++) {
+            var w = btns.get(i);
+            if (!(w instanceof PWPButton btn)) continue;
 
-            if (progress <= 0) {
-                btns[i].visible = false;
-                continue;
-            }
+            float progress = animFade(elapsed, startDelay + i * 50, 250);
+            if (progress <= 0) { btn.visible = false; continue; }
 
             float eased = Math.min(progress, 1);
             int slideY = (int) ((1 - eased) * 12);
-
-            btns[i].setAnimAlpha(eased);
-            btns[i].visible = true;
+            btn.setAnimAlpha(eased);
+            btn.visible = true;
 
             var pose = gui.pose();
             pose.pushPose();
             pose.translate(0, slideY, 0);
-            btns[i].render(gui, mouseX, mouseY, partialTick);
+            btn.render(gui, mouseX, mouseY, partialTick);
             pose.popPose();
         }
     }

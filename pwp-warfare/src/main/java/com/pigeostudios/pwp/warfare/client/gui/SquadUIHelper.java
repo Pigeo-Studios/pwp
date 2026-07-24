@@ -1,0 +1,368 @@
+package com.pigeostudios.pwp.warfare.client.gui;
+
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
+import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.coreclient.gui.components.PWPContextMenu;
+import com.pwp.coreclient.gui.components.PWPPanel;
+import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+public class SquadUIHelper {
+
+    private static final int SIDEBAR_WIDTH = 170;
+    private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
+    private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
+    private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
+
+    private SquadUIHelper() {}
+
+    public static void renderSquadList(GuiGraphics gui, int mx, int my, Set<Integer> expandedSquads, boolean applyCmdVisible) {
+        String myName = Minecraft.getInstance().player.getScoreboardName();
+        String myTeam = getPlayerTeam().toUpperCase();
+        String myDim = Minecraft.getInstance().level.dimension().location().toString();
+        boolean amIInSquad = isPlayerInSquad();
+        boolean isBlue = myTeam.contains("BLUE");
+        int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+
+        int currentY = applyCmdVisible ? 35 : 10;
+        List<WarfareWorldData.Squad> squads = getSortedSquads();
+        int idx = 1;
+
+        for (WarfareWorldData.Squad squad : squads) {
+            boolean isMySquad = squad.members.contains(myName);
+            boolean amILeader = squad.leader.equals(myName);
+            boolean isExpanded = expandedSquads.contains(squad.id);
+            boolean isCMD = squad.id == teamCMDId && teamCMDId != -1;
+
+            String prefix = isCMD ? "[CMD] " : "";
+            int squadNameColor = isCMD ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.SUCCESS;
+            gui.drawString(Minecraft.getInstance().font, idx + ".", 5, currentY, 0xFFFFFF);
+            String display = prefix + squad.name + " (" + squad.members.size() + "/9)";
+            gui.drawString(Minecraft.getInstance().font, display, 25, currentY, squadNameColor);
+
+            String actionText = "";
+            int actionColor = 0xFFFFFF;
+            boolean clickable = true;
+            if (isMySquad) {
+                actionText = "LEAVE";
+                actionColor = PWPTheme.Colors.DANGER;
+            } else if (!amIInSquad) {
+                if (squad.isLocked) { actionText = "LOCKED"; actionColor = PWPTheme.Colors.TEXT_DIM; clickable = false; }
+                else if (squad.members.size() >= 9) { actionText = "FULL"; actionColor = PWPTheme.Colors.TEXT_DIM; clickable = false; }
+                else { actionText = "JOIN"; actionColor = PWPTheme.Colors.TEXT_ACCENT; }
+            }
+
+            int actionX = 0;
+            if (!actionText.isEmpty()) {
+                int aw = Minecraft.getInstance().font.width(actionText);
+                actionX = SIDEBAR_WIDTH - aw - 10;
+                boolean hover = mx >= actionX && mx <= actionX + aw && my >= currentY && my <= currentY + 9;
+                gui.drawString(Minecraft.getInstance().font, actionText, actionX, currentY, hover && clickable ? 0xFFFFFF : actionColor);
+            }
+
+            renderSquadIcons(gui, squad, amILeader, isExpanded, actionX, currentY);
+
+            currentY += 12;
+            if (isExpanded) {
+                currentY = renderMembers(gui, mx, my, currentY, squad, isMySquad, myName);
+                currentY += 4;
+            }
+            currentY += 4;
+            idx++;
+        }
+    }
+
+    private static void renderSquadIcons(GuiGraphics gui, WarfareWorldData.Squad squad, boolean amILeader, boolean isExpanded, int actionX, int currentY) {
+        RenderSystem.enableBlend();
+        int arrowX = (actionX > 0 ? actionX : 160) - 12;
+        if (isExpanded) {
+            RenderSystem.setShaderColor(1f, 0.8f, 0.2f, 1f);
+            gui.blit(ARROW_DOWN, arrowX, currentY + 1, 0, 0, 8, 8, 8, 8);
+        } else {
+            RenderSystem.setShaderColor(0.7f, 0.7f, 0.7f, 1f);
+            gui.blit(ARROW_UP, arrowX, currentY + 1, 0, 0, 8, 8, 8, 8);
+        }
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+
+        if (amILeader || squad.isLocked) {
+            int lockX = arrowX - 12;
+            RenderSystem.setShaderColor(squad.isLocked ? 1f : 0.6f, squad.isLocked ? 0.8f : 0.6f, 0.2f, 1f);
+            gui.blit(LOCK_ICON, lockX, currentY + 1, 0, 0, 8, 8, 8, 8);
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        }
+    }
+
+    private static int renderMembers(GuiGraphics gui, int mx, int my, int currentY, WarfareWorldData.Squad squad, boolean isMySquad, String myName) {
+        for (String member : getSortedMembers(squad)) {
+            boolean isOnline = Minecraft.getInstance().getConnection().getPlayerInfo(member) != null;
+            int col = getMemberColor(squad, member, isOnline);
+            int xOffset = 30;
+
+            if (isMySquad && member.equals(myName)) {
+                boolean btnHover = mx >= xOffset && mx <= xOffset + 10 && my >= currentY && my <= currentY + 10;
+                gui.fill(xOffset, currentY, xOffset + 10, currentY + 10, btnHover ? 0xFF666666 : 0xFF444444);
+                gui.drawString(Minecraft.getInstance().font, "K", xOffset + 2, currentY + 1, 0xFFFFFF);
+                xOffset += 14;
+            }
+
+            String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
+            if (!kName.equals("Unassigned") && !kName.isEmpty()) {
+                ResourceLocation kitIcon = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
+                gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
+                xOffset += 12;
+            }
+
+            gui.drawString(Minecraft.getInstance().font, member, xOffset, currentY + 1, col);
+            currentY += 12;
+        }
+        return currentY;
+    }
+
+    private static int getMemberColor(WarfareWorldData.Squad squad, String member, boolean isOnline) {
+        if (!isOnline) return 0xFFAAAAAA;
+        if (member.equals(squad.leader)) return PWPTheme.Colors.SUCCESS;
+        if (member.equals(squad.bravoLeader)) return PWPTheme.Colors.INFO;
+        if (squad.bravoMembers.contains(member)) return 0xFFAAD4AA;
+        if (member.equals(squad.charlieLeader)) return PWPTheme.Colors.TEXT_ACCENT;
+        if (squad.charlieMembers.contains(member)) return 0xFF88BBFF;
+        return 0xFFFFFF;
+    }
+
+    public static void handleSquadClick(double mx, double my, Set<Integer> expandedSquads, PWPContextMenu contextMenu, boolean applyCmdVisible) {
+        String myName = Minecraft.getInstance().player.getScoreboardName();
+        boolean amIInSquad = isPlayerInSquad();
+        int currentY = applyCmdVisible ? 35 : 10;
+
+        for (WarfareWorldData.Squad squad : getSortedSquads()) {
+            boolean isMySquad = squad.members.contains(myName);
+            boolean amILeader = squad.leader.equals(myName);
+            boolean isExpanded = expandedSquads.contains(squad.id);
+
+            String actionText = "";
+            if (isMySquad) actionText = "LEAVE";
+            else if (!amIInSquad) actionText = squad.isLocked ? "LOCKED" : (squad.members.size() >= 9 ? "FULL" : "JOIN");
+
+            int actionWidth = actionText.isEmpty() ? 0 : Minecraft.getInstance().font.width(actionText);
+            int actionX = actionWidth > 0 ? SIDEBAR_WIDTH - actionWidth - 10 : 0;
+            int arrowX = (actionX > 0 ? actionX : 160) - 12;
+            int lockX = arrowX - 12;
+
+            if (my >= currentY && my <= currentY + 11) {
+                if (actionWidth > 0 && mx >= actionX && mx <= actionX + actionWidth) {
+                    if (isMySquad) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(2, squad.id, ""));
+                    else if (!squad.isLocked && squad.members.size() < 9) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(1, squad.id, ""));
+                } else if (mx >= arrowX && mx <= arrowX + 10) {
+                    if (isExpanded) expandedSquads.remove(squad.id);
+                    else expandedSquads.add(squad.id);
+                } else if (amILeader && mx >= lockX && mx <= lockX + 10) {
+                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
+                }
+                return;
+            }
+
+            currentY += 12;
+            if (isExpanded) {
+                for (String member : getSortedMembers(squad)) {
+                    if (my >= currentY && my <= currentY + 11) {
+                        if (isMySquad && member.equals(myName) && mx >= 30 && mx <= 45) {
+                            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+                        } else if (isMySquad && !member.equals(myName)) {
+                            List<String> options = buildContextOptions(squad, myName);
+                            if (!options.isEmpty()) {
+                                contextMenu.show((int) mx, (int) my, options, idx -> handleContextAction(idx, options, squad.id, member));
+                            }
+                        }
+                        return;
+                    }
+                    currentY += 12;
+                }
+                currentY += 4;
+            }
+            currentY += 4;
+        }
+    }
+
+    private static List<String> buildContextOptions(WarfareWorldData.Squad squad, String myName) {
+        List<String> options = new ArrayList<>();
+        boolean amISL = squad.leader.equals(myName);
+        boolean amIBravo = squad.bravoLeader.equals(myName);
+        boolean amICharlie = squad.charlieLeader.equals(myName);
+
+        if (amISL) {
+            options.add("Promote to SL");
+            options.add("Set FTL Bravo");
+            options.add("Set FTL Charlie");
+            options.add("Add to Bravo");
+            options.add("Add to Charlie");
+            options.add("Remove from FT");
+            options.add("Kick from Squad");
+        } else if (amIBravo) {
+            options.add("Pass FTL Bravo");
+            options.add("Add to Bravo");
+            options.add("Remove from FT");
+        } else if (amICharlie) {
+            options.add("Pass FTL Charlie");
+            options.add("Add to Charlie");
+            options.add("Remove from FT");
+        }
+        return options;
+    }
+
+    private static void handleContextAction(int idx, List<String> options, int squadId, String target) {
+        if (idx < 0 || idx >= options.size()) return;
+        String opt = options.get(idx);
+        switch (opt) {
+            case "Promote to SL" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(4, squadId, target));
+            case "Set FTL Bravo", "Pass FTL Bravo" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(6, squadId, target));
+            case "Set FTL Charlie", "Pass FTL Charlie" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(7, squadId, target));
+            case "Add to Bravo" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(8, squadId, target));
+            case "Add to Charlie" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(9, squadId, target));
+            case "Remove from FT" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(10, squadId, target));
+            case "Kick from Squad" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(3, squadId, target));
+        }
+    }
+
+    public static void renderChatHistory(GuiGraphics gui, int chatX, int mapBottomY, int height) {
+        int chatBottomY = height - 35;
+        int chatTopY = mapBottomY + 10;
+        int count = 0;
+        for (Component msg : ClientData.menuChatHistory) {
+            int y = chatBottomY - count * 10;
+            if (y < chatTopY) break;
+            gui.drawString(Minecraft.getInstance().font, msg, chatX, y, 0xFFFFFF, true);
+            count++;
+        }
+    }
+
+    public static void renderVoiceActivity(GuiGraphics gui, int x, int y) {
+        long now = System.currentTimeMillis();
+        ResourceLocation radioIcon = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
+        ResourceLocation voiceIcon = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon.png");
+
+        for (var entry : ClientData.RADIO_SPEAKERS.entrySet()) {
+            if (now - entry.getValue() >= 500) continue;
+            renderSpeakerRow(gui, x, y, entry.getKey(), PWPTheme.Colors.TEXT_ACCENT, radioIcon);
+            y += 14;
+        }
+        for (var entry : ClientData.SQUAD_SPEAKERS.entrySet()) {
+            if (now - entry.getValue() >= 500) continue;
+            renderSpeakerRow(gui, x, y, entry.getKey(), PWPTheme.Colors.INFO, voiceIcon);
+            y += 14;
+        }
+    }
+
+    private static void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, int color, ResourceLocation icon) {
+        int tw = Minecraft.getInstance().font.width(name) + 15;
+        gui.fill(x, y - 2, x + tw + 4, y + 10, 0xCC000000);
+        RenderSystem.enableBlend();
+        float r = (color >> 16 & 0xFF) / 255f, g = (color >> 8 & 0xFF) / 255f, b = (color & 0xFF) / 255f;
+        RenderSystem.setShaderColor(r, g, b, 1f);
+        gui.blit(icon, x + 3, y, 0, 0, 8, 8, 8, 8);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        gui.drawString(Minecraft.getInstance().font, name, x + 14, y, color);
+    }
+
+    public static void renderTeamHeader(GuiGraphics gui, int startX, int startY, boolean isBlue) {
+        String teamName = getPlayerTeam().toUpperCase();
+        int tickets = teamName.contains("BLUE") ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
+        String faction = teamName.contains("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
+        String customName = teamName.contains("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
+        ResourceLocation flagTex = getFlagTexture(faction);
+        ResourceLocation ticketIcon = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
+
+        if (flagTex != null) {
+            RenderSystem.enableBlend();
+            gui.blit(flagTex, startX, startY, 32, 18, 0, 0, 64, 36, 64, 36);
+        }
+        int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
+        gui.drawString(Minecraft.getInstance().font, customName, startX + 38, startY, teamColor, true);
+        RenderSystem.enableBlend();
+        gui.blit(ticketIcon, startX + 38, startY + 11, 0, 0, 8, 8, 8, 8);
+        gui.drawString(Minecraft.getInstance().font, String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, true);
+    }
+
+    public static boolean isApplyCmdVisible() {
+        String myName = Minecraft.getInstance().player.getScoreboardName();
+        boolean isBlue = getPlayerTeam().toUpperCase().contains("BLUE");
+        int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+        boolean voteActive = isBlue ? ClientData.blueCmdVoteActive : ClientData.redCmdVoteActive;
+        if (teamCMDId != -1 || voteActive) return false;
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (s.leader.equals(myName)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isPlayerInSquad() {
+        String myName = Minecraft.getInstance().player.getScoreboardName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (s.members.contains(myName)) return true;
+        }
+        return false;
+    }
+
+    public static boolean isSquadLeaderOrFTL(Player player) {
+        String pName = player.getScoreboardName();
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName)) return true;
+        }
+        return false;
+    }
+
+    public static String getPlayerTeam() {
+        Player p = Minecraft.getInstance().player;
+        return p != null && p.getTeam() != null ? p.getTeam().getName() : "NEUTRAL";
+    }
+
+    public static List<WarfareWorldData.Squad> getSortedSquads() {
+        String myTeam = getPlayerTeam().toUpperCase();
+        String myDim = Minecraft.getInstance().level.dimension().location().toString();
+        boolean isBlue = myTeam.contains("BLUE");
+        int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
+        return ClientData.clientSquads.stream()
+            .filter(s -> s.team.equalsIgnoreCase(myTeam))
+            .filter(s -> s.dimension != null && s.dimension.equals(myDim))
+            .sorted((a, b) -> {
+                if (a.id == teamCMDId) return -1;
+                if (b.id == teamCMDId) return 1;
+                return Integer.compare(a.id, b.id);
+            }).collect(Collectors.toList());
+    }
+
+    public static List<String> getSortedMembers(WarfareWorldData.Squad squad) {
+        List<String> sorted = new ArrayList<>();
+        if (!squad.leader.isEmpty() && squad.members.contains(squad.leader)) sorted.add(squad.leader);
+        for (String m : squad.members) {
+            if (!m.equals(squad.leader) && !squad.bravoMembers.contains(m) && !squad.charlieMembers.contains(m)) sorted.add(m);
+        }
+        if (!squad.bravoLeader.isEmpty() && squad.members.contains(squad.bravoLeader)) sorted.add(squad.bravoLeader);
+        for (String m : squad.bravoMembers) {
+            if (!m.equals(squad.bravoLeader) && squad.members.contains(m)) sorted.add(m);
+        }
+        if (!squad.charlieLeader.isEmpty() && squad.members.contains(squad.charlieLeader)) sorted.add(squad.charlieLeader);
+        for (String m : squad.charlieMembers) {
+            if (!m.equals(squad.charlieLeader) && squad.members.contains(m)) sorted.add(m);
+        }
+        return sorted;
+    }
+
+    private static ResourceLocation getFlagTexture(String faction) {
+        if (faction == null || faction.equalsIgnoreCase("none")) return null;
+        return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
+    }
+
+    public static int getSidebarWidth() { return SIDEBAR_WIDTH; }
+}
