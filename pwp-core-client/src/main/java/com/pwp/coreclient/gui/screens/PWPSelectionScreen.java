@@ -2,7 +2,6 @@ package com.pwp.coreclient.gui.screens;
 
 import com.pwp.coreclient.gui.components.PWPCard;
 import com.pwp.coreclient.gui.components.PWPLayout;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
@@ -12,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.IntPredicate;
 
 public class PWPSelectionScreen extends Screen {
 
@@ -22,6 +22,14 @@ public class PWPSelectionScreen extends Screen {
     private final Consumer<Integer> onConfirm;
     private final int autoSelectSeconds;
 
+    private final int cardW;
+    private final int cardH;
+    private final int gap;
+
+    private final IntPredicate disabledPredicate;
+
+    private final boolean instantSelect;
+
     private int selectedIndex = -1;
     private PWPButton confirmBtn;
     private long openTime;
@@ -31,13 +39,16 @@ public class PWPSelectionScreen extends Screen {
         public final String label;
         public final boolean selected;
         public final boolean hovered;
+        public final boolean disabled;
         public final int x, y, w, h;
 
-        public SelectionItem(int index, String label, boolean selected, boolean hovered, int x, int y, int w, int h) {
+        public SelectionItem(int index, String label, boolean selected, boolean hovered, boolean disabled,
+                              int x, int y, int w, int h) {
             this.index = index;
             this.label = label;
             this.selected = selected;
             this.hovered = hovered;
+            this.disabled = disabled;
             this.x = x;
             this.y = y;
             this.w = w;
@@ -54,6 +65,15 @@ public class PWPSelectionScreen extends Screen {
     public PWPSelectionScreen(String title, String instruction, List<String> items,
                               BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
                               Consumer<Integer> onConfirm, int autoSelectSeconds) {
+        this(title, instruction, items, cardRenderer, onConfirm, autoSelectSeconds,
+            130, 50, PWPTheme.Spacing.GRID_GAP, null, false);
+    }
+
+    public PWPSelectionScreen(String title, String instruction, List<String> items,
+                              BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
+                              Consumer<Integer> onConfirm, int autoSelectSeconds,
+                              int cardW, int cardH, int gap,
+                              IntPredicate disabledPredicate, boolean instantSelect) {
         super(Component.literal(title));
         this.title = title;
         this.instruction = instruction;
@@ -61,12 +81,19 @@ public class PWPSelectionScreen extends Screen {
         this.cardRenderer = cardRenderer;
         this.onConfirm = onConfirm;
         this.autoSelectSeconds = autoSelectSeconds;
+        this.cardW = cardW;
+        this.cardH = cardH;
+        this.gap = gap;
+        this.disabledPredicate = disabledPredicate;
+        this.instantSelect = instantSelect;
         this.openTime = System.currentTimeMillis();
     }
 
     @Override
     protected void init() {
         super.init();
+
+        if (instantSelect) return;
 
         int btnW = 180;
         int btnH = 28;
@@ -87,7 +114,6 @@ public class PWPSelectionScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         renderBackground(gui);
-
         PWPLayout.renderHeader(gui, title, width);
 
         var font = minecraft.font;
@@ -96,11 +122,6 @@ public class PWPSelectionScreen extends Screen {
         }
 
         int contentW = PWPLayout.contentWidth(width);
-        int cx = PWPLayout.centerX(width, contentW);
-        int cardW = 130;
-        int cardH = 50;
-        int gap = 8;
-
         int cols = PWPLayout.gridColumns(contentW, gap, cardW);
         int gridW = cols * cardW + (cols - 1) * gap;
         int gridX = PWPLayout.centerX(width, gridW);
@@ -112,18 +133,18 @@ public class PWPSelectionScreen extends Screen {
             int ix = gridX + col * (cardW + gap);
             int iy = gridY + row * (cardH + gap);
 
+            boolean isDisabled = disabledPredicate != null && disabledPredicate.test(i);
             boolean isSelected = (i == selectedIndex);
-            boolean isHovered = PWPCard.isHovered(ix, iy, cardW, cardH, mouseX, mouseY);
+            boolean isHovered = !isDisabled && PWPCard.isHovered(ix, iy, cardW, cardH, mouseX, mouseY);
 
-            PWPCard.State state = PWPCard.getState(isSelected, isHovered);
+            PWPCard.State state = PWPCard.getState(isSelected, isHovered, isDisabled);
             PWPCard.render(gui, ix, iy, cardW, cardH, state);
 
-            SelectionItem si = new SelectionItem(i, items.get(i), isSelected, isHovered, ix, iy, cardW, cardH);
+            SelectionItem si = new SelectionItem(i, items.get(i), isSelected, isHovered, isDisabled, ix, iy, cardW, cardH);
             cardRenderer.accept(gui, si);
         }
 
-        // Auto-select timer
-        if (autoSelectSeconds > 0 && selectedIndex < 0) {
+        if (!instantSelect && autoSelectSeconds > 0 && selectedIndex < 0) {
             long elapsed = (System.currentTimeMillis() - openTime) / 1000;
             int remaining = Math.max(0, autoSelectSeconds - (int) elapsed);
             if (remaining <= 0 && !items.isEmpty()) {
@@ -139,7 +160,7 @@ public class PWPSelectionScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && selectedIndex >= 0 && confirmBtn.active) {
+        if (!instantSelect && button == 0 && selectedIndex >= 0 && confirmBtn.active) {
             if (PWPCard.isHovered(confirmBtn.getX(), confirmBtn.getY(), confirmBtn.getWidth(), confirmBtn.getHeight(),
                 (int) mouseX, (int) mouseY)) {
                 return super.mouseClicked(mouseX, mouseY, button);
@@ -147,9 +168,6 @@ public class PWPSelectionScreen extends Screen {
         }
 
         int contentW = PWPLayout.contentWidth(width);
-        int cardW = 130;
-        int cardH = 50;
-        int gap = 8;
         int cols = PWPLayout.gridColumns(contentW, gap, cardW);
         int gridW = cols * cardW + (cols - 1) * gap;
         int gridX = PWPLayout.centerX(width, gridW);
@@ -161,9 +179,16 @@ public class PWPSelectionScreen extends Screen {
             int ix = gridX + col * (cardW + gap);
             int iy = gridY + row * (cardH + gap);
 
+            boolean isDisabled = disabledPredicate != null && disabledPredicate.test(i);
+            if (isDisabled) continue;
+
             if (PWPCard.isHovered(ix, iy, cardW, cardH, (int) mouseX, (int) mouseY)) {
-                selectedIndex = i;
-                confirmBtn.active = true;
+                if (instantSelect) {
+                    if (onConfirm != null) onConfirm.accept(i);
+                } else {
+                    selectedIndex = i;
+                    confirmBtn.active = true;
+                }
                 return true;
             }
         }

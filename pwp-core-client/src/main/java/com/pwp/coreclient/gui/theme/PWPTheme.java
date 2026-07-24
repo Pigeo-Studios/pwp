@@ -1,7 +1,5 @@
 package com.pwp.coreclient.gui.theme;
 
-import java.awt.Color;
-
 public class PWPTheme {
 
     // ============================================================
@@ -78,12 +76,33 @@ public class PWPTheme {
 
         private Colors() {}
 
-        public static Color of(int color) {
-            return new Color(color, true);
+        public static int alpha(int argb) { return (argb >>> 24) & 0xFF; }
+        public static int red(int argb)   { return (argb >>> 16) & 0xFF; }
+        public static int green(int argb) { return (argb >>> 8) & 0xFF; }
+        public static int blue(int argb)  { return argb & 0xFF; }
+
+        public static int argb(int a, int r, int g, int b) {
+            return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
         }
 
         public static int withAlpha(int color, int alpha) {
-            return (alpha << 24) | (color & 0x00FFFFFF);
+            return (Math.max(0, Math.min(255, alpha)) << 24) | (color & 0x00FFFFFF);
+        }
+
+        public static int multiplyAlpha(int color, float factor) {
+            int a = alpha(color);
+            int newA = Math.max(0, Math.min(255, Math.round(a * factor)));
+            return (newA << 24) | (color & 0x00FFFFFF);
+        }
+
+        public static int lerp(int from, int to, float t) {
+            if (t <= 0) return from;
+            if (t >= 1) return to;
+            int a = (int) (alpha(from) + (alpha(to) - alpha(from)) * t);
+            int r = (int) (red(from)   + (red(to)   - red(from))   * t);
+            int g = (int) (green(from) + (green(to) - green(from)) * t);
+            int b = (int) (blue(from)  + (blue(to)  - blue(from))  * t);
+            return argb(a, r, g, b);
         }
     }
 
@@ -93,9 +112,6 @@ public class PWPTheme {
 
     public static class Fonts {
 
-        public static final String DEFAULT = "mojang";  // Стандартный Minecraft шрифт
-
-        // Размеры
         public static final int SIZE_TINY        = 8;
         public static final int SIZE_SMALL       = 10;
         public static final int SIZE_NORMAL      = 12;
@@ -146,6 +162,9 @@ public class PWPTheme {
         public static final int ELEMENT_GAP    = 6;
         public static final int GRID_GAP       = 8;
 
+        public static final int TOGGLE_WIDTH   = 36;
+        public static final int TOGGLE_HEIGHT  = 16;
+
         private Spacing() {}
     }
 
@@ -155,19 +174,16 @@ public class PWPTheme {
 
     public static class Animations {
 
-        // Длительности (мс)
         public static final int DURATION_INSTANT  = 50;
         public static final int DURATION_FAST     = 100;
         public static final int DURATION_NORMAL   = 200;
         public static final int DURATION_SLOW     = 400;
         public static final int DURATION_GLACIAL  = 800;
 
-        // Задержки для каскадных анимаций
         public static final int STAGGER_FAST    = 30;
         public static final int STAGGER_NORMAL  = 60;
         public static final int STAGGER_SLOW    = 100;
 
-        // Типы анимаций
         public static final int FADE_IN    = 0;
         public static final int FADE_OUT   = 1;
         public static final int SLIDE_UP   = 2;
@@ -190,14 +206,13 @@ public class PWPTheme {
     public static class Shadows {
 
         public static final int LEVEL_0 = 0x00000000;
-        public static final int LEVEL_1 = 0x22000000;  // Лёгкая
-        public static final int LEVEL_2 = 0x44000000;  // Средняя
-        public static final int LEVEL_3 = 0x66000000;  // Глубокая
+        public static final int LEVEL_1 = 0x22000000;
+        public static final int LEVEL_2 = 0x44000000;
+        public static final int LEVEL_3 = 0x66000000;
 
-        // Оранжевая тень-свечение (теневая обводка)
-        public static final int ACCENT_GLOW_SMALL = 0x22C8812A;  // Маленькое
-        public static final int ACCENT_GLOW_MEDIUM= 0x44C8812A;  // Среднее
-        public static final int ACCENT_GLOW_LARGE = 0x66C8812A;  // Большое
+        public static final int ACCENT_GLOW_SMALL = 0x22C8812A;
+        public static final int ACCENT_GLOW_MEDIUM= 0x44C8812A;
+        public static final int ACCENT_GLOW_LARGE = 0x66C8812A;
 
         private Shadows() {}
     }
@@ -210,9 +225,7 @@ public class PWPTheme {
 
     public static class Styles {
 
-        // Стили кнопок
         public static class Button {
-            // Основная (тёмная с оранжевой обводкой)
             public static final int PRIMARY_BG       = Colors.SURFACE;
             public static final int PRIMARY_BORDER   = Colors.BORDER_ACCENT;
             public static final int PRIMARY_HOVER    = Colors.SURFACE_LIGHT;
@@ -220,20 +233,17 @@ public class PWPTheme {
             public static final int PRIMARY_TEXT     = Colors.TEXT_PRIMARY;
             public static final int PRIMARY_DISABLED_TEXT = Colors.TEXT_DIM;
 
-            // Акцентная (оранжевая — купить, улучшить, важно)
             public static final int ACCENT_BG        = Colors.ACCENT;
             public static final int ACCENT_HOVER     = Colors.ACCENT_SOFT;
             public static final int ACCENT_PRESSED   = Colors.ACCENT_DIM;
             public static final int ACCENT_TEXT      = 0xFF0A0C0E;
             public static final int ACCENT_DISABLED  = 0x664A4D54;
 
-            // Опасная (красная)
             public static final int DANGER_BG        = Colors.DANGER;
             public static final int DANGER_HOVER     = 0xFF803030;
             public static final int DANGER_PRESSED   = 0xFF602020;
             public static final int DANGER_TEXT      = Colors.TEXT_PRIMARY;
 
-            // Тёмная (второстепенная, без обводки)
             public static final int DARK_BG          = 0xFF181C24;
             public static final int DARK_BORDER      = Colors.BORDER;
             public static final int DARK_HOVER       = Colors.SURFACE_LIGHT;
@@ -241,7 +251,6 @@ public class PWPTheme {
             public static final int DARK_TEXT        = Colors.TEXT_SECONDARY;
         }
 
-        // Стили табов (вкладок)
         public static class Tab {
             public static final int BG               = Colors.SURFACE;
             public static final int BG_HOVER         = Colors.SURFACE_LIGHT;
@@ -252,7 +261,6 @@ public class PWPTheme {
             public static final int TEXT_ACTIVE      = Colors.TEXT_ACCENT;
         }
 
-        // Стили карточек
         public static class Card {
             public static final int BG               = Colors.SURFACE;
             public static final int BG_HOVER         = Colors.SURFACE_LIGHT;
@@ -261,9 +269,9 @@ public class PWPTheme {
             public static final int BORDER_HOVER     = Colors.BORDER_FOCUS;
             public static final int BORDER_SELECTED  = Colors.ACCENT;
             public static final int SHADOW           = Shadows.LEVEL_1;
+            public static final int GLOW_SELECTED    = Shadows.ACCENT_GLOW_SMALL;
         }
 
-        // Стили полей ввода
         public static class Input {
             public static final int BG               = 0xFF0E1117;
             public static final int BG_FOCUS         = Colors.SURFACE;
@@ -273,7 +281,6 @@ public class PWPTheme {
             public static final int PLACEHOLDER      = Colors.TEXT_DIM;
         }
 
-        // Стили панелей/карточек
         public static class Panel {
             public static final int BG               = Colors.SURFACE;
             public static final int BG_HOVER          = Colors.SURFACE_LIGHT;
@@ -282,7 +289,6 @@ public class PWPTheme {
             public static final int SHADOW           = Shadows.LEVEL_2;
         }
 
-        // Стили полосы прогресса
         public static class Progress {
             public static final int BG               = 0xFF181C24;
             public static final int FILL_XP          = Colors.ACCENT;
@@ -293,7 +299,6 @@ public class PWPTheme {
             public static final int TRACK_BG         = 0x2AC8812A;
         }
 
-        // Стили уведомлений (Toast)
         public static class Toast {
             public static final int BG_SUCCESS       = 0xCC2A5A2E;
             public static final int BG_ERROR         = 0xCC5A2A2A;
@@ -302,7 +307,6 @@ public class PWPTheme {
             public static final int TEXT             = Colors.TEXT_PRIMARY;
         }
 
-        // Стили редкости (приглушённые, для подсветки)
         public static class RarityHighlight {
             public static final int COMMON_BG    = 0x226A6D73;
             public static final int COMMON_BORDER= 0xFF4A4D54;
@@ -316,14 +320,12 @@ public class PWPTheme {
             public static final int MYTHIC_BORDER= 0xFFA53D3D;
         }
 
-        // Стили скроллбара
         public static class ScrollBar {
             public static final int TRACK           = Colors.SURFACE_DIM;
             public static final int THUMB           = Colors.ACCENT;
             public static final int THUMB_HOVER     = Colors.ACCENT_SOFT;
         }
 
-        // Стили бейджей/меток
         public static class Badge {
             public static final int BG_SUCCESS      = Colors.SUCCESS;
             public static final int BG_DANGER       = Colors.DANGER;
@@ -333,14 +335,12 @@ public class PWPTheme {
             public static final int TEXT_DARK       = 0xFF0A0C0E;
         }
 
-        // Стили тултипов
         public static class Tooltip {
             public static final int BG              = 0xCC0E1117;
             public static final int BORDER          = Colors.BORDER_LIGHT;
             public static final int TEXT            = Colors.TEXT_PRIMARY;
         }
 
-        // Стили разделителей
         public static class Divider {
             public static final int COLOR          = Colors.BORDER;
         }

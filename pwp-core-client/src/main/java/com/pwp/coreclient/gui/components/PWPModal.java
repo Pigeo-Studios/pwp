@@ -41,7 +41,7 @@ public class PWPModal {
 
     public void renderPanel(GuiGraphics gui) {
         if (!open) return;
-        PWPPanel.render(gui, panelX, panelY, panelW, panelH, PWPPanel.Variant.SURFACE);
+        PWPPanel.render(gui, panelX, panelY, panelW, panelH, PWPPanel.Variant.SURFACE, true);
     }
 
     public boolean isInsidePanel(int mouseX, int mouseY) {

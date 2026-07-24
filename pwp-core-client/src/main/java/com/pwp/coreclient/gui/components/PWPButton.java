@@ -23,9 +23,14 @@ public class PWPButton extends AbstractWidget {
     private Style style;
     private final OnPress onPress;
     private float hoverAnim;
+    private float pressAnim;
     private long lastRenderTime;
     private float animAlpha = 1.0F;
     private boolean loading;
+
+    public PWPButton(int x, int y, int width, Component message, OnPress onPress) {
+        this(x, y, width, PWPTheme.Spacing.BUTTON_HEIGHT, message, onPress, Style.PRIMARY);
+    }
 
     public PWPButton(int x, int y, int width, int height, Component message, OnPress onPress) {
         this(x, y, width, height, message, onPress, Style.PRIMARY);
@@ -36,6 +41,7 @@ public class PWPButton extends AbstractWidget {
         this.onPress = onPress;
         this.style = style;
         this.hoverAnim = 0.0F;
+        this.pressAnim = 0.0F;
         this.lastRenderTime = System.currentTimeMillis();
     }
 
@@ -81,22 +87,18 @@ public class PWPButton extends AbstractWidget {
 
         boolean hovered = this.isHovered();
         boolean active = this.active;
+        boolean pressedNow = active && hovered && Minecraft.getInstance().mouseHandler.isLeftPressed();
 
-        float target = (hovered && active) ? 1.0F : 0.0F;
-        if (active && hovered && Minecraft.getInstance().mouseHandler.isLeftPressed()) {
-            target = 0.5F;
-        }
-
-        float speed = 0.15F;
-        if (target > hoverAnim) {
-            hoverAnim += (target - hoverAnim) * (1 - (float) Math.exp(-speed * dt * 50));
-        } else {
-            hoverAnim += (target - hoverAnim) * (1 - (float) Math.exp(-speed * dt * 50));
-        }
+        float hoverTarget = (hovered && active) ? 1.0F : 0.0F;
+        float pressTarget = pressedNow ? 1.0F : 0.0F;
+        float speed = 1 - (float) Math.exp(-0.15F * dt * 50);
+        hoverAnim += (hoverTarget - hoverAnim) * speed;
+        pressAnim += (pressTarget - pressAnim) * speed;
 
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.animAlpha);
 
         int bg, border, textColor;
+        boolean showAccentGlow = false;
 
         if (!active) {
             bg = PWPTheme.Styles.Button.DARK_BG;
@@ -104,33 +106,47 @@ public class PWPButton extends AbstractWidget {
             textColor = PWPTheme.Colors.TEXT_DIM;
         } else {
             switch (style) {
-                case ACCENT:
-                    bg = lerpColor(PWPTheme.Styles.Button.ACCENT_BG, PWPTheme.Styles.Button.ACCENT_HOVER, hoverAnim);
+                case ACCENT: {
+                    int base = PWPTheme.Colors.lerp(
+                            PWPTheme.Styles.Button.ACCENT_BG, PWPTheme.Styles.Button.ACCENT_HOVER, hoverAnim);
+                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.ACCENT_PRESSED, pressAnim);
                     border = PWPTheme.Colors.ACCENT_DIM;
                     textColor = PWPTheme.Styles.Button.ACCENT_TEXT;
+                    showAccentGlow = hoverAnim > 0.01F;
                     break;
-                case DANGER:
-                    bg = lerpColor(PWPTheme.Styles.Button.DANGER_BG, PWPTheme.Styles.Button.DANGER_HOVER, hoverAnim);
+                }
+                case DANGER: {
+                    int base = PWPTheme.Colors.lerp(
+                            PWPTheme.Styles.Button.DANGER_BG, PWPTheme.Styles.Button.DANGER_HOVER, hoverAnim);
+                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.DANGER_PRESSED, pressAnim);
                     border = PWPTheme.Colors.DANGER;
                     textColor = PWPTheme.Styles.Button.DANGER_TEXT;
                     break;
-                case DARK:
-                    bg = lerpColor(PWPTheme.Styles.Button.DARK_BG, PWPTheme.Styles.Button.DARK_HOVER, hoverAnim);
+                }
+                case DARK: {
+                    int base = PWPTheme.Colors.lerp(
+                            PWPTheme.Styles.Button.DARK_BG, PWPTheme.Styles.Button.DARK_HOVER, hoverAnim);
+                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.DARK_PRESSED, pressAnim);
                     border = hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
                     textColor = PWPTheme.Colors.TEXT_PRIMARY;
                     break;
-                case GHOST:
-                    int ghostBg = lerpColor(0x00000000, PWPTheme.Colors.SURFACE_LIGHT, hoverAnim);
-                    int ghostBorder = lerpColor(0x00000000, PWPTheme.Colors.BORDER_FOCUS, hoverAnim);
+                }
+                case GHOST: {
+                    int ghostBg = PWPTheme.Colors.lerp(0x00000000, PWPTheme.Colors.SURFACE_LIGHT, hoverAnim);
+                    int ghostBorder = PWPTheme.Colors.lerp(0x00000000, PWPTheme.Colors.BORDER_FOCUS, hoverAnim);
                     border = ghostBorder;
                     bg = ghostBg;
                     textColor = hoverAnim > 0.01F ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
                     break;
-                default:
-                    bg = lerpColor(PWPTheme.Styles.Button.PRIMARY_BG, PWPTheme.Styles.Button.PRIMARY_HOVER, hoverAnim);
+                }
+                default: {
+                    int base = PWPTheme.Colors.lerp(
+                            PWPTheme.Styles.Button.PRIMARY_BG, PWPTheme.Styles.Button.PRIMARY_HOVER, hoverAnim);
+                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.PRIMARY_PRESSED, pressAnim);
                     border = hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.PRIMARY_BORDER;
                     textColor = PWPTheme.Colors.TEXT_PRIMARY;
                     break;
+                }
             }
         }
 
@@ -140,13 +156,15 @@ public class PWPButton extends AbstractWidget {
         int h = this.height;
         int r = PWPTheme.Spacing.RADIUS_SMALL;
 
-        // Pass 1: Fill — full rounded rectangle area
-        drawRoundedFill(gui, x, y, w, h, r, bg);
+        if (showAccentGlow) {
+            int glowColor = PWPTheme.Colors.multiplyAlpha(
+                    PWPTheme.Shadows.ACCENT_GLOW_SMALL, Math.max(hoverAnim, pressAnim));
+            RoundedRect.glow(gui, x, y, w, h, r, 2, glowColor);
+        }
 
-        // Pass 2: Border — outer perimeter, no alpha overlap with fill
-        drawRoundedBorder(gui, x, y, w, h, r, border);
+        RoundedRect.fill(gui, x, y, w, h, r, bg);
+        RoundedRect.border(gui, x, y, w, h, r, 1, border);
 
-        // Loading indicator: thin accent bar at bottom
         if (loading && active) {
             long cycle = now % 1200;
             float loadProgress = (float) cycle / 1200.0F;
@@ -155,7 +173,6 @@ public class PWPButton extends AbstractWidget {
             gui.fill(loadX, y + h - 2, loadX + loadW, y + h, PWPTheme.Colors.ACCENT);
         }
 
-        // Text
         var mcFont = Minecraft.getInstance().font;
         String msgStr = this.getMessage().getString();
         int textW = mcFont.width(msgStr);
@@ -173,41 +190,5 @@ public class PWPButton extends AbstractWidget {
         }
 
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-    }
-
-    private void drawRoundedFill(GuiGraphics gui, int x, int y, int w, int h, int r, int color) {
-        gui.fill(x + r, y, x + w - r, y + h, color);
-        gui.fill(x, y + r, x + r, y + h - r, color);
-        gui.fill(x + w - r, y + r, x + w, y + h - r, color);
-        gui.fill(x + r, y + r, x + w - r, y + h - r, color);
-    }
-
-    private void drawRoundedBorder(GuiGraphics gui, int x, int y, int w, int h, int r, int color) {
-        gui.fill(x + r, y, x + w - r, y + 1, color);
-        gui.fill(x + r, y + h - 1, x + w - r, y + h, color);
-        gui.fill(x, y + r, x + 1, y + h - r, color);
-        gui.fill(x + w - 1, y + r, x + w, y + h - r, color);
-        gui.fill(x + r, y, x + r + 1, y + 1, color);
-        gui.fill(x + w - r - 1, y, x + w - r, y + 1, color);
-        gui.fill(x + r, y + h - 1, x + r + 1, y + h, color);
-        gui.fill(x + w - r - 1, y + h - 1, x + w - r, y + h, color);
-    }
-
-    private int lerpColor(int from, int to, float t) {
-        if (t <= 0) return from;
-        if (t >= 1) return to;
-        int a1 = (from >> 24) & 0xFF;
-        int r1 = (from >> 16) & 0xFF;
-        int g1 = (from >> 8) & 0xFF;
-        int b1 = from & 0xFF;
-        int a2 = (to >> 24) & 0xFF;
-        int r2 = (to >> 16) & 0xFF;
-        int g2 = (to >> 8) & 0xFF;
-        int b2 = to & 0xFF;
-        int a = (int) (a1 + (a2 - a1) * t);
-        int r = (int) (r1 + (r2 - r1) * t);
-        int g = (int) (g1 + (g2 - g1) * t);
-        int b = (int) (b1 + (b2 - b1) * t);
-        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 }

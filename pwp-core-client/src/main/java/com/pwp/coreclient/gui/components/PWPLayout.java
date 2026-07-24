@@ -11,7 +11,7 @@ public class PWPLayout {
 
     public static final float CONTENT_WIDTH_RATIO = 0.7F;
     public static final int CONTENT_MIN = 260;
-    public static final int CONTENT_MAX = 480;
+    public static final int CONTENT_MAX = 640;
 
     private PWPLayout() {}
 
@@ -28,13 +28,17 @@ public class PWPLayout {
     }
 
     public static void renderHeader(GuiGraphics gui, String title, int screenWidth) {
-        renderHeader(gui, title, -1, screenWidth);
+        renderHeader(gui, title, -1, screenWidth, PWPTheme.Spacing.MD);
     }
 
     public static void renderHeader(GuiGraphics gui, String title, int icon, int screenWidth) {
+        renderHeader(gui, title, icon, screenWidth, PWPTheme.Spacing.MD);
+    }
+
+    public static void renderHeader(GuiGraphics gui, String title, int icon, int screenWidth, int topPadding) {
         var font = Minecraft.getInstance().font;
         int cx = screenWidth / 2;
-        int y = 12;
+        int y = topPadding;
 
         if (icon >= 0) {
             PWPIcons.render(gui, icon, cx - font.width(title) / 2 - 20, y + 2);

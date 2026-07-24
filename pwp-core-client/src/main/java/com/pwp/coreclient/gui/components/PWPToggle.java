@@ -16,6 +16,10 @@ public class PWPToggle extends AbstractWidget {
     private float thumbPos;
     private long lastRenderTime;
 
+    public PWPToggle(int x, int y, Component message, boolean toggled, Consumer<Boolean> onChange) {
+        this(x, y, PWPTheme.Spacing.TOGGLE_WIDTH, PWPTheme.Spacing.TOGGLE_HEIGHT, message, toggled, onChange);
+    }
+
     public PWPToggle(int x, int y, int width, int height, Component message, boolean toggled, Consumer<Boolean> onChange) {
         super(x, y, width, height, message);
         this.toggled = toggled;
@@ -60,20 +64,21 @@ public class PWPToggle extends AbstractWidget {
 
         int x = this.getX();
         int y = this.getY();
-        int w = 36;
-        int h = 16;
+        int w = this.width;
+        int h = this.height;
+        int thumbW = Math.max(6, (int) (h * 0.75F));
+        int inset = Math.max(1, h / 8);
 
         int trackColor = toggled ? PWPTheme.Colors.ACCENT_DIM : PWPTheme.Colors.SURFACE;
-        gui.fill(x, y, x + w, y + h, trackColor);
-        gui.fill(x, y, x + w, y + 1, PWPTheme.Colors.BORDER);
-        gui.fill(x, y + h - 1, x + w, y + h, PWPTheme.Colors.BORDER);
+        int r = PWPTheme.Spacing.RADIUS_ROUND;
+        RoundedRect.fill(gui, x, y, w, h, Math.min(r, h / 2), trackColor);
+        RoundedRect.border(gui, x, y, w, h, Math.min(r, h / 2), 1, PWPTheme.Colors.BORDER);
 
-        int thumbW = 12;
-        int thumbX = x + 2 + (int) ((w - thumbW - 4) * thumbPos);
+        int thumbX = x + inset + (int) ((w - thumbW - inset * 2) * thumbPos);
         int thumbColor = toggled ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_SECONDARY;
-        gui.fill(thumbX, y + 2, thumbX + thumbW, y + h - 2, thumbColor);
+        RoundedRect.fill(gui, thumbX, y + inset, thumbW, h - inset * 2, (h - inset * 2) / 2, thumbColor);
 
         var font = Minecraft.getInstance().font;
-        gui.drawString(font, this.getMessage(), x + w + 8, y + (h - 8) / 2, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawString(font, this.getMessage(), x + w + PWPTheme.Spacing.SM, y + (h - 8) / 2, PWPTheme.Colors.TEXT_PRIMARY);
     }
 }

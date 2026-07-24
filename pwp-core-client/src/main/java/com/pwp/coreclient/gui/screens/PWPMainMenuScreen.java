@@ -17,6 +17,14 @@ public class PWPMainMenuScreen extends Screen {
 
     private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/main_menu.png");
 
+    private static final int BG_TEXTURE_W = 1920;
+    private static final int BG_TEXTURE_H = 1080;
+
+    private static final int MENU_BUTTON_HEIGHT = 28;
+    private static final float MENU_START_Y_RATIO = 0.52f;
+    private static final float LOGO_Y_RATIO = 0.16f;
+    private static final float WELCOME_Y_RATIO = 0.34f;
+
     private final long openTime;
     private boolean connecting;
 
@@ -36,11 +44,11 @@ public class PWPMainMenuScreen extends Screen {
 
         int cx = width / 2;
         int btnW = Math.min(width / 4, 220);
-        int btnH = 28;
+        int btnH = MENU_BUTTON_HEIGHT;
         int gap = 6;
 
         int totalH = 4 * btnH + 3 * gap;
-        int startY = Math.min((int) (height * 0.52f), height - 40 - totalH);
+        int startY = Math.min((int) (height * MENU_START_Y_RATIO), height - 40 - totalH);
 
         playBtn = addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY, btnW, btnH,
@@ -86,7 +94,7 @@ public class PWPMainMenuScreen extends Screen {
         float logoProgress = animProgress(elapsed, 0, 300);
         if (logoProgress > 0) {
             float fade = Easing.easeOutCubic(Math.min(logoProgress, 1));
-            renderLogo(gui, cx, (int) (height * 0.16f), fade);
+            renderLogo(gui, cx, (int) (height * LOGO_Y_RATIO), fade);
         }
 
         float welcomeProgress = animProgress(elapsed, 100, 300);
@@ -110,14 +118,19 @@ public class PWPMainMenuScreen extends Screen {
     public void renderBackground(GuiGraphics gui) {
         int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        gui.blit(BG_TEXTURE, 0, 0, 0, 0, w, h, w, h);
+
+        float scale = Math.max((float) w / BG_TEXTURE_W, (float) h / BG_TEXTURE_H);
+        int drawW = Math.round(BG_TEXTURE_W * scale);
+        int drawH = Math.round(BG_TEXTURE_H * scale);
+        int drawX = (w - drawW) / 2;
+        int drawY = (h - drawH) / 2;
+
+        gui.blit(BG_TEXTURE, drawX, drawY, drawW, drawH, 0, 0, BG_TEXTURE_W, BG_TEXTURE_H, BG_TEXTURE_W, BG_TEXTURE_H);
         gui.fill(0, 0, w, h, PWPTheme.Colors.BACKGROUND_DIM);
     }
 
     @Override
-    public boolean shouldCloseOnEsc() {
-        return false;
-    }
+    public boolean shouldCloseOnEsc() { return false; }
 
     private void renderLogo(GuiGraphics gui, int cx, int y, float fade) {
         gui.setColor(1, 1, 1, fade);
@@ -125,7 +138,8 @@ public class PWPMainMenuScreen extends Screen {
         var pose = gui.pose();
         pose.pushPose();
         pose.translate(cx, y, 0);
-        pose.scale(2.2f, 2.2f, 1f);
+        float scale = PWPTheme.Fonts.SIZE_TITLE / 8f / 2f;
+        pose.scale(scale, scale, 1f);
         gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
         pose.popPose();
         gui.setColor(1, 1, 1, 1);
@@ -140,7 +154,7 @@ public class PWPMainMenuScreen extends Screen {
             ? Component.translatable("pwp_core.main_menu.welcome", nickname).getString()
             : "Добро пожаловать!";
 
-        int welcomeY = (int) (height * 0.34f);
+        int welcomeY = (int) (height * WELCOME_Y_RATIO);
         int slideY = (int) ((1 - fade) * 6);
 
         var pose = gui.pose();
