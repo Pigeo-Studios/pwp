@@ -1,6 +1,7 @@
 package com.pwp.coreclient.mixin;
 
 import com.pwp.coreclient.gui.animations.Easing;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -84,15 +85,17 @@ public class DisconnectedScreenMixin {
             int btnY = cy + 50;
             int btnW = 160;
             int btnH = 28;
+            int btnR = PWPTheme.Spacing.RADIUS_SMALL;
+            int bg = PWPTheme.Styles.Button.ACCENT_BG;
+            int border = PWPTheme.Colors.ACCENT_DIM;
+            int textColor = PWPTheme.Styles.Button.ACCENT_TEXT;
             boolean hover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
-            int bg = hover ? PWPTheme.Colors.SURFACE_LIGHT : 0xFF181C24;
-            int border = hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER;
-            gui.fill(btnX, btnY, btnX + btnW, btnY + btnH, bg);
-            gui.fill(btnX, btnY, btnX + btnW, btnY + 1, border);
-            gui.fill(btnX, btnY + btnH - 1, btnX + btnW, btnY + btnH, border);
-            gui.fill(btnX, btnY, btnX + 1, btnY + btnH, border);
-            gui.fill(btnX + btnW - 1, btnY, btnX + btnW, btnY + btnH, border);
-            gui.drawCenteredString(font, Component.literal("Вернуться в меню"), cx, btnY + 10, PWPTheme.Colors.TEXT_PRIMARY);
+            if (hover) {
+                bg = PWPTheme.Styles.Button.ACCENT_HOVER;
+            }
+            com.pwp.coreclient.gui.components.RoundedRect.fill(gui, btnX, btnY, btnW, btnH, btnR, bg);
+            com.pwp.coreclient.gui.components.RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
+            gui.drawCenteredString(font, Component.literal("Вернуться в меню"), cx, btnY + 10, textColor);
         }
     }
 

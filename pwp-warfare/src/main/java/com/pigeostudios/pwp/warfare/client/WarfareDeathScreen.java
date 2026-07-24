@@ -75,29 +75,29 @@ public class WarfareDeathScreen extends DeathScreen {
         mapRenderer.init(mapX, mapY, mapSize);
 
         applyCmdButton = addRenderableWidget(new PWPButton(10, 10, 150, 20,
-            Component.literal("APPLY FOR CMD"),
+            Component.literal("Стать командиром"),
             b -> { PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()); b.visible = false; },
             PWPButton.Style.DARK));
 
         boolean isInSquad = SquadUIHelper.isPlayerInSquad();
-        nameInput = new EditBox(font, 10, height - 90, 150, 20, Component.literal("Squad Name"));
+        nameInput = new EditBox(font, 10, height - 90, 150, 20, Component.literal("Название отряда"));
         nameInput.setMaxLength(12);
         nameInput.setVisible(!isInSquad);
         addRenderableWidget(nameInput);
 
         createButton = addRenderableWidget(new PWPButton(10, height - 65, 150, 20,
-            Component.literal("Create Squad"),
+            Component.literal("Создать отряд"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
             PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
 
         kitButton = addRenderableWidget(new PWPButton(10, height - 60, 150, 20,
-            Component.literal("\u2694 Kit"),
+            Component.literal("\u2694 Снаряжение"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
             PWPButton.Style.DARK));
 
         deployButton = addRenderableWidget(new PWPButton(10, height - 35, 100, 25,
-            Component.literal("DEPLOY"),
+            Component.literal("В бой"),
             b -> {
                 if (!selectedSpawnType.isEmpty()) {
                     ClientData.globalDeathTimestamp = 0L;
@@ -122,7 +122,7 @@ public class WarfareDeathScreen extends DeathScreen {
         addRenderableWidget(chatInput);
 
         addRenderableWidget(new PWPButton(width - 45, 5, 40, 20,
-            Component.literal("Quit"),
+            Component.literal("Выйти"),
             b -> { minecraft.level.disconnect(); minecraft.setScreen(new TitleScreen()); },
             PWPButton.Style.DARK));
     }
@@ -164,10 +164,10 @@ public class WarfareDeathScreen extends DeathScreen {
         int secondsLeft = (int) (respawnTimeTotal - elapsed);
         if (secondsLeft > 0) {
             deployButton.active = false;
-            deployButton.setMessage(Component.literal("WAIT " + secondsLeft + "s"));
+            deployButton.setMessage(Component.literal("Ожидание " + secondsLeft + "с"));
         } else {
             deployButton.active = !selectedSpawnType.isEmpty();
-            deployButton.setMessage(Component.literal("DEPLOY"));
+            deployButton.setMessage(Component.literal("В бой"));
         }
 
         int clipTop = applyCmdButton.visible ? 32 : 8;
@@ -212,14 +212,14 @@ public class WarfareDeathScreen extends DeathScreen {
     private void renderSpawnSelection(GuiGraphics gui, int mx, int my) {
         int startX = 180;
         int startY = 55;
-        gui.drawString(font, "SELECT SPAWN POINT:", startX, startY - 15, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(font, "Выберите точку спавна:", startX, startY - 15, PWPTheme.Colors.TEXT_ACCENT);
 
-        drawSpawnOption(gui, startX, startY, 110, 24, "MAIN BASE", "MAIN", mx, my, true, false);
+        drawSpawnOption(gui, startX, startY, 110, 24, "Основная база", "MAIN", mx, my, true, false);
         boolean rallyBlocked = isMyRallyBlocked();
         boolean rallyValid = hasValidRally() && !rallyBlocked;
-        drawSpawnOption(gui, startX, startY += 30, 110, 24, "SQUAD RALLY", "RALLY", mx, my, rallyValid, rallyBlocked);
+        drawSpawnOption(gui, startX, startY += 30, 110, 24, "Точка сбора", "RALLY", mx, my, rallyValid, rallyBlocked);
 
-        gui.drawString(font, "AVAILABLE HUBS:", startX, (startY += 40) - 12, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, "Доступные хабы:", startX, (startY += 40) - 12, PWPTheme.Colors.TEXT_SECONDARY);
         String myTeam = getPlayerTeam();
         String myDim = minecraft.level.dimension().location().toString();
         int hubIdx = 1;
@@ -227,7 +227,7 @@ public class WarfareDeathScreen extends DeathScreen {
             if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || !hub.dimension.equals(myDim)) continue;
             String id = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
             boolean canAfford = !ClientData.serverHubSpawnCosts || hub.materials >= ClientData.serverHubSpawnCostAmount;
-            drawSpawnOption(gui, startX, startY, 110, 20, "HUBS " + hubIdx, id, mx, my, !hub.isBlocked && canAfford, hub.isBlocked);
+            drawSpawnOption(gui, startX, startY, 110, 20, "Хаб " + hubIdx, id, mx, my, !hub.isBlocked && canAfford, hub.isBlocked);
             startY += 24;
             hubIdx++;
         }
@@ -397,9 +397,9 @@ public class WarfareDeathScreen extends DeathScreen {
 
     private Component getChatModeText() {
         return switch (chatMode) {
-            case 0 -> Component.literal("ALL").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 2 -> Component.literal("SQUAD").withStyle(ChatFormatting.GREEN);
-            default -> Component.literal("TEAM").withStyle(ChatFormatting.BLUE);
+            case 0 -> Component.literal("Все").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 2 -> Component.literal("Отряд").withStyle(ChatFormatting.GREEN);
+            default -> Component.literal("Команда").withStyle(ChatFormatting.BLUE);
         };
     }
 

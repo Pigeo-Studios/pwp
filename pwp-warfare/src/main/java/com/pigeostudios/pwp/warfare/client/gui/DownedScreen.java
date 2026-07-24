@@ -32,12 +32,12 @@ public class DownedScreen extends Screen {
         int bottomY = height - 55;
 
         addRenderableWidget(new PWPButton(cx - 130, bottomY, 120, 24,
-            Component.translatable("gui.pwpwarfare.downed.give_up"),
+            Component.literal("Сдаться"),
             b -> { PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(1)); onClose(); },
             PWPButton.Style.DANGER));
 
         callMedicButton = addRenderableWidget(new PWPButton(cx + 10, bottomY, 120, 24,
-            Component.translatable("gui.pwpwarfare.downed.call_medic"),
+            Component.literal("Вызвать медика"),
             b -> {
                 long now = System.currentTimeMillis();
                 if (now - lastMedicCallTime >= 15000) {
@@ -82,15 +82,14 @@ public class DownedScreen extends Screen {
         int fillColor = pct > 0.3f ? PWPTheme.Colors.SUCCESS : (pct > 0.15f ? PWPTheme.Colors.WARNING : PWPTheme.Colors.DANGER);
         gui.fill(barX, barY, barX + (int) (barW * pct), barY + barH, fillColor);
 
-        Component bleedText = Component.translatable("gui.pwpwarfare.downed.bleeding_out", remaining);
-        gui.drawCenteredString(font, bleedText, cx, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawCenteredString(font, Component.literal("Кровотечение: " + remaining + "с"), cx, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY);
 
         long cd = 15000 - (now - lastMedicCallTime);
         if (cd > 0) {
-            callMedicButton.setMessage(Component.translatable("gui.pwpwarfare.downed.call_medic_cooldown", cd / 1000 + 1));
+            callMedicButton.setMessage(Component.literal("Медик через " + (cd / 1000 + 1) + "с"));
             callMedicButton.active = false;
         } else {
-            callMedicButton.setMessage(Component.translatable("gui.pwpwarfare.downed.call_medic"));
+            callMedicButton.setMessage(Component.literal("Вызвать медика"));
             callMedicButton.active = true;
         }
 
@@ -110,9 +109,9 @@ public class DownedScreen extends Screen {
             if (d < minDist) { minDist = d; closest = other; }
         }
         if (closest != null && minDist <= 250) {
-            return Component.translatable("gui.pwpwarfare.downed.closest_ally", (int) minDist, closest.getScoreboardName());
+            return Component.literal(closest.getScoreboardName() + " — " + (int) minDist + "м");
         }
-        return Component.translatable("gui.pwpwarfare.downed.no_allies");
+        return Component.literal("Рядом нет союзников");
     }
 
     private void renderVignette(GuiGraphics gui) {

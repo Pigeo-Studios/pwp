@@ -3,6 +3,7 @@ package com.pwp.coreclient.mixin;
 import com.pwp.coreclient.gui.animations.Easing;
 import com.pwp.coreclient.gui.components.PWPProgressBar;
 import com.pwp.coreclient.gui.screens.PWPTipsWidget;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -71,6 +72,35 @@ public class ConnectScreenMixin {
 
         if (pwp_tips != null) {
             pwp_tips.render(gui, cx, cy + 55);
+        }
+
+        int btnW = 100;
+        int btnH = 20;
+        int btnX = cx - btnW / 2;
+        int btnY = h - 40;
+        boolean btnHover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
+        int btnR = PWPTheme.Spacing.RADIUS_SMALL;
+        int bg = btnHover ? PWPTheme.Colors.SURFACE_LIGHT : 0x00000000;
+        int border = btnHover ? PWPTheme.Colors.BORDER_FOCUS : 0x00000000;
+        int textCol = btnHover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
+        RoundedRect.fill(gui, btnX, btnY, btnW, btnH, btnR, bg);
+        if (btnHover) {
+            RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
+        }
+        gui.drawCenteredString(Minecraft.getInstance().font, Component.literal("Отмена"), cx, btnY + 6, textCol);
+    }
+
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    private void pwp_onClick(double mx, double my, int button, CallbackInfo ci) {
+        if (button != 0) return;
+        Minecraft mc = Minecraft.getInstance();
+        int cx = mc.getWindow().getGuiScaledWidth() / 2;
+        int h = mc.getWindow().getGuiScaledHeight();
+        int btnX = cx - 50;
+        int btnY = h - 40;
+        if (mx >= btnX && mx <= btnX + 100 && my >= btnY && my <= btnY + 20) {
+            mc.setScreen(new com.pwp.coreclient.gui.screens.PWPMainMenuScreen());
+            ci.cancel();
         }
     }
 }

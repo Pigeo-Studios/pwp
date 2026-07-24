@@ -53,23 +53,23 @@ public class SquadSelectionScreen extends Screen {
         }
 
         applyCmdButton = addRenderableWidget(new PWPButton(10, 10, 150, 20,
-            Component.translatable("gui.pwpwarfare.squad_select.apply_cmd"),
+            Component.literal("Стать командиром"),
             b -> { PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()); b.visible = false; },
             PWPButton.Style.DARK));
 
         kitButton = addRenderableWidget(new PWPButton(10, height - BOTTOM_BAR_H + 8, 150, 22,
-            Component.literal("\u2694 ").append(Component.translatable("gui.pwpwarfare.squad_select.kit")),
+            Component.literal("\u2694 Снаряжение"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
             PWPButton.Style.DARK));
         kitButton.visible = isInSquad;
 
-        nameInput = new EditBox(font, 10, height - 55, 150, 20, Component.translatable("gui.pwpwarfare.squad_select.squad_name"));
+        nameInput = new EditBox(font, 10, height - 55, 150, 20, Component.literal("Название отряда"));
         nameInput.setMaxLength(12);
         nameInput.setVisible(!isInSquad);
         addRenderableWidget(nameInput);
 
         createButton = addRenderableWidget(new PWPButton(10, height - 30, 150, 20,
-            Component.translatable("gui.pwpwarfare.squad_select.create"),
+            Component.literal("Создать отряд"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
             PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
@@ -202,9 +202,9 @@ public class SquadSelectionScreen extends Screen {
 
     private Component getChatModeText() {
         return switch (chatMode) {
-            case 0 -> Component.translatable("gui.pwpwarfare.squad_select.channel_all").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 2 -> Component.translatable("gui.pwpwarfare.squad_select.channel_squad").withStyle(ChatFormatting.GREEN);
-            default -> Component.translatable("gui.pwpwarfare.squad_select.channel_team").withStyle(ChatFormatting.BLUE);
+            case 0 -> Component.literal("Все").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 2 -> Component.literal("Отряд").withStyle(ChatFormatting.GREEN);
+            default -> Component.literal("Команда").withStyle(ChatFormatting.BLUE);
         };
     }
 

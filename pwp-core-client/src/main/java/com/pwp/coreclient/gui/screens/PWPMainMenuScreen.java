@@ -1,7 +1,6 @@
 package com.pwp.coreclient.gui.screens;
 
 import com.pwp.coreclient.gui.animations.Easing;
-import com.pwp.coreclient.gui.components.PWPBadge;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPLayout;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -27,6 +26,9 @@ public class PWPMainMenuScreen extends Screen {
     private ServerStatus serverStatus = ServerStatus.UNKNOWN;
 
     private PWPButton playBtn;
+    private PWPButton singleBtn;
+    private PWPButton settingsBtn;
+    private PWPButton quitBtn;
 
     public PWPMainMenuScreen() {
         super(Component.literal("PWP"));
@@ -43,17 +45,18 @@ public class PWPMainMenuScreen extends Screen {
 
         int cx = width / 2;
         int btnW = Math.min(width / 4, 220);
-        int btnH = 28;
+        int playH = 32;
+        int otherH = 24;
         int gap = 6;
 
-        int totalBtnH = 4 * btnH + 3 * gap;
+        int totalH = playH + otherH * 3 + gap * 3;
         int startY = (int) (height * 0.52f);
-        if (startY + totalBtnH > height - 60) {
-            startY = height - 60 - totalBtnH;
+        if (startY + totalH > height - 40) {
+            startY = height - 40 - totalH;
         }
 
         playBtn = addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY, btnW, btnH,
+            cx - btnW / 2, startY, btnW, playH,
             Component.translatable("pwp_core.main_menu.play"),
             btn -> {
                 if (connecting) return;
@@ -64,25 +67,25 @@ public class PWPMainMenuScreen extends Screen {
             PWPButton.Style.ACCENT
         ));
 
-        addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY + btnH + gap, btnW, btnH,
+        singleBtn = addRenderableWidget(new PWPButton(
+            cx - btnW / 2, startY + playH + gap, btnW, otherH,
             Component.translatable("pwp_core.main_menu.singleplayer"),
             btn -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)),
-            PWPButton.Style.PRIMARY
+            PWPButton.Style.DARK
         ));
 
-        addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY + (btnH + gap) * 2, btnW, btnH,
+        settingsBtn = addRenderableWidget(new PWPButton(
+            cx - btnW / 2, startY + playH + (otherH + gap) * 1 + gap, btnW, otherH,
             Component.translatable("pwp_core.main_menu.settings"),
             btn -> Minecraft.getInstance().setScreen(new OptionsScreen(this, Minecraft.getInstance().options)),
             PWPButton.Style.DARK
         ));
 
-        addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY + (btnH + gap) * 3, btnW, btnH,
+        quitBtn = addRenderableWidget(new PWPButton(
+            cx - btnW / 2, startY + playH + (otherH + gap) * 2 + gap, btnW, otherH,
             Component.translatable("pwp_core.main_menu.quit"),
             btn -> Minecraft.getInstance().stop(),
-            PWPButton.Style.DANGER
+            PWPButton.Style.GHOST
         ));
     }
 
@@ -196,12 +199,12 @@ public class PWPMainMenuScreen extends Screen {
     }
 
     private void renderButtons(GuiGraphics gui, int mouseX, int mouseY, float partialTick, float elapsed) {
-        var btns = renderables;
+        PWPButton[] btns = { playBtn, singleBtn, settingsBtn, quitBtn };
         int startDelay = 300;
 
-        for (int i = 0; i < btns.size(); i++) {
-            var w = btns.get(i);
-            if (!(w instanceof PWPButton btn)) continue;
+        for (int i = 0; i < btns.length; i++) {
+            PWPButton btn = btns[i];
+            if (btn == null) continue;
 
             float progress = animFade(elapsed, startDelay + i * 50, 250);
             if (progress <= 0) { btn.visible = false; continue; }

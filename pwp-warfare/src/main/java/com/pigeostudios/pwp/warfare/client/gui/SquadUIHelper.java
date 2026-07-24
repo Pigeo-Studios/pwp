@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.components.PWPPanel;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -54,23 +55,40 @@ public class SquadUIHelper {
             gui.drawString(Minecraft.getInstance().font, display, 25, currentY, squadNameColor);
 
             String actionText = "";
-            int actionColor = 0xFFFFFF;
-            boolean clickable = true;
+            boolean isJoin = false, isLeave = false, isDisabled = false;
             if (isMySquad) {
-                actionText = "LEAVE";
-                actionColor = PWPTheme.Colors.DANGER;
+                actionText = "Покинуть";
+                isLeave = true;
             } else if (!amIInSquad) {
-                if (squad.isLocked) { actionText = "LOCKED"; actionColor = PWPTheme.Colors.TEXT_DIM; clickable = false; }
-                else if (squad.members.size() >= 9) { actionText = "FULL"; actionColor = PWPTheme.Colors.TEXT_DIM; clickable = false; }
-                else { actionText = "JOIN"; actionColor = PWPTheme.Colors.TEXT_ACCENT; }
+                if (squad.isLocked) { actionText = "Закрыт"; isDisabled = true; }
+                else if (squad.members.size() >= 9) { actionText = "Полный"; isDisabled = true; }
+                else { actionText = "Вступить"; isJoin = true; }
             }
 
             int actionX = 0;
             if (!actionText.isEmpty()) {
-                int aw = Minecraft.getInstance().font.width(actionText);
-                actionX = SIDEBAR_WIDTH - aw - 10;
-                boolean hover = mx >= actionX && mx <= actionX + aw && my >= currentY && my <= currentY + 9;
-                gui.drawString(Minecraft.getInstance().font, actionText, actionX, currentY, hover && clickable ? 0xFFFFFF : actionColor);
+                int aw = Minecraft.getInstance().font.width(actionText) + 12;
+                int ah = 12;
+                actionX = SIDEBAR_WIDTH - aw - 6;
+                int actionY = currentY - 1;
+                boolean hover = mx >= actionX && mx <= actionX + aw && my >= actionY && my <= actionY + ah && !isDisabled;
+                int r = PWPTheme.Spacing.RADIUS_SMALL;
+
+                if (isJoin) {
+                    int bg = hover ? PWPTheme.Styles.Button.DARK_HOVER : PWPTheme.Styles.Button.DARK_BG;
+                    int border = hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
+                    RoundedRect.fill(gui, actionX, actionY, aw, ah, r, bg);
+                    RoundedRect.border(gui, actionX, actionY, aw, ah, r, 1, border);
+                    gui.drawCenteredString(Minecraft.getInstance().font, actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_PRIMARY);
+                } else if (isLeave) {
+                    if (hover) {
+                        RoundedRect.fill(gui, actionX, actionY, aw, ah, r, 0x22FF0000);
+                    }
+                    int textCol = hover ? PWPTheme.Colors.DANGER : PWPTheme.Colors.TEXT_DIM;
+                    gui.drawCenteredString(Minecraft.getInstance().font, actionText, actionX + aw / 2, actionY + 2, textCol);
+                } else if (isDisabled) {
+                    gui.drawCenteredString(Minecraft.getInstance().font, actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM);
+                }
             }
 
             renderSquadIcons(gui, squad, amILeader, isExpanded, actionX, currentY);

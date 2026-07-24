@@ -53,8 +53,8 @@ public class VictoryScreen extends Screen {
     protected void init() {
         int cx = width / 2;
         continueButton = addRenderableWidget(new PWPButton(cx - 70, height / 2 + 90, 140, 24,
-            Component.translatable("gui.pwpwarfare.victory.continue"),
-            b -> onClose(), PWPButton.Style.DARK));
+            Component.literal("Продолжить"),
+            b -> onClose(), PWPButton.Style.ACCENT));
         continueButton.setAnimAlpha(0f);
         continueButton.active = false;
     }
@@ -94,7 +94,7 @@ public class VictoryScreen extends Screen {
             gui.pose().pushPose();
             gui.pose().translate(cx, cy - 42, 0);
             gui.pose().scale(1.5f, 1.5f, 1f);
-            gui.drawCenteredString(font, Component.literal(winnerName + " WINS!"), 0, 0, a << 24 | 0xFFFFFF);
+            gui.drawCenteredString(font, Component.literal(winnerName + " — победа!"), 0, 0, a << 24 | 0xFFFFFF);
             gui.pose().popPose();
 
             gui.drawCenteredString(font, Component.literal(subText), cx, cy - 22, a << 24 | 0xAAAAAA);
@@ -111,7 +111,7 @@ public class VictoryScreen extends Screen {
             gui.fill(statsX + statsW - 1, statsY, statsX + statsW, statsY + panelH, a << 24 | 0xFF1E222A);
 
             int accent = a << 24 | PWPTheme.Colors.ACCENT;
-            gui.drawCenteredString(font, Component.literal("\u00a7lMATCH STATS"), cx, statsY + 4, accent);
+            gui.drawCenteredString(font, Component.literal("\u00a7lСтатистика"), cx, statsY + 4, accent);
 
             int rowY = statsY + 16;
             int rowH = 13;
@@ -119,24 +119,24 @@ public class VictoryScreen extends Screen {
             int labelCol = a << 24 | 0xFF7A7D84;
             int textCol = a << 24 | 0xFFC8CBCE;
 
-            drawStat(gui, "Kills", String.valueOf(matchKills), statsX + 8, rowY, labelCol, accent);
-            drawStat(gui, "Deaths", String.valueOf(matchDeaths), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "Revives", String.valueOf(matchRevives), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(gui, "Убийств", String.valueOf(matchKills), statsX + 8, rowY, labelCol, accent);
+            drawStat(gui, "Смертей", String.valueOf(matchDeaths), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Реанимаций", String.valueOf(matchRevives), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
             String kd = matchDeaths == 0 ? String.valueOf(matchKills) : String.format("%.2f", (double) matchKills / matchDeaths);
             drawStat(gui, "K/D", kd, statsX + 8, rowY, labelCol, accent);
-            drawStat(gui, "Score", String.format("%,d", matchScore), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "Time", formatDuration(matchDurationSec), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(gui, "Счёт", String.format("%,d", matchScore), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Время", formatDuration(matchDurationSec), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
-            drawStat(gui, "V.Kills", String.valueOf(matchVehicleKills), statsX + 8, rowY, labelCol, textCol);
-            drawStat(gui, "V.Destr.", String.valueOf(matchVehiclesDestroyed), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "Air D.", String.valueOf(matchAirVehiclesDestroyed), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(gui, "Техника", String.valueOf(matchVehicleKills), statsX + 8, rowY, labelCol, textCol);
+            drawStat(gui, "Уничтожено", String.valueOf(matchVehiclesDestroyed), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "В воздухе", String.valueOf(matchAirVehiclesDestroyed), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
-            drawStat(gui, "Captures", String.valueOf(matchCaptures), statsX + 8, rowY, labelCol, textCol);
-            drawStat(gui, "Headshots", String.valueOf(matchHeadshots), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Захватов", String.valueOf(matchCaptures), statsX + 8, rowY, labelCol, textCol);
+            drawStat(gui, "В голову", String.valueOf(matchHeadshots), statsX + 8 + cw, rowY, labelCol, textCol);
         }
 
         continueButton.setAnimAlpha(contentAlpha);
