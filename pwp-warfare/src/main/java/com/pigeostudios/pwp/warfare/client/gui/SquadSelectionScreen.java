@@ -15,8 +15,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -183,7 +183,7 @@ public class SquadSelectionScreen extends Screen {
     }
 
     private void handleMapRightClick(double mx, double my) {
-        Player p = minecraft.player;
+        LocalPlayer p = minecraft.player;
         if (!SquadUIHelper.isSquadLeaderOrFTL(p)) {
             p.displayClientMessage(Component.translatable("gui.pwpwarfare.map_marker.error").withStyle(ChatFormatting.RED), true);
             return;

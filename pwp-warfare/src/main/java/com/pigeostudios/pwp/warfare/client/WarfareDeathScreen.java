@@ -23,7 +23,7 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.client.player.LocalPlayer;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -315,7 +315,7 @@ public class WarfareDeathScreen extends DeathScreen {
 
     private String getSpawnPointUnderMouse(double mx, double my) {
         Minecraft mc = Minecraft.getInstance();
-        Player p = mc.player;
+        LocalPlayer p = mc.player;
         double bpp = mapRenderer.getBlocksPerPixel();
         double cx = mapRenderer.getCenterX(p);
         double cz = mapRenderer.getCenterZ(p);

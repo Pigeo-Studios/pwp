@@ -10,7 +10,8 @@ import net.minecraft.resources.ResourceLocation;
 public class PWPMatchCard {
 
     public enum Status {
-        PLAYING, STARTING, FULL, WAITING, FINISHED
+        PLAYING, STARTING, FULL, WAITING, FINISHED,
+        CLOSED, MAINTENANCE, RECONNECT, VOTING
     }
 
     private PWPMatchCard() {}
@@ -26,8 +27,9 @@ public class PWPMatchCard {
         int bg = isCurrent ? 0xFF1A180E : (hovered ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
         int border = switch (status) {
             case PLAYING -> PWPTheme.Colors.SUCCESS;
-            case STARTING -> PWPTheme.Colors.WARNING;
-            case FULL -> PWPTheme.Colors.DANGER;
+            case STARTING, VOTING -> PWPTheme.Colors.WARNING;
+            case FULL, CLOSED -> PWPTheme.Colors.DANGER;
+            case MAINTENANCE -> PWPTheme.Colors.INFO;
             default -> hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER;
         };
 
@@ -77,7 +79,11 @@ public class PWPMatchCard {
         switch (status) {
             case PLAYING -> { actionText = "\u25B6 \u00a7eВойти"; actionColor = PWPTheme.Colors.TEXT_ACCENT; }
             case STARTING -> { actionText = "\u23F3 Запуск..."; actionColor = PWPTheme.Colors.TEXT_DIM; }
-            case FULL -> { actionText = "ПОЛНЫЙ"; actionColor = PWPTheme.Colors.DANGER; }
+            case FULL -> { actionText = "\u2716 ПОЛНЫЙ"; actionColor = PWPTheme.Colors.DANGER; }
+            case CLOSED -> { actionText = "\u2716 Закрыт"; actionColor = PWPTheme.Colors.DANGER; }
+            case MAINTENANCE -> { actionText = "\u2699 Обслуживание"; actionColor = PWPTheme.Colors.INFO; }
+            case RECONNECT -> { actionText = "\u21BA Переподключение..."; actionColor = PWPTheme.Colors.INFO; }
+            case VOTING -> { actionText = "\u2714 Голосование"; actionColor = PWPTheme.Colors.WARNING; }
             case WAITING -> { actionText = "\u23F3 Ожидание..."; actionColor = PWPTheme.Colors.TEXT_DIM; }
             default -> { actionText = ""; actionColor = PWPTheme.Colors.TEXT_DIM; }
         }

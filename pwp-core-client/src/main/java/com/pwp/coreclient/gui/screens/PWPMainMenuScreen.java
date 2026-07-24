@@ -52,20 +52,17 @@ public class PWPMainMenuScreen extends Screen {
             startY = height - 60 - totalBtnH;
         }
 
-        boolean canPlay = serverStatus != ServerStatus.OFFLINE && serverStatus != ServerStatus.MAINTENANCE;
-
         playBtn = addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY, btnW, btnH,
-            getPlayButtonText(),
+            Component.translatable("pwp_core.main_menu.play"),
             btn -> {
-                if (connecting || !canPlay) return;
+                if (connecting) return;
                 connecting = true;
                 Minecraft.getInstance().setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
                 ClientConnectHandler.connect("pigeo.asuscomm.com", 25565);
             },
-            canPlay ? PWPButton.Style.ACCENT : PWPButton.Style.DARK
+            PWPButton.Style.ACCENT
         ));
-        playBtn.active = canPlay;
 
         addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY + btnH + gap, btnW, btnH,
@@ -87,15 +84,6 @@ public class PWPMainMenuScreen extends Screen {
             btn -> Minecraft.getInstance().stop(),
             PWPButton.Style.DANGER
         ));
-    }
-
-    private Component getPlayButtonText() {
-        return switch (serverStatus) {
-            case OFFLINE -> Component.literal("Сервер недоступен");
-            case MAINTENANCE -> Component.literal("Технические работы");
-            case ONLINE -> Component.translatable("pwp_core.main_menu.play");
-            default -> Component.translatable("pwp_core.main_menu.play");
-        };
     }
 
     @Override

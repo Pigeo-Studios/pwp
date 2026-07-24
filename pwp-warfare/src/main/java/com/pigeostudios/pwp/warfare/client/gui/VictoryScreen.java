@@ -62,8 +62,8 @@ public class VictoryScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         long elapsed = System.currentTimeMillis() - openTime;
-        float bgAlpha = Mth.clamp((float) elapsed / 800f, 0f, 1f);
-        float contentAlpha = Mth.clamp((float) (elapsed - 800L) / 1200f, 0f, 1f);
+        float bgAlpha = Mth.clamp((float) elapsed / 400f, 0f, 1f);
+        float contentAlpha = Mth.clamp((float) (elapsed - 400L) / 800f, 0f, 1f);
 
         int topBg = (int) (bgAlpha * 100) << 24;
         int bottomBg = (int) (bgAlpha * 140) << 24;
