@@ -1,0 +1,110 @@
+package com.pwp.coreclient.mixin;
+
+import com.pwp.coreclient.gui.animations.Easing;
+import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(DisconnectedScreen.class)
+public class DisconnectedScreenMixin {
+
+    @Shadow @Final
+    private Component reason;
+
+    @Unique
+    private static final ResourceLocation PWP_BG = new ResourceLocation("pwp_core_client", "textures/gui/loading.png");
+
+    @Unique
+    private long pwp_openTime;
+
+    @Unique
+    private boolean pwp_showBack;
+
+    @Inject(method = "renderBackground", at = @At("HEAD"), cancellable = true)
+    private void pwp_customBg(GuiGraphics gui, int mx, int my, float pt, CallbackInfo ci) {
+        ci.cancel();
+        int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        gui.blit(PWP_BG, 0, 0, 0, 0, w, h, w, h);
+        gui.fill(0, 0, w, h, PWPTheme.Colors.BACKGROUND_DIM);
+    }
+
+    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+    private void pwp_customRender(GuiGraphics gui, int mx, int my, float pt, CallbackInfo ci) {
+        ci.cancel();
+
+        Minecraft mc = Minecraft.getInstance();
+        int w = mc.getWindow().getGuiScaledWidth();
+        int h = mc.getWindow().getGuiScaledHeight();
+        int cx = w / 2;
+        int cy = h / 2;
+
+        if (pwp_openTime == 0) pwp_openTime = System.currentTimeMillis();
+        long elapsed = System.currentTimeMillis() - pwp_openTime;
+
+        var font = Minecraft.getInstance().font;
+        var pose = gui.pose();
+
+        pose.pushPose();
+        pose.translate(cx, (int) (h * 0.12f), 0);
+        pose.scale(1.4f, 1.4f, 1f);
+        gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
+        pose.popPose();
+
+        float fade = Math.min(elapsed / 250.0F, 1);
+        float eased = Easing.easeOutCubic(fade);
+
+        gui.setColor(1, 1, 1, eased);
+        gui.drawCenteredString(font, Component.literal("Соединение разорвано"), cx, cy - 20, PWPTheme.Colors.DANGER);
+
+        String reasonStr = reason.getString();
+        if (!reasonStr.isEmpty()) {
+            int maxW = (int) (w * 0.6f);
+            if (font.width(reasonStr) > maxW) {
+                reasonStr = font.plainSubstrByWidth(reasonStr, maxW - 4) + "...";
+            }
+            gui.drawCenteredString(font, Component.literal(reasonStr), cx, cy, PWPTheme.Colors.TEXT_SECONDARY);
+        }
+        gui.setColor(1, 1, 1, 1);
+
+        pwp_showBack = eased >= 1;
+        if (pwp_showBack) {
+            int btnX = cx - 80;
+            int btnY = cy + 50;
+            int btnW = 160;
+            int btnH = 28;
+            boolean hover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
+            int bg = hover ? PWPTheme.Colors.SURFACE_LIGHT : 0xFF181C24;
+            int border = hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER;
+            gui.fill(btnX, btnY, btnX + btnW, btnY + btnH, bg);
+            gui.fill(btnX, btnY, btnX + btnW, btnY + 1, border);
+            gui.fill(btnX, btnY + btnH - 1, btnX + btnW, btnY + btnH, border);
+            gui.fill(btnX, btnY, btnX + 1, btnY + btnH, border);
+            gui.fill(btnX + btnW - 1, btnY, btnX + btnW, btnY + btnH, border);
+            gui.drawCenteredString(font, Component.literal("Вернуться в меню"), cx, btnY + 10, PWPTheme.Colors.TEXT_PRIMARY);
+        }
+    }
+
+    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    private void pwp_onClick(double mx, double my, int button, CallbackInfo ci) {
+        if (button != 0 || !pwp_showBack) return;
+        int cx = Minecraft.getInstance().getWindow().getGuiScaledWidth() / 2;
+        int btnX = cx - 80;
+        int btnY = Minecraft.getInstance().getWindow().getGuiScaledHeight() / 2 + 50;
+        if (mx >= btnX && mx <= btnX + 160 && my >= btnY && my <= btnY + 28) {
+            Minecraft.getInstance().setScreen(new com.pwp.coreclient.gui.screens.PWPMainMenuScreen());
+            ci.cancel();
+        }
+    }
+}

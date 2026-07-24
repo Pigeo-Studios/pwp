@@ -7,7 +7,9 @@
     "TitleScreenMixin",
     "WindowIconMixin",
     "LevelLoadingScreenMixin",
-    "LevelTransitionMixin"
+    "LevelTransitionMixin",
+    "ConnectScreenMixin",
+    "DisconnectedScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

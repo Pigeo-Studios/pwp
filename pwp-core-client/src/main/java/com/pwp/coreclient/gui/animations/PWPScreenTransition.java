@@ -6,7 +6,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public class PWPScreenTransition {
 
     public enum Type {
-        FADE, SLIDE_UP, SLIDE_DOWN
+        FADE, FADE_ONLY, SLIDE_UP, SLIDE_DOWN
     }
 
     private final long startTime;
@@ -34,6 +34,7 @@ public class PWPScreenTransition {
 
         switch (type) {
             case FADE:
+            case FADE_ONLY:
                 RenderSystem.setShaderColor(1, 1, 1, eased);
                 break;
             case SLIDE_UP:

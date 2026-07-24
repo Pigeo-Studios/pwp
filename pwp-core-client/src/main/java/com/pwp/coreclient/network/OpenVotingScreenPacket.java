@@ -1,5 +1,6 @@
 package com.pwp.coreclient.network;
 
+import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -95,12 +96,7 @@ public class OpenVotingScreenPacket {
 
     public static void handle(OpenVotingScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
-            ctx.get().enqueueWork(() -> {
-                try {
-                    Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
-                    lobbyScreen.getMethod("openVote", OpenVotingScreenPacket.class).invoke(null, msg);
-                } catch (Exception ignored) {}
-            });
+            ctx.get().enqueueWork(() -> PWPLobbyScreen.openVote(msg));
         }
         ctx.get().setPacketHandled(true);
     }

@@ -1,5 +1,6 @@
 package com.pwp.coreclient.network;
 
+import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -65,12 +66,7 @@ public class OpenMatchScreenPacket {
 
     public static void handle(OpenMatchScreenPacket msg, Supplier<NetworkEvent.Context> ctx) {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
-            ctx.get().enqueueWork(() -> {
-                try {
-                    Class<?> lobbyScreen = Class.forName("com.pwp.lobby.gui.LobbyScreen");
-                    lobbyScreen.getMethod("openMatch", OpenMatchScreenPacket.class).invoke(null, msg);
-                } catch (Exception ignored) {}
-            });
+            ctx.get().enqueueWork(() -> PWPLobbyScreen.openMatch(msg));
         }
         ctx.get().setPacketHandled(true);
     }

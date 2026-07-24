@@ -16,7 +16,7 @@ import java.util.Random;
 public class PWPLoadingScreen extends Screen {
 
     public enum Context {
-        CONNECTING, LOADING_WORLD, LOADING_MAP, WAITING_DATA
+        CONNECTING, LOADING_WORLD, LOADING_MAP, WAITING_DATA, DISCONNECTING, CHANGING_DIMENSION, TRANSFERRING
     }
 
     private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/loading.png");
@@ -57,6 +57,9 @@ public class PWPLoadingScreen extends Screen {
             case LOADING_WORLD -> 60000;
             case LOADING_MAP -> 30000;
             case WAITING_DATA -> 8000;
+            case DISCONNECTING -> 5000;
+            case CHANGING_DIMENSION -> 30000;
+            case TRANSFERRING -> 15000;
         };
     }
 
@@ -214,6 +217,9 @@ public class PWPLoadingScreen extends Screen {
             case LOADING_WORLD -> "Загрузка мира...";
             case LOADING_MAP -> "Загрузка карты...";
             case WAITING_DATA -> "Загрузка...";
+            case DISCONNECTING -> "Отключение...";
+            case CHANGING_DIMENSION -> "Переход между мирами...";
+            case TRANSFERRING -> "Переключение сервера...";
         };
     }
 }

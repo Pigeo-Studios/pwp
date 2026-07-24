@@ -16,14 +16,8 @@ import net.minecraft.resources.ResourceLocation;
 public class PWPMainMenuScreen extends Screen {
 
     private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/main_menu.png");
-
-    private static final int BG_TEXTURE_W = 1920;
-    private static final int BG_TEXTURE_H = 1080;
-
-    private static final int MENU_BUTTON_HEIGHT = 28;
-    private static final float MENU_START_Y_RATIO = 0.52f;
-    private static final float LOGO_Y_RATIO = 0.16f;
-    private static final float WELCOME_Y_RATIO = 0.34f;
+    private static final int BG_W = 1920;
+    private static final int BG_H = 1080;
 
     private final long openTime;
     private boolean connecting;
@@ -44,11 +38,14 @@ public class PWPMainMenuScreen extends Screen {
 
         int cx = width / 2;
         int btnW = Math.min(width / 4, 220);
-        int btnH = MENU_BUTTON_HEIGHT;
+        int btnH = 28;
         int gap = 6;
 
-        int totalH = 4 * btnH + 3 * gap;
-        int startY = Math.min((int) (height * MENU_START_Y_RATIO), height - 40 - totalH);
+        int totalBtnH = 4 * btnH + 3 * gap;
+        int startY = (int) (height * 0.52f);
+        if (startY + totalBtnH > height - 40) {
+            startY = height - 40 - totalBtnH;
+        }
 
         playBtn = addRenderableWidget(new PWPButton(
             cx - btnW / 2, startY, btnW, btnH,
@@ -91,24 +88,21 @@ public class PWPMainMenuScreen extends Screen {
         long elapsed = System.currentTimeMillis() - openTime;
         int cx = width / 2;
 
-        float logoProgress = animProgress(elapsed, 0, 300);
-        if (logoProgress > 0) {
-            float fade = Easing.easeOutCubic(Math.min(logoProgress, 1));
-            renderLogo(gui, cx, (int) (height * LOGO_Y_RATIO), fade);
+        float logoFade = animFade(elapsed, 0, 300);
+        if (logoFade > 0) {
+            renderLogo(gui, cx, (int) (height * 0.16f), logoFade);
         }
 
-        float welcomeProgress = animProgress(elapsed, 100, 300);
-        if (welcomeProgress > 0) {
-            float fade = Easing.easeOutCubic(Math.min(welcomeProgress, 1));
-            renderWelcome(gui, cx, fade);
+        float welcomeFade = animFade(elapsed, 200, 300);
+        if (welcomeFade > 0) {
+            renderWelcome(gui, cx, welcomeFade);
         }
 
         renderButtons(gui, mouseX, mouseY, partialTick, elapsed);
 
-        float footerProgress = animProgress(elapsed, 300 + 4 * 60 + 100, 300);
-        if (footerProgress > 0) {
-            float fade = Easing.easeOutCubic(Math.min(footerProgress, 1));
-            gui.setColor(1, 1, 1, fade);
+        float footerFade = animFade(elapsed, 500, 300);
+        if (footerFade > 0) {
+            gui.setColor(1, 1, 1, footerFade);
             PWPLayout.renderFooter(gui, "PWP v1.0.1", width, height);
             gui.setColor(1, 1, 1, 1);
         }
@@ -119,18 +113,20 @@ public class PWPMainMenuScreen extends Screen {
         int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
 
-        float scale = Math.max((float) w / BG_TEXTURE_W, (float) h / BG_TEXTURE_H);
-        int drawW = Math.round(BG_TEXTURE_W * scale);
-        int drawH = Math.round(BG_TEXTURE_H * scale);
+        float scale = Math.max((float) w / BG_W, (float) h / BG_H);
+        int drawW = Math.round(BG_W * scale);
+        int drawH = Math.round(BG_H * scale);
         int drawX = (w - drawW) / 2;
         int drawY = (h - drawH) / 2;
 
-        gui.blit(BG_TEXTURE, drawX, drawY, drawW, drawH, 0, 0, BG_TEXTURE_W, BG_TEXTURE_H, BG_TEXTURE_W, BG_TEXTURE_H);
+        gui.blit(BG_TEXTURE, drawX, drawY, drawW, drawH, 0, 0, BG_W, BG_H, BG_W, BG_H);
         gui.fill(0, 0, w, h, PWPTheme.Colors.BACKGROUND_DIM);
     }
 
     @Override
-    public boolean shouldCloseOnEsc() { return false; }
+    public boolean shouldCloseOnEsc() {
+        return false;
+    }
 
     private void renderLogo(GuiGraphics gui, int cx, int y, float fade) {
         gui.setColor(1, 1, 1, fade);
@@ -154,18 +150,15 @@ public class PWPMainMenuScreen extends Screen {
             ? Component.translatable("pwp_core.main_menu.welcome", nickname).getString()
             : "Добро пожаловать!";
 
-        int welcomeY = (int) (height * WELCOME_Y_RATIO);
+        int welcomeY = (int) (height * 0.34f);
         int slideY = (int) ((1 - fade) * 6);
 
         var pose = gui.pose();
         pose.pushPose();
         pose.translate(0, slideY, 0);
 
-        int textColor = PWPTheme.Colors.TEXT_PRIMARY;
-        int subColor = PWPTheme.Colors.TEXT_SECONDARY;
-
-        gui.drawCenteredString(font, Component.literal(welcome), cx, welcomeY, textColor);
-        gui.drawCenteredString(font, Component.translatable("pwp_core.main_menu.subtitle"), cx, welcomeY + 16, subColor);
+        gui.drawCenteredString(font, Component.literal(welcome), cx, welcomeY, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(font, Component.translatable("pwp_core.main_menu.subtitle"), cx, welcomeY + 16, PWPTheme.Colors.TEXT_SECONDARY);
 
         pose.popPose();
     }
@@ -175,16 +168,15 @@ public class PWPMainMenuScreen extends Screen {
         int startDelay = 300;
 
         for (int i = 0; i < btns.length; i++) {
-            float progress = animProgress(elapsed, startDelay + i * 60, 250);
+            float progress = animFade(elapsed, startDelay + i * 50, 250);
 
             if (progress <= 0) {
                 btns[i].visible = false;
                 continue;
             }
 
-            float t = Math.min(progress, 1);
-            float eased = Easing.easeOutBack(t);
-            int slideY = (int) ((1 - eased) * 14);
+            float eased = Math.min(progress, 1);
+            int slideY = (int) ((1 - eased) * 12);
 
             btns[i].setAnimAlpha(eased);
             btns[i].visible = true;
@@ -197,8 +189,10 @@ public class PWPMainMenuScreen extends Screen {
         }
     }
 
-    private float animProgress(float elapsed, long delay, long duration) {
+    private static float animFade(float elapsed, long delay, long duration) {
         float t = (elapsed - delay) / (float) duration;
-        return Math.min(t, 1);
+        if (t <= 0) return 0;
+        if (t >= 1) return 1;
+        return Easing.easeOutCubic(t);
     }
 }
