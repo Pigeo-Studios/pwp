@@ -59,7 +59,7 @@ public class PWPLobbyScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
         if (instance != null) { instance.matchData = pkt; }
-        else { PWPLobbyScreen s = new PWPLobbyScreen(); s.matchData = pkt; mc.setScreen(s); }
+        else { PWPLobbyScreen s = new PWPLobbyScreen(); s.matchData = pkt; s.listLoading = false; mc.setScreen(s); }
     }
 
     public static void updateVote(OpenVotingScreenPacket pkt) {
@@ -79,6 +79,7 @@ public class PWPLobbyScreen extends Screen {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.modeVoteData = pkt;
             s.modeVoteOpenedAt = System.currentTimeMillis();
+            s.listLoading = false;
             mc.setScreen(s);
         }
     }
@@ -95,6 +96,7 @@ public class PWPLobbyScreen extends Screen {
             s.modeVoteData = null;
             s.voteData = pkt;
             s.voteOpenedAt = System.currentTimeMillis();
+            s.listLoading = false;
             mc.setScreen(s);
         }
     }
