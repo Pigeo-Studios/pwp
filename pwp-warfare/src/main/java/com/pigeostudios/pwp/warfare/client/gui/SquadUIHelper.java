@@ -57,12 +57,12 @@ public class SquadUIHelper {
             String actionText = "";
             boolean isJoin = false, isLeave = false, isDisabled = false;
             if (isMySquad) {
-                actionText = "РџРѕРєРёРЅСѓС‚СЊ";
+                actionText = "Покинуть";
                 isLeave = true;
             } else if (!amIInSquad) {
-                if (squad.isLocked) { actionText = "Р—Р°РєСЂС‹С‚"; isDisabled = true; }
-                else if (squad.members.size() >= 9) { actionText = "РџРѕР»РЅС‹Р№"; isDisabled = true; }
-                else { actionText = "Р’СЃС‚СѓРїРёС‚СЊ"; isJoin = true; }
+                if (squad.isLocked) { actionText = "Закрыт"; isDisabled = true; }
+                else if (squad.members.size() >= 9) { actionText = "Полный"; isDisabled = true; }
+                else { actionText = "Вступить"; isJoin = true; }
             }
 
             int actionX = 0;
