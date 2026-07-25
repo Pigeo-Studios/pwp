@@ -1,6 +1,18 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
+    }
+}
+
 plugins {
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
+apply plugin: 'org.spongepowered.mixin'
 
 group = 'com.pwp'
 version = '1.0.0'
@@ -16,6 +28,8 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
+            property 'mixin.debug.export', 'true'
+            args '-mixin.config=pwpblast.mixins.json'
             mods {
                 pwpblast {
                     source sourceSets.main
@@ -23,6 +37,12 @@ minecraft {
             }
         }
     }
+}
+
+mixin {
+    add sourceSets.main, "pwpblast.refmap.json"
+    config "pwpblast.mixins.json"
+    debug.export = true
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
@@ -33,6 +53,7 @@ repositories {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 jar {

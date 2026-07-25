@@ -28,7 +28,7 @@ public class BlastEvents {
 
     @SubscribeEvent
     public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
-        if (!PWPBlastConfig.ENABLED.get()) return;
+        if (!PWPBlastConfig.ENABLED.get() || !PWPBlastConfig.FALLBACK_FILTER_ENABLED.get()) return;
 
         event.getAffectedBlocks().removeIf(pos ->
             shouldProtect(event.getLevel().getBlockState(pos))
@@ -38,13 +38,13 @@ public class BlastEvents {
     private static boolean shouldProtect(BlockState state) {
         if (state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) ||
             state.is(GRAVEL_TAG) || state.is(SNOW_TAG)) {
-            double mult = PWPBlastConfig.SOFT_MULTIPLIER.get();
+            double mult = PWPBlastConfig.FALLBACK_SOFT_MULTIPLIER.get();
             return RANDOM.nextDouble() < (mult - 1.0) / mult;
         }
         if (state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.LOGS) ||
             state.is(BlockTags.PLANKS) || state.is(BlockTags.TERRACOTTA) ||
             state.is(BlockTags.ICE) || state.is(HARD_BLAST_TAG)) {
-            double mult = PWPBlastConfig.HARD_MULTIPLIER.get();
+            double mult = PWPBlastConfig.FALLBACK_HARD_MULTIPLIER.get();
             return RANDOM.nextDouble() < (mult - 1.0) / mult;
         }
         return false;

@@ -13,6 +13,9 @@ description='''
     to reduce cratering from explosions.
     Configured via server config (pwpblast.toml).
     '''
+[[mixins]]
+config="pwpblast.mixins.json"
+
 [[dependencies.pwpblast]]
 modId="minecraft"
 mandatory=true

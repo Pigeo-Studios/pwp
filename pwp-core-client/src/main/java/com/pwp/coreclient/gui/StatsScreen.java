@@ -53,8 +53,8 @@ public class StatsScreen extends Screen {
     };
     private static final String[] LB_CATEGORY_NAMES = {
         "Убийства", "Смерти", "K/D", "Победы", "WinRate",
-        "Техника", "Уничтожено", "Авиация",
-        "Захваты", "Урон", "Лечение", "Голова",
+        "Техникой", "Техника уничтожена", "Авиация",
+        "Захваты", "Урон", "Лечение", "Хэдшоты",
         "Наиграно", "Уровень"
     };
 
@@ -330,21 +330,21 @@ public class StatsScreen extends Screen {
         y += 6;
 
         y = drawPanel(gui, leftX, y, panelW, "ТЕХНИКА", new String[][]{
-            {"Уничтожено", intVal(st, "vehiclesDestroyed"), "Воздух", intVal(st, "airVehiclesDestroyed")},
+            {"Уничтожено техники", intVal(st, "vehiclesDestroyed"), "Сбито авиации", intVal(st, "airVehiclesDestroyed")},
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "ОРУЖИЕ", new String[][]{
-            {"Урон", doubleVal(st, "damageDealt"), "Лечение", doubleVal(st, "healingDone")},
-            {"Припасы", intVal(st, "suppliesDelivered"), "Дальнее убийство", doubleVal(st, "longestKill") + "м"},
+        y = drawPanel(gui, leftX, y, panelW, "ПОДДЕРЖКА", new String[][]{
+            {"Нанесено урона", doubleVal(st, "damageDealt"), "Вылечено", doubleVal(st, "healingDone")},
+            {"Доставлено припасов", intVal(st, "suppliesDelivered"), "Макс. дистанция", doubleVal(st, "longestKill") + "м"},
         });
         y += 6;
 
         int matchesBottom = drawPanel(gui, leftX, y, panelW, "МАТЧИ", new String[][]{
-            {"Сыграно", intVal(st, "matchesPlayed"), "Победы", intVal(st, "wins")},
-            {"Поражения", intVal(st, "losses"), "WinRate", formatWins(st)},
-            {"Время", formatPlaytime(st), "Уб./матч", formatKpg(st)},
-            {"Лучшая серия побед", intVal(st, "bestWinStreak"), "Тек. серия", intVal(st, "currentWinStreak")},
+            {"Сыграно", intVal(st, "matchesPlayed"), "Побед", intVal(st, "wins")},
+            {"Поражений", intVal(st, "losses"), "Процент побед", formatWins(st)},
+            {"Наиграно", formatPlaytime(st), "Убийств/матч", formatKpg(st)},
+            {"Макс. побед подряд", intVal(st, "bestWinStreak"), "Тек. побед подряд", intVal(st, "currentWinStreak")},
         });
         scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 12 - clipY - clipH);
     }
