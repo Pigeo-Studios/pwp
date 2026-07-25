@@ -20,7 +20,7 @@ import static com.pwp.blastprotection.util.PWPBlastLogic.SNOW_TAG;
 public abstract class BlockExplosionResistanceMixin {
 
     @Inject(
-        method = "getExplosionResistance(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/Explosion;)F",
+        method = "getExplosionResistance",
         at = @At("RETURN"),
         cancellable = true
     )
@@ -38,11 +38,11 @@ public abstract class BlockExplosionResistanceMixin {
         if (state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(BlockTags.LOGS) ||
             state.is(BlockTags.PLANKS) || state.is(BlockTags.TERRACOTTA) ||
             state.is(BlockTags.ICE) || state.is(HARD_BLAST_TAG)) {
-            return (float) PWPBlastConfig.HARD_MULTIPLIER.get();
+            return PWPBlastConfig.HARD_MULTIPLIER.get().floatValue();
         }
         if (state.is(BlockTags.DIRT) || state.is(BlockTags.SAND) ||
             state.is(GRAVEL_TAG) || state.is(SNOW_TAG)) {
-            return (float) PWPBlastConfig.SOFT_MULTIPLIER.get();
+            return PWPBlastConfig.SOFT_MULTIPLIER.get().floatValue();
         }
         return 1.0f;
     }
