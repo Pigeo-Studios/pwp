@@ -139,7 +139,8 @@ public class PWPTabs {
             int h = this.height;
 
             gui.fill(x, y, x + w, y + h, bg);
-            gui.drawCenteredString(font, this.getMessage(), x + w / 2, y + (h - 8) / 2, textColor);
+            String tabLabel = this.getMessage().getString();
+            gui.drawString(font, this.getMessage(), x + w / 2 - font.width(tabLabel) / 2, y + (h - 8) / 2, textColor, false);
         }
     }
 }

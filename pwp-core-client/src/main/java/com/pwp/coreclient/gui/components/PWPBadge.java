@@ -26,6 +26,6 @@ public class PWPBadge {
         };
 
         gui.fill(x, y, x + textW, y + h, bgColor);
-        gui.drawCenteredString(font, Component.literal(text), x + textW / 2, y + 3, PWPTheme.Styles.Badge.TEXT);
+        gui.drawString(font, Component.literal(text), x + textW / 2 - font.width(text) / 2, y + 3, PWPTheme.Styles.Badge.TEXT, false);
     }
 }

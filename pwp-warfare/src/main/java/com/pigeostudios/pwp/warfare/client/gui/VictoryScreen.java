@@ -94,10 +94,11 @@ public class VictoryScreen extends Screen {
             gui.pose().pushPose();
             gui.pose().translate(cx, cy - 42, 0);
             gui.pose().scale(1.5f, 1.5f, 1f);
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(winnerName + " вЂ” РїРѕР±РµРґР°!"), 0, 0, a << 24 | 0xFFFFFF);
+            String winText = winnerName + " вЂ” РїРѕР±РµРґР°!";
+            gui.drawString(PWPTheme.Fonts.display(), Component.literal(winText), -PWPTheme.Fonts.display().width(winText) / 2, 0, a << 24 | 0xFFFFFF, false);
             gui.pose().popPose();
 
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(subText), cx, cy - 22, a << 24 | 0xAAAAAA);
+            gui.drawString(PWPTheme.Fonts.display(), Component.literal(subText), cx - PWPTheme.Fonts.display().width(subText) / 2, cy - 22, a << 24 | 0xAAAAAA, false);
 
             int statsY = cy + 5;
             int statsX = cx - 160;
@@ -111,7 +112,7 @@ public class VictoryScreen extends Screen {
             gui.fill(statsX + statsW - 1, statsY, statsX + statsW, statsY + panelH, a << 24 | 0xFF1E222A);
 
             int accent = a << 24 | PWPTheme.Colors.ACCENT;
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u00a7lРЎС‚Р°С‚РёСЃС‚РёРєР°"), cx, statsY + 4, accent);
+            gui.drawString(PWPTheme.Fonts.display(), Component.literal("\u00a7lРЎС‚Р°С‚РёСЃС‚РёРєР°"), cx - PWPTheme.Fonts.display().width("\u00a7lРЎС‚Р°С‚РёСЃС‚РёРєР°") / 2, statsY + 4, accent, false);
 
             int rowY = statsY + 16;
             int rowH = 13;
@@ -146,8 +147,8 @@ public class VictoryScreen extends Screen {
     }
 
     private void drawStat(GuiGraphics gui, String label, String value, int x, int y, int labelColor, int valueColor) {
-        gui.drawString(PWPTheme.Fonts.display(), Component.literal(label + ":"), x, y, labelColor);
-        gui.drawString(PWPTheme.Fonts.display(), Component.literal(value), x + 60, y, valueColor);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal(label + ":"), x, y, labelColor, false);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal(value), x + 60, y, valueColor, false);
     }
 
     private static String formatDuration(int secs) {

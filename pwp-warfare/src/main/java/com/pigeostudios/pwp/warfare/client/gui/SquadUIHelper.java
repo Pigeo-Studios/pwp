@@ -50,9 +50,9 @@ public class SquadUIHelper {
 
             String prefix = isCMD ? "[CMD] " : "";
             int squadNameColor = isCMD ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.SUCCESS;
-            gui.drawString(PWPTheme.Fonts.display(), idx + ".", 5, currentY, 0xFFFFFF);
+            gui.drawString(PWPTheme.Fonts.display(), idx + ".", 5, currentY, 0xFFFFFF, false);
             String display = prefix + squad.name + " (" + squad.members.size() + "/9)";
-            gui.drawString(PWPTheme.Fonts.display(), display, 25, currentY, squadNameColor);
+            gui.drawString(PWPTheme.Fonts.display(), display, 25, currentY, squadNameColor, false);
 
             String actionText = "";
             boolean isJoin = false, isLeave = false, isDisabled = false;
@@ -79,15 +79,15 @@ public class SquadUIHelper {
                     int border = hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
                     RoundedRect.fill(gui, actionX, actionY, aw, ah, r, bg);
                     RoundedRect.border(gui, actionX, actionY, aw, ah, r, 1, border);
-                    gui.drawCenteredString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_PRIMARY);
+                    gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, PWPTheme.Colors.TEXT_PRIMARY, false);
                 } else if (isLeave) {
                     if (hover) {
                         RoundedRect.fill(gui, actionX, actionY, aw, ah, r, 0x22FF0000);
                     }
                     int textCol = hover ? PWPTheme.Colors.DANGER : PWPTheme.Colors.TEXT_DIM;
-                    gui.drawCenteredString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2, actionY + 2, textCol);
+                    gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, textCol, false);
                 } else if (isDisabled) {
-                    gui.drawCenteredString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM);
+                    gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM, false);
                 }
             }
 
@@ -132,7 +132,7 @@ public class SquadUIHelper {
             if (isMySquad && member.equals(myName)) {
                 boolean btnHover = mx >= xOffset && mx <= xOffset + 10 && my >= currentY && my <= currentY + 10;
                 gui.fill(xOffset, currentY, xOffset + 10, currentY + 10, btnHover ? 0xFF666666 : 0xFF444444);
-                gui.drawString(PWPTheme.Fonts.display(), "K", xOffset + 2, currentY + 1, 0xFFFFFF);
+                gui.drawString(PWPTheme.Fonts.display(), "K", xOffset + 2, currentY + 1, 0xFFFFFF, false);
                 xOffset += 14;
             }
 
@@ -143,7 +143,7 @@ public class SquadUIHelper {
                 xOffset += 12;
             }
 
-            gui.drawString(PWPTheme.Fonts.display(), member, xOffset, currentY + 1, col);
+            gui.drawString(PWPTheme.Fonts.display(), member, xOffset, currentY + 1, col, false);
             currentY += 12;
         }
         return currentY;
@@ -260,7 +260,7 @@ public class SquadUIHelper {
         for (Component msg : ClientData.menuChatHistory) {
             int y = chatBottomY - count * 10;
             if (y < chatTopY) break;
-            gui.drawString(PWPTheme.Fonts.display(), msg, chatX, y, 0xFFFFFF, true);
+            gui.drawString(PWPTheme.Fonts.display(), msg, chatX, y, 0xFFFFFF, false);
             count++;
         }
     }
@@ -290,7 +290,7 @@ public class SquadUIHelper {
         RenderSystem.setShaderColor(r, g, b, 1f);
         gui.blit(icon, x + 3, y, 0, 0, 8, 8, 8, 8);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        gui.drawString(PWPTheme.Fonts.display(), name, x + 14, y, color);
+        gui.drawString(PWPTheme.Fonts.display(), name, x + 14, y, color, false);
     }
 
     public static void renderTeamHeader(GuiGraphics gui, int startX, int startY, boolean isBlue) {
@@ -306,10 +306,10 @@ public class SquadUIHelper {
             gui.blit(flagTex, startX, startY, 32, 18, 0, 0, 64, 36, 64, 36);
         }
         int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
-        gui.drawString(PWPTheme.Fonts.display(), customName, startX + 38, startY, teamColor, true);
+        gui.drawString(PWPTheme.Fonts.display(), customName, startX + 38, startY, teamColor, false);
         RenderSystem.enableBlend();
         gui.blit(ticketIcon, startX + 38, startY + 11, 0, 0, 8, 8, 8, 8);
-        gui.drawString(PWPTheme.Fonts.display(), String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, true);
+        gui.drawString(PWPTheme.Fonts.display(), String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, false);
     }
 
     public static boolean isApplyCmdVisible() {

@@ -67,10 +67,10 @@ public class LevelLoadingScreenMixin {
         pose.pushPose();
         pose.translate(cx, (int) (h * 0.12f), 0);
         pose.scale(1.4f, 1.4f, 1f);
-        gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
+        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
-        gui.drawCenteredString(font, Component.literal("Р—Р°РіСЂСѓР·РєР° РјРёСЂР°..."), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawString(font, Component.literal("Р—Р°РіСЂСѓР·РєР° РјРёСЂР°..."), cx - font.width("Р—Р°РіСЂСѓР·РєР° РјРёСЂР°...") / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
         PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
 
         if (pwp_tips != null) {

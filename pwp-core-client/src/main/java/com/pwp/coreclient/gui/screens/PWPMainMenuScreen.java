@@ -147,10 +147,10 @@ public class PWPMainMenuScreen extends Screen {
             default -> { text = "РџСЂРѕРІРµСЂРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ..."; color = PWPTheme.Colors.TEXT_DIM; }
         }
 
-        gui.drawCenteredString(font, Component.literal(text), cx, y, color);
+        gui.drawString(font, Component.literal(text), cx - font.width(text) / 2, y, color, false);
 
         if (serverStatus == ServerStatus.OFFLINE || serverStatus == ServerStatus.MAINTENANCE) {
-            gui.drawCenteredString(font, Component.literal("РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ"), cx, y + 12, PWPTheme.Colors.TEXT_DIM);
+            gui.drawString(font, Component.literal("РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ"), cx - font.width("РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ") / 2, y + 12, PWPTheme.Colors.TEXT_DIM, false);
         }
 
         gui.setColor(1, 1, 1, 1);
@@ -184,7 +184,7 @@ public class PWPMainMenuScreen extends Screen {
         pose.translate(cx, y, 0);
         float scale = PWPTheme.Fonts.SIZE_TITLE / 8f / 2f;
         pose.scale(scale, scale, 1f);
-        gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
+        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
         gui.setColor(1, 1, 1, 1);
     }
@@ -205,8 +205,9 @@ public class PWPMainMenuScreen extends Screen {
         pose.pushPose();
         pose.translate(0, slideY, 0);
 
-        gui.drawCenteredString(font, Component.literal(welcome), cx, welcomeY, PWPTheme.Colors.TEXT_PRIMARY);
-        gui.drawCenteredString(font, Component.translatable("pwp_core.main_menu.subtitle"), cx, welcomeY + 16, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, Component.literal(welcome), cx - font.width(welcome) / 2, welcomeY, PWPTheme.Colors.TEXT_PRIMARY, false);
+        String subStr = Component.translatable("pwp_core.main_menu.subtitle").getString();
+        gui.drawString(font, Component.translatable("pwp_core.main_menu.subtitle"), cx - font.width(subStr) / 2, welcomeY + 16, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         pose.popPose();
     }

@@ -177,11 +177,11 @@ public class StatsScreen extends Screen {
         int cx = width / 2;
 
         if (loading) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a77Р—Р°РіСЂСѓР·РєР°...", cx, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a77Р—Р°РіСЂСѓР·РєР°...", cx - PWPTheme.Fonts.display().width("\u00a77Р—Р°РіСЂСѓР·РєР°...") / 2, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY, false);
             return;
         }
         if (errorMsg != null) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx, clipY + 40, 0xFF5555);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx - PWPTheme.Fonts.display().width("\u00a7c" + errorMsg) / 2, clipY + 40, 0xFF5555, false);
             return;
         }
 
@@ -230,15 +230,15 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("РЎРўРђРўРРЎРўРРљРђ"), cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal("РЎРўРђРўРРЎРўРРљРђ"), cx - PWPTheme.Fonts.display().width("РЎРўРђРўРРЎРўРРљРђ") / 2, 32, PWPTheme.Colors.TEXT_ACCENT, false);
         gui.fill(cx - 55, 42, cx + 55, 43, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a77Р—Р°РіСЂСѓР·РєР°...", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a77Р—Р°РіСЂСѓР·РєР°...", cx - PWPTheme.Fonts.display().width("\u00a77Р—Р°РіСЂСѓР·РєР°...") / 2, height / 2, PWPTheme.Colors.TEXT_SECONDARY, false);
             return;
         }
         if (errorMsg != null) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx, height / 2, 0xFF5555);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx - PWPTheme.Fonts.display().width("\u00a7c" + errorMsg) / 2, height / 2, 0xFF5555, false);
             return;
         }
 
@@ -317,8 +317,8 @@ public class StatsScreen extends Screen {
 
         gui.fill(leftX, y, leftX + panelW, y + 26, PWPTheme.Colors.SURFACE_LIGHT);
         gui.fill(leftX, y + 26, leftX + panelW, y + 27, PWPTheme.Colors.BORDER);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77РњР°С‚С‡Рё: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF, false);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77РњР°С‚С‡Рё: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
         y += 30;
 
         y = drawPanel(gui, leftX, y, panelW, "Р‘РћР™", new String[][]{
@@ -362,7 +362,7 @@ public class StatsScreen extends Screen {
         gui.fill(x + w - 1, y, x + w, y + h, PWPTheme.Styles.Panel.BORDER);
 
         gui.fill(x + 1, y + 1, x + w - 1, y + titleH + 1, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT, false);
 
         int ry = y + titleH + pad / 2;
         int col2X = x + w / 2;
@@ -372,14 +372,14 @@ public class StatsScreen extends Screen {
 
         for (String[] row : rows) {
             if (!row[0].isEmpty()) {
-                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[0] + ":", x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY);
+                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[0] + ":", x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY, false);
                 String val = "\u00a7f" + truncateText(row[1], maxTextW);
-                gui.drawString(PWPTheme.Fonts.display(), val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY);
+                gui.drawString(PWPTheme.Fonts.display(), val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY, false);
             }
             if (!row[2].isEmpty()) {
-                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[2] + ":", col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY);
+                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[2] + ":", col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY, false);
                 String val = "\u00a7f" + truncateText(row[3], maxTextW);
-                gui.drawString(PWPTheme.Fonts.display(), val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY);
+                gui.drawString(PWPTheme.Fonts.display(), val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY, false);
             }
             ry += rowH;
         }
@@ -417,7 +417,7 @@ public class StatsScreen extends Screen {
             gui.fill(catX + bw - 1, catY, catX + bw, catY + 18, borderCol);
 
             String textColor = isSel ? "\u00a7e" : (hover ? "\u00a7f" : "\u00a77");
-            gui.drawString(PWPTheme.Fonts.display(), textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, PWPTheme.Colors.TEXT_PRIMARY, false);
             catBounds.add(new int[]{catX, catY, bw, 18, i});
             catX += bw + 4;
             if (catX + 60 > leftX + w) { catX = leftX; catY += 20; }
@@ -428,11 +428,11 @@ public class StatsScreen extends Screen {
         int headerY = y;
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
         gui.fill(leftX, headerY + 1, leftX + w, headerY + 14, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77РРіСЂРѕРє", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77WinRate", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77РРіСЂРѕРє", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77WinRate", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         int rowY = headerY + 16;
         int rankOffset = lbPage * 10;
@@ -451,25 +451,25 @@ public class StatsScreen extends Screen {
 
             int rn = rankOffset + i + 1;
             String rankStr = rn == 1 ? "\u00a76#1" : rn == 2 ? "\u00a77#2" : rn == 3 ? "\u00a76#3" : "\u00a77#" + rn;
-            gui.drawString(PWPTheme.Fonts.display(), rankStr, leftX + 6, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), rankStr, leftX + 6, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
 
             String nameStr = e.nickname;
             if (PWPTheme.Fonts.display().width(nameStr) > 120) nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
-            gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
 
             String colVal = truncateText(getColValue(e, lbOrderBy), 70);
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
 
             String kdStr = String.format("%.2f", e.kd);
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + kdStr, leftX + 270, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + kdStr, leftX + 270, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY, false);
 
             String wrStr = String.format("%.1f%%", e.winRate);
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY, false);
 
             if (isMe) {
                 String meLabel = "\u00a7e\u25C0 РІС‹";
                 int meW = PWPTheme.Fonts.display().width(meLabel);
-                gui.drawString(PWPTheme.Fonts.display(), meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
+                gui.drawString(PWPTheme.Fonts.display(), meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT, false);
             }
 
             rowY += rowH;

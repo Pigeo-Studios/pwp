@@ -11,9 +11,10 @@ public class PWPErrorState {
 
     public static void render(GuiGraphics gui, String title, String subtitle, int cx, int cy) {
         var font = PWPTheme.Fonts.display();
-        gui.drawCenteredString(font, Component.literal("\u26A0 " + title), cx, cy - 10, PWPTheme.Colors.DANGER);
+        String errTitle = "\u26A0 " + title;
+        gui.drawString(font, Component.literal(errTitle), cx - font.width(errTitle) / 2, cy - 10, PWPTheme.Colors.DANGER, false);
         if (subtitle != null && !subtitle.isEmpty()) {
-            gui.drawCenteredString(font, Component.literal(subtitle), cx, cy + 6, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(font, Component.literal(subtitle), cx - font.width(subtitle) / 2, cy + 6, PWPTheme.Colors.TEXT_SECONDARY, false);
         }
     }
 }

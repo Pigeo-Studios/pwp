@@ -55,23 +55,23 @@ public class PWPMatchCard {
         int textMaxW = x + w - textX - 8;
         int ly = y + 6;
 
-        gui.drawString(font, Component.literal(title), textX, ly, 0xFFFFFF);
+        gui.drawString(font, Component.literal(title), textX, ly, 0xFFFFFF, false);
         ly += 11;
 
         String meta = mode + "  |  " + duration + "  |  " + currentPlayers + "/" + maxPlayers;
-        gui.drawString(font, Component.literal(meta), textX, ly, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, Component.literal(meta), textX, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
         ly += 11;
 
         String fStr = "\u00a79" + blueFaction + " \u00a77vs \u00a7c" + redFaction;
         if (font.width(fStr) > textMaxW) {
             fStr = font.plainSubstrByWidth(fStr, textMaxW - 4) + "...";
         }
-        gui.drawString(font, Component.literal(fStr), textX, ly, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, Component.literal(fStr), textX, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
         ly += 11;
 
         String tStr = "\u00a79" + blueTickets + " \u00a77| \u00a7c" + redTickets;
         if (status == Status.PLAYING || status == Status.FINISHED) {
-            gui.drawString(font, Component.literal(tStr), textX, ly, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(font, Component.literal(tStr), textX, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
         }
 
         String actionText;
@@ -89,7 +89,7 @@ public class PWPMatchCard {
         }
 
         if (!actionText.isEmpty()) {
-            gui.drawString(font, actionText, textX, y + h - 13, actionColor);
+            gui.drawString(font, actionText, textX, y + h - 13, actionColor, false);
         }
     }
 

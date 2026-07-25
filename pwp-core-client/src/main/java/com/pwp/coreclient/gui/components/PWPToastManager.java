@@ -75,7 +75,7 @@ public class PWPToastManager {
             int text = (a << 24) | (PWPTheme.Styles.Toast.TEXT & 0x00FFFFFF);
 
             gui.fill(x, y, x + toastW, y + toastH, bg);
-            gui.drawString(font, Component.literal(t.message), x + 10, y + 6, text);
+            gui.drawString(font, Component.literal(t.message), x + 10, y + 6, text, false);
 
             yOffset += toastH + 6;
         }

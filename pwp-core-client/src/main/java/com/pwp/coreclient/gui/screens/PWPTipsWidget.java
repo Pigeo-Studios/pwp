@@ -83,10 +83,10 @@ public class PWPTipsWidget {
             var lines = font.split(Component.literal(text), maxTextWidth);
             int lineCount = Math.min(lines.size(), 2);
             for (int i = 0; i < lineCount; i++) {
-                gui.drawString(font, lines.get(i), cx - maxTextWidth / 2, y + i * 10, color);
+                gui.drawString(font, lines.get(i), cx - maxTextWidth / 2, y + i * 10, color, false);
             }
         } else {
-            gui.drawCenteredString(font, Component.literal(text), cx, y, color);
+            gui.drawString(font, Component.literal(text), cx - font.width(text) / 2, y, color, false);
         }
     }
 }

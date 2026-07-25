@@ -64,10 +64,10 @@ public class ConnectScreenMixin {
         pose.pushPose();
         pose.translate(cx, (int) (h * 0.12f), 0);
         pose.scale(1.4f, 1.4f, 1f);
-        gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
+        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
-        gui.drawCenteredString(font, Component.literal("РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ..."), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawString(font, Component.literal("РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ..."), cx - font.width("РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...") / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
         PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
 
         if (pwp_tips != null) {
@@ -87,7 +87,7 @@ public class ConnectScreenMixin {
         if (btnHover) {
             RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
         }
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("РћС‚РјРµРЅР°"), cx, btnY + 6, textCol);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal("РћС‚РјРµРЅР°"), cx - PWPTheme.Fonts.display().width("РћС‚РјРµРЅР°") / 2, btnY + 6, textCol, false);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)

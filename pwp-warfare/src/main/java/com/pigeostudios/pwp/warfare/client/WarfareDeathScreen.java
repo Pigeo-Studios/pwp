@@ -212,14 +212,14 @@ public class WarfareDeathScreen extends DeathScreen {
     private void renderSpawnSelection(GuiGraphics gui, int mx, int my) {
         int startX = 180;
         int startY = 55;
-        gui.drawString(PWPTheme.Fonts.display(), "Р’С‹Р±РµСЂРёС‚Рµ С‚РѕС‡РєСѓ СЃРїР°РІРЅР°:", startX, startY - 15, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(PWPTheme.Fonts.display(), "Р’С‹Р±РµСЂРёС‚Рµ С‚РѕС‡РєСѓ СЃРїР°РІРЅР°:", startX, startY - 15, PWPTheme.Colors.TEXT_ACCENT, false);
 
         drawSpawnOption(gui, startX, startY, 110, 24, "РћСЃРЅРѕРІРЅР°СЏ Р±Р°Р·Р°", "MAIN", mx, my, true, false);
         boolean rallyBlocked = isMyRallyBlocked();
         boolean rallyValid = hasValidRally() && !rallyBlocked;
         drawSpawnOption(gui, startX, startY += 30, 110, 24, "РўРѕС‡РєР° СЃР±РѕСЂР°", "RALLY", mx, my, rallyValid, rallyBlocked);
 
-        gui.drawString(PWPTheme.Fonts.display(), "Р”РѕСЃС‚СѓРїРЅС‹Рµ С…Р°Р±С‹:", startX, (startY += 40) - 12, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "Р”РѕСЃС‚СѓРїРЅС‹Рµ С…Р°Р±С‹:", startX, (startY += 40) - 12, PWPTheme.Colors.TEXT_SECONDARY, false);
         String myTeam = getPlayerTeam();
         String myDim = minecraft.level.dimension().location().toString();
         int hubIdx = 1;
@@ -241,7 +241,7 @@ public class WarfareDeathScreen extends DeathScreen {
         String finalLabel = blocked ? label + " BLOCKED" : label;
         gui.fill(x, y, x + w, y + h, bg);
         gui.renderOutline(x, y, w, h, color);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), finalLabel, x + w / 2, y + (h - 8) / 2, color);
+        gui.drawString(PWPTheme.Fonts.display(), finalLabel, x + w / 2 - PWPTheme.Fonts.display().width(finalLabel) / 2, y + (h - 8) / 2, color, false);
     }
 
     private void renderChatArea(GuiGraphics gui) {
@@ -256,7 +256,7 @@ public class WarfareDeathScreen extends DeathScreen {
         int count = 0;
         for (Component msg : ClientData.menuChatHistory) {
             if (count >= maxMsg) break;
-            gui.drawString(PWPTheme.Fonts.display(), msg, chatX + 3, chatBottomY - 10 - count * 10, 0xFFFFFF, true);
+            gui.drawString(PWPTheme.Fonts.display(), msg, chatX + 3, chatBottomY - 10 - count * 10, 0xFFFFFF, false);
             count++;
         }
     }

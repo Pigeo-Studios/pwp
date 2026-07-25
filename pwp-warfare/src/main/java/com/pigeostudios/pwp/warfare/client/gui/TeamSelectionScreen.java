@@ -55,8 +55,8 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
             : formatFactionName(ClientData.RED_FACTION, ClientData.customRedName);
         int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
 
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(teamName)
-            .withStyle(isBlue ? ChatFormatting.BLUE : ChatFormatting.RED), cx, si.y + 8, teamColor);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal(teamName)
+            .withStyle(isBlue ? ChatFormatting.BLUE : ChatFormatting.RED), cx - PWPTheme.Fonts.display().width(teamName) / 2, si.y + 8, teamColor, false);
 
         ResourceLocation flag = getFlagTexture(isBlue ? ClientData.BLUE_FACTION : ClientData.RED_FACTION);
         int flagX = si.x + (si.w - 80) / 2;
@@ -89,13 +89,14 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
             joinText = "JOIN";
             joinColor = PWPTheme.Colors.TEXT_ACCENT;
         }
-        gui.drawCenteredString(PWPTheme.Fonts.display(),
-            Component.literal(joinText).withStyle(ChatFormatting.GOLD), cx, si.y + 78, joinColor);
+        gui.drawString(PWPTheme.Fonts.display(),
+            Component.literal(joinText).withStyle(ChatFormatting.GOLD), cx - PWPTheme.Fonts.display().width(joinText) / 2, si.y + 78, joinColor, false);
 
-        gui.drawCenteredString(PWPTheme.Fonts.display(),
-            Component.literal(playerCount + " players")
+        String playersText = playerCount + " players";
+        gui.drawString(PWPTheme.Fonts.display(),
+            Component.literal(playersText)
                 .withStyle(si.disabled ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY),
-            cx, si.y + 92, si.disabled ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.TEXT_SECONDARY);
+            cx - PWPTheme.Fonts.display().width(playersText) / 2, si.y + 92, si.disabled ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.TEXT_SECONDARY, false);
     }
 
     private static void onTeamSelected(int index) {

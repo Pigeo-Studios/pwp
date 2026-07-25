@@ -182,11 +182,11 @@ public class PWPButton extends AbstractWidget {
 
         if (textW > w - 10) {
             String shortText = mcFont.plainSubstrByWidth(msgStr, w - 14) + "...";
-            gui.drawString(mcFont, shortText, x + 5, textY + 1, shadowColor);
-            gui.drawString(mcFont, shortText, x + 5, textY, textColor);
+            gui.drawString(mcFont, shortText, x + 5, textY + 1, shadowColor, false);
+            gui.drawString(mcFont, shortText, x + 5, textY, textColor, false);
         } else {
-            gui.drawCenteredString(mcFont, this.getMessage(), x + w / 2, textY + 1, shadowColor);
-            gui.drawCenteredString(mcFont, this.getMessage(), x + w / 2, textY, textColor);
+            gui.drawString(mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY + 1, shadowColor, false);
+            gui.drawString(mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY, textColor, false);
         }
 
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);

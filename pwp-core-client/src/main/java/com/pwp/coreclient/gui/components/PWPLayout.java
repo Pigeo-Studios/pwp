@@ -44,7 +44,7 @@ public class PWPLayout {
             PWPIcons.render(gui, icon, cx - font.width(title) / 2 - 20, y + 2);
         }
 
-        gui.drawCenteredString(font, Component.literal(title), cx, y, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(font, Component.literal(title), cx - font.width(title) / 2, y, PWPTheme.Colors.TEXT_ACCENT, false);
 
         int lineW = Math.min(120, font.width(title) + 40);
         gui.fill(cx - lineW / 2, y + 14, cx + lineW / 2, y + 15, PWPTheme.Colors.ACCENT);
@@ -53,7 +53,7 @@ public class PWPLayout {
     public static void renderFooter(GuiGraphics gui, String text, int screenWidth, int screenHeight) {
         var font = PWPTheme.Fonts.display();
         int color = PWPTheme.Colors.TEXT_DIM;
-        gui.drawCenteredString(font, Component.literal(text), screenWidth / 2, screenHeight - 12, color);
+        gui.drawString(font, Component.literal(text), screenWidth / 2 - font.width(text) / 2, screenHeight - 12, color, false);
     }
 
     public static void renderDivider(GuiGraphics gui, int x, int y, int width) {

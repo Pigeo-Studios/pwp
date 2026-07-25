@@ -118,7 +118,7 @@ public class PWPSelectionScreen extends Screen {
 
         var font = PWPTheme.Fonts.display();
         if (instruction != null && !instruction.isEmpty()) {
-            gui.drawCenteredString(font, Component.literal(instruction), width / 2, 28, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(font, Component.literal(instruction), width / 2 - font.width(instruction) / 2, 28, PWPTheme.Colors.TEXT_SECONDARY, false);
         }
 
         int contentW = PWPLayout.contentWidth(width);
@@ -152,7 +152,7 @@ public class PWPSelectionScreen extends Screen {
                 confirmBtn.active = true;
             }
             String timerText = "РђРІС‚РѕРІС‹Р±РѕСЂ С‡РµСЂРµР· " + remaining + "СЃ";
-            gui.drawCenteredString(font, Component.literal(timerText), width / 2, height - 85, PWPTheme.Colors.TEXT_DIM);
+            gui.drawString(font, Component.literal(timerText), width / 2 - font.width(timerText) / 2, height - 85, PWPTheme.Colors.TEXT_DIM, false);
         }
 
         super.render(gui, mouseX, mouseY, partialTick);

@@ -4,22 +4,8 @@
       "type": "ttf",
       "file": "pwp_core_client:font/inter_regular.ttf",
       "shift": [0.0, 0.0],
-      "size": 16.0,
+      "size": 9.0,
       "oversample": 2.0
-    },
-    {
-      "type": "ttf",
-      "file": "pwp_core_client:font/inter_bold.ttf",
-      "shift": [0.0, 0.0],
-      "size": 16.0,
-      "oversample": 2.0,
-      "style": "bold"
-    },
-    {
-      "type": "space",
-      "advances": {
-        " ": 240
-      }
     }
   ]
 }

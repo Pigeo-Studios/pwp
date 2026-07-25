@@ -65,7 +65,7 @@ public class PWPContextMenu {
                 gui.fill(x + 1, iy, x + w - 1, iy + 12, PWPTheme.Colors.SURFACE_LIGHT);
             }
             int color = hover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
-            gui.drawString(font, Component.literal(options.get(i)), x + 6, iy + 2, color);
+            gui.drawString(font, Component.literal(options.get(i)), x + 6, iy + 2, color, false);
         }
     }
 }

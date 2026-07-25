@@ -104,7 +104,7 @@ public class PWPLoadingScreen extends Screen {
         pose.pushPose();
         pose.translate(cx, (int) (height * 0.12f), 0);
         pose.scale(1.4f, 1.4f, 1f);
-        gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
+        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
         if (errorState) {
@@ -115,7 +115,7 @@ public class PWPLoadingScreen extends Screen {
 
         // Status text
         String statusText = getContextText(context);
-        gui.drawCenteredString(font, Component.literal(statusText), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawString(font, Component.literal(statusText), cx - font.width(statusText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
 
         // Progress indicator
         if (hasKnownProgress) {
@@ -163,8 +163,8 @@ public class PWPLoadingScreen extends Screen {
 
         var font = PWPTheme.Fonts.display();
         gui.setColor(1, 1, 1, fade);
-        gui.drawCenteredString(font, Component.literal("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ"), cx, cy, PWPTheme.Colors.DANGER);
-        gui.drawCenteredString(font, Component.literal("РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ"), cx, cy + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(font, Component.literal("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ"), cx - font.width("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ") / 2, cy, PWPTheme.Colors.DANGER, false);
+        gui.drawString(font, Component.literal("РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ"), cx - font.width("РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ") / 2, cy + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
         gui.setColor(1, 1, 1, 1);
 
         if (fade >= 1 && children().isEmpty()) {
@@ -208,7 +208,7 @@ public class PWPLoadingScreen extends Screen {
         int finalAlpha = Math.min(255, Math.max(0, (int) (alpha * originalAlpha)));
         int displayColor = (finalAlpha << 24) | (color & 0x00FFFFFF);
 
-        gui.drawCenteredString(font, Component.literal(text), cx, y, displayColor);
+        gui.drawString(font, Component.literal(text), cx - font.width(text) / 2, y, displayColor, false);
     }
 
     private static String getContextText(Context ctx) {

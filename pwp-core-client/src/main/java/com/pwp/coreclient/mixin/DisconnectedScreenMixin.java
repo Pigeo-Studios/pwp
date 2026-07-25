@@ -60,14 +60,14 @@ public class DisconnectedScreenMixin {
         pose.pushPose();
         pose.translate(cx, (int) (h * 0.12f), 0);
         pose.scale(1.4f, 1.4f, 1f);
-        gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
+        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
         float fade = Math.min(elapsed / 250.0F, 1);
         float eased = Easing.easeOutCubic(fade);
 
         gui.setColor(1, 1, 1, eased);
-        gui.drawCenteredString(font, Component.literal("РЎРѕРµРґРёРЅРµРЅРёРµ СЂР°Р·РѕСЂРІР°РЅРѕ"), cx, cy - 20, PWPTheme.Colors.DANGER);
+        gui.drawString(font, Component.literal("РЎРѕРµРґРёРЅРµРЅРёРµ СЂР°Р·РѕСЂРІР°РЅРѕ"), cx - font.width("РЎРѕРµРґРёРЅРµРЅРёРµ СЂР°Р·РѕСЂРІР°РЅРѕ") / 2, cy - 20, PWPTheme.Colors.DANGER, false);
 
         String reasonStr = reason.getString();
         if (!reasonStr.isEmpty()) {
@@ -75,7 +75,7 @@ public class DisconnectedScreenMixin {
             if (font.width(reasonStr) > maxW) {
                 reasonStr = font.plainSubstrByWidth(reasonStr, maxW - 4) + "...";
             }
-            gui.drawCenteredString(font, Component.literal(reasonStr), cx, cy, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(font, Component.literal(reasonStr), cx - font.width(reasonStr) / 2, cy, PWPTheme.Colors.TEXT_SECONDARY, false);
         }
         gui.setColor(1, 1, 1, 1);
 
@@ -95,7 +95,7 @@ public class DisconnectedScreenMixin {
             }
             com.pwp.coreclient.gui.components.RoundedRect.fill(gui, btnX, btnY, btnW, btnH, btnR, bg);
             com.pwp.coreclient.gui.components.RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
-            gui.drawCenteredString(font, Component.literal("Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ"), cx, btnY + 10, textColor);
+            gui.drawString(font, Component.literal("Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ"), cx - font.width("Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ") / 2, btnY + 10, textColor, false);
         }
     }
 

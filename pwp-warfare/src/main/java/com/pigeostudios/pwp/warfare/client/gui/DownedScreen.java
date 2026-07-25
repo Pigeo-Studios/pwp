@@ -62,11 +62,12 @@ public class DownedScreen extends Screen {
         long now = System.currentTimeMillis();
         float pulse = 0.7f + 0.3f * (float) Math.sin((now - screenOpenTime) * 0.005);
         RenderSystem.setShaderColor(pulse, 0.2f, 0.2f, 1f);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u2764"), cx, boxY + 16, PWPTheme.Colors.DANGER);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal("\u2764"), cx - PWPTheme.Fonts.display().width("\u2764") / 2, boxY + 16, PWPTheme.Colors.DANGER, false);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         Component allyStatus = getAllyDistanceStatus();
-        gui.drawCenteredString(PWPTheme.Fonts.display(), allyStatus, cx, boxY + 50, PWPTheme.Colors.TEXT_PRIMARY);
+        String allyStatusStr = allyStatus.getString();
+        gui.drawString(PWPTheme.Fonts.display(), allyStatus, cx - PWPTheme.Fonts.display().width(allyStatusStr) / 2, boxY + 50, PWPTheme.Colors.TEXT_PRIMARY, false);
 
         int maxSeconds = WarfareConfig.MAX_DOWNED_TIME_SECONDS.get();
         long remaining = maxSeconds - (now - screenOpenTime) / 1000;
@@ -82,7 +83,8 @@ public class DownedScreen extends Screen {
         int fillColor = pct > 0.3f ? PWPTheme.Colors.SUCCESS : (pct > 0.15f ? PWPTheme.Colors.WARNING : PWPTheme.Colors.DANGER);
         gui.fill(barX, barY, barX + (int) (barW * pct), barY + barH, fillColor);
 
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("РљСЂРѕРІРѕС‚РµС‡РµРЅРёРµ: " + remaining + "СЃ"), cx, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY);
+        String bleedText = "РљСЂРѕРІРѕС‚РµС‡РµРЅРёРµ: " + remaining + "СЃ";
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal(bleedText), cx - PWPTheme.Fonts.display().width(bleedText) / 2, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         long cd = 15000 - (now - lastMedicCallTime);
         if (cd > 0) {
