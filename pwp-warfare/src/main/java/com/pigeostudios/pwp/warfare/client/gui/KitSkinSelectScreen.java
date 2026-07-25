@@ -15,6 +15,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
 public class KitSkinSelectScreen extends Screen {
 
@@ -89,7 +90,7 @@ public class KitSkinSelectScreen extends Screen {
         }
         if (this.minecraft.player != null) {
             this.minecraft.player.displayClientMessage(
-                Component.literal("§aSkin settings saved! Click 'Save' in kit editor."), true);
+                Component.literal("В§aSkin settings saved! Click 'Save' in kit editor."), true);
         }
         if (parentScreen != null) {
             this.minecraft.setScreen(parentScreen);
@@ -117,12 +118,12 @@ public class KitSkinSelectScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
-        gui.drawCenteredString(this.font, "Allowed Skins per Slot", this.width / 2, 8, 0xFFC8CBCE);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), "Allowed Skins per Slot", this.width / 2, 8, 0xFFC8CBCE);
 
         int leftX = 8, leftY = 34;
         gui.fill(leftX - 2, leftY - 2, leftX + 220, this.height - 10, 0xFF1E222A);
         gui.fill(leftX, leftY, leftX + 220, this.height - 12, 0xCC0A0C0E);
-        gui.drawCenteredString(this.font, "Weapon Slots", leftX + 110, leftY + 2, 0xFFC8CBCE);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), "Weapon Slots", leftX + 110, leftY + 2, 0xFFC8CBCE);
 
         int sy = leftY + 16;
         for (int i = 0; i < weaponSlots.size(); i++) {
@@ -144,14 +145,14 @@ public class KitSkinSelectScreen extends Screen {
             if (!stack.isEmpty()) gui.renderItem(stack, sx + 3, sry + 4);
 
             String label = slot < 9 ? "S" + slot : "C" + (slot - 41);
-            gui.drawString(this.font, label, sx + 21, sry + 7, 0xFF7A7D84, false);
+            gui.drawString(PWPTheme.Fonts.display(), label, sx + 21, sry + 7, 0xFF7A7D84, false);
             if (hasCategory) {
-                gui.drawString(this.font, "CAT:" + slotCategories.get(slot), sx + 38, sry + 7, 0xFF3D7A40, false);
+                gui.drawString(PWPTheme.Fonts.display(), "CAT:" + slotCategories.get(slot), sx + 38, sry + 7, 0xFF3D7A40, false);
             } else {
                 int count = allowedSkins.getOrDefault(slot, Collections.emptyList()).size();
-                if (count > 0) gui.drawString(this.font, count + " skins", sx + 38, sry + 7, 0xFF3D6FA5, false);
+                if (count > 0) gui.drawString(PWPTheme.Fonts.display(), count + " skins", sx + 38, sry + 7, 0xFF3D6FA5, false);
             }
-            if (sel) gui.drawString(this.font, "\u25B6", sx + 90, sry + 7, 0xFFC8812A, false);
+            if (sel) gui.drawString(PWPTheme.Fonts.display(), "\u25B6", sx + 90, sry + 7, 0xFFC8812A, false);
         }
 
         int rightX = this.width - 240;
@@ -173,12 +174,12 @@ public class KitSkinSelectScreen extends Screen {
                 int color = CATEGORIES[i].equals(curCat) ? 0xFF3D7A40 : 0xFF1E222A;
                 gui.fill(bx, btnY, bx + btnW, btnY + 16, CATEGORIES[i].equals(curCat) ? 0xFF1A2E1A : 0x2212151A);
                 gui.renderOutline(bx, btnY, btnW, 16, color);
-                gui.drawCenteredString(this.font, CATEGORIES[i].substring(0, Math.min(4, CATEGORIES[i].length())), bx + btnW / 2, btnY + 3, color);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), CATEGORIES[i].substring(0, Math.min(4, CATEGORIES[i].length())), bx + btnW / 2, btnY + 3, color);
             }
 
             if (isCategory) {
-                gui.drawCenteredString(this.font, "Any " + curCat + " skin equipped by player", rightX + rightW / 2, btnY + 24, 0xFF3D7A40);
-                gui.drawCenteredString(this.font, "will replace default item in this slot", rightX + rightW / 2, btnY + 36, 0xFF3D7A40);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), "Any " + curCat + " skin equipped by player", rightX + rightW / 2, btnY + 24, 0xFF3D7A40);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), "will replace default item in this slot", rightX + rightW / 2, btnY + 36, 0xFF3D7A40);
             } else {
                 List<String> allowed = allowedSkins.computeIfAbsent(selectedSlot, k -> new ArrayList<>());
                 String tag = getWeaponTagForSlot(selectedSlot);
@@ -186,7 +187,7 @@ public class KitSkinSelectScreen extends Screen {
                 for (SkinOption so : allSkins) {
                     if (so.weaponTag.equals(tag) || so.weaponTag.equals("any")) totalMatching++;
                 }
-                gui.drawCenteredString(this.font, "Skins: " + allowed.size() + "/" + totalMatching, rightX + rightW / 2, btnY + 24, 0xFFC8CBCE);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), "Skins: " + allowed.size() + "/" + totalMatching, rightX + rightW / 2, btnY + 24, 0xFFC8CBCE);
 
                 List<SkinOption> sortedSkins = new ArrayList<>(allSkins);
                 sortedSkins.sort((a, b) -> {
@@ -208,18 +209,18 @@ public class KitSkinSelectScreen extends Screen {
                     gui.renderOutline(rightX + 2, skinY, rightW - 4, 16, isAllowed ? 0xFF3D7A40 : 0xFF1E222A);
 
                     String sn = so.name.length() > 20 ? so.name.substring(0, 19) + "." : so.name;
-                    gui.drawString(this.font, sn, rightX + 20, skinY + 3, isAllowed ? 0xFF3D7A40 : 0xFFC8CBCE, false);
-                    gui.drawString(this.font, isAllowed ? "\u2713" : "\u25CB", rightX + 6, skinY + 3, isAllowed ? 0xFF3D7A40 : 0xFF4A4D54, false);
+                    gui.drawString(PWPTheme.Fonts.display(), sn, rightX + 20, skinY + 3, isAllowed ? 0xFF3D7A40 : 0xFFC8CBCE, false);
+                    gui.drawString(PWPTheme.Fonts.display(), isAllowed ? "\u2713" : "\u25CB", rightX + 6, skinY + 3, isAllowed ? 0xFF3D7A40 : 0xFF4A4D54, false);
 
                     skinY += 18;
                 }
                 if (totalMatching == 0) {
-                    gui.drawCenteredString(this.font, "No matching skins", rightX + rightW / 2, btnY + 60, 0xFF4A4D54);
+                    gui.drawCenteredString(PWPTheme.Fonts.display(), "No matching skins", rightX + rightW / 2, btnY + 60, 0xFF4A4D54);
                 }
             }
         } else {
-            gui.drawCenteredString(this.font, "Click a weapon slot", this.width / 2, this.height / 2, 0xFF4A4D54);
-            gui.drawCenteredString(this.font, "to configure skins", this.width / 2, this.height / 2 + 14, 0xFF4A4D54);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "Click a weapon slot", this.width / 2, this.height / 2, 0xFF4A4D54);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "to configure skins", this.width / 2, this.height / 2 + 14, 0xFF4A4D54);
         }
 
         super.render(gui, mx, my, pt);

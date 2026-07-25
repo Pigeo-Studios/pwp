@@ -122,22 +122,35 @@ public class PWPMainMenuScreen extends Screen {
     }
 
     private void renderServerStatus(GuiGraphics gui, int cx, float fade) {
-        int y = (int) (height * 0.72f);
+        int playH = 32;
+        int otherH = 24;
+        int gap = 6;
+        int totalBtnH = playH + otherH * 3 + gap * 3;
+        int startY = (int) (height * 0.52f);
+        if (startY + totalBtnH > height - 40) {
+            startY = height - 40 - totalBtnH;
+        }
+        int btnBottom = startY + totalBtnH;
+        int y = btnBottom + 20;
+        if (y + 24 > height - 20) {
+            y = btnBottom + 8;
+        }
+
         gui.setColor(1, 1, 1, fade);
 
         String text;
         int color;
         switch (serverStatus) {
-            case ONLINE -> { text = "Сервер: ONLINE"; color = PWPTheme.Colors.SUCCESS; }
-            case OFFLINE -> { text = "Сервер недоступен"; color = PWPTheme.Colors.DANGER; }
-            case MAINTENANCE -> { text = "Технические работы"; color = PWPTheme.Colors.WARNING; }
-            default -> { text = "Проверка подключения..."; color = PWPTheme.Colors.TEXT_DIM; }
+            case ONLINE -> { text = "РЎРµСЂРІРµСЂ: ONLINE"; color = PWPTheme.Colors.SUCCESS; }
+            case OFFLINE -> { text = "РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ"; color = PWPTheme.Colors.DANGER; }
+            case MAINTENANCE -> { text = "РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹"; color = PWPTheme.Colors.WARNING; }
+            default -> { text = "РџСЂРѕРІРµСЂРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ..."; color = PWPTheme.Colors.TEXT_DIM; }
         }
 
         gui.drawCenteredString(font, Component.literal(text), cx, y, color);
 
         if (serverStatus == ServerStatus.OFFLINE || serverStatus == ServerStatus.MAINTENANCE) {
-            gui.drawCenteredString(font, Component.literal("Попробуйте позже"), cx, y + 12, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(font, Component.literal("РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ"), cx, y + 12, PWPTheme.Colors.TEXT_DIM);
         }
 
         gui.setColor(1, 1, 1, 1);
@@ -165,7 +178,7 @@ public class PWPMainMenuScreen extends Screen {
 
     private void renderLogo(GuiGraphics gui, int cx, int y, float fade) {
         gui.setColor(1, 1, 1, fade);
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
         pose.pushPose();
         pose.translate(cx, y, 0);
@@ -177,13 +190,13 @@ public class PWPMainMenuScreen extends Screen {
     }
 
     private void renderWelcome(GuiGraphics gui, int cx, float fade) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         Minecraft mc = Minecraft.getInstance();
 
         String nickname = mc.player != null ? mc.player.getScoreboardName() : null;
         String welcome = nickname != null
             ? Component.translatable("pwp_core.main_menu.welcome", nickname).getString()
-            : "Добро пожаловать!";
+            : "Р”РѕР±СЂРѕ РїРѕР¶Р°Р»РѕРІР°С‚СЊ!";
 
         int welcomeY = (int) (height * 0.34f);
         int slideY = (int) ((1 - fade) * 6);

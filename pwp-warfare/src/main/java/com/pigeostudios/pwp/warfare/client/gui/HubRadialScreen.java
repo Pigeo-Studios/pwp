@@ -57,7 +57,7 @@ public class HubRadialScreen extends Screen {
       int centerX = this.width / 2;
       int centerY = this.height / 2;
       String matText = "Mats: " + this.materials;
-      gui.drawCenteredString(this.font, matText, centerX, centerY + 5, PWPTheme.Colors.TEXT_ACCENT);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), matText, centerX, centerY + 5, PWPTheme.Colors.TEXT_ACCENT);
       double dx = mouseX - centerX;
       double dy = mouseY - centerY;
       double distance = Math.sqrt(dx * dx + dy * dy);
@@ -120,8 +120,8 @@ public class HubRadialScreen extends Screen {
       } else {
          color = PWPTheme.Colors.TEXT_PRIMARY;
       }
-      int width = this.font.width(text);
-      gui.drawString(this.font, text, x - width / 2, y - 4, color, true);
+      int width = PWPTheme.Fonts.display().width(text);
+      gui.drawString(PWPTheme.Fonts.display(), text, x - width / 2, y - 4, color, true);
    }
 
    public boolean mouseClicked(double mouseX, double mouseY, int button) {

@@ -34,7 +34,7 @@ public class PWPToastManager {
 
         long now = System.currentTimeMillis();
         int screenW = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
 
         Iterator<ToastEntry> it = toasts.iterator();
         int yOffset = 10;

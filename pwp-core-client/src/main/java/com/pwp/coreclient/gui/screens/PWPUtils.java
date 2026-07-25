@@ -12,7 +12,7 @@ public class PWPUtils {
     private PWPUtils() {}
 
     public static void renderLogo(GuiGraphics gui, int cx, int y) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         PoseStack pose = gui.pose();
         pose.pushPose();
         pose.translate(cx, y, 0);
@@ -54,7 +54,7 @@ public class PWPUtils {
     }
 
     public static void renderStatusText(GuiGraphics gui, String text, int cx, int y, long ageMs) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         long periodMs = 2400;
         float pulse = Easing.pulse((float) (ageMs % periodMs) / periodMs);
         float alpha = 0.7f + 0.3f * pulse;

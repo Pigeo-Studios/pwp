@@ -130,7 +130,7 @@ public class PWPTabs {
             if (!this.visible) return;
             boolean hovered = this.isHovered();
             int bg = hovered ? PWPTheme.Styles.Tab.BG_HOVER : PWPTheme.Styles.Tab.BG;
-            var font = Minecraft.getInstance().font;
+            var font = PWPTheme.Fonts.display();
             int textColor = PWPTheme.Styles.Tab.TEXT;
 
             int x = this.getX();

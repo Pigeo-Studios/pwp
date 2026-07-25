@@ -173,7 +173,7 @@ public class PWPButton extends AbstractWidget {
             gui.fill(loadX, y + h - 2, loadX + loadW, y + h, PWPTheme.Colors.ACCENT);
         }
 
-        var mcFont = Minecraft.getInstance().font;
+        var mcFont = PWPTheme.Fonts.display();
         String msgStr = this.getMessage().getString();
         int textW = mcFont.width(msgStr);
         int textY = y + (h - 8) / 2;

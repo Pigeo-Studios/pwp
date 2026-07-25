@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
 public class SkinEditorScreen extends Screen {
 
@@ -59,7 +60,7 @@ public class SkinEditorScreen extends Screen {
     protected void init() {
         int cx = this.width / 2;
 
-        nameBox = new EditBox(this.font, cx - 70, 30, 140, 16, Component.empty());
+        nameBox = new EditBox(PWPTheme.Fonts.display(), cx - 70, 30, 140, 16, Component.empty());
         nameBox.setHint(Component.literal("e.g. Dragon Fang"));
         if (pendingEditName != null) {
             nameBox.setValue(pendingEditName);
@@ -124,28 +125,28 @@ public class SkinEditorScreen extends Screen {
         renderBackground(gui);
         int cx = this.width / 2;
 
-        gui.drawCenteredString(this.font, titleText, cx, 8, 0xFFC8CBCE);
-        gui.drawString(this.font, "Name:", cx - 120, 33, 0xFF7A7D84, false);
-        gui.drawString(this.font, "Type:", cx - 120, 59, 0xFF7A7D84, false);
-        gui.drawString(this.font, "Rarity:", cx - 120, 81, 0xFF7A7D84, false);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), titleText, cx, 8, 0xFFC8CBCE);
+        gui.drawString(PWPTheme.Fonts.display(), "Name:", cx - 120, 33, 0xFF7A7D84, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Type:", cx - 120, 59, 0xFF7A7D84, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Rarity:", cx - 120, 81, 0xFF7A7D84, false);
 
         int pX = cx - 120, pY = 102;
-        gui.drawString(this.font, "Preview:", pX, pY, 0xFF7A7D84, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Preview:", pX, pY, 0xFF7A7D84, false);
         gui.fill(pX, pY + 10, pX + 50, pY + 60, 0xCC12151A);
         if (!previewItem.isEmpty()) {
             gui.renderItem(previewItem, pX + 9, pY + 14);
-            gui.renderItemDecorations(this.font, previewItem, pX + 9, pY + 14);
-            gui.drawString(this.font, previewItemName.length() > 28 ? previewItemName.substring(0, 25) + "..." : previewItemName,
+            gui.renderItemDecorations(PWPTheme.Fonts.display(), previewItem, pX + 9, pY + 14);
+            gui.drawString(PWPTheme.Fonts.display(), previewItemName.length() > 28 ? previewItemName.substring(0, 25) + "..." : previewItemName,
                 pX + 56, pY + 14, 0xFF3D6FA5, false);
-            gui.drawString(this.font, "Slot: " + slotType, pX + 56, pY + 26, 0xFFC8812A, false);
+            gui.drawString(PWPTheme.Fonts.display(), "Slot: " + slotType, pX + 56, pY + 26, 0xFFC8812A, false);
             int rColor = RARITY_COLORS[java.util.Arrays.asList(RARITIES).indexOf(rarity)];
-            gui.drawString(this.font, rarity, pX + 56, pY + 38, rColor, false);
+            gui.drawString(PWPTheme.Fonts.display(), rarity, pX + 56, pY + 38, rColor, false);
         } else {
-            gui.drawCenteredString(this.font, "?", pX + 25, pY + 30, 0xFF4A4D54);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "?", pX + 25, pY + 30, 0xFF4A4D54);
         }
 
         int invY = 166;
-        gui.drawString(this.font, "Click an item to preview:", cx - 120, invY - 12, 0xFF4A4D54, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Click an item to preview:", cx - 120, invY - 12, 0xFF4A4D54, false);
         int gridW = INV_COLS * (SLOT_SIZE + 2);
         int invSX = (this.width - gridW) / 2;
 
@@ -161,14 +162,14 @@ public class SkinEditorScreen extends Screen {
                 if (!stack.isEmpty()) {
                     gui.renderItem(stack, ix + 1, iy + 1);
                     if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
-                        gui.renderTooltip(this.font, stack, mx, my);
+                        gui.renderTooltip(PWPTheme.Fonts.display(), stack, mx, my);
                     }
                 }
             }
         }
 
         if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(this.font, statusMsg, cx, this.height - 30, 0xFFC8812A);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), statusMsg, cx, this.height - 30, 0xFFC8812A);
 
         super.render(gui, mx, my, pt);
     }
@@ -223,8 +224,8 @@ public class SkinEditorScreen extends Screen {
 
     private void save() {
         String name = nameBox.getValue().trim();
-        if (name.isEmpty()) { showMsg("§eEnter a name!"); return; }
-        if (previewItem.isEmpty()) { showMsg("§eClick an item in the grid!"); return; }
+        if (name.isEmpty()) { showMsg("В§eEnter a name!"); return; }
+        if (previewItem.isEmpty()) { showMsg("В§eClick an item in the grid!"); return; }
 
         final String saveSkinId = editSkinId != null ? editSkinId :
             String.valueOf(Math.abs(previewRegistryName.hashCode())) + "_" +
@@ -235,30 +236,30 @@ public class SkinEditorScreen extends Screen {
         final String saveRarity = rarity;
         final String saveRegistry = previewRegistryName;
 
-        showMsg("§eSaving...");
+        showMsg("В§eSaving...");
         new Thread(() -> {
             try {
                 JsonObject result = CoreAPI.saveSkin(saveSkinId, saveName, "", saveSlot, saveWeapon, saveRarity, saveRegistry);
                 if (result != null && result.has("success") && result.get("success").getAsBoolean())
-                    mc.submit(() -> { showMsg("§aSaved!"); close(); });
+                    mc.submit(() -> { showMsg("В§aSaved!"); close(); });
                 else
-                    mc.submit(() -> showMsg("§c" + (result != null && result.has("error") ? result.get("error").getAsString() : "API error")));
+                    mc.submit(() -> showMsg("В§c" + (result != null && result.has("error") ? result.get("error").getAsString() : "API error")));
             } catch (Exception e) {
-                mc.submit(() -> showMsg("§c" + e.getMessage()));
+                mc.submit(() -> showMsg("В§c" + e.getMessage()));
             }
         }).start();
     }
 
     private void delete() {
-        if (editSkinId == null) { showMsg("§eSave first!"); return; }
-        showMsg("§eDeleting...");
+        if (editSkinId == null) { showMsg("В§eSave first!"); return; }
+        showMsg("В§eDeleting...");
         new Thread(() -> {
             try {
                 CoreAPI.deleteSkin(editSkinId);
                 Thread.sleep(200);
-                mc.submit(() -> { showMsg("§aDeleted!"); close(); });
+                mc.submit(() -> { showMsg("В§aDeleted!"); close(); });
             } catch (Exception e) {
-                mc.submit(() -> showMsg("§c" + e.getMessage()));
+                mc.submit(() -> showMsg("В§c" + e.getMessage()));
             }
         }, "PWP-Skin-Delete").start();
     }

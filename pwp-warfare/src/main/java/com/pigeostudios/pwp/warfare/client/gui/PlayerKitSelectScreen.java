@@ -58,7 +58,7 @@ public class PlayerKitSelectScreen extends Screen {
         for (int i = 0; i < kits.size(); i++) {
             PacketOpenPlayerKitMenu.KitDTO kit = kits.get(i);
             Component label = kit.isSelected
-                ? Component.literal("✔ " + kit.name)
+                ? Component.literal("вњ” " + kit.name)
                 : Component.literal(kit.name);
 
             PWPButton btn = new PWPButton(0, 0, 0, 0, label, b -> {
@@ -108,7 +108,7 @@ public class PlayerKitSelectScreen extends Screen {
         gui.fill(cx, py, cx + panelW, py + panelH, PWPTheme.Colors.SURFACE);
         gui.renderOutline(cx, py, panelW, panelH, PWPTheme.Colors.BORDER);
 
-        gui.drawCenteredString(font, title, width / 2, py + 4, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, py + 4, PWPTheme.Colors.TEXT_PRIMARY);
         gui.fill(cx + 4, py + 14, cx + panelW - 4, py + 15, PWPTheme.Colors.ACCENT);
 
         int clipY = py + 16;
@@ -148,17 +148,17 @@ public class PlayerKitSelectScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(font, Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(font, Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
         }
 
         for (Renderable w : renderables) {
             if (w instanceof Button btn && btn.isHovered() && !btn.active) {
                 for (PacketOpenPlayerKitMenu.KitDTO kit : kits) {
                     String msg = btn.getMessage().getString();
-                    if (msg.equals(kit.name) || msg.equals("✔ " + kit.name)) {
-                        gui.renderTooltip(font, Component.literal(kit.reason), mx, my);
+                    if (msg.equals(kit.name) || msg.equals("вњ” " + kit.name)) {
+                        gui.renderTooltip(PWPTheme.Fonts.display(), Component.literal(kit.reason), mx, my);
                         break;
                     }
                 }

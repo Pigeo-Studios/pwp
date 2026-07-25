@@ -14,7 +14,7 @@ public class PWPBadge {
     private PWPBadge() {}
 
     public static void render(GuiGraphics gui, String text, int x, int y, Type type) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         int textW = font.width(text) + 8;
         int h = 14;
 

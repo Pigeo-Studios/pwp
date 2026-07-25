@@ -54,7 +54,7 @@ public class DisconnectedScreenMixin {
         if (pwp_openTime == 0) pwp_openTime = System.currentTimeMillis();
         long elapsed = System.currentTimeMillis() - pwp_openTime;
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         pose.pushPose();
@@ -67,7 +67,7 @@ public class DisconnectedScreenMixin {
         float eased = Easing.easeOutCubic(fade);
 
         gui.setColor(1, 1, 1, eased);
-        gui.drawCenteredString(font, Component.literal("Соединение разорвано"), cx, cy - 20, PWPTheme.Colors.DANGER);
+        gui.drawCenteredString(font, Component.literal("РЎРѕРµРґРёРЅРµРЅРёРµ СЂР°Р·РѕСЂРІР°РЅРѕ"), cx, cy - 20, PWPTheme.Colors.DANGER);
 
         String reasonStr = reason.getString();
         if (!reasonStr.isEmpty()) {
@@ -95,7 +95,7 @@ public class DisconnectedScreenMixin {
             }
             com.pwp.coreclient.gui.components.RoundedRect.fill(gui, btnX, btnY, btnW, btnH, btnR, bg);
             com.pwp.coreclient.gui.components.RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
-            gui.drawCenteredString(font, Component.literal("Вернуться в меню"), cx, btnY + 10, textColor);
+            gui.drawCenteredString(font, Component.literal("Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ"), cx, btnY + 10, textColor);
         }
     }
 

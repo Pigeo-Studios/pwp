@@ -49,8 +49,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
 @EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT, bus = Bus.FORGE)
-// РћСЃРЅРѕРІРЅРѕР№ РѕРІРµСЂР»РµР№ РјРѕРґР°, РѕС‚РѕР±СЂР°Р¶Р°СЋС‰РёР№ HUD: РєРѕРјРїР°СЃ, Р·Р°С…РІР°С‚ С‚РѕС‡РµРє,
-// СЃС‚СЂРѕР№РєСѓ, С‚РёРєРµС‚С‹, СѓРІРµРґРѕРјР»РµРЅРёСЏ, СЂР°С†РёСЋ Рё РґСЂСѓРіРёРµ СЌР»РµРјРµРЅС‚С‹ РёРЅС‚РµСЂС„РµР№СЃР°
+// Р С›РЎРѓР Р…Р С•Р Р†Р Р…Р С•Р в„– Р С•Р Р†Р ВµРЎР‚Р В»Р ВµР в„– Р СР С•Р Т‘Р В°, Р С•РЎвЂљР С•Р В±РЎР‚Р В°Р В¶Р В°РЎР‹РЎвЂ°Р С‘Р в„– HUD: Р С”Р С•Р СР С—Р В°РЎРѓ, Р В·Р В°РЎвЂ¦Р Р†Р В°РЎвЂљ РЎвЂљР С•РЎвЂЎР ВµР С”,
+// РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”РЎС“, РЎвЂљР С‘Р С”Р ВµРЎвЂљРЎвЂ№, РЎС“Р Р†Р ВµР Т‘Р С•Р СР В»Р ВµР Р…Р С‘РЎРЏ, РЎР‚Р В°РЎвЂ Р С‘РЎР‹ Р С‘ Р Т‘РЎР‚РЎС“Р С–Р С‘Р Вµ РЎРЊР В»Р ВµР СР ВµР Р…РЎвЂљРЎвЂ№ Р С‘Р Р…РЎвЂљР ВµРЎР‚РЎвЂћР ВµР в„–РЎРѓР В°
 public class WarfareOverlay {
    private static final ResourceLocation FLAG_UKRAINE = new ResourceLocation("pwpwarfare", "textures/gui/flags/ukraine.png");
    private static final ResourceLocation FLAG_RUSSIA = new ResourceLocation("pwpwarfare", "textures/gui/flags/russia.png");
@@ -157,13 +157,13 @@ public class WarfareOverlay {
          gui.pose().pushPose();
          gui.pose().translate(centerX, y + 2.0F, 100.0F);
          gui.pose().scale(0.8F, 0.8F, 1.0F);
-         drawOutlinedString(gui, mc, "\u25BC", -(mc.font.width("\u25BC") / 2), 0, -1);
+         drawOutlinedString(gui, mc, "\u25BC", -(PWPTheme.Fonts.display().width("\u25BC") / 2), 0, -1);
          gui.pose().popPose();
          float playerYaw = (mc.player.getViewYRot(partialTick) % 360.0F + 360.0F) % 360.0F;
          String bearing = String.valueOf((int)playerYaw);
          gui.pose().pushPose();
          gui.pose().translate(centerX, y + 26.0F, 100.0F);
-         drawOutlinedString(gui, mc, bearing, -(mc.font.width(bearing) / 2), 0, -1);
+         drawOutlinedString(gui, mc, bearing, -(PWPTheme.Fonts.display().width(bearing) / 2), 0, -1);
          gui.pose().popPose();
          gui.enableScissor((int)(centerX - scaledWidth / 2.0F), 0, (int)(centerX + scaledWidth / 2.0F), screenHeight());
 
@@ -181,7 +181,7 @@ public class WarfareOverlay {
                   gui.pose().pushPose();
                   gui.pose().translate(xPos, y + 18.0F, 0.0F);
                   gui.pose().scale(0.75F, 0.75F, 1.0F);
-                  drawOutlinedStringWithAlpha(gui, mc, label, -(mc.font.width(label) / 2), 0, txtCol, alpha);
+                  drawOutlinedStringWithAlpha(gui, mc, label, -(PWPTheme.Fonts.display().width(label) / 2), 0, txtCol, alpha);
                   gui.pose().popPose();
                } else if (degree % 5 == 0) {
                   drawSmoothLine(gui, xPos, y + 12.0F, 1.0F, 4.0F, alpha << 24 | 16777215);
@@ -428,11 +428,11 @@ public class WarfareOverlay {
 
    private static void drawOutlinedStringWithAlpha(GuiGraphics gui, Minecraft mc, String text, int x, int y, int color, int alpha) {
       int black = alpha << 24;
-      gui.drawString(mc.font, text, x - 1, y, black, false);
-      gui.drawString(mc.font, text, x + 1, y, black, false);
-      gui.drawString(mc.font, text, x, y - 1, black, false);
-      gui.drawString(mc.font, text, x, y + 1, black, false);
-      gui.drawString(mc.font, text, x, y, color, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x + 1, y, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
    }
 
    private static String getDirectionLabel(int degree) {
@@ -481,11 +481,11 @@ public class WarfareOverlay {
             int y = 70;
             gui.fill(x, y, x + pWidth, y + pHeight, -1442840576);
             gui.renderOutline(x, y, pWidth, pHeight, -11141291);
-            gui.drawCenteredString(mc.font, "CMD VOTE: " + candidateName, x + pWidth / 2, y + 5, -10496);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "CMD VOTE: " + candidateName, x + pWidth / 2, y + 5, -10496);
             gui.pose().pushPose();
             gui.pose().scale(0.75F, 0.75F, 1.0F);
             int sx = (int)((x + pWidth / 2) / 0.75F);
-            gui.drawCenteredString(mc.font, "Needs 50% SL votes to pass", sx, (int)((y + 16) / 0.75F), -5592406);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "Needs 50% SL votes to pass", sx, (int)((y + 16) / 0.75F), -5592406);
             gui.pose().popPose();
             gui.fill(x + 5, y + 28, x + pWidth - 5, y + 29, 1442840575);
             int curY = y + headerH;
@@ -499,16 +499,16 @@ public class WarfareOverlay {
                   iconCol = vote ? -11141291 : -43691;
                }
 
-               gui.drawString(mc.font, icon, x + 8, curY, iconCol, true);
+               gui.drawString(PWPTheme.Fonts.display(), icon, x + 8, curY, iconCol, true);
                int nameCol = info.name.equals(mc.player.getScoreboardName()) ? -171 : -1;
-               gui.drawString(mc.font, info.name, x + 22, curY, nameCol, true);
+               gui.drawString(PWPTheme.Fonts.display(), info.name, x + 22, curY, nameCol, true);
                curY += rowH;
             }
 
             if (!mc.player.getScoreboardName().equals(candidateName)) {
-               gui.drawCenteredString(mc.font, "F7: YES | F8: NO", x + pWidth / 2, y + pHeight - 12, -4473925);
+               gui.drawCenteredString(PWPTheme.Fonts.display(), "F7: YES | F8: NO", x + pWidth / 2, y + pHeight - 12, -4473925);
             } else {
-               gui.drawCenteredString(mc.font, "WAITING FOR VOTES", x + pWidth / 2, y + pHeight - 12, -11141291);
+               gui.drawCenteredString(PWPTheme.Fonts.display(), "WAITING FOR VOTES", x + pWidth / 2, y + pHeight - 12, -11141291);
             }
          }
       }
@@ -530,14 +530,14 @@ public class WarfareOverlay {
                   int y = 140;
                   gui.fill(x, y, x + 150, y + 45, -1442840576);
                   gui.renderOutline(x, y, 150, 45, -43691);
-                  gui.drawCenteredString(mc.font, "ARTILLERY REQUEST", x + 75, y + 5, -43691);
+                  gui.drawCenteredString(PWPTheme.Fonts.display(), "ARTILLERY REQUEST", x + 75, y + 5, -43691);
                   gui.pose().pushPose();
                   gui.pose().scale(0.8F, 0.8F, 1.0F);
                   int sx = (int)((x + 75) / 0.8F);
-                  gui.drawCenteredString(mc.font, "From: " + requester, sx, (int)((y + 18) / 0.8F), -1);
-                  gui.drawCenteredString(mc.font, "Pos: " + pos.getX() + ", " + pos.getZ(), sx, (int)((y + 28) / 0.8F), -5592406);
+                  gui.drawCenteredString(PWPTheme.Fonts.display(), "From: " + requester, sx, (int)((y + 18) / 0.8F), -1);
+                  gui.drawCenteredString(PWPTheme.Fonts.display(), "Pos: " + pos.getX() + ", " + pos.getZ(), sx, (int)((y + 28) / 0.8F), -5592406);
                   gui.pose().popPose();
-                  gui.drawCenteredString(mc.font, "PgUp: CONFIRM | PgDn: DENY", x + 75, y + 35, -171);
+                  gui.drawCenteredString(PWPTheme.Fonts.display(), "PgUp: CONFIRM | PgDn: DENY", x + 75, y + 35, -171);
                   float progress = Math.max(0.0F, timer / 200.0F);
                   gui.fill(x + 5, y + 43, x + 5 + (int)(140.0F * progress), y + 44, -1);
                }
@@ -598,7 +598,7 @@ public class WarfareOverlay {
                gui.pose().pushPose();
                gui.pose().translate(x + flagW / 2.0F, y + flagH + 8, 50.0F);
                gui.pose().scale(0.9F, 0.9F, 1.0F);
-               gui.drawCenteredString(mc.font, msg, 0, 0, textColor);
+               gui.drawCenteredString(PWPTheme.Fonts.display(), msg, 0, 0, textColor);
                gui.pose().popPose();
                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                break;
@@ -679,15 +679,15 @@ public class WarfareOverlay {
          int goldLight = -10496;
          gui.fill(xStart, yStart, xStart + uiWidth, yStart + uiHeight, -1879048192);
          gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
-         gui.drawCenteredString(mc.font, "Build Mode", xStart + uiWidth / 2, yStart + 4, goldLight);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), "Build Mode", xStart + uiWidth / 2, yStart + 4, goldLight);
          RenderSystem.enableBlend();
          int row1Y = yStart + 16;
          gui.blit(MOUSE_LEFT, xStart + 8, row1Y, 0.0F, 0.0F, 12, 12, 12, 12);
-         gui.drawString(mc.font, "Rotate", xStart + 26, row1Y + 2, -1, true);
+         gui.drawString(PWPTheme.Fonts.display(), "Rotate", xStart + 26, row1Y + 2, -1, true);
          gui.blit(ICON_ROTATE, xStart + uiWidth - 20, row1Y, 0.0F, 0.0F, 12, 12, 12, 12);
          int row2Y = yStart + 30;
          gui.blit(MOUSE_RIGHT, xStart + 8, row2Y, 0.0F, 0.0F, 12, 12, 12, 12);
-         gui.drawString(mc.font, "Confirm", xStart + 26, row2Y + 2, -1, true);
+         gui.drawString(PWPTheme.Fonts.display(), "Confirm", xStart + 26, row2Y + 2, -1, true);
          gui.blit(ICON_CONFIRM, xStart + uiWidth - 20, row2Y, 0.0F, 0.0F, 12, 12, 12, 12);
          RenderSystem.disableBlend();
       }
@@ -712,10 +712,10 @@ public class WarfareOverlay {
                if (distance < 150) {
                   String name = downed.getScoreboardName();
                   String text = "\u271A " + name + " [" + distance + "m]";
-                  int x = width - mc.font.width(text) - 10;
+                  int x = width - PWPTheme.Fonts.display().width(text) - 10;
                   int bgColor = isShouting ? -1426128896 : -2136342528;
                   gui.fill(x - 2, yOffset - 1, width - 5, yOffset + 9, bgColor);
-                  gui.drawString(mc.font, text, x, yOffset, 16777215, false);
+                  gui.drawString(PWPTheme.Fonts.display(), text, x, yOffset, 16777215, false);
                   yOffset += 12;
                }
             }
@@ -735,7 +735,7 @@ public class WarfareOverlay {
             } else {
                String speakerName = entry.getKey();
                int color = -256;
-               int textWidth = mc.font.width(speakerName) + 15;
+               int textWidth = PWPTheme.Fonts.display().width(speakerName) + 15;
                gui.fill(xOffset, yOffset - 2, xOffset + 5 + textWidth, yOffset + 10, Integer.MIN_VALUE);
                RenderSystem.enableBlend();
                float r = (color >> 16 & 0xFF) / 255.0F;
@@ -744,7 +744,7 @@ public class WarfareOverlay {
                RenderSystem.setShaderColor(r, g, b, 1.0F);
                gui.blit(VOICE_ICON_RADIO_TEX, xOffset + 3, yOffset, 0.0F, 0.0F, 8, 8, 8, 8);
                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-               gui.drawString(mc.font, speakerName, xOffset + 14, yOffset, color, false);
+               gui.drawString(PWPTheme.Fonts.display(), speakerName, xOffset + 14, yOffset, color, false);
                yOffset += 14;
             }
          }
@@ -764,7 +764,7 @@ public class WarfareOverlay {
             } else {
                String speakerName = entry.getKey();
                int color = -11141291;
-               int textWidth = mc.font.width(speakerName) + 15;
+               int textWidth = PWPTheme.Fonts.display().width(speakerName) + 15;
                gui.fill(xOffset, yOffset - 2, xOffset + 5 + textWidth, yOffset + 10, Integer.MIN_VALUE);
                RenderSystem.enableBlend();
                float r = (color >> 16 & 0xFF) / 255.0F;
@@ -773,7 +773,7 @@ public class WarfareOverlay {
                RenderSystem.setShaderColor(r, g, b, 1.0F);
                gui.blit(VOICE_ICON_TEX, xOffset + 3, yOffset, 0.0F, 0.0F, 8, 8, 8, 8);
                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-               gui.drawString(mc.font, speakerName, xOffset + 14, yOffset, color, false);
+               gui.drawString(PWPTheme.Fonts.display(), speakerName, xOffset + 14, yOffset, color, false);
                yOffset += 14;
             }
          }
@@ -813,7 +813,7 @@ public class WarfareOverlay {
             }
 
             String text = "Materials: " + mats;
-            int textWidth = mc.font.width(text);
+            int textWidth = PWPTheme.Fonts.display().width(text);
             int textX = (width - textWidth) / 2;
             int textY = height - 70;
             PoseStack pose = gui.pose();
@@ -880,9 +880,9 @@ public class WarfareOverlay {
                   gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
                   RenderSystem.enableBlend();
                   gui.blit(BUILD_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
-                  gui.drawString(mc.font, "Build", xStart + 26, yStart + 10, -1, true);
+                  gui.drawString(PWPTheme.Fonts.display(), "Build", xStart + 26, yStart + 10, -1, true);
                   gui.blit(DIG_ICON, xStart + 8, yStart + 24, 0.0F, 0.0F, 12, 12, 12, 12);
-                  gui.drawString(mc.font, "Destroy", xStart + 26, yStart + 26, -1, true);
+                  gui.drawString(PWPTheme.Fonts.display(), "Destroy", xStart + 26, yStart + 26, -1, true);
                   int barX = xStart + 26;
                   int barY = yStart + 42;
                   int barWidth = 85;
@@ -894,9 +894,9 @@ public class WarfareOverlay {
                   }
 
                   if (finished) {
-                     gui.drawCenteredString(mc.font, "Structure finished!", xStart + uiWidth / 2, yStart + 52, -256);
+                     gui.drawCenteredString(PWPTheme.Fonts.display(), "Structure finished!", xStart + uiWidth / 2, yStart + 52, -256);
                   } else if (isEnemy) {
-                     gui.drawCenteredString(mc.font, "Enemy structure!", xStart + uiWidth / 2, yStart + 52, -43691);
+                     gui.drawCenteredString(PWPTheme.Fonts.display(), "Enemy structure!", xStart + uiWidth / 2, yStart + 52, -43691);
                   }
 
                   RenderSystem.disableBlend();
@@ -929,7 +929,7 @@ public class WarfareOverlay {
 
          String blueText = String.valueOf(ClientData.BLUE_TICKETS);
          int blueTextColor = ClientData.blueBleeding ? (blinkOn ? alarmRed : normalWhite) : normalWhite;
-         int blueTextX = blueX + (boxWidth - mc.font.width(blueText)) / 2;
+         int blueTextX = blueX + (boxWidth - PWPTheme.Fonts.display().width(blueText)) / 2;
          int blueTextY = topOffset + (boxHeight - 8) / 2;
          drawOutlinedString(gui, mc, blueText, blueTextX, blueTextY, blueTextColor);
          int redX = centerX + gap / 2;
@@ -945,7 +945,7 @@ public class WarfareOverlay {
 
           String redText = String.valueOf(ClientData.RED_TICKETS);
           int redTextColor = ClientData.redBleeding ? (blinkOn ? alarmRed : normalWhite) : normalWhite;
-          int redTextX = redX + (boxWidth - mc.font.width(redText)) / 2;
+          int redTextX = redX + (boxWidth - PWPTheme.Fonts.display().width(redText)) / 2;
           int redTextY = topOffset + (boxHeight - 8) / 2;
           drawOutlinedString(gui, mc, redText, redTextX, redTextY, redTextColor);
        }
@@ -953,11 +953,11 @@ public class WarfareOverlay {
 
    private static void drawOutlinedString(GuiGraphics gui, Minecraft mc, String text, int x, int y, int color) {
       int black = -16777216;
-      gui.drawString(mc.font, text, x - 1, y, black, false);
-      gui.drawString(mc.font, text, x + 1, y, black, false);
-      gui.drawString(mc.font, text, x, y - 1, black, false);
-      gui.drawString(mc.font, text, x, y + 1, black, false);
-      gui.drawString(mc.font, text, x, y, color, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x + 1, y, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
    }
 
    private static void renderCapturePoint(GuiGraphics gui, Minecraft mc, int width, int height) {
@@ -982,7 +982,7 @@ public class WarfareOverlay {
          gui.pose().scale(0.8F, 0.8F, 1.0F);
          int scaledX = (int)((xStart + flagW / 2) / 0.8F);
          int scaledY = (int)((yStart - 9) / 0.8F);
-         gui.drawCenteredString(mc.font, ClientData.pointName, scaledX, scaledY, -1);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), ClientData.pointName, scaledX, scaledY, -1);
          gui.pose().popPose();
          int barStartX = xStart - 1;
          gui.fill(barStartX, yStart - 1, xStart + flagW + 1, yStart + flagH + 1, -16777216);
@@ -1060,9 +1060,9 @@ public class WarfareOverlay {
             gui.pose().scale(0.7F, 0.7F, 1.0F);
             int lockX = (int)(barStartX / 0.71F);
             int lockY = (int)((barsY + 10) / 0.7F);
-            gui.drawString(mc.font, "BLOCKED", lockX, lockY, -43691, true);
+            gui.drawString(PWPTheme.Fonts.display(), "BLOCKED", lockX, lockY, -43691, true);
             if (!ClientData.nextObjectiveName.isEmpty()) {
-               gui.drawString(mc.font, "Need: " + ClientData.nextObjectiveName, lockX, lockY + 10, -3355444, true);
+               gui.drawString(PWPTheme.Fonts.display(), "Need: " + ClientData.nextObjectiveName, lockX, lockY + 10, -3355444, true);
             }
 
             gui.pose().popPose();
@@ -1090,17 +1090,17 @@ public class WarfareOverlay {
          gui.pose().translate(0.0F, 0.0F, 500.0F);
          gui.fill(xPos, yPos, xPos + panelWidth, yPos + panelHeight, -1442840576);
          gui.renderOutline(xPos, yPos, panelWidth, panelHeight, -1);
-         gui.drawCenteredString(mc.font, "VOTE TO START", xPos + panelWidth / 2, yPos + 5, -10496);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), "VOTE TO START", xPos + panelWidth / 2, yPos + 5, -10496);
          int seconds = Math.max(0, ClientData.voteTimer);
          String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
-         gui.drawCenteredString(mc.font, timeStr, xPos + panelWidth / 2, yPos + 16, -1);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), timeStr, xPos + panelWidth / 2, yPos + 16, -1);
          gui.fill(xPos + 5, yPos + 28, xPos + panelWidth - 5, yPos + 29, 1442840575);
          String blueName = ClientData.customBlueName;
          String redName = ClientData.customRedName;
          int blueColor = ClientData.blueReady ? -11141291 : -43691;
          int redColor = ClientData.redReady ? -11141291 : -43691;
-         gui.drawString(mc.font, blueName + ": " + (ClientData.blueReady ? "READY" : "WAITING"), xPos + 8, yPos + 32, blueColor, true);
-         gui.drawString(mc.font, redName + ": " + (ClientData.redReady ? "READY" : "WAITING"), xPos + 8, yPos + 44, redColor, true);
+         gui.drawString(PWPTheme.Fonts.display(), blueName + ": " + (ClientData.blueReady ? "READY" : "WAITING"), xPos + 8, yPos + 32, blueColor, true);
+         gui.drawString(PWPTheme.Fonts.display(), redName + ": " + (ClientData.redReady ? "READY" : "WAITING"), xPos + 8, yPos + 44, redColor, true);
          int currentY = yPos + headerHeight + statusHeight;
 
          for (MapPlayerInfo info : teamPlayers) {
@@ -1112,13 +1112,13 @@ public class WarfareOverlay {
                iconColor = vote ? -11141291 : -43691;
             }
 
-            gui.drawString(mc.font, icon, xPos + 8, currentY, iconColor, true);
+            gui.drawString(PWPTheme.Fonts.display(), icon, xPos + 8, currentY, iconColor, true);
             int nameColor = info.name.equals(mc.player.getScoreboardName()) ? -171 : -1;
-            gui.drawString(mc.font, info.name, xPos + 22, currentY, nameColor, true);
+            gui.drawString(PWPTheme.Fonts.display(), info.name, xPos + 22, currentY, nameColor, true);
             currentY += rowHeight;
          }
 
-         gui.drawCenteredString(mc.font, "F9: YES | F10: NO", xPos + panelWidth / 2, yPos + panelHeight - 12, -4473925);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), "F9: YES | F10: NO", xPos + panelWidth / 2, yPos + panelHeight - 12, -4473925);
          gui.pose().popPose();
       }
    }
@@ -1223,13 +1223,13 @@ public class WarfareOverlay {
             }
 
             String text = "Supplies: " + crates + " / " + maxCrates;
-            int textWidth = mc.font.width(text);
+            int textWidth = PWPTheme.Fonts.display().width(text);
             int x = width - textWidth - 10;
             int y = height - 25;
             drawOutlinedString(gui, mc, text, x, y, color);
             if (isCharging) {
                String reloadText = "RELOADING...";
-               drawOutlinedString(gui, mc, reloadText, width - mc.font.width(reloadText) - 10, y - 10, -11141291);
+               drawOutlinedString(gui, mc, reloadText, width - PWPTheme.Fonts.display().width(reloadText) - 10, y - 10, -11141291);
             }
          }
       }
@@ -1274,9 +1274,9 @@ public class WarfareOverlay {
             if (distance < 100) {
                String name = downed.getScoreboardName();
                String text = "\u271A " + name + " [" + distance + "m]";
-               int x = width - mc.font.width(text) - 10;
+               int x = width - PWPTheme.Fonts.display().width(text) - 10;
                gui.fill(x - 2, yOffset - 1, width - 5, yOffset + 9, -2130771968);
-               gui.drawString(mc.font, text, x, yOffset, 16777215, false);
+               gui.drawString(PWPTheme.Fonts.display(), text, x, yOffset, 16777215, false);
                yOffset += 12;
             }
          }
@@ -1323,7 +1323,7 @@ public class WarfareOverlay {
       int flagW = 22;
       int flagH = 13;
       int iconSize = 12;
-      int textW = mc.font.width(tText);
+      int textW = PWPTheme.Fonts.display().width(tText);
       int gap = 6;
       int totalContentWidth = flagW + gap + iconSize + gap + textW;
       int startX = x + containerWidth / 2 - totalContentWidth / 2;
@@ -1339,7 +1339,7 @@ public class WarfareOverlay {
       RenderSystem.enableBlend();
       gui.blit(ticketIcon, iconX, contentY, iconSize, iconSize, 0.0F, 0.0F, 16, 16, 16, 16);
       int textX = iconX + iconSize + gap;
-      gui.drawString(mc.font, tText, textX, contentY + 2, -1, true);
+      gui.drawString(PWPTheme.Fonts.display(), tText, textX, contentY + 2, -1, true);
       RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
    }
 

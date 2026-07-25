@@ -125,7 +125,7 @@ public class WarfareConfigScreen extends Screen {
    }
 
    private EditBox createIntBox(int x, int y, int val) {
-      EditBox box = new EditBox(this.font, x, y, 65, 18, Component.empty());
+      EditBox box = new EditBox(PWPTheme.Fonts.display(), x, y, 65, 18, Component.empty());
       box.setValue(String.valueOf(val));
       box.setFilter(s -> s.matches("\\d*"));
       this.addRenderableWidget(box);
@@ -133,7 +133,7 @@ public class WarfareConfigScreen extends Screen {
    }
 
    private EditBox createStringBox(int x, int y, int w, String val) {
-      EditBox box = new EditBox(this.font, x, y, w, 18, Component.empty());
+      EditBox box = new EditBox(PWPTheme.Fonts.display(), x, y, w, 18, Component.empty());
       box.setValue(val);
       this.addRenderableWidget(box);
       return box;
@@ -165,7 +165,7 @@ public class WarfareConfigScreen extends Screen {
    public void render(GuiGraphics gui, int mx, int my, float pt) {
       this.renderBackground(gui);
       int cx = this.width / 2;
-      gui.drawCenteredString(this.font, Component.literal(this.title.getString()), cx, 8, PWPTheme.Colors.TEXT_ACCENT);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(this.title.getString()), cx, 8, PWPTheme.Colors.TEXT_ACCENT);
 
       int x1 = cx - 175;
       int x2 = cx - 85;
@@ -176,21 +176,21 @@ public class WarfareConfigScreen extends Screen {
       int ly2 = 188;
       int ly3 = 218;
 
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.fob_mat"), x1, ly1, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.resup"), x2, ly1, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.max_fob"), x3, ly1, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.nok_sec"), x4, ly1, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.fob_dist"), x1, ly2, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.ral_dist"), x2, ly2, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.snd_rad"), x3, ly2, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.vote_min"), x4, ly2, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.fob_blk"), x1, ly3, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.ral_blk"), x2, ly3, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.bld_rad"), x3, ly3, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.vote_percent"), x4, ly3, color);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.blue_team_name"), cx - 160, 248, PWPTheme.Colors.TEAM_BLUE);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.red_team_name"), cx + 10, 248, PWPTheme.Colors.TEAM_RED);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.config.revive_item_id"), cx - 160, 278, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.fob_mat"), x1, ly1, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.resup"), x2, ly1, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.max_fob"), x3, ly1, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.nok_sec"), x4, ly1, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.fob_dist"), x1, ly2, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.ral_dist"), x2, ly2, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.snd_rad"), x3, ly2, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.vote_min"), x4, ly2, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.fob_blk"), x1, ly3, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.ral_blk"), x2, ly3, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.bld_rad"), x3, ly3, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.vote_percent"), x4, ly3, color);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.blue_team_name"), cx - 160, 248, PWPTheme.Colors.TEAM_BLUE);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.red_team_name"), cx + 10, 248, PWPTheme.Colors.TEAM_RED);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.config.revive_item_id"), cx - 160, 278, color);
       super.render(gui, mx, my, pt);
    }
 }

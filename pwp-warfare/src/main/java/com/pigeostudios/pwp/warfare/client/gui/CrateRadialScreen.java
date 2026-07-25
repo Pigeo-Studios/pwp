@@ -13,9 +13,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Радиальное меню для взаимодействия с ящиком снабжения
-// Позволяет пополнить боеприпасы или забрать материалы
+// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ РґР»СЏ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёСЏ СЃ СЏС‰РёРєРѕРј СЃРЅР°Р±Р¶РµРЅРёСЏ
+// РџРѕР·РІРѕР»СЏРµС‚ РїРѕРїРѕР»РЅРёС‚СЊ Р±РѕРµРїСЂРёРїР°СЃС‹ РёР»Рё Р·Р°Р±СЂР°С‚СЊ РјР°С‚РµСЂРёР°Р»С‹
 public class CrateRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_5.png");
    private final int entityId;
@@ -54,7 +55,7 @@ public class CrateRadialScreen extends Screen {
       int centerX = this.width / 2;
       int centerY = this.height / 2;
       String matText = "Mats: " + this.materials + " / " + WarfareConfig.SUPPLY_CRATE_MATERIALS.get();
-      gui.drawCenteredString(this.font, matText, centerX, centerY + 5, -22016);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), matText, centerX, centerY + 5, -22016);
       double dx = mouseX - centerX;
       double dy = mouseY - centerY;
       double distance = Math.sqrt(dx * dx + dy * dy);
@@ -141,8 +142,8 @@ public class CrateRadialScreen extends Screen {
          color = -43691;
       }
 
-      int width = this.font.width(text);
-      gui.drawString(this.font, text, x - width / 2, y - 4, color, true);
+      int width = PWPTheme.Fonts.display().width(text);
+      gui.drawString(PWPTheme.Fonts.display(), text, x - width / 2, y - 4, color, true);
    }
 
    public boolean mouseClicked(double mouseX, double mouseY, int button) {

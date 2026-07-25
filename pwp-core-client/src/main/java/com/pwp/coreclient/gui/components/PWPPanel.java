@@ -52,7 +52,7 @@ public class PWPPanel {
     public static void renderWithTitle(GuiGraphics gui, int x, int y, int w, int h, String title, int titleColor) {
         render(gui, x, y, w, h);
         if (title != null && !title.isEmpty()) {
-            var font = Minecraft.getInstance().font;
+            var font = PWPTheme.Fonts.display();
             int titleY = y + PWPTheme.Spacing.XS;
             gui.drawCenteredString(font, Component.literal(title), x + w / 2, titleY, titleColor);
             int dividerY = y + titleHeight() - PWPTheme.Spacing.XXS;

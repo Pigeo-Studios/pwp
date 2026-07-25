@@ -10,7 +10,7 @@ public class PWPEmptyState {
     private PWPEmptyState() {}
 
     public static void render(GuiGraphics gui, String title, String subtitle, int cx, int cy) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         gui.drawCenteredString(font, Component.literal(title), cx, cy - 8, PWPTheme.Colors.TEXT_SECONDARY);
         if (subtitle != null && !subtitle.isEmpty()) {
             gui.drawCenteredString(font, Component.literal(subtitle), cx, cy + 8, PWPTheme.Colors.TEXT_DIM);

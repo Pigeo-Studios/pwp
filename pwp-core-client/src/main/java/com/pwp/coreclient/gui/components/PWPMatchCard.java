@@ -40,7 +40,7 @@ public class PWPMatchCard {
         RoundedRect.fill(gui, x, y, w, h, r, bg);
         RoundedRect.border(gui, x, y, w, h, r, 1, border);
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         int imgSize = 48;
         int imgX = x + 8;
         int imgY = y + (h - imgSize) / 2;
@@ -77,14 +77,14 @@ public class PWPMatchCard {
         String actionText;
         int actionColor;
         switch (status) {
-            case PLAYING -> { actionText = "\u25B6 \u00a7eВойти"; actionColor = PWPTheme.Colors.TEXT_ACCENT; }
-            case STARTING -> { actionText = "\u23F3 Запуск..."; actionColor = PWPTheme.Colors.TEXT_DIM; }
-            case FULL -> { actionText = "\u2716 ПОЛНЫЙ"; actionColor = PWPTheme.Colors.DANGER; }
-            case CLOSED -> { actionText = "\u2716 Закрыт"; actionColor = PWPTheme.Colors.DANGER; }
-            case MAINTENANCE -> { actionText = "\u2699 Обслуживание"; actionColor = PWPTheme.Colors.INFO; }
-            case RECONNECT -> { actionText = "\u21BA Переподключение..."; actionColor = PWPTheme.Colors.INFO; }
-            case VOTING -> { actionText = "\u2714 Голосование"; actionColor = PWPTheme.Colors.WARNING; }
-            case WAITING -> { actionText = "\u23F3 Ожидание..."; actionColor = PWPTheme.Colors.TEXT_DIM; }
+            case PLAYING -> { actionText = "\u25B6 \u00a7eР’РѕР№С‚Рё"; actionColor = PWPTheme.Colors.TEXT_ACCENT; }
+            case STARTING -> { actionText = "\u23F3 Р—Р°РїСѓСЃРє..."; actionColor = PWPTheme.Colors.TEXT_DIM; }
+            case FULL -> { actionText = "\u2716 РџРћР›РќР«Р™"; actionColor = PWPTheme.Colors.DANGER; }
+            case CLOSED -> { actionText = "\u2716 Р—Р°РєСЂС‹С‚"; actionColor = PWPTheme.Colors.DANGER; }
+            case MAINTENANCE -> { actionText = "\u2699 РћР±СЃР»СѓР¶РёРІР°РЅРёРµ"; actionColor = PWPTheme.Colors.INFO; }
+            case RECONNECT -> { actionText = "\u21BA РџРµСЂРµРїРѕРґРєР»СЋС‡РµРЅРёРµ..."; actionColor = PWPTheme.Colors.INFO; }
+            case VOTING -> { actionText = "\u2714 Р“РѕР»РѕСЃРѕРІР°РЅРёРµ"; actionColor = PWPTheme.Colors.WARNING; }
+            case WAITING -> { actionText = "\u23F3 РћР¶РёРґР°РЅРёРµ..."; actionColor = PWPTheme.Colors.TEXT_DIM; }
             default -> { actionText = ""; actionColor = PWPTheme.Colors.TEXT_DIM; }
         }
 

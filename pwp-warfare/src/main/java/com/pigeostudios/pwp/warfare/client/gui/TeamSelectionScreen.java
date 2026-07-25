@@ -55,7 +55,7 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
             : formatFactionName(ClientData.RED_FACTION, ClientData.customRedName);
         int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
 
-        gui.drawCenteredString(Minecraft.getInstance().font, Component.literal(teamName)
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(teamName)
             .withStyle(isBlue ? ChatFormatting.BLUE : ChatFormatting.RED), cx, si.y + 8, teamColor);
 
         ResourceLocation flag = getFlagTexture(isBlue ? ClientData.BLUE_FACTION : ClientData.RED_FACTION);
@@ -89,10 +89,10 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
             joinText = "JOIN";
             joinColor = PWPTheme.Colors.TEXT_ACCENT;
         }
-        gui.drawCenteredString(Minecraft.getInstance().font,
+        gui.drawCenteredString(PWPTheme.Fonts.display(),
             Component.literal(joinText).withStyle(ChatFormatting.GOLD), cx, si.y + 78, joinColor);
 
-        gui.drawCenteredString(Minecraft.getInstance().font,
+        gui.drawCenteredString(PWPTheme.Fonts.display(),
             Component.literal(playerCount + " players")
                 .withStyle(si.disabled ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY),
             cx, si.y + 92, si.disabled ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.TEXT_SECONDARY);

@@ -44,13 +44,13 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
          ((KitEditorMenu)this.menu).isLeaderOnly = !((KitEditorMenu)this.menu).isLeaderOnly;
          b.setMessage(((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"));
       }, PWPButton.Style.PRIMARY));
-      this.maxTeamBox = new EditBox(this.font, x + 144, y + 14, 24, 14, Component.empty());
+      this.maxTeamBox = new EditBox(PWPTheme.Fonts.display(), x + 144, y + 14, 24, 14, Component.empty());
       this.maxTeamBox.setValue(String.valueOf(((KitEditorMenu)this.menu).maxPerTeam));
       this.addRenderableWidget(this.maxTeamBox);
-      this.maxSquadBox = new EditBox(this.font, x + 144, y + 32, 24, 14, Component.empty());
+      this.maxSquadBox = new EditBox(PWPTheme.Fonts.display(), x + 144, y + 32, 24, 14, Component.empty());
       this.maxSquadBox.setValue(String.valueOf(((KitEditorMenu)this.menu).maxPerSquad));
       this.addRenderableWidget(this.maxSquadBox);
-      this.minPlayersBox = new EditBox(this.font, x + 144, y + 50, 24, 14, Component.empty());
+      this.minPlayersBox = new EditBox(PWPTheme.Fonts.display(), x + 144, y + 50, 24, 14, Component.empty());
       this.minPlayersBox.setValue(String.valueOf(((KitEditorMenu)this.menu).minSquadPlayers));
       this.addRenderableWidget(this.minPlayersBox);
       this.addRenderableWidget(new PWPButton(x + 120, y + 148, 48, 20, Component.translatable("gui.pwpwarfare.kit_editor.save"), b -> this.saveKit(), PWPButton.Style.ACCENT));
@@ -97,15 +97,15 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
       this.renderTooltip(gui, mx, my);
       int x = this.leftPos;
       int y = this.topPos;
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.max_team"), x + 98, y + 17, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.max_squad"), x + 103, y + 35, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.min_players"), x + 103, y + 53, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.max_team"), x + 98, y + 17, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.max_squad"), x + 103, y + 35, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.min_players"), x + 103, y + 53, PWPTheme.Colors.TEXT_SECONDARY, false);
       gui.pose().pushPose();
       gui.pose().scale(0.9F, 0.9F, 1.0F);
       int scaledX = (int)((x + 8) / 0.9F);
       int scaledY = (int)((y + 36) / 0.9F);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.toggle_resupply"), scaledX, scaledY, PWPTheme.Colors.SUCCESS, false);
-      gui.drawString(this.font, Component.translatable("gui.pwpwarfare.kit_editor.save_nbt"), scaledX, scaledY + 10, PWPTheme.Colors.INFO, false);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.toggle_resupply"), scaledX, scaledY, PWPTheme.Colors.SUCCESS, false);
+      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.save_nbt"), scaledX, scaledY + 10, PWPTheme.Colors.INFO, false);
       gui.pose().popPose();
 
       for (int i = 0; i < ((KitEditorMenu)this.menu).slots.size(); i++) {

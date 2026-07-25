@@ -96,7 +96,7 @@ public class MapMarkerGridScreen extends Screen {
         int py = 10;
         PWPPanel.render(gui, cx, py, panelW, panelH);
 
-        gui.drawCenteredString(font, title, width / 2, py + 4, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, py + 4, PWPTheme.Colors.TEXT_PRIMARY);
         gui.fill(cx + 4, py + 14, cx + panelW - 4, py + 15, PWPTheme.Colors.ACCENT);
 
         int clipY = py + 16;
@@ -122,7 +122,7 @@ public class MapMarkerGridScreen extends Screen {
             gui.blit(icon, iconX, iconY, 0.0F, 0.0F, 32, 32, 32, 32);
 
             Component name = Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_"));
-            gui.drawCenteredString(font, name, bx + CARD_W / 2, by + 42, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), name, bx + CARD_W / 2, by + 42, PWPTheme.Colors.TEXT_SECONDARY);
         }
 
         super.render(gui, mx, my, pt);
@@ -130,9 +130,9 @@ public class MapMarkerGridScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(font, Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(font, Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
         }
     }
 

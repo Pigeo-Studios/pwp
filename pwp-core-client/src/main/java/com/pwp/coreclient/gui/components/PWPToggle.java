@@ -78,7 +78,7 @@ public class PWPToggle extends AbstractWidget {
         int thumbColor = toggled ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_SECONDARY;
         RoundedRect.fill(gui, thumbX, y + inset, thumbW, h - inset * 2, (h - inset * 2) / 2, thumbColor);
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         gui.drawString(font, this.getMessage(), x + w + PWPTheme.Spacing.SM, y + (h - 8) / 2, PWPTheme.Colors.TEXT_PRIMARY);
     }
 }

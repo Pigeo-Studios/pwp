@@ -82,25 +82,25 @@ public class FactionVehicleEditorScreen extends Screen {
         hotY = pInvY + INV_ROWS * SLOT + 4;
         panelH = hotY + SLOT + 34;
 
-        vehicleNameField = new EditBox(font, fieldLeft + 50, 28, 120, 16, Component.literal(""));
+        vehicleNameField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 50, 28, 120, 16, Component.literal(""));
         vehicleNameField.setMaxLength(64);
         vehicleNameField.setValue(vehicleName);
         vehicleNameField.setResponder(val -> vehicleName = val);
         addRenderableWidget(vehicleNameField);
 
-        displayNameField = new EditBox(font, fieldLeft + 220, 28, fieldWide, 16, Component.literal(""));
+        displayNameField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 220, 28, fieldWide, 16, Component.literal(""));
         displayNameField.setMaxLength(128);
         displayNameField.setValue(displayName);
         displayNameField.setResponder(val -> displayName = val);
         addRenderableWidget(displayNameField);
 
-        vehicleIdField = new EditBox(font, fieldLeft + 65, 50, 180, 16, Component.literal(""));
+        vehicleIdField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 65, 50, 180, 16, Component.literal(""));
         vehicleIdField.setMaxLength(64);
         vehicleIdField.setValue(vehicleId);
         vehicleIdField.setResponder(val -> vehicleId = val);
         addRenderableWidget(vehicleIdField);
 
-        yawField = new EditBox(font, fieldLeft + 290, 50, 42, 16, Component.literal(""));
+        yawField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 290, 50, 42, 16, Component.literal(""));
         yawField.setValue(String.valueOf((int) yaw));
         yawField.setFilter(s -> s.matches("-?\\d*"));
         yawField.setResponder(val -> { try { yaw = Float.parseFloat(val); } catch (Exception ignored) {} });
@@ -110,14 +110,14 @@ public class FactionVehicleEditorScreen extends Screen {
         addRenderableWidget(new PWPButton(fieldLeft + 352, 50, 16, 16, Component.literal("\u21BB"), b -> adjustYaw(45.0F), PWPButton.Style.PRIMARY));
 
         addRenderableWidget(new PWPButton(fieldLeft + 62, 74, 16, 16, Component.literal("-"), b -> adjustTimer(false, -5), PWPButton.Style.PRIMARY));
-        respawnTimeField = new EditBox(font, fieldLeft + 80, 74, 50, 16, Component.literal(""));
+        respawnTimeField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 80, 74, 50, 16, Component.literal(""));
         respawnTimeField.setValue(String.valueOf(respawnTime));
         respawnTimeField.setResponder(val -> { try { respawnTime = Math.max(0, Integer.parseInt(val)); } catch (Exception ignored) {} });
         addRenderableWidget(respawnTimeField);
         addRenderableWidget(new PWPButton(fieldLeft + 132, 74, 16, 16, Component.literal("+"), b -> adjustTimer(false, 5), PWPButton.Style.PRIMARY));
 
         addRenderableWidget(new PWPButton(fieldLeft + 202, 74, 16, 16, Component.literal("-"), b -> adjustTimer(true, -5), PWPButton.Style.PRIMARY));
-        initialTimeField = new EditBox(font, fieldLeft + 220, 74, 50, 16, Component.literal(""));
+        initialTimeField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 220, 74, 50, 16, Component.literal(""));
         initialTimeField.setValue(String.valueOf(initialTime));
         initialTimeField.setResponder(val -> { try { initialTime = Math.max(0, Integer.parseInt(val)); } catch (Exception ignored) {} });
         addRenderableWidget(initialTimeField);
@@ -229,24 +229,24 @@ public class FactionVehicleEditorScreen extends Screen {
         renderBackground(gui);
 
         PWPPanel.render(gui, cx, 8, panelW, panelH);
-        gui.drawCenteredString(font, title.getString(), width / 2, 12, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), title.getString(), width / 2, 12, PWPTheme.Colors.TEXT_ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(font, Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
             super.render(gui, mx, my, pt);
             return;
         }
 
         int fl = cx + 12;
-        gui.drawString(font, "Name ID:", fl, 32, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(font, "Display:", fl + 170, 32, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(font, "Vehicle ID:", fl, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(font, "Yaw:", fl + 260, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(font, "Respawn:", fl, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(font, "Initial:", fl + 152, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Name ID:", fl, 32, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Display:", fl + 170, 32, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Vehicle ID:", fl, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Yaw:", fl + 260, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Respawn:", fl, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Initial:", fl + 152, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
 
-        gui.drawString(font, "Modifier", modX, modY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
-        gui.drawString(font, "Items (32)", vInvX, vInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Modifier", modX, modY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Items (32)", vInvX, vInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
 
         // modifier slot (slot 0)
         gui.fill(modX - 2, modY - 2, modX + MOD_W + 2, modY + MOD_W + 2, PWPTheme.Colors.SURFACE_LIGHT);
@@ -268,7 +268,7 @@ public class FactionVehicleEditorScreen extends Screen {
         }
 
         // player inventory
-        gui.drawString(font, "Player Inventory", cx + 12, pInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Player Inventory", cx + 12, pInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
         int pw = INV_COLS * SLOT + 4;
         int ph = INV_ROWS * SLOT + 4;
         gui.fill(pInvX - 2, pInvY - 2, pInvX + pw, pInvY + ph, PWPTheme.Colors.SURFACE_LIGHT);
@@ -301,7 +301,7 @@ public class FactionVehicleEditorScreen extends Screen {
         gui.fill(x, y, x + SLOT - 2, y + SLOT - 2, PWPTheme.Styles.Panel.BG);
         if (!stack.isEmpty()) {
             gui.renderItem(stack, x, y);
-            gui.renderItemDecorations(font, stack, x, y);
+            gui.renderItemDecorations(PWPTheme.Fonts.display(), stack, x, y);
         }
     }
 

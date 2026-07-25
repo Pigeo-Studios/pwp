@@ -59,7 +59,7 @@ public class FactionVehicleListScreen extends Screen {
         maxScroll = 0;
         scrollOff = 0;
 
-        searchField = new EditBox(font, cx + 10, 34, panelW - 20, 16, Component.literal(""));
+        searchField = new EditBox(PWPTheme.Fonts.display(), cx + 10, 34, panelW - 20, 16, Component.literal(""));
         searchField.setMaxLength(64);
         searchField.setValue(searchText);
         searchField.setResponder(val -> {
@@ -186,16 +186,16 @@ public class FactionVehicleListScreen extends Screen {
 
         int py = 8;
         PWPPanel.render(gui, cx, py, panelW, panelH);
-        gui.drawCenteredString(font, title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
 
         int clipY = py + 52;
         int clipH = panelH - 54;
         gui.enableScissor(cx, clipY, cx + panelW, clipY + clipH);
 
         if (loading) {
-            gui.drawCenteredString(font, Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
         } else if (filtered.isEmpty()) {
-            gui.drawCenteredString(font, Component.translatable("gui.pwpwarfare.faction_vehicle_list.empty"), width / 2, clipY + 20, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_vehicle_list.empty"), width / 2, clipY + 20, PWPTheme.Colors.TEXT_DIM);
         } else {
             for (int i = 0; i < filtered.size(); i++) {
                 VehicleEntry entry = filtered.get(i);
@@ -203,9 +203,9 @@ public class FactionVehicleListScreen extends Screen {
 
                 gui.fill(cx + 8, by, cx + panelW - 8, by + CARD_H, PWPTheme.Colors.SURFACE_LIGHT);
                 gui.renderOutline(cx + 8, by, panelW - 16, CARD_H, PWPTheme.Colors.BORDER);
-                gui.drawString(font, entry.vehicleName, cx + 14, by + 4, PWPTheme.Colors.TEXT_ACCENT, false);
+                gui.drawString(PWPTheme.Fonts.display(), entry.vehicleName, cx + 14, by + 4, PWPTheme.Colors.TEXT_ACCENT, false);
                 String info = entry.displayName.isEmpty() ? entry.vehicleId : entry.displayName;
-                gui.drawString(font, info, cx + 14, by + 16, PWPTheme.Colors.TEXT_DIM, false);
+                gui.drawString(PWPTheme.Fonts.display(), info, cx + 14, by + 16, PWPTheme.Colors.TEXT_DIM, false);
             }
         }
 
@@ -214,9 +214,9 @@ public class FactionVehicleListScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(font, Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(font, Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
         }
     }
 

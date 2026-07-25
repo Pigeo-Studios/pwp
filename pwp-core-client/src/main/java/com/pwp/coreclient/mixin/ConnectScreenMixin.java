@@ -58,7 +58,7 @@ public class ConnectScreenMixin {
 
         long elapsed = System.currentTimeMillis() - pwp_openTime;
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         pose.pushPose();
@@ -67,7 +67,7 @@ public class ConnectScreenMixin {
         gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
         pose.popPose();
 
-        gui.drawCenteredString(font, Component.literal("Подключение к серверу..."), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(font, Component.literal("РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ..."), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
         PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
 
         if (pwp_tips != null) {
@@ -87,7 +87,7 @@ public class ConnectScreenMixin {
         if (btnHover) {
             RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
         }
-        gui.drawCenteredString(Minecraft.getInstance().font, Component.literal("Отмена"), cx, btnY + 6, textCol);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("РћС‚РјРµРЅР°"), cx, btnY + 6, textCol);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)

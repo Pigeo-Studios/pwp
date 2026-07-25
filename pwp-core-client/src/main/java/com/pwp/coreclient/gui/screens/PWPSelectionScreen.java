@@ -100,7 +100,7 @@ public class PWPSelectionScreen extends Screen {
 
         confirmBtn = addRenderableWidget(new PWPButton(
             PWPLayout.centerX(width, btnW), height - 55, btnW, btnH,
-            Component.literal("Подтвердить"),
+            Component.literal("РџРѕРґС‚РІРµСЂРґРёС‚СЊ"),
             btn -> {
                 if (selectedIndex >= 0 && onConfirm != null) {
                     onConfirm.accept(selectedIndex);
@@ -116,7 +116,7 @@ public class PWPSelectionScreen extends Screen {
         renderBackground(gui);
         PWPLayout.renderHeader(gui, title, width);
 
-        var font = minecraft.font;
+        var font = PWPTheme.Fonts.display();
         if (instruction != null && !instruction.isEmpty()) {
             gui.drawCenteredString(font, Component.literal(instruction), width / 2, 28, PWPTheme.Colors.TEXT_SECONDARY);
         }
@@ -151,7 +151,7 @@ public class PWPSelectionScreen extends Screen {
                 selectedIndex = 0;
                 confirmBtn.active = true;
             }
-            String timerText = "Автовыбор через " + remaining + "с";
+            String timerText = "РђРІС‚РѕРІС‹Р±РѕСЂ С‡РµСЂРµР· " + remaining + "СЃ";
             gui.drawCenteredString(font, Component.literal(timerText), width / 2, height - 85, PWPTheme.Colors.TEXT_DIM);
         }
 

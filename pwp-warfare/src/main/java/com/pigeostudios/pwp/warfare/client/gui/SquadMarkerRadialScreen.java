@@ -8,9 +8,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Радиальное меню выбора типа маркера отряда
-// Атака, защита, стройка, перемещение — для командиров отделений
+// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ РІС‹Р±РѕСЂР° С‚РёРїР° РјР°СЂРєРµСЂР° РѕС‚СЂСЏРґР°
+// РђС‚Р°РєР°, Р·Р°С‰РёС‚Р°, СЃС‚СЂРѕР№РєР°, РїРµСЂРµРјРµС‰РµРЅРёРµ вЂ” РґР»СЏ РєРѕРјР°РЅРґРёСЂРѕРІ РѕС‚РґРµР»РµРЅРёР№
 public class SquadMarkerRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_3 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector.png");
    private static final ResourceLocation SECTOR_4 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_4.png");
@@ -121,7 +122,7 @@ public class SquadMarkerRadialScreen extends Screen {
    }
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean sel, int color) {
-      gui.drawCenteredString(this.font, text, x, y - 4, sel ? -1 : color);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), text, x, y - 4, sel ? -1 : color);
    }
 
    public boolean mouseClicked(double mx, double my, int button) {

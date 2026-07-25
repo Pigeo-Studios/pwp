@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
 public class SkinListScreen extends Screen {
 
@@ -71,13 +72,13 @@ public class SkinListScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
-        gui.drawCenteredString(this.font, this.title, this.width / 2, 36, 0xFFC8CBCE);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), this.title, this.width / 2, 36, 0xFFC8CBCE);
 
         int startX = (this.width - 440) / 2;
         int y = 50;
 
         if (skins.isEmpty()) {
-            gui.drawCenteredString(this.font, "No skins defined. Click '+ Add Skin' to create one.", this.width / 2, this.height / 2, 0xFF7A7D84);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "No skins defined. Click '+ Add Skin' to create one.", this.width / 2, this.height / 2, 0xFF7A7D84);
         }
 
         RenderSystem.enableBlend();
@@ -92,17 +93,17 @@ public class SkinListScreen extends Screen {
             gui.fill(startX, ry, startX + 440, ry + 24, 0xCC12151A);
             gui.renderOutline(startX, ry, 440, 24, 0xFF1E222A);
 
-            gui.drawString(this.font, se.name, startX + 6, ry + 7, rarityColor, false);
-            gui.drawString(this.font, se.slotType, startX + 160, ry + 7, 0xFF7A7D84, false);
-            gui.drawString(this.font, se.weaponTag, startX + 260, ry + 7, 0xFF3D6FA5, false);
-            gui.drawString(this.font, se.rarity, startX + 350, ry + 7, rarityColor, false);
+            gui.drawString(PWPTheme.Fonts.display(), se.name, startX + 6, ry + 7, rarityColor, false);
+            gui.drawString(PWPTheme.Fonts.display(), se.slotType, startX + 160, ry + 7, 0xFF7A7D84, false);
+            gui.drawString(PWPTheme.Fonts.display(), se.weaponTag, startX + 260, ry + 7, 0xFF3D6FA5, false);
+            gui.drawString(PWPTheme.Fonts.display(), se.rarity, startX + 350, ry + 7, rarityColor, false);
 
             boolean hovered = mx >= startX && mx <= startX + 440 && my >= ry && my <= ry + 24;
             if (hovered) {
                 if (mx >= startX + 380 && mx < startX + 410) {
-                    gui.drawString(this.font, "Del", startX + 382, ry + 7, 0xFFA53D3D, false);
+                    gui.drawString(PWPTheme.Fonts.display(), "Del", startX + 382, ry + 7, 0xFFA53D3D, false);
                 } else if (mx >= startX + 410) {
-                    gui.drawString(this.font, "Edit", startX + 412, ry + 7, 0xFFC8812A, false);
+                    gui.drawString(PWPTheme.Fonts.display(), "Edit", startX + 412, ry + 7, 0xFFC8812A, false);
                 }
             }
         }

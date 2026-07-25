@@ -11,8 +11,9 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Экран выбора тактического маркера для установки на карте
+// Р­РєСЂР°РЅ РІС‹Р±РѕСЂР° С‚Р°РєС‚РёС‡РµСЃРєРѕРіРѕ РјР°СЂРєРµСЂР° РґР»СЏ СѓСЃС‚Р°РЅРѕРІРєРё РЅР° РєР°СЂС‚Рµ
 public class MapMarkerSelectionScreen extends Screen {
    private final BlockPos targetPos;
    private static final Map<String, ResourceLocation> MARKERS = new LinkedHashMap<>();
@@ -42,7 +43,7 @@ public class MapMarkerSelectionScreen extends Screen {
 
    public void render(GuiGraphics gui, int mx, int my, float pt) {
       this.renderBackground(gui);
-      gui.drawCenteredString(this.font, this.title, this.width / 2, 15, 16777215);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), this.title, this.width / 2, 15, 16777215);
       int i = 0;
       int startX = (this.width - 340) / 2;
       int startY = 40;

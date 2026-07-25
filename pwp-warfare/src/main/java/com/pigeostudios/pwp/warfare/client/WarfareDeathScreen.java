@@ -75,29 +75,29 @@ public class WarfareDeathScreen extends DeathScreen {
         mapRenderer.init(mapX, mapY, mapSize);
 
         applyCmdButton = addRenderableWidget(new PWPButton(10, 10, 150, 20,
-            Component.literal("Стать командиром"),
+            Component.literal("РЎС‚Р°С‚СЊ РєРѕРјР°РЅРґРёСЂРѕРј"),
             b -> { PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()); b.visible = false; },
             PWPButton.Style.DARK));
 
         boolean isInSquad = SquadUIHelper.isPlayerInSquad();
-        nameInput = new EditBox(font, 10, height - 90, 150, 20, Component.literal("Название отряда"));
+        nameInput = new EditBox(PWPTheme.Fonts.display(), 10, height - 90, 150, 20, Component.literal("РќР°Р·РІР°РЅРёРµ РѕС‚СЂСЏРґР°"));
         nameInput.setMaxLength(12);
         nameInput.setVisible(!isInSquad);
         addRenderableWidget(nameInput);
 
         createButton = addRenderableWidget(new PWPButton(10, height - 65, 150, 20,
-            Component.literal("Создать отряд"),
+            Component.literal("РЎРѕР·РґР°С‚СЊ РѕС‚СЂСЏРґ"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
             PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
 
         kitButton = addRenderableWidget(new PWPButton(10, height - 60, 150, 20,
-            Component.literal("\u2694 Снаряжение"),
+            Component.literal("\u2694 РЎРЅР°СЂСЏР¶РµРЅРёРµ"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
             PWPButton.Style.DARK));
 
         deployButton = addRenderableWidget(new PWPButton(10, height - 35, 100, 25,
-            Component.literal("В бой"),
+            Component.literal("Р’ Р±РѕР№"),
             b -> {
                 if (!selectedSpawnType.isEmpty()) {
                     ClientData.globalDeathTimestamp = 0L;
@@ -117,12 +117,12 @@ public class WarfareDeathScreen extends DeathScreen {
         chatModeButton = addRenderableWidget(new PWPButton(chatX, inputY, 50, 20, getChatModeText(),
             b -> { chatMode = (chatMode + 1) % 3; b.setMessage(getChatModeText()); }, PWPButton.Style.DARK));
 
-        chatInput = new EditBox(font, chatX + 54, inputY, chatW - 54, 20, Component.literal("Chat"));
+        chatInput = new EditBox(PWPTheme.Fonts.display(), chatX + 54, inputY, chatW - 54, 20, Component.literal("Chat"));
         chatInput.setMaxLength(100);
         addRenderableWidget(chatInput);
 
         addRenderableWidget(new PWPButton(width - 45, 5, 40, 20,
-            Component.literal("Выйти"),
+            Component.literal("Р’С‹Р№С‚Рё"),
             b -> { minecraft.level.disconnect(); minecraft.setScreen(new TitleScreen()); },
             PWPButton.Style.DARK));
     }
@@ -164,10 +164,10 @@ public class WarfareDeathScreen extends DeathScreen {
         int secondsLeft = (int) (respawnTimeTotal - elapsed);
         if (secondsLeft > 0) {
             deployButton.active = false;
-            deployButton.setMessage(Component.literal("Ожидание " + secondsLeft + "с"));
+            deployButton.setMessage(Component.literal("РћР¶РёРґР°РЅРёРµ " + secondsLeft + "СЃ"));
         } else {
             deployButton.active = !selectedSpawnType.isEmpty();
-            deployButton.setMessage(Component.literal("В бой"));
+            deployButton.setMessage(Component.literal("Р’ Р±РѕР№"));
         }
 
         int clipTop = applyCmdButton.visible ? 32 : 8;
@@ -212,14 +212,14 @@ public class WarfareDeathScreen extends DeathScreen {
     private void renderSpawnSelection(GuiGraphics gui, int mx, int my) {
         int startX = 180;
         int startY = 55;
-        gui.drawString(font, "Выберите точку спавна:", startX, startY - 15, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(PWPTheme.Fonts.display(), "Р’С‹Р±РµСЂРёС‚Рµ С‚РѕС‡РєСѓ СЃРїР°РІРЅР°:", startX, startY - 15, PWPTheme.Colors.TEXT_ACCENT);
 
-        drawSpawnOption(gui, startX, startY, 110, 24, "Основная база", "MAIN", mx, my, true, false);
+        drawSpawnOption(gui, startX, startY, 110, 24, "РћСЃРЅРѕРІРЅР°СЏ Р±Р°Р·Р°", "MAIN", mx, my, true, false);
         boolean rallyBlocked = isMyRallyBlocked();
         boolean rallyValid = hasValidRally() && !rallyBlocked;
-        drawSpawnOption(gui, startX, startY += 30, 110, 24, "Точка сбора", "RALLY", mx, my, rallyValid, rallyBlocked);
+        drawSpawnOption(gui, startX, startY += 30, 110, 24, "РўРѕС‡РєР° СЃР±РѕСЂР°", "RALLY", mx, my, rallyValid, rallyBlocked);
 
-        gui.drawString(font, "Доступные хабы:", startX, (startY += 40) - 12, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "Р”РѕСЃС‚СѓРїРЅС‹Рµ С…Р°Р±С‹:", startX, (startY += 40) - 12, PWPTheme.Colors.TEXT_SECONDARY);
         String myTeam = getPlayerTeam();
         String myDim = minecraft.level.dimension().location().toString();
         int hubIdx = 1;
@@ -227,7 +227,7 @@ public class WarfareDeathScreen extends DeathScreen {
             if (!hub.team.equalsIgnoreCase(myTeam) || !hub.constructed || !hub.dimension.equals(myDim)) continue;
             String id = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
             boolean canAfford = !ClientData.serverHubSpawnCosts || hub.materials >= ClientData.serverHubSpawnCostAmount;
-            drawSpawnOption(gui, startX, startY, 110, 20, "Хаб " + hubIdx, id, mx, my, !hub.isBlocked && canAfford, hub.isBlocked);
+            drawSpawnOption(gui, startX, startY, 110, 20, "РҐР°Р± " + hubIdx, id, mx, my, !hub.isBlocked && canAfford, hub.isBlocked);
             startY += 24;
             hubIdx++;
         }
@@ -241,7 +241,7 @@ public class WarfareDeathScreen extends DeathScreen {
         String finalLabel = blocked ? label + " BLOCKED" : label;
         gui.fill(x, y, x + w, y + h, bg);
         gui.renderOutline(x, y, w, h, color);
-        gui.drawCenteredString(font, finalLabel, x + w / 2, y + (h - 8) / 2, color);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), finalLabel, x + w / 2, y + (h - 8) / 2, color);
     }
 
     private void renderChatArea(GuiGraphics gui) {
@@ -256,7 +256,7 @@ public class WarfareDeathScreen extends DeathScreen {
         int count = 0;
         for (Component msg : ClientData.menuChatHistory) {
             if (count >= maxMsg) break;
-            gui.drawString(font, msg, chatX + 3, chatBottomY - 10 - count * 10, 0xFFFFFF, true);
+            gui.drawString(PWPTheme.Fonts.display(), msg, chatX + 3, chatBottomY - 10 - count * 10, 0xFFFFFF, true);
             count++;
         }
     }
@@ -397,9 +397,9 @@ public class WarfareDeathScreen extends DeathScreen {
 
     private Component getChatModeText() {
         return switch (chatMode) {
-            case 0 -> Component.literal("Все").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 2 -> Component.literal("Отряд").withStyle(ChatFormatting.GREEN);
-            default -> Component.literal("Команда").withStyle(ChatFormatting.BLUE);
+            case 0 -> Component.literal("Р’СЃРµ").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 2 -> Component.literal("РћС‚СЂСЏРґ").withStyle(ChatFormatting.GREEN);
+            default -> Component.literal("РљРѕРјР°РЅРґР°").withStyle(ChatFormatting.BLUE);
         };
     }
 

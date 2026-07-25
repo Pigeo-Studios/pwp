@@ -52,16 +52,16 @@ public class StatsScreen extends Screen {
         "playtime", "level"
     };
     private static final String[] LB_CATEGORY_NAMES = {
-        "Убийства", "Смерти", "K/D", "Победы", "WinRate",
-        "Уб.техникой", "Тех.уничт", "В возд.",
-        "Захваты", "Урон", "Лечение", "Хэдшоты",
-        "Наиграно", "Уровень"
+        "РЈР±РёР№СЃС‚РІР°", "РЎРјРµСЂС‚Рё", "K/D", "РџРѕР±РµРґС‹", "WinRate",
+        "РЈР±.С‚РµС…РЅРёРєРѕР№", "РўРµС….СѓРЅРёС‡С‚", "Р’ РІРѕР·Рґ.",
+        "Р—Р°С…РІР°С‚С‹", "РЈСЂРѕРЅ", "Р›РµС‡РµРЅРёРµ", "РҐСЌРґС€РѕС‚С‹",
+        "РќР°РёРіСЂР°РЅРѕ", "РЈСЂРѕРІРµРЅСЊ"
     };
 
     private List<int[]> catBounds = new ArrayList<>();
 
     public StatsScreen() {
-        super(Component.literal("СТАТИСТИКА"));
+        super(Component.literal("РЎРўРђРўРРЎРўРРљРђ"));
         Player p = Minecraft.getInstance().player;
         if (p != null) {
             playerUuid = p.getStringUUID();
@@ -121,17 +121,17 @@ public class StatsScreen extends Screen {
         int cx = width / 2;
 
         addRenderableWidget(Button.builder(
-                Component.literal("Моя статистика"),
+                Component.literal("РњРѕСЏ СЃС‚Р°С‚РёСЃС‚РёРєР°"),
                 b -> { tab = TAB_MY_STATS; scrollOffset = 0; init(); })
                 .bounds(cx - 160, 6, 80, 22).build());
 
         addRenderableWidget(Button.builder(
-                Component.literal("Лидеры"),
+                Component.literal("Р›РёРґРµСЂС‹"),
                 b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; loading = true; requestLeaderboard(); init(); })
                 .bounds(cx - 76, 6, 90, 22).build());
 
         addRenderableWidget(Button.builder(
-                Component.literal("\u2715 Закрыть"),
+                Component.literal("\u2715 Р—Р°РєСЂС‹С‚СЊ"),
                 b -> onClose())
                 .bounds(cx - 50, height - 28, 100, 22).build());
 
@@ -177,11 +177,11 @@ public class StatsScreen extends Screen {
         int cx = width / 2;
 
         if (loading) {
-            gui.drawCenteredString(font, "\u00a77Загрузка...", cx, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a77Р—Р°РіСЂСѓР·РєР°...", cx, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
         if (errorMsg != null) {
-            gui.drawCenteredString(font, "\u00a7c" + errorMsg, cx, clipY + 40, 0xFF5555);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx, clipY + 40, 0xFF5555);
             return;
         }
 
@@ -230,15 +230,15 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawCenteredString(font, Component.literal("СТАТИСТИКА"), cx, 32, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("РЎРўРђРўРРЎРўРРљРђ"), cx, 32, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx - 55, 42, cx + 55, 43, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(font, "\u00a77Загрузка...", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a77Р—Р°РіСЂСѓР·РєР°...", cx, height / 2, PWPTheme.Colors.TEXT_SECONDARY);
             return;
         }
         if (errorMsg != null) {
-            gui.drawCenteredString(font, "\u00a7c" + errorMsg, cx, height / 2, 0xFF5555);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx, height / 2, 0xFF5555);
             return;
         }
 
@@ -317,34 +317,34 @@ public class StatsScreen extends Screen {
 
         gui.fill(leftX, y, leftX + panelW, y + 26, PWPTheme.Colors.SURFACE_LIGHT);
         gui.fill(leftX, y + 26, leftX + panelW, y + 27, PWPTheme.Colors.BORDER);
-        gui.drawString(font, "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF);
-        gui.drawString(font, "\u00a77Матчи: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77РњР°С‚С‡Рё: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY);
         y += 30;
 
-        y = drawPanel(gui, leftX, y, panelW, "БОЙ", new String[][]{
-            {"Убийства", intVal(st, "kills"), "Смерти", intVal(st, "deaths")},
-            {"K/D", formatKd(st), "Спасения", intVal(st, "revives")},
-            {"Убито техникой", intVal(st, "vehicleKills"), "Захваты", intVal(st, "captures")},
-            {"Лучшая серия", intVal(st, "bestKillStreak"), "Тимкиллы", intVal(st, "teamKills")},
+        y = drawPanel(gui, leftX, y, panelW, "Р‘РћР™", new String[][]{
+            {"РЈР±РёР№СЃС‚РІР°", intVal(st, "kills"), "РЎРјРµСЂС‚Рё", intVal(st, "deaths")},
+            {"K/D", formatKd(st), "РЎРїР°СЃРµРЅРёСЏ", intVal(st, "revives")},
+            {"РЈР±РёС‚Рѕ С‚РµС…РЅРёРєРѕР№", intVal(st, "vehicleKills"), "Р—Р°С…РІР°С‚С‹", intVal(st, "captures")},
+            {"Р›СѓС‡С€Р°СЏ СЃРµСЂРёСЏ", intVal(st, "bestKillStreak"), "РўРёРјРєРёР»Р»С‹", intVal(st, "teamKills")},
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "ТЕХНИКА", new String[][]{
-            {"Уничтожено", intVal(st, "vehiclesDestroyed"), "Воздух", intVal(st, "airVehiclesDestroyed")},
+        y = drawPanel(gui, leftX, y, panelW, "РўР•РҐРќРРљРђ", new String[][]{
+            {"РЈРЅРёС‡С‚РѕР¶РµРЅРѕ", intVal(st, "vehiclesDestroyed"), "Р’РѕР·РґСѓС…", intVal(st, "airVehiclesDestroyed")},
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "ОРУЖИЕ", new String[][]{
-            {"Урон", doubleVal(st, "damageDealt"), "Лечение", doubleVal(st, "healingDone")},
-            {"Припасы", intVal(st, "suppliesDelivered"), "Дальнее убийство", doubleVal(st, "longestKill") + "м"},
+        y = drawPanel(gui, leftX, y, panelW, "РћР РЈР–РР•", new String[][]{
+            {"РЈСЂРѕРЅ", doubleVal(st, "damageDealt"), "Р›РµС‡РµРЅРёРµ", doubleVal(st, "healingDone")},
+            {"РџСЂРёРїР°СЃС‹", intVal(st, "suppliesDelivered"), "Р”Р°Р»СЊРЅРµРµ СѓР±РёР№СЃС‚РІРѕ", doubleVal(st, "longestKill") + "Рј"},
         });
         y += 6;
 
-        int matchesBottom = drawPanel(gui, leftX, y, panelW, "МАТЧИ", new String[][]{
-            {"Сыграно", intVal(st, "matchesPlayed"), "Победы", intVal(st, "wins")},
-            {"Поражения", intVal(st, "losses"), "WinRate", formatWins(st)},
-            {"Время", formatPlaytime(st), "Уб./матч", formatKpg(st)},
-            {"Лучшая серия побед", intVal(st, "bestWinStreak"), "Тек. серия", intVal(st, "currentWinStreak")},
+        int matchesBottom = drawPanel(gui, leftX, y, panelW, "РњРђРўР§Р", new String[][]{
+            {"РЎС‹РіСЂР°РЅРѕ", intVal(st, "matchesPlayed"), "РџРѕР±РµРґС‹", intVal(st, "wins")},
+            {"РџРѕСЂР°Р¶РµРЅРёСЏ", intVal(st, "losses"), "WinRate", formatWins(st)},
+            {"Р’СЂРµРјСЏ", formatPlaytime(st), "РЈР±./РјР°С‚С‡", formatKpg(st)},
+            {"Р›СѓС‡С€Р°СЏ СЃРµСЂРёСЏ РїРѕР±РµРґ", intVal(st, "bestWinStreak"), "РўРµРє. СЃРµСЂРёСЏ", intVal(st, "currentWinStreak")},
         });
         scrollMax = Math.max(0, matchesBottom + (int) scrollOffset + 12 - clipY - clipH);
     }
@@ -362,7 +362,7 @@ public class StatsScreen extends Screen {
         gui.fill(x + w - 1, y, x + w, y + h, PWPTheme.Styles.Panel.BORDER);
 
         gui.fill(x + 1, y + 1, x + w - 1, y + titleH + 1, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(font, "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT);
 
         int ry = y + titleH + pad / 2;
         int col2X = x + w / 2;
@@ -372,14 +372,14 @@ public class StatsScreen extends Screen {
 
         for (String[] row : rows) {
             if (!row[0].isEmpty()) {
-                gui.drawString(font, "\u00a77" + row[0] + ":", x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY);
+                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[0] + ":", x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY);
                 String val = "\u00a7f" + truncateText(row[1], maxTextW);
-                gui.drawString(font, val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY);
+                gui.drawString(PWPTheme.Fonts.display(), val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY);
             }
             if (!row[2].isEmpty()) {
-                gui.drawString(font, "\u00a77" + row[2] + ":", col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY);
+                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[2] + ":", col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY);
                 String val = "\u00a7f" + truncateText(row[3], maxTextW);
-                gui.drawString(font, val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY);
+                gui.drawString(PWPTheme.Fonts.display(), val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY);
             }
             ry += rowH;
         }
@@ -387,8 +387,8 @@ public class StatsScreen extends Screen {
     }
 
     private String truncateText(String text, int maxW) {
-        if (font.width(text) > maxW) {
-            return font.plainSubstrByWidth(text, maxW - 4) + "...";
+        if (PWPTheme.Fonts.display().width(text) > maxW) {
+            return PWPTheme.Fonts.display().plainSubstrByWidth(text, maxW - 4) + "...";
         }
         return text;
     }
@@ -404,7 +404,7 @@ public class StatsScreen extends Screen {
         int catX = leftX;
         int catY = y;
         for (int i = 0; i < LB_CATEGORIES.length; i++) {
-            int bw = font.width(LB_CATEGORY_NAMES[i]) + 14;
+            int bw = PWPTheme.Fonts.display().width(LB_CATEGORY_NAMES[i]) + 14;
             boolean isSel = lbOrderBy.equals(LB_CATEGORIES[i]);
             boolean hover = mx >= catX && mx <= catX + bw && my >= catY && my <= catY + 18;
             int bg = isSel ? PWPTheme.Colors.ACCENT_DIM : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
@@ -417,7 +417,7 @@ public class StatsScreen extends Screen {
             gui.fill(catX + bw - 1, catY, catX + bw, catY + 18, borderCol);
 
             String textColor = isSel ? "\u00a7e" : (hover ? "\u00a7f" : "\u00a77");
-            gui.drawString(font, textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, PWPTheme.Colors.TEXT_PRIMARY);
             catBounds.add(new int[]{catX, catY, bw, 18, i});
             catX += bw + 4;
             if (catX + 60 > leftX + w) { catX = leftX; catY += 20; }
@@ -428,11 +428,11 @@ public class StatsScreen extends Screen {
         int headerY = y;
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
         gui.fill(leftX, headerY + 1, leftX + w, headerY + 14, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(font, "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77Игрок", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
-        gui.drawString(font, "\u00a77WinRate", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77РРіСЂРѕРє", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "\u00a77WinRate", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY);
 
         int rowY = headerY + 16;
         int rankOffset = lbPage * 10;
@@ -451,25 +451,25 @@ public class StatsScreen extends Screen {
 
             int rn = rankOffset + i + 1;
             String rankStr = rn == 1 ? "\u00a76#1" : rn == 2 ? "\u00a77#2" : rn == 3 ? "\u00a76#3" : "\u00a77#" + rn;
-            gui.drawString(font, rankStr, leftX + 6, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), rankStr, leftX + 6, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
 
             String nameStr = e.nickname;
-            if (font.width(nameStr) > 120) nameStr = font.plainSubstrByWidth(nameStr, 118) + "...";
-            gui.drawString(font, (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
+            if (PWPTheme.Fonts.display().width(nameStr) > 120) nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
+            gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
 
             String colVal = truncateText(getColValue(e, lbOrderBy), 70);
-            gui.drawString(font, "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY);
 
             String kdStr = String.format("%.2f", e.kd);
-            gui.drawString(font, "\u00a77" + kdStr, leftX + 270, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + kdStr, leftX + 270, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
 
             String wrStr = String.format("%.1f%%", e.winRate);
-            gui.drawString(font, "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY);
 
             if (isMe) {
-                String meLabel = "\u00a7e\u25C0 вы";
-                int meW = font.width(meLabel);
-                gui.drawString(font, meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
+                String meLabel = "\u00a7e\u25C0 РІС‹";
+                int meW = PWPTheme.Fonts.display().width(meLabel);
+                gui.drawString(PWPTheme.Fonts.display(), meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT);
             }
 
             rowY += rowH;
@@ -481,7 +481,7 @@ public class StatsScreen extends Screen {
         for (int i = 0; i < LB_CATEGORIES.length; i++) {
             if (LB_CATEGORIES[i].equals(orderBy)) return LB_CATEGORY_NAMES[i];
         }
-        return "Убийства";
+        return "РЈР±РёР№СЃС‚РІР°";
     }
 
     private String getColValue(LeaderboardEntry e, String col) {

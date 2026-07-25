@@ -62,15 +62,15 @@ public class HubAmmoScreen extends Screen {
       int cy = (height - panelH) / 2;
 
       PWPPanel.render(gui, cx, cy, panelW, panelH);
-      gui.drawCenteredString(font, title, width / 2, cy + 8, PWPTheme.Colors.TEXT_PRIMARY);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, cy + 8, PWPTheme.Colors.TEXT_PRIMARY);
 
       if (cachedCdAGS > 0) {
          String time = cachedCdAGS / 20 + "s";
-         gui.drawCenteredString(font, Component.literal(time), cx + 45, cy + 85, PWPTheme.Colors.DANGER);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(time), cx + 45, cy + 85, PWPTheme.Colors.DANGER);
       }
       if (cachedCdM2 > 0) {
          String time = cachedCdM2 / 20 + "s";
-         gui.drawCenteredString(font, Component.literal(time), cx + panelW - 45, cy + 85, PWPTheme.Colors.DANGER);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(time), cx + panelW - 45, cy + 85, PWPTheme.Colors.DANGER);
       }
 
       super.render(gui, mouseX, mouseY, partialTick);

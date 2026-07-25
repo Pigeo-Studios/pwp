@@ -32,12 +32,12 @@ public class DownedScreen extends Screen {
         int bottomY = height - 55;
 
         addRenderableWidget(new PWPButton(cx - 130, bottomY, 120, 24,
-            Component.literal("Сдаться"),
+            Component.literal("РЎРґР°С‚СЊСЃСЏ"),
             b -> { PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(1)); onClose(); },
             PWPButton.Style.DANGER));
 
         callMedicButton = addRenderableWidget(new PWPButton(cx + 10, bottomY, 120, 24,
-            Component.literal("Вызвать медика"),
+            Component.literal("Р’С‹Р·РІР°С‚СЊ РјРµРґРёРєР°"),
             b -> {
                 long now = System.currentTimeMillis();
                 if (now - lastMedicCallTime >= 15000) {
@@ -62,11 +62,11 @@ public class DownedScreen extends Screen {
         long now = System.currentTimeMillis();
         float pulse = 0.7f + 0.3f * (float) Math.sin((now - screenOpenTime) * 0.005);
         RenderSystem.setShaderColor(pulse, 0.2f, 0.2f, 1f);
-        gui.drawCenteredString(font, Component.literal("\u2764"), cx, boxY + 16, PWPTheme.Colors.DANGER);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u2764"), cx, boxY + 16, PWPTheme.Colors.DANGER);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         Component allyStatus = getAllyDistanceStatus();
-        gui.drawCenteredString(font, allyStatus, cx, boxY + 50, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), allyStatus, cx, boxY + 50, PWPTheme.Colors.TEXT_PRIMARY);
 
         int maxSeconds = WarfareConfig.MAX_DOWNED_TIME_SECONDS.get();
         long remaining = maxSeconds - (now - screenOpenTime) / 1000;
@@ -82,14 +82,14 @@ public class DownedScreen extends Screen {
         int fillColor = pct > 0.3f ? PWPTheme.Colors.SUCCESS : (pct > 0.15f ? PWPTheme.Colors.WARNING : PWPTheme.Colors.DANGER);
         gui.fill(barX, barY, barX + (int) (barW * pct), barY + barH, fillColor);
 
-        gui.drawCenteredString(font, Component.literal("Кровотечение: " + remaining + "с"), cx, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("РљСЂРѕРІРѕС‚РµС‡РµРЅРёРµ: " + remaining + "СЃ"), cx, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY);
 
         long cd = 15000 - (now - lastMedicCallTime);
         if (cd > 0) {
-            callMedicButton.setMessage(Component.literal("Медик через " + (cd / 1000 + 1) + "с"));
+            callMedicButton.setMessage(Component.literal("РњРµРґРёРє С‡РµСЂРµР· " + (cd / 1000 + 1) + "СЃ"));
             callMedicButton.active = false;
         } else {
-            callMedicButton.setMessage(Component.literal("Вызвать медика"));
+            callMedicButton.setMessage(Component.literal("Р’С‹Р·РІР°С‚СЊ РјРµРґРёРєР°"));
             callMedicButton.active = true;
         }
 
@@ -109,9 +109,9 @@ public class DownedScreen extends Screen {
             if (d < minDist) { minDist = d; closest = other; }
         }
         if (closest != null && minDist <= 250) {
-            return Component.literal(closest.getScoreboardName() + " — " + (int) minDist + "м");
+            return Component.literal(closest.getScoreboardName() + " вЂ” " + (int) minDist + "Рј");
         }
-        return Component.literal("Рядом нет союзников");
+        return Component.literal("Р СЏРґРѕРј РЅРµС‚ СЃРѕСЋР·РЅРёРєРѕРІ");
     }
 
     private void renderVignette(GuiGraphics gui) {

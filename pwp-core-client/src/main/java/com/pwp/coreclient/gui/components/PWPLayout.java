@@ -36,7 +36,7 @@ public class PWPLayout {
     }
 
     public static void renderHeader(GuiGraphics gui, String title, int icon, int screenWidth, int topPadding) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         int cx = screenWidth / 2;
         int y = topPadding;
 
@@ -51,7 +51,7 @@ public class PWPLayout {
     }
 
     public static void renderFooter(GuiGraphics gui, String text, int screenWidth, int screenHeight) {
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         int color = PWPTheme.Colors.TEXT_DIM;
         gui.drawCenteredString(font, Component.literal(text), screenWidth / 2, screenHeight - 12, color);
     }

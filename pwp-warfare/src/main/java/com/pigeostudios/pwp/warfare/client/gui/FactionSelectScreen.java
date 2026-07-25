@@ -104,11 +104,11 @@ public class FactionSelectScreen extends Screen {
         int py = 10;
 
         PWPPanel.render(gui, cx, py, panelW, panelH);
-        gui.drawCenteredString(font, Component.literal(title.getString()), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx + 10, py + 22, cx + panelW - 10, py + 23, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(font, Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
         }
 
         super.render(gui, mx, my, pt);

@@ -46,7 +46,7 @@ public class KitPreviewScreen extends Screen {
         int cy = (height - panelH) / 2;
 
         PWPPanel.render(gui, cx, cy, panelW, panelH);
-        gui.drawCenteredString(font, title, width / 2, cy + 4, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, cy + 4, PWPTheme.Colors.TEXT_PRIMARY);
         gui.fill(cx + 4, cy + 14, cx + panelW - 4, cy + 15, PWPTheme.Colors.ACCENT);
 
         int startX = cx + PANEL_PAD;
@@ -75,6 +75,6 @@ public class KitPreviewScreen extends Screen {
         gui.fill(x, y, x + 17, y + 17, PWPTheme.Colors.SURFACE_LIGHT);
         gui.renderOutline(x, y, 17, 17, PWPTheme.Colors.BORDER);
         gui.renderFakeItem(stack, x + 1, y + 1);
-        gui.renderItemDecorations(font, stack, x + 1, y + 1);
+        gui.renderItemDecorations(PWPTheme.Fonts.display(), stack, x + 1, y + 1);
     }
 }

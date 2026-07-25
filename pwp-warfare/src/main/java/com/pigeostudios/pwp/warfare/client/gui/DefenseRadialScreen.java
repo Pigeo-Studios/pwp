@@ -13,9 +13,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Радиальное меню оборонительных сооружений
-// Позволяет размещать стены, колючую проволоку и хаб
+// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ РѕР±РѕСЂРѕРЅРёС‚РµР»СЊРЅС‹С… СЃРѕРѕСЂСѓР¶РµРЅРёР№
+// РџРѕР·РІРѕР»СЏРµС‚ СЂР°Р·РјРµС‰Р°С‚СЊ СЃС‚РµРЅС‹, РєРѕР»СЋС‡СѓСЋ РїСЂРѕРІРѕР»РѕРєСѓ Рё С…Р°Р±
 public class DefenseRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE_5 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_5.png");
    private final Screen parentScreen;
@@ -113,8 +114,8 @@ public class DefenseRadialScreen extends Screen {
       float scale = selected ? 1.1F : 0.9F;
       pose.scale(scale, scale, 1.0F);
       int color = selected ? -16711936 : -1;
-      int width = this.font.width(text);
-      gui.drawString(this.font, text, -width / 2, -4, color, true);
+      int width = PWPTheme.Fonts.display().width(text);
+      gui.drawString(PWPTheme.Fonts.display(), text, -width / 2, -4, color, true);
       pose.popPose();
    }
 

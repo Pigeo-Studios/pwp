@@ -60,17 +60,17 @@ public class SkinInventoryScreen extends Screen {
         int cx = this.width / 2;
         int btnY = 14;
 
-        addRenderableWidget(Button.builder(Component.literal("Все"), b -> setFilter("ALL"))
+        addRenderableWidget(Button.builder(Component.literal("Р’СЃРµ"), b -> setFilter("ALL"))
                 .bounds(cx - 170, btnY, 42, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Основное"), b -> setFilter("PRIMARY"))
+        addRenderableWidget(Button.builder(Component.literal("РћСЃРЅРѕРІРЅРѕРµ"), b -> setFilter("PRIMARY"))
                 .bounds(cx - 124, btnY, 52, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Вторичное"), b -> setFilter("SECONDARY"))
+        addRenderableWidget(Button.builder(Component.literal("Р’С‚РѕСЂРёС‡РЅРѕРµ"), b -> setFilter("SECONDARY"))
                 .bounds(cx - 68, btnY, 60, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Нож"), b -> setFilter("KNIFE"))
+        addRenderableWidget(Button.builder(Component.literal("РќРѕР¶"), b -> setFilter("KNIFE"))
                 .bounds(cx - 4, btnY, 45, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Холодное"), b -> setFilter("MELEE"))
+        addRenderableWidget(Button.builder(Component.literal("РҐРѕР»РѕРґРЅРѕРµ"), b -> setFilter("MELEE"))
                 .bounds(cx + 45, btnY, 45, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Униформа"), b -> setFilter("UNIFORM"))
+        addRenderableWidget(Button.builder(Component.literal("РЈРЅРёС„РѕСЂРјР°"), b -> setFilter("UNIFORM"))
                 .bounds(cx + 94, btnY, 52, 22).build());
 
         loadCosmetics();
@@ -200,11 +200,11 @@ public class SkinInventoryScreen extends Screen {
         int totalWidth = ITEMS_PER_ROW * (ITEM_SIZE + ITEM_GAP) - ITEM_GAP;
         int startX = cx - totalWidth / 2;
 
-        gui.drawCenteredString(this.font, this.title, cx, 38, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), this.title, cx, 38, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx - totalWidth / 2 - 8, 46, cx + totalWidth / 2 + 8, 47, PWPTheme.Colors.ACCENT);
 
         if (filtered.isEmpty()) {
-            gui.drawCenteredString(this.font, Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
                     cx, this.height / 2, PWPTheme.Colors.TEXT_DIM);
         } else {
             RenderSystem.enableBlend();
@@ -230,7 +230,7 @@ public class SkinInventoryScreen extends Screen {
                 if (entry.equipped) {
                     gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, PWPTheme.Colors.SUCCESS);
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
-                    gui.drawString(this.font, Component.literal("\u2714"), x + ITEM_SIZE - 10, y + 1, PWPTheme.Colors.SUCCESS, false);
+                    gui.drawString(PWPTheme.Fonts.display(), Component.literal("\u2714"), x + ITEM_SIZE - 10, y + 1, PWPTheme.Colors.SUCCESS, false);
                 } else if (canAccess) {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
                 } else {
@@ -246,7 +246,7 @@ public class SkinInventoryScreen extends Screen {
                 }
 
                 if (!canAccess) {
-                    gui.drawString(this.font, Component.literal("\uD83D\uDD12"), x + 2, y + ITEM_SIZE - 10, 0xFF7A7D84, false);
+                    gui.drawString(PWPTheme.Fonts.display(), Component.literal("\uD83D\uDD12"), x + 2, y + ITEM_SIZE - 10, 0xFF7A7D84, false);
                 }
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
@@ -257,13 +257,13 @@ public class SkinInventoryScreen extends Screen {
                     tooltip.add(Component.literal("\u00a7" + getRarityCode(entry.rarity) + displayName));
                     tooltip.add(Component.literal("\u00a77" + entry.slotType + " \u00a78| \u00a77" + entry.rarity));
                     if (entry.equipped) {
-                        tooltip.add(Component.literal("\u00a7a\u2714 Надето - нажмите чтобы снять"));
+                        tooltip.add(Component.literal("\u00a7a\u2714 РќР°РґРµС‚Рѕ - РЅР°Р¶РјРёС‚Рµ С‡С‚РѕР±С‹ СЃРЅСЏС‚СЊ"));
                     } else if (canAccess) {
-                        tooltip.add(Component.literal("\u00a7eНажмите чтобы надеть"));
+                        tooltip.add(Component.literal("\u00a7eРќР°Р¶РјРёС‚Рµ С‡С‚РѕР±С‹ РЅР°РґРµС‚СЊ"));
                     } else {
-                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Заблокировано - нет в наличии"));
+                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Р—Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРѕ - РЅРµС‚ РІ РЅР°Р»РёС‡РёРё"));
                     }
-                    gui.renderComponentTooltip(this.font, tooltip, mx, my);
+                    gui.renderComponentTooltip(PWPTheme.Fonts.display(), tooltip, mx, my);
                 }
             }
 
@@ -273,19 +273,19 @@ public class SkinInventoryScreen extends Screen {
             // Scroll indicators
             if (maxScroll > 0) {
                 if (scrollOffset > 0)
-                    gui.drawCenteredString(this.font, Component.literal("\u25B2"), cx, START_Y - 2, PWPTheme.Colors.TEXT_DIM);
+                    gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), cx, START_Y - 2, PWPTheme.Colors.TEXT_DIM);
                 if (scrollOffset < maxScroll)
-                    gui.drawCenteredString(this.font, Component.literal("\u25BC"), cx, this.height - 18, PWPTheme.Colors.TEXT_DIM);
+                    gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), cx, this.height - 18, PWPTheme.Colors.TEXT_DIM);
             }
         }
 
         if (currentFilter.equals("PRIMARY")) {
-            String hint = "\u00a77\u2714 Можно выбрать несколько основных скинов";
-            gui.drawCenteredString(this.font, Component.literal(hint), cx, this.height - 30, PWPTheme.Colors.TEXT_SECONDARY);
+            String hint = "\u00a77\u2714 РњРѕР¶РЅРѕ РІС‹Р±СЂР°С‚СЊ РЅРµСЃРєРѕР»СЊРєРѕ РѕСЃРЅРѕРІРЅС‹С… СЃРєРёРЅРѕРІ";
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(hint), cx, this.height - 30, PWPTheme.Colors.TEXT_SECONDARY);
         }
 
         if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(this.font, Component.literal(statusMsg), cx, this.height - 16, PWPTheme.Colors.TEXT_ACCENT);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(statusMsg), cx, this.height - 16, PWPTheme.Colors.TEXT_ACCENT);
 
         super.render(gui, mx, my, pt);
     }
@@ -334,7 +334,7 @@ public class SkinInventoryScreen extends Screen {
         boolean isPrimary = entry.slotType.equals("PRIMARY");
 
         if (entry.equipped) {
-            statusMsg = "\u00a76Снятие...";
+            statusMsg = "\u00a76РЎРЅСЏС‚РёРµ...";
             statusTime = System.currentTimeMillis();
             new Thread(() -> {
                 try {
@@ -346,19 +346,19 @@ public class SkinInventoryScreen extends Screen {
                     }
                     CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, "", ""));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 Снято (стандартный скин)";
+                        statusMsg = "\u00a7a\u2714 РЎРЅСЏС‚Рѕ (СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ СЃРєРёРЅ)";
                         statusTime = System.currentTimeMillis();
                         loadCosmetics();
                     });
                 } catch (Exception e) {
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7cОшибка снятия: " + e.getMessage();
+                        statusMsg = "\u00a7cРћС€РёР±РєР° СЃРЅСЏС‚РёСЏ: " + e.getMessage();
                         statusTime = System.currentTimeMillis();
                     });
                 }
             }, "PWP-Unequip-Thread").start();
         } else {
-            statusMsg = "\u00a76Экипировка...";
+            statusMsg = "\u00a76Р­РєРёРїРёСЂРѕРІРєР°...";
             statusTime = System.currentTimeMillis();
             new Thread(() -> {
                 try {
@@ -367,7 +367,7 @@ public class SkinInventoryScreen extends Screen {
                     JsonObject fresh = CoreAPI.loadPlayer(uuid);
                     if (fresh == null || !fresh.has("data")) {
                         Minecraft.getInstance().submit(() -> {
-                            statusMsg = "\u00a7cОшибка API";
+                            statusMsg = "\u00a7cРћС€РёР±РєР° API";
                             statusTime = System.currentTimeMillis();
                         });
                         return;
@@ -389,7 +389,7 @@ public class SkinInventoryScreen extends Screen {
                     }
                     if (!equipped) {
                         Minecraft.getInstance().submit(() -> {
-                            statusMsg = "\u00a7cСкин не найден в профиле!";
+                            statusMsg = "\u00a7cРЎРєРёРЅ РЅРµ РЅР°Р№РґРµРЅ РІ РїСЂРѕС„РёР»Рµ!";
                             statusTime = System.currentTimeMillis();
                         });
                         return;
@@ -408,13 +408,13 @@ public class SkinInventoryScreen extends Screen {
                     }
                     CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, entry.skinId, itemSnbt));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 Надето!";
+                        statusMsg = "\u00a7a\u2714 РќР°РґРµС‚Рѕ!";
                         statusTime = System.currentTimeMillis();
                         loadCosmetics();
                     });
                 } catch (Exception e) {
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7cОшибка надевания: " + e.getMessage();
+                        statusMsg = "\u00a7cРћС€РёР±РєР° РЅР°РґРµРІР°РЅРёСЏ: " + e.getMessage();
                         statusTime = System.currentTimeMillis();
                     });
                 }

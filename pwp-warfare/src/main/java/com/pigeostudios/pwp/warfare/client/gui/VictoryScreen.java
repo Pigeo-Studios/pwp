@@ -53,7 +53,7 @@ public class VictoryScreen extends Screen {
     protected void init() {
         int cx = width / 2;
         continueButton = addRenderableWidget(new PWPButton(cx - 70, height / 2 + 90, 140, 24,
-            Component.literal("Продолжить"),
+            Component.literal("РџСЂРѕРґРѕР»Р¶РёС‚СЊ"),
             b -> onClose(), PWPButton.Style.ACCENT));
         continueButton.setAnimAlpha(0f);
         continueButton.active = false;
@@ -94,10 +94,10 @@ public class VictoryScreen extends Screen {
             gui.pose().pushPose();
             gui.pose().translate(cx, cy - 42, 0);
             gui.pose().scale(1.5f, 1.5f, 1f);
-            gui.drawCenteredString(font, Component.literal(winnerName + " — победа!"), 0, 0, a << 24 | 0xFFFFFF);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(winnerName + " вЂ” РїРѕР±РµРґР°!"), 0, 0, a << 24 | 0xFFFFFF);
             gui.pose().popPose();
 
-            gui.drawCenteredString(font, Component.literal(subText), cx, cy - 22, a << 24 | 0xAAAAAA);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(subText), cx, cy - 22, a << 24 | 0xAAAAAA);
 
             int statsY = cy + 5;
             int statsX = cx - 160;
@@ -111,7 +111,7 @@ public class VictoryScreen extends Screen {
             gui.fill(statsX + statsW - 1, statsY, statsX + statsW, statsY + panelH, a << 24 | 0xFF1E222A);
 
             int accent = a << 24 | PWPTheme.Colors.ACCENT;
-            gui.drawCenteredString(font, Component.literal("\u00a7lСтатистика"), cx, statsY + 4, accent);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u00a7lРЎС‚Р°С‚РёСЃС‚РёРєР°"), cx, statsY + 4, accent);
 
             int rowY = statsY + 16;
             int rowH = 13;
@@ -119,24 +119,24 @@ public class VictoryScreen extends Screen {
             int labelCol = a << 24 | 0xFF7A7D84;
             int textCol = a << 24 | 0xFFC8CBCE;
 
-            drawStat(gui, "Убийств", String.valueOf(matchKills), statsX + 8, rowY, labelCol, accent);
-            drawStat(gui, "Смертей", String.valueOf(matchDeaths), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "Реанимаций", String.valueOf(matchRevives), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(gui, "РЈР±РёР№СЃС‚РІ", String.valueOf(matchKills), statsX + 8, rowY, labelCol, accent);
+            drawStat(gui, "РЎРјРµСЂС‚РµР№", String.valueOf(matchDeaths), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Р РµР°РЅРёРјР°С†РёР№", String.valueOf(matchRevives), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
             String kd = matchDeaths == 0 ? String.valueOf(matchKills) : String.format("%.2f", (double) matchKills / matchDeaths);
             drawStat(gui, "K/D", kd, statsX + 8, rowY, labelCol, accent);
-            drawStat(gui, "Счёт", String.format("%,d", matchScore), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "Время", formatDuration(matchDurationSec), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(gui, "РЎС‡С‘С‚", String.format("%,d", matchScore), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Р’СЂРµРјСЏ", formatDuration(matchDurationSec), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
-            drawStat(gui, "Техника", String.valueOf(matchVehicleKills), statsX + 8, rowY, labelCol, textCol);
-            drawStat(gui, "Уничтожено", String.valueOf(matchVehiclesDestroyed), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "В воздухе", String.valueOf(matchAirVehiclesDestroyed), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(gui, "РўРµС…РЅРёРєР°", String.valueOf(matchVehicleKills), statsX + 8, rowY, labelCol, textCol);
+            drawStat(gui, "РЈРЅРёС‡С‚РѕР¶РµРЅРѕ", String.valueOf(matchVehiclesDestroyed), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Р’ РІРѕР·РґСѓС…Рµ", String.valueOf(matchAirVehiclesDestroyed), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
-            drawStat(gui, "Захватов", String.valueOf(matchCaptures), statsX + 8, rowY, labelCol, textCol);
-            drawStat(gui, "В голову", String.valueOf(matchHeadshots), statsX + 8 + cw, rowY, labelCol, textCol);
+            drawStat(gui, "Р—Р°С…РІР°С‚РѕРІ", String.valueOf(matchCaptures), statsX + 8, rowY, labelCol, textCol);
+            drawStat(gui, "Р’ РіРѕР»РѕРІСѓ", String.valueOf(matchHeadshots), statsX + 8 + cw, rowY, labelCol, textCol);
         }
 
         continueButton.setAnimAlpha(contentAlpha);
@@ -146,8 +146,8 @@ public class VictoryScreen extends Screen {
     }
 
     private void drawStat(GuiGraphics gui, String label, String value, int x, int y, int labelColor, int valueColor) {
-        gui.drawString(font, Component.literal(label + ":"), x, y, labelColor);
-        gui.drawString(font, Component.literal(value), x + 60, y, valueColor);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal(label + ":"), x, y, labelColor);
+        gui.drawString(PWPTheme.Fonts.display(), Component.literal(value), x + 60, y, valueColor);
     }
 
     private static String formatDuration(int secs) {

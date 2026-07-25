@@ -113,7 +113,7 @@ public class FactionKitListScreen extends Screen {
         int py = 10;
         PWPPanel.render(gui, cx, py, panelW, panelH);
 
-        gui.drawCenteredString(font, Component.literal(title.getString()), width / 2, py + 4, PWPTheme.Colors.ACCENT);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 4, PWPTheme.Colors.ACCENT);
         gui.fill(cx + 6, py + 14, cx + panelW - 6, py + 15, PWPTheme.Colors.ACCENT);
 
         int clipY = py + 28;
@@ -143,9 +143,9 @@ public class FactionKitListScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(font, Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(font, Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
         }
     }
 

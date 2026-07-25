@@ -11,9 +11,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Радиальное меню тактической карты
-// Выбор типа маркера: командный, вражеский или отрядный
+// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ С‚Р°РєС‚РёС‡РµСЃРєРѕР№ РєР°СЂС‚С‹
+// Р’С‹Р±РѕСЂ С‚РёРїР° РјР°СЂРєРµСЂР°: РєРѕРјР°РЅРґРЅС‹Р№, РІСЂР°Р¶РµСЃРєРёР№ РёР»Рё РѕС‚СЂСЏРґРЅС‹Р№
 public class TacticalMapRadialScreen extends Screen {
    private final int wx;
    private final int wz;
@@ -95,7 +96,7 @@ public class TacticalMapRadialScreen extends Screen {
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected) {
       int color = selected ? -16711936 : -1;
-      gui.drawCenteredString(this.font, text, x, y - 4, color);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), text, x, y - 4, color);
    }
 
    public boolean mouseClicked(double mx, double my, int btn) {

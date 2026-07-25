@@ -53,23 +53,23 @@ public class SquadSelectionScreen extends Screen {
         }
 
         applyCmdButton = addRenderableWidget(new PWPButton(10, 10, 150, 20,
-            Component.literal("Стать командиром"),
+            Component.literal("РЎС‚Р°С‚СЊ РєРѕРјР°РЅРґРёСЂРѕРј"),
             b -> { PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()); b.visible = false; },
             PWPButton.Style.DARK));
 
         kitButton = addRenderableWidget(new PWPButton(10, height - BOTTOM_BAR_H + 8, 150, 22,
-            Component.literal("\u2694 Снаряжение"),
+            Component.literal("\u2694 РЎРЅР°СЂСЏР¶РµРЅРёРµ"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
             PWPButton.Style.DARK));
         kitButton.visible = isInSquad;
 
-        nameInput = new EditBox(font, 10, height - 55, 150, 20, Component.literal("Название отряда"));
+        nameInput = new EditBox(PWPTheme.Fonts.display(), 10, height - 55, 150, 20, Component.literal("РќР°Р·РІР°РЅРёРµ РѕС‚СЂСЏРґР°"));
         nameInput.setMaxLength(12);
         nameInput.setVisible(!isInSquad);
         addRenderableWidget(nameInput);
 
         createButton = addRenderableWidget(new PWPButton(10, height - 30, 150, 20,
-            Component.literal("Создать отряд"),
+            Component.literal("РЎРѕР·РґР°С‚СЊ РѕС‚СЂСЏРґ"),
             b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
             PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
@@ -86,7 +86,7 @@ public class SquadSelectionScreen extends Screen {
         chatModeButton = addRenderableWidget(new PWPButton(chatX, height - 25, 50, 20, getChatModeText(),
             b -> { chatMode = (chatMode + 1) % 3; b.setMessage(getChatModeText()); }, PWPButton.Style.DARK));
 
-        chatInput = new EditBox(font, chatX + 55, height - 25, chatW - 55, 20, Component.literal("Chat"));
+        chatInput = new EditBox(PWPTheme.Fonts.display(), chatX + 55, height - 25, chatW - 55, 20, Component.literal("Chat"));
         chatInput.setMaxLength(256);
         addRenderableWidget(chatInput);
     }
@@ -202,9 +202,9 @@ public class SquadSelectionScreen extends Screen {
 
     private Component getChatModeText() {
         return switch (chatMode) {
-            case 0 -> Component.literal("Все").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 2 -> Component.literal("Отряд").withStyle(ChatFormatting.GREEN);
-            default -> Component.literal("Команда").withStyle(ChatFormatting.BLUE);
+            case 0 -> Component.literal("Р’СЃРµ").withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 2 -> Component.literal("РћС‚СЂСЏРґ").withStyle(ChatFormatting.GREEN);
+            default -> Component.literal("РљРѕРјР°РЅРґР°").withStyle(ChatFormatting.BLUE);
         };
     }
 

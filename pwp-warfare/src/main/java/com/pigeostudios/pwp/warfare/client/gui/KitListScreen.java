@@ -144,7 +144,7 @@ public class KitListScreen extends Screen {
         PWPPanel.render(gui, cx, py, panelW, panelH);
 
         int titleColor = team.equals("BLUE") ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
-        gui.drawCenteredString(font, Component.literal(title.getString()), width / 2, py + 4, titleColor);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 4, titleColor);
         gui.fill(cx + 6, py + 14, cx + panelW - 6, py + 15, PWPTheme.Colors.ACCENT);
 
         int clipY = py + 40;
@@ -174,9 +174,9 @@ public class KitListScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(font, Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(font, Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
         }
     }
 

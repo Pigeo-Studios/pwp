@@ -50,24 +50,24 @@ public class SquadUIHelper {
 
             String prefix = isCMD ? "[CMD] " : "";
             int squadNameColor = isCMD ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.SUCCESS;
-            gui.drawString(Minecraft.getInstance().font, idx + ".", 5, currentY, 0xFFFFFF);
+            gui.drawString(PWPTheme.Fonts.display(), idx + ".", 5, currentY, 0xFFFFFF);
             String display = prefix + squad.name + " (" + squad.members.size() + "/9)";
-            gui.drawString(Minecraft.getInstance().font, display, 25, currentY, squadNameColor);
+            gui.drawString(PWPTheme.Fonts.display(), display, 25, currentY, squadNameColor);
 
             String actionText = "";
             boolean isJoin = false, isLeave = false, isDisabled = false;
             if (isMySquad) {
-                actionText = "Покинуть";
+                actionText = "РџРѕРєРёРЅСѓС‚СЊ";
                 isLeave = true;
             } else if (!amIInSquad) {
-                if (squad.isLocked) { actionText = "Закрыт"; isDisabled = true; }
-                else if (squad.members.size() >= 9) { actionText = "Полный"; isDisabled = true; }
-                else { actionText = "Вступить"; isJoin = true; }
+                if (squad.isLocked) { actionText = "Р—Р°РєСЂС‹С‚"; isDisabled = true; }
+                else if (squad.members.size() >= 9) { actionText = "РџРѕР»РЅС‹Р№"; isDisabled = true; }
+                else { actionText = "Р’СЃС‚СѓРїРёС‚СЊ"; isJoin = true; }
             }
 
             int actionX = 0;
             if (!actionText.isEmpty()) {
-                int aw = Minecraft.getInstance().font.width(actionText) + 12;
+                int aw = PWPTheme.Fonts.display().width(actionText) + 12;
                 int ah = 12;
                 actionX = SIDEBAR_WIDTH - aw - 6;
                 int actionY = currentY - 1;
@@ -79,15 +79,15 @@ public class SquadUIHelper {
                     int border = hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
                     RoundedRect.fill(gui, actionX, actionY, aw, ah, r, bg);
                     RoundedRect.border(gui, actionX, actionY, aw, ah, r, 1, border);
-                    gui.drawCenteredString(Minecraft.getInstance().font, actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_PRIMARY);
+                    gui.drawCenteredString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_PRIMARY);
                 } else if (isLeave) {
                     if (hover) {
                         RoundedRect.fill(gui, actionX, actionY, aw, ah, r, 0x22FF0000);
                     }
                     int textCol = hover ? PWPTheme.Colors.DANGER : PWPTheme.Colors.TEXT_DIM;
-                    gui.drawCenteredString(Minecraft.getInstance().font, actionText, actionX + aw / 2, actionY + 2, textCol);
+                    gui.drawCenteredString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2, actionY + 2, textCol);
                 } else if (isDisabled) {
-                    gui.drawCenteredString(Minecraft.getInstance().font, actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM);
+                    gui.drawCenteredString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM);
                 }
             }
 
@@ -132,7 +132,7 @@ public class SquadUIHelper {
             if (isMySquad && member.equals(myName)) {
                 boolean btnHover = mx >= xOffset && mx <= xOffset + 10 && my >= currentY && my <= currentY + 10;
                 gui.fill(xOffset, currentY, xOffset + 10, currentY + 10, btnHover ? 0xFF666666 : 0xFF444444);
-                gui.drawString(Minecraft.getInstance().font, "K", xOffset + 2, currentY + 1, 0xFFFFFF);
+                gui.drawString(PWPTheme.Fonts.display(), "K", xOffset + 2, currentY + 1, 0xFFFFFF);
                 xOffset += 14;
             }
 
@@ -143,7 +143,7 @@ public class SquadUIHelper {
                 xOffset += 12;
             }
 
-            gui.drawString(Minecraft.getInstance().font, member, xOffset, currentY + 1, col);
+            gui.drawString(PWPTheme.Fonts.display(), member, xOffset, currentY + 1, col);
             currentY += 12;
         }
         return currentY;
@@ -173,7 +173,7 @@ public class SquadUIHelper {
             if (isMySquad) actionText = "LEAVE";
             else if (!amIInSquad) actionText = squad.isLocked ? "LOCKED" : (squad.members.size() >= 9 ? "FULL" : "JOIN");
 
-            int actionWidth = actionText.isEmpty() ? 0 : Minecraft.getInstance().font.width(actionText);
+            int actionWidth = actionText.isEmpty() ? 0 : PWPTheme.Fonts.display().width(actionText);
             int actionX = actionWidth > 0 ? SIDEBAR_WIDTH - actionWidth - 10 : 0;
             int arrowX = (actionX > 0 ? actionX : 160) - 12;
             int lockX = arrowX - 12;
@@ -260,7 +260,7 @@ public class SquadUIHelper {
         for (Component msg : ClientData.menuChatHistory) {
             int y = chatBottomY - count * 10;
             if (y < chatTopY) break;
-            gui.drawString(Minecraft.getInstance().font, msg, chatX, y, 0xFFFFFF, true);
+            gui.drawString(PWPTheme.Fonts.display(), msg, chatX, y, 0xFFFFFF, true);
             count++;
         }
     }
@@ -283,14 +283,14 @@ public class SquadUIHelper {
     }
 
     private static void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, int color, ResourceLocation icon) {
-        int tw = Minecraft.getInstance().font.width(name) + 15;
+        int tw = PWPTheme.Fonts.display().width(name) + 15;
         gui.fill(x, y - 2, x + tw + 4, y + 10, 0xCC000000);
         RenderSystem.enableBlend();
         float r = (color >> 16 & 0xFF) / 255f, g = (color >> 8 & 0xFF) / 255f, b = (color & 0xFF) / 255f;
         RenderSystem.setShaderColor(r, g, b, 1f);
         gui.blit(icon, x + 3, y, 0, 0, 8, 8, 8, 8);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        gui.drawString(Minecraft.getInstance().font, name, x + 14, y, color);
+        gui.drawString(PWPTheme.Fonts.display(), name, x + 14, y, color);
     }
 
     public static void renderTeamHeader(GuiGraphics gui, int startX, int startY, boolean isBlue) {
@@ -306,10 +306,10 @@ public class SquadUIHelper {
             gui.blit(flagTex, startX, startY, 32, 18, 0, 0, 64, 36, 64, 36);
         }
         int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
-        gui.drawString(Minecraft.getInstance().font, customName, startX + 38, startY, teamColor, true);
+        gui.drawString(PWPTheme.Fonts.display(), customName, startX + 38, startY, teamColor, true);
         RenderSystem.enableBlend();
         gui.blit(ticketIcon, startX + 38, startY + 11, 0, 0, 8, 8, 8, 8);
-        gui.drawString(Minecraft.getInstance().font, String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, true);
+        gui.drawString(PWPTheme.Fonts.display(), String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, true);
     }
 
     public static boolean isApplyCmdVisible() {

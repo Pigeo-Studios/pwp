@@ -31,7 +31,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       super.init();
       int x = (this.width - this.imageWidth) / 2;
       int y = (this.height - this.imageHeight) / 2;
-      this.yawField = new EditBox(this.font, x + 35, y + 40, 40, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.yaw"));
+      this.yawField = new EditBox(PWPTheme.Fonts.display(), x + 35, y + 40, 40, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.yaw"));
       this.yawField.setValue(String.valueOf((int)((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw));
       this.yawField.setFilter(s -> s.matches("-?\\d*"));
       this.yawField.setResponder(val -> {
@@ -39,7 +39,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
          catch (Exception var3x) {}
       });
       this.addRenderableWidget(this.yawField);
-      this.vehicleIdField = new EditBox(this.font, x + 35, y + 20, 80, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"));
+      this.vehicleIdField = new EditBox(PWPTheme.Fonts.display(), x + 35, y + 20, 80, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"));
       this.vehicleIdField.setMaxLength(64);
       this.vehicleIdField.setValue(((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString);
       this.vehicleIdField.setBordered(true);
@@ -49,13 +49,13 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       int btnY_Respawn = y + 18;
       int btnY_Initial = y + 48;
       this.addRenderableWidget(new PWPButton(rightCenterX - 42, btnY_Respawn, 15, 16, Component.literal("-"), b -> this.adjustTimer(false, -5), PWPButton.Style.PRIMARY));
-      this.respawnTimeField = new EditBox(this.font, rightCenterX - 25, btnY_Respawn + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"));
+      this.respawnTimeField = new EditBox(PWPTheme.Fonts.display(), rightCenterX - 25, btnY_Respawn + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"));
       this.respawnTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings));
       this.respawnTimeField.setResponder(val -> this.onTimeFieldChanged(val, false));
       this.addRenderableWidget(this.respawnTimeField);
       this.addRenderableWidget(new PWPButton(rightCenterX + 23, btnY_Respawn, 15, 16, Component.literal("+"), b -> this.adjustTimer(false, 5), PWPButton.Style.PRIMARY));
       this.addRenderableWidget(new PWPButton(rightCenterX - 42, btnY_Initial, 15, 16, Component.literal("-"), b -> this.adjustTimer(true, -5), PWPButton.Style.PRIMARY));
-      this.initialTimeField = new EditBox(this.font, rightCenterX - 25, btnY_Initial + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.initial_time"));
+      this.initialTimeField = new EditBox(PWPTheme.Fonts.display(), rightCenterX - 25, btnY_Initial + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.initial_time"));
       this.initialTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings));
       this.initialTimeField.setResponder(val -> this.onTimeFieldChanged(val, true));
       this.addRenderableWidget(this.initialTimeField);
@@ -106,12 +106,12 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       this.renderTooltip(gui, mouseX, mouseY);
       int x = (this.width - this.imageWidth) / 2;
       int y = (this.height - this.imageHeight) / 2;
-      gui.drawString(this.font, "ID:", x + 10, y + 23, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.drawCenteredString(this.font, "Mod", x + 23, y + 35, PWPTheme.Colors.INFO);
+      gui.drawString(PWPTheme.Fonts.display(), "ID:", x + 10, y + 23, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), "Mod", x + 23, y + 35, PWPTheme.Colors.INFO);
       int txtX = x + 155;
-      gui.drawCenteredString(this.font, "Respawn (s)", txtX, y + 8, PWPTheme.Colors.TEXT_SECONDARY);
-      gui.drawCenteredString(this.font, "Initial (s)", txtX, y + 38, PWPTheme.Colors.TEXT_SECONDARY);
-      gui.drawString(this.font, "Items (32)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), "Respawn (s)", txtX, y + 8, PWPTheme.Colors.TEXT_SECONDARY);
+      gui.drawCenteredString(PWPTheme.Fonts.display(), "Initial (s)", txtX, y + 38, PWPTheme.Colors.TEXT_SECONDARY);
+      gui.drawString(PWPTheme.Fonts.display(), "Items (32)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
    }
 
    protected void renderBg(GuiGraphics gui, float partialTick, int mouseX, int mouseY) {
@@ -120,7 +120,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       RenderSystem.enableBlend();
       RenderSystem.defaultBlendFunc();
       RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-      gui.drawString(this.font, "Yaw:", x + 10, y + 43, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(PWPTheme.Fonts.display(), "Yaw:", x + 10, y + 43, PWPTheme.Colors.TEXT_SECONDARY, false);
       gui.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
       gui.blit(TEXTURE, x + 14, y + 44, 79, 19, 18, 18);
       RenderSystem.disableBlend();

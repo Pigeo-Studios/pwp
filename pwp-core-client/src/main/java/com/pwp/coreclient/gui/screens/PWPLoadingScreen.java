@@ -21,14 +21,14 @@ public class PWPLoadingScreen extends Screen {
 
     private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/loading.png");
     private static final List<String> TIPS = List.of(
-        "Используйте тактическое оборудование для победы",
-        "Связь с отрядом — ключ к успеху",
-        "Следите за уровнем брони и здоровья",
-        "Захватывайте точки, чтобы получить преимущество",
-        "Техника уязвима с тыла и флангов",
-        "Аптечки восстанавливают здоровье",
-        "Боеприпасы можно пополнить на точке",
-        "Не забывайте перезаряжаться перед боем"
+        "РСЃРїРѕР»СЊР·СѓР№С‚Рµ С‚Р°РєС‚РёС‡РµСЃРєРѕРµ РѕР±РѕСЂСѓРґРѕРІР°РЅРёРµ РґР»СЏ РїРѕР±РµРґС‹",
+        "РЎРІСЏР·СЊ СЃ РѕС‚СЂСЏРґРѕРј вЂ” РєР»СЋС‡ Рє СѓСЃРїРµС…Сѓ",
+        "РЎР»РµРґРёС‚Рµ Р·Р° СѓСЂРѕРІРЅРµРј Р±СЂРѕРЅРё Рё Р·РґРѕСЂРѕРІСЊСЏ",
+        "Р—Р°С…РІР°С‚С‹РІР°Р№С‚Рµ С‚РѕС‡РєРё, С‡С‚РѕР±С‹ РїРѕР»СѓС‡РёС‚СЊ РїСЂРµРёРјСѓС‰РµСЃС‚РІРѕ",
+        "РўРµС…РЅРёРєР° СѓСЏР·РІРёРјР° СЃ С‚С‹Р»Р° Рё С„Р»Р°РЅРіРѕРІ",
+        "РђРїС‚РµС‡РєРё РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚ Р·РґРѕСЂРѕРІСЊРµ",
+        "Р‘РѕРµРїСЂРёРїР°СЃС‹ РјРѕР¶РЅРѕ РїРѕРїРѕР»РЅРёС‚СЊ РЅР° С‚РѕС‡РєРµ",
+        "РќРµ Р·Р°Р±С‹РІР°Р№С‚Рµ РїРµСЂРµР·Р°СЂСЏР¶Р°С‚СЊСЃСЏ РїРµСЂРµРґ Р±РѕРµРј"
     );
 
     private final Context context;
@@ -91,13 +91,13 @@ public class PWPLoadingScreen extends Screen {
         long elapsed = now - openTime;
 
         if (!errorState && timeoutMs > 0 && elapsed > timeoutMs) {
-            setError("Превышено время ожидания");
+            setError("РџСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ");
         }
 
         int cx = width / 2;
         int cy = height / 2;
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         // Small logo at top
@@ -161,10 +161,10 @@ public class PWPLoadingScreen extends Screen {
         float fade = Math.min(errorElapsed / 250.0F, 1);
         fade = Easing.easeOutCubic(fade);
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         gui.setColor(1, 1, 1, fade);
-        gui.drawCenteredString(font, Component.literal("Не удалось подключиться"), cx, cy, PWPTheme.Colors.DANGER);
-        gui.drawCenteredString(font, Component.literal("Сервер недоступен"), cx, cy + 14, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawCenteredString(font, Component.literal("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ"), cx, cy, PWPTheme.Colors.DANGER);
+        gui.drawCenteredString(font, Component.literal("РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ"), cx, cy + 14, PWPTheme.Colors.TEXT_SECONDARY);
         gui.setColor(1, 1, 1, 1);
 
         if (fade >= 1 && children().isEmpty()) {
@@ -201,7 +201,7 @@ public class PWPLoadingScreen extends Screen {
             alpha = 1.0f;
         }
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         String text = TIPS.get(currentTipIndex);
         int color = PWPTheme.Colors.TEXT_SECONDARY;
         float originalAlpha = (color >> 24) & 0xFF;
@@ -213,13 +213,13 @@ public class PWPLoadingScreen extends Screen {
 
     private static String getContextText(Context ctx) {
         return switch (ctx) {
-            case CONNECTING -> "Подключение к серверу...";
-            case LOADING_WORLD -> "Загрузка мира...";
-            case LOADING_MAP -> "Загрузка карты...";
-            case WAITING_DATA -> "Загрузка...";
-            case DISCONNECTING -> "Отключение...";
-            case CHANGING_DIMENSION -> "Переход между мирами...";
-            case TRANSFERRING -> "Переключение сервера...";
+            case CONNECTING -> "РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...";
+            case LOADING_WORLD -> "Р—Р°РіСЂСѓР·РєР° РјРёСЂР°...";
+            case LOADING_MAP -> "Р—Р°РіСЂСѓР·РєР° РєР°СЂС‚С‹...";
+            case WAITING_DATA -> "Р—Р°РіСЂСѓР·РєР°...";
+            case DISCONNECTING -> "РћС‚РєР»СЋС‡РµРЅРёРµ...";
+            case CHANGING_DIMENSION -> "РџРµСЂРµС…РѕРґ РјРµР¶РґСѓ РјРёСЂР°РјРё...";
+            case TRANSFERRING -> "РџРµСЂРµРєР»СЋС‡РµРЅРёРµ СЃРµСЂРІРµСЂР°...";
         };
     }
 }

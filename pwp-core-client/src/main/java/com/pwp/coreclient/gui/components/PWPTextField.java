@@ -32,7 +32,7 @@ public class PWPTextField {
         RoundedRect.border(gui, x, y, w, h, r, 1, border);
 
         if (box.getValue().isEmpty() && !box.isFocused()) {
-            var font = Minecraft.getInstance().font;
+            var font = PWPTheme.Fonts.display();
             String msg = box.getMessage().getString();
             gui.drawString(font, Component.literal(msg), x + 4, y + (h - 8) / 2, PWPTheme.Styles.Input.PLACEHOLDER);
         }

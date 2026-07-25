@@ -34,9 +34,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Рендер тактической карты на экране отряда
-// Отображает текстуру карты, игроков, точки захвата, маркеры и технику
+// Р РµРЅРґРµСЂ С‚Р°РєС‚РёС‡РµСЃРєРѕР№ РєР°СЂС‚С‹ РЅР° СЌРєСЂР°РЅРµ РѕС‚СЂСЏРґР°
+// РћС‚РѕР±СЂР°Р¶Р°РµС‚ С‚РµРєСЃС‚СѓСЂСѓ РєР°СЂС‚С‹, РёРіСЂРѕРєРѕРІ, С‚РѕС‡РєРё Р·Р°С…РІР°С‚Р°, РјР°СЂРєРµСЂС‹ Рё С‚РµС…РЅРёРєСѓ
 public class WarfareMapRenderer implements AutoCloseable {
    private static final Map<String, ResourceLocation> MAP_ICONS_CACHE = new HashMap<>();
    private static final ResourceLocation MATS_ICON = new ResourceLocation("pwpwarfare", "textures/gui/mats_icon.png");
@@ -224,7 +225,7 @@ public class WarfareMapRenderer implements AutoCloseable {
                float textScale = 0.6F;
                gui.pose().scale(textScale, textScale, 1.0F);
                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-               gui.drawCenteredString(mc.font, cp.name, 0, 0, textColor);
+               gui.drawCenteredString(PWPTheme.Fonts.display(), cp.name, 0, 0, textColor);
                gui.pose().popPose();
             }
          }
@@ -280,7 +281,7 @@ public class WarfareMapRenderer implements AutoCloseable {
                   gui.pose().translate(sx, sy - 8, 450.0F);
                   gui.pose().scale(0.6F, 0.6F, 1.0F);
                   int nickColor = info.squadId != -1 && info.squadId == myInternalSquadId ? -11141291 : -1;
-                  gui.drawCenteredString(mc.font, Component.literal(info.name), 0, 0, nickColor);
+                  gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(info.name), 0, 0, nickColor);
                   gui.pose().popPose();
                }
 
@@ -313,8 +314,8 @@ public class WarfareMapRenderer implements AutoCloseable {
                      gui.pose().pushPose();
                      gui.pose().translate(sx, sy, 350.0F);
                      gui.pose().scale(0.5F, 0.5F, 1.0F);
-                     int tw = mc.font.width(numStr);
-                     this.drawSquadNumber(gui, mc.font, numStr, -(tw / 2), -4, textColor);
+                     int tw = PWPTheme.Fonts.display().width(numStr);
+                     this.drawSquadNumber(gui, PWPTheme.Fonts.display(), numStr, -(tw / 2), -4, textColor);
                      gui.pose().popPose();
                   }
                }
@@ -347,7 +348,7 @@ public class WarfareMapRenderer implements AutoCloseable {
                         nickColor = -171;
                      }
 
-                     gui.drawCenteredString(mc.font, Component.literal(pInfo.name), 0, 0, nickColor);
+                     gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(pInfo.name), 0, 0, nickColor);
                      gui.pose().popPose();
                      yOffset += 8;
                   }
@@ -384,7 +385,7 @@ public class WarfareMapRenderer implements AutoCloseable {
             gui.pose().translate(mySx, mySy - 10, 450.0F);
             gui.pose().scale(0.6F, 0.6F, 1.0F);
             int myColor = mySquadId != -1 ? -11141291 : -171;
-            gui.drawCenteredString(mc.font, Component.literal(self.getScoreboardName()), 0, 0, myColor);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(self.getScoreboardName()), 0, 0, myColor);
             gui.pose().popPose();
          }
       }
@@ -564,7 +565,7 @@ public class WarfareMapRenderer implements AutoCloseable {
          gui.pose().translate(pX, pY + 7, 151.0F);
          float textScale = 0.6F;
          gui.pose().scale(textScale, textScale, 1.0F);
-         gui.drawCenteredString(mc.font, "MAIN", 0, 0, -1);
+         gui.drawCenteredString(PWPTheme.Fonts.display(), "MAIN", 0, 0, -1);
          gui.pose().popPose();
       }
    }
@@ -666,7 +667,7 @@ public class WarfareMapRenderer implements AutoCloseable {
                  pose.popPose();
                  this.setFilter(hubTex, false);
                  String matsText = String.valueOf(hub.materials);
-                 int matsW = mc.font.width(matsText);
+                 int matsW = PWPTheme.Fonts.display().width(matsText);
                  int iconSize = 8;
                  int matsX = (int)sx + 8;
                  int matsY = (int)sy - 2;
@@ -676,7 +677,7 @@ public class WarfareMapRenderer implements AutoCloseable {
                  this.setFilter(MATS_ICON, true);
                  gui.blit(MATS_ICON, matsX, matsY, iconSize, iconSize, 0.0F, 0.0F, 16, 16, 16, 16);
                  this.setFilter(MATS_ICON, false);
-                 gui.drawString(mc.font, matsText, matsX + iconSize + 2, matsY + 1, -22016, false);
+                 gui.drawString(PWPTheme.Fonts.display(), matsText, matsX + iconSize + 2, matsY + 1, -22016, false);
                  pose.popPose();
               }
          }
@@ -758,8 +759,8 @@ public class WarfareMapRenderer implements AutoCloseable {
          gui.pose().pushPose();
          gui.pose().translate(mx, my + 8, 600.0F);
          gui.pose().scale(0.8F, 0.8F, 1.0F);
-         int textWidth = mc.font.width(distText);
-         gui.drawString(mc.font, distText, -(textWidth / 2), 0, color, true);
+         int textWidth = PWPTheme.Fonts.display().width(distText);
+         gui.drawString(PWPTheme.Fonts.display(), distText, -(textWidth / 2), 0, color, true);
          gui.pose().popPose();
       }
    }
@@ -970,7 +971,7 @@ public class WarfareMapRenderer implements AutoCloseable {
 
                         String numStr = String.valueOf(displayNum);
                         int whiteWithAlpha = (int)(alpha * 255.0F) << 24 | 16777215;
-                        this.drawSquadNumber(gui, mc.font, numStr, -(mc.font.width(numStr) / 2), -4, whiteWithAlpha);
+                        this.drawSquadNumber(gui, PWPTheme.Fonts.display(), numStr, -(PWPTheme.Fonts.display().width(numStr) / 2), -4, whiteWithAlpha);
                         gui.pose().popPose();
                      }
                   }

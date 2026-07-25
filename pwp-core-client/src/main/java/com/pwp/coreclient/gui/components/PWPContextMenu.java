@@ -57,7 +57,7 @@ public class PWPContextMenu {
         gui.fill(x, y, x + w, y + h, 0xCC0E1117);
         RoundedRect.border(gui, x, y, w, h, PWPTheme.Spacing.RADIUS_SMALL, 1, PWPTheme.Colors.BORDER_LIGHT);
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         for (int i = 0; i < options.size(); i++) {
             int iy = y + 3 + i * 14;
             boolean hover = mx >= x && mx <= x + w && my >= iy && my <= iy + 12;

@@ -11,9 +11,10 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Радиальное меню стационарного оружия
-// Позволяет разместить M2 Browning, миномёт, АГС-30 или ПТРК TOW
+// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ СЃС‚Р°С†РёРѕРЅР°СЂРЅРѕРіРѕ РѕСЂСѓР¶РёСЏ
+// РџРѕР·РІРѕР»СЏРµС‚ СЂР°Р·РјРµСЃС‚РёС‚СЊ M2 Browning, РјРёРЅРѕРјС‘С‚, РђР“РЎ-30 РёР»Рё РџРўР Рљ TOW
 public class StaticGunRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_4.png");
    private final Screen parentScreen;
@@ -128,8 +129,8 @@ public class StaticGunRadialScreen extends Screen {
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected) {
       int color = selected ? -16711936 : -1;
-      int width = this.font.width(text);
-      gui.drawString(this.font, text, x - width / 2, y - 4, color, true);
+      int width = PWPTheme.Fonts.display().width(text);
+      gui.drawString(PWPTheme.Fonts.display(), text, x - width / 2, y - 4, color, true);
    }
 
    public boolean mouseClicked(double mouseX, double mouseY, int button) {

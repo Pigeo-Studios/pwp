@@ -45,7 +45,7 @@ public class KitTeamSelectScreen extends Screen {
 
         PWPPanel.render(gui, cx, cy, PANEL_W, PANEL_H);
 
-        gui.drawCenteredString(font, title, width / 2, cy + 12, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, cy + 12, PWPTheme.Colors.TEXT_PRIMARY);
         PWPLayout.renderDivider(gui, cx + 10, cy + 28, PANEL_W - 20);
 
         super.render(gui, mx, my, pt);

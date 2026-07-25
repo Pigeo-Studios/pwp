@@ -61,7 +61,7 @@ public class LevelLoadingScreenMixin {
         int cx = w / 2;
         int cy = h / 2;
 
-        var font = Minecraft.getInstance().font;
+        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         pose.pushPose();
@@ -70,7 +70,7 @@ public class LevelLoadingScreenMixin {
         gui.drawCenteredString(font, Component.literal("PWP"), 0, 0, PWPTheme.Colors.ACCENT);
         pose.popPose();
 
-        gui.drawCenteredString(font, Component.literal("Загрузка мира..."), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
+        gui.drawCenteredString(font, Component.literal("Р—Р°РіСЂСѓР·РєР° РјРёСЂР°..."), cx, cy - 30, PWPTheme.Colors.TEXT_PRIMARY);
         PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
 
         if (pwp_tips != null) {
