@@ -1,12 +1,10 @@
 package com.pwp.coreclient.mixin;
 
-import com.pwp.coreclient.gui.animations.Easing;
-import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Final;
@@ -50,11 +48,11 @@ public class DisconnectedScreenMixin {
         int h = mc.getWindow().getGuiScaledHeight();
         int cx = w / 2;
         int cy = h / 2;
+        var font = com.pwp.coreclient.gui.theme.PWPTheme.Fonts.display();
 
         if (pwp_openTime == 0) pwp_openTime = System.currentTimeMillis();
         long elapsed = System.currentTimeMillis() - pwp_openTime;
 
-        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         pose.pushPose();
@@ -63,11 +61,12 @@ public class DisconnectedScreenMixin {
         gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
-        float fade = Math.min(elapsed / 250.0F, 1);
-        float eased = Easing.easeOutCubic(fade);
+        float fade = Math.min(elapsed / 250.0F, 1f);
 
-        gui.setColor(1, 1, 1, eased);
-        gui.drawString(font, Component.literal("РЎРѕРµРґРёРЅРµРЅРёРµ СЂР°Р·РѕСЂРІР°РЅРѕ"), cx - font.width("РЎРѕРµРґРёРЅРµРЅРёРµ СЂР°Р·РѕСЂРІР°РЅРѕ") / 2, cy - 20, PWPTheme.Colors.DANGER, false);
+        gui.setColor(1, 1, 1, fade);
+
+        String title = "Соединение разорвано";
+        gui.drawString(font, Component.literal(title), cx - font.width(title) / 2, cy - 20, PWPTheme.Colors.DANGER, false);
 
         String reasonStr = reason.getString();
         if (!reasonStr.isEmpty()) {
@@ -79,7 +78,7 @@ public class DisconnectedScreenMixin {
         }
         gui.setColor(1, 1, 1, 1);
 
-        pwp_showBack = eased >= 1;
+        pwp_showBack = fade >= 1;
         if (pwp_showBack) {
             int btnX = cx - 80;
             int btnY = cy + 50;
@@ -93,9 +92,10 @@ public class DisconnectedScreenMixin {
             if (hover) {
                 bg = PWPTheme.Styles.Button.ACCENT_HOVER;
             }
-            com.pwp.coreclient.gui.components.RoundedRect.fill(gui, btnX, btnY, btnW, btnH, btnR, bg);
-            com.pwp.coreclient.gui.components.RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
-            gui.drawString(font, Component.literal("Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ"), cx - font.width("Р’РµСЂРЅСѓС‚СЊСЃСЏ РІ РјРµРЅСЋ") / 2, btnY + 10, textColor, false);
+            RoundedRect.fill(gui, btnX, btnY, btnW, btnH, btnR, bg);
+            RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
+            String backText = "Вернуться в меню";
+            gui.drawString(font, Component.literal(backText), cx - font.width(backText) / 2, btnY + 10, textColor, false);
         }
     }
 

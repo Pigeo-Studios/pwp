@@ -1,6 +1,5 @@
 package com.pwp.coreclient.mixin;
 
-import com.pwp.coreclient.gui.animations.Easing;
 import com.pwp.coreclient.gui.components.PWPProgressBar;
 import com.pwp.coreclient.gui.screens.PWPTipsWidget;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -48,6 +47,7 @@ public class LevelLoadingScreenMixin {
         Minecraft mc = Minecraft.getInstance();
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
+        var font = com.pwp.coreclient.gui.theme.PWPTheme.Fonts.display();
 
         if (pwp_openTime == 0) {
             pwp_openTime = System.currentTimeMillis();
@@ -61,7 +61,6 @@ public class LevelLoadingScreenMixin {
         int cx = w / 2;
         int cy = h / 2;
 
-        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         pose.pushPose();
@@ -70,7 +69,8 @@ public class LevelLoadingScreenMixin {
         gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
-        gui.drawString(font, Component.literal("Р—Р°РіСЂСѓР·РєР° РјРёСЂР°..."), cx - font.width("Р—Р°РіСЂСѓР·РєР° РјРёСЂР°...") / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
+        String loadText = "Загрузка мира...";
+        gui.drawString(font, Component.literal(loadText), cx - font.width(loadText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
         PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
 
         if (pwp_tips != null) {

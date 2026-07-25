@@ -141,16 +141,16 @@ public class PWPMainMenuScreen extends Screen {
         String text;
         int color;
         switch (serverStatus) {
-            case ONLINE -> { text = "РЎРµСЂРІРµСЂ: ONLINE"; color = PWPTheme.Colors.SUCCESS; }
-            case OFFLINE -> { text = "РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ"; color = PWPTheme.Colors.DANGER; }
-            case MAINTENANCE -> { text = "РўРµС…РЅРёС‡РµСЃРєРёРµ СЂР°Р±РѕС‚С‹"; color = PWPTheme.Colors.WARNING; }
-            default -> { text = "РџСЂРѕРІРµСЂРєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ..."; color = PWPTheme.Colors.TEXT_DIM; }
+            case ONLINE -> { text = "Сервер: ONLINE"; color = PWPTheme.Colors.SUCCESS; }
+            case OFFLINE -> { text = "Сервер недоступен"; color = PWPTheme.Colors.DANGER; }
+            case MAINTENANCE -> { text = "Технические работы"; color = PWPTheme.Colors.WARNING; }
+            default -> { text = "Проверка подключения..."; color = PWPTheme.Colors.TEXT_DIM; }
         }
 
         gui.drawString(font, Component.literal(text), cx - font.width(text) / 2, y, color, false);
 
         if (serverStatus == ServerStatus.OFFLINE || serverStatus == ServerStatus.MAINTENANCE) {
-            gui.drawString(font, Component.literal("РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ"), cx - font.width("РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ") / 2, y + 12, PWPTheme.Colors.TEXT_DIM, false);
+            gui.drawString(font, Component.literal("Попробуйте позже"), cx - font.width("Попробуйте позже") / 2, y + 12, PWPTheme.Colors.TEXT_DIM, false);
         }
 
         gui.setColor(1, 1, 1, 1);
@@ -196,7 +196,7 @@ public class PWPMainMenuScreen extends Screen {
         String nickname = mc.player != null ? mc.player.getScoreboardName() : null;
         String welcome = nickname != null
             ? Component.translatable("pwp_core.main_menu.welcome", nickname).getString()
-            : "Р”РѕР±СЂРѕ РїРѕР¶Р°Р»РѕРІР°С‚СЊ!";
+            : "Добро пожаловать!";
 
         int welcomeY = (int) (height * 0.34f);
         int slideY = (int) ((1 - fade) * 6);

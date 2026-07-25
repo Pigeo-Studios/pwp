@@ -1,9 +1,8 @@
 package com.pwp.coreclient.mixin;
 
-import com.pwp.coreclient.gui.animations.Easing;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.components.PWPProgressBar;
 import com.pwp.coreclient.gui.screens.PWPTipsWidget;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -49,6 +48,7 @@ public class ConnectScreenMixin {
         int h = mc.getWindow().getGuiScaledHeight();
         int cx = w / 2;
         int cy = h / 2;
+        var font = com.pwp.coreclient.gui.theme.PWPTheme.Fonts.display();
 
         if (pwp_openTime == 0) pwp_openTime = System.currentTimeMillis();
         if (pwp_tips == null || w != pwp_lastW) {
@@ -58,7 +58,6 @@ public class ConnectScreenMixin {
 
         long elapsed = System.currentTimeMillis() - pwp_openTime;
 
-        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
         pose.pushPose();
@@ -67,7 +66,8 @@ public class ConnectScreenMixin {
         gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
-        gui.drawString(font, Component.literal("РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ..."), cx - font.width("РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...") / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
+        String connectText = "Подключение к серверу...";
+        gui.drawString(font, Component.literal(connectText), cx - font.width(connectText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
         PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
 
         if (pwp_tips != null) {
@@ -87,7 +87,8 @@ public class ConnectScreenMixin {
         if (btnHover) {
             RoundedRect.border(gui, btnX, btnY, btnW, btnH, btnR, 1, border);
         }
-        gui.drawString(PWPTheme.Fonts.display(), Component.literal("РћС‚РјРµРЅР°"), cx - PWPTheme.Fonts.display().width("РћС‚РјРµРЅР°") / 2, btnY + 6, textCol, false);
+        String cancelText = "Отмена";
+        gui.drawString(font, Component.literal(cancelText), cx - font.width(cancelText) / 2, btnY + 6, textCol, false);
     }
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)

@@ -21,14 +21,14 @@ public class PWPLoadingScreen extends Screen {
 
     private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/loading.png");
     private static final List<String> TIPS = List.of(
-        "РСЃРїРѕР»СЊР·СѓР№С‚Рµ С‚Р°РєС‚РёС‡РµСЃРєРѕРµ РѕР±РѕСЂСѓРґРѕРІР°РЅРёРµ РґР»СЏ РїРѕР±РµРґС‹",
-        "РЎРІСЏР·СЊ СЃ РѕС‚СЂСЏРґРѕРј вЂ” РєР»СЋС‡ Рє СѓСЃРїРµС…Сѓ",
-        "РЎР»РµРґРёС‚Рµ Р·Р° СѓСЂРѕРІРЅРµРј Р±СЂРѕРЅРё Рё Р·РґРѕСЂРѕРІСЊСЏ",
-        "Р—Р°С…РІР°С‚С‹РІР°Р№С‚Рµ С‚РѕС‡РєРё, С‡С‚РѕР±С‹ РїРѕР»СѓС‡РёС‚СЊ РїСЂРµРёРјСѓС‰РµСЃС‚РІРѕ",
-        "РўРµС…РЅРёРєР° СѓСЏР·РІРёРјР° СЃ С‚С‹Р»Р° Рё С„Р»Р°РЅРіРѕРІ",
-        "РђРїС‚РµС‡РєРё РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚ Р·РґРѕСЂРѕРІСЊРµ",
-        "Р‘РѕРµРїСЂРёРїР°СЃС‹ РјРѕР¶РЅРѕ РїРѕРїРѕР»РЅРёС‚СЊ РЅР° С‚РѕС‡РєРµ",
-        "РќРµ Р·Р°Р±С‹РІР°Р№С‚Рµ РїРµСЂРµР·Р°СЂСЏР¶Р°С‚СЊСЃСЏ РїРµСЂРµРґ Р±РѕРµРј"
+        "Используйте тактическое оборудование для победы",
+        "Связь с отрядом — ключ к успеху",
+        "Следите за уровнем брони и здоровья",
+        "Захватывайте точки, чтобы получить преимущество",
+        "Техника уязвима с тыла и флангов",
+        "Аптечки восстанавливают здоровье",
+        "Боеприпасы можно пополнить на точке",
+        "Не забывайте перезаряжаться перед боем"
     );
 
     private final Context context;
@@ -89,18 +89,17 @@ public class PWPLoadingScreen extends Screen {
 
         long now = System.currentTimeMillis();
         long elapsed = now - openTime;
+        var font = PWPTheme.Fonts.display();
 
         if (!errorState && timeoutMs > 0 && elapsed > timeoutMs) {
-            setError("РџСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ");
+            setError("Превышено время ожидания");
         }
 
         int cx = width / 2;
         int cy = height / 2;
 
-        var font = PWPTheme.Fonts.display();
         var pose = gui.pose();
 
-        // Small logo at top
         pose.pushPose();
         pose.translate(cx, (int) (height * 0.12f), 0);
         pose.scale(1.4f, 1.4f, 1f);
@@ -113,11 +112,9 @@ public class PWPLoadingScreen extends Screen {
             return;
         }
 
-        // Status text
         String statusText = getContextText(context);
         gui.drawString(font, Component.literal(statusText), cx - font.width(statusText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
 
-        // Progress indicator
         if (hasKnownProgress) {
             int barW = (int) (width * 0.3f);
             progressBar.render(gui, cx - barW / 2, cy, barW, 4, now);
@@ -125,7 +122,6 @@ public class PWPLoadingScreen extends Screen {
             PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
         }
 
-        // Tips
         renderTip(gui, cx, cy + 30, now);
 
         super.render(gui, mouseX, mouseY, partialTick);
@@ -152,6 +148,7 @@ public class PWPLoadingScreen extends Screen {
     private void renderError(GuiGraphics gui, int mouseX, int mouseY, long now) {
         int cx = width / 2;
         int cy = height / 2 - 10;
+        var font = PWPTheme.Fonts.display();
 
         if (!widgetsBuilt) {
             widgetsBuilt = true;
@@ -161,10 +158,9 @@ public class PWPLoadingScreen extends Screen {
         float fade = Math.min(errorElapsed / 250.0F, 1);
         fade = Easing.easeOutCubic(fade);
 
-        var font = PWPTheme.Fonts.display();
         gui.setColor(1, 1, 1, fade);
-        gui.drawString(font, Component.literal("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ"), cx - font.width("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ") / 2, cy, PWPTheme.Colors.DANGER, false);
-        gui.drawString(font, Component.literal("РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ"), cx - font.width("РЎРµСЂРІРµСЂ РЅРµРґРѕСЃС‚СѓРїРµРЅ") / 2, cy + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(font, Component.literal("Не удалось подключиться"), cx - font.width("Не удалось подключиться") / 2, cy, PWPTheme.Colors.DANGER, false);
+        gui.drawString(font, Component.literal("Сервер недоступен"), cx - font.width("Сервер недоступен") / 2, cy + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
         gui.setColor(1, 1, 1, 1);
 
         if (fade >= 1 && children().isEmpty()) {
@@ -179,6 +175,7 @@ public class PWPLoadingScreen extends Screen {
 
     private void renderTip(GuiGraphics gui, int cx, int y, long now) {
         long tipElapsed = now - tipStateStart;
+        var font = PWPTheme.Fonts.display();
 
         if (!tipFading && tipElapsed > 4000) {
             tipFading = true;
@@ -201,7 +198,6 @@ public class PWPLoadingScreen extends Screen {
             alpha = 1.0f;
         }
 
-        var font = PWPTheme.Fonts.display();
         String text = TIPS.get(currentTipIndex);
         int color = PWPTheme.Colors.TEXT_SECONDARY;
         float originalAlpha = (color >> 24) & 0xFF;
@@ -213,13 +209,13 @@ public class PWPLoadingScreen extends Screen {
 
     private static String getContextText(Context ctx) {
         return switch (ctx) {
-            case CONNECTING -> "РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє СЃРµСЂРІРµСЂСѓ...";
-            case LOADING_WORLD -> "Р—Р°РіСЂСѓР·РєР° РјРёСЂР°...";
-            case LOADING_MAP -> "Р—Р°РіСЂСѓР·РєР° РєР°СЂС‚С‹...";
-            case WAITING_DATA -> "Р—Р°РіСЂСѓР·РєР°...";
-            case DISCONNECTING -> "РћС‚РєР»СЋС‡РµРЅРёРµ...";
-            case CHANGING_DIMENSION -> "РџРµСЂРµС…РѕРґ РјРµР¶РґСѓ РјРёСЂР°РјРё...";
-            case TRANSFERRING -> "РџРµСЂРµРєР»СЋС‡РµРЅРёРµ СЃРµСЂРІРµСЂР°...";
+            case CONNECTING -> "Подключение к серверу...";
+            case LOADING_WORLD -> "Загрузка мира...";
+            case LOADING_MAP -> "Загрузка карты...";
+            case WAITING_DATA -> "Загрузка...";
+            case DISCONNECTING -> "Отключение...";
+            case CHANGING_DIMENSION -> "Переход между мирами...";
+            case TRANSFERRING -> "Переключение сервера...";
         };
     }
 }
