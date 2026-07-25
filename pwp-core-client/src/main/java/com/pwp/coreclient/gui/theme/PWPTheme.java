@@ -121,35 +121,8 @@ public class PWPTheme {
         public static final int SIZE_HUGE        = 24;
         public static final int SIZE_TITLE       = 32;
 
-        public static final net.minecraft.resources.ResourceLocation DISPLAY_FONT_ID =
-            new net.minecraft.resources.ResourceLocation("pwp_core_client", "display");
-
-        private static net.minecraft.client.gui.Font displayFont;
-        private static boolean fontReady;
-
         public static net.minecraft.client.gui.Font display() {
-            if (fontReady) return displayFont;
-            var mc = net.minecraft.client.Minecraft.getInstance();
-            if (mc.font != null) {
-                try {
-                    var fmField = net.minecraft.client.Minecraft.class.getDeclaredField("fontManager");
-                    fmField.setAccessible(true);
-                    var fm = fmField.get(mc);
-                    if (fm != null) {
-                        var getSetMethod = fm.getClass().getMethod("getFontSet", net.minecraft.resources.ResourceLocation.class);
-                        var fontSet = getSetMethod.invoke(fm, DISPLAY_FONT_ID);
-                        if (fontSet != null) {
-                            displayFont = new net.minecraft.client.gui.Font(
-                                (loc) -> (net.minecraft.client.gui.font.FontSet) fontSet, false);
-                            fontReady = true;
-                            return displayFont;
-                        }
-                    }
-                } catch (Exception e) {
-                    // fallback
-                }
-            }
-            return mc.font;
+            return net.minecraft.client.Minecraft.getInstance().font;
         }
 
         private Fonts() {}
