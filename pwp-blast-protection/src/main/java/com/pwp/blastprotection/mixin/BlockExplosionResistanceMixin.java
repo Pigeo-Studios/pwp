@@ -20,18 +20,13 @@ import static com.pwp.blastprotection.util.PWPBlastLogic.SNOW_TAG;
 public abstract class BlockExplosionResistanceMixin {
 
     @Inject(
-        method = "getExplosionResistance",
+        method = "getExplosionResistance()F",
         at = @At("RETURN"),
         cancellable = true
     )
-    private void pwp$boostResistance(BlockState state, BlockGetter level, BlockPos pos, Explosion explosion,
-                                      CallbackInfoReturnable<Float> cir) {
+    private void pwp$boostResistance(CallbackInfoReturnable<Float> cir) {
         if (!PWPBlastConfig.ENABLED.get()) return;
-
-        float mult = pwp$multiplierFor(state);
-        if (mult <= 1.0f) return;
-
-        cir.setReturnValue(cir.getReturnValueF() * mult);
+        cir.setReturnValue(cir.getReturnValueF() * 2.0f);
     }
 
     private static float pwp$multiplierFor(BlockState state) {
