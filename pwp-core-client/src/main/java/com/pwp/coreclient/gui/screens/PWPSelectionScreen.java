@@ -100,7 +100,7 @@ public class PWPSelectionScreen extends Screen {
 
         confirmBtn = addRenderableWidget(new PWPButton(
             PWPLayout.centerX(width, btnW), height - 55, btnW, btnH,
-            Component.literal("РџРѕРґС‚РІРµСЂРґРёС‚СЊ"),
+            Component.literal("Подтвердить"),
             btn -> {
                 if (selectedIndex >= 0 && onConfirm != null) {
                     onConfirm.accept(selectedIndex);
@@ -151,7 +151,7 @@ public class PWPSelectionScreen extends Screen {
                 selectedIndex = 0;
                 confirmBtn.active = true;
             }
-            String timerText = "РђРІС‚РѕРІС‹Р±РѕСЂ С‡РµСЂРµР· " + remaining + "СЃ";
+            String timerText = "Автовыбор через " + remaining + "с";
             gui.drawString(font, Component.literal(timerText), width / 2 - font.width(timerText) / 2, height - 85, PWPTheme.Colors.TEXT_DIM, false);
         }
 

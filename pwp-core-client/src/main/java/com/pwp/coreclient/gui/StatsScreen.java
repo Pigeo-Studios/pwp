@@ -53,8 +53,8 @@ public class StatsScreen extends Screen {
     };
     private static final String[] LB_CATEGORY_NAMES = {
         "Убийства", "Смерти", "K/D", "Победы", "WinRate",
-        "Уб.техникой", "Тех.уничт", "В возд.",
-        "Захваты", "Урон", "Лечение", "Хэдшоты",
+        "Техника", "Уничтожено", "Авиация",
+        "Захваты", "Урон", "Лечение", "Голова",
         "Наиграно", "Уровень"
     };
 
@@ -354,6 +354,7 @@ public class StatsScreen extends Screen {
         int rowH = 12;
         int pad = 6;
         int h = titleH + rows.length * rowH + pad;
+        var font = PWPTheme.Fonts.display();
 
         gui.fill(x, y, x + w, y + h, PWPTheme.Styles.Panel.BG);
         gui.fill(x, y, x + w, y + 1, PWPTheme.Styles.Panel.BORDER);
@@ -362,28 +363,53 @@ public class StatsScreen extends Screen {
         gui.fill(x + w - 1, y, x + w, y + h, PWPTheme.Styles.Panel.BORDER);
 
         gui.fill(x + 1, y + 1, x + w - 1, y + titleH + 1, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(font, "\u00a7e" + title, x + 8, y + 4, PWPTheme.Colors.TEXT_ACCENT, false);
 
         int ry = y + titleH + pad / 2;
         int col2X = x + w / 2;
-        int valX1 = x + 90;
-        int valX2 = col2X + 90;
-        int maxTextW = col2X - x - 96;
+        int gap = 8;
+        int rightEdge = x + w - 4;
 
         for (String[] row : rows) {
             if (!row[0].isEmpty()) {
-                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[0] + ":", x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY, false);
-                String val = "\u00a7f" + truncateText(row[1], maxTextW);
-                gui.drawString(PWPTheme.Fonts.display(), val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY, false);
+                String label1 = "\u00a77" + row[0] + ":";
+                int labelW1 = font.width(label1);
+                int valX1 = x + 8 + labelW1 + gap;
+                if (valX1 + font.width(row[1]) > col2X - 4 && labelW1 > 40) {
+                    label1 = "\u00a77" + font.plainSubstrByWidth(row[0] + ":", 36) + "..:";
+                    valX1 = x + 8 + font.width(label1) + gap;
+                }
+                gui.drawString(font, label1, x + 8, ry, PWPTheme.Colors.TEXT_SECONDARY, false);
+                String val = "\u00a7f" + truncateText(formatNum(row[1]), Math.max(30, col2X - valX1 - 4));
+                gui.drawString(font, val, valX1, ry, PWPTheme.Colors.TEXT_PRIMARY, false);
             }
             if (!row[2].isEmpty()) {
-                gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + row[2] + ":", col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY, false);
-                String val = "\u00a7f" + truncateText(row[3], maxTextW);
-                gui.drawString(PWPTheme.Fonts.display(), val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY, false);
+                String label2 = "\u00a77" + row[2] + ":";
+                int labelW2 = font.width(label2);
+                int valX2 = col2X + 6 + labelW2 + gap;
+                if (valX2 + font.width(row[3]) > rightEdge && labelW2 > 40) {
+                    label2 = "\u00a77" + font.plainSubstrByWidth(row[2] + ":", 36) + "..:";
+                    valX2 = col2X + 6 + font.width(label2) + gap;
+                }
+                gui.drawString(font, "\u00a77" + label2, col2X + 6, ry, PWPTheme.Colors.TEXT_SECONDARY, false);
+                String val = "\u00a7f" + truncateText(formatNum(row[3]), Math.max(30, rightEdge - valX2));
+                gui.drawString(font, val, valX2, ry, PWPTheme.Colors.TEXT_PRIMARY, false);
             }
             ry += rowH;
         }
         return y + h;
+    }
+
+    private String formatNum(String raw) {
+        try {
+            double d = Double.parseDouble(raw);
+            if (d >= 1000000) return String.format("%.1fM", d / 1000000);
+            if (d >= 1000) return String.format("%.1fK", d / 1000);
+            if (d == (long) d) return String.valueOf((long) d);
+            return raw;
+        } catch (NumberFormatException e) {
+            return raw;
+        }
     }
 
     private String truncateText(String text, int maxW) {

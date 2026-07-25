@@ -60,17 +60,17 @@ public class SkinInventoryScreen extends Screen {
         int cx = this.width / 2;
         int btnY = 14;
 
-        addRenderableWidget(Button.builder(Component.literal("Р’СЃРµ"), b -> setFilter("ALL"))
+        addRenderableWidget(Button.builder(Component.literal("Все"), b -> setFilter("ALL"))
                 .bounds(cx - 170, btnY, 42, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("РћСЃРЅРѕРІРЅРѕРµ"), b -> setFilter("PRIMARY"))
+        addRenderableWidget(Button.builder(Component.literal("Основное"), b -> setFilter("PRIMARY"))
                 .bounds(cx - 124, btnY, 52, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("Р’С‚РѕСЂРёС‡РЅРѕРµ"), b -> setFilter("SECONDARY"))
+        addRenderableWidget(Button.builder(Component.literal("Вторичное"), b -> setFilter("SECONDARY"))
                 .bounds(cx - 68, btnY, 60, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("РќРѕР¶"), b -> setFilter("KNIFE"))
+        addRenderableWidget(Button.builder(Component.literal("Нож"), b -> setFilter("KNIFE"))
                 .bounds(cx - 4, btnY, 45, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("РҐРѕР»РѕРґРЅРѕРµ"), b -> setFilter("MELEE"))
+        addRenderableWidget(Button.builder(Component.literal("Холодное"), b -> setFilter("MELEE"))
                 .bounds(cx + 45, btnY, 45, 22).build());
-        addRenderableWidget(Button.builder(Component.literal("РЈРЅРёС„РѕСЂРјР°"), b -> setFilter("UNIFORM"))
+        addRenderableWidget(Button.builder(Component.literal("Униформа"), b -> setFilter("UNIFORM"))
                 .bounds(cx + 94, btnY, 52, 22).build());
 
         loadCosmetics();
@@ -257,11 +257,11 @@ public class SkinInventoryScreen extends Screen {
                     tooltip.add(Component.literal("\u00a7" + getRarityCode(entry.rarity) + displayName));
                     tooltip.add(Component.literal("\u00a77" + entry.slotType + " \u00a78| \u00a77" + entry.rarity));
                     if (entry.equipped) {
-                        tooltip.add(Component.literal("\u00a7a\u2714 РќР°РґРµС‚Рѕ - РЅР°Р¶РјРёС‚Рµ С‡С‚РѕР±С‹ СЃРЅСЏС‚СЊ"));
+                        tooltip.add(Component.literal("\u00a7a\u2714 Надето — нажмите чтобы снять"));
                     } else if (canAccess) {
-                        tooltip.add(Component.literal("\u00a7eРќР°Р¶РјРёС‚Рµ С‡С‚РѕР±С‹ РЅР°РґРµС‚СЊ"));
+                        tooltip.add(Component.literal("\u00a7eНажмите чтобы надеть"));
                     } else {
-                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Р—Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРѕ - РЅРµС‚ РІ РЅР°Р»РёС‡РёРё"));
+                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Нет доступа"));
                     }
                     gui.renderComponentTooltip(PWPTheme.Fonts.display(), tooltip, mx, my);
                 }
@@ -408,7 +408,7 @@ public class SkinInventoryScreen extends Screen {
                     }
                     CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, entry.skinId, itemSnbt));
                     Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 РќР°РґРµС‚Рѕ!";
+                        statusMsg = "\u00a7a\u2714 Надето!";
                         statusTime = System.currentTimeMillis();
                         loadCosmetics();
                     });
