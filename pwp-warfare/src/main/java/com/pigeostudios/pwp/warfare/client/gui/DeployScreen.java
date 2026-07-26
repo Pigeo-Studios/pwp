@@ -1,8 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import net.minecraft.resources.ResourceLocation;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.*;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
@@ -46,8 +44,9 @@ public class DeployScreen extends Screen {
     private final PortraitRenderer   portrait= new PortraitRenderer();
     private final PWPContextMenu     contextMenu = new PWPContextMenu();
 
-    private PWPButton selectSpawnBtn;
+    private PWPButton selectSpawnBtn, createSquadBtn;
     private EditBox squadInput;
+    private int mySquadId = -1;
 
     String selectedSpawn = "";
     String selectedKit   = "Rifleman";
@@ -130,10 +129,21 @@ public class DeployScreen extends Screen {
         clearWidgets();
         selectSpawnBtn = addRenderableWidget(new PWPButton(width - 152, height - BOT_H + 6, 140, 24,
             Component.literal("SELECT SPAWN"), b -> doDeploy(), PWPButton.Style.ACCENT));
-        squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 4, 10, 80, 16, Component.literal("")));
+        squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 70, 16, Component.literal("")));
         squadInput.setMaxLength(12);
-        squadInput.setVisible(false);
+        squadInput.visible = false;
+        createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 46, 16,
+            Component.literal("Create"), b -> createSquad(), PWPButton.Style.DARK));
+        createSquadBtn.visible = false;
         expandedSquads.add(1);
+    }
+
+    private void createSquad() {
+        String name = squadInput.getValue().trim();
+        if (!name.isEmpty()) {
+            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, name));
+            squadInput.setValue("");
+        }
     }
 
     @Override
@@ -220,16 +230,29 @@ public class DeployScreen extends Screen {
             gui.disableScissor();
 
             // CREATE SQUAD / LEAVE SQUAD / UNASSIGNED
-            String mySquad = mySquadName();
+            mySquadId = -1;
+            String mySquadName = "";
+            var localPlayer = Minecraft.getInstance().player;
+            for (var sq : DeployData.squads) {
+                if (localPlayer != null && sq.members().contains(localPlayer.getScoreboardName())) {
+                    mySquadId = sq.id();
+                    mySquadName = sq.name();
+                    break;
+                }
+            }
             int bottomY = sqY + sqMaxH + 2;
             gui.fill(sqLeft, bottomY - 1, sqLeft + sqWidth, bottomY, PWPTheme.Colors.BORDER);
-            if (!mySquad.isEmpty()) {
+            if (mySquadId >= 0) {
+                int lw2 = PWPTheme.Fonts.display().width("ПОКИНУТЬ ОТРЯД");
                 gui.drawString(f, "ПОКИНУТЬ ОТРЯД", sqLeft, bottomY + 2, PWPTheme.Colors.DANGER, false);
             } else {
                 gui.drawString(f, "СОЗДАТЬ ОТРЯД", sqLeft, bottomY + 2, PWPTheme.Colors.ACCENT, false);
-                squadInput.setX(sqLeft + 80);
+                squadInput.setX(sqLeft + 78);
                 squadInput.setY(bottomY + 1);
                 squadInput.setVisible(true);
+                createSquadBtn.setX(sqLeft + 152);
+                createSquadBtn.setY(bottomY + 1);
+                createSquadBtn.visible = true;
             }
             gui.drawString(f, "БЕЗ ОТРЯДА", sqLeft, bottomY + 15, PWPTheme.Colors.TEXT_DIM, false);
 
@@ -275,9 +298,9 @@ public class DeployScreen extends Screen {
                     gui.fill(tx, toolY, tx + 16, toolY + 16, mx >= tx && mx <= tx + 16 && my >= toolY && my <= toolY + 16 ? 0x44FFFFFF : 0x2212151A);
                 }
                 // Player Position
-                var pp = Minecraft.getInstance().player;
-                if (pp != null) {
-                    String pos = "Player: X=" + pp.blockPosition().getX() + " Z=" + pp.blockPosition().getZ();
+                var player = Minecraft.getInstance().player;
+                if (player != null) {
+                    String pos = "Player: X=" + player.blockPosition().getX() + " Z=" + player.blockPosition().getZ();
                     gui.drawString(f, pos, loadoutX + 4, toolY, PWPTheme.Colors.TEXT_ACCENT, false);
                 }
             } else {
@@ -351,6 +374,15 @@ public class DeployScreen extends Screen {
             // SQUADS (via SquadUIHelper)
             if (mx < Math.min(lw - 8, SquadUIHelper.getSidebarWidth()) + 4) {
                 SquadUIHelper.handleSquadClick(mx, my - squadScrollOff, expandedSquads, contextMenu, false);
+
+                // ПОКИНУТЬ ОТРЯД
+                int sqY = conY + 4;
+                int sqMaxH = conH() - 50;
+                int bottomY = sqY + sqMaxH + 2;
+                if (my >= bottomY && my <= bottomY + 14 && mySquadId >= 0) {
+                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(2, mySquadId, ""));
+                    return true;
+                }
             }
 
             // ROLES
@@ -400,7 +432,10 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int btn) {
-        rightMapRenderer.mouseReleased(btn);
+        int loadoutX = sqW() + roW();
+        if (showRightMap && mx >= loadoutX) {
+            rightMapRenderer.mouseReleased(btn);
+        }
         return super.mouseReleased(mx, my, btn);
     }
 
@@ -416,6 +451,7 @@ public class DeployScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mod) {
         if (key == 50) { minecraft.setScreen(new DeployMapScreen(this)); return true; }
+        if (key == 257 && mySquadId < 0 && createSquadBtn.visible) { createSquad(); return true; }
         return super.keyPressed(key, scan, mod);
     }
 

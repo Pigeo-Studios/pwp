@@ -26,18 +26,16 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
     public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
-        this.imageWidth = 210;
-        this.imageHeight = 270;
-        this.inventoryLabelY = 1000; // hide default label
+        this.imageWidth = 230;
+        this.imageHeight = 286;
+        this.inventoryLabelY = 1000;
         this.titleLabelY = 1000;
         this.categoryIndex = Math.max(0, CATEGORIES.indexOf(menu.category));
     }
 
     @Override
     public void removed() {
-        if (!keepContainerOpen) {
-            super.removed();
-        }
+        if (!keepContainerOpen) super.removed();
     }
 
     @Override
@@ -46,41 +44,41 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         keepContainerOpen = false;
         int x = leftPos;
         int y = topPos;
-        var f = PWPTheme.Fonts.display();
 
-        descBox = new EditBox(f, x + 10, y + 30, 150, 14, Component.literal("Description"));
+        // Description
+        descBox = new EditBox(PWPTheme.Fonts.display(), x + 10, y + 28, 170, 14, Component.literal(""));
         descBox.setValue(menu.description);
         addRenderableWidget(descBox);
 
-        // Row 2: limits
-        int r2y = y + 50;
-        addRenderableWidget(new PWPButton(x + 10, r2y, 56, 16,
+        // Limits
+        int r2y = y + 60;
+        addRenderableWidget(new PWPButton(x + 8, r2y, 54, 16,
             menu.isLeaderOnly ? Component.literal("LD:ON") : Component.literal("LD:OFF"),
             b -> {
                 menu.isLeaderOnly = !menu.isLeaderOnly;
                 b.setMessage(menu.isLeaderOnly ? Component.literal("LD:ON") : Component.literal("LD:OFF"));
             }, menu.isLeaderOnly ? PWPButton.Style.ACCENT : PWPButton.Style.DARK));
 
-        maxTeamBox = new EditBox(f, x + 70, r2y, 30, 14, Component.literal("T"));
+        maxTeamBox = new EditBox(PWPTheme.Fonts.display(), x + 66, r2y, 32, 14, Component.literal("-1"));
         maxTeamBox.setValue(String.valueOf(menu.maxPerTeam));
         addRenderableWidget(maxTeamBox);
 
-        maxSquadBox = new EditBox(f, x + 104, r2y, 30, 14, Component.literal("S"));
+        maxSquadBox = new EditBox(PWPTheme.Fonts.display(), x + 102, r2y, 32, 14, Component.literal("-1"));
         maxSquadBox.setValue(String.valueOf(menu.maxPerSquad));
         addRenderableWidget(maxSquadBox);
 
-        minPlayersBox = new EditBox(f, x + 138, r2y, 26, 14, Component.literal("M"));
+        minPlayersBox = new EditBox(PWPTheme.Fonts.display(), x + 138, r2y, 28, 14, Component.literal("0"));
         minPlayersBox.setValue(String.valueOf(menu.minSquadPlayers));
         addRenderableWidget(minPlayersBox);
 
-        addRenderableWidget(new PWPButton(x + 168, r2y - 2, 16, 18,
+        addRenderableWidget(new PWPButton(x + 170, r2y - 1, 20, 18,
             Component.literal("S"),
             b -> {
                 keepContainerOpen = true;
                 Minecraft.getInstance().setScreen(new KitSkinSelectScreen(menu, this));
             }, PWPButton.Style.GHOST));
 
-        addRenderableWidget(new PWPButton(x + imageWidth - 52, y + 2, 44, 16,
+        addRenderableWidget(new PWPButton(x + imageWidth - 48, y + 2, 42, 16,
             Component.literal("Save"),
             b -> saveKit(), PWPButton.Style.ACCENT));
     }
@@ -98,49 +96,48 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
         // Title
         gui.fill(x, y, x + imageWidth, y + 16, 0xE60E1117);
-        gui.drawCenteredString(f, "KIT EDITOR  —  " + menu.kitName, x + imageWidth / 2, y + 4, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(f, "KIT: " + menu.kitName, x + imageWidth / 2, y + 4, PWPTheme.Colors.TEXT_ACCENT);
 
-        // Field row bg
-        gui.fill(x + 2, y + 18, x + imageWidth - 2, y + 68, 0x2212151A);
-        gui.renderOutline(x + 2, y + 18, imageWidth - 4, 50, PWPTheme.Colors.BORDER);
+        // Field bg
+        gui.fill(x + 2, y + 18, x + imageWidth - 2, y + 78, 0x2212151A);
+        gui.renderOutline(x + 2, y + 18, imageWidth - 4, 60, PWPTheme.Colors.BORDER);
 
         // Labels
-        gui.drawString(f, "Desc", x + 10, y + 20, PWPTheme.Colors.TEXT_DIM, false);
-        gui.drawString(f, "T", x + 70, y + 38, PWPTheme.Colors.TEXT_DIM, false);
-        gui.drawString(f, "Sq", x + 104, y + 38, PWPTheme.Colors.TEXT_DIM, false);
-        gui.drawString(f, "Mp", x + 138, y + 38, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Desc", x + 10, y + 18, PWPTheme.Colors.TEXT_DIM, false);
 
         // Category buttons
-        int catX = x + imageWidth - 90;
-        int catY = y + 70;
-        gui.drawString(f, "Cat", x + 10, catY, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Cat", x + 10, y + 46, PWPTheme.Colors.TEXT_DIM, false);
         for (int ci = 0; ci < CATEGORIES.size(); ci++) {
             boolean sel = ci == categoryIndex;
-            int bx = x + 34 + ci * 42;
-            int bw = 40;
-            gui.fill(bx, catY, bx + bw, catY + 14, sel ? 0x44C8812A : 0x2212151A);
-            gui.renderOutline(bx, catY, bw, 14, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-            gui.drawCenteredString(f, CATEGORIES.get(ci).substring(0, 4), bx + bw / 2, catY + 2,
+            int bx = x + 34 + ci * 48;
+            int bw = 46;
+            gui.fill(bx, y + 46, bx + bw, y + 58, sel ? 0x44C8812A : 0x2212151A);
+            gui.renderOutline(bx, y + 46, bw, 12, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
+            gui.drawCenteredString(f, CATEGORIES.get(ci), bx + bw / 2, y + 47,
                 sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
         }
 
+        gui.drawString(f, "Team", x + 66, r2y() + y - 12, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Sqd", x + 102, r2y() + y - 12, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Min", x + 138, r2y() + y - 12, PWPTheme.Colors.TEXT_DIM, false);
+
         // Slot area bg
-        gui.fill(x + 7, y + 86, x + 171, y + 170, 0xFF15191E);
-        gui.renderOutline(x + 7, y + 86, 164, 84, PWPTheme.Colors.BORDER);
+        gui.fill(x + 7, y + 82, x + 171, y + 166, 0xFF15191E);
+        gui.renderOutline(x + 7, y + 82, 164, 84, PWPTheme.Colors.BORDER);
 
         // Extra slots panel
-        gui.fill(x - 34, y + 86, x + 2, y + 164, 0xFF15191E);
-        gui.renderOutline(x - 34, y + 86, 36, 78, PWPTheme.Colors.BORDER);
+        gui.fill(x - 34, y + 82, x + 2, y + 160, 0xFF15191E);
+        gui.renderOutline(x - 34, y + 82, 36, 78, PWPTheme.Colors.BORDER);
 
         // Player inv area bg
-        gui.fill(x + 7, y + 174, x + 171, y + 262, 0xFF15191E);
-        gui.renderOutline(x + 7, y + 174, 164, 88, PWPTheme.Colors.BORDER);
+        gui.fill(x + 7, y + 170, x + 171, y + 258, 0xFF15191E);
+        gui.renderOutline(x + 7, y + 170, 164, 88, PWPTheme.Colors.BORDER);
 
         // Let super draw slots & items
         super.render(gui, mx, my, pt);
         renderTooltip(gui, mx, my);
 
-        // Slot overlays (on top)
+        // Slot overlays
         for (Slot slot : menu.slots) {
             if (slot.container == menu.kitInventory) {
                 int idx = slot.getContainerSlot();
@@ -158,12 +155,13 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
         // Legend
         gui.fill(x + 8, y + imageHeight - 14, x + 14, y + imageHeight - 8, 0x6000FF40);
-        gui.drawString(f, "Resupply", x + 16, y + imageHeight - 14, PWPTheme.Colors.SUCCESS, false);
-        gui.fill(x + 80, y + imageHeight - 14, x + 86, y + imageHeight - 8, 0x6000C8FF);
-        gui.drawString(f, "NBT", x + 88, y + imageHeight - 14, PWPTheme.Colors.INFO, false);
-        gui.drawString(f, "MClick=Resupply  SMClick=NBT",
-            x + 8, y + imageHeight - 26, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Resup", x + 16, y + imageHeight - 14, PWPTheme.Colors.SUCCESS, false);
+        gui.fill(x + 70, y + imageHeight - 14, x + 76, y + imageHeight - 8, 0x6000C8FF);
+        gui.drawString(f, "NBT", x + 78, y + imageHeight - 14, PWPTheme.Colors.INFO, false);
+        gui.drawString(f, "MC=Resup  SC=NBT", x + 8, y + imageHeight - 26, PWPTheme.Colors.TEXT_DIM, false);
     }
+
+    private int r2y() { return 60; }
 
     @Override
     protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {}
@@ -199,13 +197,12 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (button == 0 && my >= leftPos && my <= leftPos + imageWidth) {
-            // Category buttons
-            int catY = topPos + 70;
-            if (my >= catY && my <= catY + 14) {
+        if (button == 0) {
+            int catY = topPos + 46;
+            if (my >= catY && my <= catY + 12) {
                 for (int ci = 0; ci < CATEGORIES.size(); ci++) {
-                    int bx = leftPos + 34 + ci * 42;
-                    if (mx >= bx && mx <= bx + 40) {
+                    int bx = leftPos + 34 + ci * 48;
+                    if (mx >= bx && mx <= bx + 46) {
                         categoryIndex = ci;
                         return true;
                     }
