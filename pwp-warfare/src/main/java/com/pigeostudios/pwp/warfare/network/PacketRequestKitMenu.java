@@ -76,7 +76,7 @@ public class PacketRequestKitMenu {
                   if (myCurrentKit.isEmpty()) myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
                   boolean isSelected = myCurrentKit.equals(kitName);
                   List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
-                  dtoList.add(new PacketOpenPlayerKitMenu.KitDTO(kitName, available, reason, isSelected, kitPreviewItems));
+                  dtoList.add(new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems));
                }
             }
 

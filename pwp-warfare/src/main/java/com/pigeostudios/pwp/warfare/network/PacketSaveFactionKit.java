@@ -20,6 +20,8 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class PacketSaveFactionKit {
    private final String faction;
    private final String kitName;
+   private final String category;
+   private final String description;
    private final boolean isLeader;
    private final int maxTeam;
    private final int maxSquad;
@@ -29,11 +31,13 @@ public class PacketSaveFactionKit {
    private final Map<Integer, List<String>> slotSkins;
 
    public PacketSaveFactionKit(
-      String faction, String kitName, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
+      String faction, String kitName, String category, String description, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
       boolean[] resupplyFlags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
    ) {
       this.faction = faction;
       this.kitName = kitName;
+      this.category = category;
+      this.description = description;
       this.isLeader = isLeader;
       this.maxTeam = maxTeam;
       this.maxSquad = maxSquad;
@@ -46,6 +50,8 @@ public class PacketSaveFactionKit {
    public static void encode(PacketSaveFactionKit msg, FriendlyByteBuf buf) {
       buf.writeUtf(msg.faction);
       buf.writeUtf(msg.kitName);
+      buf.writeUtf(msg.category);
+      buf.writeUtf(msg.description);
       buf.writeBoolean(msg.isLeader);
       buf.writeInt(msg.maxTeam);
       buf.writeInt(msg.maxSquad);
@@ -70,6 +76,8 @@ public class PacketSaveFactionKit {
    public static PacketSaveFactionKit decode(FriendlyByteBuf buf) {
       String f = buf.readUtf();
       String k = buf.readUtf();
+      String cat = buf.readUtf();
+      String desc = buf.readUtf();
       boolean l = buf.readBoolean();
       int mt = buf.readInt();
       int ms = buf.readInt();
@@ -96,7 +104,7 @@ public class PacketSaveFactionKit {
          skins.put(slot, ids);
       }
 
-      return new PacketSaveFactionKit(f, k, l, mt, ms, minP, f1, f2, skins);
+      return new PacketSaveFactionKit(f, k, cat, desc, l, mt, ms, minP, f1, f2, skins);
    }
 
    public static void handle(PacketSaveFactionKit msg, Supplier<Context> ctx) {
@@ -141,6 +149,8 @@ public class PacketSaveFactionKit {
 
             JsonObject kitPayload = new JsonObject();
             kitPayload.addProperty("kitName", msg.kitName);
+            kitPayload.addProperty("category", msg.category);
+            kitPayload.addProperty("description", msg.description);
             kitPayload.addProperty("leaderOnly", msg.isLeader);
             kitPayload.addProperty("maxPerTeam", msg.maxTeam);
             kitPayload.addProperty("maxPerSquad", msg.maxSquad);
@@ -158,6 +168,8 @@ public class PacketSaveFactionKit {
             }
 
             if (kit != null) {
+               kit.category = msg.category;
+               kit.description = msg.description;
                kit.isLeaderOnly = msg.isLeader;
                kit.maxPerTeam = msg.maxTeam;
                kit.maxPerSquad = msg.maxSquad;

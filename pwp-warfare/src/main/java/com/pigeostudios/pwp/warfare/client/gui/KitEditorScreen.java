@@ -14,18 +14,23 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
+import java.util.*;
+
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
-    private EditBox maxTeamBox;
-    private EditBox maxSquadBox;
-    private EditBox minPlayersBox;
-    private boolean keepContainerOpen = false;
+
+    private static final List<String> CATEGORIES = List.of("INFANTRY", "SPECIALIST", "CREWMAN", "COMMANDER");
+
+    private EditBox descBox, maxTeamBox, maxSquadBox, minPlayersBox;
+    private int categoryIndex;
+    private boolean keepContainerOpen;
 
     public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
-       super(menu, inv, title);
-       this.imageWidth = 176;
-       this.imageHeight = 262;
-       this.inventoryLabelY = 168;
-       this.titleLabelY = 4;
+        super(menu, inv, title);
+        this.imageWidth = 210;
+        this.imageHeight = 270;
+        this.inventoryLabelY = 1000; // hide default label
+        this.titleLabelY = 1000;
+        this.categoryIndex = Math.max(0, CATEGORIES.indexOf(menu.category));
     }
 
     @Override
@@ -35,121 +40,192 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         }
     }
 
+    @Override
     protected void init() {
-       super.init();
-       this.keepContainerOpen = false;
-       int x = this.leftPos;
-      int y = this.topPos;
-      this.addRenderableWidget(new PWPButton(x + 8, y + 14, 90, 18, ((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"), b -> {
-         ((KitEditorMenu)this.menu).isLeaderOnly = !((KitEditorMenu)this.menu).isLeaderOnly;
-         b.setMessage(((KitEditorMenu)this.menu).isLeaderOnly ? Component.translatable("gui.pwpwarfare.kit_editor.leader_only") : Component.translatable("gui.pwpwarfare.kit_editor.leader_only_off"));
-      }, PWPButton.Style.PRIMARY));
-      this.maxTeamBox = new EditBox(PWPTheme.Fonts.display(), x + 144, y + 14, 24, 14, Component.empty());
-      this.maxTeamBox.setValue(String.valueOf(((KitEditorMenu)this.menu).maxPerTeam));
-      this.addRenderableWidget(this.maxTeamBox);
-      this.maxSquadBox = new EditBox(PWPTheme.Fonts.display(), x + 144, y + 32, 24, 14, Component.empty());
-      this.maxSquadBox.setValue(String.valueOf(((KitEditorMenu)this.menu).maxPerSquad));
-      this.addRenderableWidget(this.maxSquadBox);
-      this.minPlayersBox = new EditBox(PWPTheme.Fonts.display(), x + 144, y + 50, 24, 14, Component.empty());
-      this.minPlayersBox.setValue(String.valueOf(((KitEditorMenu)this.menu).minSquadPlayers));
-      this.addRenderableWidget(this.minPlayersBox);
-      this.addRenderableWidget(new PWPButton(x + 120, y + 148, 48, 20, Component.translatable("gui.pwpwarfare.kit_editor.save"), b -> this.saveKit(), PWPButton.Style.ACCENT));
-      this.addRenderableWidget(new PWPButton(x + 74, y + 148, 44, 20, Component.translatable("gui.pwpwarfare.kit_editor.skins"), b -> {
-          keepContainerOpen = true;
-          Minecraft.getInstance().setScreen(new KitSkinSelectScreen((KitEditorMenu) this.menu, this));
-       }, PWPButton.Style.PRIMARY));
-   }
+        super.init();
+        keepContainerOpen = false;
+        int x = leftPos;
+        int y = topPos;
+        var f = PWPTheme.Fonts.display();
 
-   private void saveKit() {
-      try {
-         ((KitEditorMenu)this.menu).maxPerTeam = Integer.parseInt(this.maxTeamBox.getValue());
-      } catch (Exception var4) {}
-      try {
-         ((KitEditorMenu)this.menu).maxPerSquad = Integer.parseInt(this.maxSquadBox.getValue());
-      } catch (Exception var3) {}
-      try {
-         ((KitEditorMenu)this.menu).minSquadPlayers = Integer.parseInt(this.minPlayersBox.getValue());
-      } catch (Exception var2) {}
-      String team = ((KitEditorMenu)this.menu).team;
-      if (team.equals("BLUE") || team.equals("RED")) {
-         PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
-            team, ((KitEditorMenu)this.menu).kitName,
-            ((KitEditorMenu)this.menu).isLeaderOnly, ((KitEditorMenu)this.menu).maxPerTeam,
-            ((KitEditorMenu)this.menu).maxPerSquad, ((KitEditorMenu)this.menu).minSquadPlayers,
-            ((KitEditorMenu)this.menu).resupplyFlags, ((KitEditorMenu)this.menu).saveNbtFlags,
-            ((KitEditorMenu)this.menu).slotSkins
-         ));
-      } else {
-         PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionKit(
-            team, ((KitEditorMenu)this.menu).kitName,
-            ((KitEditorMenu)this.menu).isLeaderOnly, ((KitEditorMenu)this.menu).maxPerTeam,
-            ((KitEditorMenu)this.menu).maxPerSquad, ((KitEditorMenu)this.menu).minSquadPlayers,
-            ((KitEditorMenu)this.menu).resupplyFlags, ((KitEditorMenu)this.menu).saveNbtFlags,
-            ((KitEditorMenu)this.menu).slotSkins
-         ));
-      }
-      this.minecraft.player.displayClientMessage(Component.translatable("gui.pwpwarfare.kit_editor.saved"), true);
-   }
+        descBox = new EditBox(f, x + 10, y + 30, 150, 14, Component.literal("Description"));
+        descBox.setValue(menu.description);
+        addRenderableWidget(descBox);
 
-   public void render(GuiGraphics gui, int mx, int my, float pt) {
-      this.renderBackground(gui);
-      super.render(gui, mx, my, pt);
-      this.renderTooltip(gui, mx, my);
-      int x = this.leftPos;
-      int y = this.topPos;
-      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.max_team"), x + 98, y + 17, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.max_squad"), x + 103, y + 35, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.min_players"), x + 103, y + 53, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.pose().pushPose();
-      gui.pose().scale(0.9F, 0.9F, 1.0F);
-      int scaledX = (int)((x + 8) / 0.9F);
-      int scaledY = (int)((y + 36) / 0.9F);
-      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.toggle_resupply"), scaledX, scaledY, PWPTheme.Colors.SUCCESS, false);
-      gui.drawString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.kit_editor.save_nbt"), scaledX, scaledY + 10, PWPTheme.Colors.INFO, false);
-      gui.pose().popPose();
+        // Row 2: limits
+        int r2y = y + 50;
+        addRenderableWidget(new PWPButton(x + 10, r2y, 56, 16,
+            menu.isLeaderOnly ? Component.literal("LD:ON") : Component.literal("LD:OFF"),
+            b -> {
+                menu.isLeaderOnly = !menu.isLeaderOnly;
+                b.setMessage(menu.isLeaderOnly ? Component.literal("LD:ON") : Component.literal("LD:OFF"));
+            }, menu.isLeaderOnly ? PWPButton.Style.ACCENT : PWPButton.Style.DARK));
 
-      for (int i = 0; i < ((KitEditorMenu)this.menu).slots.size(); i++) {
-         Slot slot = (Slot)((KitEditorMenu)this.menu).slots.get(i);
-         if (slot.container == ((KitEditorMenu)this.menu).kitInventory) {
-            int idx = slot.getContainerSlot();
-            if (idx >= 0 && idx < 49) {
-               if (((KitEditorMenu)this.menu).saveNbtFlags[idx]) {
-                  gui.fill(this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, 0x6000C8FF);
-               } else if (((KitEditorMenu)this.menu).resupplyFlags[idx]) {
-                  gui.fill(this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, 0x6000FF40);
-               }
+        maxTeamBox = new EditBox(f, x + 70, r2y, 30, 14, Component.literal("T"));
+        maxTeamBox.setValue(String.valueOf(menu.maxPerTeam));
+        addRenderableWidget(maxTeamBox);
+
+        maxSquadBox = new EditBox(f, x + 104, r2y, 30, 14, Component.literal("S"));
+        maxSquadBox.setValue(String.valueOf(menu.maxPerSquad));
+        addRenderableWidget(maxSquadBox);
+
+        minPlayersBox = new EditBox(f, x + 138, r2y, 26, 14, Component.literal("M"));
+        minPlayersBox.setValue(String.valueOf(menu.minSquadPlayers));
+        addRenderableWidget(minPlayersBox);
+
+        addRenderableWidget(new PWPButton(x + 168, r2y - 2, 16, 18,
+            Component.literal("S"),
+            b -> {
+                keepContainerOpen = true;
+                Minecraft.getInstance().setScreen(new KitSkinSelectScreen(menu, this));
+            }, PWPButton.Style.GHOST));
+
+        addRenderableWidget(new PWPButton(x + imageWidth - 52, y + 2, 44, 16,
+            Component.literal("Save"),
+            b -> saveKit(), PWPButton.Style.ACCENT));
+    }
+
+    @Override
+    public void render(GuiGraphics gui, int mx, int my, float pt) {
+        renderBackground(gui);
+        int x = leftPos;
+        int y = topPos;
+        var f = PWPTheme.Fonts.display();
+
+        // Panel bg
+        gui.fill(x, y, x + imageWidth, y + imageHeight, PWPTheme.Colors.SURFACE);
+        gui.renderOutline(x, y, imageWidth, imageHeight, PWPTheme.Colors.BORDER);
+
+        // Title
+        gui.fill(x, y, x + imageWidth, y + 16, 0xE60E1117);
+        gui.drawCenteredString(f, "KIT EDITOR  —  " + menu.kitName, x + imageWidth / 2, y + 4, PWPTheme.Colors.TEXT_ACCENT);
+
+        // Field row bg
+        gui.fill(x + 2, y + 18, x + imageWidth - 2, y + 68, 0x2212151A);
+        gui.renderOutline(x + 2, y + 18, imageWidth - 4, 50, PWPTheme.Colors.BORDER);
+
+        // Labels
+        gui.drawString(f, "Desc", x + 10, y + 20, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "T", x + 70, y + 38, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Sq", x + 104, y + 38, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(f, "Mp", x + 138, y + 38, PWPTheme.Colors.TEXT_DIM, false);
+
+        // Category buttons
+        int catX = x + imageWidth - 90;
+        int catY = y + 70;
+        gui.drawString(f, "Cat", x + 10, catY, PWPTheme.Colors.TEXT_DIM, false);
+        for (int ci = 0; ci < CATEGORIES.size(); ci++) {
+            boolean sel = ci == categoryIndex;
+            int bx = x + 34 + ci * 42;
+            int bw = 40;
+            gui.fill(bx, catY, bx + bw, catY + 14, sel ? 0x44C8812A : 0x2212151A);
+            gui.renderOutline(bx, catY, bw, 14, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
+            gui.drawCenteredString(f, CATEGORIES.get(ci).substring(0, 4), bx + bw / 2, catY + 2,
+                sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
+        }
+
+        // Slot area bg
+        gui.fill(x + 7, y + 86, x + 171, y + 170, 0xFF15191E);
+        gui.renderOutline(x + 7, y + 86, 164, 84, PWPTheme.Colors.BORDER);
+
+        // Extra slots panel
+        gui.fill(x - 34, y + 86, x + 2, y + 164, 0xFF15191E);
+        gui.renderOutline(x - 34, y + 86, 36, 78, PWPTheme.Colors.BORDER);
+
+        // Player inv area bg
+        gui.fill(x + 7, y + 174, x + 171, y + 262, 0xFF15191E);
+        gui.renderOutline(x + 7, y + 174, 164, 88, PWPTheme.Colors.BORDER);
+
+        // Let super draw slots & items
+        super.render(gui, mx, my, pt);
+        renderTooltip(gui, mx, my);
+
+        // Slot overlays (on top)
+        for (Slot slot : menu.slots) {
+            if (slot.container == menu.kitInventory) {
+                int idx = slot.getContainerSlot();
+                if (idx >= 0 && idx < 49) {
+                    int sx = leftPos + slot.x;
+                    int sy = topPos + slot.y;
+                    if (menu.saveNbtFlags[idx]) {
+                        gui.fill(sx, sy, sx + 16, sy + 16, 0x6000C8FF);
+                    } else if (menu.resupplyFlags[idx]) {
+                        gui.fill(sx, sy, sx + 16, sy + 16, 0x6000FF40);
+                    }
+                }
             }
-         }
-      }
-   }
+        }
 
-   public boolean mouseClicked(double mx, double my, int button) {
-      if (button == 2) {
-         Slot slot = this.hoveredSlot;
-         if (slot != null && slot.container == ((KitEditorMenu)this.menu).kitInventory) {
-            int idx = slot.getContainerSlot();
-            if (idx >= 0 && idx < 49) {
-               if (hasShiftDown()) {
-                  ((KitEditorMenu)this.menu).saveNbtFlags[idx] = !((KitEditorMenu)this.menu).saveNbtFlags[idx];
-               } else {
-                  ((KitEditorMenu)this.menu).resupplyFlags[idx] = !((KitEditorMenu)this.menu).resupplyFlags[idx];
-               }
-               return true;
+        // Legend
+        gui.fill(x + 8, y + imageHeight - 14, x + 14, y + imageHeight - 8, 0x6000FF40);
+        gui.drawString(f, "Resupply", x + 16, y + imageHeight - 14, PWPTheme.Colors.SUCCESS, false);
+        gui.fill(x + 80, y + imageHeight - 14, x + 86, y + imageHeight - 8, 0x6000C8FF);
+        gui.drawString(f, "NBT", x + 88, y + imageHeight - 14, PWPTheme.Colors.INFO, false);
+        gui.drawString(f, "MClick=Resupply  SMClick=NBT",
+            x + 8, y + imageHeight - 26, PWPTheme.Colors.TEXT_DIM, false);
+    }
+
+    @Override
+    protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {}
+
+    @Override
+    protected void renderLabels(GuiGraphics gui, int mx, int my) {}
+
+    private void saveKit() {
+        try { menu.maxPerTeam = Integer.parseInt(maxTeamBox.getValue()); } catch (Exception ignored) {}
+        try { menu.maxPerSquad = Integer.parseInt(maxSquadBox.getValue()); } catch (Exception ignored) {}
+        try { menu.minSquadPlayers = Integer.parseInt(minPlayersBox.getValue()); } catch (Exception ignored) {}
+        menu.category = CATEGORIES.get(categoryIndex);
+        menu.description = descBox.getValue();
+
+        String team = menu.team;
+        if (team.equals("BLUE") || team.equals("RED")) {
+            PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
+                team, menu.kitName, menu.category, menu.description,
+                menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
+                menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
+            ));
+        } else {
+            PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionKit(
+                team, menu.kitName, menu.category, menu.description,
+                menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
+                menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
+            ));
+        }
+        if (minecraft.player != null) {
+            minecraft.player.displayClientMessage(Component.literal("Kit saved!"), true);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0 && my >= leftPos && my <= leftPos + imageWidth) {
+            // Category buttons
+            int catY = topPos + 70;
+            if (my >= catY && my <= catY + 14) {
+                for (int ci = 0; ci < CATEGORIES.size(); ci++) {
+                    int bx = leftPos + 34 + ci * 42;
+                    if (mx >= bx && mx <= bx + 40) {
+                        categoryIndex = ci;
+                        return true;
+                    }
+                }
             }
-         }
-      }
-      return super.mouseClicked(mx, my, button);
-   }
-
-   protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {
-      gui.fill(this.leftPos, this.topPos, this.leftPos + this.imageWidth, this.topPos + this.imageHeight, PWPTheme.Colors.SURFACE);
-      gui.renderOutline(this.leftPos, this.topPos, this.imageWidth, this.imageHeight, PWPTheme.Colors.BORDER);
-      gui.fill(this.leftPos - 42, this.topPos + 62, this.leftPos - 2, this.topPos + 142, PWPTheme.Colors.SURFACE_LIGHT);
-      gui.renderOutline(this.leftPos - 42, this.topPos + 62, 40, 80, PWPTheme.Colors.BORDER);
-
-      for (Slot slot : ((KitEditorMenu)this.menu).slots) {
-         gui.fill(this.leftPos + slot.x - 1, this.topPos + slot.y - 1, this.leftPos + slot.x + 17, this.topPos + slot.y + 17, PWPTheme.Colors.BORDER);
-         gui.fill(this.leftPos + slot.x, this.topPos + slot.y, this.leftPos + slot.x + 16, this.topPos + slot.y + 16, 0xFF1A1E26);
-      }
-   }
+        }
+        if (button == 2) {
+            Slot slot = hoveredSlot;
+            if (slot != null && slot.container == menu.kitInventory) {
+                int idx = slot.getContainerSlot();
+                if (idx >= 0 && idx < 49) {
+                    if (hasShiftDown()) {
+                        menu.saveNbtFlags[idx] = !menu.saveNbtFlags[idx];
+                    } else {
+                        menu.resupplyFlags[idx] = !menu.resupplyFlags[idx];
+                    }
+                    return true;
+                }
+            }
+        }
+        return super.mouseClicked(mx, my, button);
+    }
 }

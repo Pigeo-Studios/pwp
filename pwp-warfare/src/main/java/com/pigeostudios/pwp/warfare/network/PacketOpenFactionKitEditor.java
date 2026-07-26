@@ -75,26 +75,30 @@ public class PacketOpenFactionKitEditor {
                               container.setItem(i, ((ItemStack)finalKit.inventory.get(i)).copy());
                            }
 
-                           return new KitEditorMenu(
-                              id,
-                              inv,
-                              container,
-                              msg.faction,
-                              finalKit.name,
-                              finalKit.isLeaderOnly,
-                              finalKit.maxPerTeam,
-                              finalKit.maxPerSquad,
-                              finalKit.minSquadPlayers,
-                              finalKit.resupplyFlags,
-                              finalKit.saveNbtFlags,
-                              finalKit.slotSkins
-                           );
+                            return new KitEditorMenu(
+                               id,
+                               inv,
+                               container,
+                               msg.faction,
+                               finalKit.name,
+                               finalKit.category,
+                               finalKit.description != null ? finalKit.description : "",
+                               finalKit.isLeaderOnly,
+                               finalKit.maxPerTeam,
+                               finalKit.maxPerSquad,
+                               finalKit.minSquadPlayers,
+                               finalKit.resupplyFlags,
+                               finalKit.saveNbtFlags,
+                               finalKit.slotSkins
+                            );
                         }
                      },
-                     buf -> {
-                        buf.writeUtf(msg.faction);
-                        buf.writeUtf(msg.kitName);
-                        buf.writeBoolean(finalKit.isLeaderOnly);
+                      buf -> {
+                         buf.writeUtf(msg.faction);
+                         buf.writeUtf(msg.kitName);
+                         buf.writeUtf(finalKit.category != null ? finalKit.category : "INFANTRY");
+                         buf.writeUtf(finalKit.description != null ? finalKit.description : "");
+                         buf.writeBoolean(finalKit.isLeaderOnly);
                         buf.writeInt(finalKit.maxPerTeam);
                         buf.writeInt(finalKit.maxPerSquad);
                         buf.writeInt(finalKit.minSquadPlayers);

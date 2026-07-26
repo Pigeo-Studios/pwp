@@ -20,6 +20,8 @@ public class KitEditorMenu extends AbstractContainerMenu {
    public final Container kitInventory;
    public final String team;
    public final String kitName;
+   public String category = "INFANTRY";
+   public String description = "";
    public boolean isLeaderOnly;
    public int maxPerTeam;
    public int maxPerSquad;
@@ -36,6 +38,8 @@ public class KitEditorMenu extends AbstractContainerMenu {
          id,
          playerInv,
          new SimpleContainer(49),
+         data.readUtf(),
+         data.readUtf(),
          data.readUtf(),
          data.readUtf(),
          data.readBoolean(),
@@ -66,13 +70,15 @@ public class KitEditorMenu extends AbstractContainerMenu {
    }
 
    public KitEditorMenu(
-      int id, Inventory playerInv, Container kitInv, String t, String k, boolean l, int mt, int ms, int minPlayers,
+      int id, Inventory playerInv, Container kitInv, String t, String k, String cat, String desc, boolean l, int mt, int ms, int minPlayers,
       boolean[] flags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
    ) {
       super((MenuType)ModMenuTypes.KIT_EDITOR_MENU.get(), id);
       this.kitInventory = kitInv;
       this.team = t;
       this.kitName = k;
+      this.category = cat;
+      this.description = desc;
       this.isLeaderOnly = l;
       this.maxPerTeam = mt;
       this.maxPerSquad = ms;

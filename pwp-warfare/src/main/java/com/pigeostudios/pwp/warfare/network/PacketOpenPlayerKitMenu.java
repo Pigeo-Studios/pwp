@@ -20,10 +20,13 @@ public class PacketOpenPlayerKitMenu {
    }
 
     public static void encode(PacketOpenPlayerKitMenu msg, FriendlyByteBuf buf) {
-      buf.writeInt(msg.kits.size());
+       buf.writeByte(2);
+       buf.writeInt(msg.kits.size());
 
       for (PacketOpenPlayerKitMenu.KitDTO k : msg.kits) {
          buf.writeUtf(k.name);
+         buf.writeUtf(k.category != null ? k.category : "INFANTRY");
+         buf.writeUtf(k.description != null ? k.description : "");
          buf.writeBoolean(k.available);
          buf.writeUtf(k.reason);
          buf.writeBoolean(k.isSelected);
@@ -36,11 +39,14 @@ public class PacketOpenPlayerKitMenu {
    }
 
    public static PacketOpenPlayerKitMenu decode(FriendlyByteBuf buf) {
+      int version = buf.readableBytes() > 0 ? buf.readByte() : 1;
       int size = buf.readInt();
       List<PacketOpenPlayerKitMenu.KitDTO> list = new ArrayList<>();
 
       for (int i = 0; i < size; i++) {
          String name = buf.readUtf();
+         String category = version >= 2 ? buf.readUtf() : "INFANTRY";
+         String description = version >= 2 ? buf.readUtf() : "";
          boolean avail = buf.readBoolean();
          String reason = buf.readUtf();
          boolean isSelected = buf.readBoolean();
@@ -51,7 +57,7 @@ public class PacketOpenPlayerKitMenu {
             items.add(buf.readItem());
          }
 
-         list.add(new PacketOpenPlayerKitMenu.KitDTO(name, avail, reason, isSelected, items));
+         list.add(new PacketOpenPlayerKitMenu.KitDTO(name, category, description, avail, reason, isSelected, items));
       }
 
       return new PacketOpenPlayerKitMenu(list);
@@ -65,18 +71,22 @@ public class PacketOpenPlayerKitMenu {
 
    // DTO для передачи информации о ките: название, доступность, предметы
     public static class KitDTO {
-      public String name;
-      public boolean available;
-      public String reason;
-      public boolean isSelected;
-      public List<ItemStack> items;
+       public String name;
+       public String category;
+       public String description;
+       public boolean available;
+       public String reason;
+       public boolean isSelected;
+       public List<ItemStack> items;
 
-      public KitDTO(String n, boolean a, String r, boolean sel, List<ItemStack> items) {
-         this.name = n;
-         this.available = a;
-         this.reason = r;
-         this.isSelected = sel;
-         this.items = items;
-      }
-   }
+       public KitDTO(String n, String cat, String desc, boolean a, String r, boolean sel, List<ItemStack> items) {
+          this.name = n;
+          this.category = cat;
+          this.description = desc;
+          this.available = a;
+          this.reason = r;
+          this.isSelected = sel;
+          this.items = items;
+       }
+    }
 }

@@ -66,6 +66,8 @@ public class PacketOpenKitEditor {
                                  container,
                                  msg.team,
                                  kit.name,
+                                 kit.category,
+                                 kit.description != null ? kit.description : "",
                                  kit.isLeaderOnly,
                                  kit.maxPerTeam,
                                  kit.maxPerSquad,
@@ -77,9 +79,11 @@ public class PacketOpenKitEditor {
                            }
                         },
                         buf -> {
-                           buf.writeUtf(msg.team);
-                           buf.writeUtf(msg.kitName);
-                           buf.writeBoolean(kit.isLeaderOnly);
+                            buf.writeUtf(msg.team);
+                            buf.writeUtf(msg.kitName);
+                            buf.writeUtf(kit.category != null ? kit.category : "INFANTRY");
+                            buf.writeUtf(kit.description != null ? kit.description : "");
+                            buf.writeBoolean(kit.isLeaderOnly);
                            buf.writeInt(kit.maxPerTeam);
                            buf.writeInt(kit.maxPerSquad);
                            buf.writeInt(kit.minSquadPlayers);

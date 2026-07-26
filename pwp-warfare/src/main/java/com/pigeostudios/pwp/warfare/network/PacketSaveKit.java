@@ -11,6 +11,8 @@ import net.minecraftforge.network.NetworkEvent.Context;
 public class PacketSaveKit {
    private final String team;
    private final String kitName;
+   private final String category;
+   private final String description;
    private final boolean isLeader;
    private final int maxTeam;
    private final int maxSquad;
@@ -20,11 +22,13 @@ public class PacketSaveKit {
    private final Map<Integer, List<String>> slotSkins;
 
    public PacketSaveKit(
-      String team, String kitName, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
+      String team, String kitName, String category, String description, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
       boolean[] resupplyFlags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
    ) {
       this.team = team;
       this.kitName = kitName;
+      this.category = category;
+      this.description = description;
       this.isLeader = isLeader;
       this.maxTeam = maxTeam;
       this.maxSquad = maxSquad;
@@ -37,6 +41,8 @@ public class PacketSaveKit {
    public static void encode(PacketSaveKit msg, FriendlyByteBuf buf) {
       buf.writeUtf(msg.team);
       buf.writeUtf(msg.kitName);
+      buf.writeUtf(msg.category);
+      buf.writeUtf(msg.description);
       buf.writeBoolean(msg.isLeader);
       buf.writeInt(msg.maxTeam);
       buf.writeInt(msg.maxSquad);
@@ -61,6 +67,8 @@ public class PacketSaveKit {
    public static PacketSaveKit decode(FriendlyByteBuf buf) {
       String t = buf.readUtf();
       String k = buf.readUtf();
+      String cat = buf.readUtf();
+      String desc = buf.readUtf();
       boolean l = buf.readBoolean();
       int mt = buf.readInt();
       int ms = buf.readInt();
@@ -87,7 +95,7 @@ public class PacketSaveKit {
          skins.put(slot, ids);
       }
 
-      return new PacketSaveKit(t, k, l, mt, ms, minP, f1, f2, skins);
+      return new PacketSaveKit(t, k, cat, desc, l, mt, ms, minP, f1, f2, skins);
    }
 
    public static void handle(PacketSaveKit msg, Supplier<Context> ctx) {
@@ -101,6 +109,8 @@ public class PacketSaveKit {
                kit.maxPerTeam = msg.maxTeam;
                kit.maxPerSquad = msg.maxSquad;
                kit.minSquadPlayers = msg.minSquadPlayers;
+               kit.category = msg.category;
+               kit.description = msg.description;
                kit.resupplyFlags = msg.resupplyFlags;
                kit.saveNbtFlags = msg.nbtFlags;
                kit.slotSkins = msg.slotSkins;
