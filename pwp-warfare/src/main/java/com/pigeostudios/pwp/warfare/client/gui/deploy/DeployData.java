@@ -89,11 +89,10 @@ public class DeployData {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
                 String[] meta = KIT_META.get(dto.name);
                 if (meta == null) {
-                    // Try loose match
-                    String dtoLower = dto.name.toLowerCase().replace(" ", "_").replace("-", "_");
+                    String dtoNorm = dto.name.toLowerCase().replace(" ", "").replace("-", "").replace("_", "");
                     for (var entry : KIT_META.entrySet()) {
-                        String keyLower = entry.getKey().toLowerCase().replace(" ", "_").replace("-", "_");
-                        if (keyLower.equals(dtoLower) || keyLower.replace("_", "").equals(dtoLower.replace("_", ""))) {
+                        String keyNorm = entry.getKey().toLowerCase().replace(" ", "").replace("-", "").replace("_", "");
+                        if (keyNorm.equals(dtoNorm) || dtoNorm.contains(keyNorm) || keyNorm.contains(dtoNorm)) {
                             meta = entry.getValue();
                             break;
                         }

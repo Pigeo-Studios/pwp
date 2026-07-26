@@ -117,12 +117,14 @@ public class RoleGrid {
             gui.drawCenteredString(f, cnt, x + size / 2, y + size - 8, cc);
         }
 
-        // Tooltip for unavailable
+        // Tooltip below cell for unavailable
         if (hovered && !avail && !kit.reason().isEmpty()) {
             String reason = kit.reason();
             int rw = f.width(reason) + 8;
-            gui.fill(x + size + 4, y, x + size + 4 + rw, y + 12, 0xDD000000);
-            gui.drawString(f, reason, x + size + 6, y + 2, PWPTheme.Colors.DANGER, false);
+            int tx = x + (size - rw) / 2;
+            if (tx < popupGridX) tx = popupGridX;
+            gui.fill(tx, y + size + 2, tx + rw, y + size + 14, 0xDD000000);
+            gui.drawString(f, reason, tx + 4, y + size + 4, PWPTheme.Colors.DANGER, false);
         }
     }
 

@@ -14,13 +14,20 @@ public class LoadoutPanel {
         var kit = kitO.get();
 
         int pad = 6, cy = y;
+        boolean avail = kit.available();
 
-        // HEADER: LOADOUT: role
-        gui.drawString(f, "LOADOUT:", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
+        // HEADER: LOADOUT / UNAVAILABLE
+        if (!avail) {
+            gui.drawString(f, "НЕДОСТУПНО", x + pad, cy, PWPTheme.Colors.DANGER, false);
+        } else {
+            gui.drawString(f, "СНАРЯЖЕНИЕ", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
+        }
         cy += 10;
-        RoundedRect.fill(gui, x, cy, w, 20, 4, PWPTheme.Colors.SURFACE);
-        RoundedRect.border(gui, x, cy, w, 20, 4, 1, PWPTheme.Colors.BORDER);
-        gui.drawString(f, kit.name(), x + pad + 2, cy + 5, PWPTheme.Colors.ACCENT, false);
+        int headerBg = avail ? PWPTheme.Colors.SURFACE : 0x44FF0000;
+        int headerFg = avail ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.DANGER;
+        RoundedRect.fill(gui, x, cy, w, 20, 4, headerBg);
+        RoundedRect.border(gui, x, cy, w, 20, 4, 1, avail ? PWPTheme.Colors.BORDER : PWPTheme.Colors.DANGER);
+        gui.drawString(f, kit.name().toUpperCase(), x + pad + 2, cy + 5, headerFg, false);
         cy += 24;
 
         // Slots: PRIMARY, SECONDARY, THROWABLE, EQUIPMENT → mapped to Squad: PRIMARY WEAPON, SIDE ARM, SPECIAL, BACKPACK

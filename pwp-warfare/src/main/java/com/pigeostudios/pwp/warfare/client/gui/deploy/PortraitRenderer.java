@@ -7,17 +7,10 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 public class PortraitRenderer {
 
-    private final ItemStack[] saved = new ItemStack[6];
-    private final ItemStack[] fakeArmor = {
-        new ItemStack(Items.IRON_BOOTS),
-        new ItemStack(Items.IRON_LEGGINGS),
-        new ItemStack(Items.IRON_CHESTPLATE),
-        new ItemStack(Items.IRON_HELMET),
-    };
+    private final ItemStack[] saved = new ItemStack[2];
     private boolean inSwap;
 
     public void render(GuiGraphics gui, int x, int y, int w, int h, int mx, int my, String desc, ItemStack weapon) {
@@ -49,23 +42,15 @@ public class PortraitRenderer {
 
     private void swap(net.minecraft.world.entity.player.Player p, ItemStack weapon) {
         if (inSwap) return; inSwap = true;
-        for (int i = 0; i < 4; i++) {
-            var slot = EquipmentSlot.byTypeAndIndex(EquipmentSlot.Type.ARMOR, i);
-            saved[i] = p.getItemBySlot(slot);
-            p.setItemSlot(slot, fakeArmor[i]);
-        }
-        saved[4] = p.getItemBySlot(EquipmentSlot.MAINHAND);
-        saved[5] = p.getItemBySlot(EquipmentSlot.OFFHAND);
-        p.setItemSlot(EquipmentSlot.MAINHAND, weapon.isEmpty() ? saved[4] : weapon.copy());
+        saved[0] = p.getItemBySlot(EquipmentSlot.MAINHAND);
+        saved[1] = p.getItemBySlot(EquipmentSlot.OFFHAND);
+        p.setItemSlot(EquipmentSlot.MAINHAND, weapon.isEmpty() ? saved[0] : weapon.copy());
         p.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
     }
 
     private void restore(net.minecraft.world.entity.player.Player p) {
         if (!inSwap) return; inSwap = false;
-        for (int i = 0; i < 4; i++) {
-            p.setItemSlot(EquipmentSlot.byTypeAndIndex(EquipmentSlot.Type.ARMOR, i), saved[i]);
-        }
-        p.setItemSlot(EquipmentSlot.MAINHAND, saved[4]);
-        p.setItemSlot(EquipmentSlot.OFFHAND, saved[5]);
+        p.setItemSlot(EquipmentSlot.MAINHAND, saved[0]);
+        p.setItemSlot(EquipmentSlot.OFFHAND, saved[1]);
     }
 }

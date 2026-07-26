@@ -149,8 +149,8 @@ public class PacketRespawnRequest {
                        player.setRespawnPosition(targetDimension, targetPos, 0.0F, true, false);
                        GameLogicEvents.pendingSpawnPositions.put(player.getUUID(), targetPos);
                        if (!player.isAlive()) {
-                          player.setHealth(20.0f);
-                          player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
+                          ServerPlayer newPlayer = player.server.getPlayerList().respawn(player, true);
+                          newPlayer.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, newPlayer.getYRot(), 0.0F);
                        } else {
                           player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
                        }

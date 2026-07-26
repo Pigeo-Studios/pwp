@@ -89,21 +89,13 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
         gui.drawString(f, "Desc:", x + 6, y + 34, PWPTheme.Colors.TEXT_DIM, false);
 
-        // Category
-        gui.drawString(f, "Cat:", x + 6, y + 48, PWPTheme.Colors.TEXT_DIM, false);
-        for (int ci = 0; ci < CATEGORIES.size(); ci++) {
-            boolean sel = ci == categoryIndex;
-            int bx = x + 32 + ci * 50;
-            int bw = 48;
-            gui.fill(bx, y + 48, bx + bw, y + 62, sel ? 0x44C8812A : 0x2212151A);
-            gui.renderOutline(bx, y + 48, bw, 14, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-            gui.drawCenteredString(f, CATEGORIES.get(ci).substring(0, Math.min(9, CATEGORIES.get(ci).length())),
-                bx + bw / 2, y + 49, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
-        }
+        // Category display (read-only)
+        String catLabel = menu.category != null && !menu.category.isEmpty() ? menu.category : "INFANTRY";
+        gui.drawString(f, "Cat: " + catLabel, x + 6, y + 48, PWPTheme.Colors.TEXT_ACCENT, false);
 
         // Leader toggle
         int lx = x + 6;
-        int ly = y + 67;
+        int ly = y + 60;
         gui.fill(lx, ly, lx + 12, ly + 12, menu.isLeaderOnly ? 0x44C8812A : 0x2212151A);
         gui.renderOutline(lx, ly, 12, 12, menu.isLeaderOnly ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
         if (menu.isLeaderOnly) gui.drawString(f, "\u2713", lx + 2, ly, PWPTheme.Colors.ACCENT, false);
@@ -170,7 +162,7 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         try { menu.maxPerTeam = Integer.parseInt(maxTeamBox.getValue()); } catch (Exception ignored) {}
         try { menu.maxPerSquad = Integer.parseInt(maxSquadBox.getValue()); } catch (Exception ignored) {}
         try { menu.minSquadPlayers = Integer.parseInt(minPlayersBox.getValue()); } catch (Exception ignored) {}
-        menu.category = CATEGORIES.get(categoryIndex);
+        menu.category = menu.category != null ? menu.category : "INFANTRY";
         menu.description = descBox.getValue();
 
         String team = menu.team;
@@ -195,17 +187,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (button == 0) {
-            // Category buttons
-            int catY = topPos + 48;
-            if (my >= catY && my <= catY + 14) {
-                for (int ci = 0; ci < CATEGORIES.size(); ci++) {
-                    int bx = leftPos + 32 + ci * 50;
-                    if (mx >= bx && mx <= bx + 48) {
-                        categoryIndex = ci;
-                        return true;
-                    }
-                }
-            }
             // Leader toggle
             int lx = leftPos + 6;
             int ly = topPos + 67;
