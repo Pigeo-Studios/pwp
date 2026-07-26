@@ -101,7 +101,14 @@ public class RoleGrid {
         RenderSystem.enableBlend();
         if (!avail) RenderSystem.setShaderColor(0.45f, 0.45f, 0.45f, 1f);
         int ix = x + (size - iconS) / 2, iy = y + (size - iconS) / 2 - 2;
-        gui.blit(ic, ix, iy, 0, 0, iconS, iconS, iconS, iconS);
+        // Try blit the icon, if texture is missing the render will just be blank
+        try {
+            gui.blit(ic, ix, iy, 0, 0, iconS, iconS, iconS, iconS);
+        } catch (Exception e) {
+            // Fallback: draw first letter
+            String letter = kit.name().isEmpty() ? "?" : kit.name().substring(0, 1).toUpperCase();
+            gui.drawCenteredString(PWPTheme.Fonts.display(), letter, x + size / 2, iy + 2, PWPTheme.Colors.TEXT_PRIMARY);
+        }
         RenderSystem.setShaderColor(1, 1, 1, 1);
 
         if (kit.maxInTeam() > 0) {

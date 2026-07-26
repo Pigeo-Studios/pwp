@@ -88,6 +88,17 @@ public class DeployData {
         if (serverKits != null && !serverKits.isEmpty()) {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
                 String[] meta = KIT_META.get(dto.name);
+                if (meta == null) {
+                    // Try loose match
+                    String dtoLower = dto.name.toLowerCase().replace(" ", "_").replace("-", "_");
+                    for (var entry : KIT_META.entrySet()) {
+                        String keyLower = entry.getKey().toLowerCase().replace(" ", "_").replace("-", "_");
+                        if (keyLower.equals(dtoLower) || keyLower.replace("_", "").equals(dtoLower.replace("_", ""))) {
+                            meta = entry.getValue();
+                            break;
+                        }
+                    }
+                }
                 String cat = (dto.category != null && !dto.category.isEmpty()) ? dto.category
                     : (meta != null ? meta[0] : "INFANTRY");
                 String desc = (dto.description != null && !dto.description.isEmpty()) ? dto.description

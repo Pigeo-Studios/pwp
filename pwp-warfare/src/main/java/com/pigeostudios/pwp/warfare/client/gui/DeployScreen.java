@@ -57,7 +57,7 @@ public class DeployScreen extends Screen {
     private int squadScrollOff;
 
     public DeployScreen() {
-        super(Component.literal("DEPLOYMENT"));
+        super(Component.literal("РАЗВЁРТЫВАНИЕ"));
         populateData();
         if (ClientData.availableKits.isEmpty() && !kitsRequested) {
             kitsRequested = true;
@@ -128,12 +128,12 @@ public class DeployScreen extends Screen {
     protected void init() {
         clearWidgets();
         selectSpawnBtn = addRenderableWidget(new PWPButton(width - 152, height - BOT_H + 6, 140, 24,
-            Component.literal("SELECT SPAWN"), b -> doDeploy(), PWPButton.Style.ACCENT));
+            Component.literal("ВОЗРОДИТЬСЯ"), b -> doDeploy(), PWPButton.Style.ACCENT));
         squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 70, 16, Component.literal("")));
         squadInput.setMaxLength(12);
         squadInput.visible = false;
-        createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 46, 16,
-            Component.literal("Create"), b -> createSquad(), PWPButton.Style.DARK));
+        createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 50, 18,
+            Component.literal("Создать"), b -> createSquad(), PWPButton.Style.DARK));
         createSquadBtn.visible = false;
         expandedSquads.add(1);
     }
@@ -149,6 +149,14 @@ public class DeployScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+        if (ClientData.deployRequested) {
+            var pCheck = Minecraft.getInstance().player;
+            if (pCheck != null && pCheck.isAlive() && !pCheck.isDeadOrDying()) {
+                ClientData.deployRequested = false;
+                Minecraft.getInstance().setScreen(null);
+                return;
+            }
+        }
         if (!ClientData.availableKits.isEmpty() && kitsRequested) {
             kitsRequested = false;
             populateData();
@@ -158,7 +166,7 @@ public class DeployScreen extends Screen {
         boolean isDead = p.isDeadOrDying();
         if (!isDead) {
             selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("ALIVE"));
+            selectSpawnBtn.setMessage(Component.literal("ЖИВ"));
             return;
         }
         long deathTime = ClientData.globalDeathTimestamp > 0
@@ -167,13 +175,13 @@ public class DeployScreen extends Screen {
         int sec = Math.max(0, DeployData.deployTimer - elapsed);
         if (sec > 0) {
             selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("WAIT " + String.format("%02d:%02d", sec / 60, sec % 60)));
+            selectSpawnBtn.setMessage(Component.literal("ЖДАТЬ " + String.format("%02d:%02d", sec / 60, sec % 60)));
         } else if (selectedSpawn.isEmpty()) {
             selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("SELECT SPAWN"));
+            selectSpawnBtn.setMessage(Component.literal("ВЫБРАТЬ ТОЧКУ"));
         } else {
             selectSpawnBtn.active = true;
-            selectSpawnBtn.setMessage(Component.literal("DEPLOY"));
+            selectSpawnBtn.setMessage(Component.literal("ВОЗРОДИТЬСЯ"));
         }
     }
 
@@ -188,7 +196,7 @@ public class DeployScreen extends Screen {
 
         // Tab bar
         gui.fill(0, TOP_H, width, TOP_H + TAB_H, 0xFF15191E);
-        String[] tabNames = {"TEAMS", "DEPLOY", "SERVER RULES"};
+        String[] tabNames = {"КОМАНДЫ", "РАЗВЁРТЫВАНИЕ", "ПРАВИЛА"};
         int tabW = width / 3;
         for (int i = 0; i < 3; i++) {
             boolean sel = i == activeTab;
@@ -209,7 +217,7 @@ public class DeployScreen extends Screen {
         // Title bar (top)
         var f = PWPTheme.Fonts.display();
         gui.drawString(f, DeployData.mapName, 8, 8, PWPTheme.Colors.TEXT_PRIMARY, false);
-        gui.drawCenteredString(f, "DEPLOYMENT", width / 2, 8, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(f, "РАЗВЁРТЫВАНИЕ", width / 2, 8, PWPTheme.Colors.TEXT_ACCENT);
         String faction = DeployData.blueFaction.toUpperCase();
         int fw = f.width(faction) + 20;
         gui.fill(width - fw - 8, 4, width - 8, 30, PWPTheme.Colors.TEAM_BLUE);
@@ -322,7 +330,7 @@ public class DeployScreen extends Screen {
                 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
             int elapsed = (int)((System.currentTimeMillis() - deathTime) / 1000);
             int sec = Math.max(0, DeployData.deployTimer - elapsed);
-            String timerStr = sec > 0 ? String.format("RESPAWN IN %02d:%02d", sec / 60, sec % 60) : "READY TO DEPLOY";
+            String timerStr = sec > 0 ? String.format("ОЖИДАНИЕ %02d:%02d", sec / 60, sec % 60) : "ГОТОВО К ВОЗРОЖДЕНИЮ";
             gui.drawCenteredString(f, timerStr, width / 2, bbY + 10, PWPTheme.Colors.TEXT_PRIMARY);
         }
 
@@ -450,7 +458,6 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mod) {
-        if (key == 50) { minecraft.setScreen(new DeployMapScreen(this)); return true; }
         if (key == 257 && mySquadId < 0 && createSquadBtn.visible) { createSquad(); return true; }
         return super.keyPressed(key, scan, mod);
     }
@@ -480,9 +487,10 @@ public class DeployScreen extends Screen {
     }
 
     private void doDeploy() {
+        PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
         ClientData.deployRequested = true;
-        Minecraft.getInstance().setScreen(null);
+        // Screen закроется в tick() когда игрок станет alive
     }
 
     @Override public boolean isPauseScreen() { return false; }

@@ -13,7 +13,7 @@ public class WarfareDeathScreen extends Screen {
     private boolean deployOpened;
 
     public WarfareDeathScreen(Component cause, boolean hardcore) {
-        super(Component.literal("YOU ARE DEAD"));
+        super(Component.literal("ВЫ МЕРТВЫ"));
         ClientData.globalDeathTimestamp = System.currentTimeMillis();
         ClientData.deathFadeStartTime = System.currentTimeMillis();
     }
@@ -35,7 +35,7 @@ public class WarfareDeathScreen extends Screen {
                 gui.pose().translate(0, 0, 1000);
                 int a = (int)(alpha * 200);
                 gui.fill(0, 0, width, height, a << 24);
-                gui.drawCenteredString(PWPTheme.Fonts.display(), "YOU ARE DEAD",
+                gui.drawCenteredString(PWPTheme.Fonts.display(), "ВЫ МЕРТВЫ",
                     width / 2, height / 2 - 20, ((int)(alpha * 255) << 24) | 0xFF4444);
                 gui.pose().popPose();
                 RenderSystem.disableBlend();

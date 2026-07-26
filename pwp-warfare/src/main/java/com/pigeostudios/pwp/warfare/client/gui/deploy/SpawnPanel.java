@@ -43,9 +43,9 @@ public class SpawnPanel {
         boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
 
         int bg = selected ? 0x44C8812A : (hover && !blocked ? 0x22FFFFFF : 0);
-        int border = selected ? PWPTheme.Colors.ACCENT : (hover && !blocked ? PWPTheme.Colors.BORDER_FOCUS : 0);
+        int border = selected ? PWPTheme.Colors.ACCENT : (hover && !blocked ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
         RoundedRect.fill(gui, x, y, w, h, 5, bg);
-        if (selected || hover) RoundedRect.border(gui, x, y, w, h, 5, 1, border);
+        RoundedRect.border(gui, x, y, w, h, 5, 1, border);
 
         int iconS = 28, ix = x + 6, iy = y + (h - iconS) / 2;
         gui.fill(ix, iy, ix + iconS, iy + iconS, 0xFF1A1E26);
