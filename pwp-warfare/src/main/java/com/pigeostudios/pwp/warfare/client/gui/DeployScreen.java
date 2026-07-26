@@ -367,9 +367,18 @@ public class DeployScreen extends Screen {
             String sp = spawns.mouseClicked(mx, my, btn, lw + 4, spawnY, cw - 8);
             if (sp != null) { selectedSpawn = sp; return true; }
 
-            // MAP TOGGLE
+            // RIGHT MAP click
             int loadoutX = lw + cw;
             int ch = conH();
+            int mapW = width - lw - cw;
+            if (showRightMap && btn == 0 && mx >= loadoutX && mx <= loadoutX + mapW && my >= conY && my <= conY + ch) {
+                String spawnId = getSpawnAt(rightMapRenderer, mx, my);
+                if (spawnId != null) { selectedSpawn = spawnId; return true; }
+                rightMapRenderer.mouseClicked(mx, my, btn);
+                return true;
+            }
+
+            // MAP TOGGLE
             int toggleX = loadoutX + 4;
             if (my >= conY + ch - 14 && my <= conY + ch && mx >= toggleX && mx <= toggleX + 60) {
                 showRightMap = !showRightMap;
@@ -378,6 +387,21 @@ public class DeployScreen extends Screen {
         }
 
         return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
+        int loadoutX = sqW() + roW();
+        if (showRightMap && mx >= loadoutX) {
+            rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
+        }
+        return super.mouseDragged(mx, my, btn, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int btn) {
+        rightMapRenderer.mouseReleased(btn);
+        return super.mouseReleased(mx, my, btn);
     }
 
     @Override
@@ -393,6 +417,30 @@ public class DeployScreen extends Screen {
     public boolean keyPressed(int key, int scan, int mod) {
         if (key == 50) { minecraft.setScreen(new DeployMapScreen(this)); return true; }
         return super.keyPressed(key, scan, mod);
+    }
+
+    private String getSpawnAt(WarfareMapRenderer renderer, double mx, double my) {
+        var mc = Minecraft.getInstance();
+        if (mc.player == null || !renderer.isMouseOver(mx, my)) return null;
+        double bpp = renderer.getBlocksPerPixel();
+        double cx = renderer.getCenterX(mc.player);
+        double cz = renderer.getCenterZ(mc.player);
+        int mapCX = renderer.mapX + renderer.mapSize / 2;
+        int mapCY = renderer.mapY + renderer.mapSize / 2;
+
+        String closestId = null;
+        double closestDist = 15;
+        for (DeployData.SpawnPoint sp : DeployData.spawns) {
+            double sx = mapCX + (sp.pos().getX() - cx) / bpp;
+            double sy = mapCY + (sp.pos().getZ() - cz) / bpp;
+            double dist = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
+            boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
+            if (dist < closestDist && !blocked) {
+                closestDist = dist;
+                closestId = sp.id();
+            }
+        }
+        return closestId;
     }
 
     private void doDeploy() {

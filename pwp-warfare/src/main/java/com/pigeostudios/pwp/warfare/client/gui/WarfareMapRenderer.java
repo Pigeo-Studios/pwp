@@ -41,10 +41,10 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 public class WarfareMapRenderer implements AutoCloseable {
    private static final Map<String, ResourceLocation> MAP_ICONS_CACHE = new HashMap<>();
    private static final ResourceLocation MATS_ICON = new ResourceLocation("pwpwarfare", "textures/gui/mats_icon.png");
-   public String selectedSpawnId = "";
-   private int mapX;
-   private int mapY;
-   private int mapSize;
+    public String selectedSpawnId = "";
+    public int mapX;
+    public int mapY;
+    public int mapSize;
    private double mapPanX = 0.0;
    private double mapPanZ = 0.0;
    private boolean isDraggingMap = false;

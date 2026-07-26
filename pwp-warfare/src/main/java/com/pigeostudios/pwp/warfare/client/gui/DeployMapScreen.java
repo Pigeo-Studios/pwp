@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -39,23 +40,50 @@ public class DeployMapScreen extends Screen {
 
         mapRenderer.render(gui, mx, my, pt);
 
-        String hint = "Drag to pan  \u2022  Scroll to zoom  \u2022  Click spawn";
+        String hint = "Drag to pan  \u2022  Scroll to zoom  \u2022  Click spawn to select";
         gui.drawString(f, hint, width / 2 - f.width(hint) / 2, height - 12, PWPTheme.Colors.TEXT_DIM, false);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        if (btn == 0 && mapRenderer.mouseClicked(mx, my, btn)) {
-            if (parent != null) {
-                parent.selectedSpawn = mapRenderer.selectedSpawnId;
+        if (btn == 0) {
+            String spawnId = getSpawnAt(mx, my);
+            if (spawnId != null) {
+                if (parent != null) parent.selectedSpawn = spawnId;
+                if (parent != null) minecraft.setScreen(parent);
+                return true;
             }
-            if (parent != null) minecraft.setScreen(parent);
+            mapRenderer.mouseClicked(mx, my, btn);
             return true;
         }
-        if (btn == 0) {
+        if (btn == 1) {
             mapRenderer.mouseClicked(mx, my, btn);
         }
         return false;
+    }
+
+    private String getSpawnAt(double mx, double my) {
+        var mc = Minecraft.getInstance();
+        if (mc.player == null || !mapRenderer.isMouseOver(mx, my)) return null;
+        double bpp = mapRenderer.getBlocksPerPixel();
+        double cx = mapRenderer.getCenterX(mc.player);
+        double cz = mapRenderer.getCenterZ(mc.player);
+        int mapCX = mapRenderer.mapX + mapRenderer.mapSize / 2;
+        int mapCY = mapRenderer.mapY + mapRenderer.mapSize / 2;
+
+        String closestId = null;
+        double closestDist = 15;
+        for (DeployData.SpawnPoint sp : DeployData.spawns) {
+            double sx = mapCX + (sp.pos().getX() - cx) / bpp;
+            double sy = mapCY + (sp.pos().getZ() - cz) / bpp;
+            double dist = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
+            boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
+            if (dist < closestDist && !blocked) {
+                closestDist = dist;
+                closestId = sp.id();
+            }
+        }
+        return closestId;
     }
 
     @Override
