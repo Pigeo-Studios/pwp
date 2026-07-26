@@ -44,7 +44,8 @@ public class LoadoutPanel {
                 case "PRIMARY" -> "PRIMARY WEAPON";
                 case "SECONDARY" -> "SIDE ARM";
                 case "THROWABLE" -> "THROWABLE";
-                case "EQUIPMENT" -> "BACKPACK";
+                case "SPECIAL" -> "SPECIAL";
+                case "BACKPACK" -> "BACKPACK";
                 default -> slot.label();
             };
 

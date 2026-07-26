@@ -56,7 +56,12 @@ public class SpawnPanel {
 
         int tx = ix + iconS + 10;
         int tc = blocked ? PWPTheme.Colors.TEXT_DIM : (selected ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
-        gui.drawString(PWPTheme.Fonts.display(), sp.name(), tx, y + 4, tc, false);
+        // Grid coords like Squad: "Main Base (G7-8-8)"
+        int gx = sp.pos().getX() / 100;
+        int gz = sp.pos().getZ() / 100;
+        char gridLetter = (char)('A' + Math.min(25, Math.max(0, (gz + 10))));
+        String gridCoord = gridLetter + "" + (gx + 10);
+        gui.drawString(PWPTheme.Fonts.display(), sp.name() + " (" + gridCoord + ")", tx, y + 4, tc, false);
 
         String status; int sc;
         switch (sp.status()) {

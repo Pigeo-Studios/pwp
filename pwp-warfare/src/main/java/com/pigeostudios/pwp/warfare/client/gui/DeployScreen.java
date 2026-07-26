@@ -262,7 +262,20 @@ public class DeployScreen extends Screen {
                 createSquadBtn.setY(bottomY + 1);
                 createSquadBtn.visible = true;
             }
+            // UNASSIGNED — players not in any squad
             gui.drawString(f, "БЕЗ ОТРЯДА", sqLeft, bottomY + 15, PWPTheme.Colors.TEXT_DIM, false);
+            Set<String> allInSquads = new HashSet<>();
+            for (var sq : DeployData.squads) {
+                allInSquads.addAll(sq.members());
+            }
+            int uy = bottomY + 26;
+            for (var entry : ClientData.mapPlayers.entrySet()) {
+                if (uy > bottomY + 50) break;
+                if (!allInSquads.contains(entry.getKey())) {
+                    gui.drawString(f, "  " + entry.getKey(), sqLeft, uy, PWPTheme.Colors.TEXT_PRIMARY, false);
+                    uy += 10;
+                }
+            }
 
             // CENTER TOP: ROLES (60%)
             int roleH = ch * 55 / 100;
@@ -273,17 +286,23 @@ public class DeployScreen extends Screen {
             int spawnH = ch - roleH - 6;
             spawns.render(gui, spawnX + 4, spawnY, cw - 8, spawnH, mx, my, selectedSpawn);
 
-            // System messages area (below spawns in same col)
+            // System messages area (below spawns in same col) — clipped
             int msgY = spawnY + spawnH - 50;
             gui.drawString(f, "СООБЩЕНИЯ", spawnX + 4, msgY, PWPTheme.Colors.TEXT_DIM, false);
+            gui.enableScissor(spawnX + 4, msgY + 12, spawnX + cw - 8, spawnY + spawnH - 18);
             int msgCy = msgY + 12;
             int chatCount = 0;
             for (Component chatMsg : ClientData.menuChatHistory) {
-                if (msgCy > spawnY + spawnH - 18 || chatCount >= 3) break;
-                gui.drawString(f, chatMsg.getString(), spawnX + 6, msgCy, PWPTheme.Colors.TEXT_SECONDARY, false);
+                if (msgCy > spawnY + spawnH - 18 || chatCount >= 4) break;
+                String txt = chatMsg.getString();
+                if (PWPTheme.Fonts.display().width(txt) > cw - 20) {
+                    txt = PWPTheme.Fonts.display().plainSubstrByWidth(txt, cw - 24) + "…";
+                }
+                gui.drawString(f, txt, spawnX + 6, msgCy, PWPTheme.Colors.TEXT_SECONDARY, false);
                 msgCy += 10;
                 chatCount++;
             }
+            gui.disableScissor();
 
             // Chat channel indicator
             gui.drawString(f, "[TEAM] Нажми Tab для смены канала",

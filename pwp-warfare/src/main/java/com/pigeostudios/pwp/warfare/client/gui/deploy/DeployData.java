@@ -134,7 +134,8 @@ public class DeployData {
                 new LoadoutSlot("PRIMARY", List.of(rifleM4, rifleAk, rifleM16, i % 2 == 0 ? rifleAug : rifleM4), 0),
                 new LoadoutSlot("SECONDARY", List.of(pistolM9), 0),
                 new LoadoutSlot("THROWABLE", List.of(frag, smoke, i % 3 == 0 ? smokeRed : smoke), 0),
-                new LoadoutSlot("EQUIPMENT", List.of(bag, bandage, bino), 0)
+                new LoadoutSlot("SPECIAL", List.of(bandage), 0),
+                new LoadoutSlot("BACKPACK", List.of(bag, bino), 0)
             );
             kits.add(new KitRecord(name, meta[0], meta[1], avail, "", 0, -1, loadout));
             i++;
@@ -146,7 +147,8 @@ public class DeployData {
         var primary = new ArrayList<LoadoutOption>();
         var secondary = new ArrayList<LoadoutOption>();
         var throwable = new ArrayList<LoadoutOption>();
-        var equipment = new ArrayList<LoadoutOption>();
+        var special = new ArrayList<LoadoutOption>();
+        var backpack = new ArrayList<LoadoutOption>();
 
         for (int i = 0; i < Math.min(9, items.size()); i++) {
             ItemStack stack = items.get(i);
@@ -157,13 +159,15 @@ public class DeployData {
             if (i == 0) primary.add(opt);
             else if (i == 1) secondary.add(opt);
             else if (i == 2) throwable.add(opt);
-            else equipment.add(opt);
+            else if (i == 3) special.add(opt);
+            else backpack.add(opt);
         }
 
         if (!primary.isEmpty()) slots.add(new LoadoutSlot("PRIMARY", primary, 0));
         if (!secondary.isEmpty()) slots.add(new LoadoutSlot("SECONDARY", secondary, 0));
         if (!throwable.isEmpty()) slots.add(new LoadoutSlot("THROWABLE", throwable, 0));
-        if (!equipment.isEmpty()) slots.add(new LoadoutSlot("EQUIPMENT", equipment, 0));
+        if (!special.isEmpty()) slots.add(new LoadoutSlot("SPECIAL", special, 0));
+        if (!backpack.isEmpty()) slots.add(new LoadoutSlot("BACKPACK", backpack, 0));
         return slots;
     }
 
