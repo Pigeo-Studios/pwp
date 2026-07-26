@@ -34,21 +34,23 @@ public class KitRepository {
     }
 
     public static void save(KitDefinition kit) throws SQLException {
-        String sql = "INSERT INTO kit_definitions (faction, kit_name, leader_only, max_per_team, max_per_squad, min_squad_players, items, slot_skins) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
-                + "ON DUPLICATE KEY UPDATE leader_only=VALUES(leader_only), max_per_team=VALUES(max_per_team), "
+        String sql = "INSERT INTO kit_definitions (faction, kit_name, category, description, leader_only, max_per_team, max_per_squad, min_squad_players, items, slot_skins) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                + "ON DUPLICATE KEY UPDATE category=VALUES(category), description=VALUES(description), leader_only=VALUES(leader_only), max_per_team=VALUES(max_per_team), "
                 + "max_per_squad=VALUES(max_per_squad), min_squad_players=VALUES(min_squad_players), "
                 + "items=VALUES(items), slot_skins=VALUES(slot_skins)";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, kit.faction);
             ps.setString(2, kit.kitName);
-            ps.setBoolean(3, kit.leaderOnly);
-            ps.setInt(4, kit.maxPerTeam);
-            ps.setInt(5, kit.maxPerSquad);
-            ps.setInt(6, kit.minSquadPlayers);
-            ps.setString(7, kit.items);
-            ps.setString(8, kit.slotSkins);
+            ps.setString(3, kit.category);
+            ps.setString(4, kit.description);
+            ps.setBoolean(5, kit.leaderOnly);
+            ps.setInt(6, kit.maxPerTeam);
+            ps.setInt(7, kit.maxPerSquad);
+            ps.setInt(8, kit.minSquadPlayers);
+            ps.setString(9, kit.items);
+            ps.setString(10, kit.slotSkins);
             ps.executeUpdate();
         }
     }
@@ -78,6 +80,10 @@ public class KitRepository {
         KitDefinition k = new KitDefinition();
         k.faction = rs.getString("faction");
         k.kitName = rs.getString("kit_name");
+        k.category = rs.getString("category");
+        if (k.category == null || k.category.isEmpty()) k.category = "INFANTRY";
+        k.description = rs.getString("description");
+        if (k.description == null) k.description = "";
         k.leaderOnly = rs.getBoolean("leader_only");
         k.maxPerTeam = rs.getInt("max_per_team");
         k.maxPerSquad = rs.getInt("max_per_squad");

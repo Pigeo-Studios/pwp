@@ -810,16 +810,18 @@ public class WarfareWorldData extends SavedData {
       }
    }
 
-   public static class KitInfo {
-      public String name;
-      public NonNullList<ItemStack> inventory = NonNullList.withSize(49, ItemStack.EMPTY);
-      public boolean[] resupplyFlags = new boolean[49];
-      public boolean[] saveNbtFlags = new boolean[49];
-      public boolean isLeaderOnly = false;
-      public int maxPerTeam = -1;
-      public int maxPerSquad = -1;
-      public int minSquadPlayers = 0;
-      public Map<Integer, List<String>> slotSkins = new HashMap<>();
+    public static class KitInfo {
+       public String name;
+       public String category = "INFANTRY";
+       public String description = "";
+       public NonNullList<ItemStack> inventory = NonNullList.withSize(49, ItemStack.EMPTY);
+       public boolean[] resupplyFlags = new boolean[49];
+       public boolean[] saveNbtFlags = new boolean[49];
+       public boolean isLeaderOnly = false;
+       public int maxPerTeam = -1;
+       public int maxPerSquad = -1;
+       public int minSquadPlayers = 0;
+       public Map<Integer, List<String>> slotSkins = new HashMap<>();
 
       public KitInfo(String name) {
          this.name = name;
@@ -827,8 +829,10 @@ public class WarfareWorldData extends SavedData {
 
       public CompoundTag save() {
          CompoundTag t = new CompoundTag();
-         t.putString("Name", this.name);
-         t.putBoolean("LeaderOnly", this.isLeaderOnly);
+          t.putString("Name", this.name);
+          t.putString("Category", this.category);
+          t.putString("Description", this.description);
+          t.putBoolean("LeaderOnly", this.isLeaderOnly);
          t.putInt("MaxTeam", this.maxPerTeam);
          t.putInt("MaxSquad", this.maxPerSquad);
          t.putInt("MinSquadPlayers", this.minSquadPlayers);
@@ -865,11 +869,13 @@ public class WarfareWorldData extends SavedData {
          k.isLeaderOnly = t.getBoolean("LeaderOnly");
          k.maxPerTeam = t.getInt("MaxTeam");
          k.maxPerSquad = t.getInt("MaxSquad");
-         if (t.contains("MinSquadPlayers")) {
-            k.minSquadPlayers = t.getInt("MinSquadPlayers");
-         }
+          if (t.contains("MinSquadPlayers")) {
+             k.minSquadPlayers = t.getInt("MinSquadPlayers");
+          }
+          if (t.contains("Category")) k.category = t.getString("Category");
+          if (t.contains("Description")) k.description = t.getString("Description");
 
-         ListTag items = t.getList("Items", 10);
+          ListTag items = t.getList("Items", 10);
 
          for (int i = 0; i < items.size(); i++) {
             CompoundTag itemTag = items.getCompound(i);

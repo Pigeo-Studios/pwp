@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.client;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
+import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -94,7 +95,9 @@ public class ClientData {
    public static boolean redRallyBlocked = false;
    public static boolean blueBleeding = false;
    public static boolean redBleeding = false;
-   public static long teamScreenLastClosed = 0L;
+    public static long teamScreenLastClosed = 0L;
+    public static long matchStartTime = 0L;
+    public static List<PacketOpenPlayerKitMenu.KitDTO> availableKits = new ArrayList<>();
    public static boolean teamSelectSent = false;
    public static long teamSelectSentTime = 0L;
    public static int RESPAWN_TIME = 10;

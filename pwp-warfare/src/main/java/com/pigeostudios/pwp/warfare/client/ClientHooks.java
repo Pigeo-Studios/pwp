@@ -86,9 +86,15 @@ public class ClientHooks {
       }
    }
 
-   public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
-      Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
-   }
+    public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
+       ClientData.availableKits = new ArrayList<>(kits);
+       var p = Minecraft.getInstance().player;
+       if (p != null && p.isDeadOrDying()) {
+          Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
+       } else {
+          Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
+       }
+    }
 
     public static void openKitTeamSelect() {
         Minecraft.getInstance().setScreen(new KitTeamSelectScreen());
@@ -204,6 +210,8 @@ public class ClientHooks {
         ClientData.clientHubs = new ArrayList<>(msg.hubs);
         ClientData.BLUE_FACTION = msg.blueFaction;
         ClientData.RED_FACTION = msg.redFaction;
+        if (msg.isGameStarted && ClientData.matchStartTime == 0L) ClientData.matchStartTime = System.currentTimeMillis();
+        if (!msg.isGameStarted) ClientData.matchStartTime = 0L;
         ClientData.isGameStarted = msg.isGameStarted;
         ClientData.allCapturePoints = new ArrayList<>(msg.capturePoints);
         ClientData.customBlueName = msg.blueCustomName;

@@ -3,6 +3,8 @@ package com.pwp.core.model;
 public class KitDefinition {
     public String faction;
     public String kitName;
+    public String category = "INFANTRY";
+    public String description = "";
     public boolean leaderOnly;
     public int maxPerTeam = -1;
     public int maxPerSquad = -1;
