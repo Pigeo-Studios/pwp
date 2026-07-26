@@ -12,6 +12,7 @@ import com.pigeostudios.pwp.warfare.item.SupplyTruckMarkerItem;
 import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
 import com.pigeostudios.pwp.warfare.network.PacketApplyMarker;
 import com.pigeostudios.pwp.warfare.network.PacketCMDVote;
+import com.pigeostudios.pwp.warfare.network.PacketVoiceChannelState;
 import com.pigeostudios.pwp.warfare.network.PacketConfirmArtStrike;
 import com.pigeostudios.pwp.warfare.network.PacketDebugFill;
 import com.pigeostudios.pwp.warfare.network.PacketDropCrate;
@@ -294,22 +295,40 @@ public class ClientEvents {
       }
    }
 
-   @SubscribeEvent
-   public static void onOpenGui(Opening event) {
-      if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
-         Component cause = null;
-         if (Minecraft.getInstance().player != null) {
-            cause = Minecraft.getInstance().player.getCombatTracker().getDeathMessage();
-         }
+    @SubscribeEvent
+    public static void onOpenGui(Opening event) {
+       if (ClientData.deployRequested) {
+          ClientData.deployRequested = false;
+          return;
+       }
+       if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
+          Component cause = null;
+          if (Minecraft.getInstance().player != null) {
+             cause = Minecraft.getInstance().player.getCombatTracker().getDeathMessage();
+          }
 
-         event.setNewScreen(new WarfareDeathScreen(cause, false));
-      }
-   }
+          event.setNewScreen(new WarfareDeathScreen(cause, false));
+       }
+    }
 
    @SubscribeEvent
    public static void onKeyInput(Key event) {
       Minecraft mc = Minecraft.getInstance();
       if (mc.player != null) {
+         if (ModKeyBindings.SQUAD_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
+            PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
+               event.getAction() == 1
+                  ? PacketVoiceChannelState.Channel.SQUAD
+                  : PacketVoiceChannelState.Channel.LOCAL
+            ));
+         }
+         if (ModKeyBindings.COMMAND_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
+            PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
+               event.getAction() == 1
+                  ? PacketVoiceChannelState.Channel.COMMAND
+                  : PacketVoiceChannelState.Channel.LOCAL
+            ));
+         }
          if (event.getKey() == 266 && event.getAction() == 1) {
             PacketHandler.INSTANCE.sendToServer(new PacketConfirmArtStrike(true));
          }

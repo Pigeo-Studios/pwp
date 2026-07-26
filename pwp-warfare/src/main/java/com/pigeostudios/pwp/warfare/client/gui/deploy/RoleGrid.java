@@ -88,6 +88,7 @@ public class RoleGrid {
                             DeployData.KitRecord kit, int mx, int my, String sel, boolean hovered) {
         boolean selected = sel.equals(kit.name());
         boolean avail = kit.available();
+        var f = PWPTheme.Fonts.display();
 
         int bg = selected ? 0x44C8812A : (hovered && avail ? PWPTheme.Colors.SURFACE_LIGHT :
             (avail ? PWPTheme.Colors.SURFACE : 0xFF181818));
@@ -106,7 +107,15 @@ public class RoleGrid {
         if (kit.maxInTeam() > 0) {
             String cnt = kit.inTeamCount() + "/" + kit.maxInTeam();
             int cc = kit.inTeamCount() >= kit.maxInTeam() ? PWPTheme.Colors.DANGER : PWPTheme.Colors.TEXT_SECONDARY;
-            gui.drawCenteredString(PWPTheme.Fonts.display(), cnt, x + size / 2, y + size - 8, cc);
+            gui.drawCenteredString(f, cnt, x + size / 2, y + size - 8, cc);
+        }
+
+        // Tooltip for unavailable
+        if (hovered && !avail && !kit.reason().isEmpty()) {
+            String reason = kit.reason();
+            int rw = f.width(reason) + 8;
+            gui.fill(x + size + 4, y, x + size + 4 + rw, y + 12, 0xDD000000);
+            gui.drawString(f, reason, x + size + 6, y + 2, PWPTheme.Colors.DANGER, false);
         }
     }
 

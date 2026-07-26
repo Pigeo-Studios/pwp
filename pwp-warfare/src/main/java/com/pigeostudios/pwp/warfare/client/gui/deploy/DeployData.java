@@ -87,8 +87,11 @@ public class DeployData {
 
         if (serverKits != null && !serverKits.isEmpty()) {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
-                String cat = dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY";
-                String desc = dto.description != null ? dto.description : "";
+                String[] meta = KIT_META.get(dto.name);
+                String cat = (dto.category != null && !dto.category.isEmpty()) ? dto.category
+                    : (meta != null ? meta[0] : "INFANTRY");
+                String desc = (dto.description != null && !dto.description.isEmpty()) ? dto.description
+                    : (meta != null ? meta[1] : "");
                 List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items);
                 int inTeam = 0, maxTeam = -1;
                 kits.add(new KitRecord(dto.name, cat, desc, dto.available,

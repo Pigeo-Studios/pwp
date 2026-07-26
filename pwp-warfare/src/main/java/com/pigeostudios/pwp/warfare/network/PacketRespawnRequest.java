@@ -147,9 +147,12 @@ public class PacketRespawnRequest {
 
                     if (useCustomSpawn && targetPos != null) {
                        player.setRespawnPosition(targetDimension, targetPos, 0.0F, true, false);
-                       player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
-                       if (!player.isAlive()) player.setHealth(20.0f);
                        GameLogicEvents.pendingSpawnPositions.put(player.getUUID(), targetPos);
+                       if (!player.isAlive()) {
+                          player.server.getPlayerList().respawn(player, true);
+                       } else {
+                          player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
+                       }
                    } else {
                      player.sendSystemMessage(Component.literal("Spawn point is currently unavailable!").withStyle(ChatFormatting.RED));
                   }

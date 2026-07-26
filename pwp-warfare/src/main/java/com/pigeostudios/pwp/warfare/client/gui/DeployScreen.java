@@ -480,8 +480,8 @@ public class DeployScreen extends Screen {
     }
 
     private void doDeploy() {
-        PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
+        ClientData.deployRequested = true;
         Minecraft.getInstance().setScreen(null);
     }
 

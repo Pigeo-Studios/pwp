@@ -104,7 +104,8 @@ public class ClientData {
    public static long globalDeathTimestamp = 0L;
    public static long deathFadeStartTime = 0L;
    public static boolean deathFadePlayed = false;
-   public static long downedTimestamp = 0L;
+    public static long downedTimestamp = 0L;
+    public static boolean deployRequested = false;
    public static int downedBleedoutDuration = 0;
    public static List<Component> menuChatHistory = new ArrayList<>();
    public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();

@@ -31,6 +31,14 @@ public class DeployMapScreen extends Screen {
         gui.fill(0, 0, width, height, 0xFF0A0C0E);
         var f = PWPTheme.Fonts.display();
 
+        // Update map renderer size for zoom to work
+        int mapSize = Math.min(width - 16, height - 60);
+        int mapX = (width - mapSize) / 2;
+        int mapY = 35;
+        if (mapRenderer.mapSize != mapSize || mapRenderer.mapX != mapX) {
+            mapRenderer.init(mapX, mapY, mapSize);
+        }
+
         gui.fill(0, 0, width, 30, 0xE60E1117);
         gui.drawCenteredString(f, "TACTICAL MAP  —  " + DeployData.mapName, width / 2, 9,
             PWPTheme.Colors.TEXT_ACCENT);
