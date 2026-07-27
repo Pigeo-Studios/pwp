@@ -164,14 +164,6 @@ public class DeployScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
-        if (ClientData.deployRequested) {
-            var pc = Minecraft.getInstance().player;
-            if (pc != null && pc.isAlive() && !pc.isDeadOrDying()) {
-                ClientData.deployRequested = false;
-                Minecraft.getInstance().setScreen(null);
-                return;
-            }
-        }
         if (!ClientData.availableKits.isEmpty() && kitsRequested) {
             kitsRequested = false;
             populateData();
@@ -534,7 +526,8 @@ public class DeployScreen extends Screen {
         if (selectedSpawn.isEmpty()) return;
         PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
-        ClientData.deployRequested = true;
+        ClientData.deployRequested = false;
+        Minecraft.getInstance().setScreen(null);
     }
 
     @Override public boolean isPauseScreen() { return false; }

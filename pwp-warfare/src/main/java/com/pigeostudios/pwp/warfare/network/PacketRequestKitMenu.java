@@ -22,74 +22,63 @@ public class PacketRequestKitMenu {
    }
 
    // РЎРѕР±РёСЂР°РµС‚ СЃРїРёСЃРѕРє РґРѕСЃС‚СѓРїРЅС‹С… РєРёС‚РѕРІ СЃ СѓС‡С‘С‚РѕРј Р»РёРјРёС‚РѕРІ Рё РѕС‚РїСЂР°РІР»СЏРµС‚ РєР»РёРµРЅС‚Сѓ
-   public static void handle(PacketRequestKitMenu msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         ServerPlayer player = ctx.get().getSender();
-         if (player != null && player.getTeam() != null) {
-            WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-            String teamName = player.getTeam().getName().toUpperCase();
-            String pName = player.getScoreboardName();
-            WarfareWorldData.Squad mySquad = null;
+    public static void sendKitMenu(ServerPlayer player, WarfareWorldData data) {
+       if (player.getTeam() == null) return;
+       String teamName = player.getTeam().getName().toUpperCase();
+       String pName = player.getScoreboardName();
+       WarfareWorldData.Squad mySquad = null;
 
-            for (WarfareWorldData.Squad s : data.squads) {
-               if (s.members.contains(pName)) {
-                  mySquad = s;
-                  break;
-               }
-            }
+       for (WarfareWorldData.Squad s : data.squads) {
+          if (s.members.contains(pName)) { mySquad = s; break; }
+       }
 
-            boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
-            List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
+       boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
+       List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
 
-            for (String kitName : WarfareWorldData.KIT_NAMES) {
-               WarfareWorldData.KitInfo kit = teamName.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
-               if (kit != null && (!kit.isLeaderOnly || amILeader || player.isCreative()) && (kit.maxPerTeam != 0 || kitName.equals("Unassigned"))) {
-                  int tCount = 0;
-                  int sCount = 0;
-
-                  for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-                     if (p != player && p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
-                        String cKit = p.getPersistentData().getString("WARFARE_CurrentKit");
-                        String pKit = p.getPersistentData().getString("WARFARE_PendingKit");
-                        if (cKit.equals(kitName) || pKit.equals(kitName)) {
-                           tCount++;
-                           if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) {
-                              sCount++;
-                           }
-                        }
-                     }
-                  }
-
-                  boolean available = true;
-                  String reason = "";
-                  if (kit.maxPerTeam > 0 && tCount >= kit.maxPerTeam) {
-                     available = false;
-                     reason = "Team Full (" + tCount + "/" + kit.maxPerTeam + ")";
-                  } else if (kit.maxPerSquad > 0 && sCount >= kit.maxPerSquad) {
-                     available = false;
-                     reason = "Squad Full (" + sCount + "/" + kit.maxPerSquad + ")";
-                  } else if (kit.minSquadPlayers > 0 && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) {
-                     available = false;
-                     reason = "Need " + kit.minSquadPlayers + " players in Squad";
-                  }
-
-                  String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
-                  if (myCurrentKit.isEmpty()) myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
-                  boolean isSelected = myCurrentKit.equals(kitName);
-                   List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
-                   PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems);
-                   if (kit.slotSkins != null) {
-                      for (var e : kit.slotSkins.entrySet()) {
-                         dto.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
-                      }
+       for (String kitName : WarfareWorldData.KIT_NAMES) {
+          WarfareWorldData.KitInfo kit = teamName.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
+          if (kit != null && (!kit.isLeaderOnly || amILeader || player.isCreative()) && (kit.maxPerTeam != 0 || kitName.equals("Unassigned"))) {
+             int tCount = 0, sCount = 0;
+             for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+                if (p != player && p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
+                   String cKit = p.getPersistentData().getString("WARFARE_CurrentKit");
+                   String pKit = p.getPersistentData().getString("WARFARE_PendingKit");
+                   if (cKit.equals(kitName) || pKit.equals(kitName)) {
+                      tCount++;
+                      if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) sCount++;
                    }
-                   dtoList.add(dto);
-               }
-            }
+                }
+             }
 
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketOpenPlayerKitMenu(dtoList));
-         }
-      });
-      ctx.get().setPacketHandled(true);
-   }
+             boolean available = true;
+             String reason = "";
+             if (kit.maxPerTeam > 0 && tCount >= kit.maxPerTeam) { available = false; reason = "Team Full (" + tCount + "/" + kit.maxPerTeam + ")"; }
+             else if (kit.maxPerSquad > 0 && sCount >= kit.maxPerSquad) { available = false; reason = "Squad Full (" + sCount + "/" + kit.maxPerSquad + ")"; }
+             else if (kit.minSquadPlayers > 0 && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) { available = false; reason = "Need " + kit.minSquadPlayers + " players in Squad"; }
+
+             String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
+             if (myCurrentKit.isEmpty()) myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+             boolean isSelected = myCurrentKit.equals(kitName);
+             List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
+             PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems);
+             if (kit.slotSkins != null) {
+                for (var e : kit.slotSkins.entrySet()) dto.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
+             }
+             dtoList.add(dto);
+          }
+       }
+
+       PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketOpenPlayerKitMenu(dtoList));
+    }
+
+    public static void handle(PacketRequestKitMenu msg, Supplier<Context> ctx) {
+       ctx.get().enqueueWork(() -> {
+          ServerPlayer player = ctx.get().getSender();
+          if (player != null && player.getTeam() != null) {
+             WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+             sendKitMenu(player, data);
+          }
+       });
+       ctx.get().setPacketHandled(true);
+    }
 }

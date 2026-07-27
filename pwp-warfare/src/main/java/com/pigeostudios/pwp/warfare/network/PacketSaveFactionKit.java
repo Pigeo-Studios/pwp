@@ -180,9 +180,17 @@ public class PacketSaveFactionKit {
                for (int i = 0; i < 49; i++) {
                   kit.inventory.set(i, menu.kitInventory.getItem(i).copy());
                }
-               data.setDirty();
-               PacketHandler.sendToAllClients(player.serverLevel(), data);
-            }
+                data.setDirty();
+                PacketHandler.sendToAllClients(player.serverLevel(), data);
+
+                // Broadcast updated kit menu to all players on the same team
+                String team = msg.faction.equalsIgnoreCase(data.blueFaction) ? "BLUE" : "RED";
+                for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+                   if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(team)) {
+                      PacketRequestKitMenu.sendKitMenu(p, data);
+                   }
+                }
+             }
 
             player.displayClientMessage(Component.translatable("gui.pwpwarfare.kit_editor.saved"), true);
          }

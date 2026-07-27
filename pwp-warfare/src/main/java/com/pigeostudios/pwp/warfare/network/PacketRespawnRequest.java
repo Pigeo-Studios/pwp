@@ -6,6 +6,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Supplier;
@@ -17,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -152,14 +154,17 @@ public class PacketRespawnRequest {
 
                     if (useCustomSpawn && targetPos != null) {
                         player.setRespawnPosition(targetDimension, targetPos, 0.0F, true, false);
-                        GameLogicEvents.pendingSpawnPositions.put(player.getUUID(), targetPos);
-                        if (!player.isAlive()) {
-                           player = player.server.getPlayerList().respawn(player, false);
-                        }
                         player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
                         if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
                            player.setGameMode(GameType.SURVIVAL);
                         }
+
+                        player.setHealth(20.0f);
+                        try {
+                           Field deadField = LivingEntity.class.getDeclaredField("dead");
+                           deadField.setAccessible(true);
+                           deadField.set(player, false);
+                        } catch (Exception ignored) {}
 
                         if (data.isGameStarted) {
                            if (player.getPersistentData().contains("WARFARE_PendingKit")) {

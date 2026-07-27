@@ -29,64 +29,68 @@ public class PacketRequestData {
         return new PacketRequestData(buf.readUtf(), buf.readUtf());
     }
 
-    public static void handle(PacketRequestData msg, Supplier<Context> ctx) {
+     public static void handle(PacketRequestData msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
 
             String jsonResult = "{}";
-            switch (msg.dataType) {
-                case "profile": {
-                    JsonObject profile = CoreServerApi.loadPlayer(player.getStringUUID());
-                    jsonResult = profile != null ? profile.toString() : "{}";
-                    break;
-                }
-                case "leaderboard": {
-                    JsonObject params = parseJson(msg.params);
-                    String orderBy = params.has("orderBy") ? params.get("orderBy").getAsString() : "kills";
-                    int page = params.has("page") ? params.get("page").getAsInt() : 1;
-                    JsonObject result = CoreServerApi.getLeaderboard(orderBy, page, 20);
-                    jsonResult = result != null ? result.toString() : "{}";
-                    break;
-                }
-                case "skins": {
-                    JsonObject skins = CoreServerApi.getSkins();
-                    jsonResult = skins != null ? skins.toString() : "{\"data\":[]}";
-                    break;
-                }
-                case "factions": {
-                    JsonObject factions = CoreServerApi.getFactions();
-                    jsonResult = factions != null ? factions.toString() : "{\"data\":[]}";
-                    break;
-                }
-                case "factionVehicles": {
-                    JsonObject params = parseJson(msg.params);
-                    String faction = params.has("faction") ? params.get("faction").getAsString() : "";
-                    if (!faction.isEmpty()) {
-                        JsonObject vehicles = CoreServerApi.getFactionVehicles(faction);
-                        jsonResult = vehicles != null ? vehicles.toString() : "{\"data\":[]}";
-                    }
-                    break;
-                }
-                case "factionVehicle": {
-                    JsonObject params = parseJson(msg.params);
-                    String faction = params.has("faction") ? params.get("faction").getAsString() : "";
-                    String vehicle = params.has("vehicle") ? params.get("vehicle").getAsString() : "";
-                    if (!faction.isEmpty() && !vehicle.isEmpty()) {
-                        JsonObject result = CoreServerApi.getFactionVehicle(faction, vehicle);
-                        jsonResult = result != null ? result.toString() : "{\"data\":{}}";
-                    }
-                    break;
-                }
-                case "factionKits": {
-                    JsonObject params = parseJson(msg.params);
-                    String faction = params.has("faction") ? params.get("faction").getAsString() : "";
-                    if (!faction.isEmpty()) {
-                        JsonObject kits = CoreServerApi.getFactionKits(faction);
-                        jsonResult = kits != null ? kits.toString() : "{\"data\":[]}";
-                    }
-                    break;
-                }
+            try {
+               switch (msg.dataType) {
+                  case "profile": {
+                      JsonObject profile = CoreServerApi.loadPlayer(player.getStringUUID());
+                      jsonResult = profile != null ? profile.toString() : "{}";
+                      break;
+                  }
+                  case "leaderboard": {
+                      JsonObject params = parseJson(msg.params);
+                      String orderBy = params.has("orderBy") ? params.get("orderBy").getAsString() : "kills";
+                      int page = params.has("page") ? params.get("page").getAsInt() : 1;
+                      JsonObject result = CoreServerApi.getLeaderboard(orderBy, page, 20);
+                      jsonResult = result != null ? result.toString() : "{}";
+                      break;
+                  }
+                  case "skins": {
+                      JsonObject skins = CoreServerApi.getSkins();
+                      jsonResult = skins != null ? skins.toString() : "{\"data\":[]}";
+                      break;
+                  }
+                  case "factions": {
+                      JsonObject factions = CoreServerApi.getFactions();
+                      jsonResult = factions != null ? factions.toString() : "{\"data\":[]}";
+                      break;
+                  }
+                  case "factionVehicles": {
+                      JsonObject params = parseJson(msg.params);
+                      String faction = params.has("faction") ? params.get("faction").getAsString() : "";
+                      if (!faction.isEmpty()) {
+                          JsonObject vehicles = CoreServerApi.getFactionVehicles(faction);
+                          jsonResult = vehicles != null ? vehicles.toString() : "{\"data\":[]}";
+                      }
+                      break;
+                  }
+                  case "factionVehicle": {
+                      JsonObject params = parseJson(msg.params);
+                      String faction = params.has("faction") ? params.get("faction").getAsString() : "";
+                      String vehicle = params.has("vehicle") ? params.get("vehicle").getAsString() : "";
+                      if (!faction.isEmpty() && !vehicle.isEmpty()) {
+                          JsonObject result = CoreServerApi.getFactionVehicle(faction, vehicle);
+                          jsonResult = result != null ? result.toString() : "{\"data\":{}}";
+                      }
+                      break;
+                  }
+                  case "factionKits": {
+                      JsonObject params = parseJson(msg.params);
+                      String faction = params.has("faction") ? params.get("faction").getAsString() : "";
+                      if (!faction.isEmpty()) {
+                          JsonObject kits = CoreServerApi.getFactionKits(faction);
+                          jsonResult = kits != null ? kits.toString() : "{\"data\":[]}";
+                      }
+                      break;
+                  }
+               }
+            } catch (Exception e) {
+               jsonResult = "{\"data\":[]}";
             }
 
             PacketHandler.INSTANCE.send(
