@@ -109,8 +109,9 @@ public class PacketHandler {
       );
       INSTANCE.registerMessage(id++, PacketPlaceMarker.class, PacketPlaceMarker::encode, PacketPlaceMarker::decode, PacketPlaceMarker::handle);
       INSTANCE.registerMessage(id++, PacketSyncMarker.class, PacketSyncMarker::encode, PacketSyncMarker::decode, PacketSyncMarker::handle);
-      INSTANCE.registerMessage(id++, PacketRemoveMarker.class, PacketRemoveMarker::encode, PacketRemoveMarker::decode, PacketRemoveMarker::handle);
-   }
+       INSTANCE.registerMessage(id++, PacketRemoveMarker.class, PacketRemoveMarker::encode, PacketRemoveMarker::decode, PacketRemoveMarker::handle);
+       INSTANCE.registerMessage(id++, PacketSyncSpawners.class, PacketSyncSpawners::encode, PacketSyncSpawners::decode, PacketSyncSpawners::handle);
+    }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {
       if (currentFaction != null && !currentFaction.equals("none") && !currentFaction.equals("bluefor") && !currentFaction.equals("redfor")) {

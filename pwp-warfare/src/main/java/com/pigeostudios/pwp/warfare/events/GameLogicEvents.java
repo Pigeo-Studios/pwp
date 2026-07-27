@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlock;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
+import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.item.ModItems;
@@ -19,6 +20,7 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncGameData;
 import com.pigeostudios.pwp.warfare.network.PacketSyncMapPlayers;
 import com.pigeostudios.pwp.warfare.network.PacketSyncPoint;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
+import com.pigeostudios.pwp.warfare.network.PacketSyncSpawners;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -714,11 +716,43 @@ public class GameLogicEvents {
                    }
                 }
 
-               if (globalTick % 20 == 0) {
-                  validateAndSync(level, false, blueIsBleeding, redIsBleeding);
-               }
+                if (globalTick % 20 == 0) {
+                   validateAndSync(level, false, blueIsBleeding, redIsBleeding);
+                }
 
-               if (data.countdownActive && data.countdownTicks == 1) {
+                if (globalTick % 20 == 0 && data.isGameStarted) {
+                    java.util.ArrayList<WarfareWorldData.SpawnerInfo> spawnerInfos = new java.util.ArrayList<>();
+                    var chunkSource = level.getChunkSource();
+                    try {
+                        var chunkMapField = net.minecraft.server.level.ServerChunkCache.class.getDeclaredField("chunkMap");
+                        chunkMapField.setAccessible(true);
+                        Object chunkMap = chunkMapField.get(chunkSource);
+                        var visibleField = chunkMap.getClass().getDeclaredField("visibleChunks");
+                        visibleField.setAccessible(true);
+                        java.util.Set<?> visible = (java.util.Set<?>)visibleField.get(chunkMap);
+                        java.util.Map<Long, net.minecraft.world.level.chunk.LevelChunk> loaded = new java.util.HashMap<>();
+                        for (Object holder : visible) {
+                            var getChunkMethod = holder.getClass().getMethod("getChunk");
+                            getChunkMethod.setAccessible(true);
+                            var chunk = (net.minecraft.world.level.chunk.LevelChunk)getChunkMethod.invoke(holder);
+                            if (chunk != null) loaded.put(chunk.getPos().toLong(), chunk);
+                        }
+                        for (net.minecraft.world.level.chunk.LevelChunk chunk : loaded.values()) {
+                           for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
+                              if (be instanceof VehicleSpawnerBlockEntity spawner) {
+                                 WarfareWorldData.SpawnerInfo info = spawner.getSpawnerInfo();
+                                 if (info != null) {
+                                    info.isAlive = data.markedVehicles.stream().anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(be.getBlockPos()));
+                                    spawnerInfos.add(info);
+                                 }
+                              }
+                           }
+                        }
+                    } catch (Exception ignored) {}
+                   PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSpawners(spawnerInfos));
+                }
+
+                if (data.countdownActive && data.countdownTicks == 1) {
                   long cdTicks = ((Integer)WarfareConfig.ART_STRIKE_COOLDOWN_MINUTES.get()).intValue() * 60L * 20L;
                   data.blueArtStrikeCD = level.getGameTime() + cdTicks;
                   data.redArtStrikeCD = level.getGameTime() + cdTicks;

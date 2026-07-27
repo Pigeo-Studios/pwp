@@ -65,7 +65,7 @@ public class SquadMapScreen extends Screen {
         renderLeftPanel(g, mx, my);
         renderTopBar(g, mx, my);
         map.render(g, mx, my, pt);
-        renderRightPanel(g);
+        renderRightPanel(g, mx, my);
         renderBottomBar(g);
         if (ctx.visible) ctx.render(g, mx, my);
         if (contextMenu.isVisible()) contextMenu.render(g, mx, my);
@@ -129,11 +129,11 @@ public class SquadMapScreen extends Screen {
         g.drawString(font, timer, ctrX + flagW + 6 + 12 + 6 + ticketW + 20, TOP_BAR_H / 2 - 4, 0xFFCCCCCC, false);
     }
 
-    private void renderRightPanel(GuiGraphics g) {
+    private void renderRightPanel(GuiGraphics g, int mx, int my) {
         int rightX = width - RIGHT_PANEL_W;
         g.fill(rightX, TOP_BAR_H, width, height - BOTTOM_BAR_H, 0xCC0A0C10);
         g.vLine(rightX, TOP_BAR_H, height - BOTTOM_BAR_H, 0xFF444444);
-        map.renderVehicleLegend(g, rightX + 4, TOP_BAR_H + 2, RIGHT_PANEL_W - 8);
+        map.renderVehicleLegend(g, rightX + 4, TOP_BAR_H + 2, RIGHT_PANEL_W - 8, mx, my);
     }
 
     private void renderBottomBar(GuiGraphics g) {
@@ -207,12 +207,14 @@ public class SquadMapScreen extends Screen {
         }
 
         if (btn == 1) {
+            LocalPlayer p = Minecraft.getInstance().player;
+            if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
             ctx.open((int)mx, (int)my, (cat, icon) -> {
                 int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
                 if ("arrow".equals(icon)) {
-                    if ("squad".equals(cat)) startPath(wx2, wz2, map.pathGroups);
-                    else if ("enemy".equals(cat)) startPath(wx2, wz2, map.pathGroupsRed);
-                    else startPath(wx2, wz2, map.pathGroupsYellow);
+                    if ("squad".equals(cat)) startPath(wx2, wz2, map.pathGroups());
+                    else if ("enemy".equals(cat)) startPath(wx2, wz2, map.pathGroupsRed());
+                    else startPath(wx2, wz2, map.pathGroupsYellow());
                     ctx.close();
                 } else place(cat, icon, wx2, wz2);
             });

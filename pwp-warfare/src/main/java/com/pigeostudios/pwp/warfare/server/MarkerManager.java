@@ -22,7 +22,15 @@ public class MarkerManager {
     public static void removeById(UUID id) { all.removeIf(m -> m.id.equals(id)); }
 
     public static void broadcastToTeam(ServerPlayer player, MapMarker m) {
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncMarker(m));
+        String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
+        MinecraftServer s = ServerLifecycleHooks.getCurrentServer();
+        if (s == null) return;
+        for (ServerPlayer p : s.getPlayerList().getPlayers()) {
+            String pt = p.getTeam() != null ? p.getTeam().getName() : "";
+            if (pt.equalsIgnoreCase(teamName)) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), new PacketSyncMarker(m));
+            }
+        }
     }
 
     public static void broadcastRemoval(UUID id) {

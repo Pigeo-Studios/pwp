@@ -44,10 +44,11 @@ public class SquadMapRenderer {
     private boolean isDraggingMap;
     private double lastMouseX, lastMouseY;
 
-    public final List<List<PathPoint>> pathGroups = new ArrayList<>();
-    public final List<List<PathPoint>> pathGroupsRed = new ArrayList<>();
-    public final List<List<PathPoint>> pathGroupsYellow = new ArrayList<>();
     public PathPoint previewStart, previewEnd;
+
+    public List<List<PathPoint>> pathGroups() { return com.pigeostudios.pwp.warfare.client.PathCache.groups; }
+    public List<List<PathPoint>> pathGroupsRed() { return com.pigeostudios.pwp.warfare.client.PathCache.groupsRed; }
+    public List<List<PathPoint>> pathGroupsYellow() { return com.pigeostudios.pwp.warfare.client.PathCache.groupsYellow; }
 
     private static final Map<String, ResourceLocation> MAP_ICONS_CACHE = new HashMap<>();
     private static final Map<String, ResourceLocation> TEX = new HashMap<>();
@@ -530,41 +531,114 @@ public class SquadMapRenderer {
         }
     }
 
-    public void renderVehicleLegend(GuiGraphics g, int panelX, int panelY, int panelW) {
-        if (ClientData.clientVehicles == null || ClientData.clientVehicles.isEmpty()) return;
+    public void renderVehicleLegend(GuiGraphics g, int panelX, int panelY, int panelW, int mx, int my) {
+        if (ClientData.clientSpawners == null || ClientData.clientSpawners.isEmpty()) return;
         var f = Minecraft.getInstance().font;
         int currentY = panelY + 4;
-        int titleColor = 0xFFCCCCCC;
         g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFF555555);
-        g.drawString(f, "\u0422\u0415\u0425\u041D\u0418\u041A\u0410", panelX + 4, currentY, titleColor, false);
+        g.drawString(f, "\u0422\u0415\u0425\u041D\u0418\u041A\u0410", panelX + 4, currentY, 0xFFCCCCCC, false);
         currentY += 12;
-        java.util.LinkedHashSet<String> drawn = new java.util.LinkedHashSet<>();
+
+        String hoverType = null;
+        String hoverTeam = null;
+        int hoverY = 0;
+        int rowH = 12;
+
         for (String team : new String[]{"BLUE", "RED"}) {
             boolean hasAny = false;
-            for (var v : ClientData.clientVehicles) {
-                String key = team + "_" + v.type;
-                if (v.team.equalsIgnoreCase(team) && !drawn.contains(key)) {
-                    if (!hasAny) {
-                        int teamColor = team.equals("BLUE") ? 0xFF4488FF : 0xFFFF4444;
-                        g.drawString(f, team.equals("BLUE") ? "\u0421\u0418\u041D\u0418\u0415" : "\u041A\u0420\u0410\u0421\u041D\u042B\u0415", panelX + 4, currentY, teamColor, false);
-                        currentY += 10;
-                        hasAny = true;
-                    }
-                    drawn.add(key);
-                    ResourceLocation icon = VEHICLE_ICONS.getOrDefault(v.type, VEHICLE_ICONS.get("DEFAULT"));
-                    setFilter(icon, true);
-                    g.blit(icon, panelX + 4, currentY, 10, 10, 0, 0, 16, 16, 16, 16);
-                    setFilter(icon, false);
-                    String name = v.type;
-                    int maxNameW = panelW - 90;
-                    if (f.width(name) > maxNameW) {
-                        name = f.plainSubstrByWidth(name, maxNameW - 4) + "..";
-                    }
-                    g.drawString(f, name, panelX + 18, currentY + 1, 0xFFFFFF, false);
-                    String ticketStr = "-" + v.ticketPenalty;
-                    int ticketColor = v.ticketPenalty > 20 ? 0xFFFF4444 : (v.ticketPenalty > 5 ? 0xFFFFAA00 : 0xFF88FF88);
-                    g.drawString(f, ticketStr, panelX + panelW - f.width(ticketStr) - 4, currentY + 1, ticketColor, false);
-                    currentY += 12;
+            java.util.Map<String, int[]> groups = new java.util.LinkedHashMap<>();
+            java.util.Map<String, Long> respawnTicks = new java.util.LinkedHashMap<>();
+            java.util.Map<String, Integer> penalties = new java.util.LinkedHashMap<>();
+
+            for (var s : ClientData.clientSpawners) {
+                if (!s.team.equalsIgnoreCase(team)) continue;
+                int[] counts = groups.computeIfAbsent(s.type, k -> new int[2]);
+                counts[1]++; // total
+                if (s.isAlive) counts[0]++; // alive
+                if (!s.isAlive && s.targetSpawnTick > 0) {
+                    respawnTicks.merge(s.type, s.targetSpawnTick, Math::max);
+                }
+                penalties.putIfAbsent(s.type, s.ticketPenalty);
+            }
+
+            for (var entry : groups.entrySet()) {
+                String type = entry.getKey();
+                int[] counts = entry.getValue();
+                int alive = counts[0], total = counts[1];
+                int penalty = penalties.getOrDefault(type, 0);
+
+                if (!hasAny) {
+                    int teamColor = team.equals("BLUE") ? 0xFF4488FF : 0xFFFF4444;
+                    g.drawString(f, team.equals("BLUE") ? "\u0421\u0418\u041D\u0418\u0415" : "\u041A\u0420\u0410\u0421\u041D\u042B\u0415", panelX + 4, currentY, teamColor, false);
+                    currentY += 10;
+                    hasAny = true;
+                }
+
+                int rowBg = 0;
+                if (mx >= panelX && mx <= panelX + panelW && my >= currentY && my < currentY + rowH) {
+                    rowBg = 0x44FFFFFF;
+                    hoverType = type;
+                    hoverTeam = team;
+                    hoverY = currentY;
+                }
+                if (rowBg != 0) g.fill(panelX, currentY, panelX + panelW, currentY + rowH, rowBg);
+
+                ResourceLocation icon = VEHICLE_ICONS.getOrDefault(type, VEHICLE_ICONS.get("DEFAULT"));
+                setFilter(icon, true);
+                g.blit(icon, panelX + 4, currentY + 1, 10, 10, 0, 0, 16, 16, 16, 16);
+                setFilter(icon, false);
+
+                String name = type;
+                int maxNameW = panelW - 70;
+                if (f.width(name) > maxNameW) {
+                    name = f.plainSubstrByWidth(name, maxNameW - 4) + "..";
+                }
+                g.drawString(f, name, panelX + 18, currentY + 2, 0xFFFFFF, false);
+
+                String countStr = alive + "/" + total;
+                int countColor = alive == 0 ? 0xFFFF4444 : (alive < total ? 0xFFFFAA00 : 0xFF88FF88);
+                g.drawString(f, countStr, panelX + panelW - f.width(countStr) - 4, currentY + 2, countColor, false);
+
+                currentY += rowH;
+            }
+        }
+
+        if (hoverType != null) {
+            long currentTick = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+            java.util.List<Long> timers = new java.util.ArrayList<>();
+            for (var s : ClientData.clientSpawners) {
+                if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType) && !s.isAlive && s.targetSpawnTick > currentTick) {
+                    timers.add((s.targetSpawnTick - currentTick) / 20);
+                }
+            }
+            timers.sort(null);
+
+            int tooltipX = panelX + panelW + 4;
+            int tooltipY = hoverY - 4;
+            if (tooltipX + 120 > Minecraft.getInstance().getWindow().getGuiScaledWidth()) {
+                tooltipX = panelX - 120;
+            }
+            int aliveCount = 0;
+            int totalCount = 0;
+            for (var s : ClientData.clientSpawners) {
+                if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType)) {
+                    totalCount++;
+                    if (s.isAlive) aliveCount++;
+                }
+            }
+            int tipH = 16 + (timers.isEmpty() ? 0 : timers.size() * 10 + 4);
+            g.fill(tooltipX, tooltipY, tooltipX + 115, tooltipY + tipH, 0xCC0A0C10);
+            g.drawString(f, hoverType, tooltipX + 4, tooltipY + 2, 0xFFFFFF, false);
+            String aliveTxt = "\uD83D\uDFE2 \u0411\u043E\u0435\u0433\u043E\u0442\u043E\u0432: " + aliveCount;
+            g.drawString(f, aliveTxt, tooltipX + 4, tooltipY + 14, 0xFF88FF88, false);
+            if (!timers.isEmpty()) {
+                int ty = tooltipY + 24;
+                g.drawString(f, "\u23F3 \u0420\u0435\u0441\u043F\u0430\u0432\u043D:", tooltipX + 4, ty, 0xFFFFAA00, false);
+                ty += 10;
+                for (long sec : timers) {
+                    g.drawString(f, "  " + sec + "\u0441", tooltipX + 4, ty, 0xFFCCCCCC, false);
+                    ty += 10;
+                    if (ty - tooltipY > 80) { g.drawString(f, "  ...", tooltipX + 4, ty, 0xFF888888, false); break; }
                 }
             }
         }
@@ -898,17 +972,17 @@ public class SquadMapRenderer {
 
     public boolean hitPath(int mx, int my, double cx, double cz) {
         int r = 12;
-        for (var pts : pathGroups) {
-            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroups.remove(pts); return true; } }
-            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroups.remove(pts); return true; } }
+        for (var pts : pathGroups()) {
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroups().remove(pts); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroups().remove(pts); return true; } }
         }
-        for (var pts : pathGroupsRed) {
-            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsRed.remove(pts); return true; } }
-            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsRed.remove(pts); return true; } }
+        for (var pts : pathGroupsRed()) {
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsRed().remove(pts); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsRed().remove(pts); return true; } }
         }
-        for (var pts : pathGroupsYellow) {
-            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow.remove(pts); return true; } }
-            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow.remove(pts); return true; } }
+        for (var pts : pathGroupsYellow()) {
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow().remove(pts); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow().remove(pts); return true; } }
         }
         return false;
     }
@@ -945,9 +1019,9 @@ public class SquadMapRenderer {
     }
 
     private void drawPath(GuiGraphics g, double cx, double cz) {
-        drawGroup(g, cx, cz, pathGroups, 0xFF44FF44);
-        drawGroup(g, cx, cz, pathGroupsRed, 0xFFFF4444);
-        drawGroup(g, cx, cz, pathGroupsYellow, 0xFFFFDD00);
+        drawGroup(g, cx, cz, pathGroups(), 0xFF44FF44);
+        drawGroup(g, cx, cz, pathGroupsRed(), 0xFFFF4444);
+        drawGroup(g, cx, cz, pathGroupsYellow(), 0xFFFFDD00);
     }
 
     private void drawGroup(GuiGraphics g, double cx, double cz, List<List<PathPoint>> groups, int col) {

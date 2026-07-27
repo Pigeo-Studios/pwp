@@ -6,7 +6,6 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Supplier;
@@ -18,8 +17,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -154,31 +151,11 @@ public class PacketRespawnRequest {
 
                     if (useCustomSpawn && targetPos != null) {
                        player.setRespawnPosition(targetDimension, targetPos, 0.0F, true, false);
-                       player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
                        GameLogicEvents.pendingSpawnPositions.put(player.getUUID(), targetPos);
-                       player.setHealth(20.0f);
-                       try {
-                          Field deadField = LivingEntity.class.getDeclaredField("dead");
-                          deadField.setAccessible(true);
-                          deadField.set(player, false);
-                       } catch (Exception ignored) {}
-                       if (player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
-                          player.setGameMode(GameType.SURVIVAL);
-                       }
-
-                       if (data.isGameStarted) {
-                          if (player.getPersistentData().contains("WARFARE_PendingKit")) {
-                             ResupplyHandler.tryApplyPendingKit(player, data);
-                          } else {
-                             String currentKitName = player.getPersistentData().getString("WARFARE_CurrentKit");
-                             if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                                String tName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-                                WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
-                                if (kit != null) {
-                                   ResupplyHandler.applyKitToPlayer(player, kit);
-                                }
-                             }
-                          }
+                       if (!player.isAlive()) {
+                          player.server.getPlayerList().respawn(player, false);
+                       } else {
+                          player.teleportTo(level, targetPos.getX() + 0.5, targetPos.getY(), targetPos.getZ() + 0.5, player.getYRot(), 0.0F);
                        }
                     } else {
                      player.sendSystemMessage(Component.literal("Spawn point is currently unavailable!").withStyle(ChatFormatting.RED));

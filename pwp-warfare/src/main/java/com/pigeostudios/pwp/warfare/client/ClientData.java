@@ -88,8 +88,9 @@ public class ClientData {
    public static Map<String, BlockPos> blueSpawns = new HashMap<>();
    public static Map<String, BlockPos> redSpawns = new HashMap<>();
    public static Map<String, BlockPos> neutralSpawns = new HashMap<>();
-   public static List<WarfareWorldData.VehicleRecord> clientVehicles = new ArrayList<>();
-   public static Map<String, String> playerKits = new HashMap<>();
+    public static List<WarfareWorldData.VehicleRecord> clientVehicles = new ArrayList<>();
+    public static List<WarfareWorldData.SpawnerInfo> clientSpawners = new ArrayList<>();
+    public static Map<String, String> playerKits = new HashMap<>();
    public static boolean hasBlueRally = false;
    public static boolean hasRedRally = false;
    public static boolean blueRallyBlocked = false;

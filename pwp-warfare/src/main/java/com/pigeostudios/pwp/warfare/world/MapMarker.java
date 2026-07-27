@@ -10,6 +10,8 @@ public class MapMarker {
     public UUID ownerUUID;
     public long createdAt;
 
+    public long clientExpiryTick;
+
     public MapMarker(UUID id, String team, String category, String iconType, BlockPos pos, UUID ownerUUID, long createdAt) {
         this.id = id; this.team = team; this.category = category; this.iconType = iconType;
         this.pos = pos; this.ownerUUID = ownerUUID; this.createdAt = createdAt;
@@ -20,6 +22,7 @@ public class MapMarker {
     public float getAlpha(long now) {
         long elapsed = now - createdAt;
         if (elapsed >= 6000) return 0;
-        return Math.max(0, (6000 - elapsed) / 6000f);
+        if (elapsed <= 4000) return 1;
+        return 1 - (elapsed - 4000) / 2000f;
     }
 }

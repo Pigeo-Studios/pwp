@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,15 @@ public class PacketPlaceMarker {
         ctx.get().enqueueWork(() -> {
             ServerPlayer p = ctx.get().getSender();
             if (p == null) return;
+            String pName = p.getScoreboardName();
+            WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
+            boolean authorized = false;
+            for (WarfareWorldData.Squad s : data.squads) {
+                if (s.members.contains(pName) && (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName))) {
+                    authorized = true; break;
+                }
+            }
+            if (!authorized) return;
             long tick = p.serverLevel().getGameTime();
             MapMarker m = new MapMarker(UUID.randomUUID(), msg.team, msg.category, msg.iconType, msg.pos, p.getUUID(), tick);
             MarkerManager.add(m);

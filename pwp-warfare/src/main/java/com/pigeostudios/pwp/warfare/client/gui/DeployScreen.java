@@ -426,6 +426,8 @@ public class DeployScreen extends Screen {
             if (mx >= rx && mx <= rx+rw && my >= conY && my <= conY+ch) {
                 if (btn == 1) {
                     if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
+                    LocalPlayer p = Minecraft.getInstance().player;
+                    if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
                     int wx = toWorldX(mx), wz = toWorldZ(my);
                     mapCtx.open((int)mx, (int)my, (cat, icon) -> {
                         if ("arrow".equals(icon) && ("enemy".equals(cat) || "team".equals(cat))) return;

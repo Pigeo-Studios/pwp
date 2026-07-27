@@ -226,14 +226,39 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
       }
    }
 
-   // РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ СЃРїР°СѓРЅРµСЂР° СЃ РєР»РёРµРЅС‚РѕРј
-   public void syncToClient() {
-      if (this.level != null && !this.level.isClientSide) {
-         this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
-      }
-   }
+    // РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ СЃРїР°СѓРЅРµСЂР° СЃ РєР»РёРµРЅС‚РѕРј
+    public void syncToClient() {
+       if (this.level != null && !this.level.isClientSide) {
+          this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+       }
+    }
 
-   public void load(CompoundTag tag) {
+    public WarfareWorldData.SpawnerInfo getSpawnerInfo() {
+       if (this.level == null) return null;
+       if (this.vehicleIdString == null || this.vehicleIdString.trim().isEmpty()) return null;
+       ItemStack modifierStack = this.inventory.getStackInSlot(0);
+       if (modifierStack.isEmpty()) return null;
+       String team = "NEUTRAL";
+       String type = "DEFAULT";
+       int penalty = 0;
+       if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
+          team = marker.getTeam();
+          type = marker.getType();
+          penalty = marker.getPenalty();
+       } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
+          team = supply.getTeam();
+          type = supply.getVehicleType();
+          penalty = supply.getPenalty();
+       } else {
+          return null;
+       }
+       return new WarfareWorldData.SpawnerInfo(
+          this.worldPosition, team, type, penalty,
+          this.respawnTimeSettings, this.targetSpawnTick, false
+       );
+    }
+
+    public void load(CompoundTag tag) {
       super.load(tag);
       if (tag.contains("Inventory")) {
          this.inventory.deserializeNBT(tag.getCompound("Inventory"));
