@@ -68,6 +68,11 @@ async def start():
 
     await app.initialize()
     await app.start()
+
+    # Drop stale getUpdates connections from any killed process
+    await app.bot.delete_webhook(drop_pending_updates=True)
+    await asyncio.sleep(0.5)
+
     await app.updater.start_polling()
 
     me = await app.bot.get_me()
