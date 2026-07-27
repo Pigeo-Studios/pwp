@@ -54,5 +54,18 @@
     "pwp_lobby.map.chora_valley": "Chora Valley",
     "pwp_lobby.map.tallil_outskirts": "Tallil Outskirts",
     "pwp_lobby.map.mestia": "Mestia",
-    "pwp_lobby.map.belaya": "Belaya Pass"
+    "pwp_lobby.map.belaya": "Belaya Pass",
+
+    "pwp_lobby.lobby.map_selection": "Map Selection",
+    "pwp_lobby.lobby.mode_selection": "Mode Selection",
+    "pwp_lobby.lobby.active_matches": "Active Matches",
+    "pwp_lobby.lobby.map_description": "Map Description",
+    "pwp_lobby.lobby.mode_description": "Mode Description",
+    "pwp_lobby.lobby.vote_button": "Vote",
+    "pwp_lobby.lobby.vote_accepted": "Vote Accepted ✓",
+    "pwp_lobby.lobby.votes_count": "%d votes",
+    "pwp_lobby.lobby.max_players": "Max %d players",
+    "pwp_lobby.lobby.no_preview": "No Preview",
+    "pwp_lobby.lobby.join_match": "Join Match",
+    "pwp_lobby.lobby.players_online": "%d online"
 }

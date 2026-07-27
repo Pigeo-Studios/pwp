@@ -3,9 +3,11 @@ package com.pwp.coreclient.gui.screens;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.pwp.coreclient.gui.StatsScreen;
 import com.pwp.coreclient.gui.components.*;
+import com.pwp.coreclient.gui.theme.PWPIcons;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.texture.DynamicTexture;
@@ -16,18 +18,23 @@ import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PWPLobbyScreen extends Screen {
 
     private static PWPLobbyScreen instance;
 
-    private PWPScrollPanel scrollPanel;
+    private PWPScrollPanel mapScrollPanel;
+    private PWPScrollPanel matchScrollPanel;
 
     private final long openTime;
     private boolean closing;
     private long closeStartTime;
+    private int selectedMapIndex;
+    private int selectedModeIndex = -1;
 
     private OpenMatchListScreenPacket listData;
     private OpenVotingScreenPacket voteData;
@@ -47,6 +54,12 @@ public class PWPLobbyScreen extends Screen {
     private boolean listLoading;
 
     private static final Map<String, ResourceLocation> imageCache = new HashMap<>();
+
+    private static final int PANEL_TOP = 32;
+    private static final int PANEL_BOTTOM_MARGIN = 30;
+    private static final int GAP = 4;
+    private static final int CARD_H = 50;
+    private static final int MODE_CARD_H = 64;
 
     public PWPLobbyScreen() {
         super(Component.literal("Лобби"));
@@ -75,6 +88,7 @@ public class PWPLobbyScreen extends Screen {
             instance.modeVoteData = pkt;
             instance.modeVoteOpenedAt = System.currentTimeMillis();
             instance.votedMode = null;
+            instance.selectedModeIndex = -1;
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.modeVoteData = pkt;
@@ -91,11 +105,13 @@ public class PWPLobbyScreen extends Screen {
             instance.modeVoteData = null;
             instance.voteData = pkt;
             instance.voteOpenedAt = System.currentTimeMillis();
+            instance.selectedMapIndex = 0;
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.modeVoteData = null;
             s.voteData = pkt;
             s.voteOpenedAt = System.currentTimeMillis();
+            s.selectedMapIndex = 0;
             s.listLoading = false;
             mc.setScreen(s);
         }
@@ -132,11 +148,15 @@ public class PWPLobbyScreen extends Screen {
         clearWidgets();
         if (statsInitDone && statsRenderer != null) statsRenderer.setPanelSize(width, height);
 
-        int leftW = (int) (width * 0.68f);
-        int panelY = 32;
-        int panelH = height - panelY - 30;
+        int panelH = height - PANEL_TOP - PANEL_BOTTOM_MARGIN;
+        int leftW = (int) (width * 0.27f);
+        int scrollX = PWPTheme.Spacing.SM + 4;
+        int scrollY = PANEL_TOP + 22;
+        int scrollW = leftW - 16;
+        int scrollH = panelH - 22 - 4;
 
-        scrollPanel = new PWPScrollPanel(PWPTheme.Spacing.SM, panelY, leftW - 8, panelH);
+        mapScrollPanel = new PWPScrollPanel(scrollX, scrollY, scrollW, scrollH);
+        matchScrollPanel = new PWPScrollPanel(scrollX, scrollY, scrollW, scrollH);
     }
 
     @Override
@@ -157,21 +177,21 @@ public class PWPLobbyScreen extends Screen {
         renderBackground(gui);
         PWPLayout.renderHeader(gui, "Лобби", width);
 
-        int leftW = (int) (width * 0.68f);
-        int rightW = width - leftW - 8;
-        int panelY = 32;
-        int panelH = height - panelY - 30;
-        var font = PWPTheme.Fonts.display();
+        int panelH = height - PANEL_TOP - PANEL_BOTTOM_MARGIN;
+        int leftW = (int) (width * 0.27f);
+        int rightW = (int) (width * 0.27f);
+        int centerW = width - leftW - rightW - GAP * 2 - PWPTheme.Spacing.SM;
+        int leftX = PWPTheme.Spacing.SM;
+        int centerX = leftX + leftW + GAP;
+        int rightX = centerX + centerW + GAP;
 
-        PWPPanel.render(gui, PWPTheme.Spacing.SM, panelY, leftW - 8, panelH);
-        gui.enableScissor(PWPTheme.Spacing.SM, panelY, PWPTheme.Spacing.SM + leftW - 8, panelY + panelH);
-        renderMatchList(gui, mouseX, mouseY, PWPTheme.Spacing.SM, panelY, leftW - 8, panelH);
-        gui.disableScissor();
-
-        if (scrollPanel != null) scrollPanel.renderScrollbar(gui);
-
-        int rightX = leftW + 4;
-        renderSidebar(gui, mouseX, mouseY, rightX, panelY, rightW, panelH);
+        if (modeVoteData != null && modeVoteData.modeNames.length > 0) {
+            renderModeVote(gui, mouseX, mouseY, leftX, centerX, rightX, PANEL_TOP, leftW, centerW, rightW, panelH);
+        } else if (voteData != null && voteData.mapNames.length > 0) {
+            renderMapVote(gui, mouseX, mouseY, leftX, centerX, rightX, PANEL_TOP, leftW, centerW, rightW, panelH);
+        } else {
+            renderMatchListView(gui, mouseX, mouseY, leftX, centerX, rightX, PANEL_TOP, leftW, centerW, rightW, panelH);
+        }
 
         PWPToastManager.render(gui);
         renderOverlayFade(gui);
@@ -179,6 +199,7 @@ public class PWPLobbyScreen extends Screen {
         int navY = height - 26;
         boolean backHovered = mouseX >= width / 2 - 40 && mouseX <= width / 2 + 40 && mouseY >= navY && mouseY <= navY + 20;
         String backText = "< Назад";
+        var font = PWPTheme.Fonts.display();
         gui.drawString(font, Component.literal(backText), width / 2 - font.width(backText) / 2, navY + 6, backHovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM, false);
 
         if (statsOpen && statsRenderer != null) {
@@ -195,64 +216,532 @@ public class PWPLobbyScreen extends Screen {
         super.render(gui, mouseX, mouseY, partialTick);
     }
 
-    private void renderOverlayFade(GuiGraphics gui) {
-        if (closing) {
-            long elapsed = System.currentTimeMillis() - closeStartTime;
-            float t = Math.min(elapsed / 150.0F, 1);
-            gui.fill(0, 0, width, height, PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BACKGROUND, 1.0F - com.pwp.coreclient.gui.animations.Easing.easeOutCubic(t)));
-        } else {
-            long elapsed = System.currentTimeMillis() - openTime;
-            if (elapsed < 150) {
-                float t = elapsed / 150.0F;
-                gui.fill(0, 0, width, height, PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BACKGROUND, 1.0F - com.pwp.coreclient.gui.animations.Easing.easeOutCubic(t)));
-            }
-        }
+    // ===================== MAP VOTING =====================
+
+    private void renderMapVote(GuiGraphics gui, int mx, int my, int lx, int cx, int rx,
+                                int panelY, int lw, int cw, int rw, int panelH) {
+        renderMapVoteLeft(gui, mx, my, lx, panelY, lw, panelH);
+        if (mapScrollPanel != null) mapScrollPanel.renderScrollbar(gui);
+        renderMapVoteCenter(gui, mx, my, cx, panelY, cw, panelH);
+        renderMapVoteRight(gui, mx, my, rx, panelY, rw, panelH);
     }
 
-    private void renderMatchList(GuiGraphics gui, int mx, int my, int bx, int panelY, int contentW, int panelH) {
+    private void renderMapVoteLeft(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
         var font = PWPTheme.Fonts.display();
-        if (listLoading && listData == null) {
-            renderSkeletons(gui, bx, panelY, contentW, panelH);
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        String title = "Выбор карты";
+        gui.drawString(font, Component.literal(title), x + w / 2 - font.width(title) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.fill(x + 8, panelY + 16, x + w - 8, panelY + 17, PWPTheme.Colors.BORDER);
+
+        int scrollOff = mapScrollPanel != null ? (int) -mapScrollPanel.getScrollOffset() : 0;
+        int ly = panelY + 22 + scrollOff;
+        int gap = 6;
+        int maxV = 0;
+        for (int v : voteData.voteCounts) { if (v > maxV) maxV = v; }
+
+        int totalH = voteData.mapNames.length * (CARD_H + gap) - gap;
+        if (mapScrollPanel != null) mapScrollPanel.setContentHeight(totalH + 12);
+
+        for (int i = 0; i < voteData.mapNames.length; i++) {
+            boolean selected = (i == selectedMapIndex);
+            boolean hovered = mx >= x + 4 && mx <= x + w - 4 && my >= ly && my <= ly + CARD_H;
+            PWPCard.State state = PWPCard.getState(selected, hovered, false);
+            PWPCard.render(gui, x + 4, ly, w - 8, CARD_H, state);
+
+            PWPIcons.render(gui, PWPIcons.FLAG, x + 12, ly + 6);
+            gui.drawString(font, Component.literal(voteData.mapDisplayNames[i]), x + 30, ly + 6, PWPTheme.Colors.TEXT_PRIMARY);
+
+            String votesStr = voteData.voteCounts[i] + " голосов";
+            gui.drawString(font, Component.literal(votesStr), x + 30, ly + 20, PWPTheme.Colors.TEXT_DIM);
+
+            int barW = w - 24;
+            int barY = ly + 36;
+            gui.fill(x + 12, barY, x + 12 + barW, barY + 4, PWPTheme.Styles.Progress.BG);
+            if (voteData.voteCounts[i] > 0 && maxV > 0) {
+                float pct = (float) voteData.voteCounts[i] / maxV;
+                boolean isLeader = voteData.mapNames[i].equals(voteData.leaderName);
+                int fillCol = isLeader ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.ACCENT_DIM;
+                gui.fill(x + 12, barY, x + 12 + (int) (barW * pct), barY + 4, fillCol);
+            }
+
+            ly += CARD_H + gap;
+        }
+
+        gui.disableScissor();
+    }
+
+    private void renderMapVoteCenter(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
+        var font = PWPTheme.Fonts.display();
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        if (selectedMapIndex < 0 || selectedMapIndex >= voteData.mapNames.length) {
+            gui.disableScissor();
             return;
         }
+
+        String mapName = voteData.mapNames[selectedMapIndex];
+        String worldPath = selectedMapIndex < voteData.worldPaths.length ? voteData.worldPaths[selectedMapIndex] : null;
+        ResourceLocation preview = getTexture(mapName, worldPath, "vote_");
+
+        int previewW = w - 24;
+        int previewH = previewW * 9 / 16;
+        int maxPreviewH = (int) (panelH * 0.55f);
+        if (previewH > maxPreviewH) {
+            previewH = maxPreviewH;
+            previewW = previewH * 16 / 9;
+        }
+        int px = x + (w - previewW) / 2;
+        int py = panelY + 12;
+
+        if (preview != null) {
+            RoundedRect.fill(gui, px - 2, py - 2, previewW + 4, previewH + 4, PWPTheme.Spacing.RADIUS_MEDIUM, PWPTheme.Colors.SURFACE);
+            gui.blit(preview, px, py, previewW, previewH, 0, 0, 256, 256, 256, 256);
+        } else {
+            PWPPanel.render(gui, px, py, previewW, previewH, PWPPanel.Variant.SURFACE);
+            String noPrev = "Нет превью";
+            int iconSize = 32;
+            PWPIcons.render(gui, PWPIcons.FLAG, px + previewW / 2 - iconSize / 2, py + previewH / 2 - iconSize / 2 - 10, iconSize, 80);
+            gui.drawString(font, Component.literal(noPrev), px + previewW / 2 - font.width(noPrev) / 2, py + previewH / 2 + 16, PWPTheme.Colors.TEXT_DIM, false);
+        }
+
+        int infoY = py + previewH + 14;
+        gui.drawString(font, Component.literal(voteData.mapDisplayNames[selectedMapIndex]),
+            x + w / 2 - font.width(voteData.mapDisplayNames[selectedMapIndex]) / 2,
+            infoY, PWPTheme.Colors.TEXT_PRIMARY, false);
+
+        String maxStr = "Макс. " + voteData.maxPlayers[selectedMapIndex] + " игроков";
+        gui.drawString(font, Component.literal(maxStr),
+            x + w / 2 - font.width(maxStr) / 2,
+            infoY + 12, PWPTheme.Colors.TEXT_SECONDARY, false);
+
+        if (selectedMapIndex < voteData.blueFactions.length && selectedMapIndex < voteData.redFactions.length) {
+            int blueCol = PWPTheme.Colors.TEAM_BLUE;
+            int redCol = PWPTheme.Colors.TEAM_RED;
+            String blueStr = formatFaction(voteData.blueFactions[selectedMapIndex]);
+            String redStr = formatFaction(voteData.redFactions[selectedMapIndex]);
+            String combined = blueStr + " vs " + redStr;
+            int totalW = font.width(combined);
+            int startX = x + w / 2 - totalW / 2;
+            gui.drawString(font, Component.literal(blueStr), startX, infoY + 24, blueCol, false);
+            gui.drawString(font, Component.literal(" vs "), startX + font.width(blueStr), infoY + 24, PWPTheme.Colors.TEXT_DIM, false);
+            gui.drawString(font, Component.literal(redStr), startX + font.width(blueStr + " vs "), infoY + 24, redCol, false);
+        }
+
+        gui.disableScissor();
+    }
+
+    private void renderMapVoteRight(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
+        var font = PWPTheme.Fonts.display();
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        if (selectedMapIndex < 0 || selectedMapIndex >= voteData.mapNames.length) {
+            gui.disableScissor();
+            return;
+        }
+
+        int availableH = panelH - 70;
+        int ly = panelY + 8;
+
+        String descTitle = "Описание карты";
+        gui.drawString(font, Component.literal(descTitle), x + 8, ly, PWPTheme.Colors.TEXT_ACCENT, false);
+        ly += 12;
+        gui.fill(x + 8, ly, x + w - 8, ly + 1, PWPTheme.Colors.BORDER);
+        ly += 6;
+
+        String desc = voteData.mapDescriptions != null && selectedMapIndex < voteData.mapDescriptions.length
+            ? voteData.mapDescriptions[selectedMapIndex] : "";
+        if (!desc.isEmpty()) {
+            int maxDescW = w - 16;
+            List<String> lines = wrapText(font, desc, maxDescW);
+            int lineH = 10;
+            int maxLines = Math.min(lines.size(), (availableH - (ly - panelY)) / lineH);
+            for (int li = 0; li < maxLines; li++) {
+                gui.drawString(font, Component.literal(lines.get(li)), x + 8, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+                ly += lineH;
+            }
+        } else {
+            gui.drawString(font, Component.literal("Нет описания"), x + 8, ly, PWPTheme.Colors.TEXT_DIM, false);
+        }
+
+        // Timer + button at fixed bottom position
+        int btnAreaY = panelY + panelH - 52;
+        gui.fill(x + 8, btnAreaY - 6, x + w - 8, btnAreaY - 5, PWPTheme.Colors.BORDER);
+
+        int remaining = voteData.remainingSeconds - (int) ((System.currentTimeMillis() - voteOpenedAt) / 1000);
+        if (remaining < 0) remaining = 0;
+        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
+        String infoLine = timeStr + "  " + voteData.onlinePlayers + " онлайн";
+        gui.drawString(font, Component.literal(infoLine), x + w / 2 - font.width(infoLine) / 2, btnAreaY, PWPTheme.Colors.TEXT_SECONDARY, false);
+
+        boolean hasVoted = votedMap != null;
+        boolean timeUp = remaining <= 0;
+        String btnText = hasVoted ? "Голос принят ✓" : "Проголосовать";
+        int btnH = PWPTheme.Spacing.BUTTON_HEIGHT;
+        int btnW = w - 16;
+        int btnX = x + (w - btnW) / 2;
+        int btnY = btnAreaY + 14;
+
+        if (hasVoted || timeUp) {
+            PWPPanel.render(gui, btnX, btnY, btnW, btnH, PWPPanel.Variant.SURFACE_DIM);
+            gui.drawString(font, Component.literal(btnText), btnX + btnW / 2 - font.width(btnText) / 2, btnY + 8, PWPTheme.Colors.TEXT_DIM, false);
+        } else {
+            RoundedRect.fill(gui, btnX, btnY, btnW, btnH, PWPTheme.Spacing.RADIUS_SMALL, PWPTheme.Colors.ACCENT);
+            gui.drawString(font, Component.literal(btnText), btnX + btnW / 2 - font.width(btnText) / 2, btnY + 8, 0xFF0A0C0E, false);
+        }
+
+        gui.disableScissor();
+    }
+
+    // ===================== MODE VOTING =====================
+
+    private void renderModeVote(GuiGraphics gui, int mx, int my, int lx, int cx, int rx,
+                                 int panelY, int lw, int cw, int rw, int panelH) {
+        renderModeVoteLeft(gui, mx, my, lx, panelY, lw, panelH);
+        if (mapScrollPanel != null) mapScrollPanel.renderScrollbar(gui);
+        renderModeVoteCenter(gui, mx, my, cx, panelY, cw, panelH);
+        renderModeVoteRight(gui, mx, my, rx, panelY, rw, panelH);
+    }
+
+    private void renderModeVoteLeft(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
+        var font = PWPTheme.Fonts.display();
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        String title = "Выбор режима";
+        gui.drawString(font, Component.literal(title), x + w / 2 - font.width(title) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.fill(x + 8, panelY + 16, x + w - 8, panelY + 17, PWPTheme.Colors.BORDER);
+
+        int scrollOff = mapScrollPanel != null ? (int) -mapScrollPanel.getScrollOffset() : 0;
+        int ly = panelY + 22 + scrollOff;
+        int gap = 6;
+        int maxV = 0;
+        for (int v : modeVoteData.voteCounts) { if (v > maxV) maxV = v; }
+
+        int totalH = modeVoteData.modeNames.length * (MODE_CARD_H + gap) - gap;
+        if (mapScrollPanel != null) mapScrollPanel.setContentHeight(totalH + 12);
+
+        for (int i = 0; i < modeVoteData.modeNames.length; i++) {
+            boolean selected = (i == selectedModeIndex);
+            boolean hovered = mx >= x + 4 && mx <= x + w - 4 && my >= ly && my <= ly + MODE_CARD_H;
+            PWPCard.State state = PWPCard.getState(selected, hovered, false);
+            PWPCard.render(gui, x + 4, ly, w - 8, MODE_CARD_H, state);
+
+            int icon = i == 0 ? PWPIcons.SWORDS : PWPIcons.SHIELD;
+            PWPIcons.render(gui, icon, x + 12, ly + 6);
+
+            gui.drawString(font, Component.literal(modeVoteData.modeDisplayNames[i]), x + 30, ly + 6, PWPTheme.Colors.TEXT_PRIMARY);
+
+            String desc = i < modeVoteData.modeDescriptions.length ? modeVoteData.modeDescriptions[i] : "";
+            if (!desc.isEmpty()) {
+                String shortDesc = font.plainSubstrByWidth(desc, w - 40);
+                gui.drawString(font, Component.literal(shortDesc), x + 30, ly + 20, PWPTheme.Colors.TEXT_SECONDARY);
+            }
+
+            String votesStr = modeVoteData.voteCounts[i] + " голосов";
+            gui.drawString(font, Component.literal(votesStr), x + 30, ly + 34, PWPTheme.Colors.TEXT_DIM);
+
+            int barW = w - 24;
+            int barY = ly + 48;
+            gui.fill(x + 12, barY, x + 12 + barW, barY + 4, PWPTheme.Styles.Progress.BG);
+            if (modeVoteData.voteCounts[i] > 0 && maxV > 0) {
+                float pct = (float) modeVoteData.voteCounts[i] / maxV;
+                gui.fill(x + 12, barY, x + 12 + (int) (barW * pct), barY + 4, PWPTheme.Colors.ACCENT);
+            }
+
+            ly += MODE_CARD_H + gap;
+        }
+
+        gui.disableScissor();
+    }
+
+    private void renderModeVoteCenter(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
+        var font = PWPTheme.Fonts.display();
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        String voteTitle = "Голосование за режим";
+        gui.drawString(font, Component.literal(voteTitle), x + w / 2 - font.width(voteTitle) / 2, panelY + 16, PWPTheme.Colors.TEXT_ACCENT, false);
+
+        if (voteData != null && voteData.leaderName != null) {
+            String mapLabel = "Победившая карта:";
+            gui.drawString(font, Component.literal(mapLabel), x + w / 2 - font.width(mapLabel) / 2, panelY + 36, PWPTheme.Colors.TEXT_SECONDARY, false);
+
+            String winner = voteData.leaderName;
+            for (int i = 0; i < voteData.mapNames.length; i++) {
+                if (voteData.mapNames[i].equals(winner)) {
+                    winner = voteData.mapDisplayNames[i];
+                    break;
+                }
+            }
+            gui.drawString(font, Component.literal(winner), x + w / 2 - font.width(winner) / 2, panelY + 48, PWPTheme.Colors.TEXT_PRIMARY, false);
+
+            ResourceLocation preview = getTexture(voteData.leaderName, null, "vote_win_");
+            if (preview == null) {
+                for (int i = 0; i < voteData.mapNames.length; i++) {
+                    if (voteData.mapNames[i].equals(voteData.leaderName)) {
+                        String wp = i < voteData.worldPaths.length ? voteData.worldPaths[i] : null;
+                        preview = getTexture(voteData.leaderName, wp, "vote_win_");
+                        break;
+                    }
+                }
+            }
+            if (preview != null) {
+                int prevW = Math.min(w - 40, 240);
+                int prevH = prevW * 9 / 16;
+                int px = x + (w - prevW) / 2;
+                int py = panelY + 64;
+                gui.blit(preview, px, py, prevW, prevH, 0, 0, 256, 256, 256, 256);
+            }
+        }
+
+        int remaining = modeVoteData.remainingSeconds - (int) ((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
+        if (remaining < 0) remaining = 0;
+        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
+        String infoLine = timeStr + "  " + modeVoteData.onlinePlayers + " онлайн";
+        gui.drawString(font, Component.literal(infoLine), x + w / 2 - font.width(infoLine) / 2, panelY + panelH - 24, PWPTheme.Colors.TEXT_SECONDARY, false);
+
+        gui.disableScissor();
+    }
+
+    private void renderModeVoteRight(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
+        var font = PWPTheme.Fonts.display();
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        if (selectedModeIndex < 0 || selectedModeIndex >= modeVoteData.modeNames.length) {
+            String hint = "Выберите режим";
+            gui.drawString(font, Component.literal(hint), x + w / 2 - font.width(hint) / 2, panelY + panelH / 2 - 5, PWPTheme.Colors.TEXT_DIM, false);
+            gui.disableScissor();
+            return;
+        }
+
+        int descAreaEnd = panelY + panelH - 60;
+        int ly = panelY + 8;
+
+        String descTitle = "Описание режима";
+        gui.drawString(font, Component.literal(descTitle), x + 8, ly, PWPTheme.Colors.TEXT_ACCENT, false);
+        ly += 12;
+        gui.fill(x + 8, ly, x + w - 8, ly + 1, PWPTheme.Colors.BORDER);
+        ly += 6;
+
+        String desc = selectedModeIndex < modeVoteData.modeDescriptions.length
+            ? modeVoteData.modeDescriptions[selectedModeIndex] : "";
+        if (!desc.isEmpty()) {
+            int maxDescW = w - 16;
+            List<String> lines = wrapText(font, desc, maxDescW);
+            int lineH = 10;
+            int maxLines = Math.min(lines.size(), (descAreaEnd - ly) / lineH);
+            for (int li = 0; li < maxLines; li++) {
+                gui.drawString(font, Component.literal(lines.get(li)), x + 8, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+                ly += lineH;
+            }
+        }
+
+        // Separator + timer + button at bottom
+        int btnAreaY = panelY + panelH - 50;
+        gui.fill(x + 8, btnAreaY, x + w - 8, btnAreaY + 1, PWPTheme.Colors.BORDER);
+
+        int remaining = modeVoteData.remainingSeconds - (int) ((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
+        if (remaining < 0) remaining = 0;
+        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
+        String infoLine = timeStr + "  " + modeVoteData.onlinePlayers + " онлайн";
+        gui.drawString(font, Component.literal(infoLine), x + w / 2 - font.width(infoLine) / 2, btnAreaY + 6, PWPTheme.Colors.TEXT_SECONDARY, false);
+
+        boolean hasVoted = votedMode != null;
+        boolean modeTimeUp = remaining <= 0;
+        String btnText = hasVoted ? "Голос принят ✓" : "Проголосовать";
+        int btnH = PWPTheme.Spacing.BUTTON_HEIGHT;
+        int btnW = w - 16;
+        int btnX = x + (w - btnW) / 2;
+        int btnY = btnAreaY + 20;
+
+        if (hasVoted || modeTimeUp) {
+            PWPPanel.render(gui, btnX, btnY, btnW, btnH, PWPPanel.Variant.SURFACE_DIM);
+            gui.drawString(font, Component.literal(btnText), btnX + btnW / 2 - font.width(btnText) / 2, btnY + 8, PWPTheme.Colors.TEXT_DIM, false);
+        } else {
+            RoundedRect.fill(gui, btnX, btnY, btnW, btnH, PWPTheme.Spacing.RADIUS_SMALL, PWPTheme.Colors.ACCENT);
+            gui.drawString(font, Component.literal(btnText), btnX + btnW / 2 - font.width(btnText) / 2, btnY + 8, 0xFF0A0C0E, false);
+        }
+
+        gui.disableScissor();
+    }
+
+    // ===================== MATCH LIST =====================
+
+    private void renderMatchListView(GuiGraphics gui, int mx, int my, int lx, int cx, int rx,
+                                      int panelY, int lw, int cw, int rw, int panelH) {
+        var font = PWPTheme.Fonts.display();
+
+        if (listLoading && listData == null && matchData == null) {
+            PWPPanel.render(gui, lx, panelY, lw + cw + GAP, panelH, PWPPanel.Variant.SURFACE_DIM);
+            gui.enableScissor(lx, panelY, lx + lw + cw + GAP, panelY + panelH);
+            renderSkeletons(gui, lx, panelY, lw + cw + GAP, panelH);
+            gui.disableScissor();
+            return;
+        }
+
         if (listLoadFailed) {
+            PWPPanel.render(gui, lx, panelY, lw, panelH, PWPPanel.Variant.SURFACE_DIM);
             String errTitle = "Ошибка загрузки";
             String errSub = "Проверьте подключение к серверу";
-            gui.drawString(font, Component.literal("\u26A0 " + errTitle), bx + contentW / 2 - font.width("\u26A0 " + errTitle) / 2, panelY + panelH / 2 - 10, PWPTheme.Colors.DANGER, false);
-            gui.drawString(font, Component.literal(errSub), bx + contentW / 2 - font.width(errSub) / 2, panelY + panelH / 2 + 6, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(font, Component.literal(errTitle), lx + lw / 2 - font.width(errTitle) / 2, panelY + panelH / 2 - 10, PWPTheme.Colors.DANGER, false);
+            gui.drawString(font, Component.literal(errSub), lx + lw / 2 - font.width(errSub) / 2, panelY + panelH / 2 + 6, PWPTheme.Colors.TEXT_SECONDARY, false);
             return;
         }
 
-        int scrollOff = scrollPanel != null ? (int) -scrollPanel.getScrollOffset() : 0;
-        int y = panelY + 4 + scrollOff;
+        // Left panel: match list
+        PWPPanel.render(gui, lx, panelY, lw, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(lx, panelY, lx + lw, panelY + panelH);
 
         if (matchData != null) {
-            y = renderCurrentMatch(gui, bx, y, contentW, mx, my);
-            y += 8;
+            String curTitle = "Текущий матч";
+            gui.drawString(font, Component.literal(curTitle), lx + lw / 2 - font.width(curTitle) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
+            gui.fill(lx + 8, panelY + 16, lx + lw - 8, panelY + 17, PWPTheme.Colors.BORDER);
+        }
+
+        String listTitle = matchData != null ? "Активные матчи" : "Активные матчи";
+        if (matchData == null) {
+            gui.drawString(font, Component.literal(listTitle), lx + lw / 2 - font.width(listTitle) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
+            gui.fill(lx + 8, panelY + 16, lx + lw - 8, panelY + 17, PWPTheme.Colors.BORDER);
+        }
+
+        int scrollOff = matchScrollPanel != null ? (int) -matchScrollPanel.getScrollOffset() : 0;
+        int ly = panelY + (matchData != null ? 22 : 22) + scrollOff;
+        int entryH = PWPMatchCard.cardHeight();
+        int gap = 8;
+
+        if (matchData != null) {
+            boolean hovered = PWPCard.isHovered(lx + 4, ly, lw - 8, entryH, mx, my);
+            PWPMatchCard.render(gui, lx + 4, ly, lw - 8, entryH,
+                matchData.mapDisplayName, matchData.modeDisplayName,
+                formatDuration(matchData.remainingSeconds),
+                matchData.onlinePlayers, 50,
+                formatFaction(matchData.blueFaction), formatFaction(matchData.redFaction),
+                matchData.blueTickets, matchData.redTickets,
+                "PLAYING".equals(matchData.status) ? PWPMatchCard.Status.PLAYING : PWPMatchCard.Status.WAITING,
+                null, true, hovered);
+            ly += entryH + gap + 4;
+            gui.fill(lx + 8, ly - 4, lx + lw - 8, ly - 3, PWPTheme.Colors.BORDER);
         }
 
         if (listData == null || listData.count == 0) {
-            if (scrollPanel != null) scrollPanel.setContentHeight(0);
+            if (matchScrollPanel != null) matchScrollPanel.setContentHeight(0);
             if (matchData == null) {
                 String emptyTitle = "Нет активных матчей";
-                String emptySub = "Попробуйте позже";
-                gui.drawString(font, Component.literal(emptyTitle), bx + contentW / 2 - font.width(emptyTitle) / 2, panelY + panelH / 2 - 8, PWPTheme.Colors.TEXT_SECONDARY, false);
-                gui.drawString(font, Component.literal(emptySub), bx + contentW / 2 - font.width(emptySub) / 2, panelY + panelH / 2 + 8, PWPTheme.Colors.TEXT_DIM, false);
+                gui.drawString(font, Component.literal(emptyTitle), lx + lw / 2 - font.width(emptyTitle) / 2, panelY + panelH / 2 - 8, PWPTheme.Colors.TEXT_SECONDARY, false);
             }
+            gui.disableScissor();
+            if (matchScrollPanel != null) matchScrollPanel.renderScrollbar(gui);
             return;
         }
 
-        int entryH = PWPMatchCard.cardHeight();
-        int gap = 8;
         int totalH = entryH * listData.count + gap * (listData.count - 1);
-        if (matchData != null) totalH += 72 + 8;
-        if (scrollPanel != null) scrollPanel.setContentHeight(totalH + 12);
+        if (matchScrollPanel != null) matchScrollPanel.setContentHeight(totalH + 12);
 
         for (int i = 0; i < listData.count; i++) {
-            y = renderMatchEntry(gui, bx, y, contentW, entryH, i, mx, my);
-            y += gap;
+            ly = renderMatchEntry(gui, lx + 4, ly, lw - 8, entryH, i, mx, my);
+            ly += gap;
+        }
+
+        gui.disableScissor();
+        if (matchScrollPanel != null) matchScrollPanel.renderScrollbar(gui);
+
+        // Center-right panel: currently active match info
+        if (listData != null && listData.count > 0) {
+            int rightPanelW = width - lx - lw - GAP - PWPTheme.Spacing.SM;
+            renderGlobalMatchInfo(gui, mx, my, lx + lw + GAP, panelY, rightPanelW, panelH);
+        } else if (matchData != null) {
+            int rightPanelW = width - lx - lw - GAP - PWPTheme.Spacing.SM;
+            renderGlobalMatchInfo(gui, mx, my, lx + lw + GAP, panelY, rightPanelW, panelH);
         }
     }
+
+    private void renderGlobalMatchInfo(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
+        var font = PWPTheme.Fonts.display();
+        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
+        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+
+        String infoTitle = "Информация о матче";
+        gui.drawString(font, Component.literal(infoTitle), x + w / 2 - font.width(infoTitle) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.fill(x + 8, panelY + 16, x + w - 8, panelY + 17, PWPTheme.Colors.BORDER);
+
+        if (matchData != null) {
+            int ly = panelY + 28;
+            gui.drawString(font, Component.literal("Карта: " + matchData.mapDisplayName), x + 12, ly, PWPTheme.Colors.TEXT_PRIMARY, false);
+            ly += 12;
+            gui.drawString(font, Component.literal("Режим: " + matchData.modeDisplayName), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+            ly += 12;
+            gui.drawString(font, Component.literal("Статус: " + matchData.status), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+            ly += 12;
+            gui.drawString(font, Component.literal("Игроков: " + matchData.onlinePlayers + "/50"), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+            ly += 12;
+            gui.drawString(font, Component.literal("Длительность: " + formatDuration(matchData.remainingSeconds)), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+            ly += 20;
+
+            String blueF = formatFaction(matchData.blueFaction);
+            String redF = formatFaction(matchData.redFaction);
+            gui.drawString(font, Component.literal(blueF + "  " + matchData.blueTickets + " vs " + matchData.redTickets + "  " + redF),
+                x + 12, ly, PWPTheme.Colors.TEXT_PRIMARY, false);
+        } else if (listData != null && listData.count > 0) {
+            int idx = getSelectedMatchIdx();
+            if (idx >= 0) {
+                int ly = panelY + 28;
+                gui.drawString(font, Component.literal("Карта: " + listData.displayNames[idx]), x + 12, ly, PWPTheme.Colors.TEXT_PRIMARY, false);
+                ly += 12;
+                String statusStr = "WAITING".equals(listData.statuses[idx]) ? "Ожидание" :
+                    "STARTING".equals(listData.statuses[idx]) ? "Запуск" : "В игре";
+                gui.drawString(font, Component.literal("Статус: " + statusStr), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+                ly += 12;
+                gui.drawString(font, Component.literal("Игроков: " + listData.playerCounts[idx] + "/" + listData.maxPlayers[idx]), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+                ly += 12;
+                if (listData.elapsedSeconds[idx] > 0) {
+                    gui.drawString(font, Component.literal("Длительность: " + formatDuration(listData.elapsedSeconds[idx])), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+                    ly += 12;
+                }
+                ly += 12;
+
+                String blueF = formatFaction(listData.blueFactions[idx]);
+                String redF = formatFaction(listData.redFactions[idx]);
+                gui.drawString(font, Component.literal(blueF), x + 12, ly, PWPTheme.Colors.TEAM_BLUE, false);
+                gui.drawString(font, Component.literal(" vs "), x + 12 + font.width(blueF), ly, PWPTheme.Colors.TEXT_DIM, false);
+                gui.drawString(font, Component.literal(redF), x + 12 + font.width(blueF + " vs "), ly, PWPTheme.Colors.TEAM_RED, false);
+                ly += 14;
+
+                String ticketLine = "Билеты: " + listData.blueTickets[idx] + " | " + listData.redTickets[idx];
+                gui.drawString(font, Component.literal(ticketLine), x + 12, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
+                ly += 20;
+
+                if ("PLAYING".equals(listData.statuses[idx]) && listData.playerCounts[idx] < listData.maxPlayers[idx]) {
+                    int btnW = Math.min(w - 24, 160);
+                    int btnH = PWPTheme.Spacing.BUTTON_HEIGHT;
+                    int btnX = x + (w - btnW) / 2;
+                    RoundedRect.fill(gui, btnX, ly, btnW, btnH, PWPTheme.Spacing.RADIUS_SMALL, PWPTheme.Colors.ACCENT);
+                    String joinText = "Присоединиться";
+                    gui.drawString(font, Component.literal(joinText), btnX + btnW / 2 - font.width(joinText) / 2, ly + 8, 0xFF0A0C0E, false);
+                }
+            }
+        }
+
+        // Stats link at bottom
+        int sepY = panelY + panelH - 40;
+        gui.fill(x + 8, sepY, x + w - 8, sepY + 1, PWPTheme.Colors.BORDER);
+        boolean statsHover = mx >= x + 8 && mx <= x + w - 8 && my >= sepY + 6 && my <= sepY + 26;
+        int statsCol = statsHover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
+        String statsText = "Статистика \u2192";
+        gui.drawString(font, Component.literal(statsText), x + w / 2 - font.width(statsText) / 2, sepY + 10, statsCol, false);
+
+        gui.disableScissor();
+    }
+
+    private int getSelectedMatchIdx() {
+        return 0;
+    }
+
+    // ===================== SKELETONS =====================
 
     private void renderSkeletons(GuiGraphics gui, int bx, int panelY, int contentW, int panelH) {
         long now = System.currentTimeMillis();
@@ -301,113 +790,40 @@ public class PWPLobbyScreen extends Screen {
         return y + h;
     }
 
-    private void renderSidebar(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
-        var font = PWPTheme.Fonts.display();
-        PWPPanel.render(gui, x, panelY, w, panelH, PWPPanel.Variant.SURFACE_DIM);
-        gui.enableScissor(x, panelY, x + w, panelY + panelH);
+    private List<String> wrapText(Font font, String text, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isEmpty()) { lines.add(""); return lines; }
+        String[] words = text.split(" ");
+        StringBuilder current = new StringBuilder();
+        for (String word : words) {
+            String test = current.isEmpty() ? word : current + " " + word;
+            if (font.width(test) > maxWidth && !current.isEmpty()) {
+                lines.add(current.toString());
+                current = new StringBuilder(word);
+            } else {
+                current = new StringBuilder(test);
+            }
+        }
+        if (!current.isEmpty()) lines.add(current.toString());
+        return lines;
+    }
 
-        if (modeVoteData != null && modeVoteData.modeNames.length > 0) {
-            renderModeVoteSidebar(gui, mx, my, x, panelY, w, panelH);
-        } else if (voteData != null && voteData.mapNames.length > 0) {
-            renderVoteSidebar(gui, mx, my, x, panelY, w, panelH);
+    @Override
+    public void renderBackground(GuiGraphics gui) {
+        super.renderBackground(gui);
+    }
+
+    private void renderOverlayFade(GuiGraphics gui) {
+        if (closing) {
+            long elapsed = System.currentTimeMillis() - closeStartTime;
+            float t = Math.min(elapsed / 150.0F, 1);
+            gui.fill(0, 0, width, height, PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BACKGROUND, 1.0F - com.pwp.coreclient.gui.animations.Easing.easeOutCubic(t)));
         } else {
-            String noVote1 = "Голосование";
-            String noVote2 = "не активно";
-            gui.drawString(font, Component.literal(noVote1), x + w / 2 - font.width(noVote1) / 2, panelY + 12, PWPTheme.Colors.TEXT_DIM, false);
-            gui.drawString(font, Component.literal(noVote2), x + w / 2 - font.width(noVote2) / 2, panelY + 24, PWPTheme.Colors.TEXT_DIM, false);
-        }
-
-        int sepY = panelY + panelH - 40;
-        gui.fill(x + 8, sepY, x + w - 8, sepY + 1, PWPTheme.Colors.BORDER);
-        boolean statsHover = mx >= x + 8 && mx <= x + w - 8 && my >= sepY + 6 && my <= sepY + 26;
-        int statsCol = statsHover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
-        String statsText = "Статистика \u2192";
-        gui.drawString(font, Component.literal(statsText), x + w / 2 - font.width(statsText) / 2, sepY + 10, statsCol, false);
-
-        gui.disableScissor();
-    }
-
-    private void renderVoteSidebar(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
-        var font = PWPTheme.Fonts.display();
-        int remaining = voteData.remainingSeconds - (int) ((System.currentTimeMillis() - voteOpenedAt) / 1000);
-        if (remaining < 0) remaining = 0;
-        boolean voteFinished = remaining <= 0 || votedMap != null;
-
-        String title = "Голосование";
-        gui.drawString(font, Component.literal(title), x + w / 2 - font.width(title) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
-        String infoLine = timeStr + "  " + voteData.onlinePlayers + " онлайн";
-        gui.drawString(font, Component.literal(infoLine), x + w / 2 - font.width(infoLine) / 2, panelY + 18, PWPTheme.Colors.TEXT_SECONDARY, false);
-
-        int ly = panelY + 32;
-        int barW = w - 16;
-        int maxV = 0;
-        for (int v : voteData.voteCounts) { if (v > maxV) maxV = v; }
-
-        for (int i = 0; i < voteData.mapNames.length; i++) {
-            boolean sel = voteData.mapNames[i].equals(votedMap);
-            boolean isLeader = voteData.mapNames[i].equals(voteData.leaderName) && voteData.totalVotes > 0;
-            boolean hover = mx >= x + 8 && mx <= x + w - 8 && my >= ly - 2 && my <= ly + 24;
-            boolean disabled = voteFinished && !sel;
-
-            int bg = disabled ? PWPTheme.Colors.SURFACE_DIM : (sel ? 0xFF2A2010 : (hover ? PWPTheme.Colors.SURFACE_LIGHT : 0));
-            if (bg != 0) RoundedRect.fill(gui, x + 8, ly - 2, w - 16, 28, PWPTheme.Spacing.RADIUS_SMALL, bg);
-
-            String name = (sel ? "\u2714 " : "") + voteData.mapDisplayNames[i];
-            gui.drawString(font, Component.literal(name), x + 12, ly, 0xFFFFFF, false);
-
-            int votes = voteData.voteCounts[i];
-            int barY = ly + 12;
-            gui.fill(x + 12, barY, x + 12 + barW, barY + 4, PWPTheme.Styles.Progress.BG);
-            if (votes > 0 && maxV > 0) {
-                float pct = (float) votes / maxV;
-                int fillCol = isLeader ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.ACCENT_DIM;
-                gui.fill(x + 12, barY, x + 12 + (int) (barW * pct), barY + 4, fillCol);
+            long elapsed = System.currentTimeMillis() - openTime;
+            if (elapsed < 150) {
+                float t = elapsed / 150.0F;
+                gui.fill(0, 0, width, height, PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BACKGROUND, 1.0F - com.pwp.coreclient.gui.animations.Easing.easeOutCubic(t)));
             }
-            String voteInfo = votes + " (" + (votes * 100 / (Math.max(voteData.totalVotes, 1))) + "%)";
-            gui.drawString(font, Component.literal(voteInfo), x + 12, barY + 5, PWPTheme.Colors.TEXT_SECONDARY, false);
-            ly += 32;
-        }
-    }
-
-    private void renderModeVoteSidebar(GuiGraphics gui, int mx, int my, int x, int panelY, int w, int panelH) {
-        var font = PWPTheme.Fonts.display();
-        int remaining = modeVoteData.remainingSeconds - (int) ((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
-        if (remaining < 0) remaining = 0;
-
-        String title = "Голосование за режим";
-        gui.drawString(font, Component.literal(title), x + w / 2 - font.width(title) / 2, panelY + 6, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        String timeStr = String.format("%d:%02d", remaining / 60, remaining % 60);
-        String infoLine = timeStr + " " + modeVoteData.onlinePlayers + " онлайн";
-        gui.drawString(font, Component.literal(infoLine), x + w / 2 - font.width(infoLine) / 2, panelY + 18, PWPTheme.Colors.TEXT_SECONDARY, false);
-
-        int ly = panelY + 36;
-        int barW = w - 16;
-        int maxV = 0;
-        for (int v : modeVoteData.voteCounts) { if (v > maxV) maxV = v; }
-
-        for (int i = 0; i < modeVoteData.modeNames.length; i++) {
-            boolean sel = modeVoteData.modeNames[i].equals(votedMode);
-            boolean hover = mx >= x + 8 && mx <= x + w - 8 && my >= ly - 2 && my <= ly + 24;
-            boolean disabled = remaining <= 0 || (votedMode != null && !sel);
-
-            int bg = disabled ? PWPTheme.Colors.SURFACE_DIM : (sel ? 0xFF2A2010 : (hover ? PWPTheme.Colors.SURFACE_LIGHT : 0));
-            if (bg != 0) RoundedRect.fill(gui, x + 8, ly - 2, w - 16, 28, PWPTheme.Spacing.RADIUS_SMALL, bg);
-
-            String name = (sel ? "\u2714 " : "") + modeVoteData.modeDisplayNames[i];
-            gui.drawString(font, Component.literal(name), x + 12, ly, 0xFFFFFF, false);
-
-            int votes = modeVoteData.voteCounts[i];
-            int barY = ly + 12;
-            gui.fill(x + 12, barY, x + 12 + barW, barY + 4, PWPTheme.Styles.Progress.BG);
-            if (votes > 0 && maxV > 0) {
-                gui.fill(x + 12, barY, x + 12 + (int) (barW * (float) votes / maxV), barY + 4, PWPTheme.Colors.ACCENT);
-            }
-            String voteInfo = votes + " (" + (votes * 100 / (Math.max(modeVoteData.totalVotes, 1))) + "%)";
-            gui.drawString(font, Component.literal(voteInfo), x + 12, barY + 5, PWPTheme.Colors.TEXT_SECONDARY, false);
-            ly += 32;
         }
     }
 
@@ -425,40 +841,101 @@ public class PWPLobbyScreen extends Screen {
         int navY = height - 26;
         if (mx >= width / 2 - 40 && mx <= width / 2 + 40 && my >= navY && my <= navY + 20) { startClose(); return true; }
 
-        if (scrollPanel != null && scrollPanel.mouseClicked(mx, my, button)) return true;
+        int panelH = height - PANEL_TOP - PANEL_BOTTOM_MARGIN;
+        int leftW = (int) (width * 0.27f);
+        int rightW = (int) (width * 0.27f);
+        int centerW = width - leftW - rightW - GAP * 2 - PWPTheme.Spacing.SM;
+        int leftX = PWPTheme.Spacing.SM;
+        int centerX = leftX + leftW + GAP;
+        int rightX = centerX + centerW + GAP;
 
-        int leftW = (int) (width * 0.68f);
-        int rightW = width - leftW - 8;
-        int panelY = 32;
-        int panelH = height - panelY - 30;
-
-        if (handleMatchesClick(mx, my, PWPTheme.Spacing.SM, panelY, leftW - 8, panelH)) return true;
-
-        int rightX = leftW + 4;
-        if (mx >= rightX && mx <= rightX + rightW && my >= panelY && my <= panelY + panelH) {
-            int sepY = panelY + panelH - 40;
-            if (my >= sepY + 6 && my <= sepY + 26) {
-                if (statsRenderer == null) initStats();
-                statsOpen = true;
-                return true;
-            }
-            if (handleVoteSidebarClick(mx, my, rightX, panelY, rightW, panelH)) return true;
+        boolean scrollHandled = false;
+        if (modeVoteData != null || voteData != null) {
+            scrollHandled = mapScrollPanel != null && mapScrollPanel.mouseClicked(mx, my, button);
+        } else {
+            scrollHandled = matchScrollPanel != null && matchScrollPanel.mouseClicked(mx, my, button);
         }
+        if (scrollHandled) return true;
 
-        return super.mouseClicked(mx, my, button);
+        if (modeVoteData != null && modeVoteData.modeNames.length > 0) {
+            return handleModeVoteClick(mx, my, leftX, centerX, rightX, PANEL_TOP, leftW, rightW, panelH);
+        } else if (voteData != null && voteData.mapNames.length > 0) {
+            return handleMapVoteClick(mx, my, leftX, centerX, rightX, PANEL_TOP, leftW, rightW, panelH);
+        } else {
+            return handleMatchListClick(mx, my, leftX, PANEL_TOP, leftW, panelH);
+        }
     }
 
-    private boolean handleMatchesClick(double mx, double my, int bx, int panelY, int contentW, int panelH) {
+    private boolean handleMapVoteClick(double mx, double my, int lx, int cx, int rx, int panelY, int lw, int rw, int panelH) {
+        int scrollOff = mapScrollPanel != null ? (int) -mapScrollPanel.getScrollOffset() : 0;
+        int ly = panelY + 22 + scrollOff;
+        int gap = 6;
+        for (int i = 0; i < voteData.mapNames.length; i++) {
+            if (mx >= lx + 4 && mx <= lx + lw - 4 && my >= ly && my <= ly + CARD_H) {
+                selectedMapIndex = i;
+                return true;
+            }
+            ly += CARD_H + gap;
+        }
+
+        int remaining = voteData.remainingSeconds - (int) ((System.currentTimeMillis() - voteOpenedAt) / 1000);
+        if (remaining > 0 && votedMap == null && selectedMapIndex >= 0) {
+            int btnW = rw - 16;
+            int btnH = PWPTheme.Spacing.BUTTON_HEIGHT;
+            int btnX = rx + (rw - btnW) / 2;
+            int btnAreaY = panelY + panelH - 38;
+            if (mx >= btnX && mx <= btnX + btnW && my >= btnAreaY && my <= btnAreaY + btnH) {
+                votedMap = voteData.mapNames[selectedMapIndex];
+                PacketHandler.INSTANCE.sendToServer(new VoteMapPacket(voteData.mapNames[selectedMapIndex]));
+                PWPToastManager.show("Голос принят: " + voteData.mapDisplayNames[selectedMapIndex], PWPToastManager.ToastType.SUCCESS);
+                return true;
+            }
+        }
+
+        return super.mouseClicked(mx, my, 0);
+    }
+
+    private boolean handleModeVoteClick(double mx, double my, int lx, int cx, int rx, int panelY, int lw, int rw, int panelH) {
+        int scrollOff = mapScrollPanel != null ? (int) -mapScrollPanel.getScrollOffset() : 0;
+        int ly = panelY + 22 + scrollOff;
+        int gap = 6;
+        for (int i = 0; i < modeVoteData.modeNames.length; i++) {
+            if (mx >= lx + 4 && mx <= lx + lw - 4 && my >= ly && my <= ly + MODE_CARD_H) {
+                selectedModeIndex = i;
+                return true;
+            }
+            ly += MODE_CARD_H + gap;
+        }
+
+        int remaining = modeVoteData.remainingSeconds - (int) ((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
+        if (remaining > 0 && votedMode == null && selectedModeIndex >= 0) {
+            int btnW = rw - 16;
+            int btnH = PWPTheme.Spacing.BUTTON_HEIGHT;
+            int btnX = rx + (rw - btnW) / 2;
+            int btnY = panelY + panelH - 30;
+            if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
+                votedMode = modeVoteData.modeNames[selectedModeIndex];
+                PacketHandler.INSTANCE.sendToServer(new VoteModePacket(modeVoteData.modeNames[selectedModeIndex]));
+                PWPToastManager.show("Голос принят: " + modeVoteData.modeDisplayNames[selectedModeIndex], PWPToastManager.ToastType.SUCCESS);
+                return true;
+            }
+        }
+
+        return super.mouseClicked(mx, my, 0);
+    }
+
+    private boolean handleMatchListClick(double mx, double my, int lx, int panelY, int lw, int panelH) {
         if (listData == null || listData.count == 0) return false;
+
         int entryH = PWPMatchCard.cardHeight();
         int gap = 8;
-        double scrollOff = scrollPanel != null ? scrollPanel.getScrollOffset() : 0;
-        int startY = panelY + 4;
-        if (matchData != null) startY += 72 + 8;
+        double scrollOff = matchScrollPanel != null ? matchScrollPanel.getScrollOffset() : 0;
+        int startY = panelY + (matchData != null ? 22 : 22);
+        if (matchData != null) startY += entryH + gap + 4;
 
         for (int i = 0; i < listData.count; i++) {
             int y = startY + i * (entryH + gap) - (int) scrollOff;
-            if (mx >= bx && mx <= bx + contentW && my >= y && my <= y + entryH) {
+            if (mx >= lx + 4 && mx <= lx + lw - 4 && my >= y && my <= y + entryH) {
                 if ("PLAYING".equals(listData.statuses[i])) {
                     if (listData.playerCounts[i] < listData.maxPlayers[i]) {
                         PacketHandler.INSTANCE.sendToServer(new JoinMatchServerPacket(listData.serverIds[i]));
@@ -467,47 +944,30 @@ public class PWPLobbyScreen extends Screen {
                 return true;
             }
         }
-        return false;
-    }
 
-    private boolean handleVoteSidebarClick(double mx, double my, int x, int panelY, int w, int panelH) {
-        if (modeVoteData != null && modeVoteData.modeNames.length > 0) {
-            int remaining = modeVoteData.remainingSeconds - (int) ((System.currentTimeMillis() - modeVoteOpenedAt) / 1000);
-            if (remaining <= 0 || votedMode != null) return false;
-            int ly = panelY + 36;
-            for (int i = 0; i < modeVoteData.modeNames.length; i++) {
-                if (mx >= x + 8 && mx <= x + w - 8 && my >= ly - 2 && my <= ly + 26) {
-                    votedMode = modeVoteData.modeNames[i];
-                    PacketHandler.INSTANCE.sendToServer(new VoteModePacket(modeVoteData.modeNames[i]));
-                    PWPToastManager.show("Голос принят: " + modeVoteData.modeDisplayNames[i], PWPToastManager.ToastType.SUCCESS);
-                    return true;
-                }
-                ly += 32;
-            }
-            return false;
+        // Stats link in info panel
+        int rightPanelX = lx + lw + GAP;
+        int rightPanelW = width - rightPanelX - PWPTheme.Spacing.SM;
+        int sepY = panelY + panelH - 40;
+        if (mx >= rightPanelX + 8 && mx <= rightPanelX + rightPanelW - 8 && my >= sepY + 6 && my <= sepY + 26) {
+            if (statsRenderer == null) initStats();
+            statsOpen = true;
+            return true;
         }
 
-        if (voteData == null || voteData.mapNames.length == 0) return false;
-        int remaining = voteData.remainingSeconds - (int) ((System.currentTimeMillis() - voteOpenedAt) / 1000);
-        if (remaining <= 0 || votedMap != null) return false;
-
-        int ly = panelY + 32;
-        for (int i = 0; i < voteData.mapNames.length; i++) {
-            if (mx >= x + 8 && mx <= x + w - 8 && my >= ly - 2 && my <= ly + 26) {
-                votedMap = voteData.mapNames[i];
-                PacketHandler.INSTANCE.sendToServer(new VoteMapPacket(voteData.mapNames[i]));
-                PWPToastManager.show("Голос принят: " + voteData.mapDisplayNames[i], PWPToastManager.ToastType.SUCCESS);
-                return true;
-            }
-            ly += 32;
-        }
-        return false;
+        return super.mouseClicked(mx, my, 0);
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        if (scrollPanel != null && mx < (int) (width * 0.68f)) {
-            return scrollPanel.mouseScrolled(mx, my, delta) != 0;
+        if (modeVoteData != null || voteData != null) {
+            if (mx < (int) (width * 0.27f) + PWPTheme.Spacing.SM) {
+                return mapScrollPanel != null && mapScrollPanel.mouseScrolled(mx, my, delta) != 0;
+            }
+        } else {
+            if (mx < (int) (width * 0.27f) + PWPTheme.Spacing.SM) {
+                return matchScrollPanel != null && matchScrollPanel.mouseScrolled(mx, my, delta) != 0;
+            }
         }
         if (statsOpen && statsRenderer != null) return statsRenderer.mouseScrolled(mx, my, delta);
         return super.mouseScrolled(mx, my, delta);
@@ -515,13 +975,15 @@ public class PWPLobbyScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dragX, double dragY) {
-        if (scrollPanel != null && scrollPanel.mouseDragged(mx, my, button, dragX, dragY)) return true;
+        if (mapScrollPanel != null && mapScrollPanel.mouseDragged(mx, my, button, dragX, dragY)) return true;
+        if (matchScrollPanel != null && matchScrollPanel.mouseDragged(mx, my, button, dragX, dragY)) return true;
         return super.mouseDragged(mx, my, button, dragX, dragY);
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        if (scrollPanel != null && scrollPanel.mouseReleased(mx, my, button)) return true;
+        if (mapScrollPanel != null && mapScrollPanel.mouseReleased(mx, my, button)) return true;
+        if (matchScrollPanel != null && matchScrollPanel.mouseReleased(mx, my, button)) return true;
         return super.mouseReleased(mx, my, button);
     }
 
@@ -547,7 +1009,12 @@ public class PWPLobbyScreen extends Screen {
     public boolean isPauseScreen() { return false; }
 
     private static ResourceLocation getTexture(String mapName, String worldPath, String prefix) {
-        if (mapName == null || worldPath == null || worldPath.isEmpty()) return null;
+        if (mapName == null || mapName.isEmpty()) return null;
+        if (worldPath == null || worldPath.isEmpty()) {
+            ResourceLocation cached = imageCache.get(prefix + mapName);
+            if (cached != null) return cached;
+            return null;
+        }
         return imageCache.computeIfAbsent(prefix + mapName, name -> {
             try {
                 Path iconFile = Paths.get(worldPath, "icon.png");

@@ -54,5 +54,19 @@
     "pwp_lobby.map.chora_valley": "Долина Хора",
     "pwp_lobby.map.tallil_outskirts": "Окрестности Таллиля",
     "pwp_lobby.map.mestia": "Местья",
-    "pwp_lobby.map.belaya": "Белая"
+    "pwp_lobby.map.belaya": "Белая",
+
+    "pwp_lobby.lobby.map_selection": "Выбор карты",
+    "pwp_lobby.lobby.mode_selection": "Выбор режима",
+    "pwp_lobby.lobby.active_matches": "Активные матчи",
+    "pwp_lobby.lobby.map_description": "Описание карты",
+    "pwp_lobby.lobby.mode_description": "Описание режима",
+    "pwp_lobby.lobby.vote_button": "Проголосовать",
+    "pwp_lobby.lobby.vote_accepted": "Голос принят ✓",
+    "pwp_lobby.lobby.votes_count": "%d голосов",
+    "pwp_lobby.lobby.votes_percent": "%d голосов (%d%%)",
+    "pwp_lobby.lobby.max_players": "Макс. %d игроков",
+    "pwp_lobby.lobby.no_preview": "Нет превью",
+    "pwp_lobby.lobby.join_match": "Присоединиться",
+    "pwp_lobby.lobby.players_online": "%d онлайн"
 }

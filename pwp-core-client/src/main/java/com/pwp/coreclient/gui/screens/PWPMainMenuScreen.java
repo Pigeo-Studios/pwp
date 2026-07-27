@@ -2,7 +2,6 @@ package com.pwp.coreclient.gui.screens;
 
 import com.pwp.coreclient.gui.animations.Easing;
 import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPLayout;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientConnectHandler;
 import net.minecraft.client.Minecraft;
@@ -22,9 +21,6 @@ public class PWPMainMenuScreen extends Screen {
     private final long openTime;
     private boolean connecting;
 
-    private enum ServerStatus { UNKNOWN, ONLINE, OFFLINE, MAINTENANCE }
-    private ServerStatus serverStatus = ServerStatus.UNKNOWN;
-
     private PWPButton playBtn;
     private PWPButton singleBtn;
     private PWPButton settingsBtn;
@@ -33,10 +29,6 @@ public class PWPMainMenuScreen extends Screen {
     public PWPMainMenuScreen() {
         super(Component.literal("PWP"));
         openTime = System.currentTimeMillis();
-    }
-
-    public void setServerStatus(ServerStatus status) {
-        this.serverStatus = status;
     }
 
     @Override
@@ -101,59 +93,7 @@ public class PWPMainMenuScreen extends Screen {
             renderLogo(gui, cx, (int) (height * 0.16f), logoFade);
         }
 
-        float welcomeFade = animFade(elapsed, 200, 300);
-        if (welcomeFade > 0) {
-            renderWelcome(gui, cx, welcomeFade);
-        }
-
         renderButtons(gui, mouseX, mouseY, partialTick, elapsed);
-
-        float statusFade = animFade(elapsed, 600, 300);
-        if (statusFade > 0) {
-            renderServerStatus(gui, cx, statusFade);
-        }
-
-        float footerFade = animFade(elapsed, 500, 300);
-        if (footerFade > 0) {
-            gui.setColor(1, 1, 1, footerFade);
-            PWPLayout.renderFooter(gui, "PWP v1.0.1", width, height);
-            gui.setColor(1, 1, 1, 1);
-        }
-    }
-
-    private void renderServerStatus(GuiGraphics gui, int cx, float fade) {
-        int playH = 32;
-        int otherH = 24;
-        int gap = 6;
-        int totalBtnH = playH + otherH * 3 + gap * 3;
-        int startY = (int) (height * 0.52f);
-        if (startY + totalBtnH > height - 40) {
-            startY = height - 40 - totalBtnH;
-        }
-        int btnBottom = startY + totalBtnH;
-        int y = btnBottom + 20;
-        if (y + 24 > height - 20) {
-            y = btnBottom + 8;
-        }
-
-        gui.setColor(1, 1, 1, fade);
-
-        String text;
-        int color;
-        switch (serverStatus) {
-            case ONLINE -> { text = "Сервер: ONLINE"; color = PWPTheme.Colors.SUCCESS; }
-            case OFFLINE -> { text = "Сервер недоступен"; color = PWPTheme.Colors.DANGER; }
-            case MAINTENANCE -> { text = "Технические работы"; color = PWPTheme.Colors.WARNING; }
-            default -> { text = "Проверка подключения..."; color = PWPTheme.Colors.TEXT_DIM; }
-        }
-
-        gui.drawString(font, Component.literal(text), cx - font.width(text) / 2, y, color, false);
-
-        if (serverStatus == ServerStatus.OFFLINE || serverStatus == ServerStatus.MAINTENANCE) {
-            gui.drawString(font, Component.literal("Попробуйте позже"), cx - font.width("Попробуйте позже") / 2, y + 12, PWPTheme.Colors.TEXT_DIM, false);
-        }
-
-        gui.setColor(1, 1, 1, 1);
     }
 
     @Override
@@ -187,29 +127,6 @@ public class PWPMainMenuScreen extends Screen {
         gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
         gui.setColor(1, 1, 1, 1);
-    }
-
-    private void renderWelcome(GuiGraphics gui, int cx, float fade) {
-        var font = PWPTheme.Fonts.display();
-        Minecraft mc = Minecraft.getInstance();
-
-        String nickname = mc.player != null ? mc.player.getScoreboardName() : null;
-        String welcome = nickname != null
-            ? Component.translatable("pwp_core.main_menu.welcome", nickname).getString()
-            : "Добро пожаловать!";
-
-        int welcomeY = (int) (height * 0.34f);
-        int slideY = (int) ((1 - fade) * 6);
-
-        var pose = gui.pose();
-        pose.pushPose();
-        pose.translate(0, slideY, 0);
-
-        gui.drawString(font, Component.literal(welcome), cx - font.width(welcome) / 2, welcomeY, PWPTheme.Colors.TEXT_PRIMARY, false);
-        String subStr = Component.translatable("pwp_core.main_menu.subtitle").getString();
-        gui.drawString(font, Component.translatable("pwp_core.main_menu.subtitle"), cx - font.width(subStr) / 2, welcomeY + 16, PWPTheme.Colors.TEXT_SECONDARY, false);
-
-        pose.popPose();
     }
 
     private void renderButtons(GuiGraphics gui, int mouseX, int mouseY, float partialTick, float elapsed) {

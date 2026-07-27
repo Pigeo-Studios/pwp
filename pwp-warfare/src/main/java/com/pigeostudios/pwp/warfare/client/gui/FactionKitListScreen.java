@@ -1,12 +1,16 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenFactionKitEditor;
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.coreclient.CoreAPI;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPPanel;
@@ -20,6 +24,8 @@ public class FactionKitListScreen extends Screen {
     private static final int CARD_H = 64;
     private static final int GAP = 10;
 
+    private List<String> kitNames = new ArrayList<>();
+    private boolean loading = true;
     private int cols;
     private int panelW;
     private int panelH;
@@ -37,24 +43,63 @@ public class FactionKitListScreen extends Screen {
     @Override
     protected void init() {
         cols = Math.max(1, Math.min(4, (width - 40) / (CARD_W + GAP)));
-        cols = Math.min(cols, WarfareWorldData.KIT_NAMES.length);
-        panelW = cols * CARD_W + (cols - 1) * GAP + 20;
-        panelW = Math.min(panelW, width - 20);
+        panelW = Math.min(cols * CARD_W + (cols - 1) * GAP + 20, width - 20);
         cx = (width - panelW) / 2;
+        panelH = Math.min(height - 60, 400);
+        maxScroll = 0;
+        scrollOff = 0;
 
-        int rows = (WarfareWorldData.KIT_NAMES.length + cols - 1) / cols;
-        contentH = rows * CARD_H + (rows - 1) * GAP;
-        panelH = Math.min(height - 60, contentH + 76);
-        maxScroll = Math.max(0, contentH + 76 - panelH);
-        if (maxScroll == 0) scrollOff = 0;
-        if (scrollOff > maxScroll) scrollOff = maxScroll;
+        loadKits();
+    }
 
+    private void loadKits() {
+        new Thread(() -> {
+            try {
+                JsonObject result = CoreAPI.getFactionKits(faction);
+                List<String> loaded = new ArrayList<>();
+                if (result != null && result.has("data")) {
+                    JsonArray arr = result.get("data").getAsJsonArray();
+                    for (JsonElement e : arr) {
+                        JsonObject obj = e.getAsJsonObject();
+                        String name = obj.has("kitName") ? obj.get("kitName").getAsString() : "";
+                        if (!name.isEmpty()) loaded.add(name);
+                    }
+                }
+                Minecraft.getInstance().submit(() -> {
+                    kitNames = loaded;
+                    loading = false;
+                    recreateWidgets();
+                });
+            } catch (Exception ex) {
+                Minecraft.getInstance().submit(() -> {
+                    loading = false;
+                    recreateWidgets();
+                });
+            }
+        }, "PWP-FactionKitList-Load").start();
+    }
+
+    private void recreateWidgets() {
         clearWidgets();
         kitButtons.clear();
 
-        for (int i = 0; i < WarfareWorldData.KIT_NAMES.length; i++) {
-            String kitName = WarfareWorldData.KIT_NAMES[i];
+        if (kitNames.isEmpty()) return;
 
+        cols = Math.max(1, Math.min(4, (width - 40) / (CARD_W + GAP)));
+        cols = Math.min(cols, kitNames.size());
+        panelW = Math.min(cols * CARD_W + (cols - 1) * GAP + 20, width - 20);
+        cx = (width - panelW) / 2;
+
+        int rows = (kitNames.size() + cols - 1) / cols;
+        contentH = rows * CARD_H + (rows - 1) * GAP;
+        int availH = panelH - 76;
+        maxScroll = Math.max(0, contentH - availH);
+        if (maxScroll == 0) scrollOff = 0;
+        if (scrollOff > maxScroll) scrollOff = maxScroll;
+
+        for (int i = 0; i < kitNames.size(); i++) {
+            String kitName = kitNames.get(i);
+            int fi = i;
             PWPButton editBtn = new PWPButton(0, 0, 0, 0,
                 Component.literal(kitName),
                 b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName)),
@@ -88,7 +133,7 @@ public class FactionKitListScreen extends Screen {
     private void repositionKitButtons() {
         int baseY = 52 - scrollOff;
 
-        for (int i = 0; i < WarfareWorldData.KIT_NAMES.length; i++) {
+        for (int i = 0; i < kitNames.size(); i++) {
             int r = i / cols;
             int c = i % cols;
             int bx = cx + 10 + c * (CARD_W + GAP);
@@ -116,13 +161,25 @@ public class FactionKitListScreen extends Screen {
         gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 4, PWPTheme.Colors.ACCENT);
         gui.fill(cx + 6, py + 14, cx + panelW - 6, py + 15, PWPTheme.Colors.ACCENT);
 
+        if (loading) {
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            super.render(gui, mx, my, pt);
+            return;
+        }
+
+        if (kitNames.isEmpty()) {
+            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("No kits found for " + faction.toUpperCase()), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            super.render(gui, mx, my, pt);
+            return;
+        }
+
         int clipY = py + 28;
         int clipH = panelH - 28;
         gui.enableScissor(cx, clipY, cx + panelW, clipY + clipH);
 
         int baseY = 52 - scrollOff;
-        for (int i = 0; i < WarfareWorldData.KIT_NAMES.length; i++) {
-            String kitName = WarfareWorldData.KIT_NAMES[i];
+        for (int i = 0; i < kitNames.size(); i++) {
+            String kitName = kitNames.get(i);
             int r = i / cols;
             int c = i % cols;
             int bx = cx + 10 + c * (CARD_W + GAP);

@@ -1,4 +1,4 @@
-import asyncio, json, httpx, time, hmac, hashlib, os
+import asyncio, json, httpx, time, hmac, hashlib, os, aiohttp
 from datetime import datetime, timezone
 from pathlib import Path
 import discord
@@ -15,7 +15,6 @@ LAUNCHER_SECRET = b"pwp_launcher_secret_2024"
 STATUS_COLOR = 0xf59e0b
 
 intents = discord.Intents.default()
-intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 def _sign(path):
@@ -403,9 +402,9 @@ async def process_commands():
 NEWS_FILE = Path(config.LAUNCHER_FILES_DIR) / "news.json"
 MAX_NEWS = 12
 
-async def _sync_news_from_message(msg):
-    """Parse a Discord message and save it as a news item."""
-    text = msg.content.strip()
+async def _save_news_text(text: str):
+    """Parse text and save it as a news item."""
+    text = text.strip()
     if not text:
         return
 
@@ -450,16 +449,37 @@ async def _sync_news_from_message(msg):
 
     news = news[:MAX_NEWS]
     NEWS_FILE.write_text(json.dumps(news, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"[News] Saved news from #{msg.channel.name}: {title}")
+    print(f"[News] Saved: {title}")
 
 
-@bot.event
-async def on_message(msg):
-    if msg.author.bot:
-        return
-    if msg.channel.id != config.NEWS_CHANNEL_ID:
-        return
-    await _sync_news_from_message(msg)
+DISCORD_API = "https://discord.com/api/v10"
+
+async def _poll_news_channel():
+    """Poll Discord REST API for latest messages in the news channel."""
+    url = f"{DISCORD_API}/channels/{config.NEWS_CHANNEL_ID}/messages?limit=3"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers={"Authorization": f"Bot {config.DISCORD_TOKEN}"}) as resp:
+            if resp.status != 200:
+                print(f"[News] Poll failed: {resp.status}")
+                return
+            messages = await resp.json()
+            for msg in messages:
+                if msg.get("author", {}).get("bot"):
+                    continue
+                text = msg.get("content", "").strip()
+                if text:
+                    await _save_news_text(text)
+
+
+async def _news_poll_loop():
+    """Periodically poll Discord for new news."""
+    await asyncio.sleep(10)
+    while True:
+        try:
+            await _poll_news_channel()
+        except Exception as e:
+            print(f"[News] Poll error: {e}")
+        await asyncio.sleep(30)
 
 
 
