@@ -279,22 +279,10 @@ public class DeployScreen extends Screen {
                 RoundedRect.fill(gui, sqX, chatTop-2, sqW2, chatH+4, 4, 0xE60E1117);
                 RoundedRect.border(gui, sqX, chatTop-2, sqW2, chatH+4, 4, 1, PWPTheme.Colors.BORDER);
                 gui.drawString(f, "ЧАТ", sqX + 4, chatTop, PWPTheme.Colors.TEXT_DIM, false);
-                // Channel selector
-                String[] channels = {"ALL", "TEAM", "SQD"};
-                int chX = sqX + sqW2 - 4;
-                for (int ci = channels.length - 1; ci >= 0; ci--) {
-                    String chName = channels[ci];
-                    int cw2 = f.width(chName) + 6;
-                    chX -= cw2;
-                    boolean chHover = mx >= chX && mx <= chX + cw2 && my >= chatTop && my <= chatTop + 10;
-                    boolean chSel = chatChannel.equals(chName);
-                    gui.fill(chX, chatTop, chX + cw2, chatTop + 10, chSel ? 0xFFC8812A : (chHover ? 0x442A2A2A : 0));
-                    gui.drawString(f, chName, chX + 3, chatTop + 1, chSel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM, false);
-                }
 
                 gui.enableScissor(sqX+2, chatTop+12, sqX+sqW2-2, chatTop+chatH-18);
                 int mcy2 = chatTop + 14, cc2 = 0, maxMsgs = (chatH - 32) / 10;
-                for (int ci = 0; ci < ClientData.menuChatHistory.size() && cc2 < maxMsgs; ci++) {
+                for (int ci = ClientData.menuChatHistory.size() - 1; ci >= 0 && cc2 < maxMsgs; ci--) {
                     String t = ClientData.menuChatHistory.get(ci).getString();
                     if (f.width(t) > sqW2 - 12) t = f.plainSubstrByWidth(t, sqW2 - 16) + "\u2026";
                     gui.drawString(f, t, sqX + 4, mcy2, PWPTheme.Colors.TEXT_SECONDARY, false);
@@ -302,8 +290,19 @@ public class DeployScreen extends Screen {
                 }
                 gui.disableScissor();
 
-                chatInput.setX(sqX + 4); chatInput.setY(chatTop + chatH - 16);
-                chatInput.setWidth(sqW2 - 8); chatInput.setVisible(true);
+                // Channel selector block + chat input
+                int chBoxW = f.width("SQD") + 8;
+                int chBoxCol = chatChannel.equals("ALL") ? PWPTheme.Colors.TEXT_DIM
+                    : (chatChannel.equals("TEAM") ? PWPTheme.Colors.INFO : PWPTheme.Colors.SUCCESS);
+                boolean chBoxHover = mx >= sqX + 4 && mx <= sqX + 4 + chBoxW
+                    && my >= chatTop + chatH - 18 && my <= chatTop + chatH - 2;
+                gui.fill(sqX + 4, chatTop + chatH - 17, sqX + 4 + chBoxW, chatTop + chatH - 3,
+                    chBoxHover ? 0x44FFFFFF : 0x2212151A);
+                gui.renderOutline(sqX + 4, chatTop + chatH - 17, chBoxW, 14, chBoxCol);
+                gui.drawString(f, chatChannel, sqX + 6, chatTop + chatH - 15, chBoxCol, false);
+
+                chatInput.setX(sqX + 6 + chBoxW); chatInput.setY(chatTop + chatH - 16);
+                chatInput.setWidth(sqW2 - 10 - chBoxW); chatInput.setVisible(true);
             } else {
                 chatInput.setVisible(false);
             }
@@ -409,18 +408,17 @@ public class DeployScreen extends Screen {
                     SquadUIHelper.handleSquadClick(mx, my - sqY, expandedSquads, contextMenu, false);
                     if (!contextMenu.isVisible()) return true;
                 }
-                // Chat channel click
-                if (my >= sqX+4 && my <= sqX+14) {
-                    String[] channels = {"ALL", "TEAM", "SQD"};
-                    int chX = sqX + sqW2 - 4;
-                    for (int ci = channels.length - 1; ci >= 0; ci--) {
-                        String chName = channels[ci];
-                        int cw2 = PWPTheme.Fonts.display().width(chName) + 6;
-                        chX -= cw2;
-                        if (mx >= chX && mx <= chX + cw2 && my >= sqX+4 && my <= sqX+14) {
-                            chatChannel = chName;
-                            return true;
-                        }
+                // Chat channel selector click (block next to input)
+                int chTop2 = mySquadId < 0 ? bottomY + 18 : bottomY + 4;
+                int chH2 = height - BOT_H - 4 - chTop2;
+                if (chH2 > 20) {
+                    int chBoxW2 = PWPTheme.Fonts.display().width("SQD") + 8;
+                    if (mx >= sqX + 4 && mx <= sqX + 4 + chBoxW2
+                        && my >= chTop2 + chH2 - 18 && my <= chTop2 + chH2 - 3) {
+                        String[] chOpts = {"ALL", "TEAM", "SQD"};
+                        int chIdx = java.util.Arrays.asList(chOpts).indexOf(chatChannel);
+                        chatChannel = chOpts[(chIdx + 1) % 3];
+                        return true;
                     }
                 }
             }

@@ -252,10 +252,10 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
        } else {
           return null;
        }
-       return new WarfareWorldData.SpawnerInfo(
-          this.worldPosition, team, type, penalty,
-          this.respawnTimeSettings, this.targetSpawnTick, false
-       );
+        return new WarfareWorldData.SpawnerInfo(
+           this.worldPosition, team, type, penalty,
+           this.respawnTimeSettings, this.targetSpawnTick, false, this.hasSpawnedOnce
+        );
     }
 
     public void load(CompoundTag tag) {

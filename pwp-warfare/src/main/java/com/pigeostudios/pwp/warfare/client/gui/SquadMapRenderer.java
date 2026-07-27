@@ -547,18 +547,16 @@ public class SquadMapRenderer {
         for (String team : new String[]{"BLUE", "RED"}) {
             boolean hasAny = false;
             java.util.Map<String, int[]> groups = new java.util.LinkedHashMap<>();
-            java.util.Map<String, Long> respawnTicks = new java.util.LinkedHashMap<>();
             java.util.Map<String, Integer> penalties = new java.util.LinkedHashMap<>();
+            java.util.Map<String, Boolean> allSpawned = new java.util.LinkedHashMap<>();
 
             for (var s : ClientData.clientSpawners) {
                 if (!s.team.equalsIgnoreCase(team)) continue;
                 int[] counts = groups.computeIfAbsent(s.type, k -> new int[2]);
                 counts[1]++; // total
                 if (s.isAlive) counts[0]++; // alive
-                if (!s.isAlive && s.targetSpawnTick > 0) {
-                    respawnTicks.merge(s.type, s.targetSpawnTick, Math::max);
-                }
                 penalties.putIfAbsent(s.type, s.ticketPenalty);
+                allSpawned.merge(s.type, s.hasSpawnedOnce, Boolean::logicalAnd);
             }
 
             for (var entry : groups.entrySet()) {
@@ -566,6 +564,7 @@ public class SquadMapRenderer {
                 int[] counts = entry.getValue();
                 int alive = counts[0], total = counts[1];
                 int penalty = penalties.getOrDefault(type, 0);
+                boolean allHaveSpawned = allSpawned.getOrDefault(type, false);
 
                 if (!hasAny) {
                     int teamColor = team.equals("BLUE") ? 0xFF4488FF : 0xFFFF4444;
@@ -596,7 +595,12 @@ public class SquadMapRenderer {
                 g.drawString(f, name, panelX + 18, currentY + 2, 0xFFFFFF, false);
 
                 String countStr = alive + "/" + total;
-                int countColor = alive == 0 ? 0xFFFF4444 : (alive < total ? 0xFFFFAA00 : 0xFF88FF88);
+                int countColor;
+                if (alive == 0) {
+                    countColor = allHaveSpawned ? 0xFFFF4444 : 0xFF4488FF;
+                } else {
+                    countColor = alive < total ? 0xFFFFAA00 : 0xFF88FF88;
+                }
                 g.drawString(f, countStr, panelX + panelW - f.width(countStr) - 4, currentY + 2, countColor, false);
 
                 currentY += rowH;
@@ -605,13 +609,15 @@ public class SquadMapRenderer {
 
         if (hoverType != null) {
             long currentTick = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
-            java.util.List<Long> timers = new java.util.ArrayList<>();
+            java.util.List<String> timerLines = new java.util.ArrayList<>();
             for (var s : ClientData.clientSpawners) {
                 if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType) && !s.isAlive && s.targetSpawnTick > currentTick) {
-                    timers.add((s.targetSpawnTick - currentTick) / 20);
+                    long sec = (s.targetSpawnTick - currentTick) / 20;
+                    String label = s.hasSpawnedOnce ? "\u0420\u0435\u0441\u043F\u0430\u0432\u043D" : "\u041F\u043E\u044F\u0432\u0438\u0442\u0441\u044F";
+                    timerLines.add(label + ": " + sec + "\u0441");
                 }
             }
-            timers.sort(null);
+            timerLines.sort(null);
 
             int tooltipX = panelX + panelW + 4;
             int tooltipY = hoverY - 4;
@@ -620,23 +626,25 @@ public class SquadMapRenderer {
             }
             int aliveCount = 0;
             int totalCount = 0;
+            boolean anyNeverSpawned = false;
             for (var s : ClientData.clientSpawners) {
                 if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType)) {
                     totalCount++;
                     if (s.isAlive) aliveCount++;
+                    if (!s.hasSpawnedOnce) anyNeverSpawned = true;
                 }
             }
-            int tipH = 16 + (timers.isEmpty() ? 0 : timers.size() * 10 + 4);
+            int tipH = 16 + (timerLines.isEmpty() ? 0 : timerLines.size() * 10 + 4);
             g.fill(tooltipX, tooltipY, tooltipX + 115, tooltipY + tipH, 0xCC0A0C10);
             g.drawString(f, hoverType, tooltipX + 4, tooltipY + 2, 0xFFFFFF, false);
             String aliveTxt = "\uD83D\uDFE2 \u0411\u043E\u0435\u0433\u043E\u0442\u043E\u0432: " + aliveCount;
-            g.drawString(f, aliveTxt, tooltipX + 4, tooltipY + 14, 0xFF88FF88, false);
-            if (!timers.isEmpty()) {
+            g.drawString(f, aliveTxt, tooltipX + 4, tooltipY + 14, anyNeverSpawned ? 0xFF4488FF : 0xFF88FF88, false);
+            if (!timerLines.isEmpty()) {
                 int ty = tooltipY + 24;
-                g.drawString(f, "\u23F3 \u0420\u0435\u0441\u043F\u0430\u0432\u043D:", tooltipX + 4, ty, 0xFFFFAA00, false);
+                g.drawString(f, "\u23F3 \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435:", tooltipX + 4, ty, 0xFFFFAA00, false);
                 ty += 10;
-                for (long sec : timers) {
-                    g.drawString(f, "  " + sec + "\u0441", tooltipX + 4, ty, 0xFFCCCCCC, false);
+                for (String line : timerLines) {
+                    g.drawString(f, "  " + line, tooltipX + 4, ty, 0xFFCCCCCC, false);
                     ty += 10;
                     if (ty - tooltipY > 80) { g.drawString(f, "  ...", tooltipX + 4, ty, 0xFF888888, false); break; }
                 }

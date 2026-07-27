@@ -1412,23 +1412,25 @@ public class WarfareWorldData extends SavedData {
       }
    }
 
-   public static class SpawnerInfo {
-      public BlockPos pos;
-      public String team;
-      public String type;
-      public int ticketPenalty;
-      public int respawnTime;
-      public long targetSpawnTick;
-      public boolean isAlive;
+    public static class SpawnerInfo {
+       public BlockPos pos;
+       public String team;
+       public String type;
+       public int ticketPenalty;
+       public int respawnTime;
+       public long targetSpawnTick;
+       public boolean isAlive;
+       public boolean hasSpawnedOnce;
 
-      public SpawnerInfo(BlockPos pos, String team, String type, int ticketPenalty, int respawnTime, long targetSpawnTick, boolean isAlive) {
-         this.pos = pos;
-         this.team = team;
-         this.type = type;
-         this.ticketPenalty = ticketPenalty;
-         this.respawnTime = respawnTime;
-         this.targetSpawnTick = targetSpawnTick;
-         this.isAlive = isAlive;
-      }
-   }
+       public SpawnerInfo(BlockPos pos, String team, String type, int ticketPenalty, int respawnTime, long targetSpawnTick, boolean isAlive, boolean hasSpawnedOnce) {
+          this.pos = pos;
+          this.team = team;
+          this.type = type;
+          this.ticketPenalty = ticketPenalty;
+          this.respawnTime = respawnTime;
+          this.targetSpawnTick = targetSpawnTick;
+          this.isAlive = isAlive;
+          this.hasSpawnedOnce = hasSpawnedOnce;
+       }
+    }
 }

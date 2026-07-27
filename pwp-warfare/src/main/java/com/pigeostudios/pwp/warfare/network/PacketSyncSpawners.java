@@ -25,13 +25,14 @@ public class PacketSyncSpawners {
          b.writeInt(s.respawnTime);
          b.writeLong(s.targetSpawnTick);
          b.writeBoolean(s.isAlive);
+         b.writeBoolean(s.hasSpawnedOnce);
       });
    }
 
    public static PacketSyncSpawners decode(FriendlyByteBuf buf) {
       return new PacketSyncSpawners(buf.readList(b -> {
          return new WarfareWorldData.SpawnerInfo(
-            b.readBlockPos(), b.readUtf(), b.readUtf(), b.readInt(), b.readInt(), b.readLong(), b.readBoolean()
+            b.readBlockPos(), b.readUtf(), b.readUtf(), b.readInt(), b.readInt(), b.readLong(), b.readBoolean(), b.readBoolean()
          );
       }));
    }
