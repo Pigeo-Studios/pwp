@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.*;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
+import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
@@ -45,7 +46,7 @@ public class DeployScreen extends Screen {
     private final PortraitRenderer portrait = new PortraitRenderer();
     private final PWPContextMenu contextMenu = new PWPContextMenu();
 
-    private PWPButton selectSpawnBtn, createSquadBtn;
+    private PWPButton selectSpawnBtn, createSquadBtn, applyCmdBtn;
     private EditBox squadInput, chatInput;
     private int mySquadId = -1;
     private int lastSquadCount;
@@ -139,6 +140,11 @@ public class DeployScreen extends Screen {
         createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 50, 18,
             Component.literal("Создать"), b -> createSquad(), PWPButton.Style.DARK));
         createSquadBtn.visible = false;
+        applyCmdBtn = addRenderableWidget(new PWPButton(0, 0, 100, 16,
+            Component.literal("Стать командиром"),
+            b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()),
+            PWPButton.Style.DARK));
+        applyCmdBtn.visible = false;
         chatInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 140, 14, Component.literal("")));
         chatInput.setMaxLength(256);
         chatInput.setVisible(true);
@@ -173,6 +179,7 @@ public class DeployScreen extends Screen {
         }
         var p = Minecraft.getInstance().player;
         if (p == null) return;
+        applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
         boolean dead = p.isDeadOrDying() || ClientData.DOWNED_PLAYERS.contains(p.getId());
         if (!dead) {
             selectSpawnBtn.active = false;
@@ -245,10 +252,14 @@ public class DeployScreen extends Screen {
                 if (lp != null && sq.members().contains(lp.getScoreboardName())) { mySquadId = sq.id(); break; }
             }
 
+            applyCmdBtn.setX(sqX + 4);
+            applyCmdBtn.setY(sqY + 2);
+            applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
+
             gui.enableScissor(sqX, sqY, sqX+sqW2, sqY+sqMaxH);
             gui.pose().pushPose();
             gui.pose().translate(0, sqY, 0);
-            SquadUIHelper.renderSquadList(gui, mx, my - sqY, expandedSquads, false);
+            SquadUIHelper.renderSquadList(gui, mx, my - sqY, expandedSquads, SquadUIHelper.isApplyCmdVisible());
             gui.pose().popPose();
             gui.disableScissor();
 
@@ -397,7 +408,7 @@ public class DeployScreen extends Screen {
 
             if (btn == 0 && mx < lw) {
                 if (mx < sqX+sqW2 && my > sqY && my < bottomY-2) {
-                    SquadUIHelper.handleSquadClick(mx, my - sqY, expandedSquads, contextMenu, false);
+                    SquadUIHelper.handleSquadClick(mx, my - sqY, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
                     if (!contextMenu.isVisible()) return true;
                 }
                 // Chat channel selector click (block next to input)
