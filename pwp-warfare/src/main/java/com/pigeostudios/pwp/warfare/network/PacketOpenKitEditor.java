@@ -60,12 +60,13 @@ public class PacketOpenKitEditor {
                                  container.setItem(i, ((ItemStack)kit.inventory.get(i)).copy());
                               }
 
-                              return new KitEditorMenu(
-                                 id,
-                                 inv,
-                                 container,
-                                 msg.team,
-                                 kit.name,
+                               return new KitEditorMenu(
+                                  id,
+                                  inv,
+                                  container,
+                                  msg.team,  // faction
+                                  msg.team,  // team
+                                  kit.name,
                                  kit.category,
                                  kit.description != null ? kit.description : "",
                                  kit.isLeaderOnly,
@@ -78,9 +79,10 @@ public class PacketOpenKitEditor {
                               );
                            }
                         },
-                        buf -> {
-                            buf.writeUtf(msg.team);
-                            buf.writeUtf(msg.kitName);
+                         buf -> {
+                             buf.writeUtf(msg.team);   // faction
+                             buf.writeUtf(msg.team);   // team
+                             buf.writeUtf(msg.kitName);
                             buf.writeUtf(kit.category != null ? kit.category : "INFANTRY");
                             buf.writeUtf(kit.description != null ? kit.description : "");
                             buf.writeBoolean(kit.isLeaderOnly);

@@ -4,7 +4,9 @@ import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -37,6 +39,8 @@ public class HubBlockEntity extends BlockEntity {
    // Кулдаун спауна TOW (тики)
    public int cooldownTOW = 0;
    public boolean wasDismantled = false;
+   private int dismantleProgress = 0;
+   private float dismantleMultiplier = 1.0F;
    private Object clientSoundRef = null;
 
    public HubBlockEntity(BlockPos pos, BlockState state) {
@@ -56,6 +60,19 @@ public class HubBlockEntity extends BlockEntity {
             this.currentProgress = 2400;
          }
       }
+   }
+
+   public void addDismantleProgress(boolean isEnemy) {
+      if (this.dismantleProgress < 2400) {
+         this.activeDiggers++;
+         this.dismantleMultiplier = isEnemy ? 0.5F : 1.0F;
+         this.setChanged();
+      }
+   }
+
+   public void addCreativeDismantleProgress() {
+      this.dismantleProgress = Math.min(this.dismantleProgress + 50, 2400);
+      this.setChanged();
    }
 
    public void setTeam(String team) {
@@ -205,11 +222,62 @@ public class HubBlockEntity extends BlockEntity {
          }
 
          entity.activeDiggers = 0;
+      } else {
+         if (entity.activeDiggers > 0) {
+            float speed = entity.activeDiggers == 1 ? 1.0F : (entity.activeDiggers == 2 ? 1.34F : (entity.activeDiggers == 3 ? 2.0F : 4.0F));
+            float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+            speed *= multiplier;
+            speed *= entity.dismantleMultiplier;
+            entity.dismantleProgress = entity.dismantleProgress + (int)Math.ceil(speed);
+            entity.setChanged();
+
+            if (entity.dismantleProgress >= 2400) {
+               entity.dismantleProgress = 2400;
+               entity.handleDismantleComplete(level, pos, state);
+            }
+
+            if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= 2400) {
+               level.sendBlockUpdated(pos, state, state, 3);
+            }
+         }
+
+         entity.activeDiggers = 0;
+         entity.dismantleMultiplier = 1.0F;
       }
    }
 
    private void handleSoundClient() {
       DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> this.clientSoundRef = ClientHooks.playHubSound(this, this.clientSoundRef));
+   }
+
+   private void handleDismantleComplete(Level level, BlockPos pos, BlockState state) {
+      if (level.getBlockState(pos).isAir()) return;
+      if (level instanceof ServerLevel serverLevel) {
+         WarfareWorldData data = WarfareWorldData.get(serverLevel);
+         String hubTeam = this.getTeam();
+
+         if (this.dismantleMultiplier >= 1.0F) {
+            this.wasDismantled = true;
+            if (!hubTeam.equals("NEUTRAL")) {
+               int penalty = 10;
+               if (hubTeam.equalsIgnoreCase("BLUE")) {
+                  data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                  broadcastMessage(serverLevel, "BLUE player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.BLUE);
+               } else if (hubTeam.equalsIgnoreCase("RED")) {
+                  data.redTickets = Math.max(0, data.redTickets - penalty);
+                  broadcastMessage(serverLevel, "RED player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.RED);
+               }
+               data.setDirty();
+               PacketHandler.sendToAllClients(serverLevel, data);
+            }
+         }
+      }
+
+      level.destroyBlock(pos, false);
+   }
+
+   private static void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
+      level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(text).withStyle(color), false);
    }
 
    public void setRemoved() {
@@ -221,7 +289,19 @@ public class HubBlockEntity extends BlockEntity {
    }
 
    public float getPercentage() {
+      boolean constructed = this.level != null && this.level.getBlockState(this.worldPosition).hasProperty(HubBlock.CONSTRUCTED)
+         && (Boolean)this.level.getBlockState(this.worldPosition).getValue(HubBlock.CONSTRUCTED);
+      if (constructed && this.dismantleProgress > 0) {
+         return (float)this.dismantleProgress / 2400.0F;
+      }
+      if (constructed) {
+         return 1.0F;
+      }
       return this.currentProgress / 2400.0F;
+   }
+
+   public boolean isDismantling() {
+      return this.dismantleProgress > 0;
    }
 
    protected void saveAdditional(CompoundTag tag) {
@@ -233,6 +313,7 @@ public class HubBlockEntity extends BlockEntity {
       tag.putInt("CooldownM2", this.cooldownM2);
       tag.putInt("CooldownMortar", this.cooldownMortar);
       tag.putInt("CooldownTOW", this.cooldownTOW);
+      tag.putInt("DismantleProgress", this.dismantleProgress);
    }
 
    public void load(CompoundTag tag) {
@@ -260,6 +341,10 @@ public class HubBlockEntity extends BlockEntity {
 
       if (tag.contains("CooldownTOW")) {
          this.cooldownTOW = tag.getInt("CooldownTOW");
+      }
+
+      if (tag.contains("DismantleProgress")) {
+         this.dismantleProgress = tag.getInt("DismantleProgress");
       }
    }
 

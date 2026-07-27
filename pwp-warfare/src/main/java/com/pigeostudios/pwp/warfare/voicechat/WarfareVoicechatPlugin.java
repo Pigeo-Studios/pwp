@@ -109,89 +109,97 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             }
          }
 
-         if (channel == Channel.COMMAND) {
-            WarfareWorldData.Squad squad = getPlayerSquad(pName, data);
-            if (squad != null && squad.leader != null && squad.leader.equals(pName)) {
-               int teamCMDId = senderTeam.equalsIgnoreCase("BLUE")
-                  ? data.blueCMDId : data.redCMDId;
+          if (channel == Channel.COMMAND) {
+             WarfareWorldData.Squad squad = getPlayerSquad(pName, data);
+              if (squad != null && squad.leader != null
+                 && (squad.leader.equals(pName) || squad.bravoLeader.equals(pName) || squad.charlieLeader.equals(pName))) {
 
-               StaticSoundPacket pkt = event.getPacket()
-                  .staticSoundPacketBuilder()
-                  .channelId(UUID.randomUUID())
-                  .build();
+                 StaticSoundPacket pkt = event.getPacket()
+                    .staticSoundPacketBuilder()
+                    .channelId(UUID.randomUUID())
+                    .build();
 
-               for (WarfareWorldData.Squad s : data.squads) {
-                  if (!s.team.equalsIgnoreCase(senderTeam)) continue;
-                  if (s.leader != null && !s.leader.isEmpty()
-                     && s.members.contains(s.leader)
-                     && !s.leader.equals(pName)) {
-                     ServerPlayer sl = sender.server.getPlayerList().getPlayerByName(s.leader);
-                     if (sl != null) {
-                        VoicechatConnection conn = serverApi.getConnectionOf(sl.getUUID());
-                        if (conn != null) {
-                           serverApi.sendStaticSoundPacketTo(conn, pkt);
-                        }
-                     }
-                  }
-                  if (s.id == teamCMDId) {
-                     for (String m : s.members) {
-                        if (m.equals(pName)) continue;
-                        ServerPlayer cmdMember = sender.server.getPlayerList().getPlayerByName(m);
-                        if (cmdMember != null) {
-                           VoicechatConnection conn = serverApi.getConnectionOf(cmdMember.getUUID());
-                           if (conn != null) {
-                              serverApi.sendStaticSoundPacketTo(conn, pkt);
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }
-
-         long now = System.currentTimeMillis();
-         if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150L) {
-            lastVoiceActivity.put(playerUuid, now);
-
-            if (channel == Channel.SQUAD) {
-               WarfareWorldData.Squad squad = getPlayerSquad(pName, data);
-                if (squad != null) {
-                   PacketVoiceActivity vpkt = new PacketVoiceActivity(pName);
-                   for (String memberName : squad.members) {
-                      ServerPlayer p = sender.server.getPlayerList().getPlayerByName(memberName);
-                      if (p != null) {
-                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), vpkt);
-                      }
-                   }
-                   PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sender), vpkt);
-                }
-            }
-
-            if (channel == Channel.COMMAND) {
-                int teamCMDId = senderTeam.equalsIgnoreCase("BLUE")
-                   ? data.blueCMDId : data.redCMDId;
-                PacketRadioVoiceActivity rpkt = new PacketRadioVoiceActivity(pName);
-                for (WarfareWorldData.Squad s : data.squads) {
-                   if (!s.team.equalsIgnoreCase(senderTeam)) continue;
-                   if (s.leader != null && !s.leader.isEmpty()
-                      && s.members.contains(s.leader)) {
-                      ServerPlayer p = sender.server.getPlayerList().getPlayerByName(s.leader);
-                      if (p != null) {
-                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), rpkt);
-                      }
-                   }
-                   if (s.id == teamCMDId) {
-                      for (String m : s.members) {
-                         if (m.equals(pName)) continue;
-                         ServerPlayer cmdMember = sender.server.getPlayerList().getPlayerByName(m);
-                         if (cmdMember != null) {
-                            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> cmdMember), rpkt);
-                         }
-                      }
-                   }
-                }
-                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sender), rpkt);
+                 for (WarfareWorldData.Squad s : data.squads) {
+                    if (!s.team.equalsIgnoreCase(senderTeam)) continue;
+                    if (s.leader != null && !s.leader.isEmpty()
+                       && s.members.contains(s.leader)
+                       && !s.leader.equals(pName)) {
+                       ServerPlayer sl = sender.server.getPlayerList().getPlayerByName(s.leader);
+                       if (sl != null) {
+                          VoicechatConnection conn = serverApi.getConnectionOf(sl.getUUID());
+                          if (conn != null) {
+                             serverApi.sendStaticSoundPacketTo(conn, pkt);
+                          }
+                       }
+                    }
+                    if (s.bravoLeader != null && !s.bravoLeader.isEmpty()
+                       && !s.bravoLeader.equals(pName)) {
+                       ServerPlayer bl = sender.server.getPlayerList().getPlayerByName(s.bravoLeader);
+                       if (bl != null) {
+                          VoicechatConnection conn = serverApi.getConnectionOf(bl.getUUID());
+                          if (conn != null) {
+                             serverApi.sendStaticSoundPacketTo(conn, pkt);
+                          }
+                       }
+                    }
+                    if (s.charlieLeader != null && !s.charlieLeader.isEmpty()
+                       && !s.charlieLeader.equals(pName)) {
+                       ServerPlayer cl = sender.server.getPlayerList().getPlayerByName(s.charlieLeader);
+                       if (cl != null) {
+                          VoicechatConnection conn = serverApi.getConnectionOf(cl.getUUID());
+                          if (conn != null) {
+                             serverApi.sendStaticSoundPacketTo(conn, pkt);
+                          }
+                       }
+                    }
+                 }
              }
+          }
+
+          long now = System.currentTimeMillis();
+          if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150L) {
+             lastVoiceActivity.put(playerUuid, now);
+
+             if (channel == Channel.SQUAD) {
+                WarfareWorldData.Squad squad = getPlayerSquad(pName, data);
+                 if (squad != null) {
+                    PacketVoiceActivity vpkt = new PacketVoiceActivity(pName);
+                    for (String memberName : squad.members) {
+                       ServerPlayer p = sender.server.getPlayerList().getPlayerByName(memberName);
+                       if (p != null) {
+                          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), vpkt);
+                       }
+                    }
+                    PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sender), vpkt);
+                 }
+             }
+
+             if (channel == Channel.COMMAND) {
+                 PacketRadioVoiceActivity rpkt = new PacketRadioVoiceActivity(pName);
+                 for (WarfareWorldData.Squad s : data.squads) {
+                    if (!s.team.equalsIgnoreCase(senderTeam)) continue;
+                    if (s.leader != null && !s.leader.isEmpty()
+                       && s.members.contains(s.leader)) {
+                       ServerPlayer p = sender.server.getPlayerList().getPlayerByName(s.leader);
+                       if (p != null) {
+                          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), rpkt);
+                       }
+                    }
+                    if (s.bravoLeader != null && !s.bravoLeader.isEmpty()) {
+                       ServerPlayer bl = sender.server.getPlayerList().getPlayerByName(s.bravoLeader);
+                       if (bl != null) {
+                          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> bl), rpkt);
+                       }
+                    }
+                    if (s.charlieLeader != null && !s.charlieLeader.isEmpty()) {
+                       ServerPlayer cl = sender.server.getPlayerList().getPlayerByName(s.charlieLeader);
+                       if (cl != null) {
+                          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> cl), rpkt);
+                       }
+                    }
+                 }
+                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sender), rpkt);
+              }
          }
       } catch (Exception e) {
          System.err.println("[PWP Warfare] onMicPacket failed: " + e);

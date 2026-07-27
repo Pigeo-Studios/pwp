@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -19,7 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 // Сущность блока стены
-// Управляет прогрессом строительства и связями между соседними стенами
+// Управляет прогрессом строительства, демонтажа и связями между соседними стенами
 public class WallBlockEntity extends BlockEntity {
    private int currentProgress = 0;
    private int activeDiggers = 0;
@@ -27,6 +28,8 @@ public class WallBlockEntity extends BlockEntity {
    private List<BlockPos> linkedWalls = new ArrayList<>();
    private boolean isMultiWall = false;
    private boolean isUpdatingLinked = false;
+   private int dismantleProgress = 0;
+   private float dismantleMultiplier = 1.0F;
 
    public WallBlockEntity(BlockPos pos, BlockState state) {
       super((BlockEntityType)ModBlocks.WALL_BE.get(), pos, state);
@@ -59,7 +62,19 @@ public class WallBlockEntity extends BlockEntity {
    }
 
    public float getPercentage() {
+      boolean constructed = this.level != null && this.level.getBlockState(this.worldPosition).hasProperty(WallBlock.CONSTRUCTED)
+         && (Boolean)this.level.getBlockState(this.worldPosition).getValue(WallBlock.CONSTRUCTED);
+      if (constructed && this.dismantleProgress > 0) {
+         return (float)this.dismantleProgress / this.getMaxProgress();
+      }
+      if (constructed) {
+         return 1.0F;
+      }
       return (float)this.currentProgress / this.getMaxProgress();
+   }
+
+   public boolean isDismantling() {
+      return this.dismantleProgress > 0;
    }
 
    public void addProgress() {
@@ -73,6 +88,36 @@ public class WallBlockEntity extends BlockEntity {
       if (!this.isUpdatingLinked) {
          this.performCreativeAdd(amount);
          this.propagateToLinks(true, amount);
+      }
+   }
+
+   public void addDismantleProgress(boolean isEnemy) {
+      if (this.dismantleProgress < this.getMaxProgress()) {
+         this.activeDiggers++;
+         this.dismantleMultiplier = isEnemy ? 0.5F : 1.0F;
+         if (!this.isUpdatingLinked) {
+            this.propagateDismantleToLinks(isEnemy);
+         }
+         this.setChanged();
+      }
+   }
+
+   public void addCreativeDismantleProgress() {
+      this.dismantleProgress = Math.min(this.dismantleProgress + 50, this.getMaxProgress());
+      if (!this.isUpdatingLinked) {
+         this.propagateCreativeDismantleToLinks();
+      }
+      this.setChanged();
+   }
+
+   private void propagateCreativeDismantleToLinks() {
+      if (this.isMultiWall && !this.linkedWalls.isEmpty() && this.level != null) {
+         for (BlockPos linkPos : this.linkedWalls) {
+            if (!linkPos.equals(this.worldPosition) && this.level.isLoaded(linkPos) && this.level.getBlockEntity(linkPos) instanceof WallBlockEntity linkedWall) {
+               linkedWall.dismantleProgress = Math.min(linkedWall.dismantleProgress + 50, linkedWall.getMaxProgress());
+               linkedWall.setChanged();
+            }
+         }
       }
    }
 
@@ -113,10 +158,23 @@ public class WallBlockEntity extends BlockEntity {
       }
    }
 
-   // Тик строительства - обновляет прогресс, завершает по достижении максимума
+   private void propagateDismantleToLinks(boolean isEnemy) {
+      if (this.isMultiWall && !this.linkedWalls.isEmpty() && this.level != null) {
+         for (BlockPos linkPos : this.linkedWalls) {
+            if (!linkPos.equals(this.worldPosition) && this.level.isLoaded(linkPos) && this.level.getBlockEntity(linkPos) instanceof WallBlockEntity linkedWall) {
+               linkedWall.activeDiggers++;
+               linkedWall.dismantleMultiplier = isEnemy ? 0.5F : 1.0F;
+               linkedWall.setChanged();
+            }
+         }
+      }
+   }
+
+   // Тик строительства и демонтажа - обновляет прогресс, завершает по достижении максимума
    public static void tick(Level level, BlockPos pos, BlockState state, WallBlockEntity entity) {
       if (!level.isClientSide) {
-         if (!(Boolean)state.getValue(WallBlock.CONSTRUCTED)) {
+         boolean constructed = (Boolean)state.getValue(WallBlock.CONSTRUCTED);
+         if (!constructed) {
             if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
                if (entity.activeDiggers > 0) {
                   float speed;
@@ -151,8 +209,89 @@ public class WallBlockEntity extends BlockEntity {
             }
 
             entity.activeDiggers = 0;
+         } else {
+            if (entity.activeDiggers > 0) {
+               float speed;
+               if (entity.activeDiggers == 1) {
+                  speed = 1.0F;
+               } else if (entity.activeDiggers == 2) {
+                  speed = 1.34F;
+               } else if (entity.activeDiggers == 3) {
+                  speed = 2.0F;
+               } else {
+                  speed = 4.0F;
+               }
+
+               float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+               speed *= multiplier;
+               speed *= entity.dismantleMultiplier;
+               entity.dismantleProgress = entity.dismantleProgress + (int)Math.ceil(speed);
+               entity.setChanged();
+
+               int max = entity.getMaxProgress();
+               if (entity.dismantleProgress >= max) {
+                  entity.dismantleProgress = max;
+                  entity.handleDismantleComplete(level, pos, state);
+               }
+
+               if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= max) {
+                  level.sendBlockUpdated(pos, state, state, 3);
+               }
+            }
+
+            entity.activeDiggers = 0;
+            entity.dismantleMultiplier = 1.0F;
          }
       }
+   }
+
+   private void handleDismantleComplete(Level level, BlockPos pos, BlockState state) {
+      if (level.getBlockState(pos).isAir()) return;
+      if (this.isMultiWall && !this.linkedWalls.isEmpty()) {
+         for (BlockPos linkPos : this.linkedWalls) {
+            if (!linkPos.equals(this.worldPosition) && level.getBlockEntity(linkPos) instanceof WallBlockEntity linked) {
+               linked.dismantleProgress = linked.getMaxProgress();
+               level.destroyBlock(linkPos, false);
+            }
+         }
+      }
+
+      this.returnMaterials(level, pos);
+      level.destroyBlock(pos, false);
+   }
+
+   private void returnMaterials(Level level, BlockPos pos) {
+      if (this.dismantleMultiplier >= 1.0F && level instanceof ServerLevel serverLevel) {
+         int refund = this.getRefundAmount();
+         if (refund <= 0) return;
+
+         WarfareWorldData data = WarfareWorldData.get(serverLevel);
+         BlockPos nearestHub = null;
+         double nearestDist = Double.MAX_VALUE;
+
+         for (WarfareWorldData.HubInfo h : data.hubs) {
+            if (h.team.equalsIgnoreCase(this.teamOwner) && level.getBlockEntity(h.pos) instanceof HubBlockEntity hub) {
+               double dist = h.pos.distSqr(pos);
+               if (dist < nearestDist) {
+                  nearestDist = dist;
+                  nearestHub = h.pos;
+               }
+            }
+         }
+
+         if (nearestHub != null && level.getBlockEntity(nearestHub) instanceof HubBlockEntity hub) {
+            hub.addMaterials(refund);
+         }
+      }
+   }
+
+   private int getRefundAmount() {
+      if (this.isMultiWall && !this.linkedWalls.isEmpty()) {
+         int totalBlocks = this.linkedWalls.size();
+         if (totalBlocks >= 9) return 7;
+         if (totalBlocks >= 4) return 5;
+      }
+      return 2;
    }
 
    protected void saveAdditional(CompoundTag tag) {
@@ -160,6 +299,7 @@ public class WallBlockEntity extends BlockEntity {
       tag.putInt("BuildProgress", this.currentProgress);
       tag.putString("TeamOwner", this.teamOwner);
       tag.putBoolean("IsMultiWall", this.isMultiWall);
+      tag.putInt("DismantleProgress", this.dismantleProgress);
       ListTag list = new ListTag();
 
       for (BlockPos p : this.linkedWalls) {
@@ -178,6 +318,10 @@ public class WallBlockEntity extends BlockEntity {
 
       if (tag.contains("IsMultiWall")) {
          this.isMultiWall = tag.getBoolean("IsMultiWall");
+      }
+
+      if (tag.contains("DismantleProgress")) {
+         this.dismantleProgress = tag.getInt("DismantleProgress");
       }
 
       this.linkedWalls.clear();

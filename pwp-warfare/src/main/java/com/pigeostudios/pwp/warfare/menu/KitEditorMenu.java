@@ -17,8 +17,9 @@ import net.minecraft.world.item.ItemStack;
 
 public class KitEditorMenu extends AbstractContainerMenu {
    public static final int MAX_KIT_SLOTS = 49;
-   public final Container kitInventory;
-   public final String team;
+    public final Container kitInventory;
+    public final String faction;
+    public final String team;
    public final String kitName;
    public String category = "INFANTRY";
    public String description = "";
@@ -33,23 +34,24 @@ public class KitEditorMenu extends AbstractContainerMenu {
       InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS, InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS, InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE, InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
    };
 
-   public KitEditorMenu(int id, Inventory playerInv, FriendlyByteBuf data) {
-      this(
-         id,
-         playerInv,
-         new SimpleContainer(49),
-         data.readUtf(),
-         data.readUtf(),
-         data.readUtf(),
-         data.readUtf(),
-         data.readBoolean(),
-         data.readInt(),
-         data.readInt(),
-         data.readInt(),
-         new boolean[49],
-         new boolean[49],
-         new HashMap<>()
-      );
+    public KitEditorMenu(int id, Inventory playerInv, FriendlyByteBuf data) {
+       this(
+          id,
+          playerInv,
+          new SimpleContainer(49),
+          data.readUtf(),    // faction
+          data.readUtf(),    // team
+          data.readUtf(),
+          data.readUtf(),
+          data.readUtf(),
+          data.readBoolean(),
+          data.readInt(),
+          data.readInt(),
+          data.readInt(),
+          new boolean[49],
+          new boolean[49],
+          new HashMap<>()
+       );
 
       for (int i = 0; i < 49; i++) {
          this.resupplyFlags[i] = data.readBoolean();
@@ -69,13 +71,14 @@ public class KitEditorMenu extends AbstractContainerMenu {
       }
    }
 
-   public KitEditorMenu(
-      int id, Inventory playerInv, Container kitInv, String t, String k, String cat, String desc, boolean l, int mt, int ms, int minPlayers,
-      boolean[] flags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
-   ) {
-      super((MenuType)ModMenuTypes.KIT_EDITOR_MENU.get(), id);
-      this.kitInventory = kitInv;
-      this.team = t;
+    public KitEditorMenu(
+       int id, Inventory playerInv, Container kitInv, String f, String t, String k, String cat, String desc, boolean l, int mt, int ms, int minPlayers,
+       boolean[] flags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
+    ) {
+       super((MenuType)ModMenuTypes.KIT_EDITOR_MENU.get(), id);
+       this.kitInventory = kitInv;
+       this.faction = f;
+       this.team = t;
       this.kitName = k;
       this.category = cat;
       this.description = desc;

@@ -120,13 +120,18 @@ public class ClientEvents {
                if (mc.screen == null) {
                   mc.setScreen(new DownedScreen());
                }
-            } else if (mc.player.getPersistentData().contains("WARFARE_DownedYaw")) {
-               mc.player.getPersistentData().remove("WARFARE_DownedYaw");
-               mc.player.getPersistentData().remove("WARFARE_DownedPitch");
-            }
-         }
-      }
-   }
+         } else if (mc.player.getPersistentData().contains("WARFARE_DownedYaw")) {
+                mc.player.getPersistentData().remove("WARFARE_DownedYaw");
+                mc.player.getPersistentData().remove("WARFARE_DownedPitch");
+             }
+
+             if (ClientData.currentVoiceChannel != PacketVoiceChannelState.Channel.LOCAL) {
+                KeyMapping svc = getSvcPttKey();
+                if (svc != null) svc.setDown(true);
+             }
+          }
+       }
+    }
 
    @SubscribeEvent
    public static void onMouseScroll(MouseScrollingEvent event) {
@@ -320,8 +325,10 @@ public class ClientEvents {
       if (mc.player != null) {
           if (ModKeyBindings.SQUAD_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
              boolean pressed = event.getAction() == 1;
-             KeyMapping svc = getSvcPttKey();
-             if (svc != null) svc.setDown(pressed);
+             if (!pressed) {
+                KeyMapping svc = getSvcPttKey();
+                if (svc != null) svc.setDown(false);
+             }
              PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
                 pressed ? PacketVoiceChannelState.Channel.SQUAD : PacketVoiceChannelState.Channel.LOCAL
              ));
@@ -329,8 +336,10 @@ public class ClientEvents {
           }
           if (ModKeyBindings.COMMAND_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
              boolean pressed = event.getAction() == 1;
-             KeyMapping svc = getSvcPttKey();
-             if (svc != null) svc.setDown(pressed);
+             if (!pressed) {
+                KeyMapping svc = getSvcPttKey();
+                if (svc != null) svc.setDown(false);
+             }
              PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
                 pressed ? PacketVoiceChannelState.Channel.COMMAND : PacketVoiceChannelState.Channel.LOCAL
              ));

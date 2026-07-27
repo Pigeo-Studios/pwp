@@ -56,7 +56,7 @@ public class RoleGrid {
             var list = e.getValue();
             int rows = (list.size() + cols - 1) / cols;
             if (cy + 12 + rows * (cell + gap) + 4 >= y && cy < y + h) {
-                gui.drawString(f, e.getKey(), x, cy, PWPTheme.Colors.TEXT_ACCENT, false);
+                gui.drawString(f, DeployData.getDisplayName(e.getKey()), x, cy, PWPTheme.Colors.TEXT_ACCENT, false);
             }
             cy += 12;
 

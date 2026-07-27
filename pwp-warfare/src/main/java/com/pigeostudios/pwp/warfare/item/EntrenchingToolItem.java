@@ -88,7 +88,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
       HitResult hit = player.pick(4.5, 0.0F, false);
       if (hit.getType() == Type.BLOCK) {
          BlockState state = level.getBlockState(((BlockHitResult)hit).getBlockPos());
-         if (this.isWarfareConstruction(state) && !this.isConstructed(state)) {
+         if (this.isWarfareConstruction(state)) {
             if (!level.isClientSide) {
                long id = this.getOrAssignID(itemstack, level);
                this.triggerAnim(player, id, "ShovelController", "dig");
@@ -109,41 +109,66 @@ public class EntrenchingToolItem extends Item implements GeoItem {
             BlockState state = level.getBlockState(pos);
             BlockEntity be = level.getBlockEntity(pos);
             if (this.isWarfareConstruction(state)) {
-               if (this.isConstructed(state)) {
-                  this.stopDigging(player, stack);
-                  return;
-               }
-
                String playerTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
                String structureTeam = this.getStructureTeam(be);
-               if (!structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !player.isCreative()) {
-                  this.stopDigging(player, stack);
-                  return;
-               }
+               boolean isConstructed = this.isConstructed(state);
+               boolean isEnemy = !structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !player.isCreative();
 
-               int elapsed = this.getUseDuration(stack) - count;
-               if (elapsed % 20 == 10) {
-                  level.playSound(
-                     null, player.getX(), player.getY(), player.getZ(), (SoundEvent)ModSounds.SHOVEL_DIG.get(), SoundSource.PLAYERS, 1.0F, 1.0F
-                  );
-                  ((ServerLevel)level)
-                     .sendParticles(
-                        new BlockParticleOption(ParticleTypes.BLOCK, state),
-                        pos.getX() + 0.5,
-                        pos.getY() + 1.1,
-                        pos.getZ() + 0.5,
-                        12,
-                        0.2,
-                        0.2,
-                        0.2,
-                        0.1
+               if (!isConstructed) {
+                  if (isEnemy) {
+                     this.stopDigging(player, stack);
+                     return;
+                  }
+
+                  int elapsed = this.getUseDuration(stack) - count;
+                  if (elapsed % 20 == 10) {
+                     level.playSound(
+                        null, player.getX(), player.getY(), player.getZ(), (SoundEvent)ModSounds.SHOVEL_DIG.get(), SoundSource.PLAYERS, 1.0F, 1.0F
                      );
-               }
+                     ((ServerLevel)level)
+                        .sendParticles(
+                           new BlockParticleOption(ParticleTypes.BLOCK, state),
+                           pos.getX() + 0.5,
+                           pos.getY() + 1.1,
+                           pos.getZ() + 0.5,
+                           12,
+                           0.2,
+                           0.2,
+                           0.2,
+                           0.1
+                        );
+                  }
 
-               if (player.isCreative()) {
-                  this.addCreativeProgressToBE(be, 50);
+                  if (player.isCreative()) {
+                     this.addCreativeProgressToBE(be, 50);
+                  } else {
+                     this.addProgressToBE(be, player);
+                  }
                } else {
-                  this.addProgressToBE(be, player);
+                  int elapsed = this.getUseDuration(stack) - count;
+                  if (elapsed % 20 == 10) {
+                     level.playSound(
+                        null, player.getX(), player.getY(), player.getZ(), (SoundEvent)ModSounds.SHOVEL_DIG.get(), SoundSource.PLAYERS, 1.0F, 1.0F
+                     );
+                     ((ServerLevel)level)
+                        .sendParticles(
+                           new BlockParticleOption(ParticleTypes.BLOCK, state),
+                           pos.getX() + 0.5,
+                           pos.getY() + 1.1,
+                           pos.getZ() + 0.5,
+                           12,
+                           0.2,
+                           0.2,
+                           0.2,
+                           0.1
+                        );
+                  }
+
+                  if (player.isCreative()) {
+                     this.addCreativeDismantleProgressToBE(be);
+                  } else {
+                     this.addDismantleProgressToBE(be, isEnemy);
+                  }
                }
             } else {
                this.stopDigging(player, stack);
@@ -247,6 +272,26 @@ public class EntrenchingToolItem extends Item implements GeoItem {
          b.addProgress();
       } else if (be instanceof TOWConstructionBlockEntity b) {
          b.addProgress();
+      }
+   }
+
+   private void addDismantleProgressToBE(BlockEntity be, boolean isEnemy) {
+      if (be instanceof WallBlockEntity b) {
+         b.addDismantleProgress(isEnemy);
+      } else if (be instanceof BarbedWireBlockEntity b) {
+         b.addDismantleProgress(isEnemy);
+      } else if (be instanceof HubBlockEntity b) {
+         b.addDismantleProgress(isEnemy);
+      }
+   }
+
+   private void addCreativeDismantleProgressToBE(BlockEntity be) {
+      if (be instanceof WallBlockEntity b) {
+         b.addCreativeDismantleProgress();
+      } else if (be instanceof BarbedWireBlockEntity b) {
+         b.addCreativeDismantleProgress();
+      } else if (be instanceof HubBlockEntity b) {
+         b.addCreativeDismantleProgress();
       }
    }
 

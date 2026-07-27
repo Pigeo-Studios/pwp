@@ -96,6 +96,10 @@ public class DeployData {
         KIT_DISPLAY_NAMES.put("Mechanic", "Механик");
         KIT_DISPLAY_NAMES.put("Drone Operator", "Дроновод");
         KIT_DISPLAY_NAMES.put("Anti_air", "анти воздух");
+        KIT_DISPLAY_NAMES.put("COMMANDER", "КОМАНДИР");
+        KIT_DISPLAY_NAMES.put("INFANTRY", "ПЕХОТА");
+        KIT_DISPLAY_NAMES.put("SPECIALIST", "СПЕЦИАЛИСТ");
+        KIT_DISPLAY_NAMES.put("CREWMAN", "ЭКИПАЖ");
     }
 
     public static String getDisplayName(String en) {

@@ -18,7 +18,6 @@ import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
-import com.pigeostudios.pwp.warfare.network.PacketVoiceChannelState.Channel;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -81,6 +80,7 @@ public class WarfareOverlay {
    private static final ResourceLocation ICON_CONFIRM = new ResourceLocation("pwpwarfare", "textures/gui/icon_confirm.png");
    private static final ResourceLocation VOICE_ICON_TEX = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon.png");
     private static final ResourceLocation VOICE_ICON_RADIO_TEX = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
+    private static final ResourceLocation VOICE_ICON_STAR_TEX = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_star.png");
     private static final Map<String, ResourceLocation> SQUADCALC_ICONS = new HashMap<>();
 
     private static ResourceLocation squadCalcIcon(String type, String team) {
@@ -135,7 +135,6 @@ public class WarfareOverlay {
 
             renderRadioSpeakers(gui, mc, height);
             renderVoiceSpeakers(gui, mc, height);
-            renderChannelIndicator(gui, mc, height);
             if (ClientData.isMapOpen || ClientData.mapTransition > 0.0F) {
                renderSideMap(gui, mc, width, height, event.getPartialTick());
             }
@@ -757,11 +756,12 @@ public class WarfareOverlay {
          int xOffset = 5;
 
          for (Entry<String, Long> entry : new ArrayList<>(ClientData.RADIO_SPEAKERS.entrySet())) {
-            if (now - entry.getValue() > 300L) {
+            if (now - entry.getValue() > 1000L) {
                ClientData.RADIO_SPEAKERS.remove(entry.getKey());
             } else {
                String speakerName = entry.getKey();
                int color = -256;
+               ResourceLocation icon = isCMD(speakerName) ? VOICE_ICON_STAR_TEX : VOICE_ICON_RADIO_TEX;
                int textWidth = PWPTheme.Fonts.display().width(speakerName) + 15;
                gui.fill(xOffset, yOffset - 2, xOffset + 5 + textWidth, yOffset + 10, Integer.MIN_VALUE);
                RenderSystem.enableBlend();
@@ -769,7 +769,7 @@ public class WarfareOverlay {
                float g = (color >> 8 & 0xFF) / 255.0F;
                float b = (color & 0xFF) / 255.0F;
                RenderSystem.setShaderColor(r, g, b, 1.0F);
-               gui.blit(VOICE_ICON_RADIO_TEX, xOffset + 3, yOffset, 0.0F, 0.0F, 8, 8, 8, 8);
+               gui.blit(icon, xOffset + 3, yOffset, 0.0F, 0.0F, 8, 8, 8, 8);
                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                gui.drawString(PWPTheme.Fonts.display(), speakerName, xOffset + 14, yOffset, color, false);
                yOffset += 14;
@@ -786,11 +786,12 @@ public class WarfareOverlay {
          int xOffset = 5;
 
          for (Entry<String, Long> entry : new ArrayList<>(ClientData.SQUAD_SPEAKERS.entrySet())) {
-            if (now - entry.getValue() > 300L) {
+            if (now - entry.getValue() > 1000L) {
                ClientData.SQUAD_SPEAKERS.remove(entry.getKey());
             } else {
                String speakerName = entry.getKey();
                int color = -11141291;
+               ResourceLocation icon = isCMD(speakerName) ? VOICE_ICON_STAR_TEX : VOICE_ICON_TEX;
                int textWidth = PWPTheme.Fonts.display().width(speakerName) + 15;
                gui.fill(xOffset, yOffset - 2, xOffset + 5 + textWidth, yOffset + 10, Integer.MIN_VALUE);
                RenderSystem.enableBlend();
@@ -798,7 +799,7 @@ public class WarfareOverlay {
                float g = (color >> 8 & 0xFF) / 255.0F;
                float b = (color & 0xFF) / 255.0F;
                RenderSystem.setShaderColor(r, g, b, 1.0F);
-               gui.blit(VOICE_ICON_TEX, xOffset + 3, yOffset, 0.0F, 0.0F, 8, 8, 8, 8);
+               gui.blit(icon, xOffset + 3, yOffset, 0.0F, 0.0F, 8, 8, 8, 8);
                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                gui.drawString(PWPTheme.Fonts.display(), speakerName, xOffset + 14, yOffset, color, false);
                yOffset += 14;
@@ -807,39 +808,14 @@ public class WarfareOverlay {
       }
    }
 
-   private static void renderChannelIndicator(GuiGraphics gui, Minecraft mc, int height) {
-      Channel ch = ClientData.currentVoiceChannel;
-      if (ch == Channel.SQUAD) {
-         int x = 5;
-         int y = height / 2 - 56;
-         String label = "SQUAD";
-         int color = -11141291;
-         int w = PWPTheme.Fonts.display().width(label) + 15;
-         gui.fill(x, y - 2, x + 5 + w, y + 10, 0xCC000000);
-         RenderSystem.enableBlend();
-         float r = (color >> 16 & 0xFF) / 255.0F;
-         float g = (color >> 8 & 0xFF) / 255.0F;
-         float b = (color & 0xFF) / 255.0F;
-         RenderSystem.setShaderColor(r, g, b, 0.8F);
-         gui.blit(VOICE_ICON_TEX, x + 3, y, 0.0F, 0.0F, 8, 8, 8, 8);
-         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-         gui.drawString(PWPTheme.Fonts.display(), label, x + 14, y, color, false);
-      } else if (ch == Channel.COMMAND) {
-         int x = 5;
-         int y = height / 2 - 56;
-         String label = "COMMAND";
-         int color = -256;
-         int w = PWPTheme.Fonts.display().width(label) + 15;
-         gui.fill(x, y - 2, x + 5 + w, y + 10, 0xCC000000);
-         RenderSystem.enableBlend();
-         float r = (color >> 16 & 0xFF) / 255.0F;
-         float g = (color >> 8 & 0xFF) / 255.0F;
-         float b = (color & 0xFF) / 255.0F;
-         RenderSystem.setShaderColor(r, g, b, 0.8F);
-         gui.blit(VOICE_ICON_RADIO_TEX, x + 3, y, 0.0F, 0.0F, 8, 8, 8, 8);
-         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-         gui.drawString(PWPTheme.Fonts.display(), label, x + 14, y, color, false);
+   private static boolean isCMD(String playerName) {
+      for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+         if (s.members.contains(playerName)) {
+            int cmdid = s.team.equalsIgnoreCase("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
+            return s.id == cmdid;
+         }
       }
+      return false;
    }
 
    private static void renderHubMaterials(GuiGraphics gui, Minecraft mc, int width, int height) {
@@ -929,40 +905,55 @@ public class WarfareOverlay {
                   structureTeam = tow.getTeam();
                }
 
-               if (!(progress < 0.0F)) {
-                  String playerTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "NEUTRAL";
-                  boolean isEnemy = !structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !mc.player.isCreative();
-                  int uiWidth = 120;
-                  int uiHeight = !isEnemy && !finished ? 54 : 65;
-                  int xStart = width / 2 - uiWidth / 2;
-                  int yStart = height - 110;
-                  int goldLight = -10496;
-                  int goldDark = -4026112;
-                  gui.fill(xStart, yStart, xStart + uiWidth, yStart + uiHeight, -1879048192);
-                  gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
-                  RenderSystem.enableBlend();
-                  gui.blit(BUILD_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
-                  gui.drawString(PWPTheme.Fonts.display(), "Build", xStart + 26, yStart + 10, -1, true);
-                  gui.blit(DIG_ICON, xStart + 8, yStart + 24, 0.0F, 0.0F, 12, 12, 12, 12);
-                  gui.drawString(PWPTheme.Fonts.display(), "Destroy", xStart + 26, yStart + 26, -1, true);
-                  int barX = xStart + 26;
-                  int barY = yStart + 42;
-                  int barWidth = 85;
-                  gui.blit(SHOVEL_ICON, xStart + 8, yStart + 39, 0.0F, 0.0F, 12, 12, 12, 12);
-                  gui.fill(barX, barY, barX + barWidth, barY + 5, 1090519039);
-                  int currentBarWidth = (int)(barWidth * progress);
-                  if (currentBarWidth > 0) {
-                     gui.fillGradient(barX, barY, barX + currentBarWidth, barY + 5, goldDark, goldLight);
-                  }
+                 if (!(progress < 0.0F)) {
+                    String playerTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "NEUTRAL";
+                    boolean isEnemy = !structureTeam.equals("NEUTRAL") && !structureTeam.equalsIgnoreCase(playerTeam) && !mc.player.isCreative();
+                    boolean dismantling = false;
+                    if (be instanceof WallBlockEntity w) {
+                       dismantling = w.isDismantling();
+                    } else if (be instanceof BarbedWireBlockEntity w) {
+                       dismantling = w.isDismantling();
+                    } else if (be instanceof HubBlockEntity h) {
+                       dismantling = h.isDismantling();
+                    }
 
-                  if (finished) {
-                     gui.drawCenteredString(PWPTheme.Fonts.display(), "Structure finished!", xStart + uiWidth / 2, yStart + 52, -256);
-                  } else if (isEnemy) {
-                     gui.drawCenteredString(PWPTheme.Fonts.display(), "Enemy structure!", xStart + uiWidth / 2, yStart + 52, -43691);
-                  }
+                    boolean showDestroy = finished || dismantling;
+                    int uiWidth = 120;
+                    int uiHeight = (!showDestroy) ? 54 : 65;
+                    int xStart = width / 2 - uiWidth / 2;
+                    int yStart = height - 110;
+                    int goldLight = -10496;
+                    int goldDark = -4026112;
+                    gui.fill(xStart, yStart, xStart + uiWidth, yStart + uiHeight, -1879048192);
+                    gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
+                    RenderSystem.enableBlend();
+                    if (showDestroy) {
+                       gui.blit(DIG_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
+                       gui.drawString(PWPTheme.Fonts.display(), "Destroy", xStart + 26, yStart + 10, -1, true);
+                    } else {
+                       gui.blit(BUILD_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
+                       gui.drawString(PWPTheme.Fonts.display(), "Build", xStart + 26, yStart + 10, -1, true);
+                    }
 
-                  RenderSystem.disableBlend();
-               }
+                    int barY = yStart + (showDestroy ? 28 : 24);
+                    int barWidth = 85;
+                    gui.blit(SHOVEL_ICON, xStart + 8, yStart + (showDestroy ? 25 : 21), 0.0F, 0.0F, 12, 12, 12, 12);
+                    gui.fill(xStart + 26, barY, xStart + 26 + barWidth, barY + 5, 1090519039);
+                    int currentBarWidth = (int)(barWidth * progress);
+                    if (currentBarWidth > 0) {
+                       gui.fillGradient(xStart + 26, barY, xStart + 26 + currentBarWidth, barY + 5, goldDark, goldLight);
+                    }
+
+                    if (dismantling) {
+                       gui.drawCenteredString(PWPTheme.Fonts.display(), isEnemy ? "Destroying..." : "Dismantling...", xStart + uiWidth / 2, yStart + 52, isEnemy ? -43691 : -256);
+                    } else if (finished) {
+                       gui.drawCenteredString(PWPTheme.Fonts.display(), isEnemy ? "Enemy structure" : "Structure finished", xStart + uiWidth / 2, yStart + 52, isEnemy ? -43691 : -256);
+                    } else if (isEnemy) {
+                       gui.drawCenteredString(PWPTheme.Fonts.display(), "Enemy structure", xStart + uiWidth / 2, yStart + 52, -43691);
+                    }
+
+                    RenderSystem.disableBlend();
+                 }
             }
          }
       }

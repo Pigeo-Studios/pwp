@@ -239,10 +239,9 @@ public class InteractionEvents {
          && !state.is((Block)ModBlocks.AGS_CONSTRUCTION_BLOCK.get())
          && !state.is((Block)ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get())
          && !state.is((Block)ModBlocks.TOW_CONSTRUCTION_BLOCK.get())) {
-         boolean isDefense = state.is((Block)ModBlocks.WALL_BLOCK.get()) || state.is((Block)ModBlocks.BARBED_WIRE_BLOCK.get());
-         boolean allowDefenses = (Boolean)WarfareConfig.ALLOW_BREAKING_DEFENSES.get();
-         return state.is((Block)ModBlocks.HUB_BLOCK.get())
-            || state.is((Block)ModBlocks.BLUE_RALLY_BLOCK.get())
+          boolean isDefense = state.is((Block)ModBlocks.WALL_BLOCK.get()) || state.is((Block)ModBlocks.BARBED_WIRE_BLOCK.get());
+          boolean allowDefenses = (Boolean)WarfareConfig.ALLOW_BREAKING_DEFENSES.get();
+          return state.is((Block)ModBlocks.BLUE_RALLY_BLOCK.get())
             || state.is((Block)ModBlocks.RED_RALLY_BLOCK.get())
             || state.is((Block)ModBlocks.AMMO_BAG_BLOCK.get())
             || isDefense && allowDefenses
