@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlock;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.Map;
@@ -46,8 +47,12 @@ public class PacketRespawnRequest {
          .enqueueWork(
             () -> {
                ServerPlayer player = ctx.get().getSender();
-               if (player != null) {
-                  ServerLevel level = player.serverLevel();
+                if (player != null) {
+                   if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                      DownedHandler.forceGiveUp(player);
+                      return;
+                   }
+                   ServerLevel level = player.serverLevel();
                   WarfareWorldData data = WarfareWorldData.get(level);
                   BlockPos targetPos = null;
                   ResourceKey<Level> targetDimension = level.dimension();

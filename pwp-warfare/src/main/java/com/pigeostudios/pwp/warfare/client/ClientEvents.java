@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client;
 
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.client.ClientSkinManager;
+import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadSelectionScreen;
 import com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen;
@@ -378,13 +379,13 @@ public class ClientEvents {
             }
 
             if (event.getAction() == 1 && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode()) && mc.screen == null) {
-               String teamName = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "";
-               boolean isValidTeam = teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red");
-               if (!isValidTeam) {
-                  mc.setScreen(new TeamSelectionScreen());
-               } else {
-                  mc.setScreen(new SquadSelectionScreen());
-               }
+                String teamName = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "";
+                boolean isValidTeam = teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red");
+                if (!isValidTeam) {
+                    mc.setScreen(new TeamSelectionScreen());
+                } else {
+                    mc.setScreen(new DeployScreen());
+                }
             }
 
             if (ModKeyBindings.SHOW_MAP_KEY.matches(event.getKey(), event.getScanCode())) {

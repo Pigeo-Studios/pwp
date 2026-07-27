@@ -2,8 +2,8 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.item.ModItems;
-import com.pigeostudios.pwp.warfare.voicechat.VoicechatCompat;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.util.ArrayList;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
@@ -90,23 +90,22 @@ public class PacketSquadAction {
                            boolean idTaken = false;
 
                            for (WarfareWorldData.Squad s : data.squads) {
-                              if (s.id == i) {
-                                 idTaken = true;
-                                 break;
-                              }
-                           }
+                               if (s.id == i) {
+                                  idTaken = true;
+                                  break;
+                               }
+                            }
 
-                           if (!idTaken) {
-                              newId = i;
-                              break;
-                           }
-                        }
+                            if (!idTaken) {
+                               newId = i;
+                               break;
+                            }
+                         }
 
-                        String currentDim = player.level().dimension().location().toString();
+                         String currentDim = player.level().dimension().location().toString();
                         WarfareWorldData.Squad newSquad = new WarfareWorldData.Squad(newId, finalName, pTeam, pName, currentDim);
                         newSquad.members.add(pName);
                         data.squads.add(newSquad);
-                        VoicechatCompat.createAndJoinGroup(player, newId, finalName);
                         updatePlayerTags(player, newId, true);
                         if ((Boolean)WarfareConfig.AUTO_GIVE_SL_RADIO.get()) {
                            giveRadio(player);
@@ -127,8 +126,7 @@ public class PacketSquadAction {
                               }
 
                               leaveCurrentSquad(player, data);
-                              s.members.add(pName);
-                              VoicechatCompat.joinGroup(player, s.id);
+                               s.members.add(pName);
                               updatePlayerTags(player, s.id, false);
                               player.sendSystemMessage(Component.literal("Joined squad: " + s.name).withStyle(ChatFormatting.GREEN));
                               break;
@@ -171,11 +169,10 @@ public class PacketSquadAction {
                                  }
                               }
 
-                              if (targetEntity != null) {
-                                 removePlayerTags(targetEntity);
-                                 removeRadio(targetEntity);
-                                 VoicechatCompat.leaveGroup(targetEntity);
-                                 targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                               if (targetEntity != null) {
+                                  removePlayerTags(targetEntity);
+                                  removeRadio(targetEntity);
+                                  targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
                               }
 
                               player.server
@@ -278,6 +275,25 @@ public class PacketSquadAction {
                               mySquad.removeFromFireteams(target);
                            }
                         }
+                     } else if (msg.action == 11) {
+                        WarfareWorldData.Squad mySquad = getPlayerSquad(pName, data);
+                        if (mySquad != null && mySquad.id == msg.squadId && mySquad.leader.equals(pName)) {
+                           String squadName = mySquad.name;
+                           for (String m : new ArrayList<>(mySquad.members)) {
+                              mySquad.members.remove(m);
+                              mySquad.removeFromFireteams(m);
+                              ServerPlayer mem = player.server.getPlayerList().getPlayerByName(m);
+                              if (mem != null) {
+                                 removePlayerTags(mem);
+                                 removeRadio(mem);
+                                 mem.displayClientMessage(Component.literal("Squad disbanded by leader.").withStyle(ChatFormatting.RED), true);
+                              }
+                           }
+                           if (mySquad.id == data.blueCMDId) data.blueCMDId = -1;
+                           if (mySquad.id == data.redCMDId) data.redCMDId = -1;
+                           data.squads.remove(mySquad);
+                           player.sendSystemMessage(Component.literal("Squad disbanded.").withStyle(ChatFormatting.GOLD));
+                        }
                      }
 
                      data.setDirty();
@@ -320,8 +336,7 @@ public class PacketSquadAction {
 
    // Р’С‹С…РѕРґ РёРіСЂРѕРєР° РёР· С‚РµРєСѓС‰РµРіРѕ РѕС‚СЂСЏРґР°: РѕС‡РёСЃС‚РєР° РґР°РЅРЅС‹С…, РЅР°Р·РЅР°С‡РµРЅРёРµ РЅРѕРІРѕРіРѕ Р»РёРґРµСЂР°
    public static void leaveCurrentSquad(ServerPlayer player, WarfareWorldData data) {
-      String pName = player.getScoreboardName();
-      VoicechatCompat.leaveGroup(player);
+       String pName = player.getScoreboardName();
 
       for (WarfareWorldData.Squad s : data.squads) {
          if (s.members.contains(pName)) {

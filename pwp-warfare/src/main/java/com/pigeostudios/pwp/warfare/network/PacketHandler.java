@@ -87,6 +87,9 @@ public class PacketHandler {
          id++, PacketRadioVoiceActivity.class, PacketRadioVoiceActivity::encode, PacketRadioVoiceActivity::decode, PacketRadioVoiceActivity::handle
       );
       INSTANCE.registerMessage(
+         id++, PacketVoiceChannelState.class, PacketVoiceChannelState::encode, PacketVoiceChannelState::decode, PacketVoiceChannelState::handle
+      );
+      INSTANCE.registerMessage(
          id++, PacketOpenVictoryScreen.class, PacketOpenVictoryScreen::encode, PacketOpenVictoryScreen::decode, PacketOpenVictoryScreen::handle
       );
       INSTANCE.registerMessage(

@@ -21,6 +21,8 @@ public class ModKeyBindings {
       "key.pwpwarfare.show_nicknames", KeyConflictContext.UNIVERSAL, Type.KEYSYM, 340, "key.categories.pwpwarfare"
    );
    public static final KeyMapping PLACE_PING_KEY = new KeyMapping("key.pwpwarfare.place_ping", KeyConflictContext.IN_GAME, Type.MOUSE, 2, "key.categories.pwpwarfare");
+   public static final KeyMapping SQUAD_PTT_KEY = new KeyMapping("key.pwpwarfare.squad_ptt", KeyConflictContext.IN_GAME, Type.KEYSYM, 66, "key.categories.pwpwarfare");
+   public static final KeyMapping COMMAND_PTT_KEY = new KeyMapping("key.pwpwarfare.command_ptt", KeyConflictContext.IN_GAME, Type.KEYSYM, 71, "key.categories.pwpwarfare");
 
    @SubscribeEvent
    public static void registerKeys(RegisterKeyMappingsEvent event) {
@@ -29,5 +31,7 @@ public class ModKeyBindings {
       event.register(SHOW_MAP_KEY);
       event.register(SHOW_NICKNAMES_KEY);
       event.register(PLACE_PING_KEY);
+      event.register(SQUAD_PTT_KEY);
+      event.register(COMMAND_PTT_KEY);
    }
 }

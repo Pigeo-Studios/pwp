@@ -87,13 +87,8 @@ public class ClientHooks {
    }
 
     public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
-       ClientData.availableKits = new ArrayList<>(kits);
-       var p = Minecraft.getInstance().player;
-       if (p != null && p.isDeadOrDying()) {
-          Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
-       } else {
-          Minecraft.getInstance().setScreen(new PlayerKitSelectScreen(kits));
-       }
+        ClientData.availableKits = new ArrayList<>(kits);
+        Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
     }
 
     public static void openKitTeamSelect() {

@@ -25,7 +25,8 @@ public class DeployData {
         String name, String category, String description,
         boolean available, String reason,
         int inTeamCount, int maxInTeam,
-        List<LoadoutSlot> loadout
+        List<LoadoutSlot> loadout,
+        List<ItemStack> armor
     ) {}
 
     public record SquadRecord(int id, String name, String leader, List<String> members, boolean isLocked,
@@ -98,14 +99,15 @@ public class DeployData {
                         }
                     }
                 }
-                String cat = (dto.category != null && !dto.category.isEmpty()) ? dto.category
-                    : (meta != null ? meta[0] : "INFANTRY");
+                String cat = meta != null ? meta[0]
+                    : (dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
                 String desc = (dto.description != null && !dto.description.isEmpty()) ? dto.description
                     : (meta != null ? meta[1] : "");
                 List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items);
+                List<ItemStack> armor = extractArmorFromItems(dto.items);
                 int inTeam = 0, maxTeam = -1;
                 kits.add(new KitRecord(dto.name, cat, desc, dto.available,
-                    dto.available ? "" : dto.reason, inTeam, maxTeam, loadout));
+                    dto.available ? "" : dto.reason, inTeam, maxTeam, loadout, armor));
             }
         } else {
             populateHardcoded();
@@ -137,7 +139,7 @@ public class DeployData {
                 new LoadoutSlot("SPECIAL", List.of(bandage), 0),
                 new LoadoutSlot("BACKPACK", List.of(bag, bino), 0)
             );
-            kits.add(new KitRecord(name, meta[0], meta[1], avail, "", 0, -1, loadout));
+            kits.add(new KitRecord(name, meta[0], meta[1], avail, "", 0, -1, loadout, List.of()));
             i++;
         }
     }
@@ -160,6 +162,7 @@ public class DeployData {
             else if (i == 1) secondary.add(opt);
             else if (i == 2) throwable.add(opt);
             else if (i == 3) special.add(opt);
+            else if (isWeapon(stack)) primary.add(opt);
             else backpack.add(opt);
         }
 
@@ -169,6 +172,27 @@ public class DeployData {
         if (!special.isEmpty()) slots.add(new LoadoutSlot("SPECIAL", special, 0));
         if (!backpack.isEmpty()) slots.add(new LoadoutSlot("BACKPACK", backpack, 0));
         return slots;
+    }
+
+    private static boolean isWeapon(ItemStack stack) {
+        var item = stack.getItem();
+        String id = item.getDescriptionId();
+        return id.contains("gun") || id.contains("rifle") || id.contains("pistol") || id.contains("smg")
+            || id.contains("shotgun") || id.contains("sniper") || id.contains("lmg") || id.contains("rocket")
+            || id.contains("launcher") || id.contains("sword") || id.contains("axe")
+            || item instanceof net.minecraft.world.item.SwordItem
+            || item instanceof net.minecraft.world.item.AxeItem;
+    }
+
+    private static List<ItemStack> extractArmorFromItems(List<ItemStack> items) {
+        List<ItemStack> armor = new ArrayList<>(4);
+        for (ItemStack stack : items) {
+            if (stack.isEmpty()) continue;
+            var item = stack.getItem();
+            if (item instanceof net.minecraft.world.item.ArmorItem) armor.add(stack);
+            if (armor.size() >= 4) break;
+        }
+        return armor;
     }
 
     public static int getSelectedIndex(String kitName, String slotLabel) {

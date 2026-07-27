@@ -87,36 +87,39 @@ public class KitEditorMenu extends AbstractContainerMenu {
       this.saveNbtFlags = nbtFlags;
       this.slotSkins = slotSkins;
 
-      for (int row = 0; row < 3; row++) {
-         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 66 + row * 18));
-         }
+      // Hotbar 0-8 (PR, SE, TH, SP, B1-B5)
+      for (int col = 0; col < 9; col++) {
+         this.addSlot(new Slot(kitInv, col, 8 + col * 18, 144));
       }
 
-      for (int col = 0; col < 9; col++) {
-         this.addSlot(new Slot(kitInv, col, 8 + col * 18, 124));
+      // Inventory 9-35 (3 rows of 9)
+      for (int row = 0; row < 3; row++) {
+         for (int col = 0; col < 9; col++) {
+            this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 86 + row * 18));
+         }
       }
 
       for (int i = 0; i < 4; i++) {
          final int armorIndex = i;
          int slotIndex = 36 + i;
-         this.addSlot(new Slot(kitInv, slotIndex, 8 + i * 18, 150) {
+         this.addSlot(new Slot(kitInv, slotIndex, 8 + i * 18, 164) {
             public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
                return Pair.of(InventoryMenu.BLOCK_ATLAS, KitEditorMenu.ARMOR_SLOT_TEXTURES[armorIndex]);
             }
          });
       }
 
-      this.addSlot(new Slot(kitInv, 40, 84, 150) {
+      this.addSlot(new Slot(kitInv, 40, 84, 164) {
          public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
             return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
          }
       });
 
+      // Extra 41-48 (ПРОЧЕЕ)
       for (int row = 0; row < 4; row++) {
          for (int col = 0; col < 2; col++) {
             int slotIndex = 41 + row * 2 + col;
-            this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, 66 + row * 18));
+            this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, 86 + row * 18));
          }
       }
 

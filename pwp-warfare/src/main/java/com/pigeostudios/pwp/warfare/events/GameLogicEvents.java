@@ -9,7 +9,6 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
-import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -275,40 +274,7 @@ public class GameLogicEvents {
 
    @SubscribeEvent
    public static void onPlayerItemLogic(PlayerTickEvent event) {
-      if (event.phase == Phase.END && !event.player.level().isClientSide) {
-         if (event.player.level().getGameTime() % 20L == 0L) {
-            Player player = event.player;
-            ItemStack mainHandStack = player.getMainHandItem();
-            ItemStack offHandStack = player.getOffhandItem();
-            Item monitorItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "monitor"));
-            Item walkieItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("walkietalkie", "netherite_walkietalkie"));
-            if (monitorItem != null && walkieItem != null) {
-               boolean hasMonitor = mainHandStack.getItem() == monitorItem;
-               if (hasMonitor) {
-                  if (offHandStack.getItem() != walkieItem && !offHandStack.isEmpty()) {
-                     moveItemToInventory(player, offHandStack);
-                     player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
-                  }
-
-                  if (player.getOffhandItem().isEmpty()) {
-                     int walkieSlot = findItemInInventory(player.getInventory(), walkieItem);
-                     if (walkieSlot != -1) {
-                        ItemStack walkieStack = player.getInventory().getItem(walkieSlot);
-                        player.setItemInHand(InteractionHand.OFF_HAND, walkieStack);
-                        player.getInventory().setItem(walkieSlot, ItemStack.EMPTY);
-                     }
-                  }
-                } else if (!offHandStack.isEmpty() && offHandStack.getItem() == walkieItem) {
-                   moveItemToInventory(player, offHandStack);
-                   player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
-                }
-             }
-             if (WarfareConfig.TEAM_BASED_WALKIETALKIE.get() && player instanceof ServerPlayer) {
-                WarfareVoicechatPlugin.applyTeamChannel((ServerPlayer) player);
-             }
-          }
-       }
-    }
+   }
 
    private static boolean isHeavyItem(Item item) {
       if (item == ModItems.AGS_AMMO.get()) {
@@ -1443,10 +1409,9 @@ public class GameLogicEvents {
                    }
                 }
              }
-             ResupplyHandler.giveWalkieTalkie(newPlayer);
-          }
-      }
-   }
+           }
+       }
+    }
 
    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityDeath(LivingDeathEvent event) {

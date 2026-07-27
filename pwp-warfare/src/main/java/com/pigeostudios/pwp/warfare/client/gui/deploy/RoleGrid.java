@@ -5,7 +5,6 @@ import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
 
@@ -14,6 +13,8 @@ public class RoleGrid {
     public int scrollOff;
     public String hoveredKit;
     public int hoveredCellX, hoveredCellY, hoveredCellSize, popupGridX, popupGridY, popupGridW;
+    private String tooltipText;
+    private int tooltipX, tooltipY, tooltipW;
     private Map<String, List<DeployData.KitRecord>> cachedCats;
     private int cacheVersion = -1;
 
@@ -49,6 +50,7 @@ public class RoleGrid {
         gui.enableScissor(x, y, x + w, y + h);
 
         hoveredKit = null;
+        tooltipText = null;
         int cy = y - scrollOff;
         for (var e : cats.entrySet()) {
             var list = e.getValue();
@@ -69,8 +71,7 @@ public class RoleGrid {
                             hoveredKit = list.get(idx).name();
                             hoveredCellX = cx2; hoveredCellY = cy2; hoveredCellSize = cell;
                         }
-                        renderCell(gui, cx2, cy2, cell, iconS,
-                            list.get(idx), mx, my, selectedKit, hovered);
+                        renderCell(gui, cx2, cy2, cell, iconS, list.get(idx), selectedKit, hovered);
                     }
                 }
             cy += rows * (cell + gap) + 4;
@@ -78,14 +79,24 @@ public class RoleGrid {
 
         gui.disableScissor();
 
-        // Popup
+        if (tooltipText != null) {
+            int tx = Math.max(x, tooltipX);
+            int tw = tooltipW;
+            if (tx + tw > x + w) tx = x + w - tw;
+            if (tooltipY + 14 > y + h) {
+                tooltipY = Math.max(y, hoveredCellY - 14 - 2);
+            }
+            gui.fill(tx, tooltipY, tx + tw, tooltipY + 14, 0xDD000000);
+            gui.drawString(f, tooltipText, tx + 4, tooltipY + 3, PWPTheme.Colors.DANGER, false);
+        }
+
         if (hoveredKit != null) {
             renderPopup(gui, mx, my, selectedKit);
         }
     }
 
     private void renderCell(GuiGraphics gui, int x, int y, int size, int iconS,
-                            DeployData.KitRecord kit, int mx, int my, String sel, boolean hovered) {
+                            DeployData.KitRecord kit, String sel, boolean hovered) {
         boolean selected = sel.equals(kit.name());
         boolean avail = kit.available();
         var f = PWPTheme.Fonts.display();
@@ -101,13 +112,11 @@ public class RoleGrid {
         RenderSystem.enableBlend();
         if (!avail) RenderSystem.setShaderColor(0.45f, 0.45f, 0.45f, 1f);
         int ix = x + (size - iconS) / 2, iy = y + (size - iconS) / 2 - 2;
-        // Try blit the icon, if texture is missing the render will just be blank
         try {
             gui.blit(ic, ix, iy, 0, 0, iconS, iconS, iconS, iconS);
         } catch (Exception e) {
-            // Fallback: draw first letter
             String letter = kit.name().isEmpty() ? "?" : kit.name().substring(0, 1).toUpperCase();
-            gui.drawCenteredString(PWPTheme.Fonts.display(), letter, x + size / 2, iy + 2, PWPTheme.Colors.TEXT_PRIMARY);
+            gui.drawCenteredString(f, letter, x + size / 2, iy + 2, PWPTheme.Colors.TEXT_PRIMARY);
         }
         RenderSystem.setShaderColor(1, 1, 1, 1);
 
@@ -117,14 +126,12 @@ public class RoleGrid {
             gui.drawCenteredString(f, cnt, x + size / 2, y + size - 8, cc);
         }
 
-        // Tooltip below cell for unavailable
         if (hovered && !avail && !kit.reason().isEmpty()) {
-            String reason = kit.reason();
-            int rw = f.width(reason) + 8;
-            int tx = x + (size - rw) / 2;
-            if (tx < popupGridX) tx = popupGridX;
-            gui.fill(tx, y + size + 2, tx + rw, y + size + 14, 0xDD000000);
-            gui.drawString(f, reason, tx + 4, y + size + 4, PWPTheme.Colors.DANGER, false);
+            tooltipText = kit.reason();
+            int rw = f.width(tooltipText) + 10;
+            tooltipX = x + (size - rw) / 2;
+            tooltipY = y + size + 2;
+            tooltipW = rw;
         }
     }
 
@@ -169,7 +176,6 @@ public class RoleGrid {
         int cols = 4, gap = 2;
         int cell = Math.min(42, Math.max(32, (w - (cols - 1) * gap) / cols));
 
-        // Check popup click first
         if (hoveredKit != null) {
             var kitO = DeployData.kits.stream().filter(k -> k.name().equals(hoveredKit)).findFirst();
             if (kitO.isPresent()) {
@@ -204,6 +210,7 @@ public class RoleGrid {
                     int idx = r * cols + c;
                     if (idx >= list.size()) break;
                     int cx2 = x + c * (cell + gap), cy2 = cy + r * (cell + gap);
+                    if (cy2 < y || cy2 + cell > y + h) continue;
                     if (mx >= cx2 && mx <= cx2 + cell && my >= cy2 && my <= cy2 + cell) {
                         var kit = list.get(idx);
                         if (kit.available()) { DeployData.expandedSlots.clear(); return kit.name(); }

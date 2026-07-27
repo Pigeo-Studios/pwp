@@ -10,20 +10,18 @@ import net.minecraft.network.chat.Component;
 public class DeployMapScreen extends Screen {
 
     private final DeployScreen parent;
-    private final WarfareMapRenderer mapRenderer = new WarfareMapRenderer();
+    private final WarfareMapRenderer map = new WarfareMapRenderer();
 
     public DeployMapScreen(DeployScreen parent) {
-        super(Component.literal("MAP"));
+        super(Component.literal("КАРТА"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
-        int mapSize = Math.min(width - 16, height - 60);
-        int mapX = (width - mapSize) / 2;
-        int mapY = 35;
-        mapRenderer.init(mapX, mapY, mapSize);
-        mapRenderer.centerOnPlayer();
+        int sz = Math.min(width - 10, height - 10);
+        map.init((width - sz) / 2, (height - sz) / 2, sz);
+        map.centerOnPlayer();
     }
 
     @Override
@@ -31,85 +29,45 @@ public class DeployMapScreen extends Screen {
         gui.fill(0, 0, width, height, 0xFF0A0C0E);
         var f = PWPTheme.Fonts.display();
 
-        // Update map renderer size for zoom to work
-        int mapSize = Math.min(width - 16, height - 60);
-        int mapX = (width - mapSize) / 2;
-        int mapY = 35;
-        if (mapRenderer.mapSize != mapSize || mapRenderer.mapX != mapX) {
-            mapRenderer.init(mapX, mapY, mapSize);
-        }
+        map.render(gui, mx, my, pt);
 
-        gui.fill(0, 0, width, 30, 0xE60E1117);
-        gui.drawCenteredString(f, "TACTICAL MAP  —  " + DeployData.mapName, width / 2, 9,
-            PWPTheme.Colors.TEXT_ACCENT);
-        gui.drawString(f, "[M] Close  |  Click spawn to select",
-            width - f.width("[M] Close  |  Click spawn to select") - 12, 9,
-            PWPTheme.Colors.TEXT_SECONDARY, false);
-
-        mapRenderer.render(gui, mx, my, pt);
-
-        String hint = "Drag to pan  \u2022  Scroll to zoom  \u2022  Click spawn to select";
-        gui.drawString(f, hint, width / 2 - f.width(hint) / 2, height - 12, PWPTheme.Colors.TEXT_DIM, false);
+        String hint = "Drag — \u2022 Scroll — \u2022 Click spawn \u2022 M/ESC —";
+        int hw = f.width(hint);
+        gui.fill(width/2 - hw/2 - 8, height-14, width/2 + hw/2 + 8, height, 0xCC000000);
+        gui.drawString(f, hint, width/2 - hw/2, height-11, PWPTheme.Colors.TEXT_DIM, false);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         if (btn == 0) {
-            String spawnId = getSpawnAt(mx, my);
-            if (spawnId != null) {
-                if (parent != null) parent.selectedSpawn = spawnId;
-                if (parent != null) minecraft.setScreen(parent);
+            String sid = getSpawnAt(mx, my);
+            if (sid != null) {
+                if (parent != null) parent.selectedSpawn = sid;
+                if (minecraft != null && parent != null) minecraft.setScreen(parent);
                 return true;
             }
-            mapRenderer.mouseClicked(mx, my, btn);
+            map.mouseClicked(mx, my, btn);
             return true;
-        }
-        if (btn == 1) {
-            mapRenderer.mouseClicked(mx, my, btn);
         }
         return false;
     }
 
-    private String getSpawnAt(double mx, double my) {
-        var mc = Minecraft.getInstance();
-        if (mc.player == null || !mapRenderer.isMouseOver(mx, my)) return null;
-        double bpp = mapRenderer.getBlocksPerPixel();
-        double cx = mapRenderer.getCenterX(mc.player);
-        double cz = mapRenderer.getCenterZ(mc.player);
-        int mapCX = mapRenderer.mapX + mapRenderer.mapSize / 2;
-        int mapCY = mapRenderer.mapY + mapRenderer.mapSize / 2;
-
-        String closestId = null;
-        double closestDist = 15;
-        for (DeployData.SpawnPoint sp : DeployData.spawns) {
-            double sx = mapCX + (sp.pos().getX() - cx) / bpp;
-            double sy = mapCY + (sp.pos().getZ() - cz) / bpp;
-            double dist = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
-            boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
-            if (dist < closestDist && !blocked) {
-                closestDist = dist;
-                closestId = sp.id();
-            }
-        }
-        return closestId;
-    }
-
     @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        if (mapRenderer.mouseDragged(mx, my, btn, dx, dy)) return true;
-        return super.mouseDragged(mx, my, btn, dx, dy);
+        map.mouseDragged(mx, my, btn, dx, dy);
+        return true;
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int btn) {
-        mapRenderer.mouseReleased(btn);
-        return super.mouseReleased(mx, my, btn);
+        map.mouseReleased(btn);
+        return true;
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        if (mapRenderer.mouseScrolled(mx, my, delta)) return true;
-        return super.mouseScrolled(mx, my, delta);
+        map.mouseScrolled(mx, my, delta);
+        return true;
     }
 
     @Override
@@ -119,6 +77,27 @@ public class DeployMapScreen extends Screen {
             return true;
         }
         return super.keyPressed(key, scan, mod);
+    }
+
+    private String getSpawnAt(double mx, double my) {
+        var mc = Minecraft.getInstance();
+        if (mc.player == null || !map.isMouseOver(mx, my)) return null;
+        double bpp = map.getBlocksPerPixel();
+        double cx = map.getCenterX(mc.player);
+        double cz = map.getCenterZ(mc.player);
+        int mcx = map.mapX + map.mapSize/2;
+        int mcy = map.mapY + map.mapSize/2;
+
+        String best = null;
+        double bestD = 18;
+        for (var sp : DeployData.spawns) {
+            double sx = mcx + (sp.pos().getX()-cx)/bpp;
+            double sy = mcy + (sp.pos().getZ()-cz)/bpp;
+            double d = Math.sqrt((mx-sx)*(mx-sx)+(my-sy)*(my-sy));
+            boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
+            if (d < bestD && !blocked) { bestD = d; best = sp.id(); }
+        }
+        return best;
     }
 
     @Override public boolean isPauseScreen() { return false; }

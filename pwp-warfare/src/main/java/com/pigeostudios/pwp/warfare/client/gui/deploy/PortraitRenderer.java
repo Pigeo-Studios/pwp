@@ -8,49 +8,79 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.List;
+
 public class PortraitRenderer {
 
-    private final ItemStack[] saved = new ItemStack[2];
+    private final ItemStack[] saved = new ItemStack[6];
     private boolean inSwap;
 
-    public void render(GuiGraphics gui, int x, int y, int w, int h, int mx, int my, String desc, ItemStack weapon) {
+    public void render(GuiGraphics gui, int x, int y, int w, int h, int mx, int my,
+                       String desc, ItemStack weapon, List<ItemStack> armorPieces) {
         var f = PWPTheme.Fonts.display();
+        int panelH = h - 16;
 
-        RoundedRect.fill(gui, x, y, w, h - 14, 6, 0xFF0E1117);
-        RoundedRect.border(gui, x, y, w, h - 14, 6, 1, PWPTheme.Colors.BORDER);
+        RoundedRect.fill(gui, x, y, w, panelH, 6, 0xFF0E1117);
+        RoundedRect.border(gui, x, y, w, panelH, 6, 1, PWPTheme.Colors.BORDER);
 
         var p = Minecraft.getInstance().player;
         if (p != null) {
             boolean dead = p.isDeadOrDying();
             int savedDeathTime = p.deathTime;
             if (dead) p.deathTime = 0;
-            swap(p, weapon);
-            int cx = x + w / 2, cy = y + (h - 14) / 2 + 8;
-            float lx = (float)(cx - mx) * 0.4f, ly = (float)(cy - 30 - my) * 0.4f;
-            int scale = Math.min(64, Math.max(48, w * 16 / 100));
+            swap(p, weapon, armorPieces);
+
+            int sc = Math.min(120, Math.max(70, Math.min(w, panelH) / 3));
+            int entityX = x + w / 2;
+            int entityY = y + panelH / 2 + panelH / 6;
+
+            gui.enableScissor(x, y, x + w, y + panelH);
+            float lx = (float)(entityX - mx) * 0.4f;
+            float ly = (float)(entityY - panelH / 4 - my) * 0.4f;
             gui.pose().pushPose();
             try {
-                InventoryScreen.renderEntityInInventoryFollowsMouse(gui, x + w / 2, y + h - 14, scale, lx, ly, p);
+                InventoryScreen.renderEntityInInventoryFollowsMouse(gui, entityX, entityY, sc, lx, ly, p);
             } catch (Exception ignored) {}
             gui.pose().popPose();
+            gui.disableScissor();
+
             restore(p);
             if (dead) p.deathTime = savedDeathTime;
         }
 
-        gui.drawString(f, desc, x + 6, y + h - 14 + 2, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(f, desc, x + 6, y + panelH + 2, PWPTheme.Colors.TEXT_SECONDARY, false);
     }
 
-    private void swap(net.minecraft.world.entity.player.Player p, ItemStack weapon) {
+    private void swap(net.minecraft.world.entity.player.Player p, ItemStack weapon, List<ItemStack> armor) {
         if (inSwap) return; inSwap = true;
         saved[0] = p.getItemBySlot(EquipmentSlot.MAINHAND);
         saved[1] = p.getItemBySlot(EquipmentSlot.OFFHAND);
+        saved[2] = p.getItemBySlot(EquipmentSlot.HEAD);
+        saved[3] = p.getItemBySlot(EquipmentSlot.CHEST);
+        saved[4] = p.getItemBySlot(EquipmentSlot.LEGS);
+        saved[5] = p.getItemBySlot(EquipmentSlot.FEET);
+
         p.setItemSlot(EquipmentSlot.MAINHAND, weapon.isEmpty() ? saved[0] : weapon.copy());
         p.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+
+        if (armor != null) {
+            for (ItemStack a : armor) {
+                if (a.isEmpty()) continue;
+                var item = a.getItem();
+                if (item instanceof net.minecraft.world.item.ArmorItem ai) {
+                    p.setItemSlot(ai.getEquipmentSlot(), a.copy());
+                }
+            }
+        }
     }
 
     private void restore(net.minecraft.world.entity.player.Player p) {
         if (!inSwap) return; inSwap = false;
         p.setItemSlot(EquipmentSlot.MAINHAND, saved[0]);
         p.setItemSlot(EquipmentSlot.OFFHAND, saved[1]);
+        p.setItemSlot(EquipmentSlot.HEAD, saved[2]);
+        p.setItemSlot(EquipmentSlot.CHEST, saved[3]);
+        p.setItemSlot(EquipmentSlot.LEGS, saved[4]);
+        p.setItemSlot(EquipmentSlot.FEET, saved[5]);
     }
 }
