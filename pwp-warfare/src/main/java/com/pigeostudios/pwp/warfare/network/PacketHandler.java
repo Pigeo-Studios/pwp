@@ -101,6 +101,12 @@ public class PacketHandler {
       INSTANCE.registerMessage(id++, PacketRequestData.class, PacketRequestData::encode, PacketRequestData::decode, PacketRequestData::handle);
       INSTANCE.registerMessage(id++, PacketSendData.class, PacketSendData::encode, PacketSendData::decode, PacketSendData::handle);
       INSTANCE.registerMessage(id++, PacketApiAction.class, PacketApiAction::encode, PacketApiAction::decode, PacketApiAction::handle);
+      INSTANCE.registerMessage(
+         id++, PacketVehicleDriveRequest.class, PacketVehicleDriveRequest::encode, PacketVehicleDriveRequest::decode, PacketVehicleDriveRequest::handle
+      );
+      INSTANCE.registerMessage(
+         id++, PacketVehicleDriveAnswer.class, PacketVehicleDriveAnswer::encode, PacketVehicleDriveAnswer::decode, PacketVehicleDriveAnswer::handle
+      );
    }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {

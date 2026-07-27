@@ -213,60 +213,24 @@ public class GameLogicEvents {
                   player.getPersistentData().putInt("WARFARE_LastVehicleId", vehicle.getId());
                   player.getPersistentData().putInt("WARFARE_BoardingGrace", 0);
                   player.getPersistentData().remove("WARFARE_DriveKickTimer");
-               } else {
-                   int boardingGrace = player.getPersistentData().getInt("WARFARE_BoardingGrace");
-                   if (boardingGrace < 20) {
-                      player.getPersistentData().putInt("WARFARE_BoardingGrace", boardingGrace + 1);
-                   } else {
-                        if (vehicle.getFirstPassenger() != player) {
+                } else {
+                   if (vehicle.getFirstPassenger() != player) {
+                      player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                   } else if (!player.isCreative() && !player.isSpectator()) {
+                      String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+                      if (vType.isEmpty() || vType.equals("DEFAULT")) {
                          player.getPersistentData().remove("WARFARE_DriveKickTimer");
-                       } else if (!player.isCreative() && !player.isSpectator()) {
-                           String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
-                           if (vType.isEmpty() || vType.equals("DEFAULT")) {
-                              player.getPersistentData().remove("WARFARE_DriveKickTimer");
-                              return;
-                           }
-                           String vTypeUpper = vType.toUpperCase();
-                           String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
-                           boolean isAuthorized = true;
-                           String requiredSpecialist = "";
-                           if (!vType.equalsIgnoreCase("HELICOPTER") && !vTypeUpper.contains("CAS") && !vTypeUpper.contains("SUPPLY HELICOPTER")) {
-                              if ((vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU"))
-                                 && !pKit.equals("Mechanic")
-                                 && !pKit.equals("Mechanic Officer")) {
-                                 isAuthorized = false;
-                                 requiredSpecialist = "MECHANIC";
-                              }
-                           } else if (!pKit.equals("Pilot") && !pKit.equals("Pilot Officer")) {
-                              isAuthorized = false;
-                              requiredSpecialist = "PILOT";
-                           }
-
-                        if (!isAuthorized) {
-                           int timer = player.getPersistentData().getInt("WARFARE_DriveKickTimer");
-                           if (++timer >= 100) {
-                              player.stopRiding();
-                              player.getPersistentData().remove("WARFARE_DriveKickTimer");
-                              player.getPersistentData().remove("WARFARE_BoardingGrace");
-                              player.getPersistentData().remove("WARFARE_LastVehicleId");
-                               player.displayClientMessage(Component.translatable("pwpwarfare.message.ejected_not_qualified").withStyle(ChatFormatting.RED), true);
-                           } else {
-                              player.getPersistentData().putInt("WARFARE_DriveKickTimer", timer);
-                               if (timer % 20 == 0) {
-                                  player.displayClientMessage(
-                                     Component.translatable("pwpwarfare.message.unauthorized_driver", requiredSpecialist, 5 - timer / 20)
-                                        .withStyle(ChatFormatting.YELLOW),
-                                     true
-                                  );
-                                 player.playNotifySound((SoundEvent)SoundEvents.NOTE_BLOCK_BASS.value(), SoundSource.PLAYERS, 1.0F, 0.5F);
-                              }
-                           }
-                        } else {
-                           player.getPersistentData().remove("WARFARE_DriveKickTimer");
-                        }
-                     }
-                  }
-               }
+                         return;
+                      }
+                      String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+                      if (!hasCorrectKit(vType, pKit)) {
+                         player.stopRiding();
+                         player.displayClientMessage(Component.literal("Вам нужен кит Механик/Пилот").withStyle(ChatFormatting.RED), true);
+                      } else {
+                         player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                      }
+                   }
+                }
             }
          }
       }
@@ -1561,6 +1525,10 @@ public class GameLogicEvents {
          newData.putLong("WARFARE_LastMainResupply", oldData.getLong("WARFARE_LastMainResupply"));
       }
 
+      if (oldData.contains("WARFARE_LastRespawnCommand")) {
+         newData.putLong("WARFARE_LastRespawnCommand", oldData.getLong("WARFARE_LastRespawnCommand"));
+      }
+
       if (event.isWasDeath()) {
          String teamName = oldPlayer.getTeam() != null ? oldPlayer.getTeam().getName() : null;
          if (teamName != null) {
@@ -1600,10 +1568,11 @@ public class GameLogicEvents {
       if (entity.level() != null && entity.level().getServer() != null) {
          ServerLevel level = (ServerLevel)entity.level();
          WarfareWorldData data = WarfareWorldData.get(level);
-         boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
-         if (data.blueTickets > 0 && data.redTickets > 0) {
-            boolean ticketsChanged = false;
-            if (entity instanceof ServerPlayer player && player.getTeam() != null) {
+          boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
+          data.removeApprovedDrivers(entity.getUUID());
+          if (data.blueTickets > 0 && data.redTickets > 0) {
+             boolean ticketsChanged = false;
+             if (entity instanceof ServerPlayer player && player.getTeam() != null) {
                String teamName = player.getTeam().getName();
                int cost = data.deathTicketCost;
                if (teamName.equalsIgnoreCase("Blue")) {
@@ -1650,6 +1619,16 @@ public class GameLogicEvents {
       }
    }
 
+   private static boolean hasCorrectKit(String vType, String kit) {
+      if (vType.equalsIgnoreCase("HELICOPTER") || vType.toUpperCase().contains("CAS") || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
+         return kit.equals("Pilot") || kit.equals("Pilot Officer");
+      }
+      if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
+         return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
+      }
+      return true;
+   }
+
    private static float getVehicleHealth(Entity entity) {
       try {
          Object result = entity.getClass().getMethod("getHealth").invoke(entity);
@@ -1667,8 +1646,9 @@ public class GameLogicEvents {
          String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
          String vType = entity.getPersistentData().getString("WARFARE_VehicleType");
          entity.getPersistentData().remove("WARFARE_TicketPenalty");
-         boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
-         if (penalty > 0 && data.blueTickets > 0 && data.redTickets > 0) {
+          boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
+          data.removeApprovedDrivers(entity.getUUID());
+          if (penalty > 0 && data.blueTickets > 0 && data.redTickets > 0) {
             boolean ticketsChanged = false;
             if (vTeam.equalsIgnoreCase("BLUE")) {
                data.blueTickets = Math.max(0, data.blueTickets - penalty);

@@ -173,8 +173,9 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                         }
                      }
 
-                     entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
-                     entity.getPersistentData().putString("WARFARE_VehicleType", vType);
+entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
+                      entity.getPersistentData().putString("WARFARE_VehicleType", vType);
+                      entity.getPersistentData().putBoolean("WARFARE_FreshVehicle", true);
                      entity.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
                      if (maxMats > 0) {
                         entity.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);

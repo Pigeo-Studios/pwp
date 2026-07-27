@@ -59,12 +59,18 @@ public class WarfareConfig {
       .define("requireOfficerForSL", true);
    public static final BooleanValue PREVENT_ENEMY_VEHICLE_ENTRY = BUILDER.comment("Prevent players from entering vehicles claimed by the enemy team")
       .define("preventEnemyVehicleEntry", true);
-   public static final BooleanValue REQUIRE_SPECIALIST_TO_DRIVE = BUILDER.comment(
-         "If true, only Pilots can fly and only Mechanics can drive heavy vehicles. Others are kicked from driver seat after 5 seconds."
-      )
-      .define("requireSpecialistToDrive", true);
-   public static final IntValue ART_STRIKE_COOLDOWN_MINUTES = BUILDER.comment("Cooldown for Artillery Strike in minutes")
-      .defineInRange("artStrikeCooldownMinutes", 30, 1, 120);
+public static final BooleanValue REQUIRE_SPECIALIST_TO_DRIVE = BUILDER.comment(
+          "If true, only Pilots can fly and only Mechanics can drive heavy vehicles. Others are kicked from driver seat after 5 seconds."
+       )
+       .define("requireSpecialistToDrive", true);
+    public static final BooleanValue REQUIRE_SL_PERMISSION_TO_DRIVE = BUILDER.comment(
+          "Require Squad Leader permission to drive fresh vehicles. Non-SL players with correct kit must request access."
+       )
+       .define("requireSlPermissionToDrive", true);
+    public static final IntValue RESPAWN_COMMAND_COOLDOWN_SECONDS = BUILDER.comment("Cooldown for /pwp respawn command in seconds")
+       .defineInRange("respawnCommandCooldown", 240, 0, 3600);
+    public static final IntValue ART_STRIKE_COOLDOWN_MINUTES = BUILDER.comment("Cooldown for Artillery Strike in minutes")
+       .defineInRange("artStrikeCooldownMinutes", 30, 1, 120);
    public static final IntValue ART_STRIKE_RADIUS = BUILDER.comment("Artillery strike impact radius").defineInRange("artStrikeRadius", 20, 5, 100);
    public static final IntValue MIN_HUB_DISTANCE = BUILDER.defineInRange("minHubDistance", 150, 0, 10000);
    public static final IntValue MIN_RALLY_POINT_DISTANCE = BUILDER.defineInRange("minRallyPointDistance", 150, 0, 10000);

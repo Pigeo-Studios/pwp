@@ -63,6 +63,7 @@ public class WarfareWorldData extends SavedData {
    public Map<String, BlockPos> redSpawns = new HashMap<>();
    public Map<String, BlockPos> neutralSpawns = new HashMap<>();
    public List<WarfareWorldData.VehicleRecord> markedVehicles = new ArrayList<>();
+   public Map<UUID, Set<UUID>> approvedDrivers = new HashMap<>();
    public int blueTickets = 800;
    public int redTickets = 800;
    public int respawnTimer = 10;
@@ -269,7 +270,22 @@ public class WarfareWorldData extends SavedData {
    public boolean redReady = false;
    public Map<UUID, Boolean> votes = new HashMap<>();
 
-   public WarfareWorldData() {
+    public boolean hasApprovedDriver(UUID vehicleUUID, UUID playerUUID) {
+       Set<UUID> drivers = approvedDrivers.get(vehicleUUID);
+       return drivers != null && drivers.contains(playerUUID);
+    }
+
+    public void addApprovedDriver(UUID vehicleUUID, UUID playerUUID) {
+       approvedDrivers.computeIfAbsent(vehicleUUID, k -> new HashSet<>()).add(playerUUID);
+       setDirty();
+    }
+
+    public void removeApprovedDrivers(UUID vehicleUUID) {
+       approvedDrivers.remove(vehicleUUID);
+       setDirty();
+    }
+
+    public WarfareWorldData() {
       for (String name : KIT_NAMES) {
          this.blueKits.put(name, new WarfareWorldData.KitInfo(name));
          this.redKits.put(name, new WarfareWorldData.KitInfo(name));

@@ -17,10 +17,13 @@ import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.Set;
+import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,6 +39,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.common.Tags.Blocks;
+import net.minecraftforge.event.entity.EntityMountEvent;
 import net.minecraftforge.event.entity.player.PlayerContainerEvent.Open;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.LeftClickBlock;
@@ -429,5 +433,86 @@ public class InteractionEvents {
             }
          }
       }
+   }
+
+   @SubscribeEvent(priority = EventPriority.HIGHEST)
+   public static void onMountVehicle(EntityMountEvent event) {
+      if (!event.isMounting()) return;
+      if (event.getLevel().isClientSide()) return;
+      if (!(event.getEntityMounting() instanceof ServerPlayer player)) return;
+
+      if (!(Boolean) WarfareConfig.REQUIRE_SL_PERMISSION_TO_DRIVE.get()) return;
+      if (player.isCreative() || player.isSpectator()) return;
+
+      Entity vehicle = event.getEntityBeingMounted();
+      if (!vehicle.getPersistentData().contains("WARFARE_VehicleTeam")) return;
+
+      String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+      if (!isSpecialistVehicle(vType)) return;
+
+      if (!vehicle.getPassengers().isEmpty()) return;
+
+      String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+      if (!hasCorrectKit(vType, pKit)) {
+         event.setCanceled(true);
+         player.displayClientMessage(Component.literal("Вам нужен кит Механик/Пилот для этой техники").withStyle(ChatFormatting.RED), true);
+         return;
+      }
+
+      int squadId = player.getPersistentData().getInt("WARFARE_SquadID");
+      if (squadId == 0) {
+         event.setCanceled(true);
+         player.displayClientMessage(Component.literal("Вы не в отряде").withStyle(ChatFormatting.RED), true);
+         return;
+      }
+
+      boolean isSL = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+      boolean isFresh = vehicle.getPersistentData().getBoolean("WARFARE_FreshVehicle");
+      if (!isFresh) return;
+
+      UUID vehicleUUID = vehicle.getUUID();
+      WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+
+      if (isSL || data.hasApprovedDriver(vehicleUUID, player.getUUID())) {
+         vehicle.getPersistentData().remove("WARFARE_FreshVehicle");
+         return;
+      }
+
+      long cooldownUntil = player.getPersistentData().getLong("WARFARE_DriveRequestCooldown_" + vehicle.getId());
+      if (cooldownUntil > player.level().getGameTime()) {
+         long remaining = (cooldownUntil - player.level().getGameTime()) / 20L;
+         event.setCanceled(true);
+         player.displayClientMessage(Component.literal("Запрос отклонён. Повтор через " + remaining + "с").withStyle(ChatFormatting.RED), true);
+         return;
+      }
+
+      event.setCanceled(true);
+      Component requestMsg = Component.literal("Нужно разрешение командира отряда. ")
+         .withStyle(ChatFormatting.YELLOW)
+         .append(Component.literal("[ОТПРАВИТЬ ЗАПРОС]")
+            .withStyle(style -> style.withColor(ChatFormatting.GREEN)
+               .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/vrequest " + vehicle.getId()))
+               .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Запросить разрешение у SL")))));
+      player.sendSystemMessage(requestMsg);
+   }
+
+   private static boolean isSpecialistVehicle(String vType) {
+      if (vType.equalsIgnoreCase("TANK")) return true;
+      if (vType.equalsIgnoreCase("APC")) return true;
+      if (vType.equalsIgnoreCase("Mobile ZU")) return true;
+      if (vType.equalsIgnoreCase("HELICOPTER")) return true;
+      if (vType.toUpperCase().contains("CAS")) return true;
+      if (vType.toUpperCase().contains("SUPPLY HELICOPTER")) return true;
+      return false;
+   }
+
+   private static boolean hasCorrectKit(String vType, String kit) {
+      if (vType.equalsIgnoreCase("HELICOPTER") || vType.toUpperCase().contains("CAS") || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
+         return kit.equals("Pilot") || kit.equals("Pilot Officer");
+      }
+      if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
+         return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
+      }
+      return true;
    }
 }

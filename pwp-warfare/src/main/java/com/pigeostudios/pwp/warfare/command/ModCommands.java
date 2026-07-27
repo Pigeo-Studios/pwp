@@ -7,6 +7,8 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenSkinInventory;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
+import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveRequest;
+import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveAnswer;
 import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.google.gson.JsonArray;
@@ -23,6 +25,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.world.entity.Entity;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -447,19 +450,58 @@ public class ModCommands {
               )
        );
 
-      dispatcher.register(
-         Commands.literal("pwp")
-            .then(Commands.literal("inv")
-               .executes(ctx -> {
-                  ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
-                  PacketHandler.INSTANCE.send(
-                     PacketDistributor.PLAYER.with(() -> player),
-                     new PacketOpenSkinInventory()
-                  );
-                  return 1;
-               })
-            )
-      );
+       dispatcher.register(
+          Commands.literal("pwp")
+             .then(Commands.literal("inv")
+                .executes(ctx -> {
+                   ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+                   PacketHandler.INSTANCE.send(
+                      PacketDistributor.PLAYER.with(() -> player),
+                      new PacketOpenSkinInventory()
+                   );
+                   return 1;
+                })
+             )
+             .then(Commands.literal("respawn")
+                .executes(ctx -> {
+                   ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+                   ServerLevel level = player.serverLevel();
+                   WarfareWorldData data = WarfareWorldData.get(level);
+
+                   if (!data.isGameStarted) {
+                      player.sendSystemMessage(Component.literal("Game is not active!").withStyle(ChatFormatting.RED));
+                      return 0;
+                   }
+
+                   String team = player.getTeam() != null ? player.getTeam().getName() : "";
+                   if (!team.equalsIgnoreCase("Blue") && !team.equalsIgnoreCase("Red")) {
+                      player.sendSystemMessage(Component.literal("You must be on a team to use this!").withStyle(ChatFormatting.RED));
+                      return 0;
+                   }
+
+                   long lastRespawn = player.getPersistentData().getLong("WARFARE_LastRespawnCommand");
+                   int cooldownTicks = (Integer)WarfareConfig.RESPAWN_COMMAND_COOLDOWN_SECONDS.get() * 20;
+                   long currentTick = level.getGameTime();
+                   long elapsed = currentTick - lastRespawn;
+
+                   if (elapsed < cooldownTicks && !player.isCreative()) {
+                      long remaining = (cooldownTicks - elapsed) / 20;
+                      player.sendSystemMessage(Component.literal("Wait " + remaining + "s before using /pwp respawn again.").withStyle(ChatFormatting.RED));
+                      return 0;
+                   }
+
+                   player.getPersistentData().putLong("WARFARE_LastRespawnCommand", currentTick);
+
+                   if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                      DownedHandler.forceGiveUp(player);
+                   } else {
+                      player.kill();
+                   }
+
+                   return 1;
+                })
+             )
+       );
 
       dispatcher.register(
          Commands.literal("ready")
@@ -476,6 +518,47 @@ public class ModCommands {
                PacketHandler.sendToAllClients(level, data);
                return 1;
             })
+      );
+
+      dispatcher.register(
+         Commands.literal("vrequest")
+            .executes(ctx -> {
+               ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+               Entity vehicle = player.getVehicle();
+               if (vehicle != null && vehicle.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                  PacketVehicleDriveRequest.handleRequest(player, vehicle.getId());
+               } else {
+                  player.sendSystemMessage(Component.literal("Вы не в технике или это не наша техника").withStyle(ChatFormatting.RED));
+               }
+               return 1;
+            })
+            .then(Commands.argument("vehicleId", IntegerArgumentType.integer())
+               .executes(ctx -> {
+                  ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+                  int vehicleId = IntegerArgumentType.getInteger(ctx, "vehicleId");
+                  PacketVehicleDriveRequest.handleRequest(player, vehicleId);
+                  return 1;
+               })
+            )
+      );
+
+      dispatcher.register(
+         Commands.literal("vanswer")
+            .then(Commands.argument("action", StringArgumentType.word())
+               .then(Commands.argument("vehicleId", IntegerArgumentType.integer())
+                  .then(Commands.argument("playerUUID", StringArgumentType.word())
+                     .executes(ctx -> {
+                        ServerPlayer slPlayer = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
+                        String action = StringArgumentType.getString(ctx, "action");
+                        int vehicleId = IntegerArgumentType.getInteger(ctx, "vehicleId");
+                        UUID playerUUID = UUID.fromString(StringArgumentType.getString(ctx, "playerUUID"));
+                        boolean accept = action.equalsIgnoreCase("approve");
+                        PacketVehicleDriveAnswer.handleAnswer(slPlayer, accept, vehicleId, playerUUID);
+                        return 1;
+                     })
+                  )
+               )
+            )
       );
    }
 

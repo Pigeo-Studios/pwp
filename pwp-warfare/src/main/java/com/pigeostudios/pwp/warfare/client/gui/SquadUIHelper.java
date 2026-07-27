@@ -51,6 +51,9 @@ public class SquadUIHelper {
             int squadNameColor = isCMD ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.SUCCESS;
             gui.drawString(PWPTheme.Fonts.display(), idx + ".", 5, currentY, 0xFFFFFF, false);
             String display = prefix + squad.name + " (" + squad.members.size() + "/9)";
+            int nameEndX = 25 + PWPTheme.Fonts.display().width(display);
+            int minActionX = nameEndX + 28;
+            gui.drawString(PWPTheme.Fonts.display(), display, 25, currentY, squadNameColor, false);
 
             String actionText = "";
             boolean isJoin = false, isLeave = false, isDisabled = false;
@@ -63,22 +66,11 @@ public class SquadUIHelper {
                 else { actionText = "Вступить"; isJoin = true; }
             }
 
-            // Pre-calculate lock position for name truncation
-            int preAw = actionText.isEmpty() ? 0 : PWPTheme.Fonts.display().width(actionText) + 12;
-            int preAx = preAw > 0 ? SIDEBAR_WIDTH - preAw - 6 : 0;
-            int preArrowX = (preAx > 0 ? preAx : 160) - 12;
-            int preLockX = preArrowX - 12;
-            int maxNameW = Math.max(1, preLockX - 27);
-            if (PWPTheme.Fonts.display().width(display) > maxNameW) {
-                display = PWPTheme.Fonts.display().plainSubstrByWidth(display, maxNameW - 4) + "\u2026";
-            }
-            gui.drawString(PWPTheme.Fonts.display(), display, 25, currentY, squadNameColor, false);
-
             int actionX = 0;
             if (!actionText.isEmpty()) {
                 int aw = PWPTheme.Fonts.display().width(actionText) + 12;
                 int ah = 12;
-                actionX = SIDEBAR_WIDTH - aw - 6;
+                actionX = Math.max(SIDEBAR_WIDTH - aw - 6, minActionX);
                 int actionY = currentY - 1;
                 boolean hover = mx >= actionX && mx <= actionX + aw && my >= actionY && my <= actionY + ah && !isDisabled;
                 int r = PWPTheme.Spacing.RADIUS_SMALL;
@@ -98,6 +90,9 @@ public class SquadUIHelper {
                 } else if (isDisabled) {
                     gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM, false);
                 }
+            } else {
+                // No action button, shift icons right if name is long
+                if (minActionX > 160) actionX = minActionX;
             }
 
             renderSquadIcons(gui, squad, amILeader, isExpanded, actionX, currentY);
@@ -189,8 +184,13 @@ public class SquadUIHelper {
                 else actionText = "Вступить";
             }
 
+            String prefix2 = isCMD ? "[CMD] " : "";
+            String display2 = prefix2 + squad.name + " (" + squad.members.size() + "/9)";
+            int nameEndX2 = 25 + PWPTheme.Fonts.display().width(display2);
+            int minActionX2 = nameEndX2 + 28;
+
             int aw = actionText.isEmpty() ? 0 : PWPTheme.Fonts.display().width(actionText) + 12;
-            int actionX = aw > 0 ? SIDEBAR_WIDTH - aw - 6 : 0;
+            int actionX = aw > 0 ? Math.max(SIDEBAR_WIDTH - aw - 6, minActionX2) : (minActionX2 > 160 ? minActionX2 : 0);
             int arrowX = (actionX > 0 ? actionX : 160) - 12;
             int lockX = arrowX - 12;
 
