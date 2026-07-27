@@ -195,6 +195,12 @@ public class DownedHandler {
              }
 
             ItemStack held = var6.getItemInHand(event.getHand());
+
+            ResourceLocation heldId = ForgeRegistries.ITEMS.getKey(held.getItem());
+            if (heldId.equals(new ResourceLocation("pwp_medicine", "bandage"))) {
+                return;
+            }
+
             String reviveItemName = (String)WarfareConfig.REVIVE_ITEM.get();
             Item reviveItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation(reviveItemName));
             if (held.getItem() == reviveItem) {

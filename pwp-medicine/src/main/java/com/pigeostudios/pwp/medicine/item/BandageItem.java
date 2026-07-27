@@ -47,6 +47,9 @@ implements GeoItem {
     }
 
     public int getUseDuration(ItemStack pStack) {
+        if (pStack.getOrCreateTag().getBoolean("Reviving")) {
+            return 160;
+        }
         return 60;
     }
 
@@ -62,6 +65,7 @@ implements GeoItem {
                 pPlayer.sendSystemMessage(Component.literal("§cYou cannot revive an ENEMY!"));
                 return InteractionResultHolder.fail(pPlayer.getItemInHand(pUsedHand));
             }
+            pPlayer.getItemInHand(pUsedHand).getOrCreateTag().putBoolean("Reviving", true);
             pLevel.playSound(null, pPlayer.getX(), pPlayer.getY(), pPlayer.getZ(), ModSounds.BANDAGE_START.get(), SoundSource.PLAYERS, 0.7f, 1.0f);
             pPlayer.startUsingItem(pUsedHand);
             return InteractionResultHolder.success(pPlayer.getItemInHand(pUsedHand));
@@ -107,7 +111,12 @@ implements GeoItem {
             toHeal.removeEffect(ModEffects.BLEEDING.get());
             EventHandler.BLEEDING_SOURCES.remove(toHeal.getUUID());
         }
+        pStack.getOrCreateTag().remove("Reviving");
         return pStack;
+    }
+
+    public void releaseUsing(ItemStack pStack, Level pLevel, LivingEntity pEntityLiving, int pTimeCharged) {
+        pStack.getOrCreateTag().remove("Reviving");
     }
 
     private Player getTargetPlayer(Player player) {
@@ -140,6 +149,7 @@ implements GeoItem {
                     pPlayer.sendSystemMessage(Component.literal("§cYou cannot revive an ENEMY!"));
                     return InteractionResult.FAIL;
                 }
+                pStack.getOrCreateTag().putBoolean("Reviving", true);
                 pPlayer.level().playSound(null, pPlayer.getX(), pPlayer.getY(), pPlayer.getZ(), ModSounds.BANDAGE_START.get(), SoundSource.PLAYERS, 0.7f, 1.0f);
                 pPlayer.startUsingItem(pUsedHand);
                 return InteractionResult.SUCCESS;
