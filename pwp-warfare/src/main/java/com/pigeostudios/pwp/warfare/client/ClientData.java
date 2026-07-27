@@ -23,8 +23,9 @@ public class ClientData {
    public static JsonObject leaderboardData = null;
    public static JsonArray skinsData = null;
    public static JsonArray factionsData = null;
-   public static JsonArray factionVehiclesData = null;
-   public static JsonObject factionVehicleDetail = null;
+    public static JsonArray factionVehiclesData = null;
+    public static JsonObject factionVehicleDetail = null;
+    public static JsonArray factionKitsData = null;
    public static int BLUE_TICKETS = 800;
    public static int RED_TICKETS = 800;
    public static int BLUE_PLAYER_COUNT = 0;

@@ -78,6 +78,15 @@ public class PacketRequestData {
                     }
                     break;
                 }
+                case "factionKits": {
+                    JsonObject params = parseJson(msg.params);
+                    String faction = params.has("faction") ? params.get("faction").getAsString() : "";
+                    if (!faction.isEmpty()) {
+                        JsonObject kits = CoreServerApi.getFactionKits(faction);
+                        jsonResult = kits != null ? kits.toString() : "{}";
+                    }
+                    break;
+                }
             }
 
             PacketHandler.INSTANCE.send(

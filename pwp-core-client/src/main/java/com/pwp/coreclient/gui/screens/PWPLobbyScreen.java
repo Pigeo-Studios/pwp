@@ -430,8 +430,13 @@ public class PWPLobbyScreen extends Screen {
             PWPCard.State state = PWPCard.getState(selected, hovered, false);
             PWPCard.render(gui, x + 4, ly, w - 8, MODE_CARD_H, state);
 
-            int icon = i == 0 ? PWPIcons.SWORDS : PWPIcons.SHIELD;
-            PWPIcons.render(gui, icon, x + 12, ly + 6);
+            ResourceLocation modeIcon = getModeIcon(modeVoteData.modeNames[i]);
+            if (modeIcon != null) {
+                gui.blit(modeIcon, x + 12, ly + 6, 0, 0, 16, 16, 16, 16);
+            } else {
+                int fallback = i == 0 ? PWPIcons.SWORDS : PWPIcons.SKULL;
+                PWPIcons.render(gui, fallback, x + 12, ly + 6);
+            }
 
             gui.drawString(font, Component.literal(modeVoteData.modeDisplayNames[i]), x + 30, ly + 6, PWPTheme.Colors.TEXT_PRIMARY);
 
@@ -1007,6 +1012,11 @@ public class PWPLobbyScreen extends Screen {
     public boolean shouldCloseOnEsc() { return true; }
     @Override
     public boolean isPauseScreen() { return false; }
+
+    private static ResourceLocation getModeIcon(String modeName) {
+        if (modeName == null || modeName.isEmpty()) return null;
+        return ResourceLocation.tryParse("pwp_core_client:textures/gui/modes/" + modeName + ".png");
+    }
 
     private static ResourceLocation getTexture(String mapName, String worldPath, String prefix) {
         if (mapName == null || mapName.isEmpty()) return null;

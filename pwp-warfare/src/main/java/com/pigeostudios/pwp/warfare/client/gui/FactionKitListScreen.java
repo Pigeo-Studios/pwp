@@ -3,9 +3,11 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenFactionKitEditor;
-import com.pwp.coreclient.CoreAPI;
+import com.pigeostudios.pwp.warfare.network.PacketRequestData;
+import com.google.gson.Gson;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
@@ -26,6 +28,7 @@ public class FactionKitListScreen extends Screen {
 
     private List<String> kitNames = new ArrayList<>();
     private boolean loading = true;
+    private boolean requested;
     private int cols;
     private int panelW;
     private int panelH;
@@ -49,34 +52,29 @@ public class FactionKitListScreen extends Screen {
         maxScroll = 0;
         scrollOff = 0;
 
-        loadKits();
+        ClientData.factionKitsData = null;
+        requested = true;
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factionKits",
+            "{\"faction\":\"" + faction + "\"}"));
     }
 
-    private void loadKits() {
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.getFactionKits(faction);
-                List<String> loaded = new ArrayList<>();
-                if (result != null && result.has("data")) {
-                    JsonArray arr = result.get("data").getAsJsonArray();
-                    for (JsonElement e : arr) {
-                        JsonObject obj = e.getAsJsonObject();
-                        String name = obj.has("kitName") ? obj.get("kitName").getAsString() : "";
-                        if (!name.isEmpty()) loaded.add(name);
-                    }
-                }
-                Minecraft.getInstance().submit(() -> {
-                    kitNames = loaded;
-                    loading = false;
-                    recreateWidgets();
-                });
-            } catch (Exception ex) {
-                Minecraft.getInstance().submit(() -> {
-                    loading = false;
-                    recreateWidgets();
-                });
+    @Override
+    public void tick() {
+        super.tick();
+        if (requested && ClientData.factionKitsData != null) {
+            requested = false;
+            JsonArray arr = ClientData.factionKitsData;
+            ClientData.factionKitsData = null;
+            List<String> loaded = new ArrayList<>();
+            for (JsonElement e : arr) {
+                JsonObject obj = e.getAsJsonObject();
+                String name = obj.has("kitName") ? obj.get("kitName").getAsString() : "";
+                if (!name.isEmpty()) loaded.add(name);
             }
-        }, "PWP-FactionKitList-Load").start();
+            kitNames = loaded;
+            loading = false;
+            recreateWidgets();
+        }
     }
 
     private void recreateWidgets() {
@@ -99,7 +97,6 @@ public class FactionKitListScreen extends Screen {
 
         for (int i = 0; i < kitNames.size(); i++) {
             String kitName = kitNames.get(i);
-            int fi = i;
             PWPButton editBtn = new PWPButton(0, 0, 0, 0,
                 Component.literal(kitName),
                 b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName)),

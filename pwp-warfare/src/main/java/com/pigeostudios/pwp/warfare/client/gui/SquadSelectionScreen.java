@@ -196,6 +196,7 @@ public class SquadSelectionScreen extends Screen {
         int wx = (int)(mapRenderer.getCenterX(p) + (mx - (mapX + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
         int wz = (int)(mapRenderer.getCenterZ(p) + (my - (mapY + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
         mapCtx.open((int)mx, (int)my, (cat, icon) -> {
+            if ("arrow".equals(icon) && ("enemy".equals(cat) || "team".equals(cat))) return;
             PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(
                 "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad", cat, icon, new BlockPos(wx, 64, wz)));
         });

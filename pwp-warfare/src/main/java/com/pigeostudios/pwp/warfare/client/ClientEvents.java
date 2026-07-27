@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.client.ClientSkinManager;
 import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
+import com.pigeostudios.pwp.warfare.client.gui.SquadMapScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadSelectionScreen;
 import com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
@@ -386,6 +387,10 @@ public class ClientEvents {
                 } else {
                     mc.setScreen(new DeployScreen());
                 }
+            }
+
+            if (event.getKey() == 77 && event.getAction() == 1 && mc.screen == null && !ClientData.isMapOpen) {
+                mc.setScreen(new SquadMapScreen());
             }
 
             if (ModKeyBindings.SHOW_MAP_KEY.matches(event.getKey(), event.getScanCode())) {

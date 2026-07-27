@@ -23,6 +23,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -78,10 +79,16 @@ public class WarfareOverlay {
    private static final ResourceLocation ICON_ROTATE = new ResourceLocation("pwpwarfare", "textures/gui/icon_rotate.png");
    private static final ResourceLocation ICON_CONFIRM = new ResourceLocation("pwpwarfare", "textures/gui/icon_confirm.png");
    private static final ResourceLocation VOICE_ICON_TEX = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon.png");
-   private static final ResourceLocation VOICE_ICON_RADIO_TEX = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
+    private static final ResourceLocation VOICE_ICON_RADIO_TEX = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
+    private static final Map<String, ResourceLocation> SQUADCALC_ICONS = new HashMap<>();
 
-   @SubscribeEvent
-   public static void onRenderOverlay(Post event) {
+    private static ResourceLocation squadCalcIcon(String type, String team) {
+        String s = "enemy".equals(team) ? "_r" : "team".equals(team) ? "_y" : "_g";
+        return SQUADCALC_ICONS.computeIfAbsent(type + s, k -> new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + k + ".png"));
+    }
+
+    @SubscribeEvent
+    public static void onRenderOverlay(Post event) {
       if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
          GuiGraphics gui = event.getGuiGraphics();
          Minecraft mc = Minecraft.getInstance();
@@ -279,34 +286,52 @@ public class WarfareOverlay {
    ) {
       String myTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName().toUpperCase() : "NEUTRAL";
 
-      for (WarfareWorldData.MapMarker m : ClientData.activeMarkers) {
-         if (m.team.equalsIgnoreCase(myTeam) || mc.player.isCreative()) {
-            double dist = Math.sqrt(mc.player.distanceToSqr(m.pos.getX() + 0.5, mc.player.getY(), m.pos.getZ() + 0.5));
-            if (!(dist > 250.0)) {
-               double dx = m.pos.getX() + 0.5 - mc.player.getX();
-               double dz = m.pos.getZ() + 0.5 - mc.player.getZ();
-               float angle = (float)Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-               float diff = Mth.wrapDegrees(angle - playerYaw);
-               if (Math.abs(diff) < visibleRange / 2.0F + 5.0F) {
-                  float xPos = centerX + diff * pixelsPerDegree;
-                  float distAlpha = 1.0F;
-                  if (dist > 150.0) {
-                     distAlpha = 0.35F;
-                  } else if (dist > 50.0) {
-                     distAlpha = 0.7F;
-                  }
+       for (WarfareWorldData.MapMarker m : ClientData.activeMarkers) {
+          if (m.team.equalsIgnoreCase(myTeam) || mc.player.isCreative()) {
+             double dist = Math.sqrt(mc.player.distanceToSqr(m.pos.getX() + 0.5, mc.player.getY(), m.pos.getZ() + 0.5));
+             if (!(dist > 250.0)) {
+                double dx = m.pos.getX() + 0.5 - mc.player.getX();
+                double dz = m.pos.getZ() + 0.5 - mc.player.getZ();
+                float angle = (float)Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
+                float diff = Mth.wrapDegrees(angle - playerYaw);
+                if (Math.abs(diff) < visibleRange / 2.0F + 5.0F) {
+                   float xPos = centerX + diff * pixelsPerDegree;
+                   float distAlpha = 1.0F;
+                   if (dist > 150.0) {
+                      distAlpha = 0.35F;
+                   } else if (dist > 50.0) {
+                      distAlpha = 0.7F;
+                   }
 
-                  float edgeFading = 1.0F - (float)Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
-                  float finalAlpha = distAlpha * Math.max(0.0F, edgeFading);
-                  if (finalAlpha > 0.05F) {
-                     ResourceLocation icon = getMarkerIconLocal(m.type);
-                     renderCompassIcon(gui, icon, xPos, y - 2.0F, 12, finalAlpha);
-                  }
-               }
-            }
-         }
-      }
-   }
+                   float edgeFading = 1.0F - (float)Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
+                   float finalAlpha = distAlpha * Math.max(0.0F, edgeFading);
+                   if (finalAlpha > 0.05F) {
+                      ResourceLocation icon = getMarkerIconLocal(m.type);
+                      renderCompassIcon(gui, icon, xPos, y - 2.0F, 12, finalAlpha);
+                   }
+                }
+             }
+          }
+       }
+
+       long now = mc.level.getGameTime();
+       for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
+          double dist = Math.sqrt(mc.player.distanceToSqr(m.pos.getX() + 0.5, mc.player.getY(), m.pos.getZ() + 0.5));
+          if (dist > 300.0) continue;
+          double dx = m.pos.getX() + 0.5 - mc.player.getX();
+          double dz = m.pos.getZ() + 0.5 - mc.player.getZ();
+          float angle = (float)Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
+          float diff = Mth.wrapDegrees(angle - playerYaw);
+          if (Math.abs(diff) >= visibleRange / 2.0F + 5.0F) continue;
+          float xPos = centerX + diff * pixelsPerDegree;
+          float edgeFading = 1.0F - (float)Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
+          float lifeAlpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
+          float finalAlpha = lifeAlpha * Math.max(0.0F, edgeFading);
+          if (finalAlpha > 0.05F) {
+             renderCompassIcon(gui, squadCalcIcon(m.iconType, m.team), xPos, y - 2.0F, 12, finalAlpha);
+          }
+       }
+    }
 
    private static void renderDownedOnCompass(
       GuiGraphics gui, Minecraft mc, float playerYaw, float centerX, float y, float pixelsPerDegree, float widthInPixels, float visibleRange

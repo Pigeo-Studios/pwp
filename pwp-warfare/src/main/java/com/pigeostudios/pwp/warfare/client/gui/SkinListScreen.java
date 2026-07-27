@@ -4,21 +4,26 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.CoreAPI;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.pwp.coreclient.gui.theme.PWPTheme;
 
 public class SkinListScreen extends Screen {
 
     private List<SkinEntry> skins = new ArrayList<>();
     private int scrollOffset = 0;
+    private boolean loading = true;
+    private boolean requested;
 
     public static class SkinEntry {
         String skinId, name, slotType, weaponTag, rarity, modelPath;
@@ -34,39 +39,41 @@ public class SkinListScreen extends Screen {
         addRenderableWidget(new PWPButton(cx - 40, 10, 90, 20, Component.literal("+ Add Skin"), b -> {
             Minecraft.getInstance().setScreen(new SkinEditorScreen(this));
         }, PWPButton.Style.PRIMARY));
-
         addRenderableWidget(new PWPButton(cx + 55, 10, 55, 20, Component.literal("Refresh"), b -> loadSkins(), PWPButton.Style.PRIMARY));
 
         loadSkins();
     }
 
     public void loadSkins() {
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.getSkins();
-                if (result != null && result.has("data")) {
-                    List<SkinEntry> loaded = new ArrayList<>();
-                    JsonArray arr = result.get("data").getAsJsonArray();
-                    for (JsonElement e : arr) {
-                        JsonObject obj = e.getAsJsonObject();
-                        SkinEntry se = new SkinEntry();
-                        se.skinId = obj.get("skinId").getAsString();
-                        se.name = obj.has("name") ? obj.get("name").getAsString() : se.skinId;
-                        se.slotType = obj.get("slotType").getAsString();
-                        se.weaponTag = obj.get("weaponTag").getAsString();
-                        se.rarity = obj.get("rarity").getAsString();
-                        se.modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull() ? obj.get("modelPath").getAsString() : "";
-                        loaded.add(se);
-                    }
-                    Minecraft.getInstance().submit(() -> {
-                        skins = loaded;
-                        scrollOffset = 0;
-                    });
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
+        loading = true;
+        requested = true;
+        ClientData.skinsData = null;
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("skins", ""));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (requested && ClientData.skinsData != null) {
+            requested = false;
+            JsonArray arr = ClientData.skinsData;
+            ClientData.skinsData = null;
+            List<SkinEntry> loaded = new ArrayList<>();
+            for (JsonElement e : arr) {
+                JsonObject obj = e.getAsJsonObject();
+                SkinEntry se = new SkinEntry();
+                se.skinId = obj.get("skinId").getAsString();
+                se.name = obj.has("name") ? obj.get("name").getAsString() : se.skinId;
+                se.slotType = obj.get("slotType").getAsString();
+                se.weaponTag = obj.get("weaponTag").getAsString();
+                se.rarity = obj.get("rarity").getAsString();
+                se.modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull() ? obj.get("modelPath").getAsString() : "";
+                loaded.add(se);
             }
-        }, "PWP-Skin-Load").start();
+            skins = loaded;
+            loading = false;
+            scrollOffset = 0;
+        }
     }
 
     @Override

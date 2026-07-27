@@ -15,6 +15,7 @@ LAUNCHER_SECRET = b"pwp_launcher_secret_2024"
 STATUS_COLOR = 0xf59e0b
 
 intents = discord.Intents.default()
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 def _sign(path):
@@ -452,13 +453,28 @@ async def _save_news_text(text: str):
     print(f"[News] Saved: {title}")
 
 
+@bot.event
+async def on_message(msg):
+    if msg.author.bot:
+        return
+    if msg.channel.id != config.NEWS_CHANNEL_ID:
+        return
+    text = msg.content.strip()
+    if text:
+        await _save_news_text(text)
+
+
 DISCORD_API = "https://discord.com/api/v10"
 
 async def _poll_news_channel():
     """Poll Discord REST API for latest messages in the news channel."""
     url = f"{DISCORD_API}/channels/{config.NEWS_CHANNEL_ID}/messages?limit=3"
+    ua = "DiscordBot (https://pwp.launcher, 1.0.0)"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers={"Authorization": f"Bot {config.DISCORD_TOKEN}"}) as resp:
+        async with session.get(url, headers={
+            "Authorization": f"Bot {config.DISCORD_TOKEN}",
+            "User-Agent": ua,
+        }) as resp:
             if resp.status != 200:
                 print(f"[News] Poll failed: {resp.status}")
                 return
@@ -488,4 +504,5 @@ async def start(shared_state):
     asyncio.create_task(update_dashboard_loop())
     asyncio.create_task(update_match_loop())
     asyncio.create_task(update_scheduler_loop(shared_state))
+    asyncio.create_task(_news_poll_loop())
     await bot.start(config.DISCORD_TOKEN)

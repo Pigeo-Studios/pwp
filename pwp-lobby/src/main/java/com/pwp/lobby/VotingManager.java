@@ -82,6 +82,7 @@ public class VotingManager {
                 voteStartTime = now - (voteDurationSec - 60) * 1000L;
                 remaining = 60;
                 LobbyMod.serverBroadcast("§e[PWP] §fПочти все проголосовали! §eОсталось " + remaining + "с");
+                LobbyMod.broadcastVotingUpdate();
                 log.info("90% threshold reached, vote accelerated to 60s remaining");
             }
         }

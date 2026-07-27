@@ -3,7 +3,10 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleEditorScreen;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
@@ -25,6 +28,7 @@ public class FactionVehicleListScreen extends Screen {
     private List<VehicleEntry> vehicles = new ArrayList<>();
     private List<VehicleEntry> filtered = new ArrayList<>();
     private boolean loading = true;
+    private boolean requested;
     private int panelW;
     private int panelH;
     private int contentH;
@@ -73,33 +77,33 @@ public class FactionVehicleListScreen extends Screen {
     }
 
     private void loadVehicles() {
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.getFactionVehicles(faction);
-                List<VehicleEntry> loaded = new ArrayList<>();
-                if (result != null && result.has("data")) {
-                    JsonArray arr = result.get("data").getAsJsonArray();
-                    for (JsonElement e : arr) {
-                        JsonObject obj = e.getAsJsonObject();
-                        String vn = obj.has("vehicleName") ? obj.get("vehicleName").getAsString() : "";
-                        String dn = obj.has("displayName") ? obj.get("displayName").getAsString() : "";
-                        String vi = obj.has("vehicleId") ? obj.get("vehicleId").getAsString() : "";
-                        loaded.add(new VehicleEntry(vn, dn, vi));
-                    }
-                }
-                Minecraft.getInstance().submit(() -> {
-                    vehicles = loaded;
-                    loading = false;
-                    updateFiltered();
-                    recreateWidgets();
-                });
-            } catch (Exception ex) {
-                Minecraft.getInstance().submit(() -> {
-                    loading = false;
-                    recreateWidgets();
-                });
+        loading = true;
+        requested = true;
+        ClientData.factionVehiclesData = null;
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factionVehicles",
+            "{\"faction\":\"" + faction + "\"}"));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (requested && ClientData.factionVehiclesData != null) {
+            requested = false;
+            JsonArray arr = ClientData.factionVehiclesData;
+            ClientData.factionVehiclesData = null;
+            List<VehicleEntry> loaded = new ArrayList<>();
+            for (JsonElement e : arr) {
+                JsonObject obj = e.getAsJsonObject();
+                String vn = obj.has("vehicleName") ? obj.get("vehicleName").getAsString() : "";
+                String dn = obj.has("displayName") ? obj.get("displayName").getAsString() : "";
+                String vi = obj.has("vehicleId") ? obj.get("vehicleId").getAsString() : "";
+                loaded.add(new VehicleEntry(vn, dn, vi));
             }
-        }, "PWP-FactionVehicleList-Load").start();
+            vehicles = loaded;
+            loading = false;
+            updateFiltered();
+            recreateWidgets();
+        }
     }
 
     private void updateFiltered() {

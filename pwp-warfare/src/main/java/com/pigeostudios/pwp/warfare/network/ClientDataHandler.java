@@ -18,6 +18,7 @@ public class ClientDataHandler {
             case "factions" -> handleFactions(jsonData);
             case "factionVehicles" -> handleFactionVehicles(jsonData);
             case "factionVehicle" -> handleFactionVehicle(jsonData);
+            case "factionKits" -> handleFactionKits(jsonData);
         }
     }
 
@@ -68,6 +69,13 @@ public class ClientDataHandler {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.factionVehicleDetail = data.has("data") ? data.getAsJsonObject("data") : null;
+        } catch (Exception ignored) {}
+    }
+
+    private static void handleFactionKits(String json) {
+        try {
+            JsonObject data = GSON.fromJson(json, JsonObject.class);
+            ClientData.factionKitsData = data.has("data") ? data.getAsJsonArray("data") : null;
         } catch (Exception ignored) {}
     }
 }

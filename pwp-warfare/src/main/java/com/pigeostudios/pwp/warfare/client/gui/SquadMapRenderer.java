@@ -130,8 +130,6 @@ public class SquadMapRenderer {
         drawPreview(g, cx, cz);
 
         g.disableScissor();
-        drawCompassRose(g);
-        drawCompass(g, cx, cz);
     }
 
     private void renderMapTexture(GuiGraphics g, double cx, double cz, double bpp) {

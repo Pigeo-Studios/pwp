@@ -428,6 +428,7 @@ public class DeployScreen extends Screen {
                     if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
                     int wx = toWorldX(mx), wz = toWorldZ(my);
                     mapCtx.open((int)mx, (int)my, (cat, icon) -> {
+                        if ("arrow".equals(icon) && ("enemy".equals(cat) || "team".equals(cat))) return;
                         PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(
                             "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad", cat, icon, new BlockPos(wx, 64, wz)));
                     });
