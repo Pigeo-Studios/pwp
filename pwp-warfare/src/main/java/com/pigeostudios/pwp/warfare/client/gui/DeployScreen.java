@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
+import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
@@ -48,6 +49,7 @@ public class DeployScreen extends Screen {
     private EditBox squadInput, chatInput;
     private int mySquadId = -1;
     private int lastSquadCount;
+    private String chatChannel = "ALL";
 
     String selectedSpawn = "";
     String selectedKit = "Rifleman";
@@ -155,10 +157,8 @@ public class DeployScreen extends Screen {
 
     private void createSquad() {
         String n = squadInput.getValue().trim();
-        if (!n.isEmpty()) {
-            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
-            squadInput.setValue("");
-        }
+        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
+        squadInput.setValue("");
     }
 
     @Override
@@ -265,8 +265,8 @@ public class DeployScreen extends Screen {
             gui.fill(sqX, bottomY-1, sqX+sqW2, bottomY, PWPTheme.Colors.BORDER);
             if (mySquadId < 0) {
                 gui.drawString(f, "СОЗДАТЬ ОТРЯД", sqX, bottomY+2, PWPTheme.Colors.ACCENT, false);
-                squadInput.setX(sqX+82); squadInput.setY(bottomY+1); squadInput.setVisible(true);
-                createSquadBtn.setX(sqX+176); createSquadBtn.setY(bottomY+1); createSquadBtn.visible = true;
+                squadInput.setX(sqX+78); squadInput.setWidth(80); squadInput.setY(bottomY+1); squadInput.setVisible(true);
+                createSquadBtn.setX(sqX+158); createSquadBtn.setY(bottomY+1); createSquadBtn.visible = true;
             } else {
                 squadInput.setVisible(false);
                 createSquadBtn.visible = false;
@@ -279,6 +279,18 @@ public class DeployScreen extends Screen {
                 RoundedRect.fill(gui, sqX, chatTop-2, sqW2, chatH+4, 4, 0xE60E1117);
                 RoundedRect.border(gui, sqX, chatTop-2, sqW2, chatH+4, 4, 1, PWPTheme.Colors.BORDER);
                 gui.drawString(f, "ЧАТ", sqX + 4, chatTop, PWPTheme.Colors.TEXT_DIM, false);
+                // Channel selector
+                String[] channels = {"ALL", "TEAM", "SQD"};
+                int chX = sqX + sqW2 - 4;
+                for (int ci = channels.length - 1; ci >= 0; ci--) {
+                    String chName = channels[ci];
+                    int cw2 = f.width(chName) + 6;
+                    chX -= cw2;
+                    boolean chHover = mx >= chX && mx <= chX + cw2 && my >= chatTop && my <= chatTop + 10;
+                    boolean chSel = chatChannel.equals(chName);
+                    gui.fill(chX, chatTop, chX + cw2, chatTop + 10, chSel ? 0xFFC8812A : (chHover ? 0x442A2A2A : 0));
+                    gui.drawString(f, chName, chX + 3, chatTop + 1, chSel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM, false);
+                }
 
                 gui.enableScissor(sqX+2, chatTop+12, sqX+sqW2-2, chatTop+chatH-18);
                 int mcy2 = chatTop + 14, cc2 = 0, maxMsgs = (chatH - 32) / 10;
@@ -391,18 +403,25 @@ public class DeployScreen extends Screen {
             int sqX = 4, sqW2 = Math.min(lw-8, SquadUIHelper.getSidebarWidth());
             int sqY = conY, sqMaxH = ch-110;
             int bottomY = sqY + sqMaxH + 2;
-            int chatTop = mySquadId < 0 ? bottomY + 18 : bottomY + 4;
-            int chatH = height - BOT_H - 4 - chatTop;
 
             if (btn == 0 && mx < lw) {
                 if (mx < sqX+sqW2 && my > sqY && my < bottomY-2) {
                     SquadUIHelper.handleSquadClick(mx, my - sqY, expandedSquads, contextMenu, false);
                     if (!contextMenu.isVisible()) return true;
                 }
-                // Click chat input
-                if (chatH > 20 && my >= chatTop + chatH - 18 && my <= chatTop + chatH - 2) {
-                    chatInput.setFocused(true);
-                    return super.mouseClicked(mx, my, btn);
+                // Chat channel click
+                if (my >= sqX+4 && my <= sqX+14) {
+                    String[] channels = {"ALL", "TEAM", "SQD"};
+                    int chX = sqX + sqW2 - 4;
+                    for (int ci = channels.length - 1; ci >= 0; ci--) {
+                        String chName = channels[ci];
+                        int cw2 = PWPTheme.Fonts.display().width(chName) + 6;
+                        chX -= cw2;
+                        if (mx >= chX && mx <= chX + cw2 && my >= sqX+4 && my <= sqX+14) {
+                            chatChannel = chName;
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -476,18 +495,19 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mod) {
-        if (key == 257 && mySquadId < 0 && createSquadBtn.visible) { createSquad(); return true; }
+        if (key == 257 && mySquadId < 0 && createSquadBtn.visible && squadInput.isFocused()) { createSquad(); return true; }
         if (key == 257 && chatInput.isFocused()) {
             String msg = chatInput.getValue().trim();
             if (!msg.isEmpty()) {
-                var p = Minecraft.getInstance().player;
-                if (p != null) p.connection.sendChat(msg);
+                int mode = chatChannel.equals("TEAM") ? 1 : (chatChannel.equals("SQD") ? 2 : 0);
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadChat(msg, mode));
                 chatInput.setValue("");
             }
             chatInput.setFocused(false);
             return true;
         }
         if (chatInput.isFocused()) return chatInput.keyPressed(key, scan, mod);
+        if (squadInput.isFocused()) return squadInput.keyPressed(key, scan, mod);
         return super.keyPressed(key, scan, mod);
     }
 
