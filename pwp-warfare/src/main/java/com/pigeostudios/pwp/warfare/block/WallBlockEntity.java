@@ -210,23 +210,25 @@ public class WallBlockEntity extends BlockEntity {
 
             entity.activeDiggers = 0;
          } else {
-            if (entity.activeDiggers > 0) {
-               float speed;
-               if (entity.activeDiggers == 1) {
-                  speed = 1.0F;
-               } else if (entity.activeDiggers == 2) {
-                  speed = 1.34F;
-               } else if (entity.activeDiggers == 3) {
-                  speed = 2.0F;
-               } else {
-                  speed = 4.0F;
-               }
+            if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
+               if (entity.activeDiggers > 0) {
+                  float speed;
+                  if (entity.activeDiggers == 1) {
+                     speed = 1.0F;
+                  } else if (entity.activeDiggers == 2) {
+                     speed = 1.34F;
+                  } else if (entity.activeDiggers == 3) {
+                     speed = 2.0F;
+                  } else {
+                     speed = 4.0F;
+                  }
 
-               float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
-               speed *= multiplier;
-               speed *= entity.dismantleMultiplier;
-               entity.dismantleProgress = entity.dismantleProgress + (int)Math.ceil(speed);
-               entity.setChanged();
+                  float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+                  speed *= multiplier;
+                  speed *= entity.dismantleMultiplier;
+                  entity.dismantleProgress = entity.dismantleProgress + (int)Math.ceil(speed);
+                  entity.setChanged();
+               }
 
                int max = entity.getMaxProgress();
                if (entity.dismantleProgress >= max) {

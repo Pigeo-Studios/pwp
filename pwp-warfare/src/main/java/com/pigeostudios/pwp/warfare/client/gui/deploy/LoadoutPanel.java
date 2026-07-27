@@ -38,7 +38,9 @@ public class LoadoutPanel {
             if (sel >= slot.options().size()) sel = slot.defaultIndex();
             DeployData.LoadoutOption opt = slot.options().get(sel);
             boolean hasAlt = slot.hasAlternatives();
-            boolean expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
+            boolean hoverSlot = mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
+            int altH = (hasAlt && hoverSlot) ? slot.options().size() * 17 + 4 : 0;
+            boolean expanded = hasAlt && (hoverSlot || (my >= cy + 32 + 2 && my <= cy + 32 + 2 + altH));
 
             String squadLabel = switch (slot.label()) {
                 case "PRIMARY" -> "СТВОЛ";
@@ -115,7 +117,10 @@ public class LoadoutPanel {
 
         for (DeployData.LoadoutSlot slot : kit.loadout()) {
             if (cy + 40 > y + maxH) break;
-            boolean hasAlt = slot.hasAlternatives(), expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
+            boolean hasAlt = slot.hasAlternatives();
+            boolean hoverSlot = mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
+            int altH = (hasAlt && hoverSlot) ? slot.options().size() * 17 + 4 : 0;
+            boolean expanded = hasAlt && (hoverSlot || (my >= cy + 32 + 2 && my <= cy + 32 + 2 + altH));
             cy += 10;
             cy += 20 + 2;
             if (expanded) {

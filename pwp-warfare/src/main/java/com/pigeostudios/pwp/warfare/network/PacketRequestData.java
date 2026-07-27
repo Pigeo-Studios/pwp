@@ -1,9 +1,11 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreserver.CoreServerApi;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import java.util.Map;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -79,15 +81,27 @@ public class PacketRequestData {
                       }
                       break;
                   }
-                  case "factionKits": {
-                      JsonObject params = parseJson(msg.params);
-                      String faction = params.has("faction") ? params.get("faction").getAsString() : "";
-                      if (!faction.isEmpty()) {
-                          JsonObject kits = CoreServerApi.getFactionKits(faction);
-                          jsonResult = kits != null ? kits.toString() : "{\"data\":[]}";
-                      }
-                      break;
-                  }
+                   case "factionKits": {
+                       JsonObject params = parseJson(msg.params);
+                       String faction = params.has("faction") ? params.get("faction").getAsString() : "";
+                       if (!faction.isEmpty()) {
+                           WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                           JsonArray arr = new JsonArray();
+                           Map<String, WarfareWorldData.KitInfo> target =
+                               faction.equalsIgnoreCase(data.blueFaction) ? data.blueKits : data.redKits;
+                           if (target != null) {
+                               for (WarfareWorldData.KitInfo k : target.values()) {
+                                   JsonObject entry = new JsonObject();
+                                   entry.addProperty("kitName", k.name);
+                                   entry.addProperty("category", k.category);
+                                   entry.addProperty("description", k.description);
+                                   arr.add(entry);
+                               }
+                           }
+                           jsonResult = "{\"data\":" + arr.toString() + "}";
+                       }
+                       break;
+                   }
                }
             } catch (Exception e) {
                jsonResult = "{\"data\":[]}";

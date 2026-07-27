@@ -223,13 +223,15 @@ public class HubBlockEntity extends BlockEntity {
 
          entity.activeDiggers = 0;
       } else {
-         if (entity.activeDiggers > 0) {
-            float speed = entity.activeDiggers == 1 ? 1.0F : (entity.activeDiggers == 2 ? 1.34F : (entity.activeDiggers == 3 ? 2.0F : 4.0F));
-            float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
-            speed *= multiplier;
-            speed *= entity.dismantleMultiplier;
-            entity.dismantleProgress = entity.dismantleProgress + (int)Math.ceil(speed);
-            entity.setChanged();
+         if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
+            if (entity.activeDiggers > 0) {
+               float speed = entity.activeDiggers == 1 ? 1.0F : (entity.activeDiggers == 2 ? 1.34F : (entity.activeDiggers == 3 ? 2.0F : 4.0F));
+               float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+               speed *= multiplier;
+               speed *= entity.dismantleMultiplier;
+               entity.dismantleProgress = entity.dismantleProgress + (int)Math.ceil(speed);
+               entity.setChanged();
+            }
 
             if (entity.dismantleProgress >= 2400) {
                entity.dismantleProgress = 2400;
