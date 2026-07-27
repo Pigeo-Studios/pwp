@@ -275,6 +275,7 @@ public class DatabaseManager {
                 "ALTER TABLE password_resets ADD COLUMN player_uuid VARCHAR(36) NOT NULL",
                 "ALTER TABLE players ADD COLUMN banned_until DATETIME DEFAULT NULL",
                 "ALTER TABLE hwid_bans ADD COLUMN banned_until DATETIME DEFAULT NULL",
+                "ALTER TABLE hwid_bans ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
                 "ALTER TABLE ip_blocks ADD COLUMN reason VARCHAR(256) DEFAULT NULL"
             };
             for (String sql : migrations) {
@@ -380,7 +381,20 @@ public class DatabaseManager {
                 + "expires_at DATETIME NOT NULL, "
                 + "revoked BOOLEAN NOT NULL DEFAULT FALSE, "
                 + "last_used_at DATETIME DEFAULT NULL, "
-                + "FOREIGN KEY (account_id) REFERENCES players(id) ON DELETE CASCADE)"
+                + "FOREIGN KEY (account_id) REFERENCES players(id) ON DELETE CASCADE)",
+
+                "CREATE TABLE IF NOT EXISTS punishment_history ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "player_uuid VARCHAR(36) NOT NULL, "
+                + "type VARCHAR(32) NOT NULL, "
+                + "reason TEXT, "
+                + "admin_uuid VARCHAR(36) DEFAULT NULL, "
+                + "duration_minutes INT DEFAULT NULL, "
+                + "expires_at DATETIME DEFAULT NULL, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "INDEX idx_ph_player (player_uuid), "
+                + "INDEX idx_ph_type (type), "
+                + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
             };
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) {}

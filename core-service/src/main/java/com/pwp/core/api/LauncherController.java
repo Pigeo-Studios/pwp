@@ -3,6 +3,7 @@ package com.pwp.core.api;
 import com.pwp.core.CoreApplication;
 import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerRepository;
+import com.pwp.core.db.PunishmentRepository;
 import com.pwp.core.model.ApiResponse;
 import com.pwp.core.model.Player;
 import io.javalin.Javalin;
@@ -316,11 +317,12 @@ public class LauncherController {
                 String durationStr = req.duration;
                 String expiresClause = "NULL";
                 String displayDuration = "\u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430";
+                Integer durationMinutes = null;
                 if (durationStr != null && !durationStr.isEmpty() && !"perm".equals(durationStr) && !"0".equals(durationStr)) {
                     try {
-                        int minutes = parseDuration(durationStr);
-                        expiresClause = "DATE_ADD(NOW(), INTERVAL " + minutes + " MINUTE)";
-                        displayDuration = formatDuration(minutes);
+                        durationMinutes = parseDuration(durationStr);
+                        expiresClause = "DATE_ADD(NOW(), INTERVAL " + durationMinutes + " MINUTE)";
+                        displayDuration = formatDuration(durationMinutes);
                     } catch (Exception ignored) {}
                 }
 
@@ -362,10 +364,9 @@ public class LauncherController {
                 // Ban HWID
                 if (hwid != null && !hwid.isEmpty()) {
                     try (PreparedStatement ps = c.prepareStatement(
-                        "INSERT IGNORE INTO hwid_bans (hwid, reason, banned_until, banned_at) VALUES (?, ?, " + expiresClause + ", NOW())")) {
+                        "INSERT IGNORE INTO hwid_bans (hwid, reason, banned_until, created_at) VALUES (?, ?, " + expiresClause + ", NOW())")) {
                         ps.setString(1, hwid);
                         ps.setString(2, req.reason);
-                        if (expiresClause.contains("?")) ps.setString(3, expiresClause); // fallback
                         ps.executeUpdate();
                     }
                 }
@@ -386,6 +387,15 @@ public class LauncherController {
                 }
 
                 log.info("Player {} ({}) banned ({}): {}", nickname, uuid, displayDuration, req.reason);
+
+                try {
+                    java.sql.Timestamp expiresTs = null;
+                    if (durationMinutes != null) {
+                        expiresTs = new java.sql.Timestamp(System.currentTimeMillis() + durationMinutes * 60000L);
+                    }
+                    PunishmentRepository.addRecord(uuid, "BAN", req.reason, req.adminUuid, durationMinutes, expiresTs);
+                } catch (Exception ignored) {}
+
                 ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname, "duration", displayDuration)));
             } catch (Exception e) {
                 log.error("Ban error", e);
@@ -435,6 +445,10 @@ public class LauncherController {
                     ps.executeUpdate();
                 }
 
+                try {
+                    PunishmentRepository.addRecord(uuid, "UNBAN", null, req.adminUuid, null, null);
+                } catch (Exception ignored) {}
+
                 if (tgId != null && tgId > 0) {
                     sendUnbanTelegram(tgId, nickname);
                 }
@@ -443,6 +457,43 @@ public class LauncherController {
                 ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname)));
             } catch (Exception e) {
                 log.error("Unban error", e);
+                ctx.status(500).json(ApiResponse.error(e.getMessage()));
+            }
+        });
+
+        // ── Warn player ──────────────────────────────────────
+        app.post("/api/v1/launcher/warn", ctx -> {
+            WarnReq req = ctx.bodyAsClass(WarnReq.class);
+            if (req.target == null || req.reason == null) {
+                ctx.json(ApiResponse.error("target and reason required"));
+                return;
+            }
+
+            try (Connection c = DatabaseManager.getConnection()) {
+                String uuid = null;
+                String nickname = null;
+                String lookupSql = "SELECT uuid, nickname FROM players WHERE uuid = ? OR nickname = ?";
+                try (PreparedStatement ps = c.prepareStatement(lookupSql)) {
+                    ps.setString(1, req.target);
+                    ps.setString(2, req.target);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            uuid = rs.getString("uuid");
+                            nickname = rs.getString("nickname");
+                        }
+                    }
+                }
+
+                if (uuid == null) {
+                    ctx.json(ApiResponse.error("player not found"));
+                    return;
+                }
+
+                PunishmentRepository.addRecord(uuid, "WARN", req.reason, req.adminUuid, null, null);
+                log.info("Player {} ({}) warned by {}: {}", nickname, uuid, req.adminUuid, req.reason);
+                ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname)));
+            } catch (Exception e) {
+                log.error("Warn error", e);
                 ctx.status(500).json(ApiResponse.error(e.getMessage()));
             }
         });
@@ -498,12 +549,22 @@ public class LauncherController {
     }
 
     private static boolean isHwidBanned(String hwid) {
-        String sql = "SELECT 1 FROM hwid_bans WHERE hwid = ? LIMIT 1";
+        String sql = "SELECT banned_until FROM hwid_bans WHERE hwid = ? LIMIT 1";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, hwid);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
+                if (!rs.next()) return false;
+                java.sql.Timestamp until = rs.getTimestamp("banned_until");
+                if (until != null && until.before(new java.util.Date())) {
+                    try (PreparedStatement del = c.prepareStatement(
+                        "DELETE FROM hwid_bans WHERE hwid = ?")) {
+                        del.setString(1, hwid);
+                        del.executeUpdate();
+                    }
+                    return false;
+                }
+                return true;
             }
         } catch (Exception e) {
             return false;
@@ -572,10 +633,18 @@ public class LauncherController {
         public String target;
         public String reason;
         public String duration; // "30m", "2h", "7d", "perm"
+        public String adminUuid;
     }
 
     public static class UnbanReq {
         public String target;
+        public String adminUuid;
+    }
+
+    public static class WarnReq {
+        public String target;
+        public String reason;
+        public String adminUuid;
     }
 
     public static class CheckBanReq {

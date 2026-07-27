@@ -2,6 +2,7 @@ package com.pwp.core.api;
 
 import com.pwp.core.CoreApplication;
 import com.pwp.core.db.PlayerRepository;
+import com.pwp.core.db.PunishmentRepository;
 import com.pwp.core.model.ApiResponse;
 import com.pwp.core.model.Player;
 import io.javalin.Javalin;
@@ -40,6 +41,10 @@ public class AdminController {
             }
             PlayerRepository.setBan(req.uuid, true, req.reason);
             PlayerRepository.log(req.uuid, "ban", ctx.ip(), "reason: " + req.reason);
+            try {
+                PunishmentRepository.addRecord(req.uuid, "BAN", req.reason,
+                        ctx.attribute("adminUuid"), null, null);
+            } catch (Exception ignored) {}
             ctx.json(ApiResponse.ok("user banned"));
         });
 
@@ -51,6 +56,10 @@ public class AdminController {
             }
             PlayerRepository.setBan(req.uuid, false, null);
             PlayerRepository.log(req.uuid, "unban", ctx.ip(), null);
+            try {
+                PunishmentRepository.addRecord(req.uuid, "UNBAN", null,
+                        ctx.attribute("adminUuid"), null, null);
+            } catch (Exception ignored) {}
             ctx.json(ApiResponse.ok("user unbanned"));
         });
 

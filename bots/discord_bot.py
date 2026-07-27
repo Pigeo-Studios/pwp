@@ -15,6 +15,7 @@ LAUNCHER_SECRET = b"pwp_launcher_secret_2024"
 STATUS_COLOR = 0xf59e0b
 
 intents = discord.Intents.default()
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 def _sign(path):
@@ -395,6 +396,72 @@ async def process_commands():
                 print(f"[DS] cmd error: {e}")
                 f.unlink()
         await asyncio.sleep(config.POLL_INTERVAL)
+
+
+
+# -- News integration --
+NEWS_FILE = Path(config.LAUNCHER_FILES_DIR) / "news.json"
+MAX_NEWS = 12
+
+async def _sync_news_from_message(msg):
+    """Parse a Discord message and save it as a news item."""
+    text = msg.content.strip()
+    if not text:
+        return
+
+    lines = text.split("\n", 1)
+    title = lines[0].strip()[:80]
+    description = (lines[1].strip() if len(lines) > 1 else "")[:200]
+
+    cat = "other"
+    lower = title.lower()
+    if any(w in lower for w in ["обновление", "update", "патч", "v"]):
+        cat = "update"
+    elif any(w in lower for w in ["ивент", "event", "событие", "акция"]):
+        cat = "event"
+    elif any(w in lower for w in ["сервер", "server", "техработы", "перезапуск"]):
+        cat = "server"
+    elif any(w in lower for w in ["новый", "new", "анонс", "релиз"]):
+        cat = "announce"
+
+    news = []
+    if NEWS_FILE.exists():
+        try:
+            news = json.loads(NEWS_FILE.read_text(encoding="utf-8"))
+        except:
+            news = []
+    if not isinstance(news, list):
+        news = []
+
+    for item in news:
+        if item.get("title", "").lower() == title.lower():
+            return
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    max_id = max((item.get("id", 0) for item in news), default=0)
+    news.insert(0, {
+        "id": max_id + 1,
+        "title": title,
+        "date": now,
+        "description": description,
+        "category": cat,
+        "url": None,
+    })
+
+    news = news[:MAX_NEWS]
+    NEWS_FILE.write_text(json.dumps(news, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"[News] Saved news from #{msg.channel.name}: {title}")
+
+
+@bot.event
+async def on_message(msg):
+    if msg.author.bot:
+        return
+    if msg.channel.id != config.NEWS_CHANNEL_ID:
+        return
+    await _sync_news_from_message(msg)
+
+
 
 async def start(shared_state):
     asyncio.create_task(process_commands())

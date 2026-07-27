@@ -174,11 +174,23 @@ public class AuthLibController {
     }
 
     private static boolean isHwidBanned(String hwid) {
-        String sql = "SELECT 1 FROM hwid_bans WHERE hwid = ? LIMIT 1";
+        String sql = "SELECT banned_until FROM hwid_bans WHERE hwid = ? LIMIT 1";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, hwid);
-            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return false;
+                java.sql.Timestamp until = rs.getTimestamp("banned_until");
+                if (until != null && until.before(new java.util.Date())) {
+                    try (PreparedStatement del = c.prepareStatement(
+                        "DELETE FROM hwid_bans WHERE hwid = ?")) {
+                        del.setString(1, hwid);
+                        del.executeUpdate();
+                    }
+                    return false;
+                }
+                return true;
+            }
         } catch (Exception e) { return false; }
     }
 

@@ -2,6 +2,7 @@ package com.pwp.core.api;
 
 import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerRepository;
+import com.pwp.core.db.PunishmentRepository;
 import com.pwp.core.model.ApiResponse;
 import io.javalin.Javalin;
 
@@ -44,6 +45,22 @@ public class HWIDBanController {
                 ps.setString(1, "HWID BAN: " + (req.reason != null ? req.reason : ""));
                 ps.setString(2, req.hwid);
                 ps.executeUpdate();
+            } catch (Exception ignored) {}
+
+            // Record history for affected accounts
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(
+                     "SELECT account_uuid FROM hwid_history WHERE hwid = ?")) {
+                ps.setString(1, req.hwid);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        try {
+                            PunishmentRepository.addRecord(rs.getString("account_uuid"),
+                                    "BAN", "HWID BAN: " + (req.reason != null ? req.reason : ""),
+                                    adminUuid, null, null);
+                        } catch (Exception ignored) {}
+                    }
+                }
             } catch (Exception ignored) {}
 
             ctx.json(ApiResponse.ok("hwid banned"));

@@ -1,5 +1,6 @@
 package com.pwp.core.api;
 
+import com.pwp.core.db.PunishmentRepository;
 import com.pwp.core.db.VoiceMuteRepository;
 import com.pwp.core.db.VoiceMuteRepository.VoiceMuteData;
 import com.pwp.core.model.ApiResponse;
@@ -21,6 +22,13 @@ public class VoiceMuteController {
                     : 0L;
             VoiceMuteRepository.setMute(req.uuid, req.mutedByUuid, req.mutedByNickname,
                     req.reason, expiresAt);
+            try {
+                Integer durationMin = req.durationMinutes > 0 ? req.durationMinutes : null;
+                java.sql.Timestamp expiresTs = expiresAt > 0
+                        ? new java.sql.Timestamp(expiresAt) : null;
+                PunishmentRepository.addRecord(req.uuid, "VOICE_MUTE", req.reason,
+                        req.mutedByUuid, durationMin, expiresTs);
+            } catch (Exception ignored) {}
             ctx.json(ApiResponse.ok("muted"));
         });
 
@@ -31,6 +39,10 @@ public class VoiceMuteController {
                 return;
             }
             VoiceMuteRepository.removeMute(req.uuid);
+            try {
+                PunishmentRepository.addRecord(req.uuid, "VOICE_UNMUTE", null,
+                        req.unmutedByUuid, null, null);
+            } catch (Exception ignored) {}
             ctx.json(ApiResponse.ok("unmuted"));
         });
 
@@ -61,6 +73,7 @@ public class VoiceMuteController {
 
     private static class UnmuteRequest {
         public String uuid;
+        public String unmutedByUuid;
     }
 
     private static class MuteStatusResponse {
