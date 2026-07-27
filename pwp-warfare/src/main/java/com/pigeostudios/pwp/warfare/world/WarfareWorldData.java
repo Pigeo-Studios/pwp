@@ -62,8 +62,9 @@ public class WarfareWorldData extends SavedData {
    public Map<String, BlockPos> blueSpawns = new HashMap<>();
    public Map<String, BlockPos> redSpawns = new HashMap<>();
    public Map<String, BlockPos> neutralSpawns = new HashMap<>();
-   public List<WarfareWorldData.VehicleRecord> markedVehicles = new ArrayList<>();
-   public Map<UUID, Set<UUID>> approvedDrivers = new HashMap<>();
+    public List<WarfareWorldData.VehicleRecord> markedVehicles = new ArrayList<>();
+    public final List<WarfareWorldData.SpawnerInfo> spawnerInfos = new java.util.concurrent.CopyOnWriteArrayList<>();
+    public Map<UUID, Set<UUID>> approvedDrivers = new HashMap<>();
    public int blueTickets = 800;
    public int redTickets = 800;
    public int respawnTimer = 10;

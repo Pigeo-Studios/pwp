@@ -61,10 +61,24 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
       super((BlockEntityType)ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
    }
 
-    public void onLoad() {
-       super.onLoad();
-       this.loadTimer = 60;
-    }
+     public void onLoad() {
+        super.onLoad();
+        this.loadTimer = 60;
+        if (this.level != null && !this.level.isClientSide) {
+           WarfareWorldData data = WarfareWorldData.get((ServerLevel)this.level);
+           data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+           WarfareWorldData.SpawnerInfo info = getSpawnerInfo();
+           if (info != null) data.spawnerInfos.add(info);
+        }
+     }
+
+     public void setRemoved() {
+        if (this.level != null && !this.level.isClientSide) {
+           WarfareWorldData data = WarfareWorldData.get((ServerLevel)this.level);
+           data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+        }
+        super.setRemoved();
+     }
 
     public void loadDefaultsFromFactionVehicle(FactionVehicleData veh) {
        if (veh == null) return;

@@ -20,6 +20,7 @@ public class MarkerManager {
     public static void add(MapMarker m) { all.add(m); }
     public static void remove(MapMarker m) { all.remove(m); }
     public static void removeById(UUID id) { all.removeIf(m -> m.id.equals(id)); }
+    public static MapMarker findById(UUID id) { return all.stream().filter(m -> m.id.equals(id)).findFirst().orElse(null); }
 
     public static void broadcastToTeam(ServerPlayer player, MapMarker m) {
         String teamName = player.getTeam() != null ? player.getTeam().getName() : "";

@@ -51,12 +51,12 @@ public class PacketRequestData {
                 }
                 case "skins": {
                     JsonObject skins = CoreServerApi.getSkins();
-                    jsonResult = skins != null ? skins.toString() : "{}";
+                    jsonResult = skins != null ? skins.toString() : "{\"data\":[]}";
                     break;
                 }
                 case "factions": {
                     JsonObject factions = CoreServerApi.getFactions();
-                    jsonResult = factions != null ? factions.toString() : "{}";
+                    jsonResult = factions != null ? factions.toString() : "{\"data\":[]}";
                     break;
                 }
                 case "factionVehicles": {
@@ -64,7 +64,7 @@ public class PacketRequestData {
                     String faction = params.has("faction") ? params.get("faction").getAsString() : "";
                     if (!faction.isEmpty()) {
                         JsonObject vehicles = CoreServerApi.getFactionVehicles(faction);
-                        jsonResult = vehicles != null ? vehicles.toString() : "{}";
+                        jsonResult = vehicles != null ? vehicles.toString() : "{\"data\":[]}";
                     }
                     break;
                 }
@@ -74,7 +74,7 @@ public class PacketRequestData {
                     String vehicle = params.has("vehicle") ? params.get("vehicle").getAsString() : "";
                     if (!faction.isEmpty() && !vehicle.isEmpty()) {
                         JsonObject result = CoreServerApi.getFactionVehicle(faction, vehicle);
-                        jsonResult = result != null ? result.toString() : "{}";
+                        jsonResult = result != null ? result.toString() : "{\"data\":{}}";
                     }
                     break;
                 }
@@ -83,7 +83,7 @@ public class PacketRequestData {
                     String faction = params.has("faction") ? params.get("faction").getAsString() : "";
                     if (!faction.isEmpty()) {
                         JsonObject kits = CoreServerApi.getFactionKits(faction);
-                        jsonResult = kits != null ? kits.toString() : "{}";
+                        jsonResult = kits != null ? kits.toString() : "{\"data\":[]}";
                     }
                     break;
                 }
