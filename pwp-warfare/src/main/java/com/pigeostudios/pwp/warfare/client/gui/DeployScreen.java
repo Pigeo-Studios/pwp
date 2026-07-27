@@ -33,7 +33,7 @@ public class DeployScreen extends Screen {
     private int conT() { return TOP_H + TAB_H; }
     private int conH() { return height - conT() - BOT_H; }
 
-    private final WarfareMapRenderer rightMapRenderer = new WarfareMapRenderer();
+    private final SquadMapRenderer rightMapRenderer = new SquadMapRenderer();
     private final RoleGrid   roles    = new RoleGrid();
     private final SpawnPanel spawns   = new SpawnPanel();
     private final LoadoutPanel loadout = new LoadoutPanel();
@@ -278,7 +278,7 @@ public class DeployScreen extends Screen {
 
                 gui.enableScissor(sqX+2, chatTop+12, sqX+sqW2-2, chatTop+chatH-18);
                 int mcy2 = chatTop + 14, cc2 = 0, maxMsgs = (chatH - 32) / 10;
-                for (int ci = ClientData.menuChatHistory.size() - 1; ci >= 0 && cc2 < maxMsgs; ci--) {
+                for (int ci = 0; ci < ClientData.menuChatHistory.size() && cc2 < maxMsgs; ci++) {
                     String t = ClientData.menuChatHistory.get(ci).getString();
                     if (f.width(t) > sqW2 - 12) t = f.plainSubstrByWidth(t, sqW2 - 16) + "\u2026";
                     gui.drawString(f, t, sqX + 4, mcy2, PWPTheme.Colors.TEXT_SECONDARY, false);

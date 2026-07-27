@@ -34,7 +34,7 @@ public class SquadSelectionScreen extends Screen {
     private PWPButton chatModeButton;
     private int chatMode = 1;
     private final Set<Integer> expandedSquads = new HashSet<>();
-    private final WarfareMapRenderer mapRenderer = new WarfareMapRenderer();
+    private final SquadMapRenderer mapRenderer = new SquadMapRenderer();
     private final PWPContextMenu contextMenu = new PWPContextMenu();
     private int mapX, mapY, mapSize;
 

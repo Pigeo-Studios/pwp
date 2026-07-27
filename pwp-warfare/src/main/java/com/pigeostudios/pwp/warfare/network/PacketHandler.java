@@ -107,6 +107,9 @@ public class PacketHandler {
       INSTANCE.registerMessage(
          id++, PacketVehicleDriveAnswer.class, PacketVehicleDriveAnswer::encode, PacketVehicleDriveAnswer::decode, PacketVehicleDriveAnswer::handle
       );
+      INSTANCE.registerMessage(id++, PacketPlaceMarker.class, PacketPlaceMarker::encode, PacketPlaceMarker::decode, PacketPlaceMarker::handle);
+      INSTANCE.registerMessage(id++, PacketSyncMarker.class, PacketSyncMarker::encode, PacketSyncMarker::decode, PacketSyncMarker::handle);
+      INSTANCE.registerMessage(id++, PacketRemoveMarker.class, PacketRemoveMarker::encode, PacketRemoveMarker::decode, PacketRemoveMarker::handle);
    }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {

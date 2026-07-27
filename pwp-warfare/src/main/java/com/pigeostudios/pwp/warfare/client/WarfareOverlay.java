@@ -11,7 +11,7 @@ import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
-import com.pigeostudios.pwp.warfare.client.gui.WarfareMapRenderer;
+import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
@@ -72,7 +72,7 @@ public class WarfareOverlay {
    private static final ResourceLocation PING_TEX_BRAVO = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_bravo.png");
    private static final ResourceLocation MOVE_TEX_CHARLIE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move_charlie.png");
    private static final ResourceLocation PING_TEX_CHARLIE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_charlie.png");
-   private static WarfareMapRenderer HUD_SIDE_MAP;
+    private static SquadMapRenderer HUD_SIDE_MAP;
    private static final ResourceLocation MOUSE_LEFT = new ResourceLocation("pwpwarfare", "textures/gui/dig_icon.png");
    private static final ResourceLocation MOUSE_RIGHT = new ResourceLocation("pwpwarfare", "textures/gui/build_icon.png");
    private static final ResourceLocation ICON_ROTATE = new ResourceLocation("pwpwarfare", "textures/gui/icon_rotate.png");
@@ -1285,7 +1285,7 @@ public class WarfareOverlay {
 
    private static void renderSideMap(GuiGraphics gui, Minecraft mc, int screenWidth, int screenHeight, float partialTick) {
       if (HUD_SIDE_MAP == null) {
-         HUD_SIDE_MAP = new WarfareMapRenderer();
+          HUD_SIDE_MAP = new SquadMapRenderer();
       }
 
       float speed = 0.12F;

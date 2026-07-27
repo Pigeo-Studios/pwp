@@ -1,0 +1,1078 @@
+package com.pigeostudios.pwp.warfare.client.gui;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.InputConstants.Key;
+import com.mojang.blaze3d.platform.InputConstants.Type;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat.Mode;
+import com.mojang.math.Axis;
+import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.ModKeyBindings;
+import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
+import com.pigeostudios.pwp.warfare.world.PathPoint;
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pwp.coreclient.gui.theme.PWPTheme;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.lwjgl.glfw.GLFW;
+
+public class SquadMapRenderer {
+
+    public int mapX, mapY, mapSize;
+    public String selectedSpawnId = "";
+
+    private double panX, panZ;
+    private boolean isDraggingMap;
+    private double lastMouseX, lastMouseY;
+
+    public final List<List<PathPoint>> pathGroups = new ArrayList<>();
+    public final List<List<PathPoint>> pathGroupsRed = new ArrayList<>();
+    public final List<List<PathPoint>> pathGroupsYellow = new ArrayList<>();
+    public PathPoint previewStart, previewEnd;
+
+    private static final Map<String, ResourceLocation> MAP_ICONS_CACHE = new HashMap<>();
+    private static final Map<String, ResourceLocation> TEX = new HashMap<>();
+
+    private static final ResourceLocation MATS_ICON = new ResourceLocation("pwpwarfare", "textures/gui/mats_icon.png");
+    private static final ResourceLocation MARKER_MOVE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move.png");
+    private static final ResourceLocation MARKER_ATTACK = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_attack.png");
+    private static final ResourceLocation MARKER_DEFEND = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_defend.png");
+    private static final ResourceLocation MARKER_BUILD = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_build.png");
+    private static final ResourceLocation HUB_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/hub_icon.png");
+    private static final ResourceLocation HUB_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/hub_icon_selected.png");
+    private static final ResourceLocation RALLY_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/rally_icon.png");
+    private static final ResourceLocation RALLY_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/rally_icon_selected.png");
+    private static final ResourceLocation MAIN_BASE_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/main_base.png");
+    private static final ResourceLocation MAIN_BASE_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/main_base_selected.png");
+    private static final ResourceLocation FLAG_NEUTRAL = new ResourceLocation("pwpwarfare", "textures/gui/flags/neutral.png");
+    private static final ResourceLocation ICON_CIRCLE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/player_circle.png");
+    private static final ResourceLocation ICON_PLUS = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/medic_plus.png");
+    private static final ResourceLocation ICON_SELF = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/player_self.png");
+    private static final ResourceLocation ICON_COMPASS = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/compass.png");
+    private static final ResourceLocation ICON_OBJ_ATTACK = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/objective_attack.png");
+    private static final ResourceLocation ICON_OBJ_DEFEND = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/objective_defend.png");
+    private static final Map<String, ResourceLocation> VEHICLE_ICONS = new HashMap<>();
+
+    public void init(int x, int y, int size) {
+        mapX = x;
+        mapY = y;
+        mapSize = size;
+    }
+
+    public void centerOnPlayer() {
+        panX = 0;
+        panZ = 0;
+    }
+
+    public double getBlocksPerPixel() {
+        return ClientData.mapScale;
+    }
+
+    public double getCenterX(LocalPlayer p) {
+        return p.getX() + panX;
+    }
+
+    public double getCenterZ(LocalPlayer p) {
+        return p.getZ() + panZ;
+    }
+
+    public boolean isMouseOver(double mx, double my) {
+        return mx >= mapX && mx <= mapX + mapSize && my >= mapY && my <= mapY + mapSize;
+    }
+
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null) return;
+        double bpp = ClientData.mapScale;
+        double cx = p.getX() + panX;
+        double cz = p.getZ() + panZ;
+
+        renderTopBar(g, mx, my, cx, cz);
+        drawFrame(g);
+        g.fill(mapX, mapY, mapX + mapSize, mapY + mapSize, 0xFF1A1E1A);
+        g.enableScissor(mapX, mapY, mapX + mapSize, mapY + mapSize);
+
+        renderMapTexture(g, cx, cz, bpp);
+        drawGrid(g, cx, cz);
+        drawLabels(g, cx, cz);
+        renderLatticeLines(g, cx, cz, bpp);
+        renderOverlays(g, cx, cz, bpp);
+        renderMainBases(g, cx, cz, bpp);
+        renderArtilleryZones(g, cx, cz, bpp);
+        renderStructures(g, cx, cz, bpp);
+        renderVehicles(g, cx, cz, bpp);
+        renderAllPlayers(g, p, cx, cz, bpp);
+        renderSquadMarkerLogic(g, cx, cz, bpp);
+        renderTacticalMarkers(g, cx, cz, bpp);
+        renderSquadRhombusMarkers(g, cx, cz, bpp);
+        renderSquadPings(g, cx, cz, bpp);
+        drawMarkers(g, cx, cz);
+        drawPath(g, cx, cz);
+        drawPreview(g, cx, cz);
+
+        g.disableScissor();
+        drawCompassRose(g);
+        drawCompass(g, cx, cz);
+    }
+
+    private void renderMapTexture(GuiGraphics g, double cx, double cz, double bpp) {
+        ResourceLocation tex = getCurrentMapTexture();
+        int s = ClientData.mapSizeBlocks;
+        float drawX = (float)(mapX + mapSize / 2.0 + (ClientData.mapCenterX - s / 2.0 - cx) / bpp);
+        float drawY = (float)(mapY + mapSize / 2.0 + (ClientData.mapCenterZ - s / 2.0 - cz) / bpp);
+        int texSize = (int)(s / bpp);
+        setFilter(tex, true);
+        RenderSystem.setShaderTexture(0, tex);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        g.blit(tex, (int)drawX, (int)drawY, texSize, texSize, 0, 0, 1024, 1024, 1024, 1024);
+        setFilter(tex, false);
+    }
+
+    private ResourceLocation getCurrentMapTexture() {
+        String img = ClientData.currentMapImage;
+        if (img == null || img.isEmpty()) img = "map1";
+        return MAP_ICONS_CACHE.computeIfAbsent(img,
+            k -> new ResourceLocation("pwpwarfare", "textures/gui/maps/" + k + ".png"));
+    }
+
+    private void setFilter(ResourceLocation tex, boolean smooth) {
+        Minecraft.getInstance().getTextureManager().getTexture(tex).setFilter(smooth, false);
+    }
+
+    private void renderTopBar(GuiGraphics g, int mx, int my, double cx, double cz) {
+        var f = Minecraft.getInstance().font;
+        g.fill(mapX, 2, mapX + mapSize, 18, 0xCC06080A);
+        g.hLine(mapX, mapX + mapSize, 18, 0xFF444444);
+        g.drawString(f, "MAP", mapX + 4, 5, 0xFF888888, false);
+        String kp = "--";
+        if (inMap(mx, my)) {
+            double wx = cx + (mx - (mapX + mapSize / 2.0)) * ClientData.mapScale;
+            double wz = cz + (my - (mapY + mapSize / 2.0)) * ClientData.mapScale;
+            kp = getKP(wx, wz);
+        }
+        g.drawCenteredString(f, kp, mapX + mapSize / 2, 5, 0xFFFFFF);
+        String zt = String.format("Z:%.1f", ClientData.mapScale);
+        g.drawString(f, zt, mapX + mapSize - f.width(zt) - 4, 5, 0xFF888888, false);
+    }
+
+    private void drawFrame(GuiGraphics g) {
+        int c = 0xFF555555;
+        g.hLine(mapX - 1, mapX + mapSize, mapY - 1, c);
+        g.hLine(mapX - 1, mapX + mapSize, mapY + mapSize, c);
+        g.vLine(mapX - 1, mapY - 1, mapY + mapSize, c);
+        g.vLine(mapX + mapSize, mapY - 1, mapY + mapSize, c);
+    }
+
+    private void drawGrid(GuiGraphics g, double cx, double cz) {
+        double half = mapSize / 2.0 * ClientData.mapScale;
+        long xS = (long)(cx - half) - 1200;
+        long xE = (long)(cx + half) + 1200;
+        long zS = (long)(cz - half) - 1200;
+        long zE = (long)(cz + half) + 1200;
+        gridLines(g, 300, 2, 0x30FFFFFF, xS, xE, zS, zE, cx, cz);
+        if (ClientData.mapScale <= 2.2) {
+            int a100 = (int)(24 * Math.min(1, Math.max(0, (2.2 - ClientData.mapScale) / 0.4)));
+            gridLines(g, 100, 1, (a100 << 24) | 0xFFFFFF, xS, xE, zS, zE, cx, cz);
+        }
+    }
+
+    private void gridLines(GuiGraphics g, long step, int w, int col, long xS, long xE, long zS, long zE, double cx, double cz) {
+        long s = Math.floorDiv(xS, step) * step;
+        for (long v = s; v < xE; v += step) {
+            int sx = toScreenX(v, cx);
+            if (sx >= mapX && sx <= mapX + mapSize) g.fill(sx, mapY, sx + w, mapY + mapSize, col);
+        }
+        s = Math.floorDiv(zS, step) * step;
+        for (long v = s; v < zE; v += step) {
+            int sy = toScreenZ(v, cz);
+            if (sy >= mapY && sy <= mapY + mapSize) g.fill(mapX, sy, mapX + mapSize, sy + w, col);
+        }
+    }
+
+    private void drawLabels(GuiGraphics g, double cx, double cz) {
+        drawTopLabels(g, cx, cz);
+        drawLeftLabels(g, cx, cz);
+    }
+
+    private void drawTopLabels(GuiGraphics g, double cx, double cz) {
+        var f = Minecraft.getInstance().font;
+        double half = mapSize / 2.0 * ClientData.mapScale;
+        long s = Math.floorDiv((long)(cx - half), 300L);
+        long e = Math.floorDiv((long)(cx + half), 300L);
+        for (long i = s; i <= e; i++) {
+            int px = toScreenX(i * 300L + 150, cx);
+            if (px < mapX + 10 || px > mapX + mapSize - 10) continue;
+            String t = toAlpha(i);
+            if ("?".equals(t)) continue;
+            int bw = f.width(t) + 6;
+            g.fill(px - bw / 2, mapY + 1, px + bw / 2, mapY + 13, 0xCC000000);
+            g.drawString(f, t, px - f.width(t) / 2, mapY + 3, 0xCCFFFFFF, false);
+        }
+    }
+
+    private void drawLeftLabels(GuiGraphics g, double cx, double cz) {
+        var f = Minecraft.getInstance().font;
+        double half = mapSize / 2.0 * ClientData.mapScale;
+        long s = Math.floorDiv((long)(cz - half), 300L);
+        long e = Math.floorDiv((long)(cz + half), 300L);
+        for (long i = s; i <= e; i++) {
+            int py = toScreenZ(i * 300L + 150, cz);
+            if (py < mapY + 10 || py > mapY + mapSize - 10) continue;
+            String t = String.valueOf(i + 1);
+            int bw = f.width(t) + 6;
+            g.fill(mapX + 2, py - 6, mapX + 2 + bw, py + 6, 0xCC000000);
+            g.drawString(f, t, mapX + 5, py - 4, 0xCCFFFFFF, false);
+        }
+    }
+
+    private void renderLatticeLines(GuiGraphics g, double cx, double cz, double bpp) {
+        if (ClientData.allCapturePoints == null || ClientData.allCapturePoints.isEmpty()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        String currentDim = mc.level.dimension().location().toString();
+        boolean isRed = mc.player != null && mc.player.getTeam() != null && mc.player.getTeam().getName().equalsIgnoreCase("Red");
+        List<WarfareWorldData.CapturePoint> sortedPoints = new ArrayList<>(ClientData.allCapturePoints);
+        if (isRed) sortedPoints.sort(Comparator.comparingInt(p -> p.redPriority));
+        else sortedPoints.sort(Comparator.comparingInt(p -> p.bluePriority));
+        List<Vec3> path = new ArrayList<>();
+        if (isRed) {
+            if (ClientData.redSpawns.containsKey(currentDim)) {
+                BlockPos rPos = ClientData.redSpawns.get(currentDim);
+                path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
+            }
+        } else {
+            if (ClientData.blueSpawns.containsKey(currentDim)) {
+                BlockPos bPos = ClientData.blueSpawns.get(currentDim);
+                path.add(new Vec3(bPos.getX() + 0.5, bPos.getY(), bPos.getZ() + 0.5));
+            }
+        }
+        for (var cp : sortedPoints) path.add(cp.area.getCenter());
+        if (isRed) {
+            if (ClientData.blueSpawns.containsKey(currentDim)) {
+                BlockPos bPos = ClientData.blueSpawns.get(currentDim);
+                path.add(new Vec3(bPos.getX() + 0.5, bPos.getY(), bPos.getZ() + 0.5));
+            }
+        } else {
+            if (ClientData.redSpawns.containsKey(currentDim)) {
+                BlockPos rPos = ClientData.redSpawns.get(currentDim);
+                path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
+            }
+        }
+        int lineColor = 1728053247;
+        for (int i = 0; i < path.size() - 1; i++) {
+            Vec3 p1 = path.get(i);
+            Vec3 p2 = path.get(i + 1);
+            int x1 = toScreenX(p1.x, cx);
+            int y1 = toScreenZ(p1.z, cz);
+            int x2 = toScreenX(p2.x, cx);
+            int y2 = toScreenZ(p2.z, cz);
+            drawSolidLine(g, x1, y1, x2, y2, lineColor);
+        }
+    }
+
+    private void drawSolidLine(GuiGraphics g, int x1, int y1, int x2, int y2, int color) {
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float len = (float)Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return;
+        var pose = g.pose();
+        pose.pushPose();
+        pose.translate(x1, y1, 0);
+        pose.mulPose(Axis.ZP.rotationDegrees((float)Math.toDegrees(Math.atan2(dy, dx))));
+        g.fill(0, 0, (int)len, 1, color);
+        pose.popPose();
+    }
+
+    private void renderOverlays(GuiGraphics g, double cx, double cz, double bpp) {
+        if (ClientData.allCapturePoints == null) return;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        boolean blinkOn = System.currentTimeMillis() / 400L % 2L == 0L;
+        for (var cp : ClientData.allCapturePoints) {
+            Vec3 center = cp.area.getCenter();
+            int pX = toScreenX(center.x, cx);
+            int pY = toScreenZ(center.z, cz);
+            if (!inMap(pX, pY)) continue;
+            String owner = cp.owner.toUpperCase();
+            String capTeam = cp.capturingTeam.toUpperCase();
+            float progress = cp.progress;
+            float alpha = 1;
+            String teamToRender;
+            if (owner.equals("NEUTRAL")) {
+                if (capTeam.equals("NONE") || capTeam.equals("NEUTRAL")) {
+                    teamToRender = "NEUTRAL";
+                } else if (blinkOn) {
+                    teamToRender = capTeam;
+                    alpha = 0.1F + progress * 0.9F;
+                } else {
+                    teamToRender = "NEUTRAL";
+                }
+            } else if (progress < 1) {
+                teamToRender = owner;
+                alpha = 0.1F + progress * 0.9F;
+            } else {
+                teamToRender = owner;
+            }
+            ResourceLocation flagTex = FLAG_NEUTRAL;
+            int tintColor = -1;
+            boolean useTint = false;
+            if (teamToRender.equals("BLUE")) {
+                flagTex = getFlagTexture(ClientData.BLUE_FACTION);
+                if (flagTex == null) { flagTex = FLAG_NEUTRAL; tintColor = -11184641; useTint = true; }
+            } else if (teamToRender.equals("RED")) {
+                flagTex = getFlagTexture(ClientData.RED_FACTION);
+                if (flagTex == null) { flagTex = FLAG_NEUTRAL; tintColor = -43691; useTint = true; }
+            }
+            float r = 1, g2 = 1, b = 1;
+            if (useTint) { r = (tintColor >> 16 & 0xFF) / 255f; g2 = (tintColor >> 8 & 0xFF) / 255f; b = (tintColor & 0xFF) / 255f; }
+            RenderSystem.setShaderColor(r, g2, b, alpha);
+            setFilter(flagTex, true);
+            g.blit(flagTex, pX - 8, pY - 4, 16, 9, 0, 0, 64, 36, 64, 36);
+            setFilter(flagTex, false);
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            var f = PWPTheme.Fonts.display();
+            g.pose().pushPose();
+            g.pose().translate(pX, pY + 7, 101);
+            g.pose().scale(0.6F, 0.6F, 1);
+            g.drawCenteredString(f, cp.name, 0, 0, 0xFFFFFF);
+            g.pose().popPose();
+        }
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+    }
+
+    private ResourceLocation getFlagTexture(String faction) {
+        return faction != null && !faction.equalsIgnoreCase("none")
+            ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png") : null;
+    }
+
+    private void renderMainBases(GuiGraphics g, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        String currentDim = mc.level.dimension().location().toString();
+        RenderSystem.enableBlend();
+        if (ClientData.blueSpawns.containsKey(currentDim))
+            drawMainBaseIcon(g, ClientData.blueSpawns.get(currentDim), cx, cz, bpp, ClientData.BLUE_FACTION, -13408564);
+        if (ClientData.redSpawns.containsKey(currentDim))
+            drawMainBaseIcon(g, ClientData.redSpawns.get(currentDim), cx, cz, bpp, ClientData.RED_FACTION, -3394765);
+    }
+
+    private void drawMainBaseIcon(GuiGraphics g, BlockPos pos, double cx, double cz, double bpp, String faction, int fallbackColor) {
+        int pX = toScreenX(pos.getX() + 0.5, cx);
+        int pY = toScreenZ(pos.getZ() + 0.5, cz);
+        if (!inMap(pX, pY)) return;
+        ResourceLocation flagTex = getFlagTexture(faction);
+        if (flagTex != null && !faction.equals("none")) {
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            setFilter(flagTex, true);
+            g.blit(flagTex, pX - 8, pY - 4, 16, 9, 0, 0, 64, 36, 64, 36);
+            setFilter(flagTex, false);
+        } else {
+            g.fill(pX - 8, pY - 4, pX + 8, pY + 5, fallbackColor);
+        }
+        boolean isSelected = selectedSpawnId.equals("MAIN");
+        ResourceLocation mainTex = isSelected ? MAIN_BASE_ICON_SELECTED : MAIN_BASE_ICON;
+        setFilter(mainTex, true);
+        g.pose().pushPose();
+        g.pose().translate(pX, pY, 150);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        g.blit(mainTex, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
+        g.pose().popPose();
+        setFilter(mainTex, false);
+        g.pose().pushPose();
+        g.pose().translate(pX, pY + 7, 151);
+        g.pose().scale(0.6F, 0.6F, 1);
+        g.drawCenteredString(PWPTheme.Fonts.display(), "MAIN", 0, 0, -1);
+        g.pose().popPose();
+    }
+
+    private void renderArtilleryZones(GuiGraphics g, double cx, double cz, double bpp) {
+        if (ClientData.activeStrikes == null || ClientData.activeStrikes.isEmpty()) return;
+        float radius = 15;
+        for (var strike : ClientData.activeStrikes) {
+            float sx = (float)toScreenX(strike.pos.getX() + 0.5, cx);
+            float sy = (float)toScreenZ(strike.pos.getZ() + 0.5, cz);
+            drawSmoothCircle(g, sx, sy, radius / (float)bpp, -65536);
+        }
+    }
+
+    private void drawSmoothCircle(GuiGraphics g, float cx, float cy, float radius, int color) {
+        if (radius <= 0) return;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        var tesselator = Tesselator.getInstance();
+        var buffer = tesselator.getBuilder();
+        Matrix4f matrix = g.pose().last().pose();
+        float a = (color >> 24 & 0xFF) / 255f;
+        float r = (color >> 16 & 0xFF) / 255f;
+        float g2 = (color >> 8 & 0xFF) / 255f;
+        float b = (color & 0xFF) / 255f;
+        buffer.begin(Mode.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        int seg = 128;
+        for (int i = 0; i <= seg; i++) {
+            float angle = i * (float)(Math.PI * 2) / seg;
+            float x = cx + Mth.cos(angle) * radius;
+            float y = cy + Mth.sin(angle) * radius;
+            buffer.vertex(matrix, x, y, 0).color(r, g2, b, a).endVertex();
+        }
+        tesselator.end();
+        RenderSystem.disableBlend();
+    }
+
+    private void renderStructures(GuiGraphics g, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        String myTeam = "NEUTRAL";
+        if (mc.player.getTeam() != null) {
+            String name = mc.player.getTeam().getName().toUpperCase();
+            if (name.contains("BLUE")) myTeam = "BLUE";
+            else if (name.contains("RED")) myTeam = "RED";
+        }
+        boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
+
+        for (var hub : ClientData.clientHubs) {
+            if (!hub.constructed) continue;
+            if (!hub.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
+            float sx = (float)toScreenX(hub.pos.getX() + 0.5, cx);
+            float sy = (float)toScreenZ(hub.pos.getZ() + 0.5, cz);
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 50);
+            drawSmoothCircle(g, sx, sy, 50 / (float)bpp, 1627389951);
+            int teamCircleColor = hub.team.equalsIgnoreCase("BLUE") ? -2141891073 : -2130750123;
+            drawSmoothCircle(g, sx, sy, 150 / (float)bpp, teamCircleColor);
+            g.pose().popPose();
+            if (inMap((int)sx, (int)sy)) {
+                String hubPayload = "HUB:" + hub.pos.getX() + ":" + hub.pos.getY() + ":" + hub.pos.getZ();
+                boolean isSelected = selectedSpawnId.equals(hubPayload);
+                ResourceLocation hubTex = isSelected ? HUB_ICON_SELECTED : HUB_ICON;
+                setFilter(hubTex, true);
+                g.pose().pushPose();
+                g.pose().translate(sx, sy, 160);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+                g.blit(hubTex, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
+                g.pose().popPose();
+                setFilter(hubTex, false);
+                String matsText = String.valueOf(hub.materials);
+                int matsW = PWPTheme.Fonts.display().width(matsText);
+                int matsX = (int)sx + 8;
+                int matsY = (int)sy - 2;
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 165);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+                setFilter(MATS_ICON, true);
+                g.blit(MATS_ICON, matsX, matsY, 8, 8, 0, 0, 16, 16, 16, 16);
+                setFilter(MATS_ICON, false);
+                g.drawString(PWPTheme.Fonts.display(), matsText, matsX + 10, matsY + 1, -22016, false);
+                g.pose().popPose();
+            }
+        }
+
+        for (var squad : ClientData.clientSquads) {
+            if (squad.rallyPos == null) continue;
+            if (!squad.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
+            float sx = (float)toScreenX(squad.rallyPos.getX() + 0.5, cx);
+            float sy = (float)toScreenZ(squad.rallyPos.getZ() + 0.5, cz);
+            if (inMap((int)sx, (int)sy)) {
+                boolean isSelected = selectedSpawnId.equals("RALLY");
+                ResourceLocation rallyTex = isSelected ? RALLY_ICON_SELECTED : RALLY_ICON;
+                setFilter(rallyTex, true);
+                g.pose().pushPose();
+                g.pose().translate(sx, sy, 170);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+                g.blit(rallyTex, -5, -5, 10, 10, 0, 0, 16, 16, 16, 16);
+                g.pose().popPose();
+                setFilter(rallyTex, false);
+            }
+        }
+    }
+
+    private void renderVehicles(GuiGraphics g, double cx, double cz, double bpp) {
+        if (ClientData.clientVehicles == null || ClientData.clientVehicles.isEmpty()) return;
+        Minecraft mc = Minecraft.getInstance();
+        String myTeam = "NEUTRAL";
+        if (mc.player.getTeam() != null) {
+            String name = mc.player.getTeam().getName().toUpperCase();
+            if (name.contains("BLUE")) myTeam = "BLUE";
+            else if (name.contains("RED")) myTeam = "RED";
+        }
+        boolean isObserver = mc.player.isCreative() || mc.player.isSpectator();
+        for (var record : ClientData.clientVehicles) {
+            if (!record.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
+            int sx = toScreenX(record.x, cx);
+            int sy = toScreenZ(record.z, cz);
+            if (!inMap(sx, sy)) continue;
+            ResourceLocation icon = VEHICLE_ICONS.getOrDefault(record.type, VEHICLE_ICONS.get("DEFAULT"));
+            setFilter(icon, true);
+            g.pose().pushPose();
+            g.pose().translate(sx, sy, 150);
+            if (!record.type.equals("Mine")) g.pose().mulPose(Axis.ZP.rotationDegrees(record.yaw + 180));
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            RenderSystem.enableBlend();
+            g.blit(icon, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
+            g.pose().popPose();
+            setFilter(icon, false);
+        }
+    }
+
+    private void renderAllPlayers(GuiGraphics g, LocalPlayer self, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        String myName = self.getScoreboardName();
+        int myInternalSquadId = -1;
+        String myTeamForNums = getPlayerTeamStrict();
+        boolean isBlueForNums = myTeamForNums != null && myTeamForNums.contains("BLUE");
+        int teamCMDIdForNums = isBlueForNums ? ClientData.blueCMDId : ClientData.redCMDId;
+        List<WarfareWorldData.Squad> teamSquadsForNums = ClientData.clientSquads.stream()
+            .filter(s -> s.team.equalsIgnoreCase(myTeamForNums)).collect(Collectors.toList());
+        teamSquadsForNums.sort((s1, s2) -> {
+            if (s1.id == teamCMDIdForNums && teamCMDIdForNums != -1) return -1;
+            return s2.id == teamCMDIdForNums && teamCMDIdForNums != -1 ? 1 : Integer.compare(s1.id, s2.id);
+        });
+        Map<Integer, Integer> idToDisplayNum = new HashMap<>();
+        for (int i = 0; i < teamSquadsForNums.size(); i++) {
+            WarfareWorldData.Squad s = teamSquadsForNums.get(i);
+            idToDisplayNum.put(s.id, i + 1);
+            if (s.members.contains(myName)) myInternalSquadId = s.id;
+        }
+        boolean isShowNicksHeld = isShowNicknamesHeld();
+        long currentTime = mc.level.getGameTime();
+        boolean amIMedic = "Medic".equalsIgnoreCase(ClientData.myCurrentKit);
+        Map<Integer, List<MapPlayerInfo>> vehicleGroups = new HashMap<>();
+        for (MapPlayerInfo info : ClientData.mapPlayers.values()) {
+            if (info.inVehicle) {
+                vehicleGroups.computeIfAbsent(info.vehicleId, k -> new ArrayList<>()).add(info);
+                continue;
+            }
+            int sx = toScreenX(info.x, cx);
+            int sy = toScreenZ(info.z, cz);
+            if (!inMap(sx, sy)) continue;
+            var f = PWPTheme.Fonts.display();
+            if (isShowNicksHeld && !info.name.equals(myName) && !info.isDowned) {
+                g.pose().pushPose();
+                g.pose().translate(sx, sy - 8, 450);
+                g.pose().scale(0.6F, 0.6F, 1);
+                int nickColor = info.squadId != -1 && info.squadId == myInternalSquadId ? -11141291 : -1;
+                g.drawCenteredString(f, Component.literal(info.name), 0, 0, nickColor);
+                g.pose().popPose();
+            }
+            if (info.name.equals(myName)) continue;
+            if (info.isDowned) {
+                if (amIMedic || currentTime - info.lastShoutTime < 60) {
+                    RenderSystem.setShaderColor(1, 1, 1, 1);
+                    g.blit(ICON_PLUS, sx - 4, sy - 4, 8, 8, 0, 0, 16, 16, 16, 16);
+                }
+            } else {
+                float r2 = 0.2F, g2 = 0.6F, b2 = 1.0F;
+                if (info.squadId != -1 && info.squadId == myInternalSquadId) { r2 = 0; g2 = 1; b2 = 0; }
+                RenderSystem.setShaderColor(r2, g2, b2, 1);
+                g.blit(ICON_CIRCLE, sx - 3, sy - 3, 6, 6, 0, 0, 16, 16, 16, 16);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+            }
+            Integer displayNum = idToDisplayNum.get(info.squadId);
+            if (!info.isDowned && info.isLeader && info.squadId != -1 && displayNum != null) {
+                String numStr = String.valueOf(displayNum);
+                int textColor = info.squadId == myInternalSquadId ? -11141291 : -11184641;
+                g.pose().pushPose();
+                g.pose().translate(sx, sy, 350);
+                g.pose().scale(0.5F, 0.5F, 1);
+                int tw = f.width(numStr);
+                drawSquadNumber(g, f, numStr, -(tw / 2), -4, textColor);
+                g.pose().popPose();
+            }
+        }
+
+        if (isShowNicksHeld) {
+            for (var group : vehicleGroups.values()) {
+                if (group.isEmpty()) continue;
+                group.sort(Comparator.comparingInt(p -> p.seatIndex));
+                var driver = group.get(0);
+                int sx = toScreenX(driver.x, cx);
+                int sy = toScreenZ(driver.z, cz);
+                if (!inMap(sx, sy)) continue;
+                int yOffset = sy - 10 - (group.size() - 1) * 8;
+                for (var pInfo : group) {
+                    g.pose().pushPose();
+                    g.pose().translate(sx, yOffset, 450);
+                    g.pose().scale(0.6F, 0.6F, 1);
+                    int nickColor = -1;
+                    if (pInfo.squadId != -1 && pInfo.squadId == myInternalSquadId) nickColor = -11141291;
+                    if (pInfo.name.equals(myName)) nickColor = -171;
+                    g.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(pInfo.name), 0, 0, nickColor);
+                    g.pose().popPose();
+                    yOffset += 8;
+                }
+            }
+        }
+
+        renderSelf(g, self, cx, cz, bpp, myInternalSquadId);
+    }
+
+    private void renderSelf(GuiGraphics g, LocalPlayer self, double cx, double cz, double bpp, int mySquadId) {
+        boolean inVehicle = self.getVehicle() != null;
+        int mySx = toScreenX(self.getX(), cx);
+        int mySy = toScreenZ(self.getZ(), cz);
+        if (!inMap(mySx, mySy) || inVehicle) return;
+        g.pose().pushPose();
+        g.pose().translate(mySx, mySy, 300);
+        g.pose().mulPose(Axis.ZP.rotationDegrees(self.getYRot() + 180));
+        if (mySquadId != -1) RenderSystem.setShaderColor(0, 1, 0, 1);
+        else RenderSystem.setShaderColor(1, 1, 1, 1);
+        g.blit(ICON_SELF, -5, -5, 10, 10, 0, 0, 16, 16, 16, 16);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        g.pose().popPose();
+        if (isShowNicknamesHeld()) {
+            g.pose().pushPose();
+            g.pose().translate(mySx, mySy - 10, 450);
+            g.pose().scale(0.6F, 0.6F, 1);
+            int myColor = mySquadId != -1 ? -11141291 : -171;
+            g.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(self.getScoreboardName()), 0, 0, myColor);
+            g.pose().popPose();
+        }
+    }
+
+    private void renderSquadMarkerLogic(GuiGraphics g, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null) return;
+        String myName = mc.player.getScoreboardName();
+        WarfareWorldData.Squad mySquad = null;
+        for (var s : ClientData.clientSquads) {
+            if (s.members.contains(myName)) { mySquad = s; break; }
+        }
+        if (mySquad == null) return;
+        if (mySquad.marker != null && mySquad.marker.type != 6)
+            drawMapMarkerAndLine(g, cx, cz, bpp, mySquad.marker, getSquadMarkerIcon(mySquad.marker.type), getSquadMarkerColor(mySquad.marker.type), mySquad.marker.type != 0);
+        if (mySquad.bravoMarker != null && mySquad.bravoMarker.type != 6)
+            drawMapMarkerAndLine(g, cx, cz, bpp, mySquad.bravoMarker, getBravoMarkerIcon(mySquad.bravoMarker.type), -65281, mySquad.bravoMarker.type != 0);
+        if (mySquad.charlieMarker != null && mySquad.charlieMarker.type != 6)
+            drawMapMarkerAndLine(g, cx, cz, bpp, mySquad.charlieMarker, getCharlieMarkerIcon(mySquad.charlieMarker.type), -16711766, mySquad.charlieMarker.type != 0);
+    }
+
+    private void drawMapMarkerAndLine(GuiGraphics g, double cx, double cz, double bpp, WarfareWorldData.SquadMarker m, ResourceLocation icon, int color, boolean withDash) {
+        Minecraft mc = Minecraft.getInstance();
+        int mx = toScreenX(m.x, cx);
+        int my = toScreenZ(m.z, cz);
+        int px = toScreenX(mc.player.getX(), cx);
+        int py = toScreenZ(mc.player.getZ(), cz);
+        if (withDash) drawDashedLine(g, px, py, mx, my, color);
+        if (inMap(mx, my)) {
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            g.blit(icon, mx - 6, my - 6, 0, 0, 12, 12, 12, 12);
+            double distance = Math.sqrt(mc.player.distanceToSqr(m.x, mc.player.getY(), m.z));
+            String distText = (int)distance + "m";
+            g.pose().pushPose();
+            g.pose().translate(mx, my + 8, 600);
+            g.pose().scale(0.8F, 0.8F, 1);
+            int tw = PWPTheme.Fonts.display().width(distText);
+            g.drawString(PWPTheme.Fonts.display(), distText, -(tw / 2), 0, color, true);
+            g.pose().popPose();
+        }
+    }
+
+    private void drawDashedLine(GuiGraphics g, int x1, int y1, int x2, int y2, int color) {
+        int dx = x2 - x1;
+        int dy = y2 - y1;
+        double len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 5) return;
+        for (int i = 0; i < len; i += 4) {
+            double t = i / len;
+            int lx = (int)(x1 + dx * t);
+            int ly = (int)(y1 + dy * t);
+            if (inMap(lx, ly)) g.fill(lx, ly, lx + 2, ly + 2, color);
+        }
+    }
+
+    private int getSquadMarkerColor(int type) {
+        return switch (type) { case 1 -> -22016; case 2 -> -11184641; case 3 -> -43521; case 4 -> -1; case 5 -> -65536; default -> -11141291; };
+    }
+
+    private ResourceLocation getSquadMarkerIcon(int type) {
+        return switch (type) { case 1 -> MARKER_ATTACK; case 2 -> MARKER_DEFEND; case 3 -> MARKER_BUILD; default -> MARKER_MOVE; };
+    }
+
+    private ResourceLocation getBravoMarkerIcon(int type) {
+        String pre = switch (type) { case 1 -> "marker_attack_bravo"; case 2 -> "marker_defend_bravo"; case 3 -> "marker_build_bravo"; default -> "marker_move_bravo"; };
+        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + pre + ".png");
+    }
+
+    private ResourceLocation getCharlieMarkerIcon(int type) {
+        String pre = switch (type) { case 1 -> "marker_attack_charlie"; case 2 -> "marker_defend_charlie"; case 3 -> "marker_build_charlie"; default -> "marker_move_charlie"; };
+        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + pre + ".png");
+    }
+
+    private void renderTacticalMarkers(GuiGraphics g, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        String myTeam = getPlayerTeamStrict();
+        long currentTime = mc.level.getGameTime();
+        for (var m : ClientData.activeMarkers) {
+            if (!m.team.equalsIgnoreCase(myTeam)) continue;
+            long timeLeft = m.expiryTick - currentTime;
+            if (timeLeft <= 0) continue;
+            float alpha = Mth.clamp((float)timeLeft / 3600f, 0, 1);
+            int sx = toScreenX(m.pos.getX(), cx);
+            int sy = toScreenZ(m.pos.getZ(), cz);
+            if (!inMap(sx, sy)) continue;
+            ResourceLocation icon = getMarkerIcon(m.type);
+            setFilter(icon, true);
+            g.pose().pushPose();
+            g.pose().translate(sx, sy, 120);
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1, 1, 1, alpha);
+            g.blit(icon, -8, -8, 16, 16, 0, 0, 32, 32, 32, 32);
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            g.pose().popPose();
+            setFilter(icon, false);
+        }
+    }
+
+    private ResourceLocation getMarkerIcon(String type) {
+        String path = type.toLowerCase().replace("enemy ", "").replace(" ", "_");
+        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + path + "_marker.png");
+    }
+
+    private void renderSquadRhombusMarkers(GuiGraphics g, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        long time = mc.level.getGameTime();
+        String myName = mc.player.getScoreboardName();
+        String myTeam = getPlayerTeamStrict();
+        boolean amISquadLeader = isSquadLeaderOrFTL(mc.player);
+        boolean isBlueForNums = myTeam != null && myTeam.contains("BLUE");
+        int teamCMDIdForNums = isBlueForNums ? ClientData.blueCMDId : ClientData.redCMDId;
+        List<WarfareWorldData.Squad> teamSquadsForNums = ClientData.clientSquads.stream()
+            .filter(s -> s.team.equalsIgnoreCase(myTeam)).collect(Collectors.toList());
+        teamSquadsForNums.sort((s1, s2) -> {
+            if (s1.id == teamCMDIdForNums && teamCMDIdForNums != -1) return -1;
+            return s2.id == teamCMDIdForNums && teamCMDIdForNums != -1 ? 1 : Integer.compare(s1.id, s2.id);
+        });
+        var rhombusTex = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/squad_rhombus.png");
+        var f = PWPTheme.Fonts.display();
+        for (var squad : ClientData.clientSquads) {
+            if (!squad.team.equalsIgnoreCase(myTeam)) continue;
+            boolean canSee = squad.members.contains(myName) || amISquadLeader;
+            if (!canSee) continue;
+            for (var rm : squad.rhombusMarkers) {
+                long timeLeft = rm.expiryTick - time;
+                if (timeLeft <= 0) continue;
+                float alpha = Mth.clamp((float)timeLeft / 3600f, 0.1f, 1);
+                int mx = toScreenX(rm.x, cx);
+                int my = toScreenZ(rm.z, cz);
+                if (!inMap(mx, my)) continue;
+                RenderSystem.enableBlend();
+                RenderSystem.setShaderColor(1, 1, 1, alpha);
+                g.blit(rhombusTex, mx - 8, my - 8, 0, 0, 16, 16, 16, 16);
+                g.pose().pushPose();
+                g.pose().translate(mx, my, 500);
+                g.pose().scale(0.5F, 0.5F, 1);
+                int displayNum = 0;
+                for (int i = 0; i < teamSquadsForNums.size(); i++) {
+                    if (teamSquadsForNums.get(i).id == squad.id) { displayNum = i + 1; break; }
+                }
+                String numStr = String.valueOf(displayNum);
+                int whiteWithAlpha = (int)(alpha * 255) << 24 | 0xFFFFFF;
+                drawSquadNumber(g, f, numStr, -(f.width(numStr) / 2), -4, whiteWithAlpha);
+                g.pose().popPose();
+            }
+        }
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+    }
+
+    private void renderSquadPings(GuiGraphics g, double cx, double cz, double bpp) {
+        Minecraft mc = Minecraft.getInstance();
+        String myName = mc.player.getScoreboardName();
+        WarfareWorldData.Squad mySquad = null;
+        for (var s : ClientData.clientSquads) {
+            if (s.members.contains(myName)) { mySquad = s; break; }
+        }
+        if (mySquad == null) return;
+        long time = mc.level.getGameTime();
+        boolean isSL = mySquad.leader.equals(myName);
+        boolean isBravo = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
+        boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
+        if (mySquad.pingPos != null && time < mySquad.pingExpiry)
+            drawPingOnMap(g, mySquad.pingPos, new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye.png"), cx, cz, bpp);
+        if (mySquad.bravoPingPos != null && time < mySquad.bravoPingExpiry && (isSL || isBravo))
+            drawPingOnMap(g, mySquad.bravoPingPos, new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_bravo.png"), cx, cz, bpp);
+        if (mySquad.charliePingPos != null && time < mySquad.charliePingExpiry && (isSL || isCharlie))
+            drawPingOnMap(g, mySquad.charliePingPos, new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_charlie.png"), cx, cz, bpp);
+    }
+
+    private void drawPingOnMap(GuiGraphics g, BlockPos pos, ResourceLocation icon, double cx, double cz, double bpp) {
+        int px = toScreenX(pos.getX() + 0.5, cx);
+        int py = toScreenZ(pos.getZ() + 0.5, cz);
+        if (inMap(px, py)) {
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            g.blit(icon, px - 6, py - 6, 0, 0, 12, 12, 12, 12);
+        }
+    }
+
+    private String getPlayerTeamStrict() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.player.getTeam() != null) {
+            String name = mc.player.getTeam().getName().toUpperCase();
+            if (name.contains("BLUE")) return "BLUE";
+            return name.contains("RED") ? "RED" : name;
+        }
+        return "NEUTRAL";
+    }
+
+    private boolean isSquadLeaderOrFTL(LocalPlayer player) {
+        if (player == null) return false;
+        String pName = player.getScoreboardName();
+        for (var s : ClientData.clientSquads) {
+            if (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName)) return true;
+        }
+        return false;
+    }
+
+    private void drawSquadNumber(GuiGraphics g, Font font, String text, int x, int y, int color) {
+        g.drawString(font, text, x - 1, y, -16777216, false);
+        g.drawString(font, text, x + 1, y, -16777216, false);
+        g.drawString(font, text, x, y - 1, -16777216, false);
+        g.drawString(font, text, x, y + 1, -16777216, false);
+        g.drawString(font, text, x, y, color, false);
+    }
+
+    private boolean isShowNicknamesHeld() {
+        Minecraft mc = Minecraft.getInstance();
+        long window = mc.getWindow().getWindow();
+        Key nickKey = ModKeyBindings.SHOW_NICKNAMES_KEY.getKey();
+        return nickKey.getType() == Type.MOUSE
+            ? GLFW.glfwGetMouseButton(window, nickKey.getValue()) == 1
+            : InputConstants.isKeyDown(window, nickKey.getValue());
+    }
+
+    public boolean hitPath(int mx, int my, double cx, double cz) {
+        int r = 12;
+        for (var pts : pathGroups) {
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroups.remove(pts); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroups.remove(pts); return true; } }
+        }
+        for (var pts : pathGroupsRed) {
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsRed.remove(pts); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsRed.remove(pts); return true; } }
+        }
+        for (var pts : pathGroupsYellow) {
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow.remove(pts); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow.remove(pts); return true; } }
+        }
+        return false;
+    }
+
+    public MapMarker hitMarker(int mx, int my, double cx, double cz) {
+        for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
+            int px = toScreenX(m.pos.getX() + 0.5, cx), py = toScreenZ(m.pos.getZ() + 0.5, cz);
+            if (Math.abs(mx - px) < 12 && Math.abs(my - py) < 12) return m;
+        }
+        return null;
+    }
+
+    private void drawMarkers(GuiGraphics g, double cx, double cz) {
+        var f = Minecraft.getInstance().font;
+        long now = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+        for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
+            int px = toScreenX(m.pos.getX() + 0.5, cx), py = toScreenZ(m.pos.getZ() + 0.5, cz);
+            if (!inMap(px, py)) continue;
+            float alpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1, 1, 1, alpha);
+            g.blit(icon(m.iconType, m.team), px - 10, py - 10, 0, 0, 20, 20, 20, 20);
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            if (("hat".equals(m.iconType) || "rally".equals(m.iconType)) && "squad".equals(m.team)) {
+                var p = Minecraft.getInstance().player;
+                double dist = Math.sqrt(p.distanceToSqr(m.pos.getX() + 0.5, p.getY(), m.pos.getZ() + 0.5));
+                String d = distStr(dist);
+                int tw = f.width(d);
+                g.fill(px - tw / 2 - 2, py + 11, px + tw / 2 + 3, py + 22, (int)(0xAA * alpha) << 24 | 0x000000);
+                g.drawString(f, d, px - tw / 2, py + 13, (int)(0xFF * alpha) << 24 | 0xFFFFFF, false);
+            }
+        }
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+    }
+
+    private void drawPath(GuiGraphics g, double cx, double cz) {
+        drawGroup(g, cx, cz, pathGroups, 0xFF44FF44);
+        drawGroup(g, cx, cz, pathGroupsRed, 0xFFFF4444);
+        drawGroup(g, cx, cz, pathGroupsYellow, 0xFFFFDD00);
+    }
+
+    private void drawGroup(GuiGraphics g, double cx, double cz, List<List<PathPoint>> groups, int col) {
+        int lineCol = (col & 0x00FFFFFF) | 0x99000000;
+        int arrowCol = (col & 0x00FFFFFF) | 0xB3000000;
+        for (var pts : groups) {
+            if (pts.size() < 2) continue;
+            for (int i = 0; i < pts.size() - 1; i++) {
+                var a = pts.get(i); var b = pts.get(i + 1);
+                pathLine(g, toScreenX(a.x, cx), toScreenZ(a.z, cz), toScreenX(b.x, cx), toScreenZ(b.z, cz), lineCol);
+            }
+            var first = pts.get(0);
+            circleDot(g, toScreenX(first.x, cx), toScreenZ(first.z, cz), lineCol);
+            var last = pts.get(pts.size() - 1);
+            var prev = pts.get(pts.size() - 2);
+            int tx = toScreenX(last.x, cx), ty = toScreenZ(last.z, cz);
+            int fx = toScreenX(prev.x, cx), fy = toScreenZ(prev.z, cz);
+            arrowHead(g, tx, ty, fx, fy, arrowCol);
+        }
+    }
+
+    private void arrowHead(GuiGraphics g, int tx, int ty, int fx, int fy, int col) {
+        float dx = tx - fx, dy = ty - fy, len = (float)Math.sqrt(dx*dx+dy*dy);
+        if (len < 10) return;
+        var pose = g.pose();
+        pose.pushPose(); pose.translate(tx, ty, 200);
+        pose.mulPose(Axis.ZP.rotationDegrees((float)Math.toDegrees(Math.atan2(dy, dx)) + 180));
+        for (int y = -6; y <= 6; y++) {
+            int xS = -12 + Math.abs(y) * 12 / 6;
+            g.fill(xS, y, 1, y + 1, col);
+        }
+        pose.popPose();
+    }
+
+    private void drawPreview(GuiGraphics g, double cx, double cz) {
+        if (previewStart == null || previewEnd == null) return;
+        int x1 = toScreenX(previewStart.x, cx), y1 = toScreenZ(previewStart.z, cz);
+        int x2 = toScreenX(previewEnd.x, cx), y2 = toScreenZ(previewEnd.z, cz);
+        pathLine(g, x1, y1, x2, y2, 0x55FFFFFF);
+        circleDot(g, x1, y1, 0x88FFFFFF);
+    }
+
+    private void pathLine(GuiGraphics g, int x1, int y1, int x2, int y2, int col) {
+        float dx = x2 - x1, dy = y2 - y1, len = (float)Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return;
+        var pose = g.pose();
+        pose.pushPose(); pose.translate(x1, y1, 200);
+        pose.mulPose(Axis.ZP.rotationDegrees((float)Math.toDegrees(Math.atan2(dy, dx))));
+        g.fill(0, -1, (int)len, 1, col);
+        pose.popPose();
+    }
+
+    private void circleDot(GuiGraphics g, int x, int y, int col) {
+        g.fill(x - 2, y - 2, x + 3, y - 1, col);
+        g.fill(x - 3, y - 1, x + 4, y + 2, col);
+        g.fill(x - 2, y + 2, x + 3, y + 3, col);
+    }
+
+    private void drawCompassRose(GuiGraphics g) {
+        int cx = mapX + mapSize - 70, cy = mapY + mapSize - 66;
+        g.blit(ICON_COMPASS, cx, cy, 0, 0, 64, 64, 64, 64);
+    }
+
+    private void drawCompass(GuiGraphics g, double cx, double cz) {
+        int y = mapY + mapSize + 4, mid = mapX + mapSize / 2;
+        var p = Minecraft.getInstance().player; if (p == null) return;
+        g.fill(mapX, y, mapX + mapSize, y + 16, 0xCC06080A);
+        long now = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+        for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
+            double dx = m.pos.getX() + 0.5 - p.getX(), dz = m.pos.getZ() + 0.5 - p.getZ();
+            double bearing = Math.toDegrees(Math.atan2(dx, dz));
+            double rel = (bearing - p.getYRot() + 540) % 360 - 180;
+            if (rel < -90 || rel > 90) continue;
+            int cx2 = mid + (int)(rel / 90.0 * (mapSize / 2.0));
+            float alpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1, 1, 1, alpha);
+            g.blit(icon(m.iconType, m.team), cx2 - 5, y + 3, 0, 0, 10, 10, 10, 10);
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+        }
+    }
+
+    public static String toAlpha(long n) {
+        if (n < 0) return "?";
+        var sb = new StringBuilder();
+        while (true) { sb.insert(0, (char)('A' + (int)(n % 26))); if (n < 26) break; n = n / 26 - 1; }
+        return sb.toString();
+    }
+
+    public static String getKP(double wx, double wz) {
+        long cx = Math.floorDiv((long)wx, 300), cz = Math.floorDiv((long)wz, 300);
+        return toAlpha(cx) + (cz + 1);
+    }
+
+    public static String distStr(double m) {
+        if (m <= 30) { int d = (int)Math.round(m); return Math.max(1, d-1) + "-" + (d+1) + "m"; }
+        if (m <= 100) { int d = (int)(Math.round(m/5)*5); return Math.max(1,d-5) + "-" + (d+5) + "m"; }
+        if (m <= 300) { int d = (int)(Math.round(m/10)*10); return Math.max(1,d-10) + "-" + (d+10) + "m"; }
+        int d = (int)(Math.round(m/50)*50); return Math.max(1,d-50) + "-" + (d+50) + "m";
+    }
+
+    private int toScreenX(double wx, double cx) {
+        return (int)(mapX + mapSize / 2.0 + (wx - cx) / ClientData.mapScale);
+    }
+
+    private int toScreenZ(double wz, double cz) {
+        return (int)(mapY + mapSize / 2.0 + (wz - cz) / ClientData.mapScale);
+    }
+
+    private boolean inMap(int sx, int sy) {
+        return sx >= mapX && sx <= mapX + mapSize && sy >= mapY && sy <= mapY + mapSize;
+    }
+
+    public boolean inMap(double mx, double my) {
+        return inMap((int)mx, (int)my);
+    }
+
+    private ResourceLocation icon(String type, String team) {
+        String s = "enemy".equals(team) ? "_r" : "team".equals(team) ? "_y" : "_g";
+        return TEX.computeIfAbsent(type + s, k -> new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + k + ".png"));
+    }
+
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (!isMouseOver(mx, my)) return false;
+        if (btn == 0) { isDraggingMap = true; lastMouseX = mx; lastMouseY = my; return true; }
+        return false;
+    }
+
+    public void mouseReleased(int btn) {
+        if (btn == 0) isDraggingMap = false;
+    }
+
+    public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
+        if (!isDraggingMap || btn != 0) return false;
+        panX -= (mx - lastMouseX) * ClientData.mapScale;
+        panZ -= (my - lastMouseY) * ClientData.mapScale;
+        lastMouseX = mx;
+        lastMouseY = my;
+        return true;
+    }
+
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        if (!isMouseOver(mx, my)) return false;
+        ClientData.zoomMap(delta);
+        return true;
+    }
+
+    static {
+        VEHICLE_ICONS.put("APC", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/apc.png"));
+        VEHICLE_ICONS.put("TANK", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/tank.png"));
+        VEHICLE_ICONS.put("HELICOPTER", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/helicopter.png"));
+        VEHICLE_ICONS.put("CAS Helicopter", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/cas_helicopter.png"));
+        VEHICLE_ICONS.put("CAS Fighter", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/cas_fighter.png"));
+        VEHICLE_ICONS.put("Combat Vehicle", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/combat_vehicle.png"));
+        VEHICLE_ICONS.put("Infantry Vehicle", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/infantry_vehicle.png"));
+        VEHICLE_ICONS.put("Supply Truck", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/supply_truck.png"));
+        VEHICLE_ICONS.put("Supply Helicopter", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/supply_helicopter.png"));
+        VEHICLE_ICONS.put("DEFAULT", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/default.png"));
+        VEHICLE_ICONS.put("Static ZU", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/static_zu.png"));
+        VEHICLE_ICONS.put("Mobile ZU", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/mobile_zu.png"));
+        VEHICLE_ICONS.put("BOAT", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/boat.png"));
+        VEHICLE_ICONS.put("Motorcycle", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/motorcycle.png"));
+        VEHICLE_ICONS.put("Light Supply", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/light_supply.png"));
+        VEHICLE_ICONS.put("Mine", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/skull_marker.png"));
+    }
+}
