@@ -43,44 +43,50 @@ public class PacketOpenFactionKitEditor {
       ctx.get()
          .enqueueWork(
             () -> {
-               ServerPlayer player = ctx.get().getSender();
-               if (player != null && player.isCreative()) {
-                  WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                  WarfareWorldData.KitInfo kit = null;
+                ServerPlayer player = ctx.get().getSender();
+                if (player != null && player.isCreative()) {
+                   WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                   WarfareWorldData.KitInfo kit = null;
+                   String kitTeam = "BLUE";
 
-                  if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
-                     kit = data.blueKits.get(msg.kitName);
-                  } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
-                     kit = data.redKits.get(msg.kitName);
-                  } else {
-                     kit = loadFromApi(msg.faction, msg.kitName);
-                  }
+                   if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
+                      kit = data.blueKits.get(msg.kitName);
+                      kitTeam = "BLUE";
+                   } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
+                      kit = data.redKits.get(msg.kitName);
+                      kitTeam = "RED";
+                   } else {
+                      kit = loadFromApi(msg.faction, msg.kitName);
+                      if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
+                      else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
+                   }
 
-                  if (kit == null) {
-                     kit = new WarfareWorldData.KitInfo(msg.kitName);
-                  }
+                   if (kit == null) {
+                      kit = new WarfareWorldData.KitInfo(msg.kitName);
+                   }
 
-                  final WarfareWorldData.KitInfo finalKit = kit;
-                  NetworkHooks.openScreen(
-                     player,
-                     new MenuProvider() {
-                        public Component getDisplayName() {
-                           return Component.literal("Faction Kit: " + finalKit.name);
-                        }
+                   final WarfareWorldData.KitInfo finalKit = kit;
+                   final String finalTeam = kitTeam;
+                   NetworkHooks.openScreen(
+                      player,
+                      new MenuProvider() {
+                         public Component getDisplayName() {
+                            return Component.literal("Faction Kit: " + finalKit.name);
+                         }
 
-                        public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {
-                           SimpleContainer container = new SimpleContainer(49);
+                         public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {
+                            SimpleContainer container = new SimpleContainer(49);
 
-                           for (int i = 0; i < 49; i++) {
-                              container.setItem(i, ((ItemStack)finalKit.inventory.get(i)).copy());
-                           }
+                            for (int i = 0; i < 49; i++) {
+                               container.setItem(i, ((ItemStack)finalKit.inventory.get(i)).copy());
+                            }
 
-                            return new KitEditorMenu(
-                               id,
-                               inv,
-                               container,
-                               msg.faction,
-                               finalKit.name,
+                             return new KitEditorMenu(
+                                id,
+                                inv,
+                                container,
+                                finalTeam,
+                                finalKit.name,
                                finalKit.category,
                                finalKit.description != null ? finalKit.description : "",
                                finalKit.isLeaderOnly,

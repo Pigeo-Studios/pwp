@@ -32,6 +32,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -317,20 +318,24 @@ public class ClientEvents {
    public static void onKeyInput(Key event) {
       Minecraft mc = Minecraft.getInstance();
       if (mc.player != null) {
-         if (ModKeyBindings.SQUAD_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
-            PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
-               event.getAction() == 1
-                  ? PacketVoiceChannelState.Channel.SQUAD
-                  : PacketVoiceChannelState.Channel.LOCAL
-            ));
-         }
-         if (ModKeyBindings.COMMAND_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
-            PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
-               event.getAction() == 1
-                  ? PacketVoiceChannelState.Channel.COMMAND
-                  : PacketVoiceChannelState.Channel.LOCAL
-            ));
-         }
+          if (ModKeyBindings.SQUAD_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
+             boolean pressed = event.getAction() == 1;
+             KeyMapping svc = getSvcPttKey();
+             if (svc != null) svc.setDown(pressed);
+             PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
+                pressed ? PacketVoiceChannelState.Channel.SQUAD : PacketVoiceChannelState.Channel.LOCAL
+             ));
+             ClientData.currentVoiceChannel = pressed ? PacketVoiceChannelState.Channel.SQUAD : PacketVoiceChannelState.Channel.LOCAL;
+          }
+          if (ModKeyBindings.COMMAND_PTT_KEY.matches(event.getKey(), event.getScanCode())) {
+             boolean pressed = event.getAction() == 1;
+             KeyMapping svc = getSvcPttKey();
+             if (svc != null) svc.setDown(pressed);
+             PacketHandler.INSTANCE.sendToServer(new PacketVoiceChannelState(
+                pressed ? PacketVoiceChannelState.Channel.COMMAND : PacketVoiceChannelState.Channel.LOCAL
+             ));
+             ClientData.currentVoiceChannel = pressed ? PacketVoiceChannelState.Channel.COMMAND : PacketVoiceChannelState.Channel.LOCAL;
+          }
          if (event.getKey() == 266 && event.getAction() == 1) {
             PacketHandler.INSTANCE.sendToServer(new PacketConfirmArtStrike(true));
          }
@@ -464,7 +469,23 @@ public class ClientEvents {
                float breathing = Mth.sin((float)mc.level.getGameTime() * 0.06F) * 1.5F;
                event.setPitch(targetPitch + breathing);
             }
+          }
+       }
+    }
+
+   private static KeyMapping svcPttKey = null;
+   private static boolean svcPttSearched = false;
+
+   private static KeyMapping getSvcPttKey() {
+      if (!svcPttSearched) {
+         svcPttSearched = true;
+         for (KeyMapping k : Minecraft.getInstance().options.keyMappings) {
+            if (k.getName().equals("key.push_to_talk")) {
+               svcPttKey = k;
+               break;
+            }
          }
       }
+      return svcPttKey;
    }
 }

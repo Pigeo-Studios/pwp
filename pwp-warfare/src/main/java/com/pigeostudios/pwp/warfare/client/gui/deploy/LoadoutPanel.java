@@ -37,8 +37,8 @@ public class LoadoutPanel {
             int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
             if (sel >= slot.options().size()) sel = slot.defaultIndex();
             DeployData.LoadoutOption opt = slot.options().get(sel);
-            boolean expanded = DeployData.isSlotExpanded(kit.name(), slot.label());
             boolean hasAlt = slot.hasAlternatives();
+            boolean expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
 
             String squadLabel = switch (slot.label()) {
                 case "PRIMARY" -> "СТВОЛ";
@@ -115,19 +115,16 @@ public class LoadoutPanel {
 
         for (DeployData.LoadoutSlot slot : kit.loadout()) {
             if (cy + 40 > y + maxH) break;
-            boolean hasAlt = slot.hasAlternatives(), expanded = DeployData.isSlotExpanded(kit.name(), slot.label());
+            boolean hasAlt = slot.hasAlternatives(), expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
             cy += 10;
-            if (hasAlt && mx >= x + w - pad - 18 && mx <= x + w && my >= cy && my <= cy + 20) {
-                DeployData.toggleSlotExpanded(kit.name(), slot.label()); return true;
-            }
             cy += 20 + 2;
-            if (expanded && hasAlt) {
+            if (expanded) {
                 int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
                 if (sel >= slot.options().size()) sel = slot.defaultIndex();
                 for (int ai = 0; ai < slot.options().size(); ai++) {
                     if (mx >= x + 8 && mx <= x + w && my >= cy && my <= cy + 16) {
                         DeployData.setSelectedIndex(kit.name(), slot.label(), ai);
-                        DeployData.toggleSlotExpanded(kit.name(), slot.label()); return true;
+                        return true;
                     }
                     cy += 17;
                 }

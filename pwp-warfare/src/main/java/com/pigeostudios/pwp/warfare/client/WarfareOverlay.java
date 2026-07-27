@@ -18,6 +18,7 @@ import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
+import com.pigeostudios.pwp.warfare.network.PacketVoiceChannelState.Channel;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -134,6 +135,7 @@ public class WarfareOverlay {
 
             renderRadioSpeakers(gui, mc, height);
             renderVoiceSpeakers(gui, mc, height);
+            renderChannelIndicator(gui, mc, height);
             if (ClientData.isMapOpen || ClientData.mapTransition > 0.0F) {
                renderSideMap(gui, mc, width, height, event.getPartialTick());
             }
@@ -802,6 +804,41 @@ public class WarfareOverlay {
                yOffset += 14;
             }
          }
+      }
+   }
+
+   private static void renderChannelIndicator(GuiGraphics gui, Minecraft mc, int height) {
+      Channel ch = ClientData.currentVoiceChannel;
+      if (ch == Channel.SQUAD) {
+         int x = 5;
+         int y = height / 2 - 56;
+         String label = "SQUAD";
+         int color = -11141291;
+         int w = PWPTheme.Fonts.display().width(label) + 15;
+         gui.fill(x, y - 2, x + 5 + w, y + 10, 0xCC000000);
+         RenderSystem.enableBlend();
+         float r = (color >> 16 & 0xFF) / 255.0F;
+         float g = (color >> 8 & 0xFF) / 255.0F;
+         float b = (color & 0xFF) / 255.0F;
+         RenderSystem.setShaderColor(r, g, b, 0.8F);
+         gui.blit(VOICE_ICON_TEX, x + 3, y, 0.0F, 0.0F, 8, 8, 8, 8);
+         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+         gui.drawString(PWPTheme.Fonts.display(), label, x + 14, y, color, false);
+      } else if (ch == Channel.COMMAND) {
+         int x = 5;
+         int y = height / 2 - 56;
+         String label = "COMMAND";
+         int color = -256;
+         int w = PWPTheme.Fonts.display().width(label) + 15;
+         gui.fill(x, y - 2, x + 5 + w, y + 10, 0xCC000000);
+         RenderSystem.enableBlend();
+         float r = (color >> 16 & 0xFF) / 255.0F;
+         float g = (color >> 8 & 0xFF) / 255.0F;
+         float b = (color & 0xFF) / 255.0F;
+         RenderSystem.setShaderColor(r, g, b, 0.8F);
+         gui.blit(VOICE_ICON_RADIO_TEX, x + 3, y, 0.0F, 0.0F, 8, 8, 8, 8);
+         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+         gui.drawString(PWPTheme.Fonts.display(), label, x + 14, y, color, false);
       }
    }
 

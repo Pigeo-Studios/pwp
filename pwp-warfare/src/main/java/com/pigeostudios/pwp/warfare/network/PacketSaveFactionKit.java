@@ -20,6 +20,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 public class PacketSaveFactionKit {
    private final String faction;
    private final String kitName;
+   private final String team;
    private final String category;
    private final String description;
    private final boolean isLeader;
@@ -31,11 +32,12 @@ public class PacketSaveFactionKit {
    private final Map<Integer, List<String>> slotSkins;
 
    public PacketSaveFactionKit(
-      String faction, String kitName, String category, String description, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
+      String faction, String kitName, String team, String category, String description, boolean isLeader, int maxTeam, int maxSquad, int minSquadPlayers,
       boolean[] resupplyFlags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
    ) {
       this.faction = faction;
       this.kitName = kitName;
+      this.team = team;
       this.category = category;
       this.description = description;
       this.isLeader = isLeader;
@@ -50,6 +52,7 @@ public class PacketSaveFactionKit {
    public static void encode(PacketSaveFactionKit msg, FriendlyByteBuf buf) {
       buf.writeUtf(msg.faction);
       buf.writeUtf(msg.kitName);
+      buf.writeUtf(msg.team);
       buf.writeUtf(msg.category);
       buf.writeUtf(msg.description);
       buf.writeBoolean(msg.isLeader);
@@ -76,6 +79,7 @@ public class PacketSaveFactionKit {
    public static PacketSaveFactionKit decode(FriendlyByteBuf buf) {
       String f = buf.readUtf();
       String k = buf.readUtf();
+      String t = buf.readUtf();
       String cat = buf.readUtf();
       String desc = buf.readUtf();
       boolean l = buf.readBoolean();
@@ -104,7 +108,7 @@ public class PacketSaveFactionKit {
          skins.put(slot, ids);
       }
 
-      return new PacketSaveFactionKit(f, k, cat, desc, l, mt, ms, minP, f1, f2, skins);
+      return new PacketSaveFactionKit(f, k, t, cat, desc, l, mt, ms, minP, f1, f2, skins);
    }
 
    public static void handle(PacketSaveFactionKit msg, Supplier<Context> ctx) {
@@ -161,9 +165,9 @@ public class PacketSaveFactionKit {
             CoreServerApi.saveFactionKit(msg.faction, msg.kitName, kitPayload);
 
             WarfareWorldData.KitInfo kit = null;
-            if (msg.faction.equalsIgnoreCase(data.blueFaction)) {
+            if (msg.team.equalsIgnoreCase("BLUE")) {
                kit = data.blueKits.get(msg.kitName);
-            } else if (msg.faction.equalsIgnoreCase(data.redFaction)) {
+            } else if (msg.team.equalsIgnoreCase("RED")) {
                kit = data.redKits.get(msg.kitName);
             }
 
@@ -184,9 +188,8 @@ public class PacketSaveFactionKit {
                 PacketHandler.sendToAllClients(player.serverLevel(), data);
 
                 // Broadcast updated kit menu to all players on the same team
-                String team = msg.faction.equalsIgnoreCase(data.blueFaction) ? "BLUE" : "RED";
                 for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-                   if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(team)) {
+                   if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(msg.team)) {
                       PacketRequestKitMenu.sendKitMenu(p, data);
                    }
                 }

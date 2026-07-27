@@ -194,7 +194,7 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             ));
         } else {
             PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionKit(
-                team, menu.kitName, menu.category, menu.description,
+                team, menu.kitName, team, menu.category, menu.description,
                 menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
                 menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
             ));

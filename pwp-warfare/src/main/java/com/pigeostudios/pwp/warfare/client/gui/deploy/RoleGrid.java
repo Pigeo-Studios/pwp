@@ -91,7 +91,6 @@ public class RoleGrid {
         }
 
         if (hoveredKit != null) {
-            renderPopup(gui, mx, my, selectedKit);
         }
     }
 
@@ -137,68 +136,12 @@ public class RoleGrid {
     }
 
     private void renderPopup(GuiGraphics gui, int mx, int my, String selectedKit) {
-        var f = PWPTheme.Fonts.display();
-        var kitO = DeployData.kits.stream().filter(k -> k.name().equals(hoveredKit)).findFirst();
-        if (kitO.isEmpty()) return;
-        var kit = kitO.get();
-
-        for (var slot : kit.loadout()) {
-            if (!slot.label().equals("PRIMARY")) continue;
-            if (!slot.hasAlternatives()) continue;
-
-            int pw = 120;
-            int ph = Math.min(slot.options().size() * 22 + 6, 150);
-            int px = Math.min(hoveredCellX + hoveredCellSize + 4, popupGridX + popupGridW - pw);
-            int py = Math.min(hoveredCellY, popupGridY + 200 - ph);
-            if (px < popupGridX) px = popupGridX;
-
-            gui.fill(px, py, px + pw, py + ph, 0xDD15191E);
-            gui.renderOutline(px, py, pw, ph, PWPTheme.Colors.ACCENT);
-
-            int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
-            int optY = py + 3;
-            for (int ai = 0; ai < slot.options().size(); ai++) {
-                var opt = slot.options().get(ai);
-                boolean optHover = mx >= px && mx <= px + pw && my >= optY && my <= optY + 20;
-                boolean optSel = ai == sel;
-                int bg = optSel ? 0x44C8812A : (optHover ? 0x22FFFFFF : 0);
-                gui.fill(px + 2, optY, px + pw - 2, optY + 20, bg);
-                if (optSel) gui.renderOutline(px + 1, optY, pw - 2, 20, PWPTheme.Colors.ACCENT);
-                gui.renderFakeItem(opt.stack(), px + 3, optY + 2);
-                gui.drawString(f, opt.name(), px + 22, optY + 5, PWPTheme.Colors.TEXT_PRIMARY, false);
-                optY += 22;
-            }
-            break;
-        }
     }
 
     public String mouseClicked(double mx, double my, int btn, int x, int y, int w, int h) {
         if (btn != 0) return null;
         int cols = 4, gap = 2;
         int cell = Math.min(42, Math.max(32, (w - (cols - 1) * gap) / cols));
-
-        if (hoveredKit != null) {
-            var kitO = DeployData.kits.stream().filter(k -> k.name().equals(hoveredKit)).findFirst();
-            if (kitO.isPresent()) {
-                var kit = kitO.get();
-                for (var slot : kit.loadout()) {
-                    if (!slot.label().equals("PRIMARY") || !slot.hasAlternatives()) continue;
-                    int pw = 120;
-                    int ph = Math.min(slot.options().size() * 22 + 6, 150);
-                    int px = Math.min(hoveredCellX + hoveredCellSize + 4, popupGridX + popupGridW - pw);
-                    int py = Math.min(hoveredCellY, popupGridY + 200 - ph);
-                    if (mx >= px && mx <= px + pw && my >= py && my <= py + ph) {
-                        int optIdx = (int)((my - py - 3) / 22);
-                        if (optIdx >= 0 && optIdx < slot.options().size()) {
-                            DeployData.setSelectedIndex(kit.name(), slot.label(), optIdx);
-                            return kit.name();
-                        }
-                        return "";
-                    }
-                    break;
-                }
-            }
-        }
 
         var cats = getCategories();
         int cy = y - scrollOff;
