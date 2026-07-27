@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 import java.util.HashSet;
@@ -35,6 +37,7 @@ public class SquadSelectionScreen extends Screen {
     private int chatMode = 1;
     private final Set<Integer> expandedSquads = new HashSet<>();
     private final SquadMapRenderer mapRenderer = new SquadMapRenderer();
+    private final SquadContextMenu mapCtx = new SquadContextMenu();
     private final PWPContextMenu contextMenu = new PWPContextMenu();
     private int mapX, mapY, mapSize;
 
@@ -138,6 +141,7 @@ public class SquadSelectionScreen extends Screen {
         gui.fill(4, height - BOTTOM_BAR_H, sbw - 4, height - BOTTOM_BAR_H + 1, PWPTheme.Colors.ACCENT);
 
         mapRenderer.render(gui, mx, my, pt);
+        mapCtx.render(gui, mx, my);
         SquadUIHelper.renderChatHistory(gui, 180, mapY + mapSize, height);
         renderTopBar(gui);
 
@@ -149,13 +153,14 @@ public class SquadSelectionScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
         if (contextMenu.isVisible()) {
             contextMenu.mouseClicked(mx, my, btn);
             return true;
         }
         if (mapRenderer.isMouseOver(mx, my)) {
+            if (btn == 1) { handleMapRightClick(mx, my); return true; }
             if (mapRenderer.mouseClicked(mx, my, btn)) return true;
-            if (btn == 1) handleMapRightClick(mx, my);
             return true;
         }
         if (super.mouseClicked(mx, my, btn)) return true;
@@ -188,12 +193,12 @@ public class SquadSelectionScreen extends Screen {
             p.displayClientMessage(Component.translatable("gui.pwpwarfare.map_marker.error").withStyle(ChatFormatting.RED), true);
             return;
         }
-        double bpp = mapRenderer.getBlocksPerPixel();
-        double cx = mapRenderer.getCenterX(p);
-        double cz = mapRenderer.getCenterZ(p);
-        int wx = (int)(cx + (mx - (mapX + mapSize / 2.0)) * bpp);
-        int wz = (int)(cz + (my - (mapY + mapSize / 2.0)) * bpp);
-        minecraft.setScreen(new TacticalMapRadialScreen(wx, wz, this));
+        int wx = (int)(mapRenderer.getCenterX(p) + (mx - (mapX + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
+        int wz = (int)(mapRenderer.getCenterZ(p) + (my - (mapY + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
+        mapCtx.open((int)mx, (int)my, (cat, icon) -> {
+            PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(
+                "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad", cat, icon, new BlockPos(wx, 64, wz)));
+        });
     }
 
     private void renderTopBar(GuiGraphics gui) {

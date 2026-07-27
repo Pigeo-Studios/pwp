@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.*;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
@@ -13,6 +14,8 @@ import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -34,6 +37,7 @@ public class DeployScreen extends Screen {
     private int conH() { return height - conT() - BOT_H; }
 
     private final SquadMapRenderer rightMapRenderer = new SquadMapRenderer();
+    private final SquadContextMenu mapCtx = new SquadContextMenu();
     private final RoleGrid   roles    = new RoleGrid();
     private final SpawnPanel spawns   = new SpawnPanel();
     private final LoadoutPanel loadout = new LoadoutPanel();
@@ -306,6 +310,7 @@ public class DeployScreen extends Screen {
             if (showMap) {
                 if (mapNeedsInit) initRightMap();
                 rightMapRenderer.render(gui, mx, my, pt);
+                mapCtx.render(gui, mx, my);
                 String pos = "X=" + (lp != null ? lp.blockPosition().getX() : 0) + " Z=" + (lp != null ? lp.blockPosition().getZ() : 0);
                 gui.drawString(f, pos, loadoutX+4, conY+2, PWPTheme.Colors.TEXT_ACCENT, false);
             } else {
@@ -352,8 +357,21 @@ public class DeployScreen extends Screen {
 
     // ══════════════════ MOUSE ══════════════════
 
+    private int toWorldX(double mx) {
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null) return 0;
+        return (int)(rightMapRenderer.getCenterX(p) + (mx - (rightMapRenderer.mapX + rightMapRenderer.mapSize / 2.0)) * rightMapRenderer.getBlocksPerPixel());
+    }
+
+    private int toWorldZ(double my) {
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null) return 0;
+        return (int)(rightMapRenderer.getCenterZ(p) + (my - (rightMapRenderer.mapY + rightMapRenderer.mapSize / 2.0)) * rightMapRenderer.getBlocksPerPixel());
+    }
+
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
         if (contextMenu.isVisible()) {
             contextMenu.mouseClicked(mx, my, btn);
             return true;
@@ -401,15 +419,26 @@ public class DeployScreen extends Screen {
             // ── SPAWNS ──
             int spawnY = conY+4+roleH+2;
             String sp = spawns.mouseClicked(mx, my, btn, lw+4, spawnY, cw-8);
-            if (sp != null) { selectedSpawn = sp; mapNeedsInit = true; return true; }
+            if (sp != null) { selectedSpawn = sp; rightMapRenderer.selectedSpawnId = sp; mapNeedsInit = true; return true; }
 
             // ── RIGHT MAP ──
             int rx = lw+cw, rw = width-rx;
-            if (!selectedSpawn.isEmpty() && btn == 0 && mx >= rx && mx <= rx+rw && my >= conY && my <= conY+ch) {
-                String sid = getSpawnAtMap(mx, my);
-                if (sid != null) { selectedSpawn = sid; return true; }
-                rightMapRenderer.mouseClicked(mx, my, btn);
-                return true;
+            if (mx >= rx && mx <= rx+rw && my >= conY && my <= conY+ch) {
+                if (btn == 1) {
+                    if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
+                    int wx = toWorldX(mx), wz = toWorldZ(my);
+                    mapCtx.open((int)mx, (int)my, (cat, icon) -> {
+                        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(
+                            "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad", cat, icon, new BlockPos(wx, 64, wz)));
+                    });
+                    return true;
+                }
+                if (!selectedSpawn.isEmpty() && btn == 0) {
+                    String sid = getSpawnAtMap(mx, my);
+                    if (sid != null) { selectedSpawn = sid; rightMapRenderer.selectedSpawnId = sid; return true; }
+                    rightMapRenderer.mouseClicked(mx, my, btn);
+                    return true;
+                }
             }
         }
 

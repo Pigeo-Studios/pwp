@@ -27,6 +27,7 @@ async def ensure_infrastructure():
         subprocess.Popen(
             f'start "PWP Core Service" /MIN java -Xmx512M -Xms128M -jar "{core_jar}"',
             shell=True,
+            cwd=str(PWP_ROOT / "core-service"),
         )
         for _ in range(30):
             await asyncio.sleep(1)

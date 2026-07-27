@@ -6,11 +6,11 @@ import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
@@ -18,11 +18,17 @@ public class SquadMapScreen extends Screen {
 
     private final SquadMapRenderer map = new SquadMapRenderer();
     private final SquadContextMenu ctx = new SquadContextMenu();
+    private final Screen parent;
     private int mX, mY, mS;
     private boolean pathActive;
     private List<List<PathPoint>> activeGroups;
 
-    public SquadMapScreen() { super(Component.literal("Map")); }
+    public SquadMapScreen() { this(null); }
+
+    public SquadMapScreen(Screen parent) {
+        super(Component.literal("Map"));
+        this.parent = parent;
+    }
 
     @Override
     protected void init() {
@@ -114,14 +120,15 @@ public class SquadMapScreen extends Screen {
 
     @Override
     public boolean keyPressed(int k, int sc, int mod) {
-        if (k == 256) {
+        if (k == 256 || k == 50) {
             if (ctx.visible) { ctx.close(); return true; }
             if (pathActive) {
                 if (!activeGroups.isEmpty()) activeGroups.get(activeGroups.size() - 1).clear();
                 map.previewStart = null; map.previewEnd = null; pathActive = false;
                 return true;
             }
-            Minecraft.getInstance().setScreen(null);
+            if (parent != null) Minecraft.getInstance().setScreen(parent);
+            else Minecraft.getInstance().setScreen(null);
             return true;
         }
         if ((k == 257 || k == 335) && pathActive) {
@@ -161,8 +168,8 @@ public class SquadMapScreen extends Screen {
         String best = null;
         double bestD = 18;
         for (var sp : DeployData.spawns) {
-            double sx = map.mapX + map.mapSize / 2.0 + (sp.pos().getX() - cx) / bpp;
-            double sy = map.mapY + map.mapSize / 2.0 + (sp.pos().getZ() - cz) / bpp;
+            double sx = mX + mS / 2.0 + (sp.pos().getX() - cx) / bpp;
+            double sy = mY + mS / 2.0 + (sp.pos().getZ() - cz) / bpp;
             double d = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
             boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
             if (d < bestD && !blocked) { bestD = d; best = sp.id(); }
@@ -171,11 +178,11 @@ public class SquadMapScreen extends Screen {
     }
 
     private void onDeploy(String spawnId) {
-        var screen = Minecraft.getInstance().screen;
-        if (screen instanceof com.pigeostudios.pwp.warfare.client.gui.DeployScreen) {
-            ((com.pigeostudios.pwp.warfare.client.gui.DeployScreen)screen).selectedSpawn = spawnId;
+        map.selectedSpawnId = spawnId;
+        if (parent instanceof com.pigeostudios.pwp.warfare.client.gui.DeployScreen) {
+            ((com.pigeostudios.pwp.warfare.client.gui.DeployScreen)parent).selectedSpawn = spawnId;
         }
-        Minecraft.getInstance().setScreen(screen);
+        Minecraft.getInstance().setScreen(parent);
     }
 
     private int toWorldX(double mx) {

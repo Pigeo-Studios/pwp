@@ -168,6 +168,8 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             }
 
             if (channel == Channel.COMMAND) {
+                int teamCMDId = senderTeam.equalsIgnoreCase("BLUE")
+                   ? data.blueCMDId : data.redCMDId;
                 PacketRadioVoiceActivity rpkt = new PacketRadioVoiceActivity(pName);
                 for (WarfareWorldData.Squad s : data.squads) {
                    if (!s.team.equalsIgnoreCase(senderTeam)) continue;
@@ -176,6 +178,15 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
                       ServerPlayer p = sender.server.getPlayerList().getPlayerByName(s.leader);
                       if (p != null) {
                          PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), rpkt);
+                      }
+                   }
+                   if (s.id == teamCMDId) {
+                      for (String m : s.members) {
+                         if (m.equals(pName)) continue;
+                         ServerPlayer cmdMember = sender.server.getPlayerList().getPlayerByName(m);
+                         if (cmdMember != null) {
+                            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> cmdMember), rpkt);
+                         }
                       }
                    }
                 }

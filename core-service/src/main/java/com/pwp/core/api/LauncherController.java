@@ -219,8 +219,8 @@ public class LauncherController {
         });
 
         // ── File download serving ──────────────────────────
-        app.get("/launcher/files/*", ctx -> {
-            String relPath = ctx.path().substring("/launcher/files/".length());
+        app.get("/launcher/files/{path}", ctx -> {
+            String relPath = ctx.pathParam("path");
             if (relPath.isEmpty() || relPath.contains("..")) {
                 ctx.status(400).result("Invalid path"); return;
             }
