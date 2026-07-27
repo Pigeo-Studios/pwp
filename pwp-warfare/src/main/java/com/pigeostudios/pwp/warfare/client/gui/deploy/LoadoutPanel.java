@@ -41,11 +41,11 @@ public class LoadoutPanel {
             boolean hasAlt = slot.hasAlternatives();
 
             String squadLabel = switch (slot.label()) {
-                case "PRIMARY" -> "PRIMARY WEAPON";
-                case "SECONDARY" -> "SIDE ARM";
-                case "THROWABLE" -> "THROWABLE";
-                case "SPECIAL" -> "SPECIAL";
-                case "BACKPACK" -> "BACKPACK";
+                case "PRIMARY" -> "СТВОЛ";
+                case "SECONDARY" -> "ВТОРИЧКА";
+                case "THROWABLE" -> "ГРАНАТЫ";
+                case "SPECIAL" -> "СПЕЦ";
+                case "BACKPACK" -> "РЮКЗАК";
                 default -> slot.label();
             };
 

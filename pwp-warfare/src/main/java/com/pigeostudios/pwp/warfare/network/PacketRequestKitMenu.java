@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -75,8 +76,14 @@ public class PacketRequestKitMenu {
                   String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
                   if (myCurrentKit.isEmpty()) myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
                   boolean isSelected = myCurrentKit.equals(kitName);
-                  List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
-                  dtoList.add(new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems));
+                   List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
+                   PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems);
+                   if (kit.slotSkins != null) {
+                      for (var e : kit.slotSkins.entrySet()) {
+                         dto.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
+                      }
+                   }
+                   dtoList.add(dto);
                }
             }
 

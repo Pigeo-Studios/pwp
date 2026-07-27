@@ -20,6 +20,10 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     private EditBox descBox, maxTeamBox, maxSquadBox, minPlayersBox;
     private boolean keepContainerOpen;
 
+    private static final String ALT_PREFIX = "__ALT__";
+    private static final String[] ALT_CATS = {"PRIMARY", "SECONDARY", "THROWABLE", "SPECIAL", "BACKPACK"};
+    private static final String[] ALT_LABELS = {"P", "S", "T", "X", "B"};
+
     public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
         this.imageWidth = 256;
@@ -100,17 +104,44 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         // Slot area
         RoundedRect.fill(gui, x + 7, y + 84, 164, 96, 4, 0xFF15191E);
         RoundedRect.border(gui, x + 7, y + 84, 164, 96, 4, 1, PWPTheme.Colors.BORDER);
-        String[] slotNames = {"PR", "SE", "TH", "SP", "B1", "B2", "B3", "B4", "B5"};
         for (int si = 0; si < 9; si++) {
             Slot s = menu.slots.get(si);
-            gui.drawString(f, slotNames[si], leftPos + s.x - 2, topPos + s.y - 8, PWPTheme.Colors.TEXT_ACCENT, false);
+            int sx = leftPos + s.x, sy = topPos + s.y;
+            String lbl;
+            if (si < 4) {
+                lbl = new String[]{"PR", "SE", "TH", "SP"}[si];
+            } else {
+                String altCat = getAltCategory(si);
+                lbl = altCat != null ? categoryLetter(altCat) : (isWeaponSlot(si) ? "P" : "B");
+            }
+            int lw2 = f.width(lbl) + 4;
+            int bc = lbl.equals("P") ? PWPTheme.Colors.ACCENT : (lbl.equals("S") ? PWPTheme.Colors.INFO
+                : (lbl.equals("T") ? PWPTheme.Colors.WARNING : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
+            if (si >= 4) {
+                gui.fill(sx - 2, sy - 8, sx + lw2 + 2, sy - 8 + 10, 0x2212151A);
+                gui.renderOutline(sx - 2, sy - 8, lw2 + 4, 10, bc);
+            }
+            gui.drawString(f, lbl, sx, sy - 7, bc, false);
         }
         gui.drawString(f, "БРОНЯ \u2192", x + 8, y + 156, PWPTheme.Colors.TEXT_ACCENT, false);
 
-        // ПРОЧЕЕ
-        RoundedRect.fill(gui, x - 36, y + 84, 38, 82, 4, 0xFF15191E);
-        RoundedRect.border(gui, x - 36, y + 84, 38, 82, 4, 1, PWPTheme.Colors.BORDER);
-        gui.drawString(f, "ПРОЧЕЕ", x - 32, y + 86, PWPTheme.Colors.TEXT_DIM, false);
+        // Right panel: АЛЬТЕРНАТИВЫ
+        int rx = x + 174, rw = imageWidth - 180;
+        RoundedRect.fill(gui, rx, y + 84, rw, 76, 4, 0xFF15191E);
+        RoundedRect.border(gui, rx, y + 84, rw, 76, 4, 1, PWPTheme.Colors.BORDER);
+        gui.drawString(f, "АЛЬТ", rx + 4, y + 86, PWPTheme.Colors.TEXT_DIM, false);
+        for (int si = 41; si <= 48; si++) {
+            Slot s = menu.slots.get(si);
+            int sx = leftPos + s.x, sy = topPos + s.y;
+            String altCat = getAltCategory(si);
+            String lbl = altCat != null ? categoryLetter(altCat) : "B";
+            int lw2 = f.width(lbl) + 4;
+            int bc = lbl.equals("P") ? PWPTheme.Colors.ACCENT : (lbl.equals("S") ? PWPTheme.Colors.INFO
+                : (lbl.equals("T") ? PWPTheme.Colors.WARNING : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
+            gui.fill(sx - 2, sy - 8, sx + lw2 + 2, sy - 8 + 10, 0x2212151A);
+            gui.renderOutline(sx - 2, sy - 8, lw2 + 4, 10, bc);
+            gui.drawString(f, lbl, sx, sy - 7, bc, false);
+        }
 
         // Player inventory bg
         RoundedRect.fill(gui, x + 7, y + 180, 164, 80, 4, 0xFF15191E);
@@ -187,6 +218,25 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
                 Minecraft.getInstance().setScreen(new KitSkinSelectScreen(menu, this));
                 return true;
             }
+            // Category label clicks on slots 4-8
+            for (int si = 4; si <= 8; si++) {
+                Slot s = menu.slots.get(si);
+                int slx = leftPos + s.x - 2, sly = topPos + s.y - 8;
+                if (mx >= slx && mx <= slx + 16 && my >= sly && my <= sly + 10) {
+                    cycleAltCategory(si);
+                    return true;
+                }
+            }
+            // Category label clicks on slots 41-48 (right panel)
+            for (int si = 41; si <= 48; si++) {
+                if (si >= menu.slots.size()) break;
+                Slot s = menu.slots.get(si);
+                int slx = leftPos + s.x - 2, sly = topPos + s.y - 8;
+                if (mx >= slx && mx <= slx + 16 && my >= sly && my <= sly + 10) {
+                    cycleAltCategory(si);
+                    return true;
+                }
+            }
         }
         if (button == 2) {
             Slot slot = hoveredSlot;
@@ -200,5 +250,48 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             }
         }
         return super.mouseClicked(mx, my, button);
+    }
+
+    private String getAltCategory(int slot) {
+        java.util.List<String> skins = menu.slotSkins.get(slot);
+        if (skins != null) {
+            for (String cat : ALT_CATS) {
+                if (skins.contains(ALT_PREFIX + cat)) return cat;
+            }
+        }
+        return null;
+    }
+
+    private void cycleAltCategory(int slot) {
+        String cur = getAltCategory(slot);
+        int idx = 0;
+        if (cur != null) {
+            for (int i = 0; i < ALT_CATS.length; i++) {
+                if (ALT_CATS[i].equals(cur)) { idx = i; break; }
+            }
+        }
+        idx = (idx + 1) % ALT_CATS.length;
+        java.util.List<String> list = new java.util.ArrayList<>();
+        list.add(ALT_PREFIX + ALT_CATS[idx]);
+        menu.slotSkins.put(slot, list);
+    }
+
+    private String categoryLetter(String cat) {
+        for (int i = 0; i < ALT_CATS.length; i++) {
+            if (ALT_CATS[i].equals(cat)) return ALT_LABELS[i];
+        }
+        return "B";
+    }
+
+    private boolean isWeaponSlot(int slot) {
+        net.minecraft.world.item.ItemStack stack = menu.kitInventory.getItem(slot);
+        if (stack.isEmpty()) return false;
+        var item = stack.getItem();
+        String id = item.getDescriptionId();
+        return id.contains("gun") || id.contains("rifle") || id.contains("pistol") || id.contains("smg")
+            || id.contains("shotgun") || id.contains("sniper") || id.contains("lmg") || id.contains("rocket")
+            || id.contains("launcher") || id.contains("sword") || id.contains("axe")
+            || item instanceof net.minecraft.world.item.SwordItem
+            || item instanceof net.minecraft.world.item.AxeItem;
     }
 }

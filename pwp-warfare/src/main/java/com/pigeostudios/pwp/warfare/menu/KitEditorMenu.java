@@ -115,11 +115,12 @@ public class KitEditorMenu extends AbstractContainerMenu {
          }
       });
 
-      // Extra 41-48 (ПРОЧЕЕ)
-      for (int row = 0; row < 4; row++) {
-         for (int col = 0; col < 2; col++) {
-            int slotIndex = 41 + row * 2 + col;
-            this.addSlot(new Slot(kitInv, slotIndex, -36 + col * 18, 86 + row * 18));
+      // Extra 41-48 (ПРОЧЕЕ) — right panel, 4 columns x 2 rows
+      int exX = 176;
+      for (int row = 0; row < 2; row++) {
+         for (int col = 0; col < 4; col++) {
+            int idx = 41 + row * 4 + col;
+            this.addSlot(new Slot(kitInv, idx, exX + col * 20, 98 + row * 24));
          }
       }
 

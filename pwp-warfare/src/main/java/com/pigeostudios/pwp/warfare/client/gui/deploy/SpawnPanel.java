@@ -12,7 +12,7 @@ public class SpawnPanel {
 
     public int render(GuiGraphics gui, int x, int y, int w, int maxH, int mx, int my, String selectedSpawn) {
         var f = PWPTheme.Fonts.display();
-        gui.drawString(f, "SPAWN POINTS", x + 2, y, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(f, "ТОЧКИ СПАВНА", x + 2, y, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         int totalH = DeployData.spawns.size() * (CARD_H + GAP);
         int maxScroll = Math.max(0, totalH - (maxH - 14));
@@ -65,14 +65,14 @@ public class SpawnPanel {
 
         String status; int sc;
         switch (sp.status()) {
-            case SAFE, HEALTHY -> { status = "Safe"; sc = PWPTheme.Colors.SUCCESS; }
-            case COOLDOWN -> { status = "Cooldown"; sc = PWPTheme.Colors.WARNING; }
-            case BLOCKED -> { status = "Blocked"; sc = PWPTheme.Colors.DANGER; }
-            case DESTROYED -> { status = "Destroyed"; sc = PWPTheme.Colors.DANGER; }
+            case SAFE, HEALTHY -> { status = "БЕЗОПАСНО"; sc = PWPTheme.Colors.SUCCESS; }
+            case COOLDOWN -> { status = "КД"; sc = PWPTheme.Colors.WARNING; }
+            case BLOCKED -> { status = "ЗАБЛОКИРОВАНО"; sc = PWPTheme.Colors.DANGER; }
+            case DESTROYED -> { status = "УНИЧТОЖЕНО"; sc = PWPTheme.Colors.DANGER; }
             default -> { status = ""; sc = PWPTheme.Colors.TEXT_DIM; }
         }
-        if (sp.supplies() > 0) status += "  \u2022  Supplies: " + sp.supplies();
-        if (sp.distance() > 0) status += "  \u2022  " + sp.distance() + "m";
+        if (sp.supplies() > 0) status += "  \u2022  Припасы: " + sp.supplies();
+        if (sp.distance() > 0) status += "  \u2022  " + sp.distance() + "м";
         gui.drawString(PWPTheme.Fonts.display(), status, tx, y + 24, sc, false);
     }
 

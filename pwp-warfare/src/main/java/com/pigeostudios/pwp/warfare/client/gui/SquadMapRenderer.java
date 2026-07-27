@@ -613,31 +613,37 @@ public class SquadMapRenderer {
             for (var s : ClientData.clientSpawners) {
                 if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType) && !s.isAlive && s.targetSpawnTick > currentTick) {
                     long sec = (s.targetSpawnTick - currentTick) / 20;
+                    String timeStr = sec >= 60 ? (sec / 60) + "\u043C " + (sec % 60) + "\u0441" : sec + "\u0441";
                     String label = s.hasSpawnedOnce ? "\u0420\u0435\u0441\u043F\u0430\u0432\u043D" : "\u041F\u043E\u044F\u0432\u0438\u0442\u0441\u044F";
-                    timerLines.add(label + ": " + sec + "\u0441");
+                    timerLines.add(label + ": " + timeStr);
                 }
             }
             timerLines.sort(null);
 
-            int tooltipX = panelX + panelW + 4;
-            int tooltipY = hoverY - 4;
-            if (tooltipX + 120 > Minecraft.getInstance().getWindow().getGuiScaledWidth()) {
-                tooltipX = panelX - 120;
-            }
             int aliveCount = 0;
-            int totalCount = 0;
             boolean anyNeverSpawned = false;
             for (var s : ClientData.clientSpawners) {
                 if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType)) {
-                    totalCount++;
                     if (s.isAlive) aliveCount++;
                     if (!s.hasSpawnedOnce) anyNeverSpawned = true;
                 }
             }
-            int tipH = 16 + (timerLines.isEmpty() ? 0 : timerLines.size() * 10 + 4);
-            g.fill(tooltipX, tooltipY, tooltipX + 115, tooltipY + tipH, 0xCC0A0C10);
-            g.drawString(f, hoverType, tooltipX + 4, tooltipY + 2, 0xFFFFFF, false);
+
             String aliveTxt = "\uD83D\uDFE2 \u0411\u043E\u0435\u0433\u043E\u0442\u043E\u0432: " + aliveCount;
+            int maxW = f.width(hoverType);
+            maxW = Math.max(maxW, f.width(aliveTxt));
+            for (String l : timerLines) maxW = Math.max(maxW, f.width("  " + l));
+            int tipW = Math.min(maxW + 12, 140);
+
+            int tooltipX = panelX + panelW + 4;
+            int tooltipY = hoverY - 4;
+            if (tooltipX + tipW > Minecraft.getInstance().getWindow().getGuiScaledWidth()) {
+                tooltipX = panelX - tipW;
+            }
+
+            int tipH = 24 + (timerLines.isEmpty() ? 0 : 14 + timerLines.size() * 10);
+            g.fill(tooltipX, tooltipY, tooltipX + tipW, tooltipY + tipH, 0xCC0A0C10);
+            g.drawString(f, hoverType, tooltipX + 4, tooltipY + 2, 0xFFFFFF, false);
             g.drawString(f, aliveTxt, tooltipX + 4, tooltipY + 14, anyNeverSpawned ? 0xFF4488FF : 0xFF88FF88, false);
             if (!timerLines.isEmpty()) {
                 int ty = tooltipY + 24;
@@ -646,7 +652,7 @@ public class SquadMapRenderer {
                 for (String line : timerLines) {
                     g.drawString(f, "  " + line, tooltipX + 4, ty, 0xFFCCCCCC, false);
                     ty += 10;
-                    if (ty - tooltipY > 80) { g.drawString(f, "  ...", tooltipX + 4, ty, 0xFF888888, false); break; }
+                    if (ty - tooltipY > 100) { g.drawString(f, "  ...", tooltipX + 4, ty, 0xFF888888, false); break; }
                 }
             }
         }

@@ -103,7 +103,7 @@ public class DeployData {
                     : (dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
                 String desc = (dto.description != null && !dto.description.isEmpty()) ? dto.description
                     : (meta != null ? meta[1] : "");
-                List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items);
+                List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items, dto.slotSkins);
                 List<ItemStack> armor = extractArmorFromItems(dto.items);
                 int inTeam = 0, maxTeam = -1;
                 kits.add(new KitRecord(dto.name, cat, desc, dto.available,
@@ -144,7 +144,7 @@ public class DeployData {
         }
     }
 
-    private static List<LoadoutSlot> buildLoadoutFromItems(List<ItemStack> items) {
+    private static List<LoadoutSlot> buildLoadoutFromItems(List<ItemStack> items, Map<Integer, List<String>> slotSkins) {
         List<LoadoutSlot> slots = new ArrayList<>();
         var primary = new ArrayList<LoadoutOption>();
         var secondary = new ArrayList<LoadoutOption>();
@@ -162,8 +162,43 @@ public class DeployData {
             else if (i == 1) secondary.add(opt);
             else if (i == 2) throwable.add(opt);
             else if (i == 3) special.add(opt);
-            else if (isWeapon(stack)) primary.add(opt);
-            else backpack.add(opt);
+            else {
+                String cat = getAltCategory(i, slotSkins);
+                if (cat != null) {
+                    switch (cat) {
+                        case "PRIMARY" -> primary.add(opt);
+                        case "SECONDARY" -> secondary.add(opt);
+                        case "THROWABLE" -> throwable.add(opt);
+                        case "SPECIAL" -> special.add(opt);
+                        default -> backpack.add(opt);
+                    }
+                } else if (isWeapon(stack)) {
+                    primary.add(opt);
+                } else {
+                    backpack.add(opt);
+                }
+            }
+        }
+
+        // Process extra slots 41-48
+        for (int i = 41; i < Math.min(49, items.size()); i++) {
+            ItemStack stack = items.get(i);
+            if (stack.isEmpty()) continue;
+            String id = stack.getItem().getDescriptionId();
+            String name = stack.getHoverName().getString();
+            LoadoutOption opt = new LoadoutOption(id, name.isEmpty() ? stack.getItem().toString() : name, stack);
+            String cat = getAltCategory(i, slotSkins);
+            if (cat != null) {
+                switch (cat) {
+                    case "PRIMARY" -> primary.add(opt);
+                    case "SECONDARY" -> secondary.add(opt);
+                    case "THROWABLE" -> throwable.add(opt);
+                    case "SPECIAL" -> special.add(opt);
+                    default -> backpack.add(opt);
+                }
+            } else {
+                backpack.add(opt);
+            }
         }
 
         if (!primary.isEmpty()) slots.add(new LoadoutSlot("PRIMARY", primary, 0));
@@ -172,6 +207,17 @@ public class DeployData {
         if (!special.isEmpty()) slots.add(new LoadoutSlot("SPECIAL", special, 0));
         if (!backpack.isEmpty()) slots.add(new LoadoutSlot("BACKPACK", backpack, 0));
         return slots;
+    }
+
+    private static String getAltCategory(int slot, Map<Integer, List<String>> slotSkins) {
+        if (slotSkins == null) return null;
+        List<String> list = slotSkins.get(slot);
+        if (list == null) return null;
+        String prefix = "__ALT__";
+        for (String s : list) {
+            if (s.startsWith(prefix)) return s.substring(prefix.length());
+        }
+        return null;
     }
 
     private static boolean isWeapon(ItemStack stack) {

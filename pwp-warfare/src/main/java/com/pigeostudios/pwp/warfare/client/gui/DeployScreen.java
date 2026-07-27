@@ -59,7 +59,7 @@ public class DeployScreen extends Screen {
     private boolean mapNeedsInit;
 
     public DeployScreen() {
-        super(Component.literal("РАЗВЁРТЫВАНИЕ"));
+        super(Component.literal("ДЕПЛОЙ"));
         populateData();
         if (ClientData.availableKits.isEmpty() && !kitsRequested) {
             kitsRequested = true;
@@ -216,7 +216,7 @@ public class DeployScreen extends Screen {
 
         // Tabs
         gui.fill(0, TOP_H, width, TOP_H + TAB_H, 0xFF15191E);
-        String[] tabs = {"КОМАНДЫ", "РАЗВЁРТЫВАНИЕ", "ПРАВИЛА"};
+        String[] tabs = {"КОМАНДЫ", "ДЕПЛОЙ", "ПРАВИЛА"};
         int tabW = width / 3;
         for (int i = 0; i < 3; i++) {
             boolean sel = i == activeTab;
@@ -237,7 +237,7 @@ public class DeployScreen extends Screen {
 
         // Top bar
         gui.drawString(f, DeployData.mapName, 8, 8, PWPTheme.Colors.TEXT_PRIMARY, false);
-        gui.drawCenteredString(f, "РАЗВЁРТЫВАНИЕ", width/2, 8, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(f, "ДЕПЛОЙ", width/2, 8, PWPTheme.Colors.TEXT_ACCENT);
         String fac = DeployData.blueFaction.toUpperCase();
         int fw = f.width(fac) + 20;
         gui.fill(width-fw-8, 4, width-8, 30, PWPTheme.Colors.TEAM_BLUE);
