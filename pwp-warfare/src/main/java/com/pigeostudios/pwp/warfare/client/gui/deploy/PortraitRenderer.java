@@ -28,7 +28,11 @@ public class PortraitRenderer {
             boolean dead = p.isDeadOrDying();
             int savedDeathTime = p.deathTime;
             if (dead) p.deathTime = 0;
-            swap(p, weapon, armorPieces);
+            try {
+                swap(p, weapon, armorPieces);
+            } catch (Exception e) {
+                restore(p);
+            }
 
             int sc = Math.min(120, Math.max(70, Math.min(w, panelH) / 3));
             int entityX = x + w / 2;
@@ -52,7 +56,8 @@ public class PortraitRenderer {
     }
 
     private void swap(net.minecraft.world.entity.player.Player p, ItemStack weapon, List<ItemStack> armor) {
-        if (inSwap) return; inSwap = true;
+        if (inSwap) { restore(p); return; }
+        inSwap = true;
         saved[0] = p.getItemBySlot(EquipmentSlot.MAINHAND);
         saved[1] = p.getItemBySlot(EquipmentSlot.OFFHAND);
         saved[2] = p.getItemBySlot(EquipmentSlot.HEAD);

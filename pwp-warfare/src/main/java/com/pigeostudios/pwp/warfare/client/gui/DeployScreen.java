@@ -71,9 +71,9 @@ public class DeployScreen extends Screen {
     }
 
     private void populateData() {
-        DeployData.populate(ClientData.availableKits);
         var p = Minecraft.getInstance().player;
         if (p == null) return;
+        DeployData.populate(ClientData.availableKits);
         BlockPos pp = p.blockPosition();
 
         DeployData.blueTickets = ClientData.BLUE_TICKETS;
@@ -439,12 +439,13 @@ public class DeployScreen extends Screen {
                 selectedKit = kit;
                 PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit));
                 selectedSpawn = "";
+                rightMapRenderer.selectedSpawnId = "";
                 return true;
             }
 
             // ── SPAWNS ──
-            int spawnY = conY+4+roleH+2;
-            String sp = spawns.mouseClicked(mx, my, btn, lw+4, spawnY, cw-8);
+            int spawnY = conY+4+roleH+2, spawnH = ch-roleH-6;
+            String sp = spawns.mouseClicked(mx, my, btn, lw+4, spawnY, cw-8, spawnH);
             if (sp != null) { selectedSpawn = sp; rightMapRenderer.selectedSpawnId = sp; mapNeedsInit = true; return true; }
 
             // ── RIGHT MAP ──

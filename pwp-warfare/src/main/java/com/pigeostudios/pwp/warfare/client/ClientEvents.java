@@ -303,13 +303,15 @@ public class ClientEvents {
       }
    }
 
-    @SubscribeEvent
-    public static void onOpenGui(Opening event) {
-       if (ClientData.deployRequested) {
-          ClientData.deployRequested = false;
-          return;
-       }
-       if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
+     @SubscribeEvent
+     public static void onOpenGui(Opening event) {
+        if (ClientData.deployRequested) {
+           ClientData.deployRequested = false;
+           return;
+        }
+        var p = Minecraft.getInstance().player;
+        if (p != null && !p.isDeadOrDying() && p.isAlive()) return;
+        if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
           Component cause = null;
           if (Minecraft.getInstance().player != null) {
              cause = Minecraft.getInstance().player.getCombatTracker().getDeathMessage();

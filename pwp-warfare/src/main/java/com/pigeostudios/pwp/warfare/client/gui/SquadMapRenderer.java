@@ -104,6 +104,7 @@ public class SquadMapRenderer {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
         double bpp = ClientData.mapScale;
+        if (bpp <= 0) bpp = 1.0;
         double cx = p.getX() + panX;
         double cz = p.getZ() + panZ;
 
@@ -154,7 +155,8 @@ public class SquadMapRenderer {
     }
 
     private void setFilter(ResourceLocation tex, boolean smooth) {
-        Minecraft.getInstance().getTextureManager().getTexture(tex).setFilter(smooth, false);
+        var t = Minecraft.getInstance().getTextureManager().getTexture(tex);
+        if (t != null) t.setFilter(smooth, false);
     }
 
     private void renderTopBar(GuiGraphics g, int mx, int my, double cx, double cz) {

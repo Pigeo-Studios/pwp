@@ -76,10 +76,11 @@ public class SpawnPanel {
         gui.drawString(PWPTheme.Fonts.display(), status, tx, y + 24, sc, false);
     }
 
-    public String mouseClicked(double mx, double my, int btn, int x, int y, int w) {
+    public String mouseClicked(double mx, double my, int btn, int x, int y, int w, int maxH) {
         int cy = y + 14 - scrollOff;
         for (DeployData.SpawnPoint sp : DeployData.spawns) {
-            if (mx >= x && mx <= x + w && my >= cy && my <= cy + CARD_H && btn == 0) {
+            if (cy + CARD_H > y + maxH) break;
+            if (cy + CARD_H >= y + 14 && mx >= x && mx <= x + w && my >= cy && my <= cy + CARD_H && btn == 0) {
                 boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
                 if (!blocked) return sp.id();
                 return "";
