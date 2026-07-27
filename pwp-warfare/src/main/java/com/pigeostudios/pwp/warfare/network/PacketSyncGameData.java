@@ -214,6 +214,7 @@ public class PacketSyncGameData {
          b.writeDouble(v.y);
          b.writeDouble(v.z);
          b.writeFloat(v.yaw);
+         b.writeInt(v.ticketPenalty);
       });
       buf.writeCollection(msg.hubs, (b, h) -> {
          b.writeBlockPos(h.pos);
@@ -298,7 +299,7 @@ public class PacketSyncGameData {
       int mSB = buf.readInt();
       String cMI = buf.readUtf();
       List<WarfareWorldData.VehicleRecord> vL = buf.readList(
-         b -> new WarfareWorldData.VehicleRecord(b.readUUID(), b.readUtf(), b.readUtf(), b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat(), null)
+         b -> new WarfareWorldData.VehicleRecord(b.readUUID(), b.readUtf(), b.readUtf(), b.readDouble(), b.readDouble(), b.readDouble(), b.readFloat(), null, b.readInt())
       );
       List<WarfareWorldData.HubInfo> hL = buf.readList(b -> {
          WarfareWorldData.HubInfo h = new WarfareWorldData.HubInfo(b.readBlockPos(), b.readUtf(), b.readBoolean(), b.readUtf());

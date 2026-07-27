@@ -403,6 +403,8 @@ async def process_commands():
 NEWS_FILE = Path(config.LAUNCHER_FILES_DIR) / "news.json"
 MAX_NEWS = 12
 
+VALID_CATS = {"update", "event", "server", "announce", "other"}
+
 async def _save_news_text(text: str):
     """Parse text and save it as a news item."""
     text = text.strip()
@@ -414,15 +416,23 @@ async def _save_news_text(text: str):
     description = (lines[1].strip() if len(lines) > 1 else "")[:200]
 
     cat = "other"
-    lower = title.lower()
-    if any(w in lower for w in ["обновление", "update", "патч", "v"]):
-        cat = "update"
-    elif any(w in lower for w in ["ивент", "event", "событие", "акция"]):
-        cat = "event"
-    elif any(w in lower for w in ["сервер", "server", "техработы", "перезапуск"]):
-        cat = "server"
-    elif any(w in lower for w in ["новый", "new", "анонс", "релиз"]):
-        cat = "announce"
+    # Check for prefix category tag like [update], [server], etc.
+    if title.startswith("[") and "]" in title:
+        end_bracket = title.index("]")
+        tag = title[1:end_bracket].strip().lower()
+        if tag in VALID_CATS:
+            cat = tag
+            title = title[end_bracket + 1:].strip()[:80]
+    if cat == "other":
+        lower = title.lower()
+        if any(w in lower for w in ["обновление", "update", "патч", "v"]):
+            cat = "update"
+        elif any(w in lower for w in ["ивент", "event", "событие", "акция"]):
+            cat = "event"
+        elif any(w in lower for w in ["сервер", "server", "техработы", "перезапуск"]):
+            cat = "server"
+        elif any(w in lower for w in ["новый", "new", "анонс", "релиз"]):
+            cat = "announce"
 
     news = []
     if NEWS_FILE.exists():

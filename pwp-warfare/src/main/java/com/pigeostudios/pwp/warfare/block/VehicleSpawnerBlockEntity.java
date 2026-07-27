@@ -182,14 +182,14 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
                         entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
                      }
 
-                     WarfareWorldData worldData = WarfareWorldData.get((ServerLevel)this.level);
-                     worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
-                     worldData.markedVehicles
-                        .add(
-                           new WarfareWorldData.VehicleRecord(
-                              entity.getUUID(), vTeam, vType, entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), this.worldPosition
-                           )
-                        );
+                      WarfareWorldData worldData = WarfareWorldData.get((ServerLevel)this.level);
+                      worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
+                      worldData.markedVehicles
+                         .add(
+                            new WarfareWorldData.VehicleRecord(
+                               entity.getUUID(), vTeam, vType, entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), this.worldPosition, penalty
+                            )
+                         );
                      worldData.setDirty();
                      PacketHandler.sendToAllClients((ServerLevel)this.level, worldData);
                      entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {

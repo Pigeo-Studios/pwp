@@ -2,7 +2,9 @@ package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionVehicle;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.CoreAPI;
@@ -21,6 +23,7 @@ public class FactionVehicleEditorScreen extends Screen {
     private final String faction;
     private final String editVehicleName;
     private boolean loading = true;
+    private boolean requested;
     private boolean isNew = true;
 
     private EditBox vehicleNameField;
@@ -140,59 +143,61 @@ public class FactionVehicleEditorScreen extends Screen {
     }
 
     private void loadVehicle() {
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.getFactionVehicle(faction, editVehicleName);
-                if (result != null && result.has("data")) {
-                    JsonObject data = result.getAsJsonObject("data");
-                    Minecraft.getInstance().submit(() -> {
-                        if (data.has("vehicleName")) vehicleName = data.get("vehicleName").getAsString();
-                        if (data.has("displayName")) displayName = data.get("displayName").getAsString();
-                        if (data.has("vehicleId")) vehicleId = data.get("vehicleId").getAsString();
-                        if (data.has("yaw")) yaw = data.get("yaw").getAsFloat();
-                        if (data.has("respawnTime")) respawnTime = data.get("respawnTime").getAsInt();
-                        if (data.has("initialTime")) initialTime = data.get("initialTime").getAsInt();
+        loading = true;
+        requested = true;
+        ClientData.factionVehicleDetail = null;
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factionVehicle",
+            "{\"faction\":\"" + faction + "\",\"vehicle\":\"" + editVehicleName + "\"}"));
+    }
 
-                        if (data.has("inventory")) {
-                            try {
-                                JsonArray arr = data.getAsJsonArray("inventory");
-                                for (int i = 0; i < arr.size(); i++) {
-                                    JsonObject itemJson = arr.get(i).getAsJsonObject();
-                                    int slot = itemJson.get("slot").getAsInt();
-                                    if (slot >= 0 && slot < 32 && itemJson.has("item")) {
-                                        JsonObject itemData = itemJson.getAsJsonObject("item");
-                                        String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
-                                        int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;
-                                        if (!id.isEmpty() && !id.equals("minecraft:air")) {
-                                            var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(id));
-                                            if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                                                ItemStack stack = new ItemStack(item, count);
-                                                if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
-                                                    var tag = WarfareWorldData.KitInfo.jsonToCompound(itemData.getAsJsonObject("tag"));
-                                                    if (!tag.isEmpty()) stack.setTag(tag);
-                                                }
-                                                vehicleInv[slot] = stack;
-                                            }
-                                        }
+    @Override
+    public void tick() {
+        super.tick();
+        if (requested && ClientData.factionVehicleDetail != null) {
+            requested = false;
+            JsonObject data = ClientData.factionVehicleDetail;
+            ClientData.factionVehicleDetail = null;
+            if (data.has("vehicleName")) vehicleName = data.get("vehicleName").getAsString();
+            if (data.has("displayName")) displayName = data.get("displayName").getAsString();
+            if (data.has("vehicleId")) vehicleId = data.get("vehicleId").getAsString();
+            if (data.has("yaw")) yaw = data.get("yaw").getAsFloat();
+            if (data.has("respawnTime")) respawnTime = data.get("respawnTime").getAsInt();
+            if (data.has("initialTime")) initialTime = data.get("initialTime").getAsInt();
+
+            if (data.has("inventory")) {
+                try {
+                    JsonArray arr = data.getAsJsonArray("inventory");
+                    for (int i = 0; i < arr.size(); i++) {
+                        JsonObject itemJson = arr.get(i).getAsJsonObject();
+                        int slot = itemJson.get("slot").getAsInt();
+                        if (slot >= 0 && slot < 32 && itemJson.has("item")) {
+                            JsonObject itemData = itemJson.getAsJsonObject("item");
+                            String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
+                            int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;
+                            if (!id.isEmpty() && !id.equals("minecraft:air")) {
+                                var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(id));
+                                if (item != null && item != net.minecraft.world.item.Items.AIR) {
+                                    ItemStack stack = new ItemStack(item, count);
+                                    if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
+                                        var tag = WarfareWorldData.KitInfo.jsonToCompound(itemData.getAsJsonObject("tag"));
+                                        if (!tag.isEmpty()) stack.setTag(tag);
                                     }
+                                    vehicleInv[slot] = stack;
                                 }
-                            } catch (Exception ignored) {}
+                            }
                         }
-                        vehicleNameField.setValue(vehicleName);
-                        displayNameField.setValue(displayName);
-                        vehicleIdField.setValue(vehicleId);
-                        yawField.setValue(String.valueOf((int) yaw));
-                        respawnTimeField.setValue(String.valueOf(respawnTime));
-                        initialTimeField.setValue(String.valueOf(initialTime));
-                        loading = false;
-                    });
-                } else {
-                    Minecraft.getInstance().submit(() -> loading = false);
-                }
-            } catch (Exception ex) {
-                Minecraft.getInstance().submit(() -> loading = false);
+                    }
+                } catch (Exception ignored) {}
             }
-        }, "PWP-FactionVehicle-Load").start();
+
+            vehicleNameField.setValue(vehicleName);
+            displayNameField.setValue(displayName);
+            vehicleIdField.setValue(vehicleId);
+            yawField.setValue(String.valueOf((int) yaw));
+            respawnTimeField.setValue(String.valueOf(respawnTime));
+            initialTimeField.setValue(String.valueOf(initialTime));
+            loading = false;
+        }
     }
 
     private void saveVehicle() {

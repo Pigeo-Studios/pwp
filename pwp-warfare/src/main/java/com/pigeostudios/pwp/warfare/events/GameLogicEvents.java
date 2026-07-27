@@ -1240,7 +1240,7 @@ public class GameLogicEvents {
             }
          }
          if (!team.equals("NEUTRAL")) {
-            data.markedVehicles.add(new WarfareWorldData.VehicleRecord(entity.getUUID(), team, "Mine", entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), null));
+             data.markedVehicles.add(new WarfareWorldData.VehicleRecord(entity.getUUID(), team, "Mine", entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), null, 0));
             data.setDirty();
             PacketHandler.sendToAllClients(serverLevel, data);
          }

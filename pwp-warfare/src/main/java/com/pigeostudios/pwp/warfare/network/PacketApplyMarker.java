@@ -84,12 +84,13 @@ public class PacketApplyMarker {
                            spawnerPos = BlockPos.of(target.getPersistentData().getLong("WARFARE_SpawnerPos"));
                         }
 
-                        data.markedVehicles
-                           .add(
-                              new WarfareWorldData.VehicleRecord(
-                                 target.getUUID(), team, type, target.getX(), target.getY(), target.getZ(), target.getYRot(), spawnerPos
-                              )
-                           );
+                         int tPenalty = target.getPersistentData().getInt("WARFARE_TicketPenalty");
+                         data.markedVehicles
+                            .add(
+                               new WarfareWorldData.VehicleRecord(
+                                  target.getUUID(), team, type, target.getX(), target.getY(), target.getZ(), target.getYRot(), spawnerPos, tPenalty
+                               )
+                            );
                         PacketHandler.sendToAllClients(level, data);
                      }
                   }

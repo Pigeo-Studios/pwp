@@ -530,6 +530,46 @@ public class SquadMapRenderer {
         }
     }
 
+    public void renderVehicleLegend(GuiGraphics g, int panelX, int panelY, int panelW) {
+        if (ClientData.clientVehicles == null || ClientData.clientVehicles.isEmpty()) return;
+        var f = Minecraft.getInstance().font;
+        int currentY = panelY + 4;
+        int titleColor = 0xFFCCCCCC;
+        g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFF555555);
+        g.drawString(f, "\u0422\u0415\u0425\u041D\u0418\u041A\u0410", panelX + 4, currentY, titleColor, false);
+        currentY += 12;
+        java.util.LinkedHashSet<String> drawn = new java.util.LinkedHashSet<>();
+        for (String team : new String[]{"BLUE", "RED"}) {
+            boolean hasAny = false;
+            for (var v : ClientData.clientVehicles) {
+                String key = team + "_" + v.type;
+                if (v.team.equalsIgnoreCase(team) && !drawn.contains(key)) {
+                    if (!hasAny) {
+                        int teamColor = team.equals("BLUE") ? 0xFF4488FF : 0xFFFF4444;
+                        g.drawString(f, team.equals("BLUE") ? "\u0421\u0418\u041D\u0418\u0415" : "\u041A\u0420\u0410\u0421\u041D\u042B\u0415", panelX + 4, currentY, teamColor, false);
+                        currentY += 10;
+                        hasAny = true;
+                    }
+                    drawn.add(key);
+                    ResourceLocation icon = VEHICLE_ICONS.getOrDefault(v.type, VEHICLE_ICONS.get("DEFAULT"));
+                    setFilter(icon, true);
+                    g.blit(icon, panelX + 4, currentY, 10, 10, 0, 0, 16, 16, 16, 16);
+                    setFilter(icon, false);
+                    String name = v.type;
+                    int maxNameW = panelW - 90;
+                    if (f.width(name) > maxNameW) {
+                        name = f.plainSubstrByWidth(name, maxNameW - 4) + "..";
+                    }
+                    g.drawString(f, name, panelX + 18, currentY + 1, 0xFFFFFF, false);
+                    String ticketStr = "-" + v.ticketPenalty;
+                    int ticketColor = v.ticketPenalty > 20 ? 0xFFFF4444 : (v.ticketPenalty > 5 ? 0xFFFFAA00 : 0xFF88FF88);
+                    g.drawString(f, ticketStr, panelX + panelW - f.width(ticketStr) - 4, currentY + 1, ticketColor, false);
+                    currentY += 12;
+                }
+            }
+        }
+    }
+
     private void renderAllPlayers(GuiGraphics g, LocalPlayer self, double cx, double cz, double bpp) {
         Minecraft mc = Minecraft.getInstance();
         String myName = self.getScoreboardName();

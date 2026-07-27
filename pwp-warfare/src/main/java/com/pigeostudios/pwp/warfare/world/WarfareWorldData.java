@@ -1365,8 +1365,9 @@ public class WarfareWorldData extends SavedData {
       public double z;
       public float yaw;
       public BlockPos spawnerPos;
+      public int ticketPenalty;
 
-      public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos) {
+      public VehicleRecord(UUID uuid, String team, String type, double x, double y, double z, float yaw, BlockPos spawnerPos, int ticketPenalty) {
          this.uuid = uuid;
          this.team = team;
          this.type = type;
@@ -1375,6 +1376,7 @@ public class WarfareWorldData extends SavedData {
          this.z = z;
          this.yaw = yaw;
          this.spawnerPos = spawnerPos;
+         this.ticketPenalty = ticketPenalty;
       }
 
       public CompoundTag save() {
@@ -1386,6 +1388,7 @@ public class WarfareWorldData extends SavedData {
          tag.putDouble("Y", this.y);
          tag.putDouble("Z", this.z);
          tag.putFloat("Yaw", this.yaw);
+         tag.putInt("TicketPenalty", this.ticketPenalty);
          if (this.spawnerPos != null) {
             tag.putLong("SpawnerPos", this.spawnerPos.asLong());
          }
@@ -1403,7 +1406,8 @@ public class WarfareWorldData extends SavedData {
             tag.getDouble("Y"),
             tag.getDouble("Z"),
             tag.getFloat("Yaw"),
-            sPos
+            sPos,
+            tag.getInt("TicketPenalty")
          );
       }
    }

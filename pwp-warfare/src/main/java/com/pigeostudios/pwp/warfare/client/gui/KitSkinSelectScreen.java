@@ -3,8 +3,10 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
-import com.pwp.coreclient.CoreAPI;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -30,6 +32,7 @@ public class KitSkinSelectScreen extends Screen {
     private List<SkinOption> allSkins = new ArrayList<>();
     private int selectedSlot = -1;
     private int skinScroll = 0;
+    private boolean requested;
 
     private static class SkinOption {
         String skinId, name, weaponTag, rarity;
@@ -60,24 +63,30 @@ public class KitSkinSelectScreen extends Screen {
     }
 
     private void loadSkins() {
-        new Thread(() -> {
-            try {
-                JsonObject r = CoreAPI.getSkins();
-                if (r != null && r.has("data")) {
-                    List<SkinOption> list = new ArrayList<>();
-                    for (JsonElement e : r.get("data").getAsJsonArray()) {
-                        JsonObject o = e.getAsJsonObject();
-                        SkinOption s = new SkinOption();
-                        s.skinId = o.get("skinId").getAsString();
-                        s.name = o.has("name") ? o.get("name").getAsString() : s.skinId;
-                        s.weaponTag = o.get("weaponTag").getAsString();
-                        s.rarity = o.get("rarity").getAsString();
-                        list.add(s);
-                    }
-                    Minecraft.getInstance().submit(() -> allSkins = list);
-                }
-            } catch (Exception ignored) {}
-        }).start();
+        requested = true;
+        ClientData.skinsData = null;
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("skins", ""));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (requested && ClientData.skinsData != null) {
+            requested = false;
+            JsonArray arr = ClientData.skinsData;
+            ClientData.skinsData = null;
+            List<SkinOption> list = new ArrayList<>();
+            for (JsonElement e : arr) {
+                JsonObject o = e.getAsJsonObject();
+                SkinOption s = new SkinOption();
+                s.skinId = o.get("skinId").getAsString();
+                s.name = o.has("name") ? o.get("name").getAsString() : s.skinId;
+                s.weaponTag = o.get("weaponTag").getAsString();
+                s.rarity = o.get("rarity").getAsString();
+                list.add(s);
+            }
+            allSkins = list;
+        }
     }
 
     private void saveAndClose() {

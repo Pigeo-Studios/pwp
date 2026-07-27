@@ -2,12 +2,12 @@ package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.pwp.coreclient.CoreAPI;
+import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPPanel;
@@ -21,6 +21,7 @@ public class FactionSelectScreen extends Screen {
 
     private List<String> factions = new ArrayList<>();
     private boolean loading = true;
+    private boolean requested;
     private int cols;
     private int panelW;
     private int panelH;
@@ -37,41 +38,31 @@ public class FactionSelectScreen extends Screen {
         int rows = Math.max(1, (factions.size() + cols - 1) / cols);
         panelH = Math.min(height - 60, rows * CARD_H + (rows - 1) * GAP + 56);
 
-        loadFactions();
+        ClientData.factionsData = null;
+        requested = true;
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factions", ""));
     }
 
-    private void loadFactions() {
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.getFactions();
-                List<String> loaded = new ArrayList<>();
-                if (result != null && result.has("data")) {
-                    JsonArray arr = result.get("data").getAsJsonArray();
-                    for (JsonElement e : arr) {
-                        loaded.add(e.getAsString());
-                    }
-                }
-                if (loaded.isEmpty()) {
-                    loaded.add("ukraine");
-                    loaded.add("russia");
-                    loaded.add("usa");
-                }
-                List<String> finalLoaded = loaded;
-                Minecraft.getInstance().submit(() -> {
-                    factions = finalLoaded;
-                    loading = false;
-                    recreateWidgets();
-                });
-            } catch (Exception ex) {
-                Minecraft.getInstance().submit(() -> {
-                    factions = new ArrayList<>();
-                    factions.add("ukraine");
-                    factions.add("russia");
-                    loading = false;
-                    recreateWidgets();
-                });
+    @Override
+    public void tick() {
+        super.tick();
+        if (requested && ClientData.factionsData != null) {
+            requested = false;
+            JsonArray arr = ClientData.factionsData;
+            ClientData.factionsData = null;
+            List<String> loaded = new ArrayList<>();
+            for (JsonElement e : arr) {
+                loaded.add(e.getAsString());
             }
-        }, "PWP-Faction-Load").start();
+            if (loaded.isEmpty()) {
+                loaded.add("ukraine");
+                loaded.add("russia");
+                loaded.add("usa");
+            }
+            factions = loaded;
+            loading = false;
+            recreateWidgets();
+        }
     }
 
     private void recreateWidgets() {
