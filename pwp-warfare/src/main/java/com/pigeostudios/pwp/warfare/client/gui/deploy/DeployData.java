@@ -75,6 +75,33 @@ public class DeployData {
         KIT_META.put("Anti_air", new String[]{"CREWMAN", "Anti-air specialist."});
     }
 
+    public static final Map<String, String> KIT_DISPLAY_NAMES = new LinkedHashMap<>();
+    static {
+        KIT_DISPLAY_NAMES.put("Officer", "Офицер");
+        KIT_DISPLAY_NAMES.put("Pilot Officer", "Пилот-Офицер");
+        KIT_DISPLAY_NAMES.put("Mechanic Officer", "Офицер-Механик");
+        KIT_DISPLAY_NAMES.put("Scout", "Скаут");
+        KIT_DISPLAY_NAMES.put("LAT", "LAT");
+        KIT_DISPLAY_NAMES.put("HAT", "HAT");
+        KIT_DISPLAY_NAMES.put("Sapper", "Сапёр");
+        KIT_DISPLAY_NAMES.put("Sniper", "Снайпер");
+        KIT_DISPLAY_NAMES.put("Marksman", "Марксман");
+        KIT_DISPLAY_NAMES.put("LMG", "LMG");
+        KIT_DISPLAY_NAMES.put("HMG", "HMG");
+        KIT_DISPLAY_NAMES.put("Rifleman", "Рифлмен");
+        KIT_DISPLAY_NAMES.put("Medic", "Медик");
+        KIT_DISPLAY_NAMES.put("Grenadier", "Гранатомётчик");
+        KIT_DISPLAY_NAMES.put("Assault", "Штурмовик");
+        KIT_DISPLAY_NAMES.put("Pilot", "Пилот");
+        KIT_DISPLAY_NAMES.put("Mechanic", "Механик");
+        KIT_DISPLAY_NAMES.put("Drone Operator", "Дроновод");
+        KIT_DISPLAY_NAMES.put("Anti_air", "анти воздух");
+    }
+
+    public static String getDisplayName(String en) {
+        return KIT_DISPLAY_NAMES.getOrDefault(en, en);
+    }
+
     public static void populate() {
         populate(List.of());
     }

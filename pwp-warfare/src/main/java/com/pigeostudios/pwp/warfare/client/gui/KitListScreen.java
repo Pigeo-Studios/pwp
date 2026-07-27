@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.WarfareClipboard;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenKitEditor;
 import com.pigeostudios.pwp.warfare.network.PacketPasteKit;
@@ -78,7 +79,7 @@ public class KitListScreen extends Screen {
             String kitName = WarfareWorldData.KIT_NAMES[i];
 
             PWPButton editBtn = new PWPButton(0, 0, 0, 0,
-                Component.literal(kitName),
+                Component.literal(DeployData.getDisplayName(kitName)),
                 b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenKitEditor(team, kitName)),
                 PWPButton.Style.PRIMARY
             );

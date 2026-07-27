@@ -27,7 +27,7 @@ public class LoadoutPanel {
         int headerFg = avail ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.DANGER;
         RoundedRect.fill(gui, x, cy, w, 20, 4, headerBg);
         RoundedRect.border(gui, x, cy, w, 20, 4, 1, avail ? PWPTheme.Colors.BORDER : PWPTheme.Colors.DANGER);
-        gui.drawString(f, kit.name().toUpperCase(), x + pad + 2, cy + 5, headerFg, false);
+        gui.drawString(f, DeployData.getDisplayName(kit.name()), x + pad + 2, cy + 5, headerFg, false);
         cy += 24;
 
         // Slots: PRIMARY, SECONDARY, THROWABLE, EQUIPMENT → mapped to Squad: PRIMARY WEAPON, SIDE ARM, SPECIAL, BACKPACK

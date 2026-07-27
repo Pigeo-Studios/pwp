@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenFactionKitEditor;
 import com.pigeostudios.pwp.warfare.network.PacketRequestData;
@@ -98,7 +99,7 @@ public class FactionKitListScreen extends Screen {
         for (int i = 0; i < kitNames.size(); i++) {
             String kitName = kitNames.get(i);
             PWPButton editBtn = new PWPButton(0, 0, 0, 0,
-                Component.literal(kitName),
+                Component.literal(DeployData.getDisplayName(kitName)),
                 b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName)),
                 PWPButton.Style.PRIMARY
             );

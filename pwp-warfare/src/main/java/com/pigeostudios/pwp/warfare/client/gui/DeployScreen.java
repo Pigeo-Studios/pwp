@@ -335,7 +335,7 @@ public class DeployScreen extends Screen {
 
             // ── BOTTOM BAR ──
             int bbY = height-BOT_H+2;
-            gui.drawString(f, "\u265E " + selectedKit, 8, bbY+10, PWPTheme.Colors.ACCENT, false);
+            gui.drawString(f, "\u265E " + DeployData.getDisplayName(selectedKit), 8, bbY+10, PWPTheme.Colors.ACCENT, false);
             long dt = ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
             int el = (int)((System.currentTimeMillis()-dt)/1000);
             int sec = Math.max(0, DeployData.deployTimer-el);

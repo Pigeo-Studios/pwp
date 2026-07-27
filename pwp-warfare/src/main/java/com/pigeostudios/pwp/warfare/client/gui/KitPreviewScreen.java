@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -17,7 +18,7 @@ public class KitPreviewScreen extends Screen {
     private static final int PANEL_PAD = 10;
 
     public KitPreviewScreen(Screen parent, String kitName, List<ItemStack> items) {
-        super(Component.translatable("gui.pwpwarfare.kit_preview.format", kitName));
+        super(Component.literal(DeployData.getDisplayName(kitName)));
         this.parent = parent;
         this.kitName = kitName;
         this.items = items;

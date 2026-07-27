@@ -115,7 +115,8 @@ public class RoleGrid {
         try {
             gui.blit(ic, ix, iy, 0, 0, iconS, iconS, iconS, iconS);
         } catch (Exception e) {
-            String letter = kit.name().isEmpty() ? "?" : kit.name().substring(0, 1).toUpperCase();
+            String dn = DeployData.getDisplayName(kit.name());
+            String letter = dn.isEmpty() ? "?" : dn.substring(0, 1);
             gui.drawCenteredString(f, letter, x + size / 2, iy + 2, PWPTheme.Colors.TEXT_PRIMARY);
         }
         RenderSystem.setShaderColor(1, 1, 1, 1);

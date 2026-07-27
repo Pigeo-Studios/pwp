@@ -1352,45 +1352,45 @@ public class GameLogicEvents {
         } catch (Exception ignored) {}
     }
 
-   @SubscribeEvent
-    public static void onPlayerRespawn(PlayerRespawnEvent event) {
-       if (!event.getEntity().level().isClientSide) {
-          ServerPlayer newPlayer = (ServerPlayer)event.getEntity();
-          MatchStatsTracker.get().recordSpawn(newPlayer);
-          String teamName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName() : "";
-          if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
-             newPlayer.setGameMode(GameType.ADVENTURE);
-          } else if (newPlayer.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
-             newPlayer.setGameMode(GameType.SURVIVAL);
+    @SubscribeEvent
+     public static void onPlayerRespawn(PlayerRespawnEvent event) {
+        if (!event.getEntity().level().isClientSide) {
+           ServerPlayer newPlayer = (ServerPlayer)event.getEntity();
+           MatchStatsTracker.get().recordSpawn(newPlayer);
+           String teamName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName() : "";
+           if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
+              newPlayer.setGameMode(GameType.ADVENTURE);
+           } else if (newPlayer.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
+              newPlayer.setGameMode(GameType.SURVIVAL);
+           }
+
+          newPlayer.connection.send(new ClientboundPlayerAbilitiesPacket(newPlayer.getAbilities()));
+          pendingRespawnLocations.remove(newPlayer.getUUID());
+          pendingTeams.remove(newPlayer.getUUID());
+
+          BlockPos spawnPos = pendingSpawnPositions.remove(newPlayer.getUUID());
+          if (spawnPos != null) {
+             newPlayer.teleportTo(newPlayer.serverLevel(), spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, newPlayer.getYRot(), 0.0F);
           }
 
-         newPlayer.connection.send(new ClientboundPlayerAbilitiesPacket(newPlayer.getAbilities()));
-         pendingRespawnLocations.remove(newPlayer.getUUID());
-         pendingTeams.remove(newPlayer.getUUID());
-
-         BlockPos spawnPos = pendingSpawnPositions.remove(newPlayer.getUUID());
-         if (spawnPos != null) {
-            newPlayer.teleportTo(newPlayer.serverLevel(), spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, newPlayer.getYRot(), 0.0F);
-         }
-
-         ServerLevel level = newPlayer.serverLevel();
-         WarfareWorldData data = WarfareWorldData.get(level);
-             if (data.isGameStarted) {
-             if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
-                ResupplyHandler.tryApplyPendingKit(newPlayer, data);
-             } else {
-                String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
-                if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                   String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
-                   WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
-                   if (kit != null) {
-                      ResupplyHandler.applyKitToPlayer(newPlayer, kit);
-                   }
-                }
-             }
-           }
-       }
-    }
+          ServerLevel level = newPlayer.serverLevel();
+          WarfareWorldData data = WarfareWorldData.get(level);
+              if (data.isGameStarted) {
+              if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
+                 ResupplyHandler.tryApplyPendingKit(newPlayer, data);
+              } else {
+                 String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+                 if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
+                    String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
+                    WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
+                    if (kit != null) {
+                       ResupplyHandler.applyKitToPlayer(newPlayer, kit);
+                    }
+                 }
+              }
+            }
+        }
+     }
 
    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onEntityDeath(LivingDeathEvent event) {

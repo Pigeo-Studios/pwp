@@ -35,7 +35,7 @@ public class LoadoutEditor {
         gui.drawString(f, "ROLE", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false); cy += 10;
         RoundedRect.fill(gui, x, cy, w, 20, 4, PWPTheme.Colors.SURFACE);
         RoundedRect.border(gui, x, cy, w, 20, 4, 1, PWPTheme.Colors.BORDER);
-        gui.drawString(f, kit.name().toUpperCase(), x + pad + 2, cy + 5, PWPTheme.Colors.ACCENT, false);
+        gui.drawString(f, DeployData.getDisplayName(kit.name()), x + pad + 2, cy + 5, PWPTheme.Colors.ACCENT, false);
         cy += 24;
 
         // ── Slots ──

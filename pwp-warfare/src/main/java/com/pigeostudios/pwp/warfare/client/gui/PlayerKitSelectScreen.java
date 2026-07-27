@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pwp.coreclient.gui.components.PWPButton;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
@@ -57,9 +58,10 @@ public class PlayerKitSelectScreen extends Screen {
 
         for (int i = 0; i < kits.size(); i++) {
             PacketOpenPlayerKitMenu.KitDTO kit = kits.get(i);
+            String dn = DeployData.getDisplayName(kit.name);
             Component label = kit.isSelected
-                ? Component.literal("вњ” " + kit.name)
-                : Component.literal(kit.name);
+                ? Component.literal("✓ " + dn)
+                : Component.literal(dn);
 
             PWPButton btn = new PWPButton(0, 0, 0, 0, label, b -> {
                 PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit.name));
