@@ -6,6 +6,7 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
+import net.minecraft.ChatFormatting;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
@@ -142,7 +143,12 @@ public class DeployScreen extends Screen {
         createSquadBtn.visible = false;
         applyCmdBtn = addRenderableWidget(new PWPButton(0, 0, 100, 16,
             Component.literal("Стать командиром"),
-            b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()),
+            b -> {
+                PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
+                b.visible = false;
+                Minecraft.getInstance().player.displayClientMessage(
+                    Component.literal("Запрос отправлен командирам взводов").withStyle(ChatFormatting.GREEN), true);
+            },
             PWPButton.Style.DARK));
         applyCmdBtn.visible = false;
         chatInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 140, 14, Component.literal("")));
