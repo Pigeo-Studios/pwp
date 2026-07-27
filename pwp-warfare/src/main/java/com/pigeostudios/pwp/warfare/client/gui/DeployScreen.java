@@ -543,6 +543,7 @@ public class DeployScreen extends Screen {
         if (selectedSpawn.isEmpty()) return;
         PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
+        Minecraft.getInstance().player.respawn();
         Minecraft.getInstance().setScreen(null);
     }
 
