@@ -14,6 +14,7 @@ import com.pigeostudios.pwp.warfare.client.gui.SkinListScreen;
 import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.VictoryScreen;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.client.sound.HubLoopingSound;
 import com.pigeostudios.pwp.warfare.client.sound.RallyLoopingSound;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
@@ -86,8 +87,21 @@ public class ClientHooks {
       }
    }
 
-    public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
+    public static void openPlayerKitMenu(PacketOpenPlayerKitMenu msg) {
+        List<PacketOpenPlayerKitMenu.KitDTO> kits = msg.kits;
         ClientData.availableKits = new ArrayList<>(kits);
+
+        // Restore slot selections from server
+        if (!msg.playerSelections.isEmpty()) {
+            String selKit = "";
+            for (var k : kits) {
+                if (k.isSelected) { selKit = k.name; break; }
+            }
+            if (!selKit.isEmpty()) {
+                DeployData.slotSelections.put(selKit, new HashMap<>(msg.playerSelections));
+            }
+        }
+
         var p = Minecraft.getInstance().player;
         if (p != null && p.isAlive() && !p.isDeadOrDying()) {
             var s = Minecraft.getInstance().screen;

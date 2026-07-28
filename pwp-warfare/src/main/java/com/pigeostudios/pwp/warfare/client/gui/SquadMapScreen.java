@@ -128,14 +128,14 @@ public class SquadMapScreen extends Screen {
 
         int listTop = 2;
         if (applyCmdBtn != null && applyCmdBtn.visible) listTop = 20;
-        int listBottom = height - 30;
+        int listBottom = height - 55;
 
         g.enableScissor(0, listTop, LEFT_PANEL_W, listBottom);
         SquadUIHelper.renderSquadList(g, mx, my, expandedSquads, SquadUIHelper.isApplyCmdVisible());
         g.disableScissor();
 
         if (!SquadUIHelper.isPlayerInSquad()) {
-            int by = height - 28;
+            int by = height - 52;
             g.drawString(font, Component.literal("СОЗДАТЬ ОТРЯД"), 4, by, PWPTheme.Colors.ACCENT, false);
             squadInput.setX(4); squadInput.setWidth(110); squadInput.setY(by + 12); squadInput.setVisible(true);
             createSquadBtn.setX(120); createSquadBtn.setY(by + 11); createSquadBtn.visible = true;
@@ -225,9 +225,7 @@ public class SquadMapScreen extends Screen {
             if (applyCmdBtn != null && applyCmdBtn.visible && applyCmdBtn.mouseClicked(mx, my, btn)) return true;
             if (!SquadUIHelper.isPlayerInSquad()) {
                 if (createSquadBtn != null && createSquadBtn.visible && createSquadBtn.mouseClicked(mx, my, btn)) return true;
-                if (squadInput != null && squadInput.isVisible()) {
-                    squadInput.setFocused(squadInput.isMouseOver(mx, my));
-                }
+                if (squadInput != null && squadInput.isVisible() && squadInput.mouseClicked(mx, my, btn)) return true;
             }
             SquadUIHelper.handleSquadClick(mx, my, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
             return true;

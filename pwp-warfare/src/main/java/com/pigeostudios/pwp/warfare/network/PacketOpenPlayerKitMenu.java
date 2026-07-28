@@ -16,13 +16,19 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // Отправляется сервером клиенту со списком доступных китов
 public class PacketOpenPlayerKitMenu {
    public final List<PacketOpenPlayerKitMenu.KitDTO> kits;
+   public final Map<String, Integer> playerSelections;
 
    public PacketOpenPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
+      this(kits, Map.of());
+   }
+
+   public PacketOpenPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits, Map<String, Integer> playerSelections) {
       this.kits = kits;
+      this.playerSelections = playerSelections != null ? playerSelections : Map.of();
    }
 
      public static void encode(PacketOpenPlayerKitMenu msg, FriendlyByteBuf buf) {
-        buf.writeByte(2);
+        buf.writeByte(3);
         buf.writeInt(msg.kits.size());
 
        for (PacketOpenPlayerKitMenu.KitDTO k : msg.kits) {
@@ -47,12 +53,19 @@ public class PacketOpenPlayerKitMenu {
              for (String s : e.getValue()) buf.writeUtf(s);
           }
        }
-    }
 
-    public static PacketOpenPlayerKitMenu decode(FriendlyByteBuf buf) {
-       int version = buf.readableBytes() > 0 ? buf.readByte() : 1;
-       int size = buf.readInt();
-       List<PacketOpenPlayerKitMenu.KitDTO> list = new ArrayList<>();
+        // playerSelections (version >= 3)
+        buf.writeInt(msg.playerSelections.size());
+        for (Map.Entry<String, Integer> e : msg.playerSelections.entrySet()) {
+           buf.writeUtf(e.getKey());
+           buf.writeInt(e.getValue());
+        }
+     }
+
+     public static PacketOpenPlayerKitMenu decode(FriendlyByteBuf buf) {
+        int version = buf.readableBytes() > 0 ? buf.readByte() : 1;
+        int size = buf.readInt();
+        List<PacketOpenPlayerKitMenu.KitDTO> list = new ArrayList<>();
 
        for (int i = 0; i < size; i++) {
           String name = buf.readUtf();
@@ -81,14 +94,23 @@ public class PacketOpenPlayerKitMenu {
           list.add(dto);
        }
 
-      return new PacketOpenPlayerKitMenu(list);
-   }
+        Map<String, Integer> playerSelections = Map.of();
+        if (version >= 3) {
+           int psSize = buf.readInt();
+           playerSelections = new HashMap<>();
+           for (int i = 0; i < psSize; i++) {
+              playerSelections.put(buf.readUtf(), buf.readInt());
+           }
+        }
+
+       return new PacketOpenPlayerKitMenu(list, playerSelections);
+    }
 
    // Открывает на клиенте GUI выбора кита с переданным списком
-   public static void handle(PacketOpenPlayerKitMenu msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHooks.openPlayerKitMenu(msg.kits)));
-      ctx.get().setPacketHandled(true);
-   }
+    public static void handle(PacketOpenPlayerKitMenu msg, Supplier<Context> ctx) {
+       ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientHooks.openPlayerKitMenu(msg)));
+       ctx.get().setPacketHandled(true);
+    }
 
     // DTO для передачи информации о ките: название, доступность, предметы
      public static class KitDTO {

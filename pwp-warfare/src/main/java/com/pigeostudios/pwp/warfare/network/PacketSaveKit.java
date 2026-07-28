@@ -119,8 +119,15 @@ public class PacketSaveKit {
                   kit.inventory.set(i, menu.kitInventory.getItem(i).copy());
                }
 
-               data.setDirty();
-               PacketHandler.sendToAllClients(player.serverLevel(), data);
+                data.setDirty();
+                PacketHandler.sendToAllClients(player.serverLevel(), data);
+
+                // Broadcast updated kit menu to all players on the same team
+                for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+                   if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(msg.team)) {
+                      PacketRequestKitMenu.sendKitMenu(p, data);
+                   }
+                }
             }
          }
       });

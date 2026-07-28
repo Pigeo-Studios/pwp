@@ -4,7 +4,9 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -69,7 +71,15 @@ public class PacketRequestKitMenu {
           }
        }
 
-       PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketOpenPlayerKitMenu(dtoList));
+        // Attach player's saved slot selections for persistent UI state
+        Map<String, Integer> restoredSelections = new HashMap<>();
+        CompoundTag selTag = player.getPersistentData().getCompound("WARFARE_SlotSelections");
+        for (String key : selTag.getAllKeys()) {
+            restoredSelections.put(key, selTag.getInt(key));
+        }
+
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+            new PacketOpenPlayerKitMenu(dtoList, restoredSelections));
     }
 
     public static void handle(PacketRequestKitMenu msg, Supplier<Context> ctx) {

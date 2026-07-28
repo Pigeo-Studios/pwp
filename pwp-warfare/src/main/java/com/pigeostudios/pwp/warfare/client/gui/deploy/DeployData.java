@@ -114,8 +114,6 @@ public class DeployData {
         spawns.clear();
         kits.clear();
         squads.clear();
-        expandedSlots.clear();
-        slotSelections.clear();
 
         if (serverKits != null && !serverKits.isEmpty()) {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
