@@ -309,8 +309,6 @@ public class ClientEvents {
            ClientData.deployRequested = false;
            return;
         }
-        var p = Minecraft.getInstance().player;
-        if (p != null && !p.isDeadOrDying() && p.isAlive()) return;
         if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
           Component cause = null;
           if (Minecraft.getInstance().player != null) {

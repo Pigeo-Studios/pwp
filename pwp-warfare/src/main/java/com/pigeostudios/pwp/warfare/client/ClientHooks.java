@@ -90,6 +90,7 @@ public class ClientHooks {
         ClientData.availableKits = new ArrayList<>(kits);
         var p = Minecraft.getInstance().player;
         if (p != null && p.isAlive() && !p.isDeadOrDying()) return;
+        ClientData.deployRequested = true;
         Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
     }
 

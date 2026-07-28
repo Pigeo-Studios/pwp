@@ -448,6 +448,12 @@ public class DeployScreen extends Screen {
             String sp = spawns.mouseClicked(mx, my, btn, lw+4, spawnY, cw-8, spawnH);
             if (sp != null) { selectedSpawn = sp; rightMapRenderer.selectedSpawnId = sp; mapNeedsInit = true; return true; }
 
+            // ── RIGHT: LOADOUT (only when no spawn selected; map shows instead) ──
+            if (selectedSpawn.isEmpty()) {
+                int lx = loW(), loadoutX = lw + cw;
+                if (loadout.mouseClicked(mx, my, btn, loadoutX+4, conY+4, lx-8, ch-4, selectedKit)) return true;
+            }
+
             // ── RIGHT MAP ──
             int rx = lw+cw, rw = width-rx;
             if (mx >= rx && mx <= rx+rw && my >= conY && my <= conY+ch) {

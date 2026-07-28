@@ -161,18 +161,18 @@ public class SquadMapRenderer {
 
     private void renderTopBar(GuiGraphics g, int mx, int my, double cx, double cz) {
         var f = Minecraft.getInstance().font;
-        g.fill(mapX, 2, mapX + mapSize, 18, 0xCC06080A);
-        g.hLine(mapX, mapX + mapSize, 18, 0xFF444444);
-        g.drawString(f, "MAP", mapX + 4, 5, 0xFF888888, false);
         String kp = "--";
         if (inMap(mx, my)) {
             double wx = cx + (mx - (mapX + mapSize / 2.0)) * ClientData.mapScale;
             double wz = cz + (my - (mapY + mapSize / 2.0)) * ClientData.mapScale;
             kp = getKP(wx, wz);
         }
-        g.drawCenteredString(f, kp, mapX + mapSize / 2, 5, 0xFFFFFF);
         String zt = String.format("Z:%.1f", ClientData.mapScale);
-        g.drawString(f, zt, mapX + mapSize - f.width(zt) - 4, 5, 0xFF888888, false);
+        String text = kp + "  " + zt;
+        int tw = f.width(text) + 8;
+        int th = 14;
+        g.fill(mapX + 2, mapY + 2, mapX + 2 + tw, mapY + 2 + th, 0xAA06080A);
+        g.drawString(f, text, mapX + 4, mapY + 4, 0xFFFFFF, false);
     }
 
     private void drawFrame(GuiGraphics g) {
@@ -189,20 +189,22 @@ public class SquadMapRenderer {
         long xE = (long)(cx + half) + 1200;
         long zS = (long)(cz - half) - 1200;
         long zE = (long)(cz + half) + 1200;
-        gridLines(g, 300, 2, 0x30FFFFFF, xS, xE, zS, zE, cx, cz);
+        long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
+        long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
+        gridLines(g, 300, 2, 0x30FFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
         if (ClientData.mapScale <= 2.2) {
             int a100 = (int)(24 * Math.min(1, Math.max(0, (2.2 - ClientData.mapScale) / 0.4)));
-            gridLines(g, 100, 1, (a100 << 24) | 0xFFFFFF, xS, xE, zS, zE, cx, cz);
+            gridLines(g, 100, 1, (a100 << 24) | 0xFFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
         }
     }
 
-    private void gridLines(GuiGraphics g, long step, int w, int col, long xS, long xE, long zS, long zE, double cx, double cz) {
-        long s = Math.floorDiv(xS, step) * step;
+    private void gridLines(GuiGraphics g, long step, int w, int col, long xS, long xE, long zS, long zE, double cx, double cz, long gOriginX, long gOriginZ) {
+        long s = Math.floorDiv(xS - gOriginX, step) * step + gOriginX;
         for (long v = s; v < xE; v += step) {
             int sx = toScreenX(v, cx);
             if (sx >= mapX && sx <= mapX + mapSize) g.fill(sx, mapY, sx + w, mapY + mapSize, col);
         }
-        s = Math.floorDiv(zS, step) * step;
+        s = Math.floorDiv(zS - gOriginZ, step) * step + gOriginZ;
         for (long v = s; v < zE; v += step) {
             int sy = toScreenZ(v, cz);
             if (sy >= mapY && sy <= mapY + mapSize) g.fill(mapX, sy, mapX + mapSize, sy + w, col);
@@ -216,11 +218,12 @@ public class SquadMapRenderer {
 
     private void drawTopLabels(GuiGraphics g, double cx, double cz) {
         var f = Minecraft.getInstance().font;
+        long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
         double half = mapSize / 2.0 * ClientData.mapScale;
-        long s = Math.floorDiv((long)(cx - half), 300L);
-        long e = Math.floorDiv((long)(cx + half), 300L);
+        long s = Math.floorDiv((long)(cx - half) - gOriginX, 300L);
+        long e = Math.floorDiv((long)(cx + half) - gOriginX, 300L);
         for (long i = s; i <= e; i++) {
-            int px = toScreenX(i * 300L + 150, cx);
+            int px = toScreenX(gOriginX + i * 300L + 150, cx);
             if (px < mapX + 10 || px > mapX + mapSize - 10) continue;
             String t = toAlpha(i);
             if ("?".equals(t)) continue;
@@ -232,11 +235,12 @@ public class SquadMapRenderer {
 
     private void drawLeftLabels(GuiGraphics g, double cx, double cz) {
         var f = Minecraft.getInstance().font;
+        long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
         double half = mapSize / 2.0 * ClientData.mapScale;
-        long s = Math.floorDiv((long)(cz - half), 300L);
-        long e = Math.floorDiv((long)(cz + half), 300L);
+        long s = Math.floorDiv((long)(cz - half) - gOriginZ, 300L);
+        long e = Math.floorDiv((long)(cz + half) - gOriginZ, 300L);
         for (long i = s; i <= e; i++) {
-            int py = toScreenZ(i * 300L + 150, cz);
+            int py = toScreenZ(gOriginZ + i * 300L + 150, cz);
             if (py < mapY + 10 || py > mapY + mapSize - 10) continue;
             String t = String.valueOf(i + 1);
             int bw = f.width(t) + 6;
@@ -1128,8 +1132,11 @@ public class SquadMapRenderer {
     }
 
     public static String getKP(double wx, double wz) {
-        long cx = Math.floorDiv((long)wx, 300), cz = Math.floorDiv((long)wz, 300);
-        return toAlpha(cx) + (cz + 1);
+        long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
+        long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
+        long col = Math.floorDiv((long)wx - gOriginX, 300L);
+        long row = Math.floorDiv((long)wz - gOriginZ, 300L) + 1;
+        return toAlpha(col) + row;
     }
 
     public static String distStr(double m) {

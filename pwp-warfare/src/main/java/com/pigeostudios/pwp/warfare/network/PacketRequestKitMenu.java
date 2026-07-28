@@ -32,7 +32,8 @@ public class PacketRequestKitMenu {
           if (s.members.contains(pName)) { mySquad = s; break; }
        }
 
-       boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
+        boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
+        if (!amILeader) amILeader = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
        List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
 
        for (String kitName : WarfareWorldData.KIT_NAMES) {

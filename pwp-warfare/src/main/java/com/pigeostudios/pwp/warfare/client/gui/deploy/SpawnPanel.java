@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
+import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
@@ -56,11 +57,7 @@ public class SpawnPanel {
 
         int tx = ix + iconS + 10;
         int tc = blocked ? PWPTheme.Colors.TEXT_DIM : (selected ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
-        // Grid coords like Squad: "Main Base (G7-8-8)"
-        int gx = sp.pos().getX() / 100;
-        int gz = sp.pos().getZ() / 100;
-        char gridLetter = (char)('A' + Math.min(25, Math.max(0, (gz + 10))));
-        String gridCoord = gridLetter + "" + (gx + 10);
+        String gridCoord = SquadMapRenderer.getKP(sp.pos().getX(), sp.pos().getZ());
         gui.drawString(PWPTheme.Fonts.display(), sp.name() + " (" + gridCoord + ")", tx, y + 4, tc, false);
 
         String status; int sc;

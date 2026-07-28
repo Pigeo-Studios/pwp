@@ -125,7 +125,9 @@ public class PWPSelectionScreen extends Screen {
         int cols = PWPLayout.gridColumns(contentW, gap, cardW);
         int gridW = cols * cardW + (cols - 1) * gap;
         int gridX = PWPLayout.centerX(width, gridW);
-        int gridY = 42;
+        int rows = (items.size() + cols - 1) / cols;
+        int contentH = rows * cardH + (rows - 1) * gap;
+        int gridY = Math.max(42, (height - contentH) / 2);
 
         for (int i = 0; i < items.size(); i++) {
             int row = i / cols;

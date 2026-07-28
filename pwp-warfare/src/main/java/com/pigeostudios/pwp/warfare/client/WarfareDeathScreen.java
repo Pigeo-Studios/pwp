@@ -45,6 +45,7 @@ public class WarfareDeathScreen extends Screen {
         if (!deployOpened && ClientData.deathFadeStartTime == 0L) {
             deployOpened = true;
             ClientData.deathFadePlayed = true;
+            ClientData.deployRequested = true;
             Minecraft.getInstance().setScreen(new DeployScreen());
         }
     }
