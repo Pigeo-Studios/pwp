@@ -89,7 +89,13 @@ public class ClientHooks {
     public static void openPlayerKitMenu(List<PacketOpenPlayerKitMenu.KitDTO> kits) {
         ClientData.availableKits = new ArrayList<>(kits);
         var p = Minecraft.getInstance().player;
-        if (p != null && p.isAlive() && !p.isDeadOrDying()) return;
+        if (p != null && p.isAlive() && !p.isDeadOrDying()) {
+            var s = Minecraft.getInstance().screen;
+            if (s instanceof com.pigeostudios.pwp.warfare.client.gui.DeployScreen ds) {
+                ds.populateData();
+            }
+            return;
+        }
         ClientData.deployRequested = true;
         Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
     }

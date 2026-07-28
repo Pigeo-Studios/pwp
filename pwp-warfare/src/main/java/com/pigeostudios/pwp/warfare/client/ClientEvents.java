@@ -305,10 +305,13 @@ public class ClientEvents {
 
      @SubscribeEvent
      public static void onOpenGui(Opening event) {
-        if (ClientData.deployRequested) {
-           ClientData.deployRequested = false;
-           return;
-        }
+         if (ClientData.deployRequested) {
+            ClientData.deployRequested = false;
+            if (event.getScreen() instanceof DeathScreen) {
+               event.setNewScreen(null);
+            }
+            return;
+         }
         if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
           Component cause = null;
           if (Minecraft.getInstance().player != null) {

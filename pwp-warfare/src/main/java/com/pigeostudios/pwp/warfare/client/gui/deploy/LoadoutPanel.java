@@ -34,6 +34,20 @@ public class LoadoutPanel {
         for (DeployData.LoadoutSlot slot : kit.loadout()) {
             if (cy + 40 > y + maxH) break;
 
+            if (slot.label().equals("BACKPACK")) {
+                gui.drawString(f, "РЮКЗАК", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
+                cy += 10;
+                int ix = x + pad;
+                for (var opt : slot.options()) {
+                    gui.renderFakeItem(opt.stack(), ix, cy);
+                    ix += 18;
+                    if (ix > x + w - 18) break;
+                }
+                cy += 20 + 2;
+                cy += 2;
+                continue;
+            }
+
             int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
             if (sel >= slot.options().size()) sel = slot.defaultIndex();
             DeployData.LoadoutOption opt = slot.options().get(sel);
@@ -112,10 +126,14 @@ public class LoadoutPanel {
         var kit = kitO.get();
 
         int pad = 6, cy = y;
-        cy += 10 + 20 + 24;
+        cy += 10 + 24;
 
         for (DeployData.LoadoutSlot slot : kit.loadout()) {
             if (cy + 40 > y + maxH) break;
+            if (slot.label().equals("BACKPACK")) {
+                cy += 10 + 20 + 2 + 2;
+                continue;
+            }
             boolean hasAlt = slot.hasAlternatives();
             int altTotalH = hasAlt ? slot.options().size() * 17 + 4 : 0;
             boolean expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;

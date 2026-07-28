@@ -70,7 +70,7 @@ public class DeployScreen extends Screen {
         mapNeedsInit = true;
     }
 
-    private void populateData() {
+    public void populateData() {
         var p = Minecraft.getInstance().player;
         if (p == null) return;
         DeployData.populate(ClientData.availableKits);
@@ -352,6 +352,13 @@ public class DeployScreen extends Screen {
             gui.drawCenteredString(f, ts, width/2, bbY+10, PWPTheme.Colors.TEXT_PRIMARY);
         }
 
+        // Hide squad/chat widgets on non-deploy tabs
+        if (activeTab != 1) {
+            squadInput.setVisible(false);
+            createSquadBtn.visible = false;
+            chatInput.setVisible(false);
+        }
+
         for (var w : renderables) w.render(gui, mx, my, pt);
         contextMenu.render(gui, mx, my);
     }
@@ -437,7 +444,7 @@ public class DeployScreen extends Screen {
             String kit = roles.mouseClicked(mx, my, btn, lw+4, conY+4, cw-8, roleH);
             if (kit != null) {
                 selectedKit = kit;
-                PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit));
+                PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit, DeployData.getSlotSelections(kit)));
                 selectedSpawn = "";
                 rightMapRenderer.selectedSpawnId = "";
                 return true;
@@ -548,9 +555,10 @@ public class DeployScreen extends Screen {
 
     private void doDeploy() {
         if (selectedSpawn.isEmpty()) return;
-        PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit));
+        PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
         Minecraft.getInstance().player.respawn();
+        ClientData.deployRequested = true;
         Minecraft.getInstance().setScreen(null);
     }
 

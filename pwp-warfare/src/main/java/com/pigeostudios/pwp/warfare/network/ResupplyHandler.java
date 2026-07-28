@@ -91,6 +91,10 @@ public class ResupplyHandler {
       }
 
       player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
+
+      // Apply slot selections (alternatives chosen in deploy screen)
+      applySlotSelections(player, kit);
+
       PacketHandler.broadcastPlayerSkin(player);
    }
 
@@ -221,6 +225,41 @@ public class ResupplyHandler {
    }
 
    // РџСЂРёРјРµРЅСЏРµС‚ РѕС‚Р»РѕР¶РµРЅРЅС‹Р№ РєРёС‚ (WARFARE_PendingKit) РїСЂРё РІРѕР·СЂРѕР¶РґРµРЅРёРё РёРіСЂРѕРєР°
+   private static void applySlotSelections(ServerPlayer player, WarfareWorldData.KitInfo kit) {
+      CompoundTag selTag = player.getPersistentData().getCompound("WARFARE_SlotSelections");
+      if (selTag.isEmpty() || kit.slotSkins == null || kit.slotSkins.isEmpty()) return;
+
+      // Slot index for each target label
+      Map<String, Integer> targetSlots = Map.of("PRIMARY", 0, "SECONDARY", 1, "THROWABLE", 2, "SPECIAL", 3);
+      String prefix = "__ALT__";
+
+      for (String label : targetSlots.keySet()) {
+         if (!selTag.contains(label)) continue;
+         int desiredIdx = selTag.getInt(label);
+         if (desiredIdx <= 0) continue;
+
+         // Find the desiredIdx-th __ALT__label slot in slotSkins
+         int found = -1, count = 0;
+         for (var e : kit.slotSkins.entrySet()) {
+            for (String skinVal : e.getValue()) {
+               if (skinVal.equals(prefix + label)) {
+                  if (count == desiredIdx) { found = e.getKey(); break; }
+                  count++;
+               }
+            }
+            if (found >= 0) break;
+         }
+
+         if (found >= 0 && found < 49) {
+            int tgt = targetSlots.get(label);
+            ItemStack altStack = kit.inventory.get(found);
+            if (!altStack.isEmpty()) {
+               player.getInventory().setItem(tgt, altStack.copy());
+            }
+         }
+      }
+   }
+
    public static void tryApplyPendingKit(ServerPlayer player, WarfareWorldData data) {
       String pending = player.getPersistentData().getString("WARFARE_PendingKit");
       if (!pending.isEmpty()) {

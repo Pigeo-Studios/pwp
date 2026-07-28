@@ -280,6 +280,10 @@ public class DeployData {
         slotSelections.computeIfAbsent(kitName, k -> new HashMap<>()).put(slotLabel, idx);
     }
 
+    public static Map<String, Integer> getSlotSelections(String kitName) {
+        return slotSelections.getOrDefault(kitName, Map.of());
+    }
+
     public static boolean isSlotExpanded(String kitName, String slotLabel) {
         return expandedSlots.getOrDefault(kitName, Set.of()).contains(slotLabel);
     }
