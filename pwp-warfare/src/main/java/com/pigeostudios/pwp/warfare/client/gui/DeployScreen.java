@@ -856,6 +856,7 @@ public class DeployScreen extends Screen {
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
         Minecraft.getInstance().player.respawn();
         ClientData.deployRequested = true;
+        ClientData.deployBlockedUntil = System.currentTimeMillis() + 3000;
         Minecraft.getInstance().setScreen(null);
     }
 
