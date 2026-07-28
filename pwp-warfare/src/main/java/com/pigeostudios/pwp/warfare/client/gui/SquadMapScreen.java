@@ -222,11 +222,7 @@ public class SquadMapScreen extends Screen {
         if (contextMenu.isVisible()) { contextMenu.mouseClicked(mx, my, btn); return true; }
 
         if (btn == 0 && mx < LEFT_PANEL_W) {
-            if (applyCmdBtn != null && applyCmdBtn.visible && applyCmdBtn.mouseClicked(mx, my, btn)) return true;
-            if (!SquadUIHelper.isPlayerInSquad()) {
-                if (createSquadBtn != null && createSquadBtn.visible && createSquadBtn.mouseClicked(mx, my, btn)) return true;
-                if (squadInput != null && squadInput.isVisible() && squadInput.mouseClicked(mx, my, btn)) return true;
-            }
+            if (super.mouseClicked(mx, my, btn)) return true;
             SquadUIHelper.handleSquadClick(mx, my, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
             return true;
         }

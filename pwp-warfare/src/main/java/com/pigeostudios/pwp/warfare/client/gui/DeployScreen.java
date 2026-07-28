@@ -241,7 +241,14 @@ public class DeployScreen extends Screen {
 
         String pen = p.getPersistentData().getString("WARFARE_PendingKit");
         String cur = p.getPersistentData().getString("WARFARE_CurrentKit");
-        selectedKit = !pen.isEmpty() ? pen : (!cur.isEmpty() ? cur : "Rifleman");
+        if (!pen.isEmpty()) selectedKit = pen;
+        else if (!cur.isEmpty()) selectedKit = cur;
+        // Fallback: use isSelected from server data
+        if (selectedKit.equals("Rifleman")) {
+            for (var dto : ClientData.availableKits) {
+                if (dto.isSelected) { selectedKit = dto.name; break; }
+            }
+        }
     }
 
     @Override

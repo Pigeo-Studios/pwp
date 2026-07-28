@@ -51,6 +51,8 @@ public class DeployData {
     public static int deployTimer = 18;
     public static Map<String, Set<String>> expandedSlots = new HashMap<>();
     public static Map<String, Map<String, Integer>> slotSelections = new HashMap<>();
+    public static Map<String, Long> animStart = new HashMap<>();
+    public static Map<String, Boolean> animDir = new HashMap<>(); // true=expanding
 
     private static final Map<String, String[]> KIT_META = new LinkedHashMap<>();
     static {

@@ -1,11 +1,14 @@
 package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
 
 public class LoadoutPanel {
+
+    private static final long FADE_IN_MS = 120, FADE_OUT_MS = 180;
 
     public void render(GuiGraphics gui, int x, int y, int w, int maxH, int mx, int my, String selectedKit) {
         var f = PWPTheme.Fonts.display();
@@ -16,7 +19,6 @@ public class LoadoutPanel {
         int pad = 6, cy = y;
         boolean avail = kit.available();
 
-        // HEADER: LOADOUT / UNAVAILABLE
         if (!avail) {
             gui.drawString(f, "НЕДОСТУПНО", x + pad, cy, PWPTheme.Colors.DANGER, false);
         } else {
@@ -30,7 +32,8 @@ public class LoadoutPanel {
         gui.drawString(f, DeployData.getDisplayName(kit.name()), x + pad + 2, cy + 5, headerFg, false);
         cy += 24;
 
-        // Slots: PRIMARY, SECONDARY, THROWABLE, EQUIPMENT → mapped to Squad: PRIMARY WEAPON, SIDE ARM, SPECIAL, BACKPACK
+        long now = System.currentTimeMillis();
+
         for (DeployData.LoadoutSlot slot : kit.loadout()) {
             if (cy + 40 > y + maxH) break;
 
@@ -54,8 +57,30 @@ public class LoadoutPanel {
             boolean hasAlt = slot.hasAlternatives();
             int altTotalH = hasAlt ? slot.options().size() * 17 + 4 : 0;
             boolean manual = DeployData.isSlotExpanded(kit.name(), slot.label());
-            boolean hoverExpanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
-            boolean expanded = manual ? manual : hoverExpanded;
+            boolean hover = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
+            boolean shouldExpand = manual || hover;
+
+            String key = kit.name() + ":" + slot.label();
+            if (shouldExpand) {
+                if (DeployData.animDir.getOrDefault(key, false) == false) {
+                    DeployData.animStart.put(key, now);
+                    DeployData.animDir.put(key, true);
+                }
+            } else {
+                if (DeployData.animDir.getOrDefault(key, true) == true && hasAlt) {
+                    DeployData.animStart.put(key, now);
+                    DeployData.animDir.put(key, false);
+                }
+            }
+
+            long start = DeployData.animStart.getOrDefault(key, now);
+            boolean expanding = DeployData.animDir.getOrDefault(key, true);
+            long elapsed = now - start;
+            long duration = expanding ? FADE_IN_MS : FADE_OUT_MS;
+            float alpha = expanding
+                ? Math.min(1f, (float)elapsed / duration)
+                : Math.max(0f, 1f - (float)elapsed / duration);
+            boolean showAlts = alpha > 0 && hasAlt;
 
             String squadLabel = switch (slot.label()) {
                 case "PRIMARY" -> "СТВОЛ";
@@ -75,38 +100,52 @@ public class LoadoutPanel {
             gui.renderFakeItem(opt.stack(), x + pad, cy + 2);
             gui.drawString(f, opt.name(), x + pad + 20, cy + 5, PWPTheme.Colors.TEXT_PRIMARY, false);
 
-            // Ammo count for weapons
             int count = opt.stack().getCount();
             if (count > 0 && (slot.label().equals("PRIMARY") || slot.label().equals("SECONDARY"))) {
                 gui.drawString(f, "[" + count + "]", x + w - pad - 28, cy + 5, PWPTheme.Colors.TEXT_ACCENT, false);
             }
 
             if (hasAlt) {
-                String arr = expanded ? "\u25B2" : "\u25BC";
+                String arr = expanding ? "\u25B2" : "\u25BC";
                 gui.drawString(f, arr, x + w - pad - 12, cy + 5,
-                    expanded ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM, false);
+                    shouldExpand ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM, false);
             }
             cy += barH + 2;
 
-            if (expanded && hasAlt) {
+            if (showAlts) {
+                gui.pose().pushPose();
+                RenderSystem.enableBlend();
+                RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+
                 for (int ai = 0; ai < slot.options().size(); ai++) {
                     DeployData.LoadoutOption alt = slot.options().get(ai);
                     boolean altHover = mx >= x + pad && mx <= x + w && my >= cy && my <= cy + 16;
                     boolean altSel = ai == sel;
-                    int abg = altSel ? 0x44C8812A : (altHover ? 0x22FFFFFF : 0);
+                    int abg = multiplyAlpha(altSel ? 0x44C8812A : (altHover ? 0x22FFFFFF : 0), alpha);
+                    int aborder = altSel ? multiplyAlpha(0x44C8812A, alpha) : 0;
                     RoundedRect.fill(gui, x + 8, cy, w - 16, 16, 3, abg);
-                    if (altSel) RoundedRect.border(gui, x + 8, cy, w - 16, 16, 3, 1, PWPTheme.Colors.ACCENT);
+                    if (altSel) RoundedRect.border(gui, x + 8, cy, w - 16, 16, 3, 1, aborder);
                     gui.renderFakeItem(alt.stack(), x + 12, cy);
-                    gui.drawString(f, alt.name(), x + 26, cy + 3,
-                        altSel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY, false);
+                    int tc = multiplyAlpha(altSel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY, alpha);
+                    gui.drawString(f, alt.name(), x + 26, cy + 3, tc, false);
                     cy += 17;
                 }
+
+                RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+                RenderSystem.disableBlend();
+                gui.pose().popPose();
+
+                cy += 2;
+            } else if (hasAlt && !expanding && elapsed > duration) {
+                // fully collapsed, no alt height added
+            } else if (hasAlt && expanding && elapsed > duration) {
+                cy += slot.options().size() * 17 + 2;
+            } else {
                 cy += 2;
             }
             cy += 2;
         }
 
-        // Stats block (simplified)
         if (cy + 50 < y + maxH) {
             cy += 6;
             gui.fill(x, cy, x + w, cy + 1, PWPTheme.Colors.BORDER);
@@ -119,6 +158,15 @@ public class LoadoutPanel {
             cy += 10;
             gui.drawString(f, "Fire Mode: Semi/Auto", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
         }
+    }
+
+    private static int multiplyAlpha(int color, float alpha) {
+        int a = (color >> 24) & 0xFF;
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
+        a = (int)(a * alpha);
+        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     public boolean mouseClicked(double mx, double my, int btn, int x, int y, int w, int maxH, String selectedKit) {
@@ -142,7 +190,6 @@ public class LoadoutPanel {
             boolean hoverExpanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
             boolean expanded = manual ? manual : hoverExpanded;
 
-            // Check click on the bar area (label + bar)
             boolean barHit = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
 
             cy += 10;
@@ -162,7 +209,6 @@ public class LoadoutPanel {
                 cy += 2;
             }
 
-            // Bar click: toggle manual expanded
             if (barHit) {
                 if (manual) {
                     DeployData.toggleSlotExpanded(kit.name(), slot.label());
