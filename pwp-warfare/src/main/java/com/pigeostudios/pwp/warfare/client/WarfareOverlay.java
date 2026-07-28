@@ -1359,7 +1359,7 @@ public class WarfareOverlay {
          int yPos = (screenHeight - containerHeight) / 2;
          gui.fill(xPos, yPos, xPos + containerWidth, yPos + containerHeight, -1442840576);
          renderMinimapStatus(gui, mc, xPos, yPos, containerWidth, topBarHeight);
-         HUD_SIDE_MAP.init(xPos + sidePadding, yPos + topBarHeight, mapSize);
+          HUD_SIDE_MAP.init(xPos + sidePadding, yPos + topBarHeight, mapSize, mapSize);
          HUD_SIDE_MAP.render(gui, -1, -1, partialTick);
       }
    }

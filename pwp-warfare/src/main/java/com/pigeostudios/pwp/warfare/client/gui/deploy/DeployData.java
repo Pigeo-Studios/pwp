@@ -288,6 +288,13 @@ public class DeployData {
         return expandedSlots.getOrDefault(kitName, Set.of()).contains(slotLabel);
     }
 
+    public static void setSlotExpanded(String kitName, String slotLabel, boolean expanded) {
+        expandedSlots.computeIfAbsent(kitName, k -> new HashSet<>());
+        var set = expandedSlots.get(kitName);
+        if (expanded) set.add(slotLabel);
+        else set.remove(slotLabel);
+    }
+
     public static void toggleSlotExpanded(String kitName, String slotLabel) {
         expandedSlots.computeIfAbsent(kitName, k -> new HashSet<>());
         var set = expandedSlots.get(kitName);

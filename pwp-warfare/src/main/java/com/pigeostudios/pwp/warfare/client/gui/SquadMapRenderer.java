@@ -37,7 +37,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class SquadMapRenderer {
 
-    public int mapX, mapY, mapSize;
+    public int mapX, mapY, mapWidth, mapHeight;
     public String selectedSpawnId = "";
 
     private double panX, panZ;
@@ -73,10 +73,11 @@ public class SquadMapRenderer {
     private static final ResourceLocation ICON_OBJ_DEFEND = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/objective_defend.png");
     private static final Map<String, ResourceLocation> VEHICLE_ICONS = new HashMap<>();
 
-    public void init(int x, int y, int size) {
+    public void init(int x, int y, int w, int h) {
         mapX = x;
         mapY = y;
-        mapSize = size;
+        mapWidth = w;
+        mapHeight = h;
     }
 
     public void centerOnPlayer() {
@@ -97,7 +98,7 @@ public class SquadMapRenderer {
     }
 
     public boolean isMouseOver(double mx, double my) {
-        return mx >= mapX && mx <= mapX + mapSize && my >= mapY && my <= mapY + mapSize;
+        return mx >= mapX && mx <= mapX + mapWidth && my >= mapY && my <= mapY + mapHeight;
     }
 
     public void render(GuiGraphics g, int mx, int my, float pt) {
@@ -110,8 +111,8 @@ public class SquadMapRenderer {
 
         renderTopBar(g, mx, my, cx, cz);
         drawFrame(g);
-        g.fill(mapX, mapY, mapX + mapSize, mapY + mapSize, 0xFF1A1E1A);
-        g.enableScissor(mapX, mapY, mapX + mapSize, mapY + mapSize);
+        g.fill(mapX, mapY, mapX + mapWidth, mapY + mapHeight, 0xFF1A1E1A);
+        g.enableScissor(mapX, mapY, mapX + mapWidth, mapY + mapHeight);
 
         renderMapTexture(g, cx, cz, bpp);
         drawGrid(g, cx, cz);
@@ -137,8 +138,8 @@ public class SquadMapRenderer {
     private void renderMapTexture(GuiGraphics g, double cx, double cz, double bpp) {
         ResourceLocation tex = getCurrentMapTexture();
         int s = ClientData.mapSizeBlocks;
-        float drawX = (float)(mapX + mapSize / 2.0 + (ClientData.mapCenterX - s / 2.0 - cx) / bpp);
-        float drawY = (float)(mapY + mapSize / 2.0 + (ClientData.mapCenterZ - s / 2.0 - cz) / bpp);
+        float drawX = (float)(mapX + mapWidth / 2.0 + (ClientData.mapCenterX - s / 2.0 - cx) / bpp);
+        float drawY = (float)(mapY + mapHeight / 2.0 + (ClientData.mapCenterZ - s / 2.0 - cz) / bpp);
         int texSize = (int)(s / bpp);
         setFilter(tex, true);
         RenderSystem.setShaderTexture(0, tex);
@@ -163,8 +164,8 @@ public class SquadMapRenderer {
         var f = Minecraft.getInstance().font;
         String kp = "--";
         if (inMap(mx, my)) {
-            double wx = cx + (mx - (mapX + mapSize / 2.0)) * ClientData.mapScale;
-            double wz = cz + (my - (mapY + mapSize / 2.0)) * ClientData.mapScale;
+        double wx = cx + (mx - (mapX + mapWidth / 2.0)) * ClientData.mapScale;
+        double wz = cz + (my - (mapY + mapHeight / 2.0)) * ClientData.mapScale;
             kp = getKP(wx, wz);
         }
         String zt = String.format("Z:%.1f", ClientData.mapScale);
@@ -177,18 +178,19 @@ public class SquadMapRenderer {
 
     private void drawFrame(GuiGraphics g) {
         int c = 0xFF555555;
-        g.hLine(mapX - 1, mapX + mapSize, mapY - 1, c);
-        g.hLine(mapX - 1, mapX + mapSize, mapY + mapSize, c);
-        g.vLine(mapX - 1, mapY - 1, mapY + mapSize, c);
-        g.vLine(mapX + mapSize, mapY - 1, mapY + mapSize, c);
+        g.hLine(mapX - 1, mapX + mapWidth, mapY - 1, c);
+        g.hLine(mapX - 1, mapX + mapWidth, mapY + mapHeight, c);
+        g.vLine(mapX - 1, mapY - 1, mapY + mapHeight, c);
+        g.vLine(mapX + mapWidth, mapY - 1, mapY + mapHeight, c);
     }
 
     private void drawGrid(GuiGraphics g, double cx, double cz) {
-        double half = mapSize / 2.0 * ClientData.mapScale;
-        long xS = (long)(cx - half) - 1200;
-        long xE = (long)(cx + half) + 1200;
-        long zS = (long)(cz - half) - 1200;
-        long zE = (long)(cz + half) + 1200;
+        double halfX = mapWidth / 2.0 * ClientData.mapScale;
+        double halfZ = mapHeight / 2.0 * ClientData.mapScale;
+        long xS = (long)(cx - halfX) - 1200;
+        long xE = (long)(cx + halfX) + 1200;
+        long zS = (long)(cz - halfZ) - 1200;
+        long zE = (long)(cz + halfZ) + 1200;
         long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
         long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
         gridLines(g, 300, 2, 0x30FFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
@@ -202,12 +204,12 @@ public class SquadMapRenderer {
         long s = Math.floorDiv(xS - gOriginX, step) * step + gOriginX;
         for (long v = s; v < xE; v += step) {
             int sx = toScreenX(v, cx);
-            if (sx >= mapX && sx <= mapX + mapSize) g.fill(sx, mapY, sx + w, mapY + mapSize, col);
+            if (sx >= mapX && sx <= mapX + mapWidth) g.fill(sx, mapY, sx + w, mapY + mapHeight, col);
         }
         s = Math.floorDiv(zS - gOriginZ, step) * step + gOriginZ;
         for (long v = s; v < zE; v += step) {
             int sy = toScreenZ(v, cz);
-            if (sy >= mapY && sy <= mapY + mapSize) g.fill(mapX, sy, mapX + mapSize, sy + w, col);
+            if (sy >= mapY && sy <= mapY + mapHeight) g.fill(mapX, sy, mapX + mapWidth, sy + w, col);
         }
     }
 
@@ -219,12 +221,12 @@ public class SquadMapRenderer {
     private void drawTopLabels(GuiGraphics g, double cx, double cz) {
         var f = Minecraft.getInstance().font;
         long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        double half = mapSize / 2.0 * ClientData.mapScale;
-        long s = Math.floorDiv((long)(cx - half) - gOriginX, 300L);
-        long e = Math.floorDiv((long)(cx + half) - gOriginX, 300L);
+        double halfX = mapWidth / 2.0 * ClientData.mapScale;
+        long s = Math.floorDiv((long)(cx - halfX) - gOriginX, 300L);
+        long e = Math.floorDiv((long)(cx + halfX) - gOriginX, 300L);
         for (long i = s; i <= e; i++) {
             int px = toScreenX(gOriginX + i * 300L + 150, cx);
-            if (px < mapX + 10 || px > mapX + mapSize - 10) continue;
+            if (px < mapX + 10 || px > mapX + mapWidth - 10) continue;
             String t = toAlpha(i);
             if ("?".equals(t)) continue;
             int bw = f.width(t) + 6;
@@ -236,12 +238,12 @@ public class SquadMapRenderer {
     private void drawLeftLabels(GuiGraphics g, double cx, double cz) {
         var f = Minecraft.getInstance().font;
         long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        double half = mapSize / 2.0 * ClientData.mapScale;
-        long s = Math.floorDiv((long)(cz - half) - gOriginZ, 300L);
-        long e = Math.floorDiv((long)(cz + half) - gOriginZ, 300L);
+        double halfZ = mapHeight / 2.0 * ClientData.mapScale;
+        long s = Math.floorDiv((long)(cz - halfZ) - gOriginZ, 300L);
+        long e = Math.floorDiv((long)(cz + halfZ) - gOriginZ, 300L);
         for (long i = s; i <= e; i++) {
             int py = toScreenZ(gOriginZ + i * 300L + 150, cz);
-            if (py < mapY + 10 || py > mapY + mapSize - 10) continue;
+            if (py < mapY + 10 || py > mapY + mapHeight - 10) continue;
             String t = String.valueOf(i + 1);
             int bw = f.width(t) + 6;
             g.fill(mapX + 2, py - 6, mapX + 2 + bw, py + 6, 0xCC000000);
@@ -1101,21 +1103,21 @@ public class SquadMapRenderer {
     }
 
     private void drawCompassRose(GuiGraphics g) {
-        int cx = mapX + mapSize - 70, cy = mapY + mapSize - 66;
+        int cx = mapX + mapWidth - 70, cy = mapY + mapHeight - 66;
         g.blit(ICON_COMPASS, cx, cy, 0, 0, 64, 64, 64, 64);
     }
 
     private void drawCompass(GuiGraphics g, double cx, double cz) {
-        int y = mapY + mapSize + 4, mid = mapX + mapSize / 2;
+        int y = mapY + mapHeight + 4, mid = mapX + mapWidth / 2;
         var p = Minecraft.getInstance().player; if (p == null) return;
-        g.fill(mapX, y, mapX + mapSize, y + 16, 0xCC06080A);
+        g.fill(mapX, y, mapX + mapWidth, y + 16, 0xCC06080A);
         long now = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
         for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
             double dx = m.pos.getX() + 0.5 - p.getX(), dz = m.pos.getZ() + 0.5 - p.getZ();
             double bearing = Math.toDegrees(Math.atan2(dx, dz));
             double rel = (bearing - p.getYRot() + 540) % 360 - 180;
             if (rel < -90 || rel > 90) continue;
-            int cx2 = mid + (int)(rel / 90.0 * (mapSize / 2.0));
+            int cx2 = mid + (int)(rel / 90.0 * (mapWidth / 2.0));
             float alpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
             RenderSystem.enableBlend();
             RenderSystem.setShaderColor(1, 1, 1, alpha);
@@ -1147,15 +1149,15 @@ public class SquadMapRenderer {
     }
 
     private int toScreenX(double wx, double cx) {
-        return (int)(mapX + mapSize / 2.0 + (wx - cx) / ClientData.mapScale);
+        return (int)(mapX + mapWidth / 2.0 + (wx - cx) / ClientData.mapScale);
     }
 
     private int toScreenZ(double wz, double cz) {
-        return (int)(mapY + mapSize / 2.0 + (wz - cz) / ClientData.mapScale);
+        return (int)(mapY + mapHeight / 2.0 + (wz - cz) / ClientData.mapScale);
     }
 
     private boolean inMap(int sx, int sy) {
-        return sx >= mapX && sx <= mapX + mapSize && sy >= mapY && sy <= mapY + mapSize;
+        return sx >= mapX && sx <= mapX + mapWidth && sy >= mapY && sy <= mapY + mapHeight;
     }
 
     public boolean inMap(double mx, double my) {

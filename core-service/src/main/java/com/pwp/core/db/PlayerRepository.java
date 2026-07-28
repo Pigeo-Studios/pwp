@@ -384,10 +384,11 @@ public class PlayerRepository {
     }
 
     public static String findSessionPlayer(String token) throws SQLException {
-        String sql = "SELECT s.player_uuid, p.is_banned FROM sessions s JOIN players p ON s.player_uuid = p.uuid WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP";
+        String sql = "SELECT s.player_uuid, p.is_banned FROM sessions s JOIN players p ON s.player_uuid = p.uuid WHERE (s.access_token = ? OR s.token = ?) AND s.expires_at > CURRENT_TIMESTAMP";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, token);
+            ps.setString(2, token);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next() && !rs.getBoolean("is_banned")) {
                     return rs.getString("player_uuid");
@@ -495,16 +496,18 @@ public class PlayerRepository {
         return null;
     }
 
-    public static boolean refreshSession(String refreshToken, String newAccessToken, String newRefreshToken, String newSessionKey) throws SQLException {
-        String sql = "UPDATE sessions SET access_token = ?, refresh_token = ?, session_key = ?, "
+    public static boolean refreshSession(String refreshToken, String newAccessToken, String newRefreshToken, String newSessionKey, String newHmacSecret) throws SQLException {
+        String sql = "UPDATE sessions SET access_token = ?, token = ?, refresh_token = ?, session_key = ?, hmac_secret = ?, "
                     + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY) "
                     + "WHERE refresh_token = ? AND expires_at > CURRENT_TIMESTAMP";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, newAccessToken);
-            ps.setString(2, newRefreshToken);
-            ps.setString(3, newSessionKey);
-            ps.setString(4, refreshToken);
+            ps.setString(2, newAccessToken);
+            ps.setString(3, newRefreshToken);
+            ps.setString(4, newSessionKey);
+            ps.setString(5, newHmacSecret);
+            ps.setString(6, refreshToken);
             return ps.executeUpdate() > 0;
         }
     }

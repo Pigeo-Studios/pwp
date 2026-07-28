@@ -164,7 +164,14 @@ public class CoreApplication {
             int deleted = ps.executeUpdate();
             if (deleted > 0) log.info("Cleaned up {} expired auth tokens", deleted);
         } catch (Exception e) {
-            log.warn("Failed to cleanup expired tokens: {}", e.getMessage());
+            log.warn("Failed to cleanup expired auth tokens: {}", e.getMessage());
+        }
+        try (java.sql.Connection c = DatabaseManager.getConnection();
+             var ps = c.prepareStatement("DELETE FROM sessions WHERE expires_at < NOW()")) {
+            int deleted = ps.executeUpdate();
+            if (deleted > 0) log.info("Cleaned up {} expired sessions", deleted);
+        } catch (Exception e) {
+            log.warn("Failed to cleanup expired sessions: {}", e.getMessage());
         }
     }
 

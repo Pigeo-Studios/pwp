@@ -12,10 +12,13 @@ import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -26,9 +29,117 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
+import net.minecraft.client.gui.Font;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DeployScreen extends Screen {
+
+    private record RuleCategory(String name, List<Rule> rules) {}
+    private record Rule(String name) {}
+
+    private static final List<RuleCategory> RULES = List.of(
+        new RuleCategory("1. СЕРВЕР", List.of(
+            new Rule("Сервер находится в Украине. Возможны отключения электроэнергии"),
+            new Rule("Сервер автоматически запускается после восстановления"),
+            new Rule("Администрация не несёт ответственности за потерю прогресса при сбоях"),
+            new Rule("Незнание правил не освобождает от ответственности"),
+            new Rule("Администрация вправе изменять правила без уведомления"),
+            new Rule("Запрещено намеренно использовать тех. ограничения сервера для преимущества")
+        )),
+        new RuleCategory("2. ПОВЕДЕНИЕ", List.of(
+            new Rule("Запрещены оскорбления, травля, буллинг, угрозы, провокации"),
+            new Rule("Запрещён токсичный контент в голосовом и текстовом чате"),
+            new Rule("Запрещён спам, флуд, засорение чата и голосовых каналов"),
+            new Rule("Запрещена реклама сторонних ресурсов без разрешения"),
+            new Rule("Запрещено выдавать себя за администрацию или других игроков"),
+            new Rule("Запрещено намеренно мешать другим игрокам"),
+            new Rule("Запрещено намеренно срывать матч или саботировать команду"),
+            new Rule("Запрещено покидать матч для обхода наказания"),
+            new Rule("Имя игрока не должно содержать оскорбления или рекламу")
+        )),
+        new RuleCategory("3. TEAMKILL И САБОТАЖ", List.of(
+            new Rule("Намеренное убийство союзников запрещено"),
+            new Rule("Teamkill 'в шутку' запрещён"),
+            new Rule("Намеренное нанесение урона союзникам запрещено"),
+            new Rule("Намеренное уничтожение союзной техники запрещено"),
+            new Rule("Намеренное блокирование союзников и проходов запрещено"),
+            new Rule("Запрещено строить ловушки для союзников"),
+            new Rule("Запрещено уничтожать постройки своей команды без необходимости"),
+            new Rule("Намеренные TK могут привести к бану"),
+            new Rule("После 8 TK игрок переводится в спектатор до конца игры")
+        )),
+        new RuleCategory("4. ОТРЯДЫ", List.of(
+            new Rule("Командир отряда обязан координировать отряд"),
+            new Rule("Запрещено игнорировать приказы с целью саботажа"),
+            new Rule("Запрещено покидать отряд для обхода ограничений"),
+            new Rule("Запрещено занимать слот и мешать работе отряда"),
+            new Rule("Запрещено создавать отряд для обхода системы")
+        )),
+        new RuleCategory("5. ТЕХНИКА", List.of(
+            new Rule("Запрещено бросать исправную технику без причины"),
+            new Rule("Запрещено намеренно уничтожать свою технику"),
+            new Rule("Запрещено угонять занятую технику без разрешения"),
+            new Rule("Запрещено занимать технику и удерживать без использования"),
+            new Rule("Запрещено блокировать проходы союзной техникой"),
+            new Rule("CAS и ударные вертолёты — только опытным пилотам"),
+            new Rule("Запрещено уводить транспорт снабжения без задачи"),
+            new Rule("Запрещено расходовать БК техники без необходимости")
+        )),
+        new RuleCategory("6. СНАРЯЖЕНИЕ И РЕСУРСЫ", List.of(
+            new Rule("Запрещено брать экипировку с целью лишить других игроков"),
+            new Rule("Запрещено расходовать командные ресурсы без необходимости"),
+            new Rule("Запрещено занимать ограниченные роли в ущерб команде"),
+            new Rule("Запрещено уничтожать или прятать командное снаряжение")
+        )),
+        new RuleCategory("7. СПАВН И ОБЪЕКТЫ КОМАНДЫ", List.of(
+            new Rule("Запрещено блокировать дружественные точки спавна"),
+            new Rule("Запрещено ставить блоки так, чтобы игроки не могли выйти со спавна"),
+            new Rule("Запрещено создавать ловушки возле точек появления"),
+            new Rule("Запрещено уничтожать объекты для работы спавна"),
+            new Rule("Запрещено запирать союзников блоками"),
+            new Rule("Запрещено изменять объекты карты для препятствия союзникам")
+        )),
+        new RuleCategory("8. AFK И ОТСУТСТВИЕ", List.of(
+            new Rule("Запрещено бездействовать значительную часть матча"),
+            new Rule("Запрещено использовать AFK для получения наград"),
+            new Rule("Запрещено использовать макросы для имитации активности")
+        )),
+        new RuleCategory("9. ЧИТЫ, БАГИ И ЭКСПЛОЙТЫ", List.of(
+            new Rule("Использование читов и сторонних средств запрещено"),
+            new Rule("Запрещён багоюз"),
+            new Rule("Запрещено использовать ошибки механик для преимущества"),
+            new Rule("Запрещено распространять способы эксплуатации багов"),
+            new Rule("Найденные баги необходимо сообщать администрации"),
+            new Rule("Читы и серьёзный багоюз — перманентный бан")
+        )),
+        new RuleCategory("10. ОБХОД НАКАЗАНИЙ", List.of(
+            new Rule("Запрещено обходить бан, мут или другие наказания"),
+            new Rule("Запрещено использовать доп. аккаунты для обхода бана"),
+            new Rule("Запрещено передавать аккаунт для обхода наказания"),
+            new Rule("Запрещено создавать новые аккаунты после блокировки")
+        )),
+        new RuleCategory("11. ТЕХНИЧЕСКОЕ", List.of(
+            new Rule("Для игры требуется официальный лаунчер PWP"),
+            new Rule("Запрещено вмешиваться в работу лаунчера и защиты"),
+            new Rule("Запрещено изменять клиентские файлы для обхода ограничений"),
+            new Rule("По вопросам обращаться в тикеты")
+        )),
+        new RuleCategory("12. ПОЛЬЗОВАТЕЛЬСКИЙ КОНТЕНТ", List.of(
+            new Rule("Администрация не отвечает за контент пользователей"),
+            new Rule("Запрещено размещать незаконный контент"),
+            new Rule("Запрещено размещать материалы, нарушающие правила Discord"),
+            new Rule("Запрещённый контент может быть удалён без уведомления"),
+            new Rule("Нарушитель может получить блокировку")
+        )),
+        new RuleCategory("13. НАКАЗАНИЯ", List.of(
+            new Rule("Нарушения наказываются: предупреждение, мут, кик"),
+            new Rule("Наказания: временная блокировка, перевод в спектатор"),
+            new Rule("Наказания: временный бан, перманентный бан"),
+            new Rule("Тяжесть определяется характером и повторяемостью нарушения")
+        ))
+    );
 
     private static final int TAB_H = 22, TOP_H = 34, BOT_H = 36;
 
@@ -59,6 +170,9 @@ public class DeployScreen extends Screen {
     int activeTab = 1;
     private boolean kitsRequested;
     private boolean mapNeedsInit;
+    private final Set<Integer> collapsedSections = new HashSet<>();
+    private int rulesScrollOffset;
+    private int rulesScrollMax;
 
     public DeployScreen() {
         super(Component.literal("ДЕПЛОЙ"));
@@ -162,7 +276,7 @@ public class DeployScreen extends Screen {
         int mapW = width - loadoutX;
         int mapH = conH();
         int sz = Math.min(mapW, mapH);
-        rightMapRenderer.init(loadoutX, conT(), sz);
+        rightMapRenderer.init(loadoutX, conT(), sz, sz);
         rightMapRenderer.centerOnPlayer();
         mapNeedsInit = false;
     }
@@ -235,20 +349,36 @@ public class DeployScreen extends Screen {
         gui.fill(0, height-BOT_H, width, height, 0xE60E1117);
         gui.fill(0, height-BOT_H, width, height-BOT_H+1, PWPTheme.Colors.BORDER_ACCENT);
 
-        // Column dividers
-        gui.fill(lw, conY, lw+1, height-BOT_H, PWPTheme.Colors.BORDER);
-        gui.fill(lw+cw, conY, lw+cw+1, height-BOT_H, PWPTheme.Colors.BORDER);
-        gui.fill(lw+cw+lx, conY, lw+cw+lx+1, height-BOT_H, PWPTheme.Colors.BORDER);
+        // Column dividers (deploy layout only)
+        if (activeTab == 1) {
+            gui.fill(lw, conY, lw+1, height-BOT_H, PWPTheme.Colors.BORDER);
+            gui.fill(lw+cw, conY, lw+cw+1, height-BOT_H, PWPTheme.Colors.BORDER);
+            gui.fill(lw+cw+lx, conY, lw+cw+lx+1, height-BOT_H, PWPTheme.Colors.BORDER);
+        }
 
         // Top bar
+        String team = getPlayerTeam().toUpperCase();
+        boolean isBlue = team.contains("BLUE");
+        String faction = isBlue ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
+        String customName = isBlue ? ClientData.customBlueName : ClientData.customRedName;
+        String tabTitle = activeTab == 0 ? "КОМАНДЫ" : (activeTab == 1 ? "ДЕПЛОЙ" : "ПРАВИЛА");
         gui.drawString(f, DeployData.mapName, 8, 8, PWPTheme.Colors.TEXT_PRIMARY, false);
-        gui.drawCenteredString(f, "ДЕПЛОЙ", width/2, 8, PWPTheme.Colors.TEXT_ACCENT);
-        String fac = DeployData.blueFaction.toUpperCase();
-        int fw = f.width(fac) + 20;
-        gui.fill(width-fw-8, 4, width-8, 30, PWPTheme.Colors.TEAM_BLUE);
-        gui.drawString(f, fac, width-fw+4, 8, 0xFFFFFFFF, false);
+        gui.drawCenteredString(f, tabTitle, width/2, 8, PWPTheme.Colors.TEXT_ACCENT);
+        ResourceLocation flagTex = getFlagTexture(faction);
+        int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
+        int flagX = width - 130;
+        if (flagTex != null) {
+            RenderSystem.enableBlend();
+            gui.blit(flagTex, flagX, 4, 32, 18, 0, 0, 64, 36, 64, 36);
+        }
+        gui.drawString(f, customName, flagX + 36, 10, teamColor, false);
+        int tickets = isBlue ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
+        gui.drawString(f, "\u2665 " + tickets, flagX + 36, 22, PWPTheme.Colors.TEXT_ACCENT, false);
 
-        if (activeTab == 1) {
+        if (activeTab == 0) {
+            PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);
+            renderTeamTab(gui, mx, my, conY, ch, f);
+        } else if (activeTab == 1) {
             // ── LEFT: SQUADS (SquadUIHelper) ──
             int sqX = 4, sqW2 = Math.min(lw-8, SquadUIHelper.getSidebarWidth());
             int sqY = conY, sqMaxH = ch - 110;
@@ -350,6 +480,9 @@ public class DeployScreen extends Screen {
             int sec = Math.max(0, DeployData.deployTimer-el);
             String ts = sec>0 ? String.format("ОЖИДАНИЕ %02d:%02d", sec/60, sec%60) : "ГОТОВ";
             gui.drawCenteredString(f, ts, width/2, bbY+10, PWPTheme.Colors.TEXT_PRIMARY);
+        } else if (activeTab == 2) {
+            PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);
+            renderRulesTab(gui, mx, my, conY, ch, f);
         }
 
         // Hide squad/chat widgets on non-deploy tabs
@@ -357,10 +490,161 @@ public class DeployScreen extends Screen {
             squadInput.setVisible(false);
             createSquadBtn.visible = false;
             chatInput.setVisible(false);
+            applyCmdBtn.visible = false;
         }
 
         for (var w : renderables) w.render(gui, mx, my, pt);
         contextMenu.render(gui, mx, my);
+    }
+
+    // ══════════════════ TEAM TAB ══════════════════
+
+    private void renderTeamTab(GuiGraphics gui, int mx, int my, int conY, int ch, Font f) {
+        String myTeam = getPlayerTeam().toUpperCase();
+        List<MapPlayerInfo> allPlayers = new ArrayList<>(ClientData.mapPlayers.values());
+        List<MapPlayerInfo> allies = allPlayers.stream().filter(p -> p.team != null && p.team.equalsIgnoreCase(myTeam)).collect(Collectors.toList());
+        List<MapPlayerInfo> enemies = allPlayers.stream().filter(p -> p.team != null && !p.team.equalsIgnoreCase(myTeam)).collect(Collectors.toList());
+
+        int contentX = 8;
+        int contentW = width - 16;
+        int colW = (contentW - 24) / 2;
+
+        gui.enableScissor(contentX, conY, contentX + contentW, conY + ch);
+
+        int top = conY - rulesScrollOffset;
+        renderPlayerColumn(gui, allies, contentX, top, colW, true, f);
+        renderPlayerColumn(gui, enemies, contentX + colW + 24, top, colW, false, f);
+
+        int totalH = 36 + Math.max(allies.size(), enemies.size()) * 12;
+        rulesScrollMax = Math.max(0, totalH - ch);
+        rulesScrollOffset = Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset));
+
+        gui.disableScissor();
+    }
+
+    private void renderPlayerColumn(GuiGraphics gui, List<MapPlayerInfo> players, int x, int y, int w, boolean isAlly, Font f) {
+        String faction = isAlly ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
+        String customName = isAlly ? ClientData.customBlueName : ClientData.customRedName;
+        int titleCol = isAlly ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
+
+        ResourceLocation fl = getFlagTexture(faction);
+        if (fl != null) {
+            RenderSystem.enableBlend();
+            gui.blit(fl, x + 4, y, 24, 14, 0, 0, 64, 36, 64, 36);
+        }
+        int textOff = fl != null ? 30 : 4;
+        gui.drawString(f, customName + " (" + players.size() + ")", x + textOff, y + 2, titleCol, false);
+        gui.fill(x + 4, y + 18, x + w - 4, y + 19, PWPTheme.Colors.BORDER);
+
+        int ly = y + 24;
+        String myName = Minecraft.getInstance().player.getScoreboardName();
+
+        for (MapPlayerInfo p : players) {
+            boolean isMe = p.name.equals(myName);
+            String sqName = getPlayerSquadName(p.name);
+            String display = sqName != null ? "[" + sqName + "] " + p.name : p.name;
+            int nameCol = isMe ? PWPTheme.Colors.TEXT_ACCENT : (isAlly ? 0xFFFFFF : 0xFFCCCCCC);
+
+            int maxW = w - 12;
+            if (f.width(display) > maxW) {
+                display = f.plainSubstrByWidth(display, maxW - 4) + "\u2026";
+            }
+            gui.drawString(f, display, x + 6, ly, nameCol, false);
+
+            boolean isLeader = false;
+            for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+                if (s.members.contains(p.name) && s.leader.equals(p.name)) { isLeader = true; break; }
+            }
+            if (isLeader) {
+                gui.drawString(f, "\u25CF", x + w - 14, ly, PWPTheme.Colors.SUCCESS, false);
+            }
+            ly += 12;
+        }
+    }
+
+    private String getPlayerSquadName(String playerName) {
+        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
+            if (s.members.contains(playerName)) return s.name;
+        }
+        return null;
+    }
+
+    // ══════════════════ RULES TAB ══════════════════
+
+    private void renderRulesTab(GuiGraphics gui, int mx, int my, int conY, int ch, Font f) {
+        int contentX = 8;
+        int contentW = width - 16;
+
+        int totalH = 0;
+        for (int i = 0; i < RULES.size(); i++) {
+            totalH += 20;
+            if (!collapsedSections.contains(i)) {
+                totalH += RULES.get(i).rules().size() * 14 + 6;
+            }
+        }
+        rulesScrollMax = Math.max(0, totalH - ch);
+        rulesScrollOffset = Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset));
+
+        gui.enableScissor(contentX, conY, contentX + contentW, conY + ch);
+        int y = conY - rulesScrollOffset;
+
+        for (int i = 0; i < RULES.size(); i++) {
+            if (y > conY + ch) break;
+            RuleCategory cat = RULES.get(i);
+            boolean collapsed = collapsedSections.contains(i);
+
+            if (y + 20 >= conY) {
+                String title = (collapsed ? "\u25B6 " : "\u25BC ") + cat.name();
+                gui.drawString(f, title, contentX + 4, y, PWPTheme.Colors.TEXT_ACCENT, false);
+                gui.fill(contentX + 4, y + 14, contentX + contentW - 4, y + 15, PWPTheme.Colors.BORDER);
+            }
+            y += 20;
+
+            if (!collapsed) {
+                for (Rule r : cat.rules()) {
+                    if (y > conY + ch) break;
+                    if (y + 14 >= conY) {
+                        String line = "\u2713 " + r.name();
+                        int maxW = contentW - 16;
+                        if (f.width(line) > maxW) {
+                            line = f.plainSubstrByWidth(line, maxW - 4) + "\u2026";
+                        }
+                        gui.drawString(f, line, contentX + 8, y, 0xFFCCCCCC, false);
+                    }
+                    y += 14;
+                }
+                y += 6;
+            }
+        }
+        gui.disableScissor();
+    }
+
+    private void handleRulesClick(double mx, double my) {
+        int contentX = 8;
+        int conY = conT();
+        int y = conY - rulesScrollOffset;
+
+        for (int i = 0; i < RULES.size(); i++) {
+            if (mx >= contentX + 4 && mx <= width - 8 && my >= y && my <= y + 18) {
+                if (collapsedSections.contains(i)) collapsedSections.remove(i);
+                else collapsedSections.add(i);
+                return;
+            }
+            y += 20;
+            if (!collapsedSections.contains(i)) {
+                y += RULES.get(i).rules().size() * 14 + 6;
+            }
+        }
+    }
+
+    private static ResourceLocation getFlagTexture(String faction) {
+        if (faction == null || faction.equalsIgnoreCase("none")) return null;
+        return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
+    }
+
+    private String getPlayerTeam() {
+        var p = Minecraft.getInstance().player;
+        return p != null && p.getTeam() != null ? p.getTeam().getName() : "NEUTRAL";
     }
 
     // ══════════════════ ITEMS ══════════════════
@@ -387,13 +671,13 @@ public class DeployScreen extends Screen {
     private int toWorldX(double mx) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
-        return (int)(rightMapRenderer.getCenterX(p) + (mx - (rightMapRenderer.mapX + rightMapRenderer.mapSize / 2.0)) * rightMapRenderer.getBlocksPerPixel());
+        return (int)(rightMapRenderer.getCenterX(p) + (mx - (rightMapRenderer.mapX + rightMapRenderer.mapWidth / 2.0)) * rightMapRenderer.getBlocksPerPixel());
     }
 
     private int toWorldZ(double my) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
-        return (int)(rightMapRenderer.getCenterZ(p) + (my - (rightMapRenderer.mapY + rightMapRenderer.mapSize / 2.0)) * rightMapRenderer.getBlocksPerPixel());
+        return (int)(rightMapRenderer.getCenterZ(p) + (my - (rightMapRenderer.mapY + rightMapRenderer.mapHeight / 2.0)) * rightMapRenderer.getBlocksPerPixel());
     }
 
     @Override
@@ -411,6 +695,11 @@ public class DeployScreen extends Screen {
         if (my >= TOP_H && my < TOP_H+TAB_H) {
             int t = (int)(mx / (width/3));
             if (t >= 0 && t < 3) { activeTab = t; return true; }
+        }
+
+        if (activeTab == 2) {
+            handleRulesClick(mx, my);
+            return true;
         }
 
         if (activeTab == 1) {
@@ -490,20 +779,28 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        int rx = sqW()+roW();
-        if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
+        if (activeTab == 1) {
+            int rx = sqW()+roW();
+            if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
+        }
         return super.mouseDragged(mx, my, btn, dx, dy);
     }
 
     @Override
     public boolean mouseReleased(double mx, double my, int btn) {
-        int rx = sqW()+roW();
-        if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseReleased(btn);
+        if (activeTab == 1) {
+            int rx = sqW()+roW();
+            if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseReleased(btn);
+        }
         return super.mouseReleased(mx, my, btn);
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if (activeTab == 0 || activeTab == 2) {
+            rulesScrollOffset = (int) Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset - delta * 16));
+            return true;
+        }
         int lw = sqW(), cw = roW(), rx = lw+cw;
         int scroll = -(int)(delta * 20);
         if (mx >= lw && mx < rx) { roles.scrollOff += scroll; return true; }
@@ -538,8 +835,8 @@ public class DeployScreen extends Screen {
         double bpp = rightMapRenderer.getBlocksPerPixel();
         double cx = rightMapRenderer.getCenterX(mc.player);
         double cz = rightMapRenderer.getCenterZ(mc.player);
-        int mcx = rightMapRenderer.mapX + rightMapRenderer.mapSize/2;
-        int mcy = rightMapRenderer.mapY + rightMapRenderer.mapSize/2;
+        int mcx = rightMapRenderer.mapX + rightMapRenderer.mapWidth/2;
+        int mcy = rightMapRenderer.mapY + rightMapRenderer.mapHeight/2;
 
         String best = null;
         double bestD = 15;

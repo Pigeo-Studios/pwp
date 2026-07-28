@@ -6,17 +6,21 @@ import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
+import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -35,9 +39,13 @@ public class SquadMapScreen extends Screen {
     private final PWPContextMenu contextMenu = new PWPContextMenu();
     private final Set<Integer> expandedSquads = new HashSet<>();
     private final Screen parent;
-    private int mX, mY, mS;
+    private int mX, mY, mMapW, mMapH;
     private boolean pathActive;
     private List<List<PathPoint>> activeGroups;
+    private PWPButton applyCmdBtn;
+    private PWPButton createSquadBtn;
+    private EditBox squadInput;
+    private int mySquadId = -1;
 
     private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
 
@@ -53,10 +61,50 @@ public class SquadMapScreen extends Screen {
         super.init();
         int availW = width - LEFT_PANEL_W - RIGHT_PANEL_W;
         int availH = height - TOP_BAR_H - BOTTOM_BAR_H;
-        mS = Math.min(availW - 4, availH - 4);
-        mX = LEFT_PANEL_W + (availW - mS) / 2;
-        mY = TOP_BAR_H + (availH - mS) / 2;
-        map.init(mX, mY, mS);
+        mMapW = availW - 4;
+        mMapH = availH - 4;
+        mX = LEFT_PANEL_W + 2;
+        mY = TOP_BAR_H + 2;
+        map.init(mX, mY, mMapW, mMapH);
+
+        squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 90, 16, Component.literal("")));
+        squadInput.setMaxLength(12);
+        squadInput.setVisible(false);
+
+        createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 50, 18,
+            Component.literal("Создать"), b -> {
+                String n = squadInput.getValue().trim();
+                if (!n.isEmpty()) {
+                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
+                    squadInput.setValue("");
+                }
+            }, PWPButton.Style.DARK));
+        createSquadBtn.visible = false;
+
+        applyCmdBtn = addRenderableWidget(new PWPButton(4, 2, LEFT_PANEL_W - 8, 16,
+            Component.literal("Стать командиром"),
+            b -> {
+                PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
+                b.visible = false;
+                Minecraft.getInstance().player.displayClientMessage(
+                    Component.literal("Запрос отправлен командирам взводов").withStyle(ChatFormatting.GREEN), true);
+            },
+            PWPButton.Style.DARK));
+        applyCmdBtn.visible = false;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (applyCmdBtn != null) applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
+        mySquadId = -1;
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p != null) {
+            String n = p.getScoreboardName();
+            for (var sq : ClientData.clientSquads) {
+                if (sq.members.contains(n)) { mySquadId = sq.id; break; }
+            }
+        }
     }
 
     @Override
@@ -78,19 +126,22 @@ public class SquadMapScreen extends Screen {
         g.fill(0, 0, LEFT_PANEL_W, height, 0xCC0A0C10);
         g.vLine(LEFT_PANEL_W - 1, 0, height, 0xFF444444);
 
+        int listTop = 2;
+        if (applyCmdBtn != null && applyCmdBtn.visible) listTop = 20;
+        int listBottom = height - 30;
+
+        g.enableScissor(0, listTop, LEFT_PANEL_W, listBottom);
         SquadUIHelper.renderSquadList(g, mx, my, expandedSquads, SquadUIHelper.isApplyCmdVisible());
+        g.disableScissor();
 
         if (!SquadUIHelper.isPlayerInSquad()) {
-            String create = "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0440\u044F\u0434";
-            int cw = font.width(create) + 16;
-            int cx = LEFT_PANEL_W / 2 - cw / 2;
-            int by = height - 30;
-            boolean ch = mx >= cx && mx <= cx + cw && my >= by - 1 && my <= by + 13;
-            int bg = ch ? 0xFF2A5A2A : 0xFF1A2A1A;
-            int border = ch ? 0xFF44AA44 : 0xFF335533;
-            RoundedRect.fill(g, cx, by - 1, cw, 14, 4, bg);
-            RoundedRect.border(g, cx, by - 1, cw, 14, 4, 1, border);
-            g.drawString(font, create, cx + 8, by + 3, 0xFF88FF88, false);
+            int by = height - 28;
+            g.drawString(font, Component.literal("СОЗДАТЬ ОТРЯД"), 4, by, PWPTheme.Colors.ACCENT, false);
+            squadInput.setX(4); squadInput.setWidth(110); squadInput.setY(by + 12); squadInput.setVisible(true);
+            createSquadBtn.setX(120); createSquadBtn.setY(by + 11); createSquadBtn.visible = true;
+        } else {
+            squadInput.setVisible(false);
+            createSquadBtn.visible = false;
         }
     }
 
@@ -162,6 +213,7 @@ public class SquadMapScreen extends Screen {
     public void mouseMoved(double mx, double my) {
         if (pathActive && map.previewStart != null && map.inMap(mx, my))
             map.previewEnd = new PathPoint(toWorldX(mx), toWorldZ(my));
+        super.mouseMoved(mx, my);
     }
 
     @Override
@@ -170,17 +222,14 @@ public class SquadMapScreen extends Screen {
         if (contextMenu.isVisible()) { contextMenu.mouseClicked(mx, my, btn); return true; }
 
         if (btn == 0 && mx < LEFT_PANEL_W) {
-            SquadUIHelper.handleSquadClick(mx, my, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
+            if (applyCmdBtn != null && applyCmdBtn.visible && applyCmdBtn.mouseClicked(mx, my, btn)) return true;
             if (!SquadUIHelper.isPlayerInSquad()) {
-                String create = "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u043E\u0442\u0440\u044F\u0434";
-                int cw = font.width(create) + 16;
-                int cx = LEFT_PANEL_W / 2 - cw / 2;
-                int by = height - 31;
-                if (mx >= cx && mx <= cx + cw && my >= by - 1 && my <= by + 13) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, ""));
-                    return true;
+                if (createSquadBtn != null && createSquadBtn.visible && createSquadBtn.mouseClicked(mx, my, btn)) return true;
+                if (squadInput != null && squadInput.isVisible()) {
+                    squadInput.setFocused(squadInput.isMouseOver(mx, my));
                 }
             }
+            SquadUIHelper.handleSquadClick(mx, my, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
             return true;
         }
 
@@ -290,8 +339,8 @@ public class SquadMapScreen extends Screen {
         String best = null;
         double bestD = 18;
         for (var sp : DeployData.spawns) {
-            double sx = mX + mS / 2.0 + (sp.pos().getX() - cx) / bpp;
-            double sy = mY + mS / 2.0 + (sp.pos().getZ() - cz) / bpp;
+            double sx = mX + mMapW / 2.0 + (sp.pos().getX() - cx) / bpp;
+            double sy = mY + mMapH / 2.0 + (sp.pos().getZ() - cz) / bpp;
             double d = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
             if (d < bestD && sp.status() != DeployData.SpawnStatus.BLOCKED && sp.status() != DeployData.SpawnStatus.DESTROYED) {
                 bestD = d; best = sp.id();
@@ -310,12 +359,12 @@ public class SquadMapScreen extends Screen {
     private int toWorldX(double mx) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
-        return (int)(map.getCenterX(p) + (mx - (mX + mS / 2.0)) * map.getBlocksPerPixel());
+        return (int)(map.getCenterX(p) + (mx - (mX + mMapW / 2.0)) * map.getBlocksPerPixel());
     }
 
     private int toWorldZ(double my) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
-        return (int)(map.getCenterZ(p) + (my - (mY + mS / 2.0)) * map.getBlocksPerPixel());
+        return (int)(map.getCenterZ(p) + (my - (mY + mMapH / 2.0)) * map.getBlocksPerPixel());
     }
 }

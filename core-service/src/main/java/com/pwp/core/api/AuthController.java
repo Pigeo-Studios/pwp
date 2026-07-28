@@ -420,14 +420,16 @@ public class AuthController {
                 String newAccess = PlayerRepository.generateTokenPart();
                 String newRefresh = PlayerRepository.generateTokenPart();
                 String newKey = PlayerRepository.generateSessionKey();
-                boolean ok = PlayerRepository.refreshSession(req.refreshToken, newAccess, newRefresh, newKey);
+                String newHmacSecret = generateHmacSecret();
+                boolean ok = PlayerRepository.refreshSession(req.refreshToken, newAccess, newRefresh, newKey, newHmacSecret);
                 if (!ok) {
                     ctx.json(ApiResponse.error("invalid or expired refresh token")); return;
                 }
                 ctx.json(ApiResponse.ok(Map.of(
                     "session_key", newKey,
                     "access_token", newAccess,
-                    "refresh_token", newRefresh
+                    "refresh_token", newRefresh,
+                    "hmac_secret", newHmacSecret
                 )));
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("refresh failed: " + e.getMessage()));

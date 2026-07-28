@@ -82,7 +82,7 @@ public class SquadSelectionScreen extends Screen {
         mapSize = Math.min(rightW - 4, availH);
         mapX = width - mapSize - 2;
         mapY = 30 + 2;
-        mapRenderer.init(mapX, mapY, mapSize);
+        mapRenderer.init(mapX, mapY, mapSize, mapSize);
 
         int chatX = 175;
         int chatW = width - SquadUIHelper.getSidebarWidth() - 10;

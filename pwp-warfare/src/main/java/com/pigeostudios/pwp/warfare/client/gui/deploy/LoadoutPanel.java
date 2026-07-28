@@ -53,7 +53,9 @@ public class LoadoutPanel {
             DeployData.LoadoutOption opt = slot.options().get(sel);
             boolean hasAlt = slot.hasAlternatives();
             int altTotalH = hasAlt ? slot.options().size() * 17 + 4 : 0;
-            boolean expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
+            boolean manual = DeployData.isSlotExpanded(kit.name(), slot.label());
+            boolean hoverExpanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
+            boolean expanded = manual ? manual : hoverExpanded;
 
             String squadLabel = switch (slot.label()) {
                 case "PRIMARY" -> "СТВОЛ";
@@ -136,21 +138,40 @@ public class LoadoutPanel {
             }
             boolean hasAlt = slot.hasAlternatives();
             int altTotalH = hasAlt ? slot.options().size() * 17 + 4 : 0;
-            boolean expanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
+            boolean manual = DeployData.isSlotExpanded(kit.name(), slot.label());
+            boolean hoverExpanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
+            boolean expanded = manual ? manual : hoverExpanded;
+
+            // Check click on the bar area (label + bar)
+            boolean barHit = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
+
             cy += 10;
             cy += 20 + 2;
+
             if (expanded) {
                 int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
                 if (sel >= slot.options().size()) sel = slot.defaultIndex();
                 for (int ai = 0; ai < slot.options().size(); ai++) {
                     if (mx >= x + 8 && mx <= x + w && my >= cy && my <= cy + 16) {
                         DeployData.setSelectedIndex(kit.name(), slot.label(), ai);
+                        if (!manual) DeployData.setSlotExpanded(kit.name(), slot.label(), true);
                         return true;
                     }
                     cy += 17;
                 }
                 cy += 2;
             }
+
+            // Bar click: toggle manual expanded
+            if (barHit) {
+                if (manual) {
+                    DeployData.toggleSlotExpanded(kit.name(), slot.label());
+                } else {
+                    DeployData.setSlotExpanded(kit.name(), slot.label(), true);
+                }
+                return true;
+            }
+
             cy += 2;
         }
         return false;
