@@ -7,6 +7,7 @@ import com.pwp.coreclient.network.OpenMatchListScreenPacket;
 import com.pwp.coreclient.network.OpenMatchScreenPacket;
 import com.pwp.coreclient.network.OpenModeVotePacket;
 import com.pwp.coreclient.network.OpenVotingScreenPacket;
+import com.pwp.coreclient.network.OpenFactionVotePacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
@@ -92,6 +93,7 @@ public class LobbyMod {
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) return;
         VotingManager.tick();
+        FactionVotingManager.tick();
         tickModeVote();
         MatchAllocator.tick();
 
@@ -247,6 +249,7 @@ public class LobbyMod {
         serverBroadcast("§7[PWP] §e" + name + " §fзашёл в лобби. §7Онлайн: §e" + online);
 
         if (MatchAllocator.hasActiveMatch()) {
+            broadcastMatchScreenToPlayer(player);
             sendMatchListToPlayer(player);
         } else {
             broadcastMatchScreenToPlayer(player);
@@ -264,9 +267,15 @@ public class LobbyMod {
             if (pkt != null) {
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
             }
+        } else if (FactionVotingManager.isActive()) {
+            serverBroadcast("§7[PWP] Идёт голосование за фракции! §e/votefaction §7<синие> <красные>");
+            OpenFactionVotePacket pkt = FactionVotingManager.buildPacket();
+            if (pkt != null) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
+            }
         }
 
-        if (!MatchAllocator.hasActiveMatch() && !VotingManager.isActive() && !modeVoteActive) {
+        if (!MatchAllocator.hasActiveMatch() && !VotingManager.isActive() && !modeVoteActive && !FactionVotingManager.isActive()) {
             VotingManager.startVoting();
         }
     }
@@ -387,6 +396,7 @@ public class LobbyMod {
                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), vPkt);
                     }
                 } else if (MatchAllocator.hasActiveMatch()) {
+                    broadcastMatchScreenToPlayer(player);
                     sendMatchListToPlayer(player);
                 } else {
                     VotingManager.startVoting();
@@ -444,6 +454,22 @@ public class LobbyMod {
                     ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + modeName), false);
                     return Command.SINGLE_SUCCESS;
                 })));
+
+        dispatcher.register(Commands.literal("votefaction")
+            .then(Commands.argument("blue", com.mojang.brigadier.arguments.StringArgumentType.word())
+            .then(Commands.argument("red", com.mojang.brigadier.arguments.StringArgumentType.word())
+                .executes(ctx -> {
+                    String blue = ctx.getArgument("blue", String.class);
+                    String red = ctx.getArgument("red", String.class);
+                    if (!FactionVotingManager.isActive()) {
+                        ctx.getSource().sendFailure(Component.literal("Голосование за фракции не активно"));
+                        return 0;
+                    }
+                    ServerPlayer player = ctx.getSource().getPlayerOrException();
+                    FactionVotingManager.vote(player.getUUID(), blue, red);
+                    ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + blue + " / " + red), false);
+                    return Command.SINGLE_SUCCESS;
+                }))));
     }
 
     private static OpenMatchListScreenPacket buildMatchListPacket() {
@@ -611,50 +637,49 @@ public class LobbyMod {
         if (pendingMapName != null) {
             MapConfig map = MapRegistry.get(pendingMapName);
             if (map != null) {
-                // Randomize factions
-                String blueFaction, redFaction;
                 List<String> available = (map.availableFactions != null && !map.availableFactions.isEmpty())
                         ? new ArrayList<>(map.availableFactions)
                         : new ArrayList<>(Arrays.asList("ukraine", "russia", "usa", "nato", "insurgency", "pmc"));
-                if (available.size() < 2) {
-                    blueFaction = "usa";
-                    redFaction = "russia";
+                if (available.size() >= 2) {
+                    FactionVotingManager.startFactionVoting(pendingMapName, available);
                 } else {
-                    Collections.shuffle(available);
-                    blueFaction = available.get(0);
-                    redFaction = available.get(1);
+                    startMatchAfterFactionVote(map, "usa", "russia");
                 }
+            } else {
+                pendingMapName = null;
+                modeVotes.clear();
+            }
+        } else {
+            pendingMapName = null;
+            modeVotes.clear();
+        }
+    }
 
-                boolean isInvasion = modeVoteWinner.equals("invasion");
-                boolean invasionDefenderIsRed = true;
-                if (isInvasion) {
-                    invasionDefenderIsRed = new Random().nextBoolean();
-                }
+    public static void startMatchAfterFactionVote(MapConfig map, String blueFaction, String redFaction) {
+        boolean isInvasion = modeVoteWinner.equals("invasion");
+        boolean invasionDefenderIsRed = true;
+        if (isInvasion) invasionDefenderIsRed = new Random().nextBoolean();
 
-                // Resolve tickets per mode
-                int blueTickets = map.teams.BLUE.tickets;
-                int redTickets = map.teams.RED.tickets;
-                if (isInvasion && map.modes != null && map.modes.containsKey("invasion")) {
-                    MapConfig.ModeConfig invConfig = map.modes.get("invasion");
-                    if (invasionDefenderIsRed) {
-                        blueTickets = invConfig.attackerTickets;
-                        redTickets = invConfig.defenderTickets;
-                    } else {
-                        blueTickets = invConfig.defenderTickets;
-                        redTickets = invConfig.attackerTickets;
-                    }
-                }
-
-                // Randomize capture point pattern
-                int patternIndex = -1;
-                if (map.capturePointPatterns != null && !map.capturePointPatterns.isEmpty()) {
-                    patternIndex = new Random().nextInt(map.capturePointPatterns.size());
-                    serverBroadcast("§7[PWP] Выбран паттерн точек: §e" + map.capturePointPatterns.get(patternIndex).name);
-                }
-
-                MatchAllocator.startMatch(map, blueFaction, redFaction, modeVoteWinner, blueTickets, redTickets, invasionDefenderIsRed, patternIndex);
+        int blueTickets = map.teams.BLUE.tickets;
+        int redTickets = map.teams.RED.tickets;
+        if (isInvasion && map.modes != null && map.modes.containsKey("invasion")) {
+            var invConfig = map.modes.get("invasion");
+            if (invasionDefenderIsRed) {
+                blueTickets = invConfig.attackerTickets;
+                redTickets = invConfig.defenderTickets;
+            } else {
+                blueTickets = invConfig.defenderTickets;
+                redTickets = invConfig.attackerTickets;
             }
         }
+
+        int patternIndex = -1;
+        if (map.capturePointPatterns != null && !map.capturePointPatterns.isEmpty()) {
+            patternIndex = new Random().nextInt(map.capturePointPatterns.size());
+            serverBroadcast("§7[PWP] Выбран паттерн точек: §e" + map.capturePointPatterns.get(patternIndex).name);
+        }
+
+        MatchAllocator.startMatch(map, blueFaction, redFaction, modeVoteWinner, blueTickets, redTickets, invasionDefenderIsRed, patternIndex);
 
         pendingMapName = null;
         modeVotes.clear();

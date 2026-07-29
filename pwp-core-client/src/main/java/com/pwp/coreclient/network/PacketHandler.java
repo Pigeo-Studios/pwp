@@ -67,6 +67,14 @@ public class PacketHandler {
                 PacketAction::encode,
                 PacketAction::decode,
                 PacketAction::handle);
+        INSTANCE.registerMessage(id++, OpenFactionVotePacket.class,
+                OpenFactionVotePacket::encode,
+                OpenFactionVotePacket::decode,
+                OpenFactionVotePacket::handle);
+        INSTANCE.registerMessage(id++, VoteFactionPacket.class,
+                VoteFactionPacket::encode,
+                VoteFactionPacket::decode,
+                VoteFactionPacket::handle);
 
     }
 }
