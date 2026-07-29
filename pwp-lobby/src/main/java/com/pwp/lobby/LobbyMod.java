@@ -298,90 +298,157 @@ public class LobbyMod {
                     MatchAllocator.joinActiveMatch(player);
                     return Command.SINGLE_SUCCESS;
                 }))
-            .then(Commands.literal("start")
+            .then(Commands.literal("server")
                 .requires(s -> s.hasPermission(2))
-                .executes(ctx -> {
-                    if (MatchAllocator.hasActiveMatch()) {
-                        ctx.getSource().sendFailure(Component.literal("Матч уже запущен"));
-                        return 0;
-                    }
-                    MapConfig map = MapRegistry.getBestFit(MatchAllocator.getLobbyPlayerCount());
-                    if (map == null) {
-                        ctx.getSource().sendFailure(Component.literal("Нет доступных карт"));
-                        return 0;
-                    }
-                    MatchAllocator.startMatch(map);
-                    ctx.getSource().sendSuccess(() -> Component.literal("Match started: " + map.displayName), true);
-                    return Command.SINGLE_SUCCESS;
-                })
-                .then(Commands.argument("mapname", com.mojang.brigadier.arguments.StringArgumentType.word())
-                    .suggests((ctx, builder) -> {
-                        for (MapConfig m : MapRegistry.getAll()) {
-                            builder.suggest(m.name, Component.literal(m.displayName + " (" + m.modeDisplayName + ")"));
-                        }
-                        return builder.buildFuture();
-                    })
+                // /pwp server start — full voting cycle
+                .then(Commands.literal("start")
                     .executes(ctx -> {
                         if (MatchAllocator.hasActiveMatch()) {
                             ctx.getSource().sendFailure(Component.literal("Матч уже запущен"));
                             return 0;
                         }
-                        String mapName = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "mapname");
-                        MapConfig map = MapRegistry.get(mapName);
-                        if (map == null) {
-                            ctx.getSource().sendFailure(Component.literal("Карта не найдена: " + mapName));
+                        if (VotingManager.isActive()) {
+                            ctx.getSource().sendFailure(Component.literal("Голосование уже активно"));
                             return 0;
                         }
-                        MatchAllocator.startMatch(map);
-                        ctx.getSource().sendSuccess(() -> Component.literal("Матч запущен: " + map.displayName), true);
+                        List<MapConfig> votable = MapRegistry.getVotable();
+                        if (votable.isEmpty()) {
+                            ctx.getSource().sendFailure(Component.literal("Нет карт для голосования"));
+                            return 0;
+                        }
+                        VotingManager.startVoting();
+                        ctx.getSource().sendSuccess(() -> Component.literal("§aГолосование начато"), false);
+                        return Command.SINGLE_SUCCESS;
+                    })
+                    // /pwp server start <map> — force map
+                    .then(Commands.argument("map", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            for (MapConfig m : MapRegistry.getAll()) {
+                                builder.suggest(m.name, Component.literal(m.displayName));
+                            }
+                            return builder.buildFuture();
+                        })
+                        .executes(ctx -> {
+                            String mn = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "map");
+                            MapConfig map = MapRegistry.get(mn);
+                            if (map == null) { ctx.getSource().sendFailure(Component.literal("Карта не найдена")); return 0; }
+                            VotingManager.startVoting();
+                            // Immediately finish map vote with forced map
+                            onVoteFinished(mn);
+                            ctx.getSource().sendSuccess(() -> Component.literal("§aКарта форсирована: " + map.displayName), false);
+                            return Command.SINGLE_SUCCESS;
+                        })
+                        // /pwp server start <map> <mode> — force map+mode
+                        .then(Commands.argument("mode", com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .suggests((ctx, builder) -> { builder.suggest("aas"); builder.suggest("invasion"); return builder.buildFuture(); })
+                            .executes(ctx -> {
+                                String mn = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "map");
+                                String md = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "mode");
+                                if (!md.equals("aas") && !md.equals("invasion")) {
+                                    ctx.getSource().sendFailure(Component.literal("Режим должен быть aas или invasion")); return 0;
+                                }
+                                MapConfig map = MapRegistry.get(mn);
+                                if (map == null) { ctx.getSource().sendFailure(Component.literal("Карта не найдена")); return 0; }
+                                // Force map + mode: simulate vote results
+                                pendingMapName = mn;
+                                modeVoteWinner = md;
+                                LobbyMod.serverBroadcast("§e[PWP] §aКарта: §e" + map.displayName + " §aРежим: §e" + md.toUpperCase());
+                                List<String> available = getAvailableFactions(map);
+                                if (available.size() >= 2) {
+                                    FactionVotingManager.startFactionVoting(mn, available);
+                                } else {
+                                    startMatchAfterFactionVote(map, "usa", "russia");
+                                }
+                                ctx.getSource().sendSuccess(() -> Component.literal("§aКарта+режим форсированы, голосование за фракции"), false);
+                                return Command.SINGLE_SUCCESS;
+                            })
+                            // /pwp server start <map> <mode> <blue> <red> — instant match
+                            .then(Commands.argument("blue", com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .then(Commands.argument("red", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                .executes(ctx -> {
+                                    String mn = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "map");
+                                    String md = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "mode");
+                                    String bl = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "blue");
+                                    String re = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "red");
+                                    if (!md.equals("aas") && !md.equals("invasion")) {
+                                        ctx.getSource().sendFailure(Component.literal("Режим: aas или invasion")); return 0;
+                                    }
+                                    MapConfig map = MapRegistry.get(mn);
+                                    if (map == null) { ctx.getSource().sendFailure(Component.literal("Карта не найдена")); return 0; }
+                                    pendingMapName = mn;
+                                    modeVoteWinner = md;
+                                    startMatchAfterFactionVote(map, bl, re);
+                                    ctx.getSource().sendSuccess(() -> Component.literal("§aМатч запущен: " + map.displayName + " (" + bl + " vs " + re + ")"), false);
+                                    return Command.SINGLE_SUCCESS;
+                                }))))))
+                // /pwp server stop
+                .then(Commands.literal("stop")
+                    .executes(ctx -> {
+                        MatchInfo mi = MatchAllocator.getActiveMatch();
+                        if (mi == null) { ctx.getSource().sendFailure(Component.literal("Нет активного матча")); return 0; }
+                        MatchAllocator.requestMatchStop(mi.serverId);
+                        ctx.getSource().sendSuccess(() -> Component.literal("Остановка матча..."), true);
+                        return Command.SINGLE_SUCCESS;
+                    }))
+                // /pwp server stopvote
+                .then(Commands.literal("stopvote")
+                    .executes(ctx -> {
+                        boolean any = false;
+                        if (VotingManager.isActive()) { VotingManager.stopVoting(); any = true; }
+                        if (modeVoteActive) { modeVoteActive = false; modeVotes.clear(); any = true; }
+                        if (FactionVotingManager.isActive()) { FactionVotingManager.stop(); any = true; }
+                        if (any) {
+                            serverBroadcast("§e[PWP] §fГолосование остановлено администратором");
+                            ctx.getSource().sendSuccess(() -> Component.literal("Голосование остановлено"), true);
+                        } else {
+                            ctx.getSource().sendFailure(Component.literal("Нет активного голосования"));
+                        }
+                        return Command.SINGLE_SUCCESS;
+                    }))
+                // /pwp server autostart on|off
+                .then(Commands.literal("autostart")
+                    .then(Commands.literal("on").executes(ctx -> {
+                        ServerConfig.setAutoStartEnabled(true);
+                        ctx.getSource().sendSuccess(() -> Component.literal("Авто-старт включён"), true);
+                        return Command.SINGLE_SUCCESS;
+                    }))
+                    .then(Commands.literal("off").executes(ctx -> {
+                        ServerConfig.setAutoStartEnabled(false);
+                        ctx.getSource().sendSuccess(() -> Component.literal("Авто-старт отключён"), true);
                         return Command.SINGLE_SUCCESS;
                     })))
-            .then(Commands.literal("vote")
-                .requires(s -> s.hasPermission(2))
-                .executes(ctx -> {
-                    if (VotingManager.isActive()) {
-                        ctx.getSource().sendFailure(Component.literal("Голосование уже активно"));
-                        return 0;
-                    }
-                    List<MapConfig> votable = MapRegistry.getVotable();
-                    if (votable.isEmpty()) {
-                        ctx.getSource().sendFailure(Component.literal("§cНет карт для голосования! Проверьте папку maps."));
-                        return 0;
-                    }
-                    VotingManager.startVoting();
-                    return Command.SINGLE_SUCCESS;
-                }))
-            .then(Commands.literal("stop")
-                .requires(s -> s.hasPermission(2))
-                .executes(ctx -> {
-                    MatchInfo mi = MatchAllocator.getActiveMatch();
-                    if (mi == null) {
-                        ctx.getSource().sendFailure(Component.literal("Нет активного матча"));
-                        return 0;
-                    }
-                    MatchAllocator.requestMatchStop(mi.serverId);
-                        ctx.getSource().sendSuccess(() -> Component.literal("Остановка матча..."), true);
-                    return Command.SINGLE_SUCCESS;
-                }))
-            .then(Commands.literal("status")
-                .requires(s -> s.hasPermission(2))
-                .executes(ctx -> {
-                    MatchInfo mi = MatchAllocator.getActiveMatch();
-                    if (mi != null) {
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                            "§eМатч: " + mi.displayName + " | " + mi.modeDisplayName +
-                            " | " + mi.blueFaction + " vs " + mi.redFaction +
-                            " | Билеты: " + mi.blueTickets + "/" + mi.redTickets +
-                            " | Фаза: " + mi.phase +
-                            " | Игроки: " + mi.playerCount + "/" + mi.maxPlayers), false);
-                    } else if (VotingManager.isActive()) {
-                        ctx.getSource().sendSuccess(() -> Component.literal(
-                            "§eГолосование активно: " + VotingManager.getRemainingSeconds() + "с осталось"), false);
-                    } else {
-                        ctx.getSource().sendSuccess(() -> Component.literal("§eНет активного матча или голосования"), false);
-                    }
-                    return Command.SINGLE_SUCCESS;
-                }))
+                // /pwp server maxmatches <n>
+                .then(Commands.literal("maxmatches")
+                    .then(Commands.argument("count", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                        .executes(ctx -> {
+                            int n = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "count");
+                            ServerConfig.setMaxMatches(n);
+                            ctx.getSource().sendSuccess(() -> Component.literal("Макс. матчей: " + n), true);
+                            return Command.SINGLE_SUCCESS;
+                        })))
+                // /pwp server status
+                .then(Commands.literal("status")
+                    .executes(ctx -> {
+                        MatchInfo mi = MatchAllocator.getActiveMatch();
+                        StringBuffer sb = new StringBuffer();
+                        sb.append("§e[PWP] §fСтатус сервера:\n");
+                        sb.append("§fМатчей: §e" + MatchAllocator.getActiveMatches().size() + "§7/" + ServerConfig.getMaxMatches() + "\n");
+                        sb.append("§fАвто-старт: §e" + (ServerConfig.isAutoStartEnabled() ? "ВКЛ" : "ВЫКЛ") + "\n");
+                        if (mi != null) {
+                            sb.append("§fАктивный матч: §e" + mi.displayName + "§7 (" + mi.blueFaction + " vs " + mi.redFaction + ")\n");
+                            sb.append("§fФаза: §e" + mi.phase + " §fИгроки: §e" + mi.playerCount + "§7/" + mi.maxPlayers);
+                        } else if (VotingManager.isActive()) {
+                            sb.append("§fГолосование за карту: §e" + VotingManager.getRemainingSeconds() + "с");
+                        } else if (modeVoteActive) {
+                            sb.append("§fГолосование за режим: §e" + getModeVoteRemainingSeconds() + "с");
+                        } else if (FactionVotingManager.isActive()) {
+                            sb.append("§fГолосование за фракции: §e" + FactionVotingManager.getRemainingSeconds() + "с");
+                        } else {
+                            sb.append("§fНет активного матча или голосования");
+                        }
+                        ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
+                        return Command.SINGLE_SUCCESS;
+                    })))
             .executes(ctx -> {
                 ServerPlayer player = ctx.getSource().getPlayerOrException();
 
@@ -653,6 +720,12 @@ public class LobbyMod {
             pendingMapName = null;
             modeVotes.clear();
         }
+    }
+
+    private static List<String> getAvailableFactions(MapConfig map) {
+        return (map.availableFactions != null && !map.availableFactions.isEmpty())
+                ? new ArrayList<>(map.availableFactions)
+                : new ArrayList<>(Arrays.asList("ukraine", "russia", "usa", "nato", "insurgency", "pmc"));
     }
 
     public static void startMatchAfterFactionVote(MapConfig map, String blueFaction, String redFaction) {

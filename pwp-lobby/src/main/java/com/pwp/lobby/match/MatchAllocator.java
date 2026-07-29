@@ -3,6 +3,7 @@ package com.pwp.lobby.match;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.LobbyMod;
+import com.pwp.lobby.ServerConfig;
 import com.pwp.lobby.ServerManager;
 import com.pwp.lobby.VotingManager;
 import com.pwp.lobby.maps.MapConfig;
@@ -63,9 +64,9 @@ public class MatchAllocator {
             log.info("Not enough players: {}/{}", lobbyPlayers.size(), minPlayersToStart);
             return;
         }
-        if (hasActiveMatch()) {
-            LobbyMod.serverBroadcast("§e[PWP] §cМатч уже запущен!");
-            log.info("A match is already running");
+        if (activeMatches.size() >= ServerConfig.getMaxMatches()) {
+            LobbyMod.serverBroadcast("§e[PWP] §cДостигнут лимит активных матчей (" + ServerConfig.getMaxMatches() + ")");
+            log.info("Max matches reached: {}/{}", activeMatches.size(), ServerConfig.getMaxMatches());
             return;
         }
 
@@ -241,7 +242,8 @@ public class MatchAllocator {
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
         LobbyMod.sendMatchListUpdateToAll();
-        if (!hasActiveMatch() && !lobbyPlayers.isEmpty() && !VotingManager.isActive()) {
+        if (!hasActiveMatch() && !lobbyPlayers.isEmpty() && !VotingManager.isActive()
+            && ServerConfig.isAutoStartEnabled()) {
             VotingManager.startVoting();
         }
     }

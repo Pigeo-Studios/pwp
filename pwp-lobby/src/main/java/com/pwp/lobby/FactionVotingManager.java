@@ -54,6 +54,12 @@ public class FactionVotingManager {
         return Math.max(0, durationSec - (int)((System.currentTimeMillis() - startTime) / 1000));
     }
 
+    public static void stop() {
+        active = false;
+        finished = false;
+        votes.clear();
+    }
+
     private static void finishFactionVote() {
         if (finished) return;
         finished = true;
