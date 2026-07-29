@@ -74,8 +74,9 @@ public class VoteTabRenderer {
         }
         selMap = -1; votMap = -1;
         recalc(mapOpts);
+        phaseStartTime = System.currentTimeMillis() - (120 - pkt.remainingSeconds) * 1000L;
         if (currentPhase == Phase.IDLE || currentPhase == Phase.FINISHED) xition(Phase.MAP);
-        else { currentPhase = Phase.MAP; phaseStartTime = System.currentTimeMillis(); }
+        else currentPhase = Phase.MAP;
     }
 
     public void updateVoteData(OpenVotingScreenPacket pkt) {
@@ -93,6 +94,7 @@ public class VoteTabRenderer {
         }
         selMode = -1; votMode = -1;
         recalc(modeOpts);
+        phaseStartTime = System.currentTimeMillis() - (120 - pkt.remainingSeconds) * 1000L;
         xition(Phase.MODE);
     }
 
@@ -121,8 +123,20 @@ public class VoteTabRenderer {
             factOpts.add(new Option(n, dn, null, null, null, v, 0xFFA53D3D, flag(n)));
         }
         selFact1 = -1; selFact2 = -1; votFact1 = -1; votFact2 = -1;
-        recalc(factOpts);
+        factionPerTeamBars();
+        phaseStartTime = System.currentTimeMillis() - (120 - pkt.remainingSeconds) * 1000L;
         xition(Phase.FACTION);
+    }
+
+    private void factionPerTeamBars() {
+        for (int col = 0; col < 2; col++) {
+            int start = col * 3, teamTotal = 0;
+            for (int r = 0; r < 3; r++) teamTotal += factOpts.get(start + r).votes;
+            for (int r = 0; r < 3; r++) {
+                float prog = teamTotal > 0 ? (float) factOpts.get(start + r).votes / teamTotal : 0;
+                factOpts.get(start + r).bar.setProgress(prog);
+            }
+        }
     }
 
     public void updateFactionVoteData(OpenFactionVotePacket pkt) {
@@ -131,7 +145,7 @@ public class VoteTabRenderer {
                           : (i-3 < pkt.team2Votes.length ? pkt.team2Votes[i-3] : 0);
             factOpts.get(i).votes = v;
         }
-        recalc(factOpts);
+        factionPerTeamBars();
     }
 
     private static ResourceLocation flag(String n) { return n != null && !n.isEmpty() ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png") : null; }
@@ -165,7 +179,7 @@ public class VoteTabRenderer {
                 renderPhase(g, sw, sh, mx, my, transitionTo, now);
                 RenderSystem.setShaderColor(1,1,1,1);
             }
-            if (t >= 1) { transitioning = false; currentPhase = transitionTo; phaseStartTime = now; }
+            if (t >= 1) { transitioning = false; currentPhase = transitionTo; }
         } else { renderPhase(g, sw, sh, mx, my, currentPhase, now); renderAfter(g, sw, sh, mx, my, now); }
     }
 
@@ -317,8 +331,7 @@ public class VoteTabRenderer {
         g.drawString(f, Component.literal(t1), gx+cw/2-f.width(t1)/2, gy-12, 0xFF3D6FA5, false);
         g.drawString(f, Component.literal(t2), gx+cw+gap+cw/2-f.width(t2)/2, gy-12, 0xFFA53D3D, false);
 
-        // Smooth recalc for per-card bars
-        recalc(factOpts);
+        factionPerTeamBars();
 
         // Cards: 3 per column
         hoveredCard = -1;
@@ -330,7 +343,7 @@ public class VoteTabRenderer {
             boolean hv = mx>=cx&&mx<=cx+cw&&my>=cy&&my<=cy+ch;
             if (hv) hoveredCard = i;
             boolean sel = (col == 0) ? (row == selFact1) : (row == selFact2);
-            renderFactionCard(g, cx, cy, cw, ch, factOpts.get(i), sel, hv, now, i);
+            renderFactionCard(g, cx, cy, cw, ch, factOpts.get(i), sel, hv, now);
         }
 
         // Vote button
@@ -347,7 +360,7 @@ public class VoteTabRenderer {
         g.drawString(f, Component.literal(bt), bx+bw/2-f.width(bt)/2, by+7, canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM, false);
     }
 
-    private void renderFactionCard(GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now, int cardIndex) {
+    private void renderFactionCard(GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now) {
         var f = PWPTheme.Fonts.display();
         PWPCard.State st = sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT);
         PWPCard.render(g, x, y, w, h, st);
@@ -365,14 +378,7 @@ public class VoteTabRenderer {
         g.drawString(f, Component.literal(n), x+w/2-f.width(n)/2, cy, 0xFFFFFF, false);
         cy += 11;
 
-        // Progress bar: relative to team total, not global
-        int teamStart = (cardIndex < 3) ? 0 : 3;
-        int teamTotal = 0;
-        for (int i = teamStart; i < teamStart + 3; i++) teamTotal += factOpts.get(i).votes;
-        float prog = teamTotal > 0 ? (float) o.votes / teamTotal : 0;
-        int bw = w - 16;
-        g.fill(x+8, cy, x+8+bw, cy+5, PWPTheme.Styles.Progress.BG);
-        if (prog > 0.01f) { int fw = Math.max(2, (int)(bw*prog)); g.fill(x+8, cy, x+8+fw, cy+5, sel ? PWPTheme.Colors.ACCENT : o.color); }
+        o.bar.render(g, x+8, cy, w-16, 5, now, sel ? PWPTheme.Colors.ACCENT : o.color);
         cy += 8;
         String vs = o.votes+" голос"+suffix(o.votes);
         g.drawString(f, Component.literal(vs), x+w/2-f.width(vs)/2, cy, PWPTheme.Colors.TEXT_DIM, false);
@@ -597,7 +603,7 @@ public class VoteTabRenderer {
                         if (conn != null) conn.sendCommand("votefaction " + blueId + " " + redId);
                     } catch (Exception ignored) {}
                     votFact1 = selFact1; votFact2 = selFact2;
-                    recalc(factOpts);
+                    factionPerTeamBars();
                     return true;
                 } else {
                     int sel = currentPhase==Phase.MAP ? selMap : selMode;
