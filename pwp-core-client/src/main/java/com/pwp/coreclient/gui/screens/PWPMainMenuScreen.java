@@ -21,6 +21,11 @@ public class PWPMainMenuScreen extends Screen {
     private PWPButton settingsBtn;
     private PWPButton quitBtn;
 
+    private boolean replayModAvailable;
+    private boolean replayRecording;
+    private int replayTextX, replayTextY, replayTextW, replayTextH;
+    private boolean replayHovered;
+
     public PWPMainMenuScreen() {
         super(Component.literal("PWP"));
         openTime = System.currentTimeMillis();
@@ -29,6 +34,8 @@ public class PWPMainMenuScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+
+        detectReplayMod();
 
         int cx = width / 2;
         int btnW = Math.min(width / 4, 220);
@@ -76,6 +83,22 @@ public class PWPMainMenuScreen extends Screen {
         ));
     }
 
+    private void detectReplayMod() {
+        replayModAvailable = false;
+        try {
+            Class.forName("com.replaymod.replay.ReplayModReplay");
+            Class<?> rc = Class.forName("com.replaymod.core.ReplayMod");
+            Object mod = rc.getField("instance").get(null);
+            Object reg = rc.getMethod("getSettingsRegistry").invoke(mod);
+            Class<?> sc = Class.forName("com.replaymod.recording.Setting");
+            Object key = sc.getField("RECORD_SERVER").get(null);
+            replayRecording = (boolean) reg.getClass()
+                .getMethod("get", key.getClass().getSuperclass())
+                .invoke(reg, key);
+            replayModAvailable = true;
+        } catch (Exception ignored) {}
+    }
+
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         renderBackground(gui);
@@ -89,6 +112,10 @@ public class PWPMainMenuScreen extends Screen {
         }
 
         renderButtons(gui, mouseX, mouseY, partialTick, elapsed);
+
+        if (replayModAvailable) {
+            renderReplayToggle(gui, mouseX, mouseY);
+        }
     }
 
     @Override
@@ -101,6 +128,15 @@ public class PWPMainMenuScreen extends Screen {
     @Override
     public boolean shouldCloseOnEsc() {
         return false;
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0 && replayModAvailable && replayHovered) {
+            toggleReplayRecording();
+            return true;
+        }
+        return super.mouseClicked(mx, my, button);
     }
 
     private void renderLogo(GuiGraphics gui, int cx, int y, float fade) {
@@ -138,6 +174,39 @@ public class PWPMainMenuScreen extends Screen {
             btn.render(gui, mouseX, mouseY, partialTick);
             pose.popPose();
         }
+    }
+
+    private void renderReplayToggle(GuiGraphics gui, int mx, int my) {
+        var font = PWPTheme.Fonts.display();
+        String text = "REPLAY " + (replayRecording ? "ON" : "OFF");
+        int tw = font.width(text);
+        int tx = width - 16 - tw;
+        int ty = 14;
+        boolean hv = mx >= tx && mx <= tx + tw && my >= ty && my <= ty + 10;
+        int color;
+        if (replayRecording) {
+            color = hv ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY;
+        } else {
+            color = hv ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
+        }
+        gui.drawString(font, Component.literal(text), tx, ty, color, false);
+        replayTextX = tx; replayTextY = ty; replayTextW = tw; replayTextH = 10;
+        replayHovered = hv;
+    }
+
+    private void toggleReplayRecording() {
+        try {
+            Class<?> rc = Class.forName("com.replaymod.core.ReplayMod");
+            Object mod = rc.getField("instance").get(null);
+            Object reg = rc.getMethod("getSettingsRegistry").invoke(mod);
+            Class<?> sc = Class.forName("com.replaymod.recording.Setting");
+            Object key = sc.getField("RECORD_SERVER").get(null);
+            replayRecording = !replayRecording;
+            reg.getClass()
+                .getMethod("set", key.getClass().getSuperclass(), Object.class)
+                .invoke(reg, key, replayRecording);
+            reg.getClass().getMethod("save").invoke(reg);
+        } catch (Exception ignored) {}
     }
 
     private static float animFade(float elapsed, long delay, long duration) {
