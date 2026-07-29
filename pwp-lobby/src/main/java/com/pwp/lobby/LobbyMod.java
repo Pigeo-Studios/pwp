@@ -731,7 +731,6 @@ public class LobbyMod {
     public static void startMatchAfterFactionVote(MapConfig map, String blueFaction, String redFaction) {
         boolean isInvasion = modeVoteWinner.equals("invasion");
         boolean invasionDefenderIsRed = true;
-        if (isInvasion) invasionDefenderIsRed = new Random().nextBoolean();
 
         int blueTickets = map.teams.BLUE.tickets;
         int redTickets = map.teams.RED.tickets;
