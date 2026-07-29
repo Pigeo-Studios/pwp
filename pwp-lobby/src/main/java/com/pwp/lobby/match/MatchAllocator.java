@@ -2,6 +2,7 @@ package com.pwp.lobby.match;
 
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.lobby.FactionVotingManager;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerConfig;
 import com.pwp.lobby.ServerManager;
@@ -205,6 +206,8 @@ public class MatchAllocator {
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!lobbyPlayers.contains(player.getStringUUID())) continue;
+            java.util.UUID puid = player.getUUID();
+            if (!VotingManager.hasVoted(puid) && !LobbyMod.hasVotedMode(puid) && !FactionVotingManager.hasVoted(puid)) continue;
             player.sendSystemMessage(
                     Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."),
                     false);

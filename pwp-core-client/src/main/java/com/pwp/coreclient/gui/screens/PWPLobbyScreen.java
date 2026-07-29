@@ -50,26 +50,35 @@ public class PWPLobbyScreen extends Screen {
         openTime = System.currentTimeMillis();
         instance = this;
     }
+    @Override
+    public void onClose() {
+        super.onClose();
+        instance = null;
+    }
+
     public static void openMatch(OpenMatchScreenPacket pkt) {
+        ensureOpenOrCreate(s -> { s.matchData = pkt; s.playTab.setData(pkt, s.listData); });
+    }
+
+    private static void ensureOpenOrCreate(java.util.function.Consumer<PWPLobbyScreen> init) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-        if (instance != null) { instance.matchData = pkt; instance.playTab.setData(pkt, instance.listData); }
-        else { PWPLobbyScreen s = new PWPLobbyScreen(); s.matchData = pkt; mc.setScreen(s); }
+        if (instance == null || instance.isMinecraftScreenInvalid()) {
+            PWPLobbyScreen s = new PWPLobbyScreen();
+            init.accept(s);
+            mc.setScreen(s);
+        } else {
+            init.accept(instance);
+        }
+    }
+
+    private boolean isMinecraftScreenInvalid() {
+        return Minecraft.getInstance().screen != this;
     }
 
     public static void openVote(OpenVotingScreenPacket pkt) {
         PWPToastManager.show("Голосование за карту началось!", PWPToastManager.ToastType.INFO);
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        if (instance != null) {
-            instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.initVoteData(pkt);
-        } else {
-            PWPLobbyScreen s = new PWPLobbyScreen();
-            s.currentTab = LobbyTab.GOLOSOVANIE;
-            s.voteTab.initVoteData(pkt);
-            mc.setScreen(s);
-        }
+        ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initVoteData(pkt); });
     }
 
     public static void updateVote(OpenVotingScreenPacket pkt) {
@@ -79,45 +88,16 @@ public class PWPLobbyScreen extends Screen {
 
     public static void openModeVote(OpenModeVotePacket pkt) {
         PWPToastManager.show("Голосование за режим!", PWPToastManager.ToastType.INFO);
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        if (instance != null) {
-            instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.initModeVoteData(pkt);
-        } else {
-            PWPLobbyScreen s = new PWPLobbyScreen();
-            s.currentTab = LobbyTab.GOLOSOVANIE;
-            s.voteTab.initModeVoteData(pkt);
-            mc.setScreen(s);
-        }
+        ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initModeVoteData(pkt); });
     }
 
     public static void openFactionVote(OpenFactionVotePacket pkt) {
         PWPToastManager.show("Голосование за фракции!", PWPToastManager.ToastType.INFO);
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        if (instance != null) {
-            instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.initFactionVoteData(pkt);
-        } else {
-            PWPLobbyScreen s = new PWPLobbyScreen();
-            s.currentTab = LobbyTab.GOLOSOVANIE;
-            s.voteTab.initFactionVoteData(pkt);
-            mc.setScreen(s);
-        }
+        ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initFactionVoteData(pkt); });
     }
 
     public static void openList(OpenMatchListScreenPacket pkt) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        if (instance != null) {
-            instance.listData = pkt;
-            instance.playTab.setData(instance.matchData, pkt);
-        } else {
-            PWPLobbyScreen s = new PWPLobbyScreen();
-            s.listData = pkt;
-            mc.setScreen(s);
-        }
+        ensureOpenOrCreate(s -> { s.listData = pkt; s.playTab.setData(null, pkt); });
     }
 
     public static void updateList(OpenMatchListScreenPacket pkt) {

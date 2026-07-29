@@ -21,6 +21,7 @@ public class FactionVotingManager {
     private static List<String> availableFactions;
     private static final Map<UUID, String[]> votes = new HashMap<>();
 
+    public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
     public static boolean isActive() { return active; }
 
     public static void startFactionVoting(String map, List<String> available) {

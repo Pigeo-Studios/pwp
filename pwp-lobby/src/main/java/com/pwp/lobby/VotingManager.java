@@ -183,6 +183,7 @@ public class VotingManager {
         lastBroadcastedRemaining = -1;
     }
 
+    public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
     public static boolean isActive() { return active; }
     public static boolean isFinished() { return finished; }
     public static int getRemainingSeconds() {

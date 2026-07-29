@@ -609,6 +609,8 @@ public class VoteTabRenderer {
                         var conn = Minecraft.getInstance().player.connection;
                         if (conn != null) conn.sendCommand("votefaction " + blueId + " " + redId);
                     } catch (Exception ignored) {}
+                    votFact1 = selFact1; votFact2 = selFact2;
+                    recalc(factOpts);
                     return true;
                 } else {
                     int sel = currentPhase==Phase.MAP ? selMap : selMode;
@@ -622,6 +624,8 @@ public class VoteTabRenderer {
                             var conn = Minecraft.getInstance().player.connection;
                             if (conn != null) conn.sendCommand(cmd + cmdId);
                         } catch (Exception ignored) {}
+                        if (currentPhase == Phase.MAP) { votMap = sel; recalc(mapOpts); }
+                        else { votMode = sel; recalc(modeOpts); }
                         return true;
                     }
                 }
