@@ -78,22 +78,32 @@ public class PWPLobbyScreen extends Screen {
 
     public static void openVote(OpenVotingScreenPacket pkt) {
         PWPToastManager.show("Голосование за карту началось!", PWPToastManager.ToastType.INFO);
-        ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initVoteData(pkt); });
-    }
-
-    public static void updateVote(OpenVotingScreenPacket pkt) {
-        if (instance == null) return;
-        instance.voteTab.updateVoteData(pkt);
+        if (instance == null || instance.isMinecraftScreenInvalid()) {
+            ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initVoteData(pkt); });
+        } else {
+            instance.currentTab = LobbyTab.GOLOSOVANIE;
+            instance.voteTab.updateVoteData(pkt);
+        }
     }
 
     public static void openModeVote(OpenModeVotePacket pkt) {
         PWPToastManager.show("Голосование за режим!", PWPToastManager.ToastType.INFO);
-        ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initModeVoteData(pkt); });
+        if (instance == null || instance.isMinecraftScreenInvalid()) {
+            ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initModeVoteData(pkt); });
+        } else {
+            instance.currentTab = LobbyTab.GOLOSOVANIE;
+            instance.voteTab.updateModeVoteData(pkt);
+        }
     }
 
     public static void openFactionVote(OpenFactionVotePacket pkt) {
         PWPToastManager.show("Голосование за фракции!", PWPToastManager.ToastType.INFO);
-        ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initFactionVoteData(pkt); });
+        if (instance == null || instance.isMinecraftScreenInvalid()) {
+            ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initFactionVoteData(pkt); });
+        } else {
+            instance.currentTab = LobbyTab.GOLOSOVANIE;
+            instance.voteTab.updateFactionVoteData(pkt);
+        }
     }
 
     public static void openList(OpenMatchListScreenPacket pkt) {

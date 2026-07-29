@@ -259,18 +259,10 @@ public class VoteTabRenderer {
         var f = PWPTheme.Fonts.display();
         g.drawString(f, Component.literal("ГОЛОСОВАНИЕ"), sw/2 - f.width("ГОЛОСОВАНИЕ")/2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
         g.fill(sw/2 - 60, 96, sw/2 + 60, 97, PWPTheme.Colors.ACCENT);
-        float pulse = 0.5f + 0.5f * (float)Math.sin(now/800.0*Math.PI*2);
-        int a = (int)(80 + 175*pulse);
-        int c = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, a);
-        String s = "НЕ АКТИВНО";
-        g.drawString(f, Component.literal(s), sw/2 - f.width(s)/2, 130, c, false);
-        String h = "Голосование начнётся после завершения текущего матча";
+        String s = "ОЖИДАНИЕ ГОЛОСОВАНИЯ";
+        g.drawString(f, Component.literal(s), sw/2 - f.width(s)/2, 130, PWPTheme.Colors.TEXT_SECONDARY, false);
+        String h = "Голосование начнётся автоматически";
         g.drawString(f, Component.literal(h), sw/2 - f.width(h)/2, 150, PWPTheme.Colors.TEXT_DIM, false);
-        int bw = 180, bh = 28, bx = (sw-bw)/2, by = 180;
-        boolean bhv = mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh;
-        RoundedRect.fill(g, bx, by, bw, bh, 3, bhv ? PWPTheme.Colors.ACCENT_SOFT : PWPTheme.Colors.ACCENT);
-        RoundedRect.border(g, bx, by, bw, bh, 3, 1, PWPTheme.Colors.ACCENT);
-        g.drawString(f, Component.literal("НАЧАТЬ ГОЛОСОВАНИЕ"), bx+bw/2-f.width("НАЧАТЬ ГОЛОСОВАНИЕ")/2, by+8, 0xFF0A0C0E, false);
     }
 
     private void voteGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now, String title, List<Option> opts, int sel, boolean factions) {
@@ -338,7 +330,7 @@ public class VoteTabRenderer {
             boolean hv = mx>=cx&&mx<=cx+cw&&my>=cy&&my<=cy+ch;
             if (hv) hoveredCard = i;
             boolean sel = (col == 0) ? (row == selFact1) : (row == selFact2);
-            renderFactionCard(g, cx, cy, cw, ch, factOpts.get(i), sel, hv, now);
+            renderFactionCard(g, cx, cy, cw, ch, factOpts.get(i), sel, hv, now, i);
         }
 
         // Vote button
@@ -355,7 +347,7 @@ public class VoteTabRenderer {
         g.drawString(f, Component.literal(bt), bx+bw/2-f.width(bt)/2, by+7, canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM, false);
     }
 
-    private void renderFactionCard(GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now) {
+    private void renderFactionCard(GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now, int cardIndex) {
         var f = PWPTheme.Fonts.display();
         PWPCard.State st = sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT);
         PWPCard.render(g, x, y, w, h, st);
@@ -373,7 +365,14 @@ public class VoteTabRenderer {
         g.drawString(f, Component.literal(n), x+w/2-f.width(n)/2, cy, 0xFFFFFF, false);
         cy += 11;
 
-        o.bar.render(g, x+8, cy, w-16, 5, now, sel ? PWPTheme.Colors.ACCENT : o.color);
+        // Progress bar: relative to team total, not global
+        int teamStart = (cardIndex < 3) ? 0 : 3;
+        int teamTotal = 0;
+        for (int i = teamStart; i < teamStart + 3; i++) teamTotal += factOpts.get(i).votes;
+        float prog = teamTotal > 0 ? (float) o.votes / teamTotal : 0;
+        int bw = w - 16;
+        g.fill(x+8, cy, x+8+bw, cy+5, PWPTheme.Styles.Progress.BG);
+        if (prog > 0.01f) { int fw = Math.max(2, (int)(bw*prog)); g.fill(x+8, cy, x+8+fw, cy+5, sel ? PWPTheme.Colors.ACCENT : o.color); }
         cy += 8;
         String vs = o.votes+" голос"+suffix(o.votes);
         g.drawString(f, Component.literal(vs), x+w/2-f.width(vs)/2, cy, PWPTheme.Colors.TEXT_DIM, false);
@@ -568,18 +567,6 @@ public class VoteTabRenderer {
     public boolean mouseClicked(double mx, double my) {
         long now = System.currentTimeMillis();
         if (transitioning) return false;
-
-        // IDLE -> start button with crossfade
-        if (currentPhase == Phase.IDLE) {
-            int bw = 180, bh = 28, bx = (screenWidth - bw) / 2, by = 180;
-            if (mx >= bx && mx <= bx+bw && my >= by && my <= by+bh) {
-                selMap = -1; votMap = -1; selMode = -1; votMode = -1;
-                selFact1 = -1; selFact2 = -1; votFact1 = -1; votFact2 = -1;
-                xition(Phase.MAP);
-                return true;
-            }
-            return false;
-        }
 
         // Card clicks
         if (hoveredCard >= 0) {
