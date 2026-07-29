@@ -63,18 +63,18 @@ public class PWPLobbyScreen extends Screen {
         if (mc.player == null) return;
         if (instance != null) {
             instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.setVoteData(pkt);
+            instance.voteTab.initVoteData(pkt);
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.currentTab = LobbyTab.GOLOSOVANIE;
-            s.voteTab.setVoteData(pkt);
+            s.voteTab.initVoteData(pkt);
             mc.setScreen(s);
         }
     }
 
     public static void updateVote(OpenVotingScreenPacket pkt) {
         if (instance == null) return;
-        instance.voteTab.setVoteData(pkt);
+        instance.voteTab.updateVoteData(pkt);
     }
 
     public static void openModeVote(OpenModeVotePacket pkt) {
@@ -83,11 +83,11 @@ public class PWPLobbyScreen extends Screen {
         if (mc.player == null) return;
         if (instance != null) {
             instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.setModeVoteData(pkt);
+            instance.voteTab.initModeVoteData(pkt);
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.currentTab = LobbyTab.GOLOSOVANIE;
-            s.voteTab.setModeVoteData(pkt);
+            s.voteTab.initModeVoteData(pkt);
             mc.setScreen(s);
         }
     }
@@ -98,11 +98,11 @@ public class PWPLobbyScreen extends Screen {
         if (mc.player == null) return;
         if (instance != null) {
             instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.setFactionVoteData(pkt);
+            instance.voteTab.initFactionVoteData(pkt);
         } else {
             PWPLobbyScreen s = new PWPLobbyScreen();
             s.currentTab = LobbyTab.GOLOSOVANIE;
-            s.voteTab.setFactionVoteData(pkt);
+            s.voteTab.initFactionVoteData(pkt);
             mc.setScreen(s);
         }
     }
@@ -250,6 +250,23 @@ public class PWPLobbyScreen extends Screen {
                     }
                 }
                 return true;
+            }
+            // Tab content clicks
+            if (currentTab == LobbyTab.IGRA) {
+                int hi = playTab.getHoveredIndex();
+                if (hi >= 0) {
+                    int sid = playTab.getServerId(hi);
+                    if (sid >= 0) {
+                        PacketHandler.INSTANCE.sendToServer(new JoinMatchServerPacket(sid));
+                        return true;
+                    }
+                }
+            }
+            if (currentTab == LobbyTab.GOLOSOVANIE) {
+                return voteTab.mouseClicked(mx, my);
+            }
+            if (currentTab == LobbyTab.LIDERY) {
+                return leaderTab.mouseClicked(mx, my);
             }
         }
         return super.mouseClicked(mx, my, button);

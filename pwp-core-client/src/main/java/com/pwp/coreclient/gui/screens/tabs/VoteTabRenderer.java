@@ -21,21 +21,22 @@ public class VoteTabRenderer {
     private enum Phase { IDLE, MAP, MODE, FACTION, FINISHED }
 
     private static class Option {
-        String name, desc, f1, f2;
+        String id, name, desc, f1, f2, worldPath;
         int votes, color;
+        int remainingSec;
         PWPProgressBar bar;
         ResourceLocation icon;
         java.util.List<ResourceLocation> teamFlags;
 
-        Option(String name, String desc, String f1, String f2, int votes, int color) {
-            this(name, desc, f1, f2, votes, color, null, null);
+        Option(String id, String name, String desc, String f1, String f2, int votes, int color) {
+            this(id, name, desc, f1, f2, votes, color, null, null, null);
         }
-        Option(String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon) {
-            this(name, desc, f1, f2, votes, color, icon, null);
+        Option(String id, String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon) {
+            this(id, name, desc, f1, f2, votes, color, icon, null, null);
         }
-        Option(String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon, java.util.List<ResourceLocation> teamFlags) {
-            this.name = name; this.desc = desc; this.f1 = f1; this.f2 = f2;
-            this.votes = votes; this.color = color; this.icon = icon; this.teamFlags = teamFlags;
+        Option(String id, String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon, String worldPath, java.util.List<ResourceLocation> teamFlags) {
+            this.id = id; this.name = name; this.desc = desc; this.f1 = f1; this.f2 = f2;
+            this.votes = votes; this.color = color; this.icon = icon; this.worldPath = worldPath; this.teamFlags = teamFlags;
             this.bar = new PWPProgressBar();
         }
     }
@@ -63,12 +64,13 @@ public class VoteTabRenderer {
 
     public VoteTabRenderer() {}
 
-    public void setVoteData(OpenVotingScreenPacket pkt) {
+    public void initVoteData(OpenVotingScreenPacket pkt) {
         mapOpts.clear();
         for (int i = 0; i < pkt.mapNames.length; i++) {
-            mapOpts.add(new Option(pkt.mapDisplayNames[i], pkt.mapDescriptions[i],
+            mapOpts.add(new Option(pkt.mapNames[i], pkt.mapDisplayNames[i], pkt.mapDescriptions[i],
                 pkt.blueFactions[i], pkt.redFactions[i],
-                pkt.voteCounts[i], 0xFF8B6B3D + i * 0x112233));
+                pkt.voteCounts[i], 0xFF8B6B3D + i * 0x112233, null,
+                i < pkt.worldPaths.length ? pkt.worldPaths[i] : null, null));
         }
         selMap = -1; votMap = -1;
         recalc(mapOpts);
@@ -76,10 +78,17 @@ public class VoteTabRenderer {
         else { currentPhase = Phase.MAP; phaseStartTime = System.currentTimeMillis(); }
     }
 
-    public void setModeVoteData(OpenModeVotePacket pkt) {
+    public void updateVoteData(OpenVotingScreenPacket pkt) {
+        for (int i = 0; i < pkt.mapNames.length && i < mapOpts.size(); i++) {
+            mapOpts.get(i).votes = pkt.voteCounts[i];
+        }
+        recalc(mapOpts);
+    }
+
+    public void initModeVoteData(OpenModeVotePacket pkt) {
         modeOpts.clear();
         for (int i = 0; i < pkt.modeNames.length; i++) {
-            modeOpts.add(new Option(pkt.modeDisplayNames[i], pkt.modeDescriptions[i],
+            modeOpts.add(new Option(pkt.modeNames[i], pkt.modeDisplayNames[i], pkt.modeDescriptions[i],
                 null, null, pkt.voteCounts[i], i == 0 ? 0xFFC8812A : 0xFF3D6FA5));
         }
         selMode = -1; votMode = -1;
@@ -87,7 +96,14 @@ public class VoteTabRenderer {
         xition(Phase.MODE);
     }
 
-    public void setFactionVoteData(OpenFactionVotePacket pkt) {
+    public void updateModeVoteData(OpenModeVotePacket pkt) {
+        for (int i = 0; i < pkt.modeNames.length && i < modeOpts.size(); i++) {
+            modeOpts.get(i).votes = pkt.voteCounts[i];
+        }
+        recalc(modeOpts);
+    }
+
+    public void initFactionVoteData(OpenFactionVotePacket pkt) {
         factOpts.clear();
         java.util.Map<String,String> fnames = new java.util.HashMap<>();
         fnames.put("usa","США"); fnames.put("ukraine","Украина"); fnames.put("nato","НАТО");
@@ -95,20 +111,36 @@ public class VoteTabRenderer {
         for (int i = 0; i < 3; i++) {
             String n = pkt.team1Factions != null && i < pkt.team1Factions.length ? pkt.team1Factions[i] : "";
             int v = pkt.team1Votes != null && i < pkt.team1Votes.length ? pkt.team1Votes[i] : 0;
-            factOpts.add(new Option(fnames.getOrDefault(n, n.toUpperCase()), null, null, null, v, 0xFF3D6FA5, flag(n)));
+            String dn = fnames.getOrDefault(n, n.toUpperCase());
+            factOpts.add(new Option(n, dn, null, null, null, v, 0xFF3D6FA5, flag(n)));
         }
         for (int i = 0; i < 3; i++) {
             String n = pkt.team2Factions != null && i < pkt.team2Factions.length ? pkt.team2Factions[i] : "";
             int v = pkt.team2Votes != null && i < pkt.team2Votes.length ? pkt.team2Votes[i] : 0;
-            factOpts.add(new Option(fnames.getOrDefault(n, n.toUpperCase()), null, null, null, v, 0xFFA53D3D, flag(n)));
+            String dn = fnames.getOrDefault(n, n.toUpperCase());
+            factOpts.add(new Option(n, dn, null, null, null, v, 0xFFA53D3D, flag(n)));
         }
         selFact1 = -1; selFact2 = -1; votFact1 = -1; votFact2 = -1;
         recalc(factOpts);
         xition(Phase.FACTION);
     }
 
-    private static ResourceLocation flag(String n) { return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png"); }
+    public void updateFactionVoteData(OpenFactionVotePacket pkt) {
+        for (int i = 0; i < 6 && i < factOpts.size(); i++) {
+            int v = i < 3 ? (i < pkt.team1Votes.length ? pkt.team1Votes[i] : 0)
+                          : (i-3 < pkt.team2Votes.length ? pkt.team2Votes[i-3] : 0);
+            factOpts.get(i).votes = v;
+        }
+        recalc(factOpts);
+    }
+
+    private static ResourceLocation flag(String n) { return n != null && !n.isEmpty() ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png") : null; }
     private static void recalc(List<Option> o) { int t = 0; for (Option x : o) t += x.votes; for (Option x : o) x.bar.setProgress(t > 0 ? (float)x.votes/t : 0); }
+
+    private static ResourceLocation getMapPreview(String worldPath) {
+        if (worldPath == null || worldPath.isEmpty()) return null;
+        return com.pwp.coreclient.gui.screens.PWPLobbyScreen.getTexture("preview", worldPath, "vote_");
+    }
 
     public void render(GuiGraphics g, int sw, int sh, int mx, int my) {
         screenWidth = sw;
@@ -244,6 +276,8 @@ public class VoteTabRenderer {
     private void voteGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now, String title, List<Option> opts, int sel, boolean factions) {
         var f = PWPTheme.Fonts.display();
         long elapsed = now - phaseStartTime, rem = Math.max(0, 120 - elapsed/1000);
+        // Store remaining for faction vote timer reference
+        for (Option o : opts) o.remainingSec = (int)rem;
         g.drawString(f, Component.literal(title), sw/2 - f.width(title)/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
         g.fill(sw/2 - f.width(title)/2 - 4, 94, sw/2 + f.width(title)/2 + 4, 95, PWPTheme.Colors.ACCENT);
         String tmr = String.format("Осталось: %d:%02d", rem/60, rem%60);
@@ -349,8 +383,15 @@ public class VoteTabRenderer {
         var f = PWPTheme.Fonts.display();
         PWPCard.render(g, x, y, w, h, sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT));
         int px = x+8, py = y+8, pw = w-16, ph = h/3;
-        g.fill(px, py, px+pw, py+ph, 0xFF000000);
-        g.fill(px+1, py+1, px+pw-1, py+ph-1, sel ? PWPTheme.Colors.lerp(o.color, PWPTheme.Colors.ACCENT, 0.3f) : o.color);
+        ResourceLocation preview = getMapPreview(o.worldPath);
+        if (preview != null) {
+            g.fill(px, py, px+pw, py+ph, 0xFF000000);
+            int rw = pw - 2, rh = ph - 2;
+            g.blit(preview, px+1, py+1, 0, 0, rw, rh, rw, rh);
+        } else {
+            g.fill(px, py, px+pw, py+ph, 0xFF000000);
+            g.fill(px+1, py+1, px+pw-1, py+ph-1, sel ? PWPTheme.Colors.lerp(o.color, PWPTheme.Colors.ACCENT, 0.3f) : o.color);
+        }
         String t = o.name;
         if (f.width(t) > pw-8) t = f.plainSubstrByWidth(t, pw-12)+"...";
         g.drawString(f, Component.literal(t), px+6, py+ph/2-4, 0xFFFFFFFF, false);
@@ -561,23 +602,26 @@ public class VoteTabRenderer {
                 if (currentPhase == Phase.FACTION) {
                     if ((selFact1 < 0 && votFact1 < 0) || (selFact2 < 0 && votFact2 < 0)) return false;
                     if (selFact1 == votFact1 && selFact2 == votFact2) return false;
-                    String blue = selFact1 >= 0 ? factOpts.get(selFact1).name : "";
-                    String red = selFact2 >= 0 ? factOpts.get(3+selFact2).name : "";
-                    if (blue.isEmpty() || red.isEmpty()) return false;
-                    // send command
-                    var conn = Minecraft.getInstance().player.connection;
-                    if (conn != null) conn.sendCommand("votefaction " + blue + " " + red);
+                    String blueId = selFact1 >= 0 ? factOpts.get(selFact1).id : "";
+                    String redId = selFact2 >= 0 ? factOpts.get(3+selFact2).id : "";
+                    if (blueId.isEmpty() || redId.isEmpty()) return false;
+                    try {
+                        var conn = Minecraft.getInstance().player.connection;
+                        if (conn != null) conn.sendCommand("votefaction " + blueId + " " + redId);
+                    } catch (Exception ignored) {}
                     return true;
                 } else {
                     int sel = currentPhase==Phase.MAP ? selMap : selMode;
                     int vot = currentPhase==Phase.MAP ? votMap : votMode;
                     if (sel >= 0 && sel != vot) {
                         List<Option> opts = currentPhase==Phase.MAP ? mapOpts : modeOpts;
-                        String name = opts.get(sel).name;
+                        String cmdId = opts.get(sel).id;
+                        if (cmdId == null || cmdId.isEmpty()) return false;
                         String cmd = currentPhase == Phase.MAP ? "votemap " : "votemode ";
-                        // send command
-                        var conn = Minecraft.getInstance().player.connection;
-                        if (conn != null) conn.sendCommand(cmd + name);
+                        try {
+                            var conn = Minecraft.getInstance().player.connection;
+                            if (conn != null) conn.sendCommand(cmd + cmdId);
+                        } catch (Exception ignored) {}
                         return true;
                     }
                 }
