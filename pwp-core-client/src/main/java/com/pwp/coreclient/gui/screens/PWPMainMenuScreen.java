@@ -10,13 +10,8 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.OptionsScreen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 
 public class PWPMainMenuScreen extends Screen {
-
-    private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/main_menu.png");
-    private static final int BG_W = 1920;
-    private static final int BG_H = 1080;
 
     private final long openTime;
     private boolean connecting;
@@ -100,15 +95,7 @@ public class PWPMainMenuScreen extends Screen {
     public void renderBackground(GuiGraphics gui) {
         int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-
-        float scale = Math.max((float) w / BG_W, (float) h / BG_H);
-        int drawW = Math.round(BG_W * scale);
-        int drawH = Math.round(BG_H * scale);
-        int drawX = (w - drawW) / 2;
-        int drawY = (h - drawH) / 2;
-
-        gui.blit(BG_TEXTURE, drawX, drawY, drawW, drawH, 0, 0, BG_W, BG_H, BG_W, BG_H);
-        gui.fill(0, 0, w, h, PWPTheme.Colors.BACKGROUND_DIM);
+        PWPRotatingBackground.render(gui, 0, 0, w, h);
     }
 
     @Override

@@ -41,7 +41,7 @@ public class LeaderTabRenderer {
             damage =         getInt(s, "damageDealt", 0);
             healing =        getInt(s, "healingDone", 0);
             playtimeSec =    getInt(s, "playtimeSeconds", 0);
-            score = kills*100 + vehicleKills*150 + captures*200 + revives*75 + damage + healing;
+            score = kills*100 + vehicleKills*150 + captures*200 + revives*75 + healing;
             kd100 = deaths > 0 ? (int)(kills*1000f/deaths) : (kills*1000);
             wr100 = (wins+losses) > 0 ? (int)(wins*10000f/(wins+losses)) : 0;
         }

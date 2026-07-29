@@ -11,6 +11,9 @@ description='''
 Core client mod for PWP. Custom main menu, loading screen, and client utilities.
 '''
 
+[[mixins]]
+config="pwp_core_client.mixins.json"
+
 [[dependencies.pwp_core_client]]
     modId="minecraft"
     mandatory=true

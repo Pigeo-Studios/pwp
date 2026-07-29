@@ -1,6 +1,7 @@
 package com.pwp.coreclient.gui.screens;
 
 import com.pwp.coreclient.gui.animations.Easing;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -60,6 +61,12 @@ public class PWPUtils {
         float alpha = 0.7f + 0.3f * pulse;
         int color = withAlpha(PWPTheme.Colors.TEXT_PRIMARY, (int) (alpha * 255));
         gui.drawCenteredString(font, Component.literal(text), cx, y, color);
+    }
+
+    public static void renderBox(GuiGraphics gui, int cx, int y, int w, int h) {
+        int x = cx - w / 2;
+        RoundedRect.fill(gui, x, y, w, h, PWPTheme.Spacing.RADIUS_SMALL, 0xCC000000);
+        RoundedRect.border(gui, x, y, w, h, PWPTheme.Spacing.RADIUS_SMALL, 1, 0x44FFFFFF);
     }
 
     public static int withAlpha(int color, int alpha) {

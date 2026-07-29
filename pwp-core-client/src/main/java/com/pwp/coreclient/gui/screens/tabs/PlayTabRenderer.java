@@ -24,13 +24,14 @@ public class PlayTabRenderer {
         public int blueTickets;
         public int redTickets;
         public PWPMatchCard.Status status;
+        public int serverId;
 
         public MatchEntry(String title, String mode, String duration, int current, int max,
-                          String blue, String red, int bt, int rt, PWPMatchCard.Status status) {
+                          String blue, String red, int bt, int rt, PWPMatchCard.Status status, int serverId) {
             this.title = title; this.mode = mode; this.duration = duration;
             this.currentPlayers = current; this.maxPlayers = max;
             this.blueFaction = blue; this.redFaction = red;
-            this.blueTickets = bt; this.redTickets = rt; this.status = status;
+            this.blueTickets = bt; this.redTickets = rt; this.status = status; this.serverId = serverId;
         }
     }
 
@@ -47,7 +48,7 @@ public class PlayTabRenderer {
             matches.add(new MatchEntry(matchPkt.mapDisplayName, matchPkt.modeDisplayName,
                 matchPkt.remainingSeconds + "s", 0, 0,
                 matchPkt.blueFaction, matchPkt.redFaction,
-                matchPkt.blueTickets, matchPkt.redTickets, PWPMatchCard.Status.PLAYING));
+                matchPkt.blueTickets, matchPkt.redTickets, PWPMatchCard.Status.PLAYING, -1));
         }
         if (listPkt != null) {
             for (int i = 0; i < listPkt.count; i++) {
@@ -56,7 +57,7 @@ public class PlayTabRenderer {
                     listPkt.elapsedSeconds[i] + "s",
                     listPkt.playerCounts[i], listPkt.maxPlayers[i],
                     listPkt.blueFactions[i], listPkt.redFactions[i],
-                    listPkt.blueTickets[i], listPkt.redTickets[i], st));
+                    listPkt.blueTickets[i], listPkt.redTickets[i], st, listPkt.serverIds[i]));
             }
         }
     }
@@ -152,5 +153,6 @@ public class PlayTabRenderer {
     }
 
     public int getHoveredIndex() { return hoveredIndex; }
+    public int getServerId(int index) { return matches.get(index).serverId; }
     public List<MatchEntry> getMatches() { return matches; }
 }

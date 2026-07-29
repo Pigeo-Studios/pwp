@@ -8,10 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-
-import java.util.List;
-import java.util.Random;
 
 public class PWPLoadingScreen extends Screen {
 
@@ -19,39 +15,24 @@ public class PWPLoadingScreen extends Screen {
         CONNECTING, LOADING_WORLD, LOADING_MAP, WAITING_DATA, DISCONNECTING, CHANGING_DIMENSION, TRANSFERRING
     }
 
-    private static final ResourceLocation BG_TEXTURE = new ResourceLocation("pwp_core_client", "textures/gui/loading.png");
-    private static final List<String> TIPS = List.of(
-        "Используйте тактическое оборудование для победы",
-        "Связь с отрядом — ключ к успеху",
-        "Следите за уровнем брони и здоровья",
-        "Захватывайте точки, чтобы получить преимущество",
-        "Техника уязвима с тыла и флангов",
-        "Аптечки восстанавливают здоровье",
-        "Боеприпасы можно пополнить на точке",
-        "Не забывайте перезаряжаться перед боем"
-    );
-
     private final Context context;
     private final long openTime;
-    private final Random random = new Random();
     private final PWPProgressBar progressBar = new PWPProgressBar();
+
+    private PWPTipsWidget tipsWidget;
+    private int prevWidth;
 
     private boolean hasKnownProgress;
     private boolean errorState;
     private long errorTime;
     private boolean widgetsBuilt;
 
-    private int currentTipIndex;
-    private long tipStateStart;
-    private boolean tipFading;
     private long timeoutMs;
 
     public PWPLoadingScreen(Context context) {
         super(Component.literal(getContextText(context)));
         this.context = context;
         this.openTime = System.currentTimeMillis();
-        this.currentTipIndex = random.nextInt(TIPS.size());
-        this.tipStateStart = System.currentTimeMillis();
         this.timeoutMs = switch (context) {
             case CONNECTING -> 12000;
             case LOADING_WORLD -> 60000;
@@ -61,6 +42,11 @@ public class PWPLoadingScreen extends Screen {
             case CHANGING_DIMENSION -> 30000;
             case TRANSFERRING -> 15000;
         };
+    }
+
+    @Override
+    protected void init() {
+        super.init();
     }
 
     public void setProgress(float progress) {
@@ -76,11 +62,6 @@ public class PWPLoadingScreen extends Screen {
 
     public boolean isErrorState() {
         return errorState;
-    }
-
-    @Override
-    protected void init() {
-        super.init();
     }
 
     @Override
@@ -100,9 +81,10 @@ public class PWPLoadingScreen extends Screen {
 
         var pose = gui.pose();
 
+        // PWP Logo
         pose.pushPose();
         pose.translate(cx, (int) (height * 0.12f), 0);
-        pose.scale(1.4f, 1.4f, 1f);
+        pose.scale(1.6f, 1.6f, 1f);
         gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
         pose.popPose();
 
@@ -112,17 +94,28 @@ public class PWPLoadingScreen extends Screen {
             return;
         }
 
+        // Content box
+        int boxW = Math.min(280, width - 40);
+        int boxH = hasKnownProgress ? 54 : 54;
+        int boxY = cy - 38;
+        PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
+
         String statusText = getContextText(context);
         gui.drawString(font, Component.literal(statusText), cx - font.width(statusText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
 
         if (hasKnownProgress) {
-            int barW = (int) (width * 0.3f);
-            progressBar.render(gui, cx - barW / 2, cy, barW, 4, now);
+            int barW = (int) (boxW * 0.7f);
+            progressBar.render(gui, cx - barW / 2, cy + 4, barW, 4, now);
         } else {
-            PWPProgressBar.renderPulse(gui, cx - 60, cy, 120, 4, elapsed);
+            PWPUtils.renderSpinner(gui, cx, cy + 4, elapsed);
         }
 
-        renderTip(gui, cx, cy + 30, now);
+        // Tips
+        if (tipsWidget == null || width != prevWidth) {
+            prevWidth = width;
+            tipsWidget = new PWPTipsWidget((int) (width * 0.6f));
+        }
+        tipsWidget.render(gui, cx, cy + 32);
 
         super.render(gui, mouseX, mouseY, partialTick);
     }
@@ -131,8 +124,7 @@ public class PWPLoadingScreen extends Screen {
     public void renderBackground(GuiGraphics gui) {
         int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        gui.blit(BG_TEXTURE, 0, 0, 0, 0, w, h, w, h);
-        gui.fill(0, 0, w, h, PWPTheme.Colors.BACKGROUND_DIM);
+        PWPRotatingBackground.render(gui, 0, 0, w, h);
     }
 
     @Override
@@ -158,6 +150,11 @@ public class PWPLoadingScreen extends Screen {
         float fade = Math.min(errorElapsed / 250.0F, 1);
         fade = Easing.easeOutCubic(fade);
 
+        int boxW = Math.min(280, width - 40);
+        int boxH = 64;
+        int boxY = cy - 20;
+        PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
+
         gui.setColor(1, 1, 1, fade);
         gui.drawString(font, Component.literal("Не удалось подключиться"), cx - font.width("Не удалось подключиться") / 2, cy, PWPTheme.Colors.DANGER, false);
         gui.drawString(font, Component.literal("Сервер недоступен"), cx - font.width("Сервер недоступен") / 2, cy + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
@@ -171,40 +168,6 @@ public class PWPLoadingScreen extends Screen {
                 PWPButton.Style.DARK
             ));
         }
-    }
-
-    private void renderTip(GuiGraphics gui, int cx, int y, long now) {
-        long tipElapsed = now - tipStateStart;
-        var font = PWPTheme.Fonts.display();
-
-        if (!tipFading && tipElapsed > 4000) {
-            tipFading = true;
-            tipStateStart = now;
-        } else if (tipFading && tipElapsed > 300) {
-            tipFading = false;
-            int next;
-            do {
-                next = random.nextInt(TIPS.size());
-            } while (next == currentTipIndex);
-            currentTipIndex = next;
-            tipStateStart = now;
-        }
-
-        float alpha;
-        if (tipFading) {
-            float fadeProgress = Math.min(tipElapsed / 300.0F, 1);
-            alpha = 1.0f - Easing.easeOutCubic(fadeProgress);
-        } else {
-            alpha = 1.0f;
-        }
-
-        String text = TIPS.get(currentTipIndex);
-        int color = PWPTheme.Colors.TEXT_SECONDARY;
-        float originalAlpha = (color >> 24) & 0xFF;
-        int finalAlpha = Math.min(255, Math.max(0, (int) (alpha * originalAlpha)));
-        int displayColor = (finalAlpha << 24) | (color & 0x00FFFFFF);
-
-        gui.drawString(font, Component.literal(text), cx - font.width(text) / 2, y, displayColor, false);
     }
 
     private static String getContextText(Context ctx) {

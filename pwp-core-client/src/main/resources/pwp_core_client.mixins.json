@@ -9,7 +9,7 @@
     "LevelLoadingScreenMixin",
     "LevelTransitionMixin",
     "ConnectScreenMixin",
-    "DisconnectedScreenMixin"
+    "DisconnectedScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

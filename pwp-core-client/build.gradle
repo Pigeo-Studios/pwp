@@ -1,8 +1,20 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
+    }
+}
+
 plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
+apply plugin: 'org.spongepowered.mixin'
 
 group = 'com.pwp'
 version = '1.0.1'
@@ -22,9 +34,17 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
+            property 'mixin.debug.export', 'true'
+            args '-mixin.config=pwp_core_client.mixins.json'
             mods { pwpcoreclient { source sourceSets.main } }
         }
     }
+}
+
+mixin {
+    add sourceSets.main, "pwp_core_client.refmap.json"
+    config "pwp_core_client.mixins.json"
+    debug.export = true
 }
 
 repositories {
@@ -36,4 +56,5 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'org.slf4j:slf4j-api:2.0.16'
     implementation project(':pwp-core-server')
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
