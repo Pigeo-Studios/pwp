@@ -20,6 +20,7 @@ public class PWPMainMenuScreen extends Screen {
     private PWPButton singleBtn;
     private PWPButton settingsBtn;
     private PWPButton quitBtn;
+    private PWPButton replayBtn;
 
     private boolean replayModAvailable;
     private boolean replayRecording;
@@ -43,7 +44,8 @@ public class PWPMainMenuScreen extends Screen {
         int otherH = 24;
         int gap = 6;
 
-        int totalH = playH + otherH * 3 + gap * 3;
+        int btnCount = replayModAvailable ? 5 : 4;
+        int totalH = playH + otherH * (btnCount - 1) + gap * (btnCount - 1);
         int startY = (int) (height * 0.52f);
         if (startY + totalH > height - 40) {
             startY = height - 40 - totalH;
@@ -81,6 +83,25 @@ public class PWPMainMenuScreen extends Screen {
             btn -> Minecraft.getInstance().stop(),
             PWPButton.Style.GHOST
         ));
+
+        if (replayModAvailable) {
+            replayBtn = addRenderableWidget(new PWPButton(
+                cx - btnW / 2, startY + playH + (otherH + gap) * 3 + gap, btnW, otherH,
+                Component.literal("REPLAY VIEWER"),
+                btn -> openReplayViewer(),
+                PWPButton.Style.GHOST
+            ));
+        }
+    }
+
+    private void openReplayViewer() {
+        try {
+            Class<?> rc = Class.forName("com.replaymod.replay.ReplayModReplay");
+            Object mod = rc.getField("instance").get(null);
+            Class<?> vc = Class.forName("com.replaymod.replay.gui.screen.GuiReplayViewer");
+            Object viewer = vc.getConstructor(rc).newInstance(mod);
+            vc.getMethod("display").invoke(viewer);
+        } catch (Exception ignored) {}
     }
 
     private void detectReplayMod() {
@@ -154,7 +175,9 @@ public class PWPMainMenuScreen extends Screen {
     }
 
     private void renderButtons(GuiGraphics gui, int mouseX, int mouseY, float partialTick, float elapsed) {
-        PWPButton[] btns = { playBtn, singleBtn, settingsBtn, quitBtn };
+        PWPButton[] btns = replayModAvailable
+            ? new PWPButton[]{ playBtn, singleBtn, settingsBtn, quitBtn, replayBtn }
+            : new PWPButton[]{ playBtn, singleBtn, settingsBtn, quitBtn };
         int startDelay = 300;
 
         for (int i = 0; i < btns.length; i++) {
