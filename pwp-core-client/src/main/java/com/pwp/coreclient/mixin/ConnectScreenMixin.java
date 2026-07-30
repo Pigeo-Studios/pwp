@@ -1,15 +1,14 @@
 package com.pwp.coreclient.mixin;
 
-import com.pwp.coreclient.gui.screens.PWPMainMenuScreen;
 import com.pwp.coreclient.gui.screens.PWPRotatingBackground;
 import com.pwp.coreclient.gui.screens.PWPTipsWidget;
 import com.pwp.coreclient.gui.screens.PWPUtils;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,10 +21,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ConnectScreenMixin {
 
     @Shadow
-    private Button cancelButton;
+    private Screen parent;
 
     @Shadow
-    protected int height;
+    public java.util.List<net.minecraft.client.gui.components.AbstractWidget> children() { return null; }
 
     @Unique
     private long pwp_openTime;
@@ -36,13 +35,22 @@ public class ConnectScreenMixin {
     @Unique
     private int pwp_lastW;
 
-    @Inject(method = "init", at = @At("RETURN"))
-    private void pwp_moveCancelButton(CallbackInfo ci) {
-        if (cancelButton != null) {
-            int boxY = height / 2 - 38;
-            int boxH = 54;
-            cancelButton.setY(boxY + boxH + 22);
+    @Unique
+    private int pwp_cancelX, pwp_cancelY, pwp_cancelW = 200, pwp_cancelH = 20;
+
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (button == 0
+                && mx >= pwp_cancelX && mx <= pwp_cancelX + pwp_cancelW
+                && my >= pwp_cancelY && my <= pwp_cancelY + pwp_cancelH) {
+            Minecraft.getInstance().setScreen(parent);
+            return true;
         }
+        for (var child : children()) {
+            if (child.mouseClicked(mx, my, button)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
@@ -89,9 +97,20 @@ public class ConnectScreenMixin {
             pwp_tips.render(gui, cx, h / 2 + 32);
         }
 
-        // Render cancel button widget so it's visible (ci.cancel() skips super.render)
-        if (cancelButton != null) {
-            cancelButton.render(gui, mx, my, pt);
+        // Cancel button below content box
+        pwp_cancelX = cx - pwp_cancelW / 2;
+        pwp_cancelY = boxY + boxH + 22;
+        boolean btnHover = mx >= pwp_cancelX && mx <= pwp_cancelX + pwp_cancelW
+                        && my >= pwp_cancelY && my <= pwp_cancelY + pwp_cancelH;
+        int btnR = PWPTheme.Spacing.RADIUS_SMALL;
+        int bg = btnHover ? PWPTheme.Colors.SURFACE_LIGHT : 0x00000000;
+        int border = btnHover ? PWPTheme.Colors.BORDER_FOCUS : 0x00000000;
+        int textCol = btnHover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
+        RoundedRect.fill(gui, pwp_cancelX, pwp_cancelY, pwp_cancelW, pwp_cancelH, btnR, bg);
+        if (btnHover) {
+            RoundedRect.border(gui, pwp_cancelX, pwp_cancelY, pwp_cancelW, pwp_cancelH, btnR, 1, border);
         }
+        String cancelText = "Отмена";
+        gui.drawString(font, Component.literal(cancelText), cx - font.width(cancelText) / 2, pwp_cancelY + 6, textCol, false);
     }
 }
