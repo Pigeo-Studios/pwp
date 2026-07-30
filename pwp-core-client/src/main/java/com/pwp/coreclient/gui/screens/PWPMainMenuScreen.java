@@ -91,9 +91,10 @@ public class PWPMainMenuScreen extends Screen {
             Object mod = rc.getField("instance").get(null);
             Object reg = rc.getMethod("getSettingsRegistry").invoke(mod);
             Class<?> sc = Class.forName("com.replaymod.recording.Setting");
+            Class<?> sk = Class.forName("com.replaymod.core.SettingsRegistry$SettingKey");
             Object key = sc.getField("RECORD_SERVER").get(null);
             replayRecording = (boolean) reg.getClass()
-                .getMethod("get", key.getClass().getSuperclass())
+                .getMethod("get", sk)
                 .invoke(reg, key);
             replayModAvailable = true;
         } catch (Exception ignored) {}
@@ -200,10 +201,11 @@ public class PWPMainMenuScreen extends Screen {
             Object mod = rc.getField("instance").get(null);
             Object reg = rc.getMethod("getSettingsRegistry").invoke(mod);
             Class<?> sc = Class.forName("com.replaymod.recording.Setting");
+            Class<?> sk = Class.forName("com.replaymod.core.SettingsRegistry$SettingKey");
             Object key = sc.getField("RECORD_SERVER").get(null);
             replayRecording = !replayRecording;
             reg.getClass()
-                .getMethod("set", key.getClass().getSuperclass(), Object.class)
+                .getMethod("set", sk, Object.class)
                 .invoke(reg, key, replayRecording);
             reg.getClass().getMethod("save").invoke(reg);
         } catch (Exception ignored) {}
