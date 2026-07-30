@@ -4,12 +4,12 @@ import com.pwp.coreclient.gui.screens.PWPMainMenuScreen;
 import com.pwp.coreclient.gui.screens.PWPRotatingBackground;
 import com.pwp.coreclient.gui.screens.PWPTipsWidget;
 import com.pwp.coreclient.gui.screens.PWPUtils;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConnectScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,7 +22,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ConnectScreenMixin {
 
     @Shadow
-    private Screen parent;
+    private Button cancelButton;
+
+    @Shadow
+    protected int height;
 
     @Unique
     private long pwp_openTime;
@@ -33,8 +36,14 @@ public class ConnectScreenMixin {
     @Unique
     private int pwp_lastW;
 
-    @Unique
-    private int pwp_cancelBtnX, pwp_cancelBtnY, pwp_cancelBtnW = 200, pwp_cancelBtnH = 20;
+    @Inject(method = "init", at = @At("RETURN"))
+    private void pwp_moveCancelButton(CallbackInfo ci) {
+        if (cancelButton != null) {
+            int boxY = height / 2 - 38;
+            int boxH = 54;
+            cancelButton.setY(boxY + boxH + 22);
+        }
+    }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void pwp_customRender(GuiGraphics gui, int mx, int my, float pt, CallbackInfo ci) {
@@ -78,32 +87,6 @@ public class ConnectScreenMixin {
         // Tips
         if (pwp_tips != null) {
             pwp_tips.render(gui, cx, h / 2 + 32);
-        }
-
-        // Cancel button: below content box
-        pwp_cancelBtnX = cx - pwp_cancelBtnW / 2;
-        pwp_cancelBtnY = boxY + boxH + 22;
-        boolean btnHover = mx >= pwp_cancelBtnX && mx <= pwp_cancelBtnX + pwp_cancelBtnW
-                        && my >= pwp_cancelBtnY && my <= pwp_cancelBtnY + pwp_cancelBtnH;
-        int btnR = PWPTheme.Spacing.RADIUS_SMALL;
-        int bg = btnHover ? PWPTheme.Colors.SURFACE_LIGHT : 0x00000000;
-        int border = btnHover ? PWPTheme.Colors.BORDER_FOCUS : 0x00000000;
-        int textCol = btnHover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
-        RoundedRect.fill(gui, pwp_cancelBtnX, pwp_cancelBtnY, pwp_cancelBtnW, pwp_cancelBtnH, btnR, bg);
-        if (btnHover) {
-            RoundedRect.border(gui, pwp_cancelBtnX, pwp_cancelBtnY, pwp_cancelBtnW, pwp_cancelBtnH, btnR, 1, border);
-        }
-        String cancelText = "Отмена";
-        gui.drawString(font, Component.literal(cancelText), cx - font.width(cancelText) / 2, pwp_cancelBtnY + 6, textCol, false);
-    }
-
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void pwp_onMouseClicked(double mx, double my, int button, CallbackInfo ci) {
-        if (button == 0
-                && mx >= pwp_cancelBtnX && mx <= pwp_cancelBtnX + pwp_cancelBtnW
-                && my >= pwp_cancelBtnY && my <= pwp_cancelBtnY + pwp_cancelBtnH) {
-            Minecraft.getInstance().setScreen(parent);
-            ci.cancel();
         }
     }
 }
