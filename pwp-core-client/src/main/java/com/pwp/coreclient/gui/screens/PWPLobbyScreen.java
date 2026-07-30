@@ -107,7 +107,7 @@ public class PWPLobbyScreen extends Screen {
     }
 
     public static void openList(OpenMatchListScreenPacket pkt) {
-        ensureOpenOrCreate(s -> { s.listData = pkt; s.playTab.setData(null, pkt); });
+        ensureOpenOrCreate(s -> { s.listData = pkt; s.playTab.setData(s.matchData, pkt); });
     }
 
     public static void updateList(OpenMatchListScreenPacket pkt) {

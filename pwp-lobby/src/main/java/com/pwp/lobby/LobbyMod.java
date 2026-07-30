@@ -249,12 +249,8 @@ public class LobbyMod {
 
         serverBroadcast("§7[PWP] §e" + name + " §fзашёл в лобби. §7Онлайн: §e" + online);
 
-        if (MatchAllocator.hasActiveMatch()) {
-            broadcastMatchScreenToPlayer(player);
-            sendMatchListToPlayer(player);
-        } else {
-            broadcastMatchScreenToPlayer(player);
-        }
+        broadcastMatchScreenToPlayer(player);
+        sendMatchListToPlayer(player);
 
         if (VotingManager.isActive()) {
             serverBroadcast("§7[PWP] Идёт голосование за карту! §e/votemap §7<карта> — осталось §e" + VotingManager.getRemainingSeconds() + "с");
@@ -453,6 +449,9 @@ public class LobbyMod {
             .executes(ctx -> {
                 ServerPlayer player = ctx.getSource().getPlayerOrException();
 
+                broadcastMatchScreenToPlayer(player);
+                sendMatchListToPlayer(player);
+
                 if (modeVoteActive) {
                     OpenModeVotePacket mvPkt = buildModeVotePacket();
                     if (mvPkt != null) {
@@ -463,10 +462,7 @@ public class LobbyMod {
                     if (vPkt != null) {
                         PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), vPkt);
                     }
-                } else if (MatchAllocator.hasActiveMatch()) {
-                    broadcastMatchScreenToPlayer(player);
-                    sendMatchListToPlayer(player);
-                } else {
+                } else if (!MatchAllocator.hasActiveMatch()) {
                     VotingManager.startVoting();
                     OpenVotingScreenPacket vPkt = buildVotingPacket();
                     if (vPkt != null) {
