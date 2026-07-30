@@ -88,5 +88,10 @@ public class ConnectScreenMixin {
         if (pwp_tips != null) {
             pwp_tips.render(gui, cx, h / 2 + 32);
         }
+
+        // Render cancel button widget so it's visible (ci.cancel() skips super.render)
+        if (cancelButton != null) {
+            cancelButton.render(gui, mx, my, pt);
+        }
     }
 }
