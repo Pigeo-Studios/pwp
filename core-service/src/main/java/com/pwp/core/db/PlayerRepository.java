@@ -161,7 +161,7 @@ public class PlayerRepository {
         Map.entry("vehicles_destroyed", "ps.vehicles_destroyed"),
         Map.entry("air_destroyed", "ps.air_vehicles_destroyed"),
         Map.entry("headshots", "ps.headshots"),
-        Map.entry("score", "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.damage_dealt + ps.healing_done)"),
+        Map.entry("score", "(ps.kills * 100 + ps.vehicle_kills * 150 + ps.captures * 200 + ps.revives * 75 + ps.healing_done)"),
         Map.entry("level", "px.level"),
         Map.entry("prestige", "px.prestige")
     );

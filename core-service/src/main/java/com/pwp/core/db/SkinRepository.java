@@ -66,11 +66,11 @@ public class SkinRepository {
     }
 
     public static void save(SkinDefinition s) throws SQLException {
-        String sql = "INSERT INTO skin_definitions (skin_id, name, description, slot_type, weapon_tag, rarity, model_path, image_url, enabled) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        String sql = "INSERT INTO skin_definitions (skin_id, name, description, slot_type, weapon_tag, rarity, model_path, image_url, price, enabled) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE name=VALUES(name), description=VALUES(description), "
                 + "slot_type=VALUES(slot_type), weapon_tag=VALUES(weapon_tag), rarity=VALUES(rarity), "
-                + "model_path=VALUES(model_path), image_url=VALUES(image_url), enabled=VALUES(enabled)";
+                + "model_path=VALUES(model_path), image_url=VALUES(image_url), price=VALUES(price), enabled=VALUES(enabled)";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, s.skinId);
@@ -81,7 +81,8 @@ public class SkinRepository {
             ps.setString(6, s.rarity);
             ps.setString(7, s.modelPath);
             ps.setString(8, s.imageUrl);
-            ps.setBoolean(9, s.enabled);
+            ps.setInt(9, s.price);
+            ps.setBoolean(10, s.enabled);
             ps.executeUpdate();
         }
     }
@@ -96,6 +97,7 @@ public class SkinRepository {
         s.rarity = rs.getString("rarity");
         s.modelPath = rs.getString("model_path");
         s.imageUrl = rs.getString("image_url");
+        s.price = rs.getInt("price");
         s.enabled = rs.getBoolean("enabled");
         s.createdAt = rs.getString("created_at");
         return s;

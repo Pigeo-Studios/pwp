@@ -132,6 +132,7 @@ public class DatabaseManager {
             + "skin_id VARCHAR(64) PRIMARY KEY, name VARCHAR(64) NOT NULL, description TEXT, "
             + "slot_type VARCHAR(32) NOT NULL, weapon_tag VARCHAR(32) NOT NULL DEFAULT 'any', "
             + "rarity VARCHAR(16) NOT NULL DEFAULT 'COMMON', model_path VARCHAR(255), image_url VARCHAR(255), "
+            + "price INT NOT NULL DEFAULT 0, "
             + "enabled BOOLEAN NOT NULL DEFAULT TRUE, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
 
             "CREATE TABLE IF NOT EXISTS case_definitions ("
@@ -186,7 +187,20 @@ public class DatabaseManager {
             "CREATE TABLE IF NOT EXISTS hwid_bans ("
             + "hwid VARCHAR(255) PRIMARY KEY, "
             + "reason VARCHAR(256), "
-            + "banned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+            + "banned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+
+            "CREATE TABLE IF NOT EXISTS player_owned_skins ("
+            + "uuid VARCHAR(36) NOT NULL, skin_id VARCHAR(64) NOT NULL, "
+            + "PRIMARY KEY (uuid, skin_id), "
+            + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE, "
+            + "FOREIGN KEY (skin_id) REFERENCES skin_definitions(skin_id) ON DELETE CASCADE)",
+
+            "CREATE TABLE IF NOT EXISTS player_equipped_skins ("
+            + "uuid VARCHAR(36) NOT NULL, weapon_tag VARCHAR(32) NOT NULL, "
+            + "skin_id VARCHAR(64) NOT NULL, "
+            + "PRIMARY KEY (uuid, weapon_tag), "
+            + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE, "
+            + "FOREIGN KEY (skin_id) REFERENCES skin_definitions(skin_id) ON DELETE CASCADE)"
         };
         try (Connection c = getConnection(); Statement s = c.createStatement()) {
             for (String sql : tables) {
@@ -276,7 +290,8 @@ public class DatabaseManager {
                 "ALTER TABLE players ADD COLUMN banned_until DATETIME DEFAULT NULL",
                 "ALTER TABLE hwid_bans ADD COLUMN banned_until DATETIME DEFAULT NULL",
                 "ALTER TABLE hwid_bans ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
-                "ALTER TABLE ip_blocks ADD COLUMN reason VARCHAR(256) DEFAULT NULL"
+                "ALTER TABLE ip_blocks ADD COLUMN reason VARCHAR(256) DEFAULT NULL",
+                "ALTER TABLE skin_definitions ADD COLUMN price INT NOT NULL DEFAULT 0"
             };
             for (String sql : migrations) {
                 try { s.execute(sql); } catch (Exception ignored) {}

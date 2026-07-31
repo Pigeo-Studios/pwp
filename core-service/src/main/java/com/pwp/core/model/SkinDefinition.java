@@ -9,6 +9,7 @@ public class SkinDefinition {
     public String rarity;
     public String modelPath;
     public String imageUrl;
+    public int price;
     public boolean enabled;
     public String createdAt;
 }

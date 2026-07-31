@@ -62,6 +62,7 @@ public class CoreApplication {
         new ShopController(app);
         new DonationController(app);
         new SkinController(app);
+        new SkinV2Controller(app);
         new CaseController(app);
         new RankController(app);
         new RewardController(app);
@@ -74,6 +75,7 @@ public class CoreApplication {
         new LauncherController(app);
         new AuthLibController(app);
         new HWIDBanController(app);
+        new MatchPolicyController(app);
         new SecurityController(app, config);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -121,12 +123,30 @@ public class CoreApplication {
     }
 
     private static void loadConfig(String path) {
-        try (FileReader reader = new FileReader(path)) {
-            config = new com.google.gson.Gson().fromJson(reader, Config.class);
-        } catch (Exception e) {
-            log.warn("Could not load config file '{}', using defaults", path);
-            config = new Config();
+        // Search order: explicit path -> cwd -> next to the JAR (../.. from build/libs)
+        List<java.nio.file.Path> candidates = new java.util.ArrayList<>();
+        try { candidates.add(Paths.get(path)); } catch (Exception ignored) {}
+        try {
+            java.io.File jar = new java.io.File(
+                CoreApplication.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            java.nio.file.Path dir = jar.isDirectory() ? jar.toPath() : jar.toPath().getParent();
+            candidates.add(dir.resolve("config.json"));
+            candidates.add(dir.getParent().resolve("config.json"));
+            candidates.add(dir.getParent().getParent().resolve("config.json"));
+        } catch (Exception ignored) {}
+
+        for (java.nio.file.Path c : candidates) {
+            if (!Files.exists(c)) continue;
+            try (FileReader reader = new FileReader(c.toFile())) {
+                config = new com.google.gson.Gson().fromJson(reader, Config.class);
+                log.info("Loaded config from {}", c);
+                return;
+            } catch (Exception e) {
+                log.warn("Could not parse config '{}': {}", c, e.getMessage());
+            }
         }
+        log.warn("Could not load config file '{}', using defaults", path);
+        config = new Config();
     }
 
     public static class Config {
