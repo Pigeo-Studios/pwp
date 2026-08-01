@@ -409,7 +409,51 @@ public class DatabaseManager {
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                 + "INDEX idx_ph_player (player_uuid), "
                 + "INDEX idx_ph_type (type), "
-                + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
+                + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
+
+                "CREATE TABLE IF NOT EXISTS anticheat_blacklist ("
+                + "id INT AUTO_INCREMENT PRIMARY KEY, "
+                + "kind VARCHAR(64) NOT NULL DEFAULT '', "
+                + "pattern VARCHAR(512) NOT NULL, "
+                + "match_type VARCHAR(16) NOT NULL DEFAULT 'substring', "
+                + "severity INT NOT NULL DEFAULT 0, "
+                + "enabled BOOLEAN NOT NULL DEFAULT TRUE, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "UNIQUE KEY uk_ac_pattern (pattern(255)))",
+
+                "CREATE TABLE IF NOT EXISTS anticheat_sessions ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "player_uuid VARCHAR(36) NOT NULL, "
+                + "launch_token VARCHAR(64) NOT NULL UNIQUE, "
+                + "hwid VARCHAR(64) DEFAULT NULL, "
+                + "last_heartbeat DATETIME DEFAULT NULL, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "expires_at DATETIME NOT NULL, "
+                + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE, "
+                + "INDEX idx_ac_sess (player_uuid, expires_at))",
+
+                "CREATE TABLE IF NOT EXISTS anticheat_detections ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "player_uuid VARCHAR(36) DEFAULT NULL, "
+                + "launch_token VARCHAR(64) DEFAULT NULL, "
+                + "source VARCHAR(16) NOT NULL DEFAULT 'launcher', "
+                + "type VARCHAR(32) NOT NULL, "
+                + "signature TEXT, "
+                + "severity INT NOT NULL DEFAULT 0, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE SET NULL, "
+                + "INDEX idx_ac_det_created (created_at), "
+                + "INDEX idx_ac_det_token (launch_token))",
+
+                "CREATE TABLE IF NOT EXISTS anticheat_screenshots ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "player_uuid VARCHAR(36) DEFAULT NULL, "
+                + "file_path VARCHAR(512) NOT NULL, "
+                + "width INT NOT NULL DEFAULT 0, "
+                + "height INT NOT NULL DEFAULT 0, "
+                + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE SET NULL, "
+                + "INDEX idx_ac_shot (created_at))"
             };
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) {}

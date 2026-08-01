@@ -18,6 +18,7 @@
                          ],
                 "rateLimitPerMinute":  100,
                 "rateLimitPerMinuteAdmin":  10,
+                "adminTelegramIds":  "1048950532",
                 "rateLimitBypassKeys":  [
 
                                         ]
@@ -26,6 +27,12 @@
                      "filesDir":  "C:/Users/maska/OneDrive/Desktop/launcherfiles",
                      "downloadBaseUrl":  "/launcher/files"
                  },
+    "anticheat":  {
+                      "p5Secret":  "21b04d5fd978e1aa0dc55f954fd0e4b5df05f086036a5f780ef284e42b246587",
+                      "p5Enforce":  false,
+                      "banSeverity":  100,
+                      "heartbeatTimeoutSec":  60
+                  },
     "logging":  {
                     "level":  "INFO",
                     "file":  "logs/core-service.log"

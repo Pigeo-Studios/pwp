@@ -41,6 +41,8 @@ public class CoreApplication {
         int port = config.server.port;
         Javalin app = Javalin.create(cfg -> {
             cfg.showJavalinBanner = false;
+            cfg.http.maxRequestSize = 64L * 1024 * 1024; // скриншоты (base64 BMP ~ 10 МБ)
+            cfg.bundledPlugins.enableCors(cors -> cors.addRule(http -> http.anyHost()));
             com.pwp.core.api.GsonMapper.apply(cfg);
         });
 
@@ -73,6 +75,7 @@ public class CoreApplication {
         new AdminController(app);
         new NetworkController(app);
         new LauncherController(app);
+        new AnticheatController(app);
         new AuthLibController(app);
         new HWIDBanController(app);
         new MatchPolicyController(app);
@@ -155,7 +158,17 @@ public class CoreApplication {
         public ApiConfig api = new ApiConfig();
         public LoggingConfig logging = new LoggingConfig();
         public LauncherConfig launcher = new LauncherConfig();
+        public AnticheatConfig anticheat = new AnticheatConfig();
 
+    }
+
+    /** Античит-конфигурация. Пустой p5Secret = P5 выключен (fail-open). */
+    public static class AnticheatConfig {
+        public String p5Secret = "";
+        public boolean p5Enforce = false;
+        public int banSeverity = 100;
+        public int heartbeatTimeoutSec = 60;
+        public String screenshotDir = "C:/Users/maska/OneDrive/Desktop/PWP-Server/anticheat-screenshots";
     }
 
     public static class LauncherConfig {
