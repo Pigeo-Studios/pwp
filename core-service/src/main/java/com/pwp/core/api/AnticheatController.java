@@ -38,6 +38,28 @@ public class AnticheatController {
 
     public AnticheatController(Javalin app) {
 
+        // ── Раздача артефактов античита (agent.jar, anticheat.dll) ──
+        app.get("/api/v1/launcher/anticheat/artifact/{name}", ctx -> {
+            String name = ctx.pathParam("name");
+            if (!name.matches("[A-Za-z0-9._-]+")) {
+                ctx.status(400).json(ApiResponse.error("invalid artifact name"));
+                return;
+            }
+            java.nio.file.Path dir = java.nio.file.Paths.get(CoreApplication.config.anticheat.artifactsDir);
+            java.nio.file.Path file = dir.resolve(name).normalize();
+            if (!file.startsWith(dir) || !java.nio.file.Files.exists(file)) {
+                ctx.status(404).json(ApiResponse.error("artifact not found"));
+                return;
+            }
+            try {
+                ctx.contentType(name.endsWith(".jar")
+                        ? "application/java-archive" : "application/octet-stream");
+                ctx.result(java.nio.file.Files.newInputStream(file));
+            } catch (Exception e) {
+                ctx.status(500).json(ApiResponse.error("artifact read failed"));
+            }
+        });
+
         // ── Чёрный список сигнатур (хардкод-фолбэк остаётся в лаунчере) ──
         app.get("/api/v1/launcher/anticheat/blacklist", ctx -> {
             List<Map<String, Object>> items = new ArrayList<>();

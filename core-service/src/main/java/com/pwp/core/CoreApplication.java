@@ -169,6 +169,7 @@ public class CoreApplication {
         public int banSeverity = 100;
         public int heartbeatTimeoutSec = 60;
         public String screenshotDir = "C:/Users/maska/OneDrive/Desktop/PWP-Server/anticheat-screenshots";
+        public String artifactsDir = "C:/Users/maska/OneDrive/Desktop/Pwpfiles/anticheat";
     }
 
     public static class LauncherConfig {
