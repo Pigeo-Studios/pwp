@@ -231,6 +231,9 @@ public class ClientHooks {
         if (msg.isGameStarted && ClientData.matchStartTime == 0L) ClientData.matchStartTime = System.currentTimeMillis();
         if (!msg.isGameStarted) ClientData.matchStartTime = 0L;
         ClientData.isGameStarted = msg.isGameStarted;
+        ClientData.invasionSetupActive = msg.invasionSetupActive;
+        ClientData.invasionSetupTimer = msg.invasionSetupTimer;
+        ClientData.invasionDefender = msg.invasionDefender;
         ClientData.allCapturePoints = new ArrayList<>(msg.capturePoints);
         ClientData.customBlueName = msg.blueCustomName;
         ClientData.customRedName = msg.redCustomName;

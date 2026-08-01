@@ -2,7 +2,7 @@ package com.pwp.lobby.match;
 
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
-import com.pwp.lobby.FactionVotingManager;
+import com.pwp.coreserver.CoreServerApi;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerConfig;
 import com.pwp.lobby.ServerManager;
@@ -133,7 +133,7 @@ public class MatchAllocator {
         mi.startedAt = System.currentTimeMillis();
         activeMatches.put(mi.serverId, mi);
 
-        LobbyMod.sendMatchListUpdateToAll();
+        LobbyMod.broadcastLobbyState();
         log.info("Match {}: {} ({}) on port {} ({} players, {} vs {})",
                 mi.serverId, map.displayName, mode, sr.port, lobbyPlayers.size(), blueFaction, redFaction);
     }
@@ -191,7 +191,7 @@ public class MatchAllocator {
                 mi.phase = MatchPhase.PLAYING;
                 LobbyMod.serverBroadcast("§e[PWP] §aСервер матча готов! §7Перенос игроков на §e" + mi.mapName + "§7...");
                 log.info("Match {} ready on port {}, transferring players", mi.serverId, mi.port);
-                LobbyMod.sendMatchListUpdateToAll();
+                LobbyMod.broadcastLobbyState();
                 transferPlayers(mi);
             }
         }
@@ -204,10 +204,9 @@ public class MatchAllocator {
         String host = "pigeo.asuscomm.com";
         log.info("Transferring players to {}:{} for match {}", host, mi.port, mi.mapName);
 
+        // Переносим ВСЕХ игроков лобби — голосовать не обязательно
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!lobbyPlayers.contains(player.getStringUUID())) continue;
-            java.util.UUID puid = player.getUUID();
-            if (!VotingManager.hasVoted(puid) && !LobbyMod.hasVotedMode(puid) && !FactionVotingManager.hasVoted(puid)) continue;
             player.sendSystemMessage(
                     Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."),
                     false);
@@ -234,7 +233,7 @@ public class MatchAllocator {
             }
         }
         LobbyMod.serverBroadcast("§e[PWP] §fОстановка матча §e" + mi.displayName + "§f...");
-        LobbyMod.sendMatchListUpdateToAll();
+        LobbyMod.broadcastLobbyState();
     }
 
     public static void matchEnded(int serverId) {
@@ -244,8 +243,8 @@ public class MatchAllocator {
             LobbyMod.serverBroadcast("§e[PWP] §fМатч §e" + mi.displayName + " §fзавершён. Возвращайтесь в лобби!");
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
-        LobbyMod.sendMatchListUpdateToAll();
-        if (!hasActiveMatch() && !lobbyPlayers.isEmpty() && !VotingManager.isActive()
+        LobbyMod.broadcastLobbyState();
+        if (!hasActiveMatch() && !lobbyPlayers.isEmpty() && !LobbyMod.isAnyVoteActive()
             && ServerConfig.isAutoStartEnabled()) {
             VotingManager.startVoting();
         }

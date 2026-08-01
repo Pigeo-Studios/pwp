@@ -158,19 +158,23 @@ public class PacketRespawnRequest {
                         }
 
                         if (data.isGameStarted) {
-                           if (player.getPersistentData().contains("WARFARE_PendingKit")) {
-                              ResupplyHandler.tryApplyPendingKit(player, data);
-                           } else {
-                              String currentKitName = player.getPersistentData().getString("WARFARE_CurrentKit");
-                              if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                                 String tName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-                                 WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
-                                 if (kit != null) {
-                                    ResupplyHandler.applyKitToPlayer(player, kit);
-                                 }
-                              }
-                           }
-                        }
+                            String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
+                            boolean isSetupAttacker = data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
+                            if (!isSetupAttacker) {
+                               if (player.getPersistentData().contains("WARFARE_PendingKit")) {
+                                  ResupplyHandler.tryApplyPendingKit(player, data);
+                               } else {
+                                  String currentKitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+                                  if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
+                                     String tName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
+                                     WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
+                                     if (kit != null) {
+                                        ResupplyHandler.applyKitToPlayer(player, kit);
+                                     }
+                                  }
+                               }
+                            }
+                         }
                     } else {
                      player.sendSystemMessage(Component.literal("Spawn point is currently unavailable!").withStyle(ChatFormatting.RED));
                   }

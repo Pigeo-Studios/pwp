@@ -49,6 +49,7 @@ public class SquadMapRenderer {
     public List<List<PathPoint>> pathGroups() { return com.pigeostudios.pwp.warfare.client.PathCache.groups; }
     public List<List<PathPoint>> pathGroupsRed() { return com.pigeostudios.pwp.warfare.client.PathCache.groupsRed; }
     public List<List<PathPoint>> pathGroupsYellow() { return com.pigeostudios.pwp.warfare.client.PathCache.groupsYellow; }
+    public Map<Integer, List<PathPoint>> pathGroupsSquad() { return com.pigeostudios.pwp.warfare.client.PathCache.groupsSquad; }
 
     private static final Map<String, ResourceLocation> MAP_ICONS_CACHE = new HashMap<>();
     private static final Map<String, ResourceLocation> TEX = new HashMap<>();
@@ -539,6 +540,23 @@ public class SquadMapRenderer {
         }
     }
 
+    private static String factionName(String f) {
+        if (f == null || f.isEmpty() || "none".equals(f)) return null;
+        return switch (f.toLowerCase()) {
+            case "usa" -> "\u0421\u0428\u0410";
+            case "russia", "russian" -> "\u0420\u043E\u0441\u0441\u0438\u044F";
+            case "british", "uk", "gb" -> "\u0412\u0435\u043B\u0438\u043A\u043E\u0431\u0440\u0438\u0442\u0430\u043D\u0438\u044F";
+            case "militia" -> "\u041E\u043F\u043E\u043B\u0447\u0435\u043D\u0438\u0435";
+            case "insurgent", "insurgents" -> "\u041F\u043E\u0432\u0441\u0442\u0430\u043D\u0446\u044B";
+            case "middle_eastern_alliance", "mea" -> "\u0411\u041B\u0412";
+            case "canada", "ca" -> "\u041A\u0430\u043D\u0430\u0434\u0430";
+            case "australia", "au" -> "\u0410\u0432\u0441\u0442\u0440\u0430\u043B\u0438\u044F";
+            case "germany", "de" -> "\u0413\u0435\u0440\u043C\u0430\u043D\u0438\u044F";
+            case "turkey", "tr" -> "\u0422\u0443\u0440\u0446\u0438\u044F";
+            default -> f.toUpperCase();
+        };
+    }
+
     public void renderVehicleLegend(GuiGraphics g, int panelX, int panelY, int panelW, int mx, int my) {
         if (ClientData.clientSpawners == null || ClientData.clientSpawners.isEmpty()) return;
         var f = Minecraft.getInstance().font;
@@ -576,7 +594,11 @@ public class SquadMapRenderer {
 
                 if (!hasAny) {
                     int teamColor = team.equals("BLUE") ? 0xFF4488FF : 0xFFFF4444;
-                    g.drawString(f, team.equals("BLUE") ? "\u0421\u0418\u041D\u0418\u0415" : "\u041A\u0420\u0410\u0421\u041D\u042B\u0415", panelX + 4, currentY, teamColor, false);
+                    String faction = team.equals("BLUE") ? com.pigeostudios.pwp.warfare.client.ClientData.BLUE_FACTION : com.pigeostudios.pwp.warfare.client.ClientData.RED_FACTION;
+                    String displayName = factionName(faction);
+                    if (displayName == null || displayName.isEmpty() || "none".equals(faction))
+                        displayName = team.equals("BLUE") ? "\u0421\u0418\u041D\u0418\u0415" : "\u041A\u0420\u0410\u0421\u041D\u042B\u0415";
+                    g.drawString(f, displayName, panelX + 4, currentY, teamColor, false);
                     currentY += 10;
                     hasAny = true;
                 }
@@ -616,14 +638,19 @@ public class SquadMapRenderer {
         }
 
         if (hoverType != null) {
+            var p2 = Minecraft.getInstance().player;
+            String myTeam = p2 != null && p2.getTeam() != null ? p2.getTeam().getName() : "";
+            boolean isMyTeam = hoverTeam != null && myTeam.equalsIgnoreCase(hoverTeam);
             long currentTick = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
             java.util.List<String> timerLines = new java.util.ArrayList<>();
-            for (var s : ClientData.clientSpawners) {
-                if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType) && !s.isAlive && s.targetSpawnTick > currentTick) {
-                    long sec = (s.targetSpawnTick - currentTick) / 20;
-                    String timeStr = sec >= 60 ? (sec / 60) + "\u043C " + (sec % 60) + "\u0441" : sec + "\u0441";
-                    String label = s.hasSpawnedOnce ? "\u0420\u0435\u0441\u043F\u0430\u0432\u043D" : "\u041F\u043E\u044F\u0432\u0438\u0442\u0441\u044F";
-                    timerLines.add(label + ": " + timeStr);
+            if (isMyTeam) {
+                for (var s : ClientData.clientSpawners) {
+                    if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType) && !s.isAlive && s.targetSpawnTick > currentTick) {
+                        long sec = (s.targetSpawnTick - currentTick) / 20;
+                        String timeStr = sec >= 60 ? (sec / 60) + "\u043C " + (sec % 60) + "\u0441" : sec + "\u0441";
+                        String label = s.hasSpawnedOnce ? "\u0420\u0435\u0441\u043F\u0430\u0432\u043D" : "\u041F\u043E\u044F\u0432\u0438\u0442\u0441\u044F";
+                        timerLines.add(label + ": " + timeStr);
+                    }
                 }
             }
             timerLines.sort(null);
@@ -1006,7 +1033,23 @@ public class SquadMapRenderer {
             if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow().remove(pts); return true; } }
             if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { pathGroupsYellow().remove(pts); return true; } }
         }
+        var sqIt = pathGroupsSquad().entrySet().iterator();
+        while (sqIt.hasNext()) {
+            var pts = sqIt.next().getValue();
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { sqIt.remove(); return true; } }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) { sqIt.remove(); return true; } }
+        }
         return false;
+    }
+
+    public java.util.UUID hitServerPath(int mx, int my, double cx, double cz) {
+        int r = 12;
+        for (var entry : com.pigeostudios.pwp.warfare.client.PathCache.serverPaths.entrySet()) {
+            var pts = entry.getValue().points();
+            if (!pts.isEmpty()) { var p = pts.get(0); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) return entry.getKey(); }
+            if (pts.size()>=2) { var p = pts.get(pts.size()-1); if (Math.abs(mx-toScreenX(p.x,cx))<r&&Math.abs(my-toScreenZ(p.z,cz))<r) return entry.getKey(); }
+        }
+        return null;
     }
 
     public MapMarker hitMarker(int mx, int my, double cx, double cz) {
@@ -1023,9 +1066,13 @@ public class SquadMapRenderer {
         for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
             int px = toScreenX(m.pos.getX() + 0.5, cx), py = toScreenZ(m.pos.getZ() + 0.5, cz);
             if (!inMap(px, py)) continue;
-            float alpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
+            float maxTicks = "enemy".equals(m.team) ? 6000f : 12000f;
+            float t = (now - m.createdAt) / maxTicks;
+            float alpha;
+            if (t < 0.2f) alpha = 1.0f;
+            else alpha = Math.max(0, 1.0f - (float)Math.pow((t - 0.2f) / 0.8f, 1.5f));
             RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, alpha);
+            RenderSystem.setShaderColor(1, 1, 1, alpha * 0.9F);
             g.blit(icon(m.iconType, m.team), px - 10, py - 10, 0, 0, 20, 20, 20, 20);
             RenderSystem.setShaderColor(1, 1, 1, 1);
             if (("hat".equals(m.iconType) || "rally".equals(m.iconType)) && "squad".equals(m.team)) {
@@ -1040,41 +1087,228 @@ public class SquadMapRenderer {
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
+    static final float PATH_MIN_LENGTH = 50.0F;
+    static final float PATH_MAX_LENGTH = 1500.0F;
+
+    public float pathAnimProgress = 1.0F;
+    public float pathFadeAlpha = 1.0F;
+    private long animStart = -1;
+
+    public void startPathAnim() { animStart = System.currentTimeMillis(); pathAnimProgress = 0; }
+    public void tickAnim() {
+        if (animStart < 0) return;
+        pathAnimProgress = Math.min(1, (System.currentTimeMillis() - animStart) / 1000.0F);
+        if (pathAnimProgress >= 1) animStart = -1;
+    }
+
+    private float pathFadeFor(List<PathPoint> pts) {
+        if (pts == null || pts.isEmpty()) return 1.0f;
+        long now = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+        int key = System.identityHashCode(pts);
+        Long created = com.pigeostudios.pwp.warfare.client.PathCache.pathCreatedAt.get(key);
+        if (created == null) {
+            // Check if this is a server path with createdAt in ServerPath record
+            for (var ep : com.pigeostudios.pwp.warfare.client.PathCache.serverPaths.entrySet()) {
+                if (ep.getValue().points() == pts) { created = ep.getValue().createdAt(); break; }
+            }
+        }
+        if (created == null || created <= 0) return 1.0f;
+        float elapsed = now - created;
+        float maxTicks = 12000f;
+        if (elapsed > maxTicks) { return 0f; }
+        float t = elapsed / maxTicks;
+        if (t < 0.2f) return 1.0f;
+        return Math.max(0, 1.0f - (float)Math.pow((t - 0.2f) / 0.8f, 1.5f));
+    }
+
     private void drawPath(GuiGraphics g, double cx, double cz) {
+        pathFadeAlpha = 1.0f;
         drawGroup(g, cx, cz, pathGroups(), 0xFF44FF44);
         drawGroup(g, cx, cz, pathGroupsRed(), 0xFFFF4444);
         drawGroup(g, cx, cz, pathGroupsYellow(), 0xFFFFDD00);
+        drawSquadPaths(g, cx, cz);
+        // Server-synced paths (no animation, full visibility)
+        pathFadeAlpha = 1.0F;
+        float savedAnim = pathAnimProgress;
+        pathAnimProgress = 1.0F;
+        for (var entry : com.pigeostudios.pwp.warfare.client.PathCache.serverPaths.entrySet()) {
+            var sp = entry.getValue();
+            if ("cmd_squads".equals(sp.type())) {
+                // Temporarily add to squad paths map for rendering
+                var saved = pathGroupsSquad().put(sp.squadNum(), sp.points());
+                drawSquadPaths(g, cx, cz);
+                if (saved != null) pathGroupsSquad().put(sp.squadNum(), saved);
+                else pathGroupsSquad().remove(sp.squadNum());
+            } else {
+                int c = "squad".equals(sp.type()) ? 0xFF44FF44 : "enemy".equals(sp.type()) ? 0xFFFF4444 : 0xFFFFDD00;
+                drawGroup(g, cx, cz, List.of(sp.points()), c);
+            }
+        }
+        pathAnimProgress = savedAnim;
+    }
+
+    private void drawSquadPaths(GuiGraphics g, double cx, double cz) {
+        var font = Minecraft.getInstance().font;
+        for (var entry : pathGroupsSquad().entrySet()) {
+            int pathKey = entry.getKey();
+            int squadNum = com.pigeostudios.pwp.warfare.client.PathCache.squadNumForPath.getOrDefault(pathKey, pathKey);
+            var pts = entry.getValue();
+            if (pts.size() < 2) continue;
+            pathFadeAlpha = pathFadeFor(pts);
+            if (pathFadeAlpha <= 0.001f) continue;
+
+            int col = 0xFFFFDD00;
+            int lineCol = (col & 0x00FFFFFF) | 0xE6000000;
+            float r = ((col >> 16) & 0xFF) / 255.0F;
+            float gr = ((col >> 8) & 0xFF) / 255.0F;
+            float b = (col & 0xFF) / 255.0F;
+
+            int n = pts.size();
+            double[] segX = new double[n], segY = new double[n];
+            double[] segStarts = new double[n-1];
+            double totalLen = 0;
+            for (int i = 0; i < n; i++) {
+                segX[i] = toScreenX(pts.get(i).x, cx);
+                segY[i] = toScreenZ(pts.get(i).z, cz);
+                if (i > 0) { segStarts[i-1] = totalLen; totalLen += Math.hypot(segX[i]-segX[i-1], segY[i]-segY[i-1]); }
+            }
+            double prog = pathAnimProgress * totalLen;
+
+            for (int i = 0; i < n-1; i++) {
+                if (prog <= segStarts[i]) break;
+                double lx1 = segX[i], ly1 = segY[i];
+                if (i == 0 && n > 1) {
+                    double dx = segX[1] - segX[0], dy = segY[1] - segY[0];
+                    double segLen = Math.hypot(dx, dy);
+                    if (segLen > 11) { lx1 += dx * 11 / segLen; ly1 += dy * 11 / segLen; }
+                }
+                double t = Math.min(1, (prog - segStarts[i]) / (segStarts[i] + Math.hypot(segX[i+1]-segX[i], segY[i+1]-segY[i]) - segStarts[i]));
+                int lx2 = (int)(lx1 + (segX[i+1] - lx1) * t);
+                int ly2 = (int)(ly1 + (segY[i+1] - ly1) * t);
+                var pose = g.pose();
+                pose.pushPose(); pose.translate((int)lx1, (int)ly1, 200);
+                float angle = (float)Math.toDegrees(Math.atan2(ly2 - (int)ly1, lx2 - (int)lx1));
+                pose.mulPose(Axis.ZP.rotationDegrees(angle));
+                float clen = (float)Math.hypot(lx2 - lx1, ly2 - ly1);
+                g.fill(0, -1, (int)clen, 2, 0x66000000);
+                g.fill(0, 0, (int)clen, 1, lineCol);
+                pose.popPose();
+                if (t < 1) break;
+            }
+
+            if (pathAnimProgress > 0.05F) {
+                int sx = (int)segX[0], sy = (int)segY[0];
+                RenderSystem.setShaderColor(r, gr, b, 0.9F * pathFadeAlpha);
+                g.blit(ICON_CIRCLE, sx - 9, sy - 9, 18, 18, 0, 0, 16, 16, 16, 16);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+                String numStr = String.valueOf(squadNum);
+                int tw = font.width(numStr);
+                int tx = sx - tw / 2, ty = sy - 4;
+                g.drawString(font, numStr, tx - 1, ty, 0xFF000000, false);
+                g.drawString(font, numStr, tx + 1, ty, 0xFF000000, false);
+                g.drawString(font, numStr, tx, ty - 1, 0xFF000000, false);
+                g.drawString(font, numStr, tx, ty + 1, 0xFF000000, false);
+                g.drawString(font, numStr, tx, ty, 0xFFFFFFFF, false);
+            }
+
+            if (pathAnimProgress > 0.8F) {
+                int ex2 = (int)segX[n-1], ey2 = (int)segY[n-1];
+                int px = (int)segX[n-2], py = (int)segY[n-2];
+                float edx = ex2 - px, edy = ey2 - py;
+                float elen = (float)Math.hypot(edx, edy);
+                if (elen >= 5) {
+                    var pose = g.pose();
+                    pose.pushPose(); pose.translate(ex2, ey2, 200);
+                    float eAngle = (float)Math.toDegrees(Math.atan2(edy, edx)) + 90;
+                    pose.mulPose(Axis.ZP.rotationDegrees(eAngle));
+                    RenderSystem.setShaderColor(r, gr, b, 0.9F * pathFadeAlpha);
+                    g.blit(ICON_SELF, -9, -9, 18, 18, 0, 0, 16, 16, 16, 16);
+                    RenderSystem.setShaderColor(1, 1, 1, 1);
+                    pose.popPose();
+                }
+            }
+        }
     }
 
     private void drawGroup(GuiGraphics g, double cx, double cz, List<List<PathPoint>> groups, int col) {
-        int lineCol = (col & 0x00FFFFFF) | 0x99000000;
-        int arrowCol = (col & 0x00FFFFFF) | 0xB3000000;
+        float r = ((col >> 16) & 0xFF) / 255.0F;
+        float gr2 = ((col >> 8) & 0xFF) / 255.0F;
+        float b = (col & 0xFF) / 255.0F;
+        int lineCol = (col & 0x00FFFFFF) | 0xE6000000;
         for (var pts : groups) {
             if (pts.size() < 2) continue;
-            for (int i = 0; i < pts.size() - 1; i++) {
-                var a = pts.get(i); var b = pts.get(i + 1);
-                pathLine(g, toScreenX(a.x, cx), toScreenZ(a.z, cz), toScreenX(b.x, cx), toScreenZ(b.z, cz), lineCol);
+            pathFadeAlpha = pathFadeFor(pts);
+            if (pathFadeAlpha <= 0.001f) continue;
+            double totalLen = 0;
+            int n = pts.size();
+            double[] segX = new double[n], segY = new double[n];
+            double[] segStarts = new double[n-1];
+            for (int i = 0; i < n; i++) {
+                segX[i] = toScreenX(pts.get(i).x, cx);
+                segY[i] = toScreenZ(pts.get(i).z, cz);
+                if (i > 0) {
+                    segStarts[i-1] = totalLen;
+                    totalLen += Math.hypot(segX[i]-segX[i-1], segY[i]-segY[i-1]);
+                }
             }
-            var first = pts.get(0);
-            circleDot(g, toScreenX(first.x, cx), toScreenZ(first.z, cz), lineCol);
-            var last = pts.get(pts.size() - 1);
-            var prev = pts.get(pts.size() - 2);
-            int tx = toScreenX(last.x, cx), ty = toScreenZ(last.z, cz);
-            int fx = toScreenX(prev.x, cx), fy = toScreenZ(prev.z, cz);
-            arrowHead(g, tx, ty, fx, fy, arrowCol);
+            double prog = pathAnimProgress * totalLen;
+
+            // Draw lines up to progress, with 14px gap from circle center
+            for (int i = 0; i < n-1; i++) {
+                if (prog <= segStarts[i]) break;
+                double lx1 = segX[i], ly1 = segY[i];
+                // Offset first line start 14px from circle center
+                if (i == 0 && n > 1) {
+                    double dx = segX[1] - segX[0], dy = segY[1] - segY[0];
+                    double segLen = Math.hypot(dx, dy);
+                    if (segLen > 11) { lx1 += dx * 11 / segLen; ly1 += dy * 11 / segLen; }
+                }
+                double lSegLen = Math.hypot(segX[i+1] - lx1, segY[i+1] - ly1);
+                if (prog <= segStarts[i]) break;
+                double t = Math.min(1, (prog - segStarts[i]) / (segStarts[i] + Math.hypot(segX[i+1]-segX[i], segY[i+1]-segY[i]) - segStarts[i]));
+                int lx2 = (int)(lx1 + (segX[i+1] - lx1) * t);
+                int ly2 = (int)(ly1 + (segY[i+1] - ly1) * t);
+                drawPathLine(g, (int)lx1, (int)ly1, lx2, ly2, lineCol);
+                if (t < 1) break;
+            }
+
+            // Start circle (appears at progress > 5% of first segment)
+            if (pathAnimProgress > 0.05F) {
+                int sx = (int)segX[0], sy = (int)segY[0];
+                RenderSystem.setShaderColor(r, gr2, b, 0.9F * pathFadeAlpha);
+                g.blit(ICON_CIRCLE, sx - 8, sy - 8, 16, 16, 0, 0, 16, 16, 16, 16);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+            }
+
+            // End arrow (appears at progress > 80%)
+            if (pathAnimProgress > 0.8F) {
+                int ex2 = (int)segX[n-1], ey2 = (int)segY[n-1];
+                int px = (int)segX[n-2], py = (int)segY[n-2];
+                float edx = ex2 - px, edy = ey2 - py;
+                float elen = (float)Math.hypot(edx, edy);
+                if (elen >= 5) {
+                    var pose = g.pose();
+                    pose.pushPose(); pose.translate(ex2, ey2, 200);
+                    float eAngle = (float)Math.toDegrees(Math.atan2(edy, edx)) + 90;
+                    pose.mulPose(Axis.ZP.rotationDegrees(eAngle));
+                    RenderSystem.setShaderColor(r, gr2, b, 0.9F * pathFadeAlpha);
+                    g.blit(ICON_SELF, -8, -8, 16, 16, 0, 0, 16, 16, 16, 16);
+                    RenderSystem.setShaderColor(1, 1, 1, 1);
+                    pose.popPose();
+                }
+            }
         }
     }
 
-    private void arrowHead(GuiGraphics g, int tx, int ty, int fx, int fy, int col) {
-        float dx = tx - fx, dy = ty - fy, len = (float)Math.sqrt(dx*dx+dy*dy);
-        if (len < 10) return;
+    private void drawPathLine(GuiGraphics g, int x1, int y1, int x2, int y2, int col) {
+        float dx = x2 - x1, dy = y2 - y1, len = (float)Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return;
         var pose = g.pose();
-        pose.pushPose(); pose.translate(tx, ty, 200);
-        pose.mulPose(Axis.ZP.rotationDegrees((float)Math.toDegrees(Math.atan2(dy, dx)) + 180));
-        for (int y = -6; y <= 6; y++) {
-            int xS = -12 + Math.abs(y) * 12 / 6;
-            g.fill(xS, y, 1, y + 1, col);
-        }
+        pose.pushPose(); pose.translate(x1, y1, 200);
+        float angle = (float)Math.toDegrees(Math.atan2(dy, dx));
+        pose.mulPose(Axis.ZP.rotationDegrees(angle));
+        g.fill(0, -1, (int)len, 2, 0x66000000);
+        g.fill(0, 0, (int)len, 1, col);
         pose.popPose();
     }
 
@@ -1082,24 +1316,10 @@ public class SquadMapRenderer {
         if (previewStart == null || previewEnd == null) return;
         int x1 = toScreenX(previewStart.x, cx), y1 = toScreenZ(previewStart.z, cz);
         int x2 = toScreenX(previewEnd.x, cx), y2 = toScreenZ(previewEnd.z, cz);
-        pathLine(g, x1, y1, x2, y2, 0x55FFFFFF);
-        circleDot(g, x1, y1, 0x88FFFFFF);
-    }
-
-    private void pathLine(GuiGraphics g, int x1, int y1, int x2, int y2, int col) {
-        float dx = x2 - x1, dy = y2 - y1, len = (float)Math.sqrt(dx * dx + dy * dy);
-        if (len < 1) return;
-        var pose = g.pose();
-        pose.pushPose(); pose.translate(x1, y1, 200);
-        pose.mulPose(Axis.ZP.rotationDegrees((float)Math.toDegrees(Math.atan2(dy, dx))));
-        g.fill(0, -1, (int)len, 1, col);
-        pose.popPose();
-    }
-
-    private void circleDot(GuiGraphics g, int x, int y, int col) {
-        g.fill(x - 2, y - 2, x + 3, y - 1, col);
-        g.fill(x - 3, y - 1, x + 4, y + 2, col);
-        g.fill(x - 2, y + 2, x + 3, y + 3, col);
+        drawPathLine(g, x1, y1, x2, y2, 0x55FFFFFF);
+        RenderSystem.setShaderColor(1, 1, 1, 0.5F);
+        g.blit(ICON_CIRCLE, x1 - 8, y1 - 8, 16, 16, 0, 0, 16, 16, 16, 16);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     private void drawCompassRose(GuiGraphics g) {

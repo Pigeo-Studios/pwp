@@ -675,6 +675,17 @@ public class DeployScreen extends Screen {
 
     // ══════════════════ MOUSE ══════════════════
 
+    private static boolean isPlayerCMD(LocalPlayer p) {
+        String name = p.getScoreboardName();
+        String team = p.getTeam() != null ? p.getTeam().getName().toUpperCase() : "NEUTRAL";
+        int cmdId = team.contains("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
+        if (cmdId == -1) return false;
+        for (var sq : ClientData.clientSquads) {
+            if (sq.id == cmdId && sq.members.contains(name)) return true;
+        }
+        return false;
+    }
+
     private int toWorldX(double mx) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
@@ -764,11 +775,15 @@ public class DeployScreen extends Screen {
                     if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
                     LocalPlayer p = Minecraft.getInstance().player;
                     if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
+                    boolean cmd = p != null && isPlayerCMD(p);
                     int wx = toWorldX(mx), wz = toWorldZ(my);
-                    mapCtx.open((int)mx, (int)my, (cat, icon) -> {
-                        if ("arrow".equals(icon) && ("enemy".equals(cat) || "team".equals(cat))) return;
-                        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(
-                            "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad", cat, icon, new BlockPos(wx, 64, wz)));
+                    mapCtx.open((int)mx, (int)my, cmd, (cat, icon) -> {
+                        if ("arrow".equals(icon) && ("enemy".equals(cat) || "cmd_top".equals(cat))) return;
+                        if ("cmd_squads".equals(cat)) return;
+                        String type = "squad";
+                        if ("enemy".equals(cat)) type = "enemy";
+                        else if ("cmd_top".equals(cat)) type = "team";
+                        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(type, cat, icon, new BlockPos(wx, 64, wz)));
                     });
                     return true;
                 }

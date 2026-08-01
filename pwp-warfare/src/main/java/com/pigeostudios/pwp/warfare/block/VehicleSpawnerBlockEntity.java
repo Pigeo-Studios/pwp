@@ -41,12 +41,12 @@ import org.jetbrains.annotations.Nullable;
 // РЎСѓС‰РЅРѕСЃС‚СЊ Р±Р»РѕРєР° СЃРїР°СѓРЅРµСЂР° С‚РµС…РЅРёРєРё
 // РЈРїСЂР°РІР»СЏРµС‚ С‚Р°Р№РјРµСЂР°РјРё РІРѕР·СЂРѕР¶РґРµРЅРёСЏ, РёРЅРІРµРЅС‚Р°СЂС‘Рј Рё СЃРїР°СѓРЅРѕРј С‚СЂР°РЅСЃРїРѕСЂС‚РЅС‹С… СЃСЂРµРґСЃС‚РІ
 public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvider {
-   // РРЅРІРµРЅС‚Р°СЂСЊ СЃРїР°СѓРЅРµСЂР° (33 СЃР»РѕС‚Р°: 0 - РјР°СЂРєРµСЂ РўРЎ, 1-32 - СЃРѕРґРµСЂР¶РёРјРѕРµ)
-   public final ItemStackHandler inventory = new ItemStackHandler(33) {
-      protected void onContentsChanged(int slot) {
-         VehicleSpawnerBlockEntity.this.setChanged();
-      }
-   };
+    public final ItemStackHandler inventory = new ItemStackHandler(33) {
+       protected void onContentsChanged(int slot) {
+          VehicleSpawnerBlockEntity.this.setChanged();
+          if (slot == 0) syncToWorldData();
+       }
+    };
     public float vehicleYaw = 0.0F;
     public int respawnTimeSettings = 60;
     public int initialTimeSettings = 60;
@@ -61,16 +61,11 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
       super((BlockEntityType)ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
    }
 
-     public void onLoad() {
-        super.onLoad();
-        this.loadTimer = 60;
-        if (this.level != null && !this.level.isClientSide) {
-           WarfareWorldData data = WarfareWorldData.get((ServerLevel)this.level);
-           data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
-           WarfareWorldData.SpawnerInfo info = getSpawnerInfo();
-           if (info != null) data.spawnerInfos.add(info);
-        }
-     }
+      public void onLoad() {
+         super.onLoad();
+         this.loadTimer = 60;
+         syncToWorldData();
+      }
 
      public void setRemoved() {
         if (this.level != null && !this.level.isClientSide) {
@@ -79,6 +74,17 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
         }
         super.setRemoved();
      }
+
+    public void syncToWorldData() {
+       if (this.level == null || this.level.isClientSide) return;
+       WarfareWorldData data = WarfareWorldData.get((ServerLevel)this.level);
+       data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+        WarfareWorldData.SpawnerInfo info = getSpawnerInfo();
+       if (info != null) {
+          data.spawnerInfos.add(info);
+          data.setDirty();
+       }
+    }
 
     public void loadDefaultsFromFactionVehicle(FactionVehicleData veh) {
        if (veh == null) return;
@@ -96,9 +102,22 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
              this.inventory.setStackInSlot(i, veh.inventory.get(i).copy());
           }
        }
-       this.setChanged();
-       syncToClient();
-    }
+        this.setChanged();
+        syncToClient();
+        syncToWorldData();
+     }
+
+   private static String getSpawnerTeam(VehicleSpawnerBlockEntity be) {
+      ItemStack modifierStack = be.inventory.getStackInSlot(0);
+      if (!modifierStack.isEmpty()) {
+         if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
+            return marker.getTeam();
+         } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
+            return supply.getTeam();
+         }
+      }
+      return "NEUTRAL";
+   }
 
    // РўРёРє СЃРїР°СѓРЅРµСЂР°: СѓРїСЂР°РІР»СЏРµС‚ С‚Р°Р№РјРµСЂР°РјРё РІРѕР·СЂРѕР¶РґРµРЅРёСЏ Рё СЃРїР°СѓРЅРёС‚ С‚РµС…РЅРёРєСѓ
    public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
@@ -108,45 +127,65 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
          } else {
             WarfareWorldData data = WarfareWorldData.get((ServerLevel)level);
             if (data.isGameStarted) {
+               // During invasion setup: skip vehicle spawn for attackers
+               if (data.invasionSetupActive) {
+                  String vTeam = getSpawnerTeam(be);
+                  if (!vTeam.equalsIgnoreCase(data.invasionDefender)) {
+                      if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
+                         be.hasSpawnedOnce = false;
+                         be.targetSpawnTick = 0L;
+                         be.lastVehicleUUID = null;
+                         be.setChanged();
+                         be.syncToClient();
+                         be.syncToWorldData();
+                      }
+                      return;
+                  }
+               }
                long currentTick = level.getGameTime();
                boolean vehicleExistsGlobally = data.markedVehicles.stream().anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
                if (vehicleExistsGlobally) {
-                  if (be.targetSpawnTick != 0L) {
-                     be.targetSpawnTick = 0L;
-                     be.setChanged();
-                     be.syncToClient();
-                  }
-               } else {
-                  if (be.lastVehicleUUID != null) {
-                     be.lastVehicleUUID = null;
-                     int delay = be.respawnTimeSettings * 20;
-                     be.targetSpawnTick = currentTick + delay;
-                     be.setChanged();
-                     be.syncToClient();
-                  }
+                   if (be.targetSpawnTick != 0L) {
+                      be.targetSpawnTick = 0L;
+                      be.setChanged();
+                      be.syncToClient();
+                      be.syncToWorldData();
+                   }
+                } else {
+                   if (be.lastVehicleUUID != null) {
+                      be.lastVehicleUUID = null;
+                      int delay = be.respawnTimeSettings * 20;
+                      be.targetSpawnTick = currentTick + delay;
+                      be.setChanged();
+                      be.syncToClient();
+                      be.syncToWorldData();
+                   }
 
-                  if (be.targetSpawnTick == 0L && !be.hasSpawnedOnce) {
-                     int delay = be.initialTimeSettings * 20;
-                     be.targetSpawnTick = currentTick + delay;
-                     be.setChanged();
-                     be.syncToClient();
-                  }
+                   if (be.targetSpawnTick == 0L && !be.hasSpawnedOnce) {
+                      int delay = be.initialTimeSettings * 20;
+                      be.targetSpawnTick = currentTick + delay;
+                      be.setChanged();
+                      be.syncToClient();
+                      be.syncToWorldData();
+                   }
 
-                  if (be.targetSpawnTick != 0L && currentTick >= be.targetSpawnTick) {
-                     be.spawnVehicle();
-                     be.targetSpawnTick = 0L;
-                     be.setChanged();
-                     be.syncToClient();
-                  }
-               }
+                   if (be.targetSpawnTick != 0L && currentTick >= be.targetSpawnTick) {
+                      be.spawnVehicle();
+                      be.targetSpawnTick = 0L;
+                      be.setChanged();
+                      be.syncToClient();
+                      be.syncToWorldData();
+                   }
+                }
             } else {
-               if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
-                  be.hasSpawnedOnce = false;
-                  be.targetSpawnTick = 0L;
-                  be.lastVehicleUUID = null;
-                  be.setChanged();
-                  be.syncToClient();
-               }
+                if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
+                   be.hasSpawnedOnce = false;
+                   be.targetSpawnTick = 0L;
+                   be.lastVehicleUUID = null;
+                   be.setChanged();
+                   be.syncToClient();
+                   be.syncToWorldData();
+                }
             }
          }
       }

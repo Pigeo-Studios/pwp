@@ -114,6 +114,7 @@ public class WarfareOverlay {
             renderPlacementHints(gui, mc, width, height);
             renderCaptureNotifications(gui, mc, width, height);
             renderCompass(gui, mc, width, event.getPartialTick());
+            renderInvasionSetupTimer(gui, mc, width);
             renderCMDVotePanel(gui, mc, width);
             renderArtStrikeRequest(gui, mc, width);
             if (mc.player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
@@ -1011,6 +1012,20 @@ public class WarfareOverlay {
       gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
       gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
       gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
+   }
+
+   private static void renderInvasionSetupTimer(GuiGraphics gui, Minecraft mc, int width) {
+      if (ClientData.invasionSetupActive && ClientData.invasionSetupTimer > 0) {
+         String team = mc.player.getTeam() != null ? mc.player.getTeam().getName().toUpperCase() : "";
+         boolean isDefender = ClientData.invasionDefender.equalsIgnoreCase(team);
+         String time = String.format("%02d:%02d", ClientData.invasionSetupTimer / 60, ClientData.invasionSetupTimer % 60);
+         String label = isDefender ? "\u23F3 \u041F\u041E\u0414\u0413\u041E\u0422\u041E\u0412\u041A\u0410" : "\uD83D\uDD12 \u0411\u041B\u041E\u041A\u0410\u0414\u0410";
+         String text = label + " " + time;
+         int color = isDefender ? 0xFF55FF55 : 0xFFFF5555;
+         int centerX = width / 2;
+         int y = 52;
+         drawOutlinedString(gui, mc, text, centerX - PWPTheme.Fonts.display().width(text) / 2, y, color);
+      }
    }
 
    private static void renderCapturePoint(GuiGraphics gui, Minecraft mc, int width, int height) {

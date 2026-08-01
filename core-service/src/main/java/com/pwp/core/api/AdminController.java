@@ -58,6 +58,9 @@ public class AdminController {
             PlayerRepository.setBan(req.uuid, false, null);
             PlayerRepository.log(req.uuid, "unban", ctx.ip(), null);
             try {
+                PlayerRepository.clearBans(req.uuid);
+            } catch (Exception ignored) {}
+            try {
                 PunishmentRepository.addRecord(req.uuid, "UNBAN", null,
                         ctx.attribute("adminUuid"), null, null);
             } catch (Exception ignored) {}
@@ -167,13 +170,16 @@ public class AdminController {
             )));
         });
 
-        // ── Список банов (наказания + HWID) ─────────────────────
+        // ── Список банов (актуальное состояние: последняя запись по игроку) ──
         app.get("/api/v1/admin/anticheat/bans", ctx -> {
             verifyAdmin(ctx);
             List<Map<String, Object>> items = new ArrayList<>();
             String sql = "SELECT p.uuid, p.nickname, ph.type, ph.reason, ph.created_at, ph.expires_at "
-                + "FROM punishment_history ph JOIN players p ON p.uuid = ph.player_uuid "
-                + "WHERE ph.type IN ('BAN', 'UNBAN') ORDER BY ph.id DESC LIMIT 200";
+                + "FROM punishment_history ph "
+                + "JOIN (SELECT player_uuid, MAX(id) AS max_id FROM punishment_history "
+                + "      WHERE type IN ('BAN', 'UNBAN') GROUP BY player_uuid) m ON ph.id = m.max_id "
+                + "JOIN players p ON p.uuid = ph.player_uuid "
+                + "ORDER BY ph.id DESC LIMIT 200";
             try (var c = com.pwp.core.db.DatabaseManager.getConnection();
                  var ps = c.prepareStatement(sql);
                  var rs = ps.executeQuery()) {

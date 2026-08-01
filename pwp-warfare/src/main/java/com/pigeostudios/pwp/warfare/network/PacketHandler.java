@@ -109,9 +109,13 @@ public class PacketHandler {
       );
       INSTANCE.registerMessage(id++, PacketPlaceMarker.class, PacketPlaceMarker::encode, PacketPlaceMarker::decode, PacketPlaceMarker::handle);
       INSTANCE.registerMessage(id++, PacketSyncMarker.class, PacketSyncMarker::encode, PacketSyncMarker::decode, PacketSyncMarker::handle);
-       INSTANCE.registerMessage(id++, PacketRemoveMarker.class, PacketRemoveMarker::encode, PacketRemoveMarker::decode, PacketRemoveMarker::handle);
-       INSTANCE.registerMessage(id++, PacketSyncSpawners.class, PacketSyncSpawners::encode, PacketSyncSpawners::decode, PacketSyncSpawners::handle);
-    }
+        INSTANCE.registerMessage(id++, PacketRemoveMarker.class, PacketRemoveMarker::encode, PacketRemoveMarker::decode, PacketRemoveMarker::handle);
+        INSTANCE.registerMessage(id++, PacketSyncSpawners.class, PacketSyncSpawners::encode, PacketSyncSpawners::decode, PacketSyncSpawners::handle);
+        INSTANCE.registerMessage(id++, PacketPlacePath.class, PacketPlacePath::encode, PacketPlacePath::decode, PacketPlacePath::handle);
+        INSTANCE.registerMessage(id++, PacketSyncPath.class, PacketSyncPath::encode, PacketSyncPath::decode, PacketSyncPath::handle);
+        INSTANCE.registerMessage(id++, PacketRemovePath.class, PacketRemovePath::encode, PacketRemovePath::decode, PacketRemovePath::handle);
+        INSTANCE.registerMessage(id++, PacketForceCMD.class, PacketForceCMD::encode, PacketForceCMD::decode, PacketForceCMD::handle);
+     }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {
       if (currentFaction != null && !currentFaction.equals("none") && !currentFaction.equals("bluefor") && !currentFaction.equals("redfor")) {
@@ -190,6 +194,9 @@ public class PacketHandler {
              rName,
              "aas",
              false,
+             false,
+             0,
+             "RED",
             new ArrayList<>(),
             new HashMap<>(),
             new HashMap<>(),
@@ -299,9 +306,12 @@ public class PacketHandler {
           data.redFaction,
           bName,
           rName,
-          data.gameMode != null ? data.gameMode : "aas",
-          data.isGameStarted,
-         data.capturePoints,
+           data.gameMode != null ? data.gameMode : "aas",
+           data.isGameStarted,
+           data.invasionSetupActive,
+           data.invasionSetupTimer,
+           data.invasionDefender != null ? data.invasionDefender : "RED",
+          data.capturePoints,
          data.blueSpawns,
          data.redSpawns,
          data.neutralSpawns,

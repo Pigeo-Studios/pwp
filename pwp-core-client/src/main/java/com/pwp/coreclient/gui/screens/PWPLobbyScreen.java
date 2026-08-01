@@ -38,8 +38,13 @@ public class PWPLobbyScreen extends Screen {
     private final LeaderTabRenderer leaderTab = new LeaderTabRenderer();
     private final ProfileTabRenderer profileTab = new ProfileTabRenderer();
 
-    private OpenMatchListScreenPacket listData;
-    private OpenMatchScreenPacket matchData;
+    private LobbyStatePacket lastState;
+    private int onlinePlayers = 0;
+    private int prevPacketPhase = -1;
+
+    // GUI не открывается принудительно, если игрок сам закрыл его недавно
+    private static long lastManualClose = 0;
+    private static int lastSeenPhase = -1;
 
     private final long openTime;
     private long tabSwitchTime = -1;
@@ -53,11 +58,47 @@ public class PWPLobbyScreen extends Screen {
     @Override
     public void onClose() {
         super.onClose();
+        lastManualClose = System.currentTimeMillis();
         instance = null;
     }
 
-    public static void openMatch(OpenMatchScreenPacket pkt) {
-        ensureOpenOrCreate(s -> { s.matchData = pkt; s.playTab.setData(pkt, s.listData); });
+    /** Единственный источник данных GUI — серверный state-пакет (каждую секунду + при изменениях). */
+    public static void updateLobbyState(LobbyStatePacket pkt) {
+        boolean screenOpen = instance != null && !instance.isMinecraftScreenInvalid();
+        if (!screenOpen) {
+            boolean open = pkt.requestOpen;
+            if (!open) {
+                long sinceClose = System.currentTimeMillis() - lastManualClose;
+                open = pkt.phase != lastSeenPhase || sinceClose > 60_000;
+            }
+            lastSeenPhase = pkt.phase;
+            if (open) {
+                ensureOpenOrCreate(s -> s.applyState(pkt));
+            }
+        } else {
+            lastSeenPhase = pkt.phase;
+            instance.applyState(pkt);
+        }
+    }
+
+    private void applyState(LobbyStatePacket pkt) {
+        lastState = pkt;
+        onlinePlayers = pkt.onlinePlayers;
+        playTab.applyState(pkt);
+        voteTab.applyState(pkt);
+
+        if (prevPacketPhase >= 0 && pkt.phase != prevPacketPhase) {
+            switch (pkt.phase) {
+                case LobbyStatePacket.PHASE_MAP_VOTE ->
+                    PWPToastManager.show("Голосование за карту началось!", PWPToastManager.ToastType.INFO);
+                case LobbyStatePacket.PHASE_MODE_VOTE ->
+                    PWPToastManager.show("Голосование за режим!", PWPToastManager.ToastType.INFO);
+                case LobbyStatePacket.PHASE_FACTION_VOTE ->
+                    PWPToastManager.show("Голосование за фракции!", PWPToastManager.ToastType.INFO);
+                default -> {}
+            }
+        }
+        prevPacketPhase = pkt.phase;
     }
 
     private static void ensureOpenOrCreate(java.util.function.Consumer<PWPLobbyScreen> init) {
@@ -76,47 +117,12 @@ public class PWPLobbyScreen extends Screen {
         return Minecraft.getInstance().screen != this;
     }
 
-    public static void openVote(OpenVotingScreenPacket pkt) {
-        PWPToastManager.show("Голосование за карту началось!", PWPToastManager.ToastType.INFO);
-        if (instance == null || instance.isMinecraftScreenInvalid()) {
-            ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initVoteData(pkt); });
-        } else {
-            instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.updateVoteData(pkt);
-        }
+    public static void resetInstance() {
+        instance = null;
+        imageCache.clear();
+        lastSeenPhase = -1;
+        lastManualClose = 0;
     }
-
-    public static void openModeVote(OpenModeVotePacket pkt) {
-        PWPToastManager.show("Голосование за режим!", PWPToastManager.ToastType.INFO);
-        if (instance == null || instance.isMinecraftScreenInvalid()) {
-            ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initModeVoteData(pkt); });
-        } else {
-            instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.updateModeVoteData(pkt);
-        }
-    }
-
-    public static void openFactionVote(OpenFactionVotePacket pkt) {
-        PWPToastManager.show("Голосование за фракции!", PWPToastManager.ToastType.INFO);
-        if (instance == null || instance.isMinecraftScreenInvalid()) {
-            ensureOpenOrCreate(s -> { s.currentTab = LobbyTab.GOLOSOVANIE; s.voteTab.initFactionVoteData(pkt); });
-        } else {
-            instance.currentTab = LobbyTab.GOLOSOVANIE;
-            instance.voteTab.updateFactionVoteData(pkt);
-        }
-    }
-
-    public static void openList(OpenMatchListScreenPacket pkt) {
-        ensureOpenOrCreate(s -> { s.listData = pkt; s.playTab.setData(s.matchData, pkt); });
-    }
-
-    public static void updateList(OpenMatchListScreenPacket pkt) {
-        if (instance == null) return;
-        instance.listData = pkt;
-        instance.playTab.setData(instance.matchData, pkt);
-    }
-
-    public static void resetInstance() { instance = null; imageCache.clear(); }
 
     public static ResourceLocation getTexture(String mapName, String worldPath, String prefix) {
         if (worldPath == null || worldPath.isEmpty() || !Files.exists(Paths.get(worldPath, "icon.png"))) return null;
@@ -156,7 +162,7 @@ public class PWPLobbyScreen extends Screen {
     private void renderTopBar(GuiGraphics gui) {
         var font = PWPTheme.Fonts.display();
         gui.drawString(font, Component.literal("PWP"), 20, 16, PWPTheme.Colors.TEXT_ACCENT, false);
-        String online = "ОНЛАЙН: " + (matchData != null ? matchData.onlinePlayers : 0);
+        String online = "ОНЛАЙН: " + onlinePlayers;
         gui.drawString(font, Component.literal(online), width - 20 - font.width(online), 16, PWPTheme.Colors.TEXT_SECONDARY, false);
         gui.fill(16, 36, width - 16, 37, PWPTheme.Colors.BORDER);
     }

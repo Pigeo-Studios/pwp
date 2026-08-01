@@ -45,6 +45,9 @@ public class PacketSyncGameData {
     public final String redCustomName;
     public final String gameMode;
     public final boolean isGameStarted;
+    public final boolean invasionSetupActive;
+    public final int invasionSetupTimer;
+    public final String invasionDefender;
    public final List<WarfareWorldData.CapturePoint> capturePoints;
    public final Map<String, BlockPos> blueSpawns;
    public final Map<String, BlockPos> redSpawns;
@@ -98,9 +101,12 @@ public class PacketSyncGameData {
       String redFaction,
        String blueCustomName,
        String redCustomName,
-       String gameMode,
-       boolean isGameStarted,
-      List<WarfareWorldData.CapturePoint> capturePoints,
+        String gameMode,
+        boolean isGameStarted,
+        boolean invasionSetupActive,
+        int invasionSetupTimer,
+        String invasionDefender,
+       List<WarfareWorldData.CapturePoint> capturePoints,
       Map<String, BlockPos> blueSpawns,
       Map<String, BlockPos> redSpawns,
       Map<String, BlockPos> neutralSpawns,
@@ -155,8 +161,11 @@ public class PacketSyncGameData {
        this.blueCustomName = blueCustomName;
        this.redCustomName = redCustomName;
        this.gameMode = gameMode;
-       this.isGameStarted = isGameStarted;
-      this.capturePoints = capturePoints;
+        this.isGameStarted = isGameStarted;
+        this.invasionSetupActive = invasionSetupActive;
+        this.invasionSetupTimer = invasionSetupTimer;
+        this.invasionDefender = invasionDefender;
+       this.capturePoints = capturePoints;
       this.blueSpawns = blueSpawns;
       this.redSpawns = redSpawns;
       this.neutralSpawns = neutralSpawns;
@@ -230,6 +239,9 @@ public class PacketSyncGameData {
       buf.writeUtf(msg.redCustomName);
       buf.writeUtf(msg.gameMode);
       buf.writeBoolean(msg.isGameStarted);
+      buf.writeBoolean(msg.invasionSetupActive);
+      buf.writeInt(msg.invasionSetupTimer);
+      buf.writeUtf(msg.invasionDefender);
       CompoundTag pointsTag = new CompoundTag();
       ListTag list = new ListTag();
 
@@ -311,9 +323,12 @@ public class PacketSyncGameData {
       String rF = buf.readUtf();
       String bCN = buf.readUtf();
       String rCN = buf.readUtf();
-      String gMode = buf.readUtf();
-      boolean started = buf.readBoolean();
-      List<WarfareWorldData.CapturePoint> pL = new ArrayList<>();
+       String gMode = buf.readUtf();
+       boolean started = buf.readBoolean();
+       boolean invSetupActive = buf.readBoolean();
+       int invSetupTimer = buf.readInt();
+       String invDefender = buf.readUtf();
+       List<WarfareWorldData.CapturePoint> pL = new ArrayList<>();
       CompoundTag pTag = buf.readNbt();
       if (pTag != null && pTag.contains("Points")) {
          ListTag list = pTag.getList("Points", 10);
@@ -381,10 +396,13 @@ public class PacketSyncGameData {
          rF,
           bCN,
           rCN,
-          gMode,
-          started,
-         pL,
-         bSp,
+           gMode,
+           started,
+           invSetupActive,
+           invSetupTimer,
+           invDefender,
+          pL,
+          bSp,
          rSp,
          nSp,
          pK,

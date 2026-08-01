@@ -5,9 +5,7 @@ import com.pwp.coreclient.gui.components.PWPCard;
 import com.pwp.coreclient.gui.components.PWPProgressBar;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.network.OpenVotingScreenPacket;
-import com.pwp.coreclient.network.OpenModeVotePacket;
-import com.pwp.coreclient.network.OpenFactionVotePacket;
+import com.pwp.coreclient.network.LobbyStatePacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -18,7 +16,7 @@ import java.util.List;
 
 public class VoteTabRenderer {
 
-    private enum Phase { IDLE, MAP, MODE, FACTION, FINISHED }
+    private enum Phase { IDLE, MAP, MODE, FACTION, FINISHED, MATCH }
 
     private static class Option {
         String id, name, desc, f1, f2, worldPath;
@@ -42,12 +40,12 @@ public class VoteTabRenderer {
     }
 
     private Phase currentPhase = Phase.IDLE;
-    private long phaseStartTime = System.currentTimeMillis();
     private boolean transitioning;
     private long transitionTime;
     private Phase transitionFrom, transitionTo;
     private long finishedAnimStart;
     private boolean finishedBusy;
+    private long finishedEnterTime;
 
     private final List<Option> mapOpts = new ArrayList<>();
     private final List<Option> modeOpts = new ArrayList<>();
@@ -56,76 +54,127 @@ public class VoteTabRenderer {
     private int selMap = -1, selMode = -1, selFact1 = -1, selFact2 = -1;
     private int votMap = -1, votMode = -1, votFact1 = -1, votFact2 = -1;
     private int hoveredCard = -1;
+    private int voteDurationSec = 0;
     private int screenWidth;
     private int voteButtonY;
     private int tooltipTarget = -1;
     private long tooltipHoverStart;
     private int tooltipMouseX, tooltipMouseY;
 
+    // Режим для подписей команд (приходит от сервера)
+    private String mode = "aas";
+    // Инфо матча для экрана "матч запускается/идёт"
+    private boolean matchStarting;
+    private String matchMapDisplay = "", matchModeDisplay = "", matchBlueFaction = "", matchRedFaction = "";
+    private int matchBlueTickets, matchRedTickets;
+
     public VoteTabRenderer() {}
 
-    public void initVoteData(OpenVotingScreenPacket pkt) {
+    /**
+     * Единственный источник истины — сервер. Применяет состояние из пакета,
+     * который приходит каждую секунду + при любом изменении.
+     */
+    public void applyState(LobbyStatePacket pkt) {
+        voteDurationSec = pkt.remainingSeconds;
+        if (pkt.mode != null) mode = pkt.mode;
+
+        switch (pkt.phase) {
+            case LobbyStatePacket.PHASE_MAP_VOTE -> {
+                rebuildMaps(pkt);
+                setPhase(Phase.MAP);
+            }
+            case LobbyStatePacket.PHASE_MODE_VOTE -> {
+                rebuildModes(pkt);
+                setPhase(Phase.MODE);
+            }
+            case LobbyStatePacket.PHASE_FACTION_VOTE -> {
+                rebuildFactions(pkt);
+                setPhase(Phase.FACTION);
+            }
+            case LobbyStatePacket.PHASE_MATCH_STARTING, LobbyStatePacket.PHASE_MATCH_PLAYING -> {
+                matchStarting = pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING;
+                matchMapDisplay = pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "";
+                matchModeDisplay = pkt.matchModeDisplay != null ? pkt.matchModeDisplay : "";
+                matchBlueFaction = pkt.matchBlueFaction != null ? pkt.matchBlueFaction : "";
+                matchRedFaction = pkt.matchRedFaction != null ? pkt.matchRedFaction : "";
+                matchBlueTickets = pkt.matchBlueTickets;
+                matchRedTickets = pkt.matchRedTickets;
+                setPhase(Phase.MATCH);
+            }
+            default -> {
+                // IDLE: показываем результаты последнего голосования, если они есть
+                if (pkt.hasResults()) setPhase(Phase.FINISHED);
+                else setPhase(Phase.IDLE);
+            }
+        }
+    }
+
+    private void rebuildMaps(LobbyStatePacket pkt) {
         mapOpts.clear();
-        for (int i = 0; i < pkt.mapNames.length; i++) {
-            mapOpts.add(new Option(pkt.mapNames[i], pkt.mapDisplayNames[i], pkt.mapDescriptions[i],
-                pkt.blueFactions[i], pkt.redFactions[i],
-                pkt.voteCounts[i], 0xFF8B6B3D + i * 0x112233, null,
-                i < pkt.worldPaths.length ? pkt.worldPaths[i] : null, null));
+        int len = pkt.mapNames != null ? pkt.mapNames.length : 0;
+        for (int i = 0; i < len; i++) {
+            mapOpts.add(new Option(pkt.mapNames[i],
+                    i < pkt.mapDisplayNames.length ? pkt.mapDisplayNames[i] : pkt.mapNames[i],
+                    i < pkt.mapDescriptions.length ? pkt.mapDescriptions[i] : null,
+                    i < pkt.blueFactions.length ? pkt.blueFactions[i] : null,
+                    i < pkt.redFactions.length ? pkt.redFactions[i] : null,
+                    i < pkt.voteCounts.length ? pkt.voteCounts[i] : 0,
+                    0xFF8B6B3D + i * 0x112233, null,
+                    i < pkt.worldPaths.length ? pkt.worldPaths[i] : null, null));
         }
         selMap = -1; votMap = -1;
         recalc(mapOpts);
-        phaseStartTime = System.currentTimeMillis() - (120 - pkt.remainingSeconds) * 1000L;
-        if (currentPhase == Phase.IDLE || currentPhase == Phase.FINISHED) xition(Phase.MAP);
-        else currentPhase = Phase.MAP;
     }
 
-    public void updateVoteData(OpenVotingScreenPacket pkt) {
-        for (int i = 0; i < pkt.mapNames.length && i < mapOpts.size(); i++) {
-            mapOpts.get(i).votes = pkt.voteCounts[i];
-        }
-        recalc(mapOpts);
-    }
-
-    public void initModeVoteData(OpenModeVotePacket pkt) {
+    private void rebuildModes(LobbyStatePacket pkt) {
         modeOpts.clear();
-        for (int i = 0; i < pkt.modeNames.length; i++) {
-            modeOpts.add(new Option(pkt.modeNames[i], pkt.modeDisplayNames[i], pkt.modeDescriptions[i],
-                null, null, pkt.voteCounts[i], i == 0 ? 0xFFC8812A : 0xFF3D6FA5));
+        int len = pkt.modeNames != null ? pkt.modeNames.length : 0;
+        for (int i = 0; i < len; i++) {
+            modeOpts.add(new Option(pkt.modeNames[i],
+                    i < pkt.modeDisplayNames.length ? pkt.modeDisplayNames[i] : pkt.modeNames[i],
+                    i < pkt.modeDescriptions.length ? pkt.modeDescriptions[i] : null,
+                    null, null,
+                    i < pkt.modeVoteCounts.length ? pkt.modeVoteCounts[i] : 0,
+                    i == 0 ? 0xFFC8812A : 0xFF3D6FA5));
         }
         selMode = -1; votMode = -1;
         recalc(modeOpts);
-        phaseStartTime = System.currentTimeMillis() - (120 - pkt.remainingSeconds) * 1000L;
-        xition(Phase.MODE);
     }
 
-    public void updateModeVoteData(OpenModeVotePacket pkt) {
-        for (int i = 0; i < pkt.modeNames.length && i < modeOpts.size(); i++) {
-            modeOpts.get(i).votes = pkt.voteCounts[i];
-        }
-        recalc(modeOpts);
-    }
-
-    public void initFactionVoteData(OpenFactionVotePacket pkt) {
+    private void rebuildFactions(LobbyStatePacket pkt) {
         factOpts.clear();
         java.util.Map<String,String> fnames = new java.util.HashMap<>();
         fnames.put("usa","США"); fnames.put("ukraine","Украина"); fnames.put("nato","НАТО");
         fnames.put("russia","Россия"); fnames.put("insurgency","Insurgency"); fnames.put("pmc","ЧВК");
+        int len1 = pkt.team1Factions != null ? pkt.team1Factions.length : 0;
         for (int i = 0; i < 3; i++) {
-            String n = pkt.team1Factions != null && i < pkt.team1Factions.length ? pkt.team1Factions[i] : "";
-            int v = pkt.team1Votes != null && i < pkt.team1Votes.length ? pkt.team1Votes[i] : 0;
-            String dn = fnames.getOrDefault(n, n.toUpperCase());
+            String n = i < len1 ? pkt.team1Factions[i] : "";
+            int v = i < pkt.team1Votes.length ? pkt.team1Votes[i] : 0;
+            String dn = fnames.getOrDefault(n, n.isEmpty() ? "-" : n.toUpperCase());
             factOpts.add(new Option(n, dn, null, null, null, v, 0xFF3D6FA5, flag(n)));
         }
+        int len2 = pkt.team2Factions != null ? pkt.team2Factions.length : 0;
         for (int i = 0; i < 3; i++) {
-            String n = pkt.team2Factions != null && i < pkt.team2Factions.length ? pkt.team2Factions[i] : "";
-            int v = pkt.team2Votes != null && i < pkt.team2Votes.length ? pkt.team2Votes[i] : 0;
-            String dn = fnames.getOrDefault(n, n.toUpperCase());
+            String n = i < len2 ? pkt.team2Factions[i] : "";
+            int v = i < pkt.team2Votes.length ? pkt.team2Votes[i] : 0;
+            String dn = fnames.getOrDefault(n, n.isEmpty() ? "-" : n.toUpperCase());
             factOpts.add(new Option(n, dn, null, null, null, v, 0xFFA53D3D, flag(n)));
         }
         selFact1 = -1; selFact2 = -1; votFact1 = -1; votFact2 = -1;
         factionPerTeamBars();
-        phaseStartTime = System.currentTimeMillis() - (120 - pkt.remainingSeconds) * 1000L;
-        xition(Phase.FACTION);
+    }
+
+    /** Переход между фазами — только по данным от сервера. */
+    private void setPhase(Phase to) {
+        if (transitioning) {
+            transitioning = false;
+            currentPhase = transitionTo;
+        }
+        if (to == Phase.FINISHED && currentPhase != Phase.FINISHED) {
+            finishedEnterTime = System.currentTimeMillis();
+        }
+        if (to != currentPhase) xition(to);
+        else currentPhase = to;
     }
 
     private void factionPerTeamBars() {
@@ -137,15 +186,6 @@ public class VoteTabRenderer {
                 factOpts.get(start + r).bar.setProgress(prog);
             }
         }
-    }
-
-    public void updateFactionVoteData(OpenFactionVotePacket pkt) {
-        for (int i = 0; i < 6 && i < factOpts.size(); i++) {
-            int v = i < 3 ? (i < pkt.team1Votes.length ? pkt.team1Votes[i] : 0)
-                          : (i-3 < pkt.team2Votes.length ? pkt.team2Votes[i-3] : 0);
-            factOpts.get(i).votes = v;
-        }
-        factionPerTeamBars();
     }
 
     private static ResourceLocation flag(String n) { return n != null && !n.isEmpty() ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png") : null; }
@@ -267,7 +307,30 @@ public class VoteTabRenderer {
             case MODE -> voteGrid(g, sw, sh, mx, my, now, "ГОЛОСОВАНИЕ ЗА РЕЖИМ", modeOpts, selMode, false);
             case FACTION -> factionGrid(g, sw, sh, mx, my, now);
             case FINISHED -> finished(g, sw, sh, now);
+            case MATCH -> matchInfo(g, sw, sh);
         }
+    }
+
+    private void matchInfo(GuiGraphics g, int sw, int sh) {
+        var f = PWPTheme.Fonts.display();
+        String title = matchStarting ? "МАТЧ ЗАПУСКАЕТСЯ" : "МАТЧ ИДЁТ";
+        g.drawString(f, Component.literal(title), sw/2 - f.width(title)/2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
+        g.fill(sw/2 - 80, 96, sw/2 + 80, 97, PWPTheme.Colors.ACCENT);
+
+        String map = matchMapDisplay.isEmpty() ? "-" : matchMapDisplay;
+        g.drawString(f, Component.literal("Карта: " + map), sw/2 - f.width("Карта: " + map)/2, 130, 0xFFFFFF, false);
+
+        String modeTxt = matchModeDisplay.isEmpty() ? "" : "Режим: " + matchModeDisplay;
+        if (!modeTxt.isEmpty()) g.drawString(f, Component.literal(modeTxt), sw/2 - f.width(modeTxt)/2, 152, PWPTheme.Colors.TEXT_SECONDARY, false);
+
+        String factions = matchBlueFaction.isEmpty() ? "" : matchBlueFaction.toUpperCase() + " vs " + matchRedFaction.toUpperCase();
+        if (!factions.isEmpty()) {
+            g.drawString(f, Component.literal(factions), sw/2 - f.width(factions)/2, 176, PWPTheme.Colors.TEXT_PRIMARY, false);
+            String t = matchBlueTickets + " : " + matchRedTickets;
+            g.drawString(f, Component.literal(t), sw/2 - f.width(t)/2, 192, PWPTheme.Colors.TEXT_DIM, false);
+        }
+        String h = matchStarting ? "Сервер матча готовится..." : "Откройте вкладку ИГРА для подключения";
+        g.drawString(f, Component.literal(h), sw/2 - f.width(h)/2, 230, PWPTheme.Colors.TEXT_DIM, false);
     }
     private void idle(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
         var f = PWPTheme.Fonts.display();
@@ -281,9 +344,9 @@ public class VoteTabRenderer {
 
     private void voteGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now, String title, List<Option> opts, int sel, boolean factions) {
         var f = PWPTheme.Fonts.display();
-        long elapsed = now - phaseStartTime, rem = Math.max(0, 120 - elapsed/1000);
+        int rem = Math.max(0, voteDurationSec);
         // Store remaining for faction vote timer reference
-        for (Option o : opts) o.remainingSec = (int)rem;
+        for (Option o : opts) o.remainingSec = rem;
         g.drawString(f, Component.literal(title), sw/2 - f.width(title)/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
         g.fill(sw/2 - f.width(title)/2 - 4, 94, sw/2 + f.width(title)/2 + 4, 95, PWPTheme.Colors.ACCENT);
         String tmr = String.format("Осталось: %d:%02d", rem/60, rem%60);
@@ -309,7 +372,7 @@ public class VoteTabRenderer {
     }
     private void factionGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
         var f = PWPTheme.Fonts.display();
-        long elapsed = now - phaseStartTime, rem = Math.max(0, 120 - elapsed/1000);
+        int rem = Math.max(0, voteDurationSec);
         String title = "ВЫБОР СТОРОНЫ";
         g.drawString(f, Component.literal(title), sw/2-f.width(title)/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
         g.fill(sw/2-f.width(title)/2-4, 94, sw/2+f.width(title)/2+4, 95, PWPTheme.Colors.ACCENT);
@@ -326,7 +389,7 @@ public class VoteTabRenderer {
 
         // Team labels
         String t1 = "КОМАНДА 1", t2 = "КОМАНДА 2";
-        boolean isInv = selMode >= 0 && selMode < modeOpts.size() && modeOpts.get(selMode).name.contains("Invasion");
+        boolean isInv = "invasion".equalsIgnoreCase(mode);
         if (isInv) { t1 = "АТАКУЕТ"; t2 = "ОБОРОНЯЕТСЯ"; }
         g.drawString(f, Component.literal(t1), gx+cw/2-f.width(t1)/2, gy-12, 0xFF3D6FA5, false);
         g.drawString(f, Component.literal(t2), gx+cw+gap+cw/2-f.width(t2)/2, gy-12, 0xFFA53D3D, false);
@@ -627,24 +690,18 @@ public class VoteTabRenderer {
 
         // FINISHED -> new vote button (block during slide-up animation)
         if (currentPhase == Phase.FINISHED) {
-            if (now - phaseStartTime < 600) return false;
+            if (now - finishedEnterTime < 600) return false;
             int bw = 180, bh = 28, bx = (screenWidth - bw) / 2;
             if (mx >= bx && mx <= bx+bw && my >= voteButtonY && my <= voteButtonY+bh) {
-                resetVote();
+                // Запросить актуальное состояние (новое голосование начнётся автоматически)
+                try {
+                    var conn = Minecraft.getInstance().player.connection;
+                    if (conn != null) conn.sendCommand("pwp");
+                } catch (Exception ignored) {}
                 return true;
             }
         }
 
         return false;
-    }
-
-    private void resetVote() {
-        mapOpts.clear(); modeOpts.clear(); factOpts.clear();
-        selMap = -1; selMode = -1; selFact1 = -1; selFact2 = -1;
-        votMap = -1; votMode = -1; votFact1 = -1; votFact2 = -1;
-        hoveredCard = -1;
-        currentPhase = Phase.IDLE;
-        phaseStartTime = System.currentTimeMillis();
-        transitioning = false;
     }
 }

@@ -111,8 +111,9 @@ public class PacketSquadAction {
                            giveRadio(player);
                         }
 
-                        player.sendSystemMessage(Component.literal("Squad created: " + finalName).withStyle(ChatFormatting.GOLD));
-                     } else if (msg.action == 1) {
+                         player.sendSystemMessage(Component.literal("Squad created: " + finalName).withStyle(ChatFormatting.GOLD));
+                         PacketRequestKitMenu.sendKitMenu(player, data);
+                      } else if (msg.action == 1) {
                         for (WarfareWorldData.Squad s : data.squads) {
                            if (s.id == msg.squadId && s.team.equalsIgnoreCase(pTeam)) {
                               if (s.isLocked && !player.isCreative()) {
@@ -128,14 +129,16 @@ public class PacketSquadAction {
                               leaveCurrentSquad(player, data);
                                s.members.add(pName);
                               updatePlayerTags(player, s.id, false);
-                              player.sendSystemMessage(Component.literal("Joined squad: " + s.name).withStyle(ChatFormatting.GREEN));
-                              break;
+                               player.sendSystemMessage(Component.literal("Joined squad: " + s.name).withStyle(ChatFormatting.GREEN));
+                               PacketRequestKitMenu.sendKitMenu(player, data);
+                               break;
                            }
                         }
                      } else if (msg.action == 2) {
-                        leaveCurrentSquad(player, data);
-                        player.sendSystemMessage(Component.literal("You left the squad.").withStyle(ChatFormatting.YELLOW));
-                     } else if (msg.action == 3) {
+                         leaveCurrentSquad(player, data);
+                         player.sendSystemMessage(Component.literal("You left the squad.").withStyle(ChatFormatting.YELLOW));
+                         PacketRequestKitMenu.sendKitMenu(player, data);
+                      } else if (msg.action == 3) {
                         WarfareWorldData.Squad targetSquad = null;
 
                         for (WarfareWorldData.Squad s : data.squads) {
@@ -162,18 +165,20 @@ public class PacketSquadAction {
                                        giveRadio(newLeader);
                                     }
 
-                                    newLeader.sendSystemMessage(
-                                       Component.literal("The previous leader was offline and removed. You are the new Leader!")
-                                          .withStyle(ChatFormatting.GOLD)
-                                    );
-                                 }
+                                  newLeader.sendSystemMessage(
+                                     Component.literal("The previous leader was offline and removed. You are the new Leader!")
+                                        .withStyle(ChatFormatting.GOLD)
+                                  );
+                                  PacketRequestKitMenu.sendKitMenu(newLeader, data);
+                               }
                               }
 
                                if (targetEntity != null) {
                                   removePlayerTags(targetEntity);
                                   removeRadio(targetEntity);
                                   targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
-                              }
+                                  PacketRequestKitMenu.sendKitMenu(targetEntity, data);
+                               }
 
                               player.server
                                  .getPlayerList()
@@ -197,17 +202,19 @@ public class PacketSquadAction {
                               mySquad.leader = targetName;
                               updatePlayerTags(player, mySquad.id, false);
                               ServerPlayer target = player.server.getPlayerList().getPlayerByName(targetName);
-                              if (target != null) {
-                                 updatePlayerTags(target, mySquad.id, true);
-                                 if ((Boolean)WarfareConfig.AUTO_GIVE_SL_RADIO.get()) {
-                                    giveRadio(target);
-                                 }
+                               if (target != null) {
+                                  updatePlayerTags(target, mySquad.id, true);
+                                  if ((Boolean)WarfareConfig.AUTO_GIVE_SL_RADIO.get()) {
+                                     giveRadio(target);
+                                  }
 
-                                 mySquad.leader = targetName;
-                                 target.displayClientMessage(Component.literal("You have been promoted to Squad Leader!").withStyle(ChatFormatting.GOLD), true);
-                              }
+                                  mySquad.leader = targetName;
+                                  target.displayClientMessage(Component.literal("You have been promoted to Squad Leader!").withStyle(ChatFormatting.GOLD), true);
+                                  PacketRequestKitMenu.sendKitMenu(target, data);
+                               }
 
-                              player.sendSystemMessage(Component.literal("Promoted " + targetName).withStyle(ChatFormatting.GOLD));
+                               player.sendSystemMessage(Component.literal("Promoted " + targetName).withStyle(ChatFormatting.GOLD));
+                               PacketRequestKitMenu.sendKitMenu(player, data);
                            }
                         }
                      } else if (msg.action == 5) {
@@ -283,11 +290,12 @@ public class PacketSquadAction {
                               mySquad.members.remove(m);
                               mySquad.removeFromFireteams(m);
                               ServerPlayer mem = player.server.getPlayerList().getPlayerByName(m);
-                              if (mem != null) {
-                                 removePlayerTags(mem);
-                                 removeRadio(mem);
-                                 mem.displayClientMessage(Component.literal("Squad disbanded by leader.").withStyle(ChatFormatting.RED), true);
-                              }
+                               if (mem != null) {
+                                  removePlayerTags(mem);
+                                  removeRadio(mem);
+                                  mem.displayClientMessage(Component.literal("Squad disbanded by leader.").withStyle(ChatFormatting.RED), true);
+                                  PacketRequestKitMenu.sendKitMenu(mem, data);
+                               }
                            }
                            if (mySquad.id == data.blueCMDId) data.blueCMDId = -1;
                            if (mySquad.id == data.redCMDId) data.redCMDId = -1;

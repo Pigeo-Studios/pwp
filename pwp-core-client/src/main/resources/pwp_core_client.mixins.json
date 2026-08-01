@@ -9,6 +9,7 @@
     "LevelLoadingScreenMixin",
     "LevelTransitionMixin",
     "ConnectScreenMixin",
+    "ScreenInvoker",
     "DisconnectedScreenAccessor"
   ],
   "injectors": {

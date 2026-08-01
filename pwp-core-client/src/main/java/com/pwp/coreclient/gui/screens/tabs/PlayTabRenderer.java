@@ -3,8 +3,7 @@ package com.pwp.coreclient.gui.screens.tabs;
 import com.pwp.coreclient.gui.components.PWPMatchCard;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.network.OpenMatchScreenPacket;
-import com.pwp.coreclient.network.OpenMatchListScreenPacket;
+import com.pwp.coreclient.network.LobbyStatePacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
@@ -42,23 +41,33 @@ public class PlayTabRenderer {
 
     public PlayTabRenderer() {}
 
-    public void setData(OpenMatchScreenPacket matchPkt, OpenMatchListScreenPacket listPkt) {
+    public void applyState(LobbyStatePacket pkt) {
         matches.clear();
-        if (matchPkt != null) {
-            matches.add(new MatchEntry(matchPkt.mapDisplayName, matchPkt.modeDisplayName,
-                matchPkt.remainingSeconds + "s", 0, 0,
-                matchPkt.blueFaction, matchPkt.redFaction,
-                matchPkt.blueTickets, matchPkt.redTickets, PWPMatchCard.Status.PLAYING, -1));
+        // Активный матч лобби (карточка сверху)
+        if (pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING || pkt.phase == LobbyStatePacket.PHASE_MATCH_PLAYING) {
+            matches.add(new MatchEntry(pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "-",
+                pkt.matchModeDisplay != null ? pkt.matchModeDisplay : "",
+                pkt.matchElapsed + "s", pkt.matchPlayers, pkt.matchMaxPlayers,
+                pkt.matchBlueFaction != null ? pkt.matchBlueFaction : "",
+                pkt.matchRedFaction != null ? pkt.matchRedFaction : "",
+                pkt.matchBlueTickets, pkt.matchRedTickets,
+                pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING ? PWPMatchCard.Status.STARTING : PWPMatchCard.Status.PLAYING,
+                pkt.matchServerId));
         }
-        if (listPkt != null) {
-            for (int i = 0; i < listPkt.count; i++) {
-                PWPMatchCard.Status st = parseStatus(listPkt.statuses[i]);
-                matches.add(new MatchEntry(listPkt.displayNames[i], listPkt.statuses[i],
-                    listPkt.elapsedSeconds[i] + "s",
-                    listPkt.playerCounts[i], listPkt.maxPlayers[i],
-                    listPkt.blueFactions[i], listPkt.redFactions[i],
-                    listPkt.blueTickets[i], listPkt.redTickets[i], st, listPkt.serverIds[i]));
-            }
+        // Остальные активные матчи
+        int count = pkt.matchCount;
+        for (int i = 0; i < count; i++) {
+            PWPMatchCard.Status st = parseStatus(i < pkt.mStatuses.length ? pkt.mStatuses[i] : "");
+            matches.add(new MatchEntry(i < pkt.mDisplayNames.length ? pkt.mDisplayNames[i] : "-",
+                i < pkt.mStatuses.length ? pkt.mStatuses[i] : "",
+                (i < pkt.mElapsed.length ? pkt.mElapsed[i] : 0) + "s",
+                i < pkt.mPlayers.length ? pkt.mPlayers[i] : 0,
+                i < pkt.mMaxPlayers.length ? pkt.mMaxPlayers[i] : 0,
+                i < pkt.mBlueFactions.length ? pkt.mBlueFactions[i] : "",
+                i < pkt.mRedFactions.length ? pkt.mRedFactions[i] : "",
+                i < pkt.mBlueTickets.length ? pkt.mBlueTickets[i] : 0,
+                i < pkt.mRedTickets.length ? pkt.mRedTickets[i] : 0,
+                st, i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1));
         }
     }
 

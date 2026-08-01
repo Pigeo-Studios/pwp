@@ -44,11 +44,11 @@ public class DownedHandler {
         if (!event.getEntity().level().isClientSide
             && event.getEntity() instanceof ServerPlayer
             && event.getSource().getEntity() instanceof ServerPlayer) {
-           WarfareWorldData data = WarfareWorldData.get((ServerLevel) event.getEntity().level());
-           if (data.isPaused) {
-              event.setCanceled(true);
-              return;
-           }
+            WarfareWorldData data = WarfareWorldData.get((ServerLevel) event.getEntity().level());
+            if (!data.isGameStarted || data.isPaused) {
+               event.setCanceled(true);
+               return;
+            }
         }
         // Track damage dealt by a player to any living entity
         if (event.getSource().getEntity() instanceof ServerPlayer attacker

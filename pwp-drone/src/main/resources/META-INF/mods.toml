@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="pwpdrone"
+version="1.0.0"
+displayName="PWP Drone FPV"
+credits="Pigeo Studios"
+authors="Pigeo Studios"
+description="FPV-style effects for superwarfare drones. Adds signal noise, scanlines, distortion and signal loss."
+
+[[dependencies.pwpdrone]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.pwpdrone]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="CLIENT"

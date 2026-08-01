@@ -445,6 +445,11 @@ public class LauncherController {
                     ps.executeUpdate();
                 }
 
+                // Полный разбан: снимаем HWID- и IP-баны устройства
+                try {
+                    PlayerRepository.clearBans(uuid);
+                } catch (Exception ignored) {}
+
                 try {
                     PunishmentRepository.addRecord(uuid, "UNBAN", null, req.adminUuid, null, null);
                 } catch (Exception ignored) {}

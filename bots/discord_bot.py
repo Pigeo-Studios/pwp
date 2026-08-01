@@ -313,12 +313,6 @@ def _build_scheduler_embed(status):
     embed.set_footer(text=f"PWP Scheduler \u2022 \u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u043e: {updated}")
     return embed
 
-async def _send_sched_ping(channel, text):
-    try:
-        await channel.send(text)
-    except Exception as e:
-        print(f"[DS] sched ping error: {e}")
-
 async def update_scheduler_loop(shared_state):
     await bot.wait_until_ready()
     while not bot.is_closed():
@@ -343,37 +337,40 @@ async def update_scheduler_loop(shared_state):
             else:
                 await ch.send(embed=embed)
 
-            bot_flags = await shared_state.get_flags()
             sid = status.get("session_id", "")
-            needs_save = False
 
+            bot_flags = await shared_state.get_flags()
             if sid and sid != bot_flags.get("last_session_id"):
-                bot_flags = {"last_session_id": sid}
-                needs_save = True
-
-            if status.get("ping_warmup") and not bot_flags.get("warmup_sent"):
-                await _send_sched_ping(ch, "<@&1526110377832611891> \u23f3 \u0414\u043e \u0441\u0442\u0430\u0440\u0442\u0430 \u043c\u0435\u043d\u044c\u0448\u0435 \u0447\u0430\u0441\u0430! \u0413\u043e\u0442\u043e\u0432\u044c\u0442\u0435\u0441\u044c \u043a \u0438\u0433\u0440\u0435!")
-                bot_flags["warmup_sent"] = True
-                needs_save = True
-
-            if status.get("ping_start") and not bot_flags.get("start_sent"):
-                await _send_sched_ping(ch, "<@&1526110377832611891> \U0001f680 \u0421\u0435\u0440\u0432\u0435\u0440 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0435\u0442\u0441\u044f! \u0417\u0430\u0445\u043e\u0434\u0438\u0442\u0435 \u0432 \u0438\u0433\u0440\u0443!")
-                bot_flags["start_sent"] = True
-                needs_save = True
-
-            if status.get("ping_online") and not bot_flags.get("online_sent"):
-                await _send_sched_ping(ch, "<@&1526110377832611891> \U0001f7e2 \u0421\u0435\u0440\u0432\u0435\u0440 \u0430\u043a\u0442\u0438\u0432\u0435\u043d! \u0417\u0430\u0445\u043e\u0434\u0438\u0442\u0435 \u0438\u0433\u0440\u0430\u0442\u044c!")
-                bot_flags["online_sent"] = True
-                needs_save = True
-
-            if needs_save:
-                await shared_state.set_flags(bot_flags)
+                await shared_state.set_flags({"last_session_id": sid})
 
         except Exception as e:
             print(f"[DS] scheduler loop error: {e}")
         await asyncio.sleep(10)
 
 # ── File command processing (for AI/admin sends) ──
+import re as _re
+
+async def _send_retry(channel, text):
+    """Send a message; on 403 retry without role mentions."""
+    try:
+        await channel.send(text)
+        return True
+    except discord.Forbidden:
+        stripped = _re.sub(r"<@&\d+>", "", text).strip()
+        if stripped and stripped != text:
+            try:
+                await channel.send(stripped)
+                print(f"[DS] sent without ping to {channel.name} ({channel.id})")
+                return True
+            except Exception as e:
+                print(f"[DS] send failed in {channel.name} ({channel.id}): {e}")
+        else:
+            print(f"[DS] FORBIDDEN in {channel.name} ({channel.id}): Send Messages denied")
+        return False
+    except Exception as e:
+        print(f"[DS] send error in {channel.name} ({channel.id}): {e}")
+        return False
+
 async def process_commands():
     await bot.wait_until_ready()
     while not bot.is_closed():
@@ -383,7 +380,8 @@ async def process_commands():
                 action = data.get("action")
                 if action == "send":
                     ch = bot.get_channel(int(data["channel_id"]))
-                    if ch: await ch.send(data["text"])
+                    if ch:
+                        await _send_retry(ch, data["text"])
                 elif action == "send_embed":
                     ch = bot.get_channel(int(data["channel_id"]))
                     if ch:

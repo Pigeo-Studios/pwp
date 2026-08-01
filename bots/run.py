@@ -2,7 +2,6 @@ import asyncio, subprocess, os
 from pathlib import Path
 import config
 from shared_state import SharedState
-import scheduler_loop
 
 PWP_ROOT = Path(__file__).parent.parent.resolve()
 
@@ -93,8 +92,6 @@ async def main():
     if config.TELEGRAM_TOKEN:
         import telegram_bot
         tasks.append(telegram_bot.start())
-
-    tasks.append(scheduler_loop.run(shared))
 
     if not tasks:
         print("No tokens set. Add TELEGRAM_TOKEN and/or DISCORD_TOKEN to .env")

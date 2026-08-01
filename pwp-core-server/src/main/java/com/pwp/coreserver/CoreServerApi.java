@@ -29,6 +29,14 @@ public class CoreServerApi {
     private static String apiKey = "";
     private static boolean trustAllCerts = false;
 
+    /** Heartbeats run off the server thread so a slow Core Service can't lag the MC server. */
+    private static final java.util.concurrent.ExecutorService HEARTBEAT_EXECUTOR =
+        java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "pwp-heartbeat");
+            t.setDaemon(true);
+            return t;
+        });
+
     static {
         try {
             SSLContext ctx = SSLContext.getInstance("TLS");
@@ -184,10 +192,58 @@ public class CoreServerApi {
         return get("/api/v1/ranks/player/" + uuid);
     }
 
+    // ====== MATCH POLICY ======
+
+    /** Кэш политики: запросы к core-service синхронные, чтобы не лагать серверный тик. */
+    private static volatile long policyCheckedAt = 0;
+    private static volatile boolean policyCached = true;
+    private static volatile String policyReason = null;
+    private static final long POLICY_TTL_MS = 15_000;
+
+    public static boolean canStartNewMatch() {
+        refreshPolicy();
+        return policyCached;
+    }
+
+    public static String getMatchPolicyReason() {
+        refreshPolicy();
+        return policyReason;
+    }
+
+    private static synchronized void refreshPolicy() {
+        long now = System.currentTimeMillis();
+        if (now - policyCheckedAt < POLICY_TTL_MS) return;
+        policyCheckedAt = now;
+        try {
+            JsonObject resp = get("/api/v1/network/match-policy");
+            if (resp != null && resp.has("data")) {
+                JsonObject data = resp.getAsJsonObject("data");
+                if (data.has("canStartNewMatch")) {
+                    policyCached = data.get("canStartNewMatch").getAsBoolean();
+                }
+                if (data.has("reason") && !data.get("reason").isJsonNull()) {
+                    policyReason = data.get("reason").getAsString();
+                } else {
+                    policyReason = null;
+                }
+            }
+        } catch (Exception e) {
+            // core-service недоступен — оставляем последнее известное значение
+            log.warn("Failed to refresh match policy: {}", e.getMessage());
+        }
+    }
+
+    public static JsonObject setMatchPolicy(boolean canStart, String reason) {
+        policyCheckedAt = 0; // инвалидируем кэш
+        return post("/api/v1/network/match-policy", map("canStartNewMatch", canStart, "reason", reason));
+    }
+
     // ====== NETWORK ======
 
     public static JsonObject sendHeartbeat(String server, int online) {
-        return post("/api/v1/network/heartbeat", map("server", server, "online", online));
+        HEARTBEAT_EXECUTOR.execute(() ->
+            post("/api/v1/network/heartbeat", map("server", server, "online", online)));
+        return null;
     }
 
     public static JsonObject sendHeartbeat(String server, int online,
@@ -209,7 +265,8 @@ public class CoreServerApi {
             body.addProperty("matchStartedAt", matchStartedAt);
             body.addProperty("matchPlayers", matchPlayers);
         }
-        return post("/api/v1/network/heartbeat", body);
+        HEARTBEAT_EXECUTOR.execute(() -> post("/api/v1/network/heartbeat", body));
+        return null;
     }
 
     // ====== KITS ======

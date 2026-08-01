@@ -26,8 +26,14 @@ public class VotingManager {
     private static int lastBroadcastedRemaining = -1;
 
     public static void startVoting() {
-        if (MatchAllocator.hasActiveMatch()) {
-            log.warn("Cannot start voting while a match is active");
+        if (MatchAllocator.hasActiveMatch() || LobbyMod.isAnyVoteActive()) {
+            log.warn("Cannot start voting while a match or another vote is active");
+            return;
+        }
+        if (!com.pwp.coreserver.CoreServerApi.canStartNewMatch()) {
+            String reason = com.pwp.coreserver.CoreServerApi.getMatchPolicyReason();
+            LobbyMod.serverBroadcast("§e[PWP] §cНовые матчи приостановлены" + (reason != null && !reason.isEmpty() ? ": " + reason : ""));
+            log.info("Voting start blocked by match policy");
             return;
         }
         List<MapConfig> maps = MapRegistry.getVotable();
@@ -48,7 +54,7 @@ public class VotingManager {
         String mapList = maps.stream().map(m -> m.displayName).collect(Collectors.joining("§7, §e"));
         LobbyMod.serverBroadcast("§e[PWP] §fГолосование началось! §7Карты: §e" + mapList);
         LobbyMod.serverBroadcast("§7Напишите §e/votemap <название> §7или откройте GUI чтобы проголосовать");
-        LobbyMod.broadcastVotingUpdate();
+        LobbyMod.broadcastLobbyState();
         log.info("Voting started: {} maps available, {} seconds", maps.size(), voteDurationSec);
     }
 
@@ -65,7 +71,7 @@ public class VotingManager {
         if (total % 5 == 0 || total == online) {
             broadcastLeader();
         }
-        LobbyMod.broadcastVotingUpdate();
+        LobbyMod.broadcastLobbyState();
         return true;
     }
 
@@ -82,7 +88,7 @@ public class VotingManager {
                 voteStartTime = now - (voteDurationSec - 60) * 1000L;
                 remaining = 60;
                 LobbyMod.serverBroadcast("§e[PWP] §fПочти все проголосовали! §eОсталось " + remaining + "с");
-                LobbyMod.broadcastVotingUpdate();
+                LobbyMod.broadcastLobbyState();
                 log.info("90% threshold reached, vote accelerated to 60s remaining");
             }
         }
@@ -154,10 +160,13 @@ public class VotingManager {
             String display = cfg != null ? cfg.displayName : winner;
             LobbyMod.serverBroadcast("§e[PWP] §aПобедила карта: §e" + display + " §a— матч запускается!");
             log.info("Vote finished. Winner: {}", winner);
+            LobbyMod.recordResult("MAP", winner, counts.getOrDefault(winner, 0));
+            LobbyMod.broadcastLobbyState();
             LobbyMod.onVoteFinished(winner);
         } else {
             LobbyMod.serverBroadcast("§e[PWP] §cНе удалось определить победителя голосования!");
             log.warn("Vote finished but no winner!");
+            LobbyMod.broadcastLobbyState();
         }
     }
 
@@ -181,6 +190,7 @@ public class VotingManager {
         voteStartTime = 0;
         winner = null;
         lastBroadcastedRemaining = -1;
+        LobbyMod.broadcastLobbyState();
     }
 
     public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }

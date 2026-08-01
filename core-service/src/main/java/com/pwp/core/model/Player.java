@@ -18,4 +18,5 @@ public class Player {
     public String role;
     public boolean isBanned;
     public String banReason;
+    public String bannedUntil;
 }

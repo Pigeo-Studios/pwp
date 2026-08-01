@@ -9,6 +9,8 @@ import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveRequest;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveAnswer;
+import com.pigeostudios.pwp.warfare.server.MarkerManager;
+import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.google.gson.JsonArray;
@@ -448,11 +450,24 @@ public class ModCommands {
                     ))
                  )
               )
-       );
+        );
 
-       dispatcher.register(
-          Commands.literal("pwp")
-             .then(Commands.literal("inv")
+        dispatcher.register(
+           Commands.literal("pwpwarfare")
+              .requires(s -> s.hasPermission(2))
+               .then(Commands.literal("makecmd")
+                  .then(Commands.argument("squadId", IntegerArgumentType.integer())
+                     .executes(ctx -> forceSetCMD(
+                        (CommandSourceStack)ctx.getSource(),
+                        IntegerArgumentType.getInteger(ctx, "squadId")
+                     ))
+                  )
+               )
+         );
+
+        dispatcher.register(
+           Commands.literal("pwp")
+              .then(Commands.literal("inv")
                 .executes(ctx -> {
                    ServerPlayer player = ((CommandSourceStack)ctx.getSource()).getPlayerOrException();
                    PacketHandler.INSTANCE.send(
@@ -582,13 +597,14 @@ public class ModCommands {
          data.playedRedSiren = false;
          GameLogicEvents.startGameCountdown(level);
          source.sendSuccess(() -> Component.literal("Countdown started in this world!").withStyle(ChatFormatting.GREEN), true);
-      } else {
-         data.isGameStarted = false;
-         GameLogicEvents.cancelCountdown(level);
-         data.setDirty();
-         syncDataToAll(level, data);
-         source.sendSuccess(() -> Component.literal("Game Stopped in this world!").withStyle(ChatFormatting.RED), true);
-      }
+       } else {
+          data.isGameStarted = false;
+          data.invasionSetupActive = false;
+          GameLogicEvents.cancelCountdown(level);
+          data.setDirty();
+          syncDataToAll(level, data);
+          source.sendSuccess(() -> Component.literal("Game Stopped in this world!").withStyle(ChatFormatting.RED), true);
+       }
 
       return 1;
    }
@@ -666,8 +682,10 @@ public class ModCommands {
       }
 
       team.setColor(color);
-      scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
-      source.sendSuccess(() -> Component.literal("Player joined " + internalTeamName).withStyle(color), true);
+       scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
+       MarkerManager.syncToPlayer(player);
+       PathManager.syncToPlayer(player);
+       source.sendSuccess(() -> Component.literal("Player joined " + internalTeamName).withStyle(color), true);
       return 1;
    }
 
@@ -975,13 +993,35 @@ public class ModCommands {
       return 1;
    }
 
-   private static int clearTeamkill(CommandSourceStack source, ServerPlayer target) {
-      DownedHandler.clearTeamkillPunishment(target);
-      source.sendSuccess(() -> Component.literal("Cleared teamkill punishment for " + target.getScoreboardName()).withStyle(ChatFormatting.GREEN), true);
-      return 1;
-   }
+    private static int clearTeamkill(CommandSourceStack source, ServerPlayer target) {
+       DownedHandler.clearTeamkillPunishment(target);
+       source.sendSuccess(() -> Component.literal("Cleared teamkill punishment for " + target.getScoreboardName()).withStyle(ChatFormatting.GREEN), true);
+       return 1;
+    }
 
-   private static int togglePause(CommandSourceStack source) {
+    private static int forceSetCMD(CommandSourceStack source, int squadId) {
+       ServerLevel level = source.getLevel();
+       WarfareWorldData data = WarfareWorldData.get(level);
+       if (data == null) return 0;
+       String team = null;
+       for (var s : data.squads) {
+          if (s.id == squadId) { team = s.team; break; }
+       }
+       if (team == null) {
+          source.sendFailure(Component.literal("Squad not found"));
+          return 0;
+       }
+        boolean isBlue = team.toUpperCase().contains("BLUE");
+        if (isBlue) data.blueCMDId = squadId;
+        else data.redCMDId = squadId;
+        data.setDirty();
+        PacketHandler.sendToAllClients(level, data);
+        String finalTeam = team;
+        source.sendSuccess(() -> Component.literal("CMD set to squad " + squadId + " (" + finalTeam + ")").withStyle(ChatFormatting.GREEN), true);
+        return 1;
+    }
+
+    private static int togglePause(CommandSourceStack source) {
       ServerLevel level = source.getLevel();
       WarfareWorldData data = WarfareWorldData.get(level);
       data.isPaused = !data.isPaused;
@@ -1018,4 +1058,6 @@ public class ModCommands {
       }
       return 1;
    }
+
 }
+

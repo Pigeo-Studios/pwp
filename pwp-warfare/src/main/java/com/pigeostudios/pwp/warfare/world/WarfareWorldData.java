@@ -100,6 +100,8 @@ public class WarfareWorldData extends SavedData {
     public boolean isPaused = false;
     public boolean waitingActive = false;
     public int waitingTimer = 0;
+    public boolean invasionSetupActive = false;
+    public int invasionSetupTimer = 300;
     public List<String> getAvailableMapImages() {
        List<String> images = new ArrayList<>();
        try {
@@ -263,8 +265,48 @@ public class WarfareWorldData extends SavedData {
    public WarfareWorldData.ArtStrikeRequest blueArtRequest = null;
    public WarfareWorldData.ArtStrikeRequest redArtRequest = null;
    public List<WarfareWorldData.ActiveStrike> activeStrikes = new ArrayList<>();
-   public List<WarfareWorldData.MapMarker> activeMarkers = new ArrayList<>();
-   public List<WarfareWorldData.MainProtectionZone> mainZones = new ArrayList<>();
+    public List<WarfareWorldData.MapMarker> activeMarkers = new ArrayList<>();
+    public List<WarfareWorldData.MainProtectionZone> mainZones = new ArrayList<>();
+    public final List<MarkerSnapshot> savedMarkers = new ArrayList<>();
+    public final List<PathSnapshot> savedPaths = new ArrayList<>();
+
+    public record MarkerSnapshot(UUID id, String team, String category, String iconType, BlockPos pos, UUID ownerUUID, long createdAt) {
+        public CompoundTag save() {
+            CompoundTag t = new CompoundTag();
+            t.putUUID("Id", id); t.putString("Team", team); t.putString("Category", category);
+            t.putString("Icon", iconType); t.putLong("Pos", pos.asLong());
+            t.putUUID("Owner", ownerUUID); t.putLong("Created", createdAt);
+            return t;
+        }
+        public static MarkerSnapshot load(CompoundTag t) {
+            return new MarkerSnapshot(t.getUUID("Id"), t.getString("Team"), t.getString("Category"),
+                t.getString("Icon"), BlockPos.of(t.getLong("Pos")), t.getUUID("Owner"), t.getLong("Created"));
+        }
+    }
+
+    public record PathSnapshot(UUID id, String owner, String team, String type, int squadNum, long createdAt, List<PathPoint> points) {
+        public CompoundTag save() {
+            CompoundTag t = new CompoundTag();
+            t.putUUID("Id", id); t.putString("Owner", owner); t.putString("Team", team);
+            t.putString("Type", type); t.putInt("SquadNum", squadNum); t.putLong("Created", createdAt);
+            ListTag ptList = new ListTag();
+            for (var p : points) { CompoundTag pt = new CompoundTag(); pt.putDouble("X", p.x); pt.putDouble("Z", p.z); ptList.add(pt); }
+            t.put("Points", ptList);
+            return t;
+        }
+        public static PathSnapshot load(CompoundTag t) {
+            UUID id = t.getUUID("Id"); String owner = t.getString("Owner"); String team = t.getString("Team");
+            String type = t.getString("Type"); int squadNum = t.getInt("SquadNum");
+            long createdAt = t.getLong("Created");
+            List<PathPoint> pts = new ArrayList<>();
+            ListTag ptList = t.getList("Points", 10);
+            for (int i = 0; i < ptList.size(); i++) {
+                CompoundTag pt = ptList.getCompound(i);
+                pts.add(new PathPoint(pt.getDouble("X"), pt.getDouble("Z")));
+            }
+            return new PathSnapshot(id, owner, team, type, squadNum, createdAt, pts);
+        }
+    }
    public boolean voteActive = false;
    public int voteTimer = 0;
    public boolean blueReady = false;
@@ -293,8 +335,10 @@ public class WarfareWorldData extends SavedData {
       }
    }
 
-   public CompoundTag save(CompoundTag tag) {
-      tag.putInt("BlueTickets", this.blueTickets);
+    public CompoundTag save(CompoundTag tag) {
+       com.pigeostudios.pwp.warfare.server.MarkerManager.saveTo(this);
+       com.pigeostudios.pwp.warfare.server.PathManager.saveTo(this);
+       tag.putInt("BlueTickets", this.blueTickets);
       tag.putInt("RedTickets", this.redTickets);
       tag.putInt("RespawnTimer", this.respawnTimer);
       tag.putInt("DeathTicketCost", this.deathTicketCost);
@@ -323,6 +367,8 @@ public class WarfareWorldData extends SavedData {
       tag.putBoolean("IsPaused", this.isPaused);
       tag.putBoolean("WaitingActive", this.waitingActive);
       tag.putInt("WaitingTimer", this.waitingTimer);
+      tag.putBoolean("InvasionSetupActive", this.invasionSetupActive);
+      tag.putInt("InvasionSetupTimer", this.invasionSetupTimer);
       tag.putLong("BlueArtCD", this.blueArtStrikeCD);
       tag.putLong("RedArtCD", this.redArtStrikeCD);
       tag.putInt("BlueCMDId", this.blueCMDId);
@@ -362,6 +408,12 @@ public class WarfareWorldData extends SavedData {
       }
 
       tag.put("TacticalMarkers", markerList);
+      ListTag pwpMarkerList = new ListTag();
+      for (MarkerSnapshot m : this.savedMarkers) pwpMarkerList.add(m.save());
+      tag.put("PwpMarkers", pwpMarkerList);
+      ListTag pathList = new ListTag();
+      for (PathSnapshot p : this.savedPaths) pathList.add(p.save());
+      tag.put("PwpPaths", pathList);
       ListTag blueList = new ListTag();
 
       for (BlockPos pos : this.blueRallies) {
@@ -489,6 +541,8 @@ public class WarfareWorldData extends SavedData {
       data.isPaused = tag.contains("IsPaused") && tag.getBoolean("IsPaused");
       data.waitingActive = tag.contains("WaitingActive") && tag.getBoolean("WaitingActive");
       data.waitingTimer = tag.contains("WaitingTimer") ? tag.getInt("WaitingTimer") : 0;
+      data.invasionSetupActive = tag.contains("InvasionSetupActive") && tag.getBoolean("InvasionSetupActive");
+      data.invasionSetupTimer = tag.contains("InvasionSetupTimer") ? tag.getInt("InvasionSetupTimer") : 300;
       data.blueArtStrikeCD = tag.getLong("BlueArtCD");
       data.redArtStrikeCD = tag.getLong("RedArtCD");
       data.blueCMDId = tag.getInt("BlueCMDId");
@@ -523,6 +577,15 @@ public class WarfareWorldData extends SavedData {
          for (int i = 0; i < list.size(); i++) {
             data.activeMarkers.add(WarfareWorldData.MapMarker.load(list.getCompound(i)));
          }
+      }
+
+      if (tag.contains("PwpMarkers")) {
+         ListTag list = tag.getList("PwpMarkers", 10);
+         for (int i = 0; i < list.size(); i++) data.savedMarkers.add(MarkerSnapshot.load(list.getCompound(i)));
+      }
+      if (tag.contains("PwpPaths")) {
+         ListTag list = tag.getList("PwpPaths", 10);
+         for (int i = 0; i < list.size(); i++) data.savedPaths.add(PathSnapshot.load(list.getCompound(i)));
       }
 
       if (tag.contains("TriggerBlocks")) {
@@ -647,6 +710,8 @@ public class WarfareWorldData extends SavedData {
          }
       }
 
+      com.pigeostudios.pwp.warfare.server.MarkerManager.loadFrom(data);
+      com.pigeostudios.pwp.warfare.server.PathManager.loadFrom(data);
       return data;
    }
 

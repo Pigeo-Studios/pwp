@@ -1,30 +1,33 @@
 package com.pwp.lobby;
 
-import com.pwp.coreclient.network.OpenFactionVotePacket;
-import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 import java.util.*;
 
 public class FactionVotingManager {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FactionVotingManager.class);
+
     private static boolean active;
     private static boolean finished;
     private static long startTime;
     private static int durationSec = 120;
     private static String mapName;
-    private static List<String> availableFactions;
+    private static List<String> availableFactions = new ArrayList<>();
     private static final Map<UUID, String[]> votes = new HashMap<>();
 
     public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
     public static boolean isActive() { return active; }
+    public static int getVoteCount() { return votes.size(); }
 
     public static void startFactionVoting(String map, List<String> available) {
+        if (MatchAllocator.hasActiveMatch() || LobbyMod.isAnyVoteActive()) {
+            log.warn("Cannot start faction voting: match or another vote active");
+            return;
+        }
         active = true;
         finished = false;
         startTime = System.currentTimeMillis();
@@ -32,16 +35,17 @@ public class FactionVotingManager {
         availableFactions = new ArrayList<>(available);
         Collections.shuffle(availableFactions);
         votes.clear();
-        broadcastUpdate();
+        LobbyMod.broadcastLobbyState();
         serverBroadcast("§e[PWP] §fГолосование за фракции началось! Осталось §e" + durationSec + "с");
     }
 
     public static void vote(UUID uuid, String blueFaction, String redFaction) {
         if (!active || finished) return;
+        if (availableFactions.size() < 6) return;
         if (!availableFactions.subList(0, 3).contains(blueFaction)) return;
         if (!availableFactions.subList(3, 6).contains(redFaction)) return;
         votes.put(uuid, new String[]{blueFaction, redFaction});
-        broadcastUpdate();
+        LobbyMod.broadcastLobbyState();
     }
 
     public static void tick() {
@@ -59,6 +63,7 @@ public class FactionVotingManager {
         active = false;
         finished = false;
         votes.clear();
+        LobbyMod.broadcastLobbyState();
     }
 
     private static void finishFactionVote() {
@@ -66,7 +71,13 @@ public class FactionVotingManager {
         finished = true;
         active = false;
 
-        if (votes.isEmpty() || availableFactions.size() < 2) {
+        if (availableFactions == null || availableFactions.size() < 2) {
+            log.warn("Faction vote finished but not enough factions available");
+            LobbyMod.broadcastLobbyState();
+            return;
+        }
+
+        if (votes.isEmpty()) {
             List<String> shuffled = new ArrayList<>(availableFactions);
             Collections.shuffle(shuffled);
             startMatch(shuffled.get(0), shuffled.get(1));
@@ -89,30 +100,43 @@ public class FactionVotingManager {
     private static void startMatch(String blue, String red) {
         MapConfig map = MapRegistry.get(mapName);
         if (map == null) return;
+        LobbyMod.recordResult("F1", blue, (int) votes.values().stream().filter(p -> p[0].equals(blue)).count());
+        LobbyMod.recordResult("F2", red, (int) votes.values().stream().filter(p -> p[1].equals(red)).count());
         LobbyMod.startMatchAfterFactionVote(map, blue, red);
     }
 
-    public static OpenFactionVotePacket buildPacket() {
-        int[] t1v = new int[3], t2v = new int[3];
+    // ====== Геттеры для state-пакета ======
+
+    public static String[] getTeam1Factions() {
+        if (availableFactions.size() < 3) return new String[0];
+        return availableFactions.subList(0, 3).toArray(new String[3]);
+    }
+
+    public static String[] getTeam2Factions() {
+        if (availableFactions.size() < 6) return new String[0];
+        return availableFactions.subList(3, 6).toArray(new String[3]);
+    }
+
+    public static int[] getTeam1Votes() {
+        int[] t1v = new int[3];
+        if (availableFactions.size() < 6) return t1v;
         for (String[] pair : votes.values()) {
             for (int i = 0; i < 3; i++) {
                 if (pair[0].equals(availableFactions.get(i))) t1v[i]++;
+            }
+        }
+        return t1v;
+    }
+
+    public static int[] getTeam2Votes() {
+        int[] t2v = new int[3];
+        if (availableFactions.size() < 6) return t2v;
+        for (String[] pair : votes.values()) {
+            for (int i = 0; i < 3; i++) {
                 if (pair[1].equals(availableFactions.get(3 + i))) t2v[i]++;
             }
         }
-        return new OpenFactionVotePacket(getRemainingSeconds(),
-                MatchAllocator.getLobbyPlayerCount(), votes.size(),
-                availableFactions.subList(0, 3).toArray(new String[3]),
-                availableFactions.subList(3, 6).toArray(new String[3]),
-                t1v, t2v);
-    }
-
-    public static void broadcastUpdate() {
-        OpenFactionVotePacket pkt = buildPacket();
-        var server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        server.getPlayerList().getPlayers().forEach(p ->
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+        return t2v;
     }
 
     private static void serverBroadcast(String msg) {

@@ -284,16 +284,19 @@ public class WarfareMod {
                  cp.capturingTeam = "NONE";
                  cp.invLocked = false;
               }
-             if (root.has("modes")) {
-                JsonObject modes = root.getAsJsonObject("modes");
-                if (modes.has("invasion")) {
-                   JsonObject inv = modes.getAsJsonObject("invasion");
-                   if (inv.has("captureBonus")) {
-                      data.invasionCaptureBonus = inv.get("captureBonus").getAsInt();
-                   }
-                }
-             }
-             LOGGER.info("INVASION mode: all points set to defender {}, capture bonus={}", defender, data.invasionCaptureBonus);
+              if (root.has("modes")) {
+                 JsonObject modes = root.getAsJsonObject("modes");
+                 if (modes.has("invasion")) {
+                    JsonObject inv = modes.getAsJsonObject("invasion");
+                    if (inv.has("captureBonus")) {
+                       data.invasionCaptureBonus = inv.get("captureBonus").getAsInt();
+                    }
+                    if (inv.has("setupPhaseSeconds")) {
+                       data.invasionSetupTimer = inv.get("setupPhaseSeconds").getAsInt();
+                    }
+                 }
+              }
+              LOGGER.info("INVASION mode: defender={}, captureBonus={}, setupTimer={}s", defender, data.invasionCaptureBonus, data.invasionSetupTimer);
           }
 
           // Start waiting phase (5 min timer), then voting

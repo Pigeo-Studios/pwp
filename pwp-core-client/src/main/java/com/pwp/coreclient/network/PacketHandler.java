@@ -23,14 +23,6 @@ public class PacketHandler {
                 ConnectToServerPacket::encode,
                 ConnectToServerPacket::decode,
                 ConnectToServerPacket::handle);
-        INSTANCE.registerMessage(id++, OpenVotingScreenPacket.class,
-                OpenVotingScreenPacket::encode,
-                OpenVotingScreenPacket::decode,
-                OpenVotingScreenPacket::handle);
-        INSTANCE.registerMessage(id++, OpenMatchScreenPacket.class,
-                OpenMatchScreenPacket::encode,
-                OpenMatchScreenPacket::decode,
-                OpenMatchScreenPacket::handle);
         INSTANCE.registerMessage(id++, VoteMapPacket.class,
                 VoteMapPacket::encode,
                 VoteMapPacket::decode,
@@ -39,10 +31,6 @@ public class PacketHandler {
                 JoinMatchPacket::encode,
                 JoinMatchPacket::decode,
                 JoinMatchPacket::handle);
-        INSTANCE.registerMessage(id++, OpenMatchListScreenPacket.class,
-                OpenMatchListScreenPacket::encode,
-                OpenMatchListScreenPacket::decode,
-                OpenMatchListScreenPacket::handle);
         INSTANCE.registerMessage(id++, JoinMatchServerPacket.class,
                 JoinMatchServerPacket::encode,
                 JoinMatchServerPacket::decode,
@@ -51,10 +39,6 @@ public class PacketHandler {
                 VoteModePacket::encode,
                 VoteModePacket::decode,
                 VoteModePacket::handle);
-        INSTANCE.registerMessage(id++, OpenModeVotePacket.class,
-                OpenModeVotePacket::encode,
-                OpenModeVotePacket::decode,
-                OpenModeVotePacket::handle);
         INSTANCE.registerMessage(id++, PacketDataRequest.class,
                 PacketDataRequest::encode,
                 PacketDataRequest::decode,
@@ -67,14 +51,14 @@ public class PacketHandler {
                 PacketAction::encode,
                 PacketAction::decode,
                 PacketAction::handle);
-        INSTANCE.registerMessage(id++, OpenFactionVotePacket.class,
-                OpenFactionVotePacket::encode,
-                OpenFactionVotePacket::decode,
-                OpenFactionVotePacket::handle);
         INSTANCE.registerMessage(id++, VoteFactionPacket.class,
                 VoteFactionPacket::encode,
                 VoteFactionPacket::decode,
                 VoteFactionPacket::handle);
+        INSTANCE.registerMessage(id++, LobbyStatePacket.class,
+                LobbyStatePacket::encode,
+                LobbyStatePacket::decode,
+                LobbyStatePacket::handle);
 
     }
 }

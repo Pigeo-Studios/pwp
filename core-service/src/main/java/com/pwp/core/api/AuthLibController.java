@@ -195,7 +195,20 @@ public class AuthLibController {
     }
 
     private void checkBan(Player pl) {
-        if (pl == null || pl.isBanned) throw new BanException("Banned");
+        if (pl == null) throw new BanException("Banned");
+        if (pl.isBanned) {
+            // Временный бан: если срок истёк — снимаем автоматически
+            if (pl.bannedUntil != null && !pl.bannedUntil.isEmpty()) {
+                try {
+                    java.sql.Timestamp until = java.sql.Timestamp.valueOf(pl.bannedUntil.replace('T', ' '));
+                    if (until.before(new java.util.Date())) {
+                        PlayerRepository.setBan(pl.uuid, false, null);
+                        return;
+                    }
+                } catch (Exception ignored) {}
+            }
+            throw new BanException("Banned");
+        }
         if (pl.hwid != null && !pl.hwid.isEmpty() && isHwidBanned(pl.hwid))
             throw new BanException("Banned");
     }

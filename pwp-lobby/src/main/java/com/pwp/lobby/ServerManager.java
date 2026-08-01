@@ -97,6 +97,10 @@ public class ServerManager {
 
         backgroundExecutor.submit(() -> {
             try {
+                // Зомби прошлого запуска мог остаться висеть на порту (окно "PWP Match N") —
+                // освобождаем порт до старта, иначе сервер упадёт с "port in use"
+                killPort(port);
+
                 if (Files.exists(serverDir)) deleteDirectory(serverDir);
 
                 instance.phase = "template";
@@ -367,6 +371,19 @@ public class ServerManager {
             public int vehicleInfoDisplayDistance = 0;
             public boolean vehicleChunkLoading = true;
             public boolean projectileChunkLoading = true;
+        }
+    }
+
+    /** Убить процесс, слушающий порт (зомби матч-сервер от прошлого запуска). */
+    private static void killPort(int port) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c",
+                    "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr \":" + port + " \" ^| findstr \"LISTENING\"') do @taskkill /F /PID %a");
+            Process p = pb.start();
+            p.waitFor(30, TimeUnit.SECONDS);
+            log.info("Port {} freed (killed zombie if any)", port);
+        } catch (Exception e) {
+            log.warn("Failed to free port {}: {}", port, e.getMessage());
         }
     }
 

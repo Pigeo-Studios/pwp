@@ -1,0 +1,4 @@
+{
+    "vertex": "minecraft:shaders/program/blit.vsh",
+    "fragment": "pwpdrone:shaders/program/fpv.fsh"
+}

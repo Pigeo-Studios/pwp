@@ -40,14 +40,15 @@ public class PacketUpdateSpawner {
    public static void handle(PacketUpdateSpawner msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
-         if (player != null && player.isCreative() && player.level().getBlockEntity(msg.pos) instanceof VehicleSpawnerBlockEntity spawner) {
-            spawner.respawnTimeSettings = msg.respawnTime;
-            spawner.initialTimeSettings = msg.initialTime;
-            spawner.vehicleIdString = msg.vehicleId;
-            spawner.vehicleYaw = msg.vehicleYaw;
-            spawner.setChanged();
-            player.level().sendBlockUpdated(msg.pos, spawner.getBlockState(), spawner.getBlockState(), 3);
-         }
+          if (player != null && player.isCreative() && player.level().getBlockEntity(msg.pos) instanceof VehicleSpawnerBlockEntity spawner) {
+             spawner.respawnTimeSettings = msg.respawnTime;
+             spawner.initialTimeSettings = msg.initialTime;
+             spawner.vehicleIdString = msg.vehicleId;
+             spawner.vehicleYaw = msg.vehicleYaw;
+             spawner.setChanged();
+             player.level().sendBlockUpdated(msg.pos, spawner.getBlockState(), spawner.getBlockState(), 3);
+             spawner.syncToWorldData();
+          }
       });
       ctx.get().setPacketHandled(true);
    }

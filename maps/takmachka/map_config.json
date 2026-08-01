@@ -16,7 +16,8 @@
         "invasion": {
             "attackerTickets": 300,
             "defenderTickets": 1400,
-            "captureBonus": 100
+            "captureBonus": 100,
+            "setupPhaseSeconds": 300
         }
     },
 

@@ -24,6 +24,8 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncSpawners;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pigeostudios.pwp.warfare.server.MarkerManager;
+import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pwp.coreserver.CoreServerApi;
 import com.pwp.coreclient.network.ConnectToServerPacket;
@@ -365,9 +367,34 @@ public class GameLogicEvents {
                        startGameCountdown(level);
                       PacketHandler.sendToAllClients(level, data);
                    }
-               }
+                }
 
-               if (globalTick % 2 == 0) {
+                if (data.invasionSetupActive && globalTick % 20 == 0) {
+                   data.invasionSetupTimer--;
+                   data.setDirty();
+                   sendSyncPacket(level, data);
+                   int secs = data.invasionSetupTimer;
+                   if (secs == 60) {
+                      level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.MASTER, 1.0F, 2.0F);
+                      broadcastMessage(level, "§e[PWP] §fФаза подготовки: осталось §e1 минута!", ChatFormatting.GOLD);
+                   }
+                   if (secs == 30) {
+                      level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_PLING.value(), SoundSource.MASTER, 1.0F, 2.0F);
+                      broadcastMessage(level, "§e[PWP] §fФаза подготовки: осталось §e30 секунд!", ChatFormatting.GOLD);
+                   }
+                   if (secs <= 10 && secs > 0) {
+                      level.playSound(null, new BlockPos(0, 100, 0), SoundEvents.NOTE_BLOCK_HAT.value(), SoundSource.MASTER, 1.0F, 1.0F);
+                   }
+                   if (secs <= 0) {
+                      data.invasionSetupActive = false;
+                      data.setDirty();
+                      sendSyncPacket(level, data);
+                      sendTitleToLevel(level, "§aАТАКА!", ChatFormatting.GREEN);
+                      broadcastMessage(level, "§a[PWP] Фаза подготовки окончена! Атакующие освобождены!", ChatFormatting.GREEN);
+                   }
+                }
+
+                if (globalTick % 2 == 0) {
                   List<MapPlayerInfo> allPlayersInfo = buildPlayerInfo(level.players(), data);
                   PacketSyncMapPlayers allPlayersPacket = new PacketSyncMapPlayers(allPlayersInfo);
 
@@ -618,10 +645,22 @@ public class GameLogicEvents {
 
                       data.countdownTicks--;
                       data.setDirty();
-                  } else {
-                      data.countdownActive = false;
-                      sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
-                      data.isGameStarted = true;
+                   } else {
+                       data.countdownActive = false;
+                       // Clear markers and paths from previous match
+                       com.pigeostudios.pwp.warfare.server.MarkerManager.clearAll();
+                       com.pigeostudios.pwp.warfare.server.PathManager.clearAll();
+                       data.savedMarkers.clear();
+                       data.savedPaths.clear();
+                       data.isGameStarted = true;
+
+                      if ("invasion".equals(data.gameMode)) {
+                         data.invasionSetupActive = true;
+                         sendTitleToLevel(level, "ПОДГОТОВКА!", ChatFormatting.GOLD);
+                      } else {
+                         sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
+                      }
+
                       data.setDirty();
 
                       Scoreboard scoreboard = level.getScoreboard();
@@ -644,13 +683,17 @@ public class GameLogicEvents {
                       MatchStatsTracker.get().startMatch(data.currentMapImage, data.gameMode != null ? data.gameMode : "AAS");
 
                       for (ServerPlayer p : level.players()) {
-                         String pending = p.getPersistentData().getString("WARFARE_PendingKit");
-                        String current = p.getPersistentData().getString("WARFARE_CurrentKit");
-                        String kitToApply = !pending.isEmpty() ? pending : current;
-                        if (kitToApply != null && !kitToApply.isEmpty() && !kitToApply.equals("Unassigned")) {
-                           ResupplyHandler.tryApplyPendingKit(p, data);
-                        }
-                     }
+                         String pTeam = p.getTeam() != null ? p.getTeam().getName().toUpperCase() : "";
+                         boolean isSetupAttacker = data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
+                         if (!isSetupAttacker) {
+                            String pending = p.getPersistentData().getString("WARFARE_PendingKit");
+                            String current = p.getPersistentData().getString("WARFARE_CurrentKit");
+                            String kitToApply = !pending.isEmpty() ? pending : current;
+                            if (kitToApply != null && !kitToApply.isEmpty() && !kitToApply.equals("Unassigned")) {
+                               ResupplyHandler.tryApplyPendingKit(p, data);
+                            }
+                         }
+                      }
 
                       for (BlockPos p : data.triggerBlocks) {
                          if (level.isLoaded(p)) {
@@ -683,7 +726,7 @@ public class GameLogicEvents {
                }
 
                 boolean gameEnded = data.blueTickets <= 0 || data.redTickets <= 0;
-                if (data.isGameStarted && !gameEnded && !data.capturePoints.isEmpty()) {
+                if (data.isGameStarted && !data.invasionSetupActive && !gameEnded && !data.capturePoints.isEmpty()) {
                    int totalPoints = data.capturePoints.size();
                    long blueOwned = data.capturePoints.stream().filter(p -> p.owner.equalsIgnoreCase("BLUE")).count();
                    long redOwned = data.capturePoints.stream().filter(p -> p.owner.equalsIgnoreCase("RED")).count();
@@ -1056,11 +1099,17 @@ public class GameLogicEvents {
 
    private static void handleMainProtectionZones(ServerLevel level, WarfareWorldData data) {
       if (!data.mainZones.isEmpty()) {
-         if (!data.isGameStarted) {
+         boolean restrictMovement = !data.isGameStarted || data.invasionSetupActive;
+
+         // Phase 1: CONFINE certain players to their own main base
+         if (restrictMovement) {
             for (ServerPlayer player : level.players()) {
                if (!player.isCreative() && !player.isSpectator()) {
                   String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
                   if (!pTeam.equals("NEUTRAL")) {
+                     // During invasion setup, defenders are NOT restricted
+                     if (data.invasionSetupActive && pTeam.equalsIgnoreCase(data.invasionDefender)) continue;
+
                      for (WarfareWorldData.MainProtectionZone zone : data.mainZones) {
                         if (zone.team.equalsIgnoreCase(pTeam)) {
                            if (!zone.isInside(player.position())) {
@@ -1068,9 +1117,11 @@ public class GameLogicEvents {
                               BlockPos spawn = pTeam.equals("BLUE") ? data.blueSpawns.get(dim) : data.redSpawns.get(dim);
                               if (spawn != null) {
                                  player.teleportTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);
+                                 String msg = data.invasionSetupActive
+                                    ? "§cВы не можете покинуть базу во время подготовки! Осталось: " + formatTime(data.invasionSetupTimer)
+                                    : "§cThe match hasn't started yet! Wait in the Main Base.";
                                  player.displayClientMessage(
-                                    Component.literal("The match hasn't started yet! Wait in the Main Base.")
-                                       .withStyle(new ChatFormatting[]{ChatFormatting.RED, ChatFormatting.BOLD}),
+                                    Component.literal(msg).withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
                                     true
                                  );
                                  player.playNotifySound(SoundEvents.ENDERMAN_TELEPORT, SoundSource.MASTER, 1.0F, 1.0F);
@@ -1082,7 +1133,10 @@ public class GameLogicEvents {
                   }
                }
             }
-         } else {
+         }
+
+         // Phase 2: KILL enemies who enter main bases (runs when game started)
+         if (data.isGameStarted) {
             label207:
             for (WarfareWorldData.MainProtectionZone zone : data.mainZones) {
                List<Entity> entitiesInZone = level.getEntitiesOfClass(Entity.class, zone.area);
@@ -1299,9 +1353,11 @@ public class GameLogicEvents {
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
            sendSyncPacket(level, data);
-           PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
-           PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
-           String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
+            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+            MarkerManager.syncToPlayer(player);
+            PathManager.syncToPlayer(player);
+            String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
            if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
                player.setGameMode(GameType.ADVENTURE);
               player.sendSystemMessage(Component.literal("Choose a team to start playing!").withStyle(ChatFormatting.GOLD));
@@ -1373,22 +1429,26 @@ public class GameLogicEvents {
              newPlayer.teleportTo(newPlayer.serverLevel(), spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, newPlayer.getYRot(), 0.0F);
           }
 
-          ServerLevel level = newPlayer.serverLevel();
-          WarfareWorldData data = WarfareWorldData.get(level);
-              if (data.isGameStarted) {
-              if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
-                 ResupplyHandler.tryApplyPendingKit(newPlayer, data);
-              } else {
-                 String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
-                 if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                    String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
-                    WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
-                    if (kit != null) {
-                       ResupplyHandler.applyKitToPlayer(newPlayer, kit);
-                    }
-                 }
-              }
-            }
+           ServerLevel level = newPlayer.serverLevel();
+           WarfareWorldData data = WarfareWorldData.get(level);
+                if (data.isGameStarted) {
+                String pTeam = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "";
+                boolean isSetupAttacker = data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
+               if (!isSetupAttacker) {
+                  if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
+                     ResupplyHandler.tryApplyPendingKit(newPlayer, data);
+                  } else {
+                     String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+                     if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
+                        String tName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "NEUTRAL";
+                        WarfareWorldData.KitInfo kit = tName.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
+                        if (kit != null) {
+                           ResupplyHandler.applyKitToPlayer(newPlayer, kit);
+                        }
+                     }
+                  }
+               }
+             }
         }
      }
 
@@ -1585,52 +1645,58 @@ public class GameLogicEvents {
          WarfareWorldData data = WarfareWorldData.get(level);
           boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
           data.removeApprovedDrivers(entity.getUUID());
-          if (data.blueTickets > 0 && data.redTickets > 0) {
+          if (data.isGameStarted && data.blueTickets > 0 && data.redTickets > 0) {
              boolean ticketsChanged = false;
              if (entity instanceof ServerPlayer player && player.getTeam() != null) {
-               String teamName = player.getTeam().getName();
-               int cost = data.deathTicketCost;
-               if (teamName.equalsIgnoreCase("Blue")) {
-                  data.blueTickets = Math.max(0, data.blueTickets - cost);
-                  ticketsChanged = true;
-               } else if (teamName.equalsIgnoreCase("Red")) {
-                  data.redTickets = Math.max(0, data.redTickets - cost);
-                  ticketsChanged = true;
-               }
-            }
+                String teamName = player.getTeam().getName();
+                boolean isInSetupAttacker = data.invasionSetupActive && !teamName.equalsIgnoreCase(data.invasionDefender);
+                if (!isInSetupAttacker) {
+                   int cost = data.deathTicketCost;
+                   if (teamName.equalsIgnoreCase("Blue")) {
+                      data.blueTickets = Math.max(0, data.blueTickets - cost);
+                      ticketsChanged = true;
+                   } else if (teamName.equalsIgnoreCase("Red")) {
+                      data.redTickets = Math.max(0, data.redTickets - cost);
+                      ticketsChanged = true;
+                   }
+                }
+             }
 
-            if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-               int penalty = entity.getPersistentData().getInt("WARFARE_TicketPenalty");
-               String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
-               String vType = entity.getPersistentData().getString("WARFARE_VehicleType");
-               entity.getPersistentData().remove("WARFARE_TicketPenalty");
-               if (penalty > 0) {
-                  if (vTeam.equalsIgnoreCase("BLUE")) {
-                     data.blueTickets = Math.max(0, data.blueTickets - penalty);
-                     ticketsChanged = true;
-                     broadcastMessage(level, "BLUE lost " + vType + " (-" + penalty + ")", ChatFormatting.BLUE);
-                  } else if (vTeam.equalsIgnoreCase("RED")) {
-                     data.redTickets = Math.max(0, data.redTickets - penalty);
-                     ticketsChanged = true;
-                     broadcastMessage(level, "RED lost " + vType + " (-" + penalty + ")", ChatFormatting.RED);
-                  }
-               }
-            }
+             if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
+                String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+                boolean isInSetupAttackerVehicle = data.invasionSetupActive && !vTeam.equalsIgnoreCase(data.invasionDefender);
+                if (!isInSetupAttackerVehicle) {
+                   int penalty = entity.getPersistentData().getInt("WARFARE_TicketPenalty");
+                   String vType = entity.getPersistentData().getString("WARFARE_VehicleType");
+                   entity.getPersistentData().remove("WARFARE_TicketPenalty");
+                   if (penalty > 0) {
+                      if (vTeam.equalsIgnoreCase("BLUE")) {
+                         data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                         ticketsChanged = true;
+                         broadcastMessage(level, "BLUE lost " + vType + " (-" + penalty + ")", ChatFormatting.BLUE);
+                      } else if (vTeam.equalsIgnoreCase("RED")) {
+                         data.redTickets = Math.max(0, data.redTickets - penalty);
+                         ticketsChanged = true;
+                         broadcastMessage(level, "RED lost " + vType + " (-" + penalty + ")", ChatFormatting.RED);
+                      }
+                   }
+                }
+             }
 
-            if (ticketsChanged || markerRemoved) {
-               if (ticketsChanged) {
-                  checkGameOver(level, data);
-               }
+             if (ticketsChanged || markerRemoved) {
+                if (ticketsChanged) {
+                   checkGameOver(level, data);
+                }
 
-               data.setDirty();
-               sendSyncPacket(level, data);
-            }
-         } else {
-            if (markerRemoved) {
-               data.setDirty();
-               sendSyncPacket(level, data);
-            }
-         }
+                data.setDirty();
+                sendSyncPacket(level, data);
+             }
+          } else {
+             if (markerRemoved) {
+                data.setDirty();
+                sendSyncPacket(level, data);
+             }
+          }
       }
    }
 
@@ -1657,14 +1723,26 @@ public class GameLogicEvents {
 
    private static void processWreckLoss(Entity entity, WarfareWorldData data, ServerLevel level) {
       if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-         int penalty = entity.getPersistentData().getInt("WARFARE_TicketPenalty");
          String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+         // During invasion setup: skip ticket deduction for attackers' vehicles
+         if (data.invasionSetupActive && !vTeam.equalsIgnoreCase(data.invasionDefender)) {
+            boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
+            data.removeApprovedDrivers(entity.getUUID());
+            entity.getPersistentData().remove("WARFARE_TicketPenalty");
+            if (markerRemoved) {
+               data.setDirty();
+               sendSyncPacket(level, data);
+            }
+            return;
+         }
+
+         int penalty = entity.getPersistentData().getInt("WARFARE_TicketPenalty");
          String vType = entity.getPersistentData().getString("WARFARE_VehicleType");
          entity.getPersistentData().remove("WARFARE_TicketPenalty");
           boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
           data.removeApprovedDrivers(entity.getUUID());
           if (penalty > 0 && data.blueTickets > 0 && data.redTickets > 0) {
-            boolean ticketsChanged = false;
+             boolean ticketsChanged = false;
             if (vTeam.equalsIgnoreCase("BLUE")) {
                data.blueTickets = Math.max(0, data.blueTickets - penalty);
                ticketsChanged = true;
@@ -2099,9 +2177,12 @@ public class GameLogicEvents {
           data.redFaction,
           bName,
           rName,
-          data.gameMode != null ? data.gameMode : "aas",
-          data.isGameStarted,
-         data.capturePoints,
+           data.gameMode != null ? data.gameMode : "aas",
+           data.isGameStarted,
+           data.invasionSetupActive,
+           data.invasionSetupTimer,
+           data.invasionDefender != null ? data.invasionDefender : "RED",
+          data.capturePoints,
          data.blueSpawns,
          data.redSpawns,
          data.neutralSpawns,
@@ -2205,10 +2286,14 @@ public class GameLogicEvents {
       if (!event.getEntity().level().isClientSide) {
          ServerPlayer player = (ServerPlayer)event.getEntity();
          ServerLevel level = player.serverLevel();
-         WarfareWorldData data = WarfareWorldData.get(level);
-         if (data.isGameStarted) {
-            return;
-         }
+          WarfareWorldData data = WarfareWorldData.get(level);
+          if (data.isGameStarted) {
+             String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
+             boolean isSetupAttacker = data.invasionSetupActive && !team.equalsIgnoreCase(data.invasionDefender);
+             if (!isSetupAttacker) {
+                return;
+             }
+          }
 
          PacketSquadAction.leaveCurrentSquad(player, data);
          player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");

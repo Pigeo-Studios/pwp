@@ -1,0 +1,17 @@
+{
+    "targets": [
+        "swap"
+    ],
+    "passes": [
+        {
+            "name": "pwpdrone:fpv",
+            "intarget": "minecraft:main",
+            "outtarget": "swap"
+        },
+        {
+            "name": "pwpdrone:fpv",
+            "intarget": "swap",
+            "outtarget": "minecraft:main"
+        }
+    ]
+}

@@ -1,9 +1,0 @@
-Manifest-Version: 1.0
-Specification-Title: Explosion Overhaul: A new level of destruction
-Specification-Vendor: Vinlanx
-Specification-Version: 1
-Implementation-Title: Explosion Overhaul: A new level of destruction
-Implementation-Version: 0.2.3.0-forge
-Implementation-Vendor: Vinlanx
-MixinConfigs: explosionoverhaul.mixins.json
-

@@ -262,17 +262,26 @@ public class InteractionEvents {
          BlockPos clickedPos = event.getPos();
          Direction face = event.getFace();
          BlockState clickedState = level.getBlockState(clickedPos);
-         if (clickedState.is((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get())) {
-            if (!level.isClientSide) {
-               ServerPlayer sPlayer = (ServerPlayer)player;
-               WarfareWorldData data = WarfareWorldData.get(sPlayer.serverLevel());
-               if (!data.isGameStarted && !sPlayer.isCreative()) {
-                  sPlayer.sendSystemMessage(Component.literal("Game hasn't started yet!").withStyle(ChatFormatting.RED));
-                  event.setCanceled(true);
-                  return;
-               }
+          if (clickedState.is((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get())) {
+             if (!level.isClientSide) {
+                ServerPlayer sPlayer = (ServerPlayer)player;
+                WarfareWorldData data = WarfareWorldData.get(sPlayer.serverLevel());
+                if (!data.isGameStarted && !sPlayer.isCreative()) {
+                   sPlayer.sendSystemMessage(Component.literal("Game hasn't started yet!").withStyle(ChatFormatting.RED));
+                   event.setCanceled(true);
+                   return;
+                }
 
-               long lastMainUse = sPlayer.getPersistentData().getLong("WARFARE_LastMainResupply");
+                if (data.invasionSetupActive && !sPlayer.isCreative()) {
+                   String pTeam = sPlayer.getTeam() != null ? sPlayer.getTeam().getName().toUpperCase() : "";
+                   if (!pTeam.equalsIgnoreCase(data.invasionDefender)) {
+                      sPlayer.sendSystemMessage(Component.literal("Main Supply недоступен во время подготовки!").withStyle(ChatFormatting.RED));
+                      event.setCanceled(true);
+                      return;
+                   }
+                }
+
+                long lastMainUse = sPlayer.getPersistentData().getLong("WARFARE_LastMainResupply");
                long currentTime = sPlayer.level().getGameTime();
                if (!sPlayer.isCreative() && currentTime < lastMainUse + 1200L) {
                   long secondsLeft = (lastMainUse + 1200L - currentTime) / 20L;

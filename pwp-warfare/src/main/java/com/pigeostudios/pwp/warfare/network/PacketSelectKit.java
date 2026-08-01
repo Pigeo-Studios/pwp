@@ -55,7 +55,9 @@ public class PacketSelectKit {
             }
             player.getPersistentData().put("WARFARE_SlotSelections", selTag);
             PacketHandler.sendToAllClients(player.serverLevel(), data);
-            if (!data.isGameStarted) {
+            String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
+            boolean isReserved = !data.isGameStarted || (data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender));
+            if (isReserved) {
                player.sendSystemMessage(
                   Component.translatable("pwpwarfare.message.kit_reserved", msg.kitName).withStyle(ChatFormatting.YELLOW)
                );
