@@ -126,7 +126,8 @@ public class PWPLobbyScreen extends Screen {
 
     public static ResourceLocation getTexture(String mapName, String worldPath, String prefix) {
         if (worldPath == null || worldPath.isEmpty() || !Files.exists(Paths.get(worldPath, "icon.png"))) return null;
-        String key = prefix + mapName;
+        // Ключ по worldPath — у каждой карты своя иконка (mapName всегда "preview")
+        String key = prefix + Integer.toHexString(worldPath.hashCode());
         if (imageCache.containsKey(key)) return imageCache.get(key);
         try {
             NativeImage img = NativeImage.read(new FileInputStream(Paths.get(worldPath, "icon.png").toFile()));

@@ -39,6 +39,9 @@ public class SquadMapRenderer {
 
     public int mapX, mapY, mapWidth, mapHeight;
     public String selectedSpawnId = "";
+    // Минимальный скейл (блоков на пиксель) для вписывания всей карты в область рендера.
+    // 0 = использовать глобальный ClientData.mapScale (поведение M-меню).
+    public double fitScale = 0.0;
 
     private double panX, panZ;
     private boolean isDraggingMap;
@@ -65,6 +68,7 @@ public class SquadMapRenderer {
     private static final ResourceLocation RALLY_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/rally_icon_selected.png");
     private static final ResourceLocation MAIN_BASE_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/main_base.png");
     private static final ResourceLocation MAIN_BASE_ICON_SELECTED = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/main_base_selected.png");
+    private static final ResourceLocation STATION_ICON = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/vehicle_station.png");
     private static final ResourceLocation FLAG_NEUTRAL = new ResourceLocation("pwpwarfare", "textures/gui/flags/neutral.png");
     private static final ResourceLocation ICON_CIRCLE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/player_circle.png");
     private static final ResourceLocation ICON_PLUS = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/medic_plus.png");
@@ -86,8 +90,12 @@ public class SquadMapRenderer {
         panZ = 0;
     }
 
+    public double effectiveScale() {
+        return fitScale > 0 ? Math.max(ClientData.mapScale, fitScale) : ClientData.mapScale;
+    }
+
     public double getBlocksPerPixel() {
-        return ClientData.mapScale;
+        return effectiveScale();
     }
 
     public double getCenterX(LocalPlayer p) {
@@ -105,7 +113,7 @@ public class SquadMapRenderer {
     public void render(GuiGraphics g, int mx, int my, float pt) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
-        double bpp = ClientData.mapScale;
+        double bpp = effectiveScale();
         if (bpp <= 0) bpp = 1.0;
         double cx = p.getX() + panX;
         double cz = p.getZ() + panZ;
@@ -165,11 +173,11 @@ public class SquadMapRenderer {
         var f = Minecraft.getInstance().font;
         String kp = "--";
         if (inMap(mx, my)) {
-        double wx = cx + (mx - (mapX + mapWidth / 2.0)) * ClientData.mapScale;
-        double wz = cz + (my - (mapY + mapHeight / 2.0)) * ClientData.mapScale;
+        double wx = cx + (mx - (mapX + mapWidth / 2.0)) * effectiveScale();
+        double wz = cz + (my - (mapY + mapHeight / 2.0)) * effectiveScale();
             kp = getKP(wx, wz);
         }
-        String zt = String.format("Z:%.1f", ClientData.mapScale);
+        String zt = String.format("Z:%.1f", effectiveScale());
         String text = kp + "  " + zt;
         int tw = f.width(text) + 8;
         int th = 14;
@@ -186,8 +194,8 @@ public class SquadMapRenderer {
     }
 
     private void drawGrid(GuiGraphics g, double cx, double cz) {
-        double halfX = mapWidth / 2.0 * ClientData.mapScale;
-        double halfZ = mapHeight / 2.0 * ClientData.mapScale;
+        double halfX = mapWidth / 2.0 * effectiveScale();
+        double halfZ = mapHeight / 2.0 * effectiveScale();
         long xS = (long)(cx - halfX) - 1200;
         long xE = (long)(cx + halfX) + 1200;
         long zS = (long)(cz - halfZ) - 1200;
@@ -195,8 +203,8 @@ public class SquadMapRenderer {
         long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
         long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
         gridLines(g, 300, 2, 0x30FFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
-        if (ClientData.mapScale <= 2.2) {
-            int a100 = (int)(24 * Math.min(1, Math.max(0, (2.2 - ClientData.mapScale) / 0.4)));
+        if (effectiveScale() <= 2.2) {
+            int a100 = (int)(24 * Math.min(1, Math.max(0, (2.2 - effectiveScale()) / 0.4)));
             gridLines(g, 100, 1, (a100 << 24) | 0xFFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
         }
     }
@@ -222,7 +230,7 @@ public class SquadMapRenderer {
     private void drawTopLabels(GuiGraphics g, double cx, double cz) {
         var f = Minecraft.getInstance().font;
         long gOriginX = Math.floorDiv((long)(ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        double halfX = mapWidth / 2.0 * ClientData.mapScale;
+        double halfX = mapWidth / 2.0 * effectiveScale();
         long s = Math.floorDiv((long)(cx - halfX) - gOriginX, 300L);
         long e = Math.floorDiv((long)(cx + halfX) - gOriginX, 300L);
         for (long i = s; i <= e; i++) {
@@ -239,7 +247,7 @@ public class SquadMapRenderer {
     private void drawLeftLabels(GuiGraphics g, double cx, double cz) {
         var f = Minecraft.getInstance().font;
         long gOriginZ = Math.floorDiv((long)(ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        double halfZ = mapHeight / 2.0 * ClientData.mapScale;
+        double halfZ = mapHeight / 2.0 * effectiveScale();
         long s = Math.floorDiv((long)(cz - halfZ) - gOriginZ, 300L);
         long e = Math.floorDiv((long)(cz + halfZ) - gOriginZ, 300L);
         for (long i = s; i <= e; i++) {
@@ -490,6 +498,21 @@ public class SquadMapRenderer {
                 setFilter(MATS_ICON, false);
                 g.drawString(PWPTheme.Fonts.display(), matsText, matsX + 10, matsY + 1, -22016, false);
                 g.pose().popPose();
+            }
+        }
+
+        for (var supply : ClientData.clientMainSupplies) {
+            if (!supply.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
+            float sx = (float)toScreenX(supply.pos.getX() + 0.5, cx);
+            float sy = (float)toScreenZ(supply.pos.getZ() + 0.5, cz);
+            if (inMap((int)sx, (int)sy)) {
+                setFilter(STATION_ICON, true);
+                g.pose().pushPose();
+                g.pose().translate(sx, sy, 155);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+                g.blit(STATION_ICON, -5, -5, 10, 10, 0, 0, 16, 16, 16, 16);
+                g.pose().popPose();
+                setFilter(STATION_ICON, false);
             }
         }
 
@@ -1369,11 +1392,11 @@ public class SquadMapRenderer {
     }
 
     private int toScreenX(double wx, double cx) {
-        return (int)(mapX + mapWidth / 2.0 + (wx - cx) / ClientData.mapScale);
+        return (int)(mapX + mapWidth / 2.0 + (wx - cx) / effectiveScale());
     }
 
     private int toScreenZ(double wz, double cz) {
-        return (int)(mapY + mapHeight / 2.0 + (wz - cz) / ClientData.mapScale);
+        return (int)(mapY + mapHeight / 2.0 + (wz - cz) / effectiveScale());
     }
 
     private boolean inMap(int sx, int sy) {
@@ -1401,8 +1424,8 @@ public class SquadMapRenderer {
 
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
         if (!isDraggingMap || btn != 0) return false;
-        panX -= (mx - lastMouseX) * ClientData.mapScale;
-        panZ -= (my - lastMouseY) * ClientData.mapScale;
+        panX -= (mx - lastMouseX) * effectiveScale();
+        panZ -= (my - lastMouseY) * effectiveScale();
         lastMouseX = mx;
         lastMouseY = my;
         return true;
@@ -1430,6 +1453,8 @@ public class SquadMapRenderer {
         VEHICLE_ICONS.put("BOAT", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/boat.png"));
         VEHICLE_ICONS.put("Motorcycle", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/motorcycle.png"));
         VEHICLE_ICONS.put("Light Supply", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/light_supply.png"));
+        VEHICLE_ICONS.put("Heavy Supply", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/heavy_supply.png"));
+        VEHICLE_ICONS.put("SPG", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/spg.png"));
         VEHICLE_ICONS.put("Mine", new ResourceLocation("pwpwarfare", "textures/gui/map_icons/skull_marker.png"));
     }
 }

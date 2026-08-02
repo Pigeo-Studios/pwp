@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.Vec3;
@@ -35,13 +36,15 @@ public class BarbedWireBlock extends BaseEntityBlock {
    public static final BooleanProperty CONSTRUCTED = BooleanProperty.create("constructed");
    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
    public static final BooleanProperty VALID = BooleanProperty.create("valid");
+   // Стадия строительства (0 - чертёж, 1 - начало, 2 - почти готово)
+   public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
    private static final VoxelShape SHAPE = Block.box(1.0, 0.0, 1.0, 15.0, 15.0, 15.0);
 
    public BarbedWireBlock() {
       super(Properties.of().mapColor(MapColor.METAL).strength(3.0F, 9.0F).noOcclusion());
       this.registerDefaultState(
          (BlockState)((BlockState)((BlockState)((BlockState)this.stateDefinition.any()).setValue(CONSTRUCTED, false)).setValue(FACING, Direction.NORTH))
-            .setValue(VALID, true)
+            .setValue(VALID, true).setValue(BUILD_STAGE, 0)
       );
    }
 
@@ -76,7 +79,7 @@ public class BarbedWireBlock extends BaseEntityBlock {
    }
 
    protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
-      builder.add(new Property[]{CONSTRUCTED, FACING, VALID});
+      builder.add(new Property[]{CONSTRUCTED, FACING, VALID, BUILD_STAGE});
    }
 
    @Nullable

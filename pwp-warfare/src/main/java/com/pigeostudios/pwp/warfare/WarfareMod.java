@@ -32,6 +32,7 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig.Type;
+import com.pigeostudios.pwp.warfare.server.MatchHeartbeatSender;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -59,6 +60,7 @@ public class WarfareMod {
       ModMenuTypes.register(modEventBus);
       ModSounds.register(modEventBus);
       MinecraftForge.EVENT_BUS.register(this);
+      MatchHeartbeatSender.register();
    }
 
    private void commonSetup(FMLCommonSetupEvent event) {
@@ -325,6 +327,8 @@ public class WarfareMod {
        int pen = cp.has("ticketPenalty") ? cp.get("ticketPenalty").getAsInt() : 60;
        int deduct = cp.has("captureDeduction") ? cp.get("captureDeduction").getAsInt() : 0;
        int lockMin = cp.has("lockDurationMinutes") ? cp.get("lockDurationMinutes").getAsInt() : 0;
-       return new WarfareWorldData.CapturePoint(name, aabb, bp, rp, ctm, pen, deduct, shape, lockMin);
+       int gainNeut = cp.has("gainNeutralizeTickets") ? cp.get("gainNeutralizeTickets").getAsInt() : 0;
+       int gainCap = cp.has("gainCaptureTickets") ? cp.get("gainCaptureTickets").getAsInt() : 0;
+       return new WarfareWorldData.CapturePoint(name, aabb, bp, rp, ctm, pen, deduct, shape, lockMin, gainNeut, gainCap);
     }
 }

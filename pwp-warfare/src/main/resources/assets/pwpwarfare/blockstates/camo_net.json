@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "pwpwarfare:block/camo_net_model" },
+    "facing=south": { "model": "pwpwarfare:block/camo_net_model", "y": 180 },
+    "facing=east": { "model": "pwpwarfare:block/camo_net_model", "y": 90 },
+    "facing=west": { "model": "pwpwarfare:block/camo_net_model", "y": 270 }
+  }
+}

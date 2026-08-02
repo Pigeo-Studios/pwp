@@ -18,6 +18,8 @@
     "item.pwpwarfare.blue_mobile_zu": "Mobile ZU (BLUFOR)",
     "item.pwpwarfare.blue_supply_marker": "Supply (BLUFOR)",
     "item.pwpwarfare.blue_supply_helicopter": "Supply Heli (BLUFOR)",
+    "item.pwpwarfare.blue_heavy_supply": "Heavy Supply (BLUFOR)",
+    "item.pwpwarfare.blue_spg": "SPG (BLUFOR)",
     "item.pwpwarfare.red_apc": "APC (REDFOR)",
     "item.pwpwarfare.red_tank": "Tank (REDFOR)",
     "item.pwpwarfare.red_helicopter": "Helicopter (REDFOR)",
@@ -32,6 +34,8 @@
     "item.pwpwarfare.red_mobile_zu": "Mobile ZU (REDFOR)",
     "item.pwpwarfare.red_supply_marker": "Supply (REDFOR)",
     "item.pwpwarfare.red_supply_helicopter": "Supply Heli (REDFOR)",
+    "item.pwpwarfare.red_heavy_supply": "Heavy Supply (REDFOR)",
+    "item.pwpwarfare.red_spg": "SPG (REDFOR)",
     "item.pwpwarfare.vehicle_spawner": "Vehicle Spawner",
     "item.pwpwarfare.ags_ammo_box": "AGS-30 Ammo Box",
     "item.pwpwarfare.m2_ammo_box": "M2 Ammo Box",
@@ -243,6 +247,7 @@
     "gui.pwpwarfare.radial.static_guns": "Static Guns",
     "gui.pwpwarfare.radial.tactical": "Tactical",
     "gui.pwpwarfare.radial.markers": "Markers",
+    "gui.pwpwarfare.radial.walls": "Walls",
 
     "gui.pwpwarfare.map_marker_select.title": "Select Marker Type",
 

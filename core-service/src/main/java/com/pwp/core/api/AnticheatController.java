@@ -85,7 +85,11 @@ public class AnticheatController {
 
         // ── Init (handshake перед запуском игры) ──
         app.post("/api/v1/launcher/anticheat/init", ctx -> {
-            InitReq req = ctx.bodyAsClass(InitReq.class);
+            InitReq req = parseBody(ctx, InitReq.class);
+            if (req == null) {
+                ctx.status(400).json(ApiResponse.error("invalid body"));
+                return;
+            }
             String playerUuid = PlayerRepository.findUuidByAccessToken(ctx.queryParam("access_token"));
             if (playerUuid == null) {
                 ctx.json(ApiResponse.error("invalid session"));
@@ -126,7 +130,11 @@ public class AnticheatController {
 
         // ── Отчёт о детекте/событии агента (agent-alive = heartbeat) ──
         app.post("/api/v1/launcher/anticheat/detect", ctx -> {
-            DetectReq req = ctx.bodyAsClass(DetectReq.class);
+            DetectReq req = parseBody(ctx, DetectReq.class);
+            if (req == null) {
+                ctx.status(400).json(ApiResponse.error("invalid body"));
+                return;
+            }
             String playerUuid = null;
             if (req.launchToken != null && !req.launchToken.isEmpty()) {
                 playerUuid = findUuidByLaunchToken(req.launchToken);
@@ -145,7 +153,11 @@ public class AnticheatController {
 
         // ── Инвентарь модов (whitelist: сверка с манифестом) ──
         app.post("/api/v1/launcher/anticheat/files", ctx -> {
-            FilesReq req = ctx.bodyAsClass(FilesReq.class);
+            FilesReq req = parseBody(ctx, FilesReq.class);
+            if (req == null) {
+                ctx.status(400).json(ApiResponse.error("invalid body"));
+                return;
+            }
             String playerUuid = null;
             if (req.launchToken != null && !req.launchToken.isEmpty()) {
                 playerUuid = findUuidByLaunchToken(req.launchToken);
@@ -200,7 +212,11 @@ public class AnticheatController {
 
         // ── Скриншот от агента (base64 BMP → JPEG + БД) ──
         app.post("/api/v1/launcher/anticheat/screenshot", ctx -> {
-            ShotReq req = ctx.bodyAsClass(ShotReq.class);
+            ShotReq req = parseBody(ctx, ShotReq.class);
+            if (req == null) {
+                ctx.status(400).json(ApiResponse.error("invalid body"));
+                return;
+            }
             String playerUuid = null;
             if (req.launchToken != null && !req.launchToken.isEmpty()) {
                 playerUuid = findUuidByLaunchToken(req.launchToken);
@@ -537,13 +553,23 @@ public class AnticheatController {
         return o == null ? "" : String.valueOf(o);
     }
 
+    /** Безопасный парсинг тела: кривой JSON → null (400), а не 500. */
+    private static <T> T parseBody(io.javalin.http.Context ctx, Class<T> type) {
+        try {
+            return ctx.bodyAsClass(type);
+        } catch (Exception e) {
+            log.warn("bad JSON body for {} {}: {}", ctx.method(), ctx.path(), e.getMessage());
+            return null;
+        }
+    }
+
     // ── Request bodies ──
 
     public static class InitReq {
         public String hwid;
         public String hwidComponents;
         public String pcName;
-        public int flags;
+        public String flags;
         public List<Map<String, Object>> detections;
     }
 

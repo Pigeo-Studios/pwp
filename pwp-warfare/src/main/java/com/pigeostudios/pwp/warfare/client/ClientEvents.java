@@ -52,6 +52,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ComputeFovModifierEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.InputEvent.Key;
@@ -89,6 +90,24 @@ public class ClientEvents {
       ClientData.addChatMessage(event.getMessage());
    }
 
+   // При отключении от сервера сбрасываем метки и возвращаем Discord RPC в базовый статус.
+   // Иначе тактические метки остаются в клиентском кэше и «переезжают» на следующий сервер.
+   @SubscribeEvent
+   public static void onClientLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+      MarkerClientCache.clear();
+      ClientData.activeMarkers.clear();
+      Minecraft mc = Minecraft.getInstance();
+      String nick = mc.player != null ? mc.player.getScoreboardName() : "";
+      LauncherStatusReporter.onDisconnect(nick);
+   }
+
+   // Защитно очищаем при входе на сервер: метки заполнятся заново из синка сервера
+   @SubscribeEvent
+   public static void onClientLoggingIn(ClientPlayerNetworkEvent.LoggingIn event) {
+      MarkerClientCache.clear();
+      ClientData.activeMarkers.clear();
+   }
+
    @SubscribeEvent
    public static void onClientTick(ClientTickEvent event) {
       if (event.phase == Phase.END) {
@@ -123,6 +142,19 @@ public class ClientEvents {
          } else if (mc.player.getPersistentData().contains("WARFARE_DownedYaw")) {
                 mc.player.getPersistentData().remove("WARFARE_DownedYaw");
                 mc.player.getPersistentData().remove("WARFARE_DownedPitch");
+             }
+
+             // Респавн завершился — игрок ожил: сбрасываем защиту от экрана смерти
+             // и закрываем застрявший деплой/экран смерти (цикл смерти/респавна)
+             if (ClientData.awaitingRespawn || ClientData.deployRequested) {
+                if (!mc.player.isDeadOrDying()) {
+                   ClientData.awaitingRespawn = false;
+                   ClientData.deployRequested = false;
+                   ClientData.deployBlockedUntil = 0L;
+                   if (mc.screen instanceof DeployScreen || mc.screen instanceof WarfareDeathScreen) {
+                      mc.setScreen(null);
+                   }
+                }
              }
 
              if (ClientData.currentVoiceChannel != PacketVoiceChannelState.Channel.LOCAL) {
@@ -305,19 +337,14 @@ public class ClientEvents {
 
       @SubscribeEvent
       public static void onOpenGui(Opening event) {
-          if (ClientData.deployRequested) {
-             ClientData.deployRequested = false;
+          // Ванила пересоздаёт DeathScreen каждый тик, пока клиентский игрок мёртв.
+          // Пока идёт респавн после деплоя — глушим экран смерти (флаги НЕ сжигаем,
+          // иначе со следующего тика экран «ВЫ МЕРТВЫ» откроется поверх живого игрока).
+          if (ClientData.awaitingRespawn || ClientData.deployRequested || System.currentTimeMillis() < ClientData.deployBlockedUntil) {
              if (event.getScreen() instanceof DeathScreen) {
                 event.setNewScreen(null);
              }
              return;
-          }
-          if (System.currentTimeMillis() < ClientData.deployBlockedUntil) {
-              ClientData.deployBlockedUntil = 0;
-              if (event.getScreen() instanceof DeathScreen) {
-                 event.setNewScreen(null);
-              }
-              return;
           }
          if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
           Component cause = null;

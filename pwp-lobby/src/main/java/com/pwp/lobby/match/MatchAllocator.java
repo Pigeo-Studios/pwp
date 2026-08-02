@@ -167,6 +167,10 @@ public class MatchAllocator {
 
     public static void tick() {
         ServerManager.tick();
+        if (++statusPollTicks >= 200) {
+            statusPollTicks = 0;
+            updateMatchOnlineFromCore();
+        }
 
         for (MatchInfo mi : activeMatches.values()) {
             if (mi.phase == MatchPhase.ENDING) {
@@ -217,6 +221,38 @@ public class MatchAllocator {
     }
 
     private static final long STOP_TIMEOUT_MS = 30_000;
+
+    private static int statusPollTicks = 0;
+
+    /**
+     * Живой онлайн и тикеты матчей из heartbeat'ов матч-серверов.
+     * Матч-сервер шлёт heartbeat с портом — сверяем по порту.
+     */
+    private static void updateMatchOnlineFromCore() {
+        try {
+            JsonObject resp = CoreServerApi.fetchServersStatus();
+            if (resp == null || !resp.has("success") || !resp.get("success").getAsBoolean()) return;
+            JsonObject data = resp.getAsJsonObject("data");
+            if (data == null || !data.has("servers")) return;
+            JsonArray servers = data.getAsJsonArray("servers");
+            for (com.google.gson.JsonElement el : servers) {
+                JsonObject s = el.getAsJsonObject();
+                if (!s.has("port") || s.get("port").getAsInt() <= 0) continue;
+                if (!s.has("match")) continue;
+                int port = s.get("port").getAsInt();
+                int online = s.get("online").getAsInt();
+                for (MatchInfo mi : activeMatches.values()) {
+                    if (mi.port != port) continue;
+                    mi.playerCount = online;
+                    JsonObject m = s.getAsJsonObject("match");
+                    if (m.has("blueScore")) mi.blueTickets = m.get("blueScore").getAsInt();
+                    if (m.has("redScore")) mi.redTickets = m.get("redScore").getAsInt();
+                }
+            }
+        } catch (Exception e) {
+            // тик не ломаем из-за опроса статуса
+        }
+    }
 
     public static void requestMatchStop(int serverId) {
         MatchInfo mi = activeMatches.get(serverId);

@@ -1,16 +1,24 @@
 package com.pwp.core.api;
 
 import com.pwp.core.CoreApplication;
+import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerRepository;
 import com.pwp.core.db.PunishmentRepository;
 import com.pwp.core.model.ApiResponse;
 import com.pwp.core.model.Player;
 import io.javalin.Javalin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.*;
 
 public class AdminController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     public AdminController(Javalin app) {
 
@@ -25,6 +33,15 @@ public class AdminController {
             if (pl == null) {
                 ctx.json(ApiResponse.error("user not found")); return;
             }
+            // Истёкший временный бан снимаем и показываем фактический статус
+            if (pl.isBanned && PlayerRepository.isBanExpired(pl)) {
+                try {
+                    PlayerRepository.setBan(pl.uuid, false, null);
+                    pl.isBanned = false;
+                    pl.banReason = null;
+                    pl.bannedUntil = null;
+                } catch (Exception ignored) {}
+            }
             Map<String, Object> m = new HashMap<>();
             m.put("uuid", pl.uuid); m.put("login", pl.login); m.put("nickname", pl.nickname);
             m.put("email", maskEmail(pl.email)); m.put("telegram_id", pl.telegramId);
@@ -37,14 +54,28 @@ public class AdminController {
         app.post("/api/v1/admin/ban", ctx -> {
             verifyAdmin(ctx);
             BanReq req = ctx.bodyAsClass(BanReq.class);
-            if (PlayerRepository.findByUuid(req.uuid) == null) {
+            Player pl = PlayerRepository.findByUuid(req.uuid);
+            if (pl == null) {
                 ctx.json(ApiResponse.error("user not found")); return;
             }
-            PlayerRepository.setBan(req.uuid, true, req.reason);
+            // duration — формат как в /pwpban: "30m", "2h", "7d", "perm" (по умолчанию вечно)
+            String expiresClause = "NULL";
+            Integer durationMinutes = null;
+            if (req.duration != null && !req.duration.isEmpty()
+                    && !"perm".equalsIgnoreCase(req.duration) && !"0".equals(req.duration)) {
+                try {
+                    durationMinutes = LauncherController.parseDuration(req.duration);
+                    expiresClause = "DATE_ADD(NOW(), INTERVAL " + durationMinutes + " MINUTE)";
+                } catch (Exception ignored) {}
+            }
+            java.sql.Timestamp expiresTs = durationMinutes != null
+                    ? new java.sql.Timestamp(System.currentTimeMillis() + durationMinutes * 60000L) : null;
+            PlayerRepository.setBan(req.uuid, true, req.reason, expiresTs);
+            banDevice(req.uuid, req.reason, expiresClause);
             PlayerRepository.log(req.uuid, "ban", ctx.ip(), "reason: " + req.reason);
             try {
                 PunishmentRepository.addRecord(req.uuid, "BAN", req.reason,
-                        ctx.attribute("adminUuid"), null, null);
+                        ctx.attribute("adminUuid"), durationMinutes, expiresTs);
             } catch (Exception ignored) {}
             ctx.json(ApiResponse.ok("user banned"));
         });
@@ -455,7 +486,7 @@ public class AdminController {
             int offset = Math.max(parseInt(ctx.queryParam("offset"), 0), 0);
             String q = ctx.queryParam("q");
             List<Map<String, Object>> items = new ArrayList<>();
-            String sql = "SELECT uuid, nickname, login, role, is_banned, ban_reason, last_ip, hwid, "
+            String sql = "SELECT uuid, nickname, login, role, is_banned, ban_reason, banned_until, last_ip, hwid, "
                 + "first_join, last_join FROM players";
             if (q != null && !q.isEmpty()) {
                 sql += " WHERE nickname LIKE ? OR login LIKE ? OR uuid LIKE ?";
@@ -479,8 +510,17 @@ public class AdminController {
                         m.put("nickname", rs.getString("nickname"));
                         m.put("login", rs.getString("login"));
                         m.put("role", rs.getString("role"));
-                        m.put("is_banned", rs.getBoolean("is_banned"));
-                        m.put("ban_reason", rs.getString("ban_reason"));
+                        boolean isBanned = rs.getBoolean("is_banned");
+                        java.sql.Timestamp until = rs.getTimestamp("banned_until");
+                        if (isBanned && until != null && until.before(new java.util.Date())) {
+                            // истёкший временный бан — снимаем и показываем как не забанен
+                            try {
+                                PlayerRepository.setBan(rs.getString("uuid"), false, null);
+                                isBanned = false;
+                            } catch (Exception ignored) {}
+                        }
+                        m.put("is_banned", isBanned);
+                        m.put("ban_reason", isBanned ? rs.getString("ban_reason") : null);
                         m.put("last_ip", rs.getString("last_ip"));
                         m.put("hwid", rs.getString("hwid"));
                         m.put("first_join", rs.getTimestamp("first_join") == null ? null : String.valueOf(rs.getTimestamp("first_join")));
@@ -540,8 +580,41 @@ public class AdminController {
         try { return Integer.parseInt(s); } catch (Exception e) { return def; }
     }
 
+    /** Банит HWID и IP игрока (как /pwpban), чтобы бан работал на всех его устройствах. */
+    private static void banDevice(String uuid, String reason, String expiresClause) {
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement("SELECT hwid, last_ip FROM players WHERE uuid = ?")) {
+            ps.setString(1, uuid);
+            String hwid = null, lastIp = null;
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    hwid = rs.getString("hwid");
+                    lastIp = rs.getString("last_ip");
+                }
+            }
+            if (hwid != null && !hwid.isEmpty()) {
+                try (PreparedStatement ins = c.prepareStatement(
+                    "INSERT IGNORE INTO hwid_bans (hwid, reason, banned_until, created_at) VALUES (?, ?, " + expiresClause + ", NOW())")) {
+                    ins.setString(1, hwid);
+                    ins.setString(2, reason);
+                    ins.executeUpdate();
+                }
+            }
+            if (lastIp != null && !lastIp.isEmpty()) {
+                try (PreparedStatement ins = c.prepareStatement(
+                    "INSERT INTO ip_blocks (ip, blocked_until, reason) VALUES (?, " + expiresClause + ", ?)")) {
+                    ins.setString(1, lastIp);
+                    ins.setString(2, reason);
+                    ins.executeUpdate();
+                }
+            }
+        } catch (Exception e) {
+            log.error("device ban failed for {}: {}", uuid, e.getMessage());
+        }
+    }
+
     public static class FindUserReq { public String query; }
-    public static class BanReq { public String uuid; public String reason; }
+    public static class BanReq { public String uuid; public String reason; public String duration; }
     public static class ReqUuid { public String uuid; }
     public static class SetRoleReq { public String uuid; public String role; }
     public static class ResolveResetReq { public int resetId; public String adminUuid; public String status; }

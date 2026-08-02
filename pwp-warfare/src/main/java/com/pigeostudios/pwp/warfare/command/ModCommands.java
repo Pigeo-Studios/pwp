@@ -53,7 +53,7 @@ import net.minecraftforge.network.PacketDistributor;
 public class ModCommands {
    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
       dispatcher.register(
-         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal(
+         (LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)((LiteralArgumentBuilder)Commands.literal(
                                                                      "pwpwarfare"
                                                                   )
                                                                   .requires(s -> s.hasPermission(2)))
@@ -68,6 +68,35 @@ public class ModCommands {
                                                                            )
                                                                      )
                                                                ))
+                                                          .then(
+                                                             Commands.literal("gamemode")
+                                                                .then(
+                                                                   Commands.argument("mode", StringArgumentType.word())
+                                                                      .suggests(
+                                                                         (ctx, builder) -> SharedSuggestionProvider.suggest(List.of("aas", "invasion"), builder)
+                                                                      )
+                                                                      .executes(
+                                                                         ctx -> setGameMode(
+                                                                            (CommandSourceStack)ctx.getSource(), StringArgumentType.getString(ctx, "mode")
+                                                                         )
+                                                                      )
+                                                                )
+                                                          ))
+                                                       .then(
+                                                          Commands.literal("invasiondefend")
+                                                             .then(
+                                                                Commands.argument("team", StringArgumentType.word())
+                                                                   .suggests(
+                                                                      (ctx, builder) -> SharedSuggestionProvider.suggest(List.of("blue", "red"), builder)
+                                                                   )
+                                                                   .executes(
+                                                                      ctx -> setInvasionDefender(
+                                                                         (CommandSourceStack)ctx.getSource(), StringArgumentType.getString(ctx, "team")
+                                                                      )
+                                                                   )
+                                                             )
+                                                          ))
+
                                                             .then(
                                                                Commands.literal("deathtimer")
                                                                   .then(
@@ -208,29 +237,41 @@ public class ModCommands {
                                                                                  Commands.argument("timeMin", IntegerArgumentType.integer(1))
                                                                                     .then(
                                                                                        Commands.argument("penalty", IntegerArgumentType.integer(0))
-                                                                                          .then(
-                                                                                             Commands.argument("captureDeduct", IntegerArgumentType.integer(0))
-                                                                                                .then(
-                                                                                                   Commands.argument(
-                                                                                                         "lockMinutes", IntegerArgumentType.integer(0)
-                                                                                                      )
-                                                                                                      .executes(
-                                                                                                         ctx -> addPoint(
-                                                                                                            (CommandSourceStack)ctx.getSource(),
-                                                                                                            StringArgumentType.getString(ctx, "shape"),
-                                                                                                            BlockPosArgument.getSpawnablePos(ctx, "pos1"),
-                                                                                                            BlockPosArgument.getSpawnablePos(ctx, "pos2"),
-                                                                                                            StringArgumentType.getString(ctx, "name"),
-                                                                                                            IntegerArgumentType.getInteger(ctx, "bluePriority"),
-                                                                                                            IntegerArgumentType.getInteger(ctx, "redPriority"),
-                                                                                                            IntegerArgumentType.getInteger(ctx, "timeMin"),
-                                                                                                            IntegerArgumentType.getInteger(ctx, "penalty"),
-                                                                                                            IntegerArgumentType.getInteger(ctx, "captureDeduct"),
-                                                                                                            IntegerArgumentType.getInteger(ctx, "lockMinutes")
-                                                                                                         )
-                                                                                                      )
-                                                                                                )
-                                                                                          )
+                                                                                     .then(
+                                                                                        Commands.argument("captureDeduct", IntegerArgumentType.integer(0))
+                                                                                           .then(
+                                                                                              Commands.argument(
+                                                                                                    "lockMinutes", IntegerArgumentType.integer(0)
+                                                                                                 )
+                                                                                                 .then(
+                                                                                                    Commands.argument(
+                                                                                                          "gainNeutralize", IntegerArgumentType.integer(0)
+                                                                                                       )
+                                                                                                       .then(
+                                                                                                          Commands.argument(
+                                                                                                                "gainCapture", IntegerArgumentType.integer(0)
+                                                                                                             )
+                                                                                                             .executes(
+                                                                                                                ctx -> addPoint(
+                                                                                                                   (CommandSourceStack)ctx.getSource(),
+                                                                                                                   StringArgumentType.getString(ctx, "shape"),
+                                                                                                                   BlockPosArgument.getSpawnablePos(ctx, "pos1"),
+                                                                                                                   BlockPosArgument.getSpawnablePos(ctx, "pos2"),
+                                                                                                                   StringArgumentType.getString(ctx, "name"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "bluePriority"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "redPriority"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "timeMin"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "penalty"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "captureDeduct"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "lockMinutes"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "gainNeutralize"),
+                                                                                                                   IntegerArgumentType.getInteger(ctx, "gainCapture")
+                                                                                                                )
+                                                                                                             )
+                                                                                                       )
+                                                                                                 )
+                                                                                           )
+                                                                                     )
                                                                                     )
                                                                               )
                                                                         )
@@ -609,6 +650,49 @@ public class ModCommands {
       return 1;
    }
 
+   private static int setGameMode(CommandSourceStack source, String mode) {
+      ServerLevel level = source.getLevel();
+      WarfareWorldData data = WarfareWorldData.get(level);
+      String cleanMode = mode.equalsIgnoreCase("invasion") ? "invasion" : "aas";
+      data.gameMode = cleanMode;
+      if (cleanMode.equals("invasion") && !data.capturePoints.isEmpty()) {
+         String defender = data.invasionDefender != null ? data.invasionDefender : "RED";
+
+         for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+            cp.owner = defender;
+            cp.progress = 1.0F;
+            cp.capturingTeam = "NONE";
+            cp.invLocked = false;
+         }
+      }
+
+      data.setDirty();
+      syncDataToAll(level, data);
+      source.sendSuccess(() -> Component.literal("Game mode set to " + cleanMode + "!").withStyle(ChatFormatting.GREEN), true);
+      return 1;
+   }
+
+   private static int setInvasionDefender(CommandSourceStack source, String team) {
+      ServerLevel level = source.getLevel();
+      WarfareWorldData data = WarfareWorldData.get(level);
+      String defender = team.equalsIgnoreCase("blue") ? "BLUE" : "RED";
+      data.invasionDefender = defender;
+      if (data.gameMode != null && data.gameMode.equals("invasion") && !data.capturePoints.isEmpty()) {
+
+         for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+            cp.owner = defender;
+            cp.progress = 1.0F;
+            cp.capturingTeam = "NONE";
+            cp.invLocked = false;
+         }
+      }
+
+      data.setDirty();
+      syncDataToAll(level, data);
+      source.sendSuccess(() -> Component.literal("Invasion defender set to " + defender + "!").withStyle(ChatFormatting.GREEN), true);
+      return 1;
+   }
+
    private static int setRespawnTime(CommandSourceStack source, int seconds) {
       ServerLevel level = source.getLevel();
       WarfareWorldData data = WarfareWorldData.get(level);
@@ -700,7 +784,9 @@ public class ModCommands {
       int time,
       int penalty,
       int captureDeduct,
-      int lockMinutes
+      int lockMinutes,
+      int gainNeut,
+      int gainCap
    ) {
       ServerLevel level = source.getLevel();
       WarfareWorldData data = WarfareWorldData.get(level);
@@ -720,9 +806,9 @@ public class ModCommands {
          area = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
       }
 
-      data.capturePoints.add(new WarfareWorldData.CapturePoint(name, area, bp, rp, time, penalty, captureDeduct, shape.toUpperCase(), lockMinutes));
+      data.capturePoints.add(new WarfareWorldData.CapturePoint(name, area, bp, rp, time, penalty, captureDeduct, shape.toUpperCase(), lockMinutes, gainNeut, gainCap));
       data.setDirty();
-      source.sendSuccess(() -> Component.literal("Point '" + name + "' (" + shape + ") added! Lock: " + lockMinutes + " min."), true);
+      source.sendSuccess(() -> Component.literal("Point '" + name + "' (" + shape + ") added! Lock: " + lockMinutes + " min. Gain: " + gainNeut + "/" + gainCap), true);
       PacketHandler.sendToAllClients(level, data);
       return 1;
    }

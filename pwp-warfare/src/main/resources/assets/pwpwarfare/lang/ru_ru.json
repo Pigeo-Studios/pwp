@@ -18,6 +18,8 @@
     "item.pwpwarfare.blue_mobile_zu": "Моб. ЗУ (BLUFOR)",
     "item.pwpwarfare.blue_supply_marker": "Снабжение (BLUFOR)",
     "item.pwpwarfare.blue_supply_helicopter": "Грузовой вертолёт (BLUFOR)",
+    "item.pwpwarfare.blue_heavy_supply": "Тяжёлое снабжение (BLUFOR)",
+    "item.pwpwarfare.blue_spg": "САУ (BLUFOR)",
     "item.pwpwarfare.red_apc": "БТР (REDFOR)",
     "item.pwpwarfare.red_tank": "Танк (REDFOR)",
     "item.pwpwarfare.red_helicopter": "Вертолёт (REDFOR)",
@@ -32,6 +34,8 @@
     "item.pwpwarfare.red_mobile_zu": "Моб. ЗУ (REDFOR)",
     "item.pwpwarfare.red_supply_marker": "Снабжение (REDFOR)",
     "item.pwpwarfare.red_supply_helicopter": "Грузовой вертолёт (REDFOR)",
+    "item.pwpwarfare.red_heavy_supply": "Тяжёлое снабжение (REDFOR)",
+    "item.pwpwarfare.red_spg": "САУ (REDFOR)",
     "item.pwpwarfare.vehicle_spawner": "Вызов техники",
     "item.pwpwarfare.ags_ammo_box": "Ящик с патронами АГС-30",
     "item.pwpwarfare.m2_ammo_box": "Ящик с патронами M2",
@@ -243,6 +247,7 @@
     "gui.pwpwarfare.radial.static_guns": "Стационарное оружие",
     "gui.pwpwarfare.radial.tactical": "Тактика",
     "gui.pwpwarfare.radial.markers": "Метки",
+    "gui.pwpwarfare.radial.walls": "Стены",
 
     "gui.pwpwarfare.map_marker_select.title": "Выберите тип метки",
 

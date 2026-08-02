@@ -149,6 +149,11 @@ public class LobbyMod {
 
     /** Собрать полное состояние лобби для GUI. Сервер — единственный источник истины. */
     public static LobbyStatePacket buildStatePacket(boolean requestOpen) {
+        return buildStatePacket(requestOpen, null);
+    }
+
+    /** Состояние лобби с персональным голосом игрока (playerUuid может быть null — голос не заполняется). */
+    public static LobbyStatePacket buildStatePacket(boolean requestOpen, UUID playerUuid) {
         MatchInfo mi = MatchAllocator.getActiveMatch();
 
         int phase;
@@ -210,12 +215,13 @@ public class LobbyMod {
         int[] t2v = FactionVotingManager.getTeam2Votes();
 
         // Матч
-        String matchMapDisplay = "", matchModeDisplay = "", matchBlueFaction = "", matchRedFaction = "", matchStatus = "";
+        String matchMapDisplay = "", matchModeDisplay = "", matchWorldPath = "", matchBlueFaction = "", matchRedFaction = "", matchStatus = "";
         int matchBlueTickets = 0, matchRedTickets = 0, matchServerId = -1, matchElapsed = 0, matchPlayers = 0, matchMaxPlayers = 0;
         boolean matchCanJoin = false;
         if (mi != null) {
             matchMapDisplay = mi.displayName;
             matchModeDisplay = mi.modeDisplayName;
+            matchWorldPath = mi.worldPath != null ? mi.worldPath : "";
             matchBlueFaction = mi.blueFaction;
             matchRedFaction = mi.redFaction;
             matchBlueTickets = mi.blueTickets;
@@ -228,15 +234,46 @@ public class LobbyMod {
             matchStatus = matchCanJoin ? "PLAYING" : "STARTING";
         }
 
-        // Список активных матчей
+        // Персональный голос игрока
+        int myMapVote = -1, myModeVote = -1, myFaction1 = -1, myFaction2 = -1;
+        if (playerUuid != null) {
+            String mapVote = VotingManager.getVote(playerUuid);
+            if (mapVote != null) {
+                for (int i = 0; i < ml; i++) {
+                    if (mapNames[i].equals(mapVote)) { myMapVote = i; break; }
+                }
+            }
+            String modeVote = modeVotes.get(playerUuid);
+            if (modeVote != null) {
+                for (int i = 0; i < MODE_NAMES.length; i++) {
+                    if (MODE_NAMES[i].equals(modeVote)) { myModeVote = i; break; }
+                }
+            }
+            String[] factVote = FactionVotingManager.getVote(playerUuid);
+            if (factVote != null) {
+                for (int i = 0; i < t1f.length; i++) {
+                    if (t1f[i].equals(factVote[0])) { myFaction1 = i; break; }
+                }
+                for (int i = 0; i < t2f.length; i++) {
+                    if (t2f[i].equals(factVote[1])) { myFaction2 = i; break; }
+                }
+            }
+        }
+
+        // Список активных матчей (активный матч лобби показывается отдельной карточкой — исключаем дубль)
         var matches = MatchAllocator.getActiveMatches();
-        int mc = matches.size();
+        List<MatchInfo> list = new ArrayList<>();
+        for (MatchInfo m : matches.values()) {
+            if (mi != null && m.serverId == mi.serverId) continue;
+            list.add(m);
+        }
+        int mc = list.size();
         int[] mServerIds = new int[mc], mBlueTickets = new int[mc], mRedTickets = new int[mc];
         int[] mPlayers = new int[mc], mMaxPlayers = new int[mc], mElapsed = new int[mc];
         String[] mDisplayNames = new String[mc], mStatuses = new String[mc];
-        String[] mBlueFactions = new String[mc], mRedFactions = new String[mc];
+        String[] mBlueFactions = new String[mc], mRedFactions = new String[mc], mWorldPaths = new String[mc];
         int idx = 0;
-        for (MatchInfo m : matches.values()) {
+        for (MatchInfo m : list) {
             mServerIds[idx] = m.serverId;
             mDisplayNames[idx] = m.displayName;
             mStatuses[idx] = m.phase == MatchAllocator.MatchPhase.PLAYING ? "PLAYING" : "STARTING";
@@ -247,6 +284,7 @@ public class LobbyMod {
             mElapsed[idx] = m.getElapsedSeconds();
             mBlueFactions[idx] = m.blueFaction;
             mRedFactions[idx] = m.redFaction;
+            mWorldPaths[idx] = m.worldPath != null ? m.worldPath : "";
             idx++;
         }
 
@@ -258,24 +296,29 @@ public class LobbyMod {
                 blueFactions, redFactions,
                 MODE_NAMES, MODE_DISPLAY_NAMES, MODE_DESCRIPTIONS, modeVoteCounts,
                 t1f, t2f, t1v, t2v,
+                myMapVote, myModeVote, myFaction1, myFaction2,
                 resMap, resMapVotes, resMode, resModeVotes, resF1, resF1Votes, resF2, resF2Votes,
-                matchMapDisplay, matchModeDisplay, matchBlueFaction, matchRedFaction, matchStatus,
+                matchMapDisplay, matchModeDisplay, matchWorldPath,
+                matchBlueFaction, matchRedFaction, matchStatus,
                 matchBlueTickets, matchRedTickets, matchServerId,
                 matchElapsed, matchPlayers, matchMaxPlayers, matchCanJoin,
                 mc, mServerIds, mDisplayNames, mStatuses,
-                mBlueTickets, mRedTickets, mPlayers, mMaxPlayers, mElapsed, mBlueFactions, mRedFactions);
+                mBlueTickets, mRedTickets, mPlayers, mMaxPlayers, mElapsed, mBlueFactions, mRedFactions,
+                mWorldPaths);
     }
 
     public static void broadcastLobbyState() {
-        LobbyStatePacket pkt = buildStatePacket(false);
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
-        server.getPlayerList().getPlayers().forEach(p ->
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt));
+        // Пакет персональный — каждый игрок получает свой голос в my*Vote
+        server.getPlayerList().getPlayers().forEach(p -> {
+            LobbyStatePacket pkt = buildStatePacket(false, p.getUUID());
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt);
+        });
     }
 
     public static void sendLobbyStateToPlayer(ServerPlayer player) {
-        LobbyStatePacket pkt = buildStatePacket(true);
+        LobbyStatePacket pkt = buildStatePacket(true, player.getUUID());
         if (pkt != null) {
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), pkt);
         }

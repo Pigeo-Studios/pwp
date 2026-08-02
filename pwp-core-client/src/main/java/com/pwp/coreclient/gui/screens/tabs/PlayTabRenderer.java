@@ -2,10 +2,12 @@ package com.pwp.coreclient.gui.screens.tabs;
 
 import com.pwp.coreclient.gui.components.PWPMatchCard;
 import com.pwp.coreclient.gui.components.RoundedRect;
+import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.LobbyStatePacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,13 +26,21 @@ public class PlayTabRenderer {
         public int redTickets;
         public PWPMatchCard.Status status;
         public int serverId;
+        public String worldPath;
 
         public MatchEntry(String title, String mode, String duration, int current, int max,
                           String blue, String red, int bt, int rt, PWPMatchCard.Status status, int serverId) {
+            this(title, mode, duration, current, max, blue, red, bt, rt, status, serverId, null);
+        }
+
+        public MatchEntry(String title, String mode, String duration, int current, int max,
+                          String blue, String red, int bt, int rt, PWPMatchCard.Status status, int serverId,
+                          String worldPath) {
             this.title = title; this.mode = mode; this.duration = duration;
             this.currentPlayers = current; this.maxPlayers = max;
             this.blueFaction = blue; this.redFaction = red;
             this.blueTickets = bt; this.redTickets = rt; this.status = status; this.serverId = serverId;
+            this.worldPath = worldPath;
         }
     }
 
@@ -52,7 +62,7 @@ public class PlayTabRenderer {
                 pkt.matchRedFaction != null ? pkt.matchRedFaction : "",
                 pkt.matchBlueTickets, pkt.matchRedTickets,
                 pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING ? PWPMatchCard.Status.STARTING : PWPMatchCard.Status.PLAYING,
-                pkt.matchServerId));
+                pkt.matchServerId, pkt.matchWorldPath));
         }
         // Остальные активные матчи
         int count = pkt.matchCount;
@@ -67,7 +77,8 @@ public class PlayTabRenderer {
                 i < pkt.mRedFactions.length ? pkt.mRedFactions[i] : "",
                 i < pkt.mBlueTickets.length ? pkt.mBlueTickets[i] : 0,
                 i < pkt.mRedTickets.length ? pkt.mRedTickets[i] : 0,
-                st, i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1));
+                st, i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1,
+                i < pkt.mWorldPaths.length ? pkt.mWorldPaths[i] : null));
         }
     }
 
@@ -105,12 +116,17 @@ public class PlayTabRenderer {
             if (hovered) hoveredIndex = i;
 
             MatchEntry m = matches.get(i);
+            // Превью карты матча (иконка выбранной карты)
+            ResourceLocation preview = null;
+            if (m.worldPath != null && !m.worldPath.isEmpty()) {
+                preview = PWPLobbyScreen.getTexture("preview", m.worldPath, "match_");
+            }
             PWPMatchCard.render(gui, listX, cy, listW, cardH,
                 m.title, m.mode, m.duration,
                 m.currentPlayers, m.maxPlayers,
                 m.blueFaction, m.redFaction,
                 m.blueTickets, m.redTickets,
-                m.status, null, false, hovered);
+                m.status, preview, false, hovered);
         }
 
         // Tooltip

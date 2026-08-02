@@ -54,6 +54,12 @@ public class LobbyStatePacket {
     public final int[] team1Votes;
     public final int[] team2Votes;
 
+    // Персональный голос игрока (индексы в массивах, -1 = не голосовал)
+    public final int myMapVote;
+    public final int myModeVote;
+    public final int myFaction1;
+    public final int myFaction2;
+
     // Результаты последнего завершённого голосования
     public final String resultMap;
     public final int resultMapVotes;
@@ -67,6 +73,7 @@ public class LobbyStatePacket {
     // Активный матч
     public final String matchMapDisplay;
     public final String matchModeDisplay;
+    public final String matchWorldPath;
     public final String matchBlueFaction;
     public final String matchRedFaction;
     public final String matchStatus;
@@ -90,6 +97,7 @@ public class LobbyStatePacket {
     public final int[] mElapsed;
     public final String[] mBlueFactions;
     public final String[] mRedFactions;
+    public final String[] mWorldPaths;
 
     public LobbyStatePacket(int phase, int remainingSeconds, int onlinePlayers, int totalVotes,
                             String leadingName, boolean canStartNewMatch, String policyReason, String mode,
@@ -101,17 +109,19 @@ public class LobbyStatePacket {
                             int[] modeVoteCounts,
                             String[] team1Factions, String[] team2Factions,
                             int[] team1Votes, int[] team2Votes,
+                            int myMapVote, int myModeVote, int myFaction1, int myFaction2,
                             String resultMap, int resultMapVotes,
                             String resultMode, int resultModeVotes,
                             String resultF1, int resultF1Votes,
                             String resultF2, int resultF2Votes,
-                            String matchMapDisplay, String matchModeDisplay,
+                            String matchMapDisplay, String matchModeDisplay, String matchWorldPath,
                             String matchBlueFaction, String matchRedFaction, String matchStatus,
                             int matchBlueTickets, int matchRedTickets, int matchServerId,
                             int matchElapsed, int matchPlayers, int matchMaxPlayers, boolean matchCanJoin,
                             int matchCount, int[] mServerIds, String[] mDisplayNames, String[] mStatuses,
                             int[] mBlueTickets, int[] mRedTickets, int[] mPlayers, int[] mMaxPlayers,
-                            int[] mElapsed, String[] mBlueFactions, String[] mRedFactions) {
+                            int[] mElapsed, String[] mBlueFactions, String[] mRedFactions,
+                            String[] mWorldPaths) {
         this.phase = phase;
         this.remainingSeconds = remainingSeconds;
         this.onlinePlayers = onlinePlayers;
@@ -137,6 +147,10 @@ public class LobbyStatePacket {
         this.team2Factions = team2Factions;
         this.team1Votes = team1Votes;
         this.team2Votes = team2Votes;
+        this.myMapVote = myMapVote;
+        this.myModeVote = myModeVote;
+        this.myFaction1 = myFaction1;
+        this.myFaction2 = myFaction2;
         this.resultMap = resultMap;
         this.resultMapVotes = resultMapVotes;
         this.resultMode = resultMode;
@@ -147,6 +161,7 @@ public class LobbyStatePacket {
         this.resultF2Votes = resultF2Votes;
         this.matchMapDisplay = matchMapDisplay;
         this.matchModeDisplay = matchModeDisplay;
+        this.matchWorldPath = matchWorldPath;
         this.matchBlueFaction = matchBlueFaction;
         this.matchRedFaction = matchRedFaction;
         this.matchStatus = matchStatus;
@@ -168,6 +183,7 @@ public class LobbyStatePacket {
         this.mElapsed = mElapsed;
         this.mBlueFactions = mBlueFactions;
         this.mRedFactions = mRedFactions;
+        this.mWorldPaths = mWorldPaths;
     }
 
     public boolean hasResults() {
@@ -232,6 +248,11 @@ public class LobbyStatePacket {
         writeIntArr(buf, msg.team1Votes);
         writeIntArr(buf, msg.team2Votes);
 
+        buf.writeInt(msg.myMapVote);
+        buf.writeInt(msg.myModeVote);
+        buf.writeInt(msg.myFaction1);
+        buf.writeInt(msg.myFaction2);
+
         buf.writeUtf(msg.resultMap != null ? msg.resultMap : "");
         buf.writeInt(msg.resultMapVotes);
         buf.writeUtf(msg.resultMode != null ? msg.resultMode : "");
@@ -243,6 +264,7 @@ public class LobbyStatePacket {
 
         buf.writeUtf(msg.matchMapDisplay != null ? msg.matchMapDisplay : "");
         buf.writeUtf(msg.matchModeDisplay != null ? msg.matchModeDisplay : "");
+        buf.writeUtf(msg.matchWorldPath != null ? msg.matchWorldPath : "");
         buf.writeUtf(msg.matchBlueFaction != null ? msg.matchBlueFaction : "");
         buf.writeUtf(msg.matchRedFaction != null ? msg.matchRedFaction : "");
         buf.writeUtf(msg.matchStatus != null ? msg.matchStatus : "");
@@ -265,6 +287,7 @@ public class LobbyStatePacket {
         writeIntArr(buf, msg.mElapsed);
         writeStringArr(buf, msg.mBlueFactions);
         writeStringArr(buf, msg.mRedFactions);
+        writeStringArr(buf, msg.mWorldPaths);
     }
 
     private static String opt(String s) { return s == null || s.isEmpty() ? null : s; }
@@ -299,6 +322,11 @@ public class LobbyStatePacket {
         int[] team1Votes = readIntArr(buf);
         int[] team2Votes = readIntArr(buf);
 
+        int myMapVote = buf.readInt();
+        int myModeVote = buf.readInt();
+        int myFaction1 = buf.readInt();
+        int myFaction2 = buf.readInt();
+
         String resultMap = opt(buf.readUtf());
         int resultMapVotes = buf.readInt();
         String resultMode = opt(buf.readUtf());
@@ -310,6 +338,7 @@ public class LobbyStatePacket {
 
         String matchMapDisplay = opt(buf.readUtf());
         String matchModeDisplay = opt(buf.readUtf());
+        String matchWorldPath = opt(buf.readUtf());
         String matchBlueFaction = opt(buf.readUtf());
         String matchRedFaction = opt(buf.readUtf());
         String matchStatus = opt(buf.readUtf());
@@ -332,6 +361,7 @@ public class LobbyStatePacket {
         int[] mElapsed = readIntArr(buf);
         String[] mBlueFactions = readStringArr(buf);
         String[] mRedFactions = readStringArr(buf);
+        String[] mWorldPaths = readStringArr(buf);
 
         return new LobbyStatePacket(phase, remainingSeconds, onlinePlayers, totalVotes,
                 leadingName, canStartNewMatch, policyReason, mode, requestOpen,
@@ -339,13 +369,16 @@ public class LobbyStatePacket {
                 blueFactions, redFactions,
                 modeNames, modeDisplayNames, modeDescriptions, modeVoteCounts,
                 team1Factions, team2Factions, team1Votes, team2Votes,
+                myMapVote, myModeVote, myFaction1, myFaction2,
                 resultMap, resultMapVotes, resultMode, resultModeVotes,
                 resultF1, resultF1Votes, resultF2, resultF2Votes,
-                matchMapDisplay, matchModeDisplay, matchBlueFaction, matchRedFaction, matchStatus,
+                matchMapDisplay, matchModeDisplay, matchWorldPath,
+                matchBlueFaction, matchRedFaction, matchStatus,
                 matchBlueTickets, matchRedTickets, matchServerId,
                 matchElapsed, matchPlayers, matchMaxPlayers, matchCanJoin,
                 matchCount, mServerIds, mDisplayNames, mStatuses,
-                mBlueTickets, mRedTickets, mPlayers, mMaxPlayers, mElapsed, mBlueFactions, mRedFactions);
+                mBlueTickets, mRedTickets, mPlayers, mMaxPlayers, mElapsed, mBlueFactions, mRedFactions,
+                mWorldPaths);
     }
 
     public static void handle(LobbyStatePacket msg, Supplier<NetworkEvent.Context> ctx) {

@@ -6,6 +6,8 @@ import com.pigeostudios.pwp.warfare.block.BarbedWireBlockEntity;
 import com.pigeostudios.pwp.warfare.block.HubBlock;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.MainSupplyBlock;
+import com.pigeostudios.pwp.warfare.block.MainSupplyBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
@@ -232,6 +234,8 @@ public class EntrenchingToolItem extends Item implements GeoItem {
    private void addCreativeProgressToBE(BlockEntity be, int multiplier) {
       if (be instanceof HubBlockEntity b) {
          b.addCreativeProgress(multiplier);
+      } else if (be instanceof MainSupplyBlockEntity b) {
+         b.addCreativeProgress(multiplier);
       } else if (be instanceof WallBlockEntity b) {
          b.addCreativeProgress(multiplier);
       } else if (be instanceof BarbedWireBlockEntity b) {
@@ -252,6 +256,8 @@ public class EntrenchingToolItem extends Item implements GeoItem {
          return (Boolean)state.getValue(WallBlock.CONSTRUCTED);
       } else if (state.hasProperty(HubBlock.CONSTRUCTED)) {
          return (Boolean)state.getValue(HubBlock.CONSTRUCTED);
+      } else if (state.hasProperty(MainSupplyBlock.CONSTRUCTED)) {
+         return (Boolean)state.getValue(MainSupplyBlock.CONSTRUCTED);
       } else {
          return state.hasProperty(BarbedWireBlock.CONSTRUCTED) ? (Boolean)state.getValue(BarbedWireBlock.CONSTRUCTED) : false;
       }
@@ -259,6 +265,8 @@ public class EntrenchingToolItem extends Item implements GeoItem {
 
    private void addProgressToBE(BlockEntity be, Player player) {
       if (be instanceof HubBlockEntity b) {
+         b.addProgress();
+      } else if (be instanceof MainSupplyBlockEntity b) {
          b.addProgress();
       } else if (be instanceof WallBlockEntity b) {
          b.addProgress();

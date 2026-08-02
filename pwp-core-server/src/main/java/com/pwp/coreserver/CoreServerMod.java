@@ -26,6 +26,7 @@ public class CoreServerMod {
         if (FMLEnvironment.dist.isDedicatedServer()) {
             FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
             MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+            new BanEnforcer();
             log.info("PWP Core Server initialized");
         } else {
             log.info("PWP Core Server loaded on client — skipping server setup");

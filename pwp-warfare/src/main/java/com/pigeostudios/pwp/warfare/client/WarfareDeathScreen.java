@@ -22,6 +22,16 @@ public class WarfareDeathScreen extends Screen {
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         gui.fill(0, 0, width, height, 0xFF000000);
 
+        // Страховка: игрок ожил (респавн прошёл) — экран смерти больше не нужен
+        var p = Minecraft.getInstance().player;
+        if (p != null && !p.isDeadOrDying()) {
+            ClientData.deathFadeStartTime = 0L;
+            ClientData.deployRequested = false;
+            ClientData.awaitingRespawn = false;
+            Minecraft.getInstance().setScreen(null);
+            return;
+        }
+
         if (ClientData.deathFadeStartTime != 0L) {
             long elapsed = System.currentTimeMillis() - ClientData.deathFadeStartTime;
             float alpha = 0f;

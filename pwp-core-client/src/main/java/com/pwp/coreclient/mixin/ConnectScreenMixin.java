@@ -47,7 +47,7 @@ public class ConnectScreenMixin {
                     btn -> Minecraft.getInstance().setScreen(parent), PWPButton.Style.GHOST);
             ((ScreenInvoker) (Object) this).pwpInvokeAddRenderableWidget(pwp_cancelButton);
         }
-        pwp_cancelButton.setPosition(w / 2 - 100, boxY + 54 + 22);
+        pwp_cancelButton.setPosition(w / 2 - 100, boxY + 54 + 40);
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)

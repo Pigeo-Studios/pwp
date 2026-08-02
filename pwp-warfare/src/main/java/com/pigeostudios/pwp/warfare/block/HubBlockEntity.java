@@ -189,6 +189,10 @@ public class HubBlockEntity extends BlockEntity {
             entity.handleSoundClient();
          }
       } else if (!(Boolean)state.getValue(HubBlock.CONSTRUCTED)) {
+         if (state.getValue(HubBlock.BUILD_STAGE) == 0) {
+            level.setBlock(pos, (BlockState)state.setValue(HubBlock.BUILD_STAGE, 1), 3);
+         }
+
          if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
             if (entity.activeDiggers > 0) {
                float speed = entity.activeDiggers == 1 ? 1.0F : (entity.activeDiggers == 2 ? 1.34F : (entity.activeDiggers == 3 ? 2.0F : 4.0F));
@@ -199,7 +203,7 @@ public class HubBlockEntity extends BlockEntity {
 
             if (entity.currentProgress >= 2400) {
                entity.currentProgress = 2400;
-               level.setBlock(pos, (BlockState)state.setValue(HubBlock.CONSTRUCTED, true), 3);
+               level.setBlock(pos, (BlockState)((BlockState)state.setValue(HubBlock.CONSTRUCTED, true)).setValue(HubBlock.BUILD_STAGE, 2), 3);
                if (!level.isClientSide) {
                   ((ServerLevel)level)
                      .sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 50, 1.2, 0.5, 1.2, 0.05);
@@ -213,6 +217,11 @@ public class HubBlockEntity extends BlockEntity {
                         break;
                      }
                   }
+               }
+            } else {
+               int newStage = entity.currentProgress >= 1200 ? 2 : 1;
+               if (state.getValue(HubBlock.BUILD_STAGE) != newStage) {
+                  level.setBlock(pos, (BlockState)state.setValue(HubBlock.BUILD_STAGE, newStage), 3);
                }
             }
 

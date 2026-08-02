@@ -226,6 +226,7 @@ public class ClientHooks {
         ClientData.blueRallyBlocked = msg.blueBlocked;
         ClientData.redRallyBlocked = msg.redBlocked;
         ClientData.clientHubs = new ArrayList<>(msg.hubs);
+        ClientData.clientMainSupplies = new ArrayList<>(msg.mainSupplies);
         ClientData.BLUE_FACTION = msg.blueFaction;
         ClientData.RED_FACTION = msg.redFaction;
         if (msg.isGameStarted && ClientData.matchStartTime == 0L) ClientData.matchStartTime = System.currentTimeMillis();
@@ -271,6 +272,12 @@ public class ClientHooks {
         ClientData.blueArtReqName = msg.blueArtReqName;
         ClientData.redArtReqName = msg.redArtReqName;
         updatePlayerSkin();
+
+        // Discord RPC лаунчера: статус «в бою против кого» / «в лобби»
+        var mcPl = Minecraft.getInstance().player;
+        String pTeam = mcPl != null && mcPl.getTeam() != null ? mcPl.getTeam().getName() : "";
+        String pNick = mcPl != null ? mcPl.getScoreboardName() : "";
+        LauncherStatusReporter.onSyncGameData(msg.isGameStarted, msg.blueFaction, msg.redFaction, pTeam, pNick);
 
         // Auto-open team selection screen if player has no team
         Minecraft mc = Minecraft.getInstance();

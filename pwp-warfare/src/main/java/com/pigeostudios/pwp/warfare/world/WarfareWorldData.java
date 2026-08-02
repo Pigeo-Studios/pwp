@@ -41,6 +41,7 @@ public class WarfareWorldData extends SavedData {
    public List<BlockPos> blueRallies = new ArrayList<>();
    public List<BlockPos> redRallies = new ArrayList<>();
    public List<WarfareWorldData.HubInfo> hubs = new ArrayList<>();
+   public List<WarfareWorldData.MainSupplyInfo> mainSupplies = new ArrayList<>();
    public List<WarfareWorldData.Squad> squads = new ArrayList<>();
    public int blueCMDId = -1;
    public int redCMDId = -1;
@@ -156,6 +157,7 @@ public class WarfareWorldData extends SavedData {
       if (apiResponse == null || !apiResponse.has("data")) return;
       JsonArray kits = apiResponse.getAsJsonArray("data");
       Map<String, WarfareWorldData.KitInfo> target = team.equalsIgnoreCase("BLUE") ? this.blueKits : this.redKits;
+      target.clear(); // API — источник истины: старые киты из NBT мира не должны оставаться
       for (int i = 0; i < kits.size(); i++) {
          JsonObject kitJson = kits.get(i).getAsJsonObject();
          String kitName = kitJson.get("kitName").getAsString();
@@ -442,6 +444,13 @@ public class WarfareWorldData extends SavedData {
       }
 
       tag.put("HubsData", hubList);
+      ListTag supplyList = new ListTag();
+
+      for (WarfareWorldData.MainSupplyInfo s : this.mainSupplies) {
+         supplyList.add(s.save());
+      }
+
+      tag.put("MainSupplies", supplyList);
       CompoundTag blueSpawnsTag = new CompoundTag();
       this.blueSpawns.forEach((dim, pos) -> blueSpawnsTag.putLong(dim, pos.asLong()));
       tag.put("BlueSpawnsMap", blueSpawnsTag);
@@ -630,6 +639,14 @@ public class WarfareWorldData extends SavedData {
          }
       }
 
+      if (tag.contains("MainSupplies")) {
+         ListTag list = tag.getList("MainSupplies", 10);
+
+         for (int i = 0; i < list.size(); i++) {
+            data.mainSupplies.add(WarfareWorldData.MainSupplyInfo.load(list.getCompound(i)));
+         }
+      }
+
       if (tag.contains("BlueSpawnsMap")) {
          CompoundTag map = tag.getCompound("BlueSpawnsMap");
 
@@ -757,21 +774,26 @@ public class WarfareWorldData extends SavedData {
       public float progress = 0.0F;
       public String capturingTeam = "NONE";
       public String shapeType = "CUBE";
-      public int lockDurationMinutes = 0;
-      public long lockedUntilTick = 0L;
-      public boolean invLocked = false;
+       public int lockDurationMinutes = 0;
+       public long lockedUntilTick = 0L;
+       public boolean invLocked = false;
+       // Тикеты, которые команда получит за нейтрализацию/захват этой точки
+       public int ticketGainNeutralize = 0;
+       public int ticketGainCapture = 0;
 
-      public CapturePoint(String name, AABB area, int bp, int rp, int time, int penalty, int deduct, String shape, int lockMin) {
-         this.name = name;
-         this.area = area;
-         this.bluePriority = bp;
-         this.redPriority = rp;
-         this.captureTimeMinutes = time;
-         this.ticketPenalty = penalty;
-         this.captureDeduction = deduct;
-         this.shapeType = shape;
-         this.lockDurationMinutes = lockMin;
-      }
+       public CapturePoint(String name, AABB area, int bp, int rp, int time, int penalty, int deduct, String shape, int lockMin, int gainNeut, int gainCap) {
+          this.name = name;
+          this.area = area;
+          this.bluePriority = bp;
+          this.redPriority = rp;
+          this.captureTimeMinutes = time;
+          this.ticketPenalty = penalty;
+          this.captureDeduction = deduct;
+          this.shapeType = shape;
+          this.lockDurationMinutes = lockMin;
+          this.ticketGainNeutralize = gainNeut;
+          this.ticketGainCapture = gainCap;
+       }
 
       public CompoundTag save() {
          CompoundTag tag = new CompoundTag();
@@ -786,8 +808,10 @@ public class WarfareWorldData extends SavedData {
          tag.putInt("RedPriority", this.redPriority);
          tag.putInt("Time", this.captureTimeMinutes);
          tag.putInt("Penalty", this.ticketPenalty);
-         tag.putInt("Deduct", this.captureDeduction);
-         tag.putString("Owner", this.owner);
+          tag.putInt("Deduct", this.captureDeduction);
+          tag.putInt("GainNeut", this.ticketGainNeutralize);
+          tag.putInt("GainCap", this.ticketGainCapture);
+          tag.putString("Owner", this.owner);
          tag.putFloat("Progress", this.progress);
          tag.putString("CapturingTeam", this.capturingTeam);
           tag.putString("Shape", this.shapeType);
@@ -810,7 +834,9 @@ public class WarfareWorldData extends SavedData {
             tag.getInt("Penalty"),
             tag.getInt("Deduct"),
             tag.contains("Shape") ? tag.getString("Shape") : "CUBE",
-            tag.contains("LockMin") ? tag.getInt("LockMin") : 0
+            tag.contains("LockMin") ? tag.getInt("LockMin") : 0,
+            tag.contains("GainNeut") ? tag.getInt("GainNeut") : 0,
+            tag.contains("GainCap") ? tag.getInt("GainCap") : 0
          );
          if (tag.contains("Owner")) {
             point.owner = tag.getString("Owner");
@@ -889,6 +915,33 @@ public class WarfareWorldData extends SavedData {
          }
 
          return h;
+      }
+   }
+
+   public static class MainSupplyInfo {
+      public BlockPos pos;
+      public String team;
+      public String dimension;
+
+      public MainSupplyInfo(BlockPos pos, String team, String dimension) {
+         this.pos = pos;
+         this.team = team;
+         this.dimension = dimension;
+      }
+
+      public CompoundTag save() {
+         CompoundTag tag = new CompoundTag();
+         tag.putLong("Pos", this.pos.asLong());
+         tag.putString("Team", this.team);
+         tag.putString("Dimension", this.dimension != null ? this.dimension : "minecraft:overworld");
+         return tag;
+      }
+
+      public static WarfareWorldData.MainSupplyInfo load(CompoundTag tag) {
+         BlockPos p = BlockPos.of(tag.getLong("Pos"));
+         String t = tag.getString("Team");
+         String d = tag.contains("Dimension") ? tag.getString("Dimension") : "minecraft:overworld";
+         return new WarfareWorldData.MainSupplyInfo(p, t, d);
       }
    }
 

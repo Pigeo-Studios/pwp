@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -13,11 +14,15 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraftforge.registries.ForgeRegistries;
 
 // Сущность блока стены
 // Управляет прогрессом строительства, демонтажа и связями между соседними стенами
@@ -30,6 +35,9 @@ public class WallBlockEntity extends BlockEntity {
    private boolean isUpdatingLinked = false;
    private int dismantleProgress = 0;
    private float dismantleMultiplier = 1.0F;
+   // Блок, в который стена превратится после достройки (например, камо-нет входа бункера)
+   private String transformTo = "";
+   private int transformDir = 2;
 
    public WallBlockEntity(BlockPos pos, BlockState state) {
       super((BlockEntityType)ModBlocks.WALL_BE.get(), pos, state);
@@ -59,6 +67,13 @@ public class WallBlockEntity extends BlockEntity {
 
    public String getTeam() {
       return this.teamOwner;
+   }
+
+   // Задаёт блок, в который стена превратится после завершения строительства
+   public void setTransformTo(String blockId, int directionIndex) {
+      this.transformTo = blockId;
+      this.transformDir = directionIndex;
+      this.setChanged();
    }
 
    public float getPercentage() {
@@ -173,43 +188,64 @@ public class WallBlockEntity extends BlockEntity {
    // Тик строительства и демонтажа - обновляет прогресс, завершает по достижении максимума
    public static void tick(Level level, BlockPos pos, BlockState state, WallBlockEntity entity) {
       if (!level.isClientSide) {
-         boolean constructed = (Boolean)state.getValue(WallBlock.CONSTRUCTED);
-         if (!constructed) {
-            if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
-               if (entity.activeDiggers > 0) {
-                  float speed;
-                  if (entity.activeDiggers == 1) {
-                     speed = 1.0F;
-                  } else if (entity.activeDiggers == 2) {
-                     speed = 1.34F;
-                  } else if (entity.activeDiggers == 3) {
-                     speed = 2.0F;
-                  } else {
-                     speed = 4.0F;
-                  }
+          boolean constructed = (Boolean)state.getValue(WallBlock.CONSTRUCTED);
+          if (!constructed) {
+             if (state.getValue(WallBlock.BUILD_STAGE) == 0) {
+                level.setBlock(pos, (BlockState)state.setValue(WallBlock.BUILD_STAGE, 1), 3);
+             }
 
-                  float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
-                  speed *= multiplier;
-                  entity.currentProgress = entity.currentProgress + (int)Math.ceil(speed);
-               }
+             if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
+                if (entity.activeDiggers > 0) {
+                   float speed;
+                   if (entity.activeDiggers == 1) {
+                      speed = 1.0F;
+                   } else if (entity.activeDiggers == 2) {
+                      speed = 1.34F;
+                   } else if (entity.activeDiggers == 3) {
+                      speed = 2.0F;
+                   } else {
+                      speed = 4.0F;
+                   }
 
-               int max = entity.getMaxProgress();
-               if (entity.currentProgress >= max) {
-                  entity.currentProgress = max;
-                  level.setBlock(pos, (BlockState)state.setValue(WallBlock.CONSTRUCTED, true), 3);
-                  if (!level.isClientSide) {
-                     ((ServerLevel)level)
-                        .sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 25, 0.6, 0.4, 0.6, 0.05);
-                  }
-               }
+                   float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+                   speed *= multiplier;
+                   entity.currentProgress = entity.currentProgress + (int)Math.ceil(speed);
+                }
 
-               if (level.getGameTime() % 5L == 0L || entity.currentProgress >= max) {
-                  level.sendBlockUpdated(pos, state, state, 3);
-               }
-            }
+                int max = entity.getMaxProgress();
+                if (entity.currentProgress >= max) {
+                   entity.currentProgress = max;
+                   if (!entity.transformTo.isEmpty()) {
+                      Block target = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(entity.transformTo));
+                      if (target != null) {
+                         BlockState finalState = target.defaultBlockState();
+                         if (finalState.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+                            finalState = finalState.setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.from2DDataValue(entity.transformDir));
+                         }
+                         level.setBlock(pos, finalState, 3);
+                      }
+                   } else {
+                      level.setBlock(pos, (BlockState)((BlockState)state.setValue(WallBlock.CONSTRUCTED, true)).setValue(WallBlock.BUILD_STAGE, 2), 3);
+                   }
 
-            entity.activeDiggers = 0;
-         } else {
+                   if (!level.isClientSide) {
+                      ((ServerLevel)level)
+                         .sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 25, 0.6, 0.4, 0.6, 0.05);
+                   }
+                } else {
+                   int newStage = entity.currentProgress >= max / 2 ? 2 : 1;
+                   if (state.getValue(WallBlock.BUILD_STAGE) != newStage) {
+                      level.setBlock(pos, (BlockState)state.setValue(WallBlock.BUILD_STAGE, newStage), 3);
+                   }
+                }
+
+                if (level.getGameTime() % 5L == 0L || entity.currentProgress >= max) {
+                   level.sendBlockUpdated(pos, state, state, 3);
+                }
+             }
+
+             entity.activeDiggers = 0;
+          } else {
             if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
                if (entity.activeDiggers > 0) {
                   float speed;
@@ -302,6 +338,8 @@ public class WallBlockEntity extends BlockEntity {
       tag.putString("TeamOwner", this.teamOwner);
       tag.putBoolean("IsMultiWall", this.isMultiWall);
       tag.putInt("DismantleProgress", this.dismantleProgress);
+      tag.putString("TransformTo", this.transformTo);
+      tag.putInt("TransformDir", this.transformDir);
       ListTag list = new ListTag();
 
       for (BlockPos p : this.linkedWalls) {
@@ -324,6 +362,14 @@ public class WallBlockEntity extends BlockEntity {
 
       if (tag.contains("DismantleProgress")) {
          this.dismantleProgress = tag.getInt("DismantleProgress");
+      }
+
+      if (tag.contains("TransformTo")) {
+         this.transformTo = tag.getString("TransformTo");
+      }
+
+      if (tag.contains("TransformDir")) {
+         this.transformDir = tag.getInt("TransformDir");
       }
 
       this.linkedWalls.clear();

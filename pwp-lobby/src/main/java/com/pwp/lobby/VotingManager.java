@@ -194,6 +194,8 @@ public class VotingManager {
     }
 
     public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
+    /** Голос игрока (имя карты) или null, если не голосовал. */
+    public static String getVote(java.util.UUID uuid) { return votes.get(uuid); }
     public static boolean isActive() { return active; }
     public static boolean isFinished() { return finished; }
     public static int getRemainingSeconds() {

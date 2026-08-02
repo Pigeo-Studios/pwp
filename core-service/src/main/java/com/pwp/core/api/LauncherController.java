@@ -293,6 +293,25 @@ public class LauncherController {
             }
         });
 
+        // ── Batch ban check (игровой сервер опрашивает раз в ~20с) ──
+        app.post("/api/v1/launcher/ban-check", ctx -> {
+            BanCheckReq req = ctx.bodyAsClass(BanCheckReq.class);
+            List<Map<String, Object>> kicks = new ArrayList<>();
+            List<BanCheckPlayer> players = req.players != null ? req.players : Collections.emptyList();
+            for (BanCheckPlayer p : players) {
+                if (p.uuid == null || p.uuid.isEmpty()) continue;
+                String reason = effectiveBanReason(p.uuid, p.ip);
+                if (reason == null) continue;
+                Map<String, Object> k = new HashMap<>();
+                k.put("uuid", p.uuid);
+                k.put("nickname", p.nickname != null ? p.nickname : "");
+                k.put("reason", reason);
+                kicks.add(k);
+                log.info("ban-check KICK {} ({}): {}", p.nickname, p.uuid, reason);
+            }
+            ctx.json(ApiResponse.ok(Map.of("kicks", kicks)));
+        });
+
         // ── HWID ban check ──────────────────────────────────
         app.post("/api/v1/launcher/check-hwid-ban", ctx -> {
             HwidCheckReq req = ctx.bodyAsClass(HwidCheckReq.class);
@@ -539,7 +558,7 @@ public class LauncherController {
         }
     }
 
-    private static int parseDuration(String s) {
+    public static int parseDuration(String s) {
         s = s.trim().toLowerCase();
         if (s.endsWith("m")) return Integer.parseInt(s.substring(0, s.length() - 1));
         if (s.endsWith("h")) return Integer.parseInt(s.substring(0, s.length() - 1)) * 60;
@@ -574,6 +593,62 @@ public class LauncherController {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** Проверка IP-бана: null blocked_until = вечный. Истёкшие — снимает. */
+    private static boolean isIpBlocked(String ip) {
+        String sql = "SELECT blocked_until FROM ip_blocks WHERE ip = ? ORDER BY id DESC LIMIT 1";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, ip);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return false;
+                java.sql.Timestamp until = rs.getTimestamp("blocked_until");
+                if (until != null && until.before(new java.util.Date())) {
+                    try (PreparedStatement del = c.prepareStatement(
+                        "DELETE FROM ip_blocks WHERE ip = ?")) {
+                        del.setString(1, ip);
+                        del.executeUpdate();
+                    }
+                    return false;
+                }
+                return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Причина бана игрока (аккаунт/HWID/IP) или null, если не забанен. Истёкшие баны снимает. */
+    private static String effectiveBanReason(String uuid, String ip) {
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT is_banned, ban_reason, banned_until, hwid FROM players WHERE uuid = ?")) {
+            ps.setString(1, uuid);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                java.sql.Timestamp until = rs.getTimestamp("banned_until");
+                boolean isBanned = rs.getBoolean("is_banned");
+                if (isBanned) {
+                    if (until != null && until.before(new java.util.Date())) {
+                        PlayerRepository.setBan(uuid, false, null);
+                    } else {
+                        String reason = rs.getString("ban_reason");
+                        return reason != null && !reason.isEmpty() ? reason : "Вы забанены";
+                    }
+                }
+                String hwid = rs.getString("hwid");
+                if (hwid != null && !hwid.isEmpty() && isHwidBanned(hwid)) {
+                    return "Ваше устройство забанено";
+                }
+                if (ip != null && !ip.isEmpty() && isIpBlocked(ip)) {
+                    return "Ваш IP-адрес забанен";
+                }
+            }
+        } catch (Exception e) {
+            log.warn("ban-check failed for {}: {}", uuid, e.getMessage());
+        }
+        return null;
     }
 
     private static void updateHwidHistory(String uuid, String hwid, String components, String pcName, String ip, int flags) {
@@ -654,6 +729,16 @@ public class LauncherController {
 
     public static class CheckBanReq {
         public String uuid;
+    }
+
+    public static class BanCheckReq {
+        public List<BanCheckPlayer> players;
+    }
+
+    public static class BanCheckPlayer {
+        public String uuid;
+        public String nickname;
+        public String ip;
     }
 
     public static class CheckSessionReq {

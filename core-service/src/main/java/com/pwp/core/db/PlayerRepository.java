@@ -326,13 +326,31 @@ public class PlayerRepository {
     }
 
     public static void setBan(String uuid, boolean banned, String reason) throws SQLException {
-        String sql = "UPDATE players SET is_banned = ?, ban_reason = ? WHERE uuid = ?";
+        // Вечный бан/разбан: banned_until всегда сбрасываем, чтобы не оставался «просроченный» статус
+        setBan(uuid, banned, reason, null);
+    }
+
+    /** Бан/разбан с указанием срока действия (banned_until = null для вечного). */
+    public static void setBan(String uuid, boolean banned, String reason, java.sql.Timestamp bannedUntil) throws SQLException {
+        String sql = "UPDATE players SET is_banned = ?, ban_reason = ?, banned_until = ? WHERE uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setBoolean(1, banned);
             ps.setString(2, reason);
-            ps.setString(3, uuid);
+            ps.setTimestamp(3, bannedUntil);
+            ps.setString(4, uuid);
             ps.executeUpdate();
+        }
+    }
+
+    /** Истёк ли временный бан (banned_until в прошлом). */
+    public static boolean isBanExpired(Player pl) {
+        if (pl == null || pl.bannedUntil == null || pl.bannedUntil.isEmpty()) return false;
+        try {
+            java.sql.Timestamp until = java.sql.Timestamp.valueOf(pl.bannedUntil.replace('T', ' '));
+            return until.before(new java.util.Date());
+        } catch (Exception e) {
+            return false;
         }
     }
 

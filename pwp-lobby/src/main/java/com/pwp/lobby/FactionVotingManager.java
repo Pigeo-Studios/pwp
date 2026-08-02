@@ -20,6 +20,8 @@ public class FactionVotingManager {
     private static final Map<UUID, String[]> votes = new HashMap<>();
 
     public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
+    /** Голос игрока ([blue, red]) или null, если не голосовал. */
+    public static String[] getVote(java.util.UUID uuid) { return votes.get(uuid); }
     public static boolean isActive() { return active; }
     public static int getVoteCount() { return votes.size(); }
 

@@ -24,6 +24,8 @@ public class ModBlocks {
    public static final RegistryObject<Block> HUB_BLOCK = BLOCKS.register("hub_block", HubBlock::new);
    public static final RegistryObject<Block> BARBED_WIRE_BLOCK = BLOCKS.register("barbed_wire", BarbedWireBlock::new);
    public static final RegistryObject<Block> WALL_BLOCK = BLOCKS.register("wall_block", WallBlock::new);
+   public static final RegistryObject<Block> WALL_SLAB_BLOCK = BLOCKS.register("wall_slab_block", WallSlabBlock::new);
+   public static final RegistryObject<Block> CAMO_NET_BLOCK = BLOCKS.register("camo_net", CamoNetBlock::new);
    public static final RegistryObject<Block> M2_CONSTRUCTION_BLOCK = BLOCKS.register("m2_construction", M2ConstructionBlock::new);
    public static final RegistryObject<Block> AGS_CONSTRUCTION_BLOCK = BLOCKS.register("ags_construction", AGSConstructionBlock::new);
    public static final RegistryObject<Block> MAIN_SUPPLY_BLOCK = BLOCKS.register("main_supply", MainSupplyBlock::new);
@@ -52,7 +54,7 @@ public class ModBlocks {
       "m2_construction_be", () -> Builder.of(M2ConstructionBlockEntity::new, new Block[]{(Block)M2_CONSTRUCTION_BLOCK.get()}).build(null)
    );
    public static final RegistryObject<BlockEntityType<WallBlockEntity>> WALL_BE = BLOCK_ENTITIES.register(
-      "wall_be", () -> Builder.of(WallBlockEntity::new, new Block[]{(Block)WALL_BLOCK.get()}).build(null)
+      "wall_be", () -> Builder.of(WallBlockEntity::new, new Block[]{(Block)WALL_BLOCK.get(), (Block)WALL_SLAB_BLOCK.get()}).build(null)
    );
    public static final RegistryObject<BlockEntityType<MainSupplyBlockEntity>> MAIN_SUPPLY_BE = BLOCK_ENTITIES.register(
       "main_supply_be", () -> Builder.of(MainSupplyBlockEntity::new, new Block[]{(Block)MAIN_SUPPLY_BLOCK.get()}).build(null)

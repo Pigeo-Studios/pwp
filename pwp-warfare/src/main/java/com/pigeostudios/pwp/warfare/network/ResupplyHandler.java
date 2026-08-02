@@ -33,7 +33,10 @@ public class ResupplyHandler {
 
       for (int i = 0; i < 49; i++) {
          ItemStack kitStack = (ItemStack)kit.inventory.get(i);
-         if (!kitStack.isEmpty()) {
+         if (kitStack.isEmpty()) continue;
+         // Альтернативные слоты (__ALT__ в slotSkins) — только выбор в меню деплоя, не выдаются
+         if (isAltSlot(kit, i)) continue;
+         {
             ItemStack itemToGive = kitStack.copy();
             if (i < kit.saveNbtFlags.length && kit.saveNbtFlags[i] && savedTags != null && savedTags.containsKey(i)) {
                itemToGive.setTag(savedTags.get(i));
@@ -91,7 +94,6 @@ public class ResupplyHandler {
       }
 
       player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
-
       // Apply slot selections (alternatives chosen in deploy screen)
       applySlotSelections(player, kit);
 
@@ -260,7 +262,43 @@ public class ResupplyHandler {
       }
    }
 
-   public static void tryApplyPendingKit(ServerPlayer player, WarfareWorldData data) {
+    // Альтернативный слот кита (метка __ALT__ в slotSkins) — только для выбора в меню деплоя
+    private static boolean isAltSlot(WarfareWorldData.KitInfo kit, int slot) {
+       if (kit.slotSkins == null) return false;
+       List<String> meta = kit.slotSkins.get(slot);
+       if (meta == null) return false;
+       for (String s : meta) {
+          if (s.startsWith("__ALT__")) return true;
+       }
+       return false;
+    }
+
+    // Считает в отряде игрока других членов с китом категории FIRE_SUPPORT (текущим или отложенным).
+    // Squad-правило: не больше 3 огневой поддержки на отряд (сам игрок при выборе FS-кита занимает слот).
+    public static int countFireSupportOthersInSquad(ServerPlayer player, WarfareWorldData data) {
+       String pName = player.getScoreboardName();
+       String teamName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
+       if (teamName.isEmpty()) return 0;
+       Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
+       for (WarfareWorldData.Squad s : data.squads) {
+          if (s.members.contains(pName)) {
+             int count = 0;
+             for (String member : s.members) {
+                if (member.equals(pName)) continue;
+                ServerPlayer p = player.server.getPlayerList().getPlayerByName(member);
+                if (p == null) continue;
+                String pen = p.getPersistentData().getString("WARFARE_PendingKit");
+                String cur = p.getPersistentData().getString("WARFARE_CurrentKit");
+                WarfareWorldData.KitInfo k = kits.get(!pen.isEmpty() ? pen : cur);
+                if (k != null && "FIRE_SUPPORT".equals(k.category)) count++;
+             }
+             return count;
+          }
+       }
+       return 0;
+    }
+
+    public static void tryApplyPendingKit(ServerPlayer player, WarfareWorldData data) {
       String pending = player.getPersistentData().getString("WARFARE_PendingKit");
       if (!pending.isEmpty()) {
          String teamName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
@@ -310,6 +348,10 @@ public class ResupplyHandler {
                   }
 
                   if (kit.isLeaderOnly && (mySquad == null || !mySquad.leader.equals(pName))) {
+                     allowed = false;
+                  }
+
+                  if (allowed && "FIRE_SUPPORT".equals(kit.category) && countFireSupportOthersInSquad(player, data) >= 3) {
                      allowed = false;
                   }
 

@@ -30,6 +30,7 @@ public class AuthMiddleware {
         "/api/v1/launcher/version",
         "/api/v1/launcher/manifest",
         "/api/v1/launcher/logs",
+        "/api/v1/launcher/anticheat/artifact/",
         "/api/v1/launcher/p5/",
         "/api/v1/admin/",
         "/authlib/",

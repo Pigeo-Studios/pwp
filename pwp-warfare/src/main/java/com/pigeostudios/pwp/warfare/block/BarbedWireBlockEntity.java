@@ -166,32 +166,41 @@ public class BarbedWireBlockEntity extends BlockEntity {
    // Тик строительства и демонтажа - обновляет прогресс, завершает по достижении MAX_PROGRESS
    public static void tick(Level level, BlockPos pos, BlockState state, BarbedWireBlockEntity entity) {
       if (!level.isClientSide) {
-         boolean constructed = (Boolean)state.getValue(BarbedWireBlock.CONSTRUCTED);
-         if (!constructed) {
-            if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
-               if (entity.activeDiggers > 0) {
-                  float speed = entity.activeDiggers >= 3 ? 2.0F : 1.0F;
-                  float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
-                  speed *= multiplier;
-                  entity.currentProgress = entity.currentProgress + (int)Math.ceil(speed);
-               }
+          boolean constructed = (Boolean)state.getValue(BarbedWireBlock.CONSTRUCTED);
+          if (!constructed) {
+             if (state.getValue(BarbedWireBlock.BUILD_STAGE) == 0) {
+                level.setBlock(pos, (BlockState)state.setValue(BarbedWireBlock.BUILD_STAGE, 1), 3);
+             }
 
-               if (entity.currentProgress >= 1200) {
-                  entity.currentProgress = 1200;
-                  level.setBlock(pos, (BlockState)state.setValue(BarbedWireBlock.CONSTRUCTED, true), 3);
-                  if (!level.isClientSide) {
-                     ((ServerLevel)level)
-                        .sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 15, 0.5, 0.3, 0.5, 0.03);
-                  }
-               }
+             if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
+                if (entity.activeDiggers > 0) {
+                   float speed = entity.activeDiggers >= 3 ? 2.0F : 1.0F;
+                   float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+                   speed *= multiplier;
+                   entity.currentProgress = entity.currentProgress + (int)Math.ceil(speed);
+                }
 
-               if (level.getGameTime() % 5L == 0L || entity.currentProgress >= 1200) {
-                  level.sendBlockUpdated(pos, state, state, 3);
-               }
-            }
+                if (entity.currentProgress >= 1200) {
+                   entity.currentProgress = 1200;
+                   level.setBlock(pos, (BlockState)((BlockState)state.setValue(BarbedWireBlock.CONSTRUCTED, true)).setValue(BarbedWireBlock.BUILD_STAGE, 2), 3);
+                   if (!level.isClientSide) {
+                      ((ServerLevel)level)
+                         .sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 15, 0.5, 0.3, 0.5, 0.03);
+                   }
+                } else {
+                   int newStage = entity.currentProgress >= 600 ? 2 : 1;
+                   if (state.getValue(BarbedWireBlock.BUILD_STAGE) != newStage) {
+                      level.setBlock(pos, (BlockState)state.setValue(BarbedWireBlock.BUILD_STAGE, newStage), 3);
+                   }
+                }
 
-            entity.activeDiggers = 0;
-         } else {
+                if (level.getGameTime() % 5L == 0L || entity.currentProgress >= 1200) {
+                   level.sendBlockUpdated(pos, state, state, 3);
+                }
+             }
+
+             entity.activeDiggers = 0;
+          } else {
             if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
                if (entity.activeDiggers > 0) {
                   float speed = entity.activeDiggers >= 3 ? 2.0F : 1.0F;

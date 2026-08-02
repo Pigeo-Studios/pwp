@@ -80,6 +80,15 @@ public class CoreServerApi {
         return post("/api/v1/player/save", body);
     }
 
+    // ====== BANS ======
+
+    /** Проверка банов онлайна: сервер передаёт игроков, получает кого кикать. */
+    public static JsonObject checkBans(JsonArray players) {
+        JsonObject body = new JsonObject();
+        body.add("players", players);
+        return post("/api/v1/launcher/ban-check", body);
+    }
+
     // ====== CURRENCY / XP ======
 
     public static JsonObject addCurrency(String uuid, long amount, String reason) {
@@ -240,6 +249,11 @@ public class CoreServerApi {
 
     // ====== NETWORK ======
 
+    /** Статус всех серверов из core-service (heartbeat'ы) — для живого онлайна матчей. */
+    public static JsonObject fetchServersStatus() {
+        return get("/api/v1/network/status");
+    }
+
     public static JsonObject sendHeartbeat(String server, int online) {
         HEARTBEAT_EXECUTOR.execute(() ->
             post("/api/v1/network/heartbeat", map("server", server, "online", online)));
@@ -253,6 +267,31 @@ public class CoreServerApi {
                                            String phase, int maxPlayers,
                                            long matchStartedAt, int matchPlayers) {
         JsonObject body = map("server", server, "online", online);
+        if (mapName != null) {
+            body.addProperty("mapName", mapName);
+            body.addProperty("mode", mode != null ? mode : "");
+            body.addProperty("blueFaction", blueFaction != null ? blueFaction : "");
+            body.addProperty("redFaction", redFaction != null ? redFaction : "");
+            body.addProperty("blueScore", blueScore);
+            body.addProperty("redScore", redScore);
+            body.addProperty("phase", phase != null ? phase : "");
+            body.addProperty("maxPlayers", maxPlayers);
+            body.addProperty("matchStartedAt", matchStartedAt);
+            body.addProperty("matchPlayers", matchPlayers);
+        }
+        HEARTBEAT_EXECUTOR.execute(() -> post("/api/v1/network/heartbeat", body));
+        return null;
+    }
+
+    /** Heartbeat матч-сервера с портом — лобби сверяет по нему матч. */
+    public static JsonObject sendHeartbeat(String server, int online, int port,
+                                           String mapName, String mode,
+                                           String blueFaction, String redFaction,
+                                           int blueScore, int redScore,
+                                           String phase, int maxPlayers,
+                                           long matchStartedAt, int matchPlayers) {
+        JsonObject body = map("server", server, "online", online);
+        body.addProperty("port", port);
         if (mapName != null) {
             body.addProperty("mapName", mapName);
             body.addProperty("mode", mode != null ? mode : "");

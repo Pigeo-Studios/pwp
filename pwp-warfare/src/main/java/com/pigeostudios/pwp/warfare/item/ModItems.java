@@ -58,12 +58,20 @@ public class ModItems {
    public static final RegistryObject<Item> RED_SUPPLY_MARKER = ITEMS.register(
       "red_supply_marker", () -> new SupplyTruckMarkerItem("RED", 5, "Supply Truck", 100)
    );
-   public static final RegistryObject<Item> BLUE_SUPPLY_HELICOPTER = ITEMS.register(
-      "blue_supply_helicopter", () -> new SupplyTruckMarkerItem("BLUE", 20, "Supply Helicopter", 100)
-   );
-   public static final RegistryObject<Item> RED_SUPPLY_HELICOPTER = ITEMS.register(
-      "red_supply_helicopter", () -> new SupplyTruckMarkerItem("RED", 20, "Supply Helicopter", 100)
-   );
+    public static final RegistryObject<Item> BLUE_SUPPLY_HELICOPTER = ITEMS.register(
+       "blue_supply_helicopter", () -> new SupplyTruckMarkerItem("BLUE", 20, "Supply Helicopter", 100)
+    );
+    public static final RegistryObject<Item> RED_SUPPLY_HELICOPTER = ITEMS.register(
+       "red_supply_helicopter", () -> new SupplyTruckMarkerItem("RED", 20, "Supply Helicopter", 100)
+    );
+    public static final RegistryObject<Item> BLUE_HEAVY_SUPPLY = ITEMS.register(
+       "blue_heavy_supply", () -> new SupplyTruckMarkerItem("BLUE", 10, "Heavy Supply", 100)
+    );
+    public static final RegistryObject<Item> RED_HEAVY_SUPPLY = ITEMS.register(
+       "red_heavy_supply", () -> new SupplyTruckMarkerItem("RED", 10, "Heavy Supply", 100)
+    );
+    public static final RegistryObject<Item> BLUE_SPG = ITEMS.register("blue_spg", () -> new VehicleMarkerItem("BLUE", "SPG", 40, 30));
+    public static final RegistryObject<Item> RED_SPG = ITEMS.register("red_spg", () -> new VehicleMarkerItem("RED", "SPG", 40, 30));
    public static final RegistryObject<Item> VEHICLE_SPAWNER_ITEM = ITEMS.register(
       "vehicle_spawner", () -> new BlockItem((Block)ModBlocks.VEHICLE_SPAWNER_BLOCK.get(), new Properties())
    );

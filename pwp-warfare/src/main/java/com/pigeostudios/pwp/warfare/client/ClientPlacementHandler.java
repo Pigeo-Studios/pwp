@@ -145,6 +145,69 @@ public class ClientPlacementHandler {
                         for (int x = 0; x < 3; x++) {
                            renderGhostBlock(mc, wireState, pose, x, 0, 0);
                         }
+                     } else if (structureId == 15) {
+                        BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
+                                 .defaultBlockState()
+                                 .setValue(WallBlock.FACING, Direction.NORTH))
+                              .setValue(WallBlock.CONSTRUCTED, false))
+                           .setValue(WallBlock.VALID, isValid);
+                        BlockState wireState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.BARBED_WIRE_BLOCK.get())
+                                 .defaultBlockState()
+                                 .setValue(BarbedWireBlock.FACING, Direction.NORTH))
+                              .setValue(BarbedWireBlock.CONSTRUCTED, false))
+                           .setValue(BarbedWireBlock.VALID, isValid);
+
+                        for (int x = -1; x <= 1; x++) {
+                           renderGhostBlock(mc, wallState, pose, x, 0, 0);
+                           renderGhostBlock(mc, wallState, pose, x, 0, -1);
+                           renderGhostBlock(mc, wallState, pose, x, 1, -1);
+                           renderGhostBlock(mc, wireState, pose, x, 0, -2);
+                        }
+                     } else if (structureId == 16) {
+                        BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
+                                 .defaultBlockState()
+                                 .setValue(WallBlock.FACING, Direction.NORTH))
+                              .setValue(WallBlock.CONSTRUCTED, false))
+                           .setValue(WallBlock.VALID, isValid);
+                        BlockState slabState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_SLAB_BLOCK.get())
+                                 .defaultBlockState()
+                                 .setValue(WallBlock.FACING, Direction.NORTH))
+                              .setValue(WallBlock.CONSTRUCTED, false))
+                           .setValue(WallBlock.VALID, isValid);
+
+                        for (int x = -1; x <= 1; x++) {
+                           for (int y = 0; y < 3; y++) {
+                              renderGhostBlock(mc, x == 0 && y == 1 ? slabState : wallState, pose, x, y, 0);
+                           }
+                        }
+                     } else if (structureId == 17) {
+                        BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
+                                 .defaultBlockState()
+                                 .setValue(WallBlock.FACING, Direction.NORTH))
+                              .setValue(WallBlock.CONSTRUCTED, false))
+                           .setValue(WallBlock.VALID, isValid);
+                        BlockState slabState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_SLAB_BLOCK.get())
+                                 .defaultBlockState()
+                                 .setValue(WallBlock.FACING, Direction.NORTH))
+                              .setValue(WallBlock.CONSTRUCTED, false))
+                           .setValue(WallBlock.VALID, isValid);
+
+                        for (int x = -1; x <= 1; x++) {
+                           for (int y = 0; y <= 2; y++) {
+                              for (int z = -1; z <= 1; z++) {
+                                 if (x == 0 && z == 0 && y < 2) {
+                                    continue;
+                                 }
+                                 renderGhostBlock(mc, y == 2 ? slabState : wallState, pose, x, y, z);
+                              }
+                           }
+                        }
+                     } else if (structureId == 18) {
+                        BlockState stationState = (BlockState)((BlockState)((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get())
+                              .defaultBlockState()
+                              .setValue(com.pigeostudios.pwp.warfare.block.MainSupplyBlock.FACING, Direction.NORTH))
+                           .setValue(com.pigeostudios.pwp.warfare.block.MainSupplyBlock.CONSTRUCTED, false);
+                        renderGhostBlock(mc, stationState, pose, 0, 0, 0);
                      } else {
                         BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
                                  .defaultBlockState()
@@ -264,11 +327,27 @@ public class ClientPlacementHandler {
       }
 
       if (structureId == 22) {
-         cost = 200;
+         cost = 300;
       }
 
       if (structureId == 23) {
          cost = 200;
+      }
+
+      if (structureId == 15) {
+         cost = 25;
+      }
+
+      if (structureId == 16) {
+         cost = 20;
+      }
+
+      if (structureId == 17) {
+         cost = 50;
+      }
+
+      if (structureId == 18) {
+         cost = 100;
       }
 
       if (playerTeam.equals("NEUTRAL") && !mc.player.isCreative()) {

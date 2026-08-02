@@ -1813,17 +1813,26 @@ public class GameLogicEvents {
                      }
                   }
                   checkGameOver(level, data);
-               } else if (point.captureDeduction > 0) {
-                  if (attackingTeam.equals("BLUE")) {
-                     data.redTickets = data.redTickets - point.captureDeduction;
-                  } else {
-                     data.blueTickets = data.blueTickets - point.captureDeduction;
-                  }
-                  checkGameOver(level, data);
-               }
+                } else if (point.captureDeduction > 0) {
+                   if (attackingTeam.equals("BLUE")) {
+                      data.redTickets = data.redTickets - point.captureDeduction;
+                   } else {
+                      data.blueTickets = data.blueTickets - point.captureDeduction;
+                   }
+                   checkGameOver(level, data);
+                }
 
-               data.setDirty();
-               sendSyncPacket(level, data);
+                // Тикеты за захват точки (gainCap)
+                if (point.ticketGainCapture > 0) {
+                   if (attackingTeam.equals("BLUE")) {
+                      data.blueTickets += point.ticketGainCapture;
+                   } else {
+                      data.redTickets += point.ticketGainCapture;
+                   }
+                }
+
+                data.setDirty();
+                sendSyncPacket(level, data);
             }
          }
       } else if (point.owner.equals(attackingTeam)) {
@@ -1846,6 +1855,15 @@ public class GameLogicEvents {
                   data.redTickets = data.redTickets - point.ticketPenalty;
                }
                checkGameOver(level, data);
+            }
+
+            // Тикеты за нейтрализацию точки (gainNeut)
+            if (point.ticketGainNeutralize > 0) {
+               if (attackingTeam.equals("BLUE")) {
+                  data.blueTickets += point.ticketGainNeutralize;
+               } else {
+                  data.redTickets += point.ticketGainNeutralize;
+               }
             }
 
             point.owner = "NEUTRAL";
@@ -2173,6 +2191,7 @@ public class GameLogicEvents {
          data.currentMapImage,
          data.markedVehicles,
          data.hubs,
+         data.mainSupplies,
           data.blueFaction,
           data.redFaction,
           bName,

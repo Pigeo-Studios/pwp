@@ -4,9 +4,12 @@ import com.pigeostudios.pwp.warfare.block.AGSConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.AGSConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.BarbedWireBlock;
 import com.pigeostudios.pwp.warfare.block.BarbedWireBlockEntity;
+import com.pigeostudios.pwp.warfare.block.CamoNetBlock;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.MainSupplyBlock;
+import com.pigeostudios.pwp.warfare.block.MainSupplyBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
@@ -173,13 +176,270 @@ public class PacketBuildRequest {
                                  level.setBlock(p, state, 3);
                               }
 
-                              for (BlockPos p : parts) {
-                                 if (level.getBlockEntity(p) instanceof BarbedWireBlockEntity wire) {
-                                    wire.setTeam(team);
-                                    wire.setLinkedWires(parts);
-                                 }
-                              }
-                           }
+                               for (BlockPos p : parts) {
+                                  if (level.getBlockEntity(p) instanceof BarbedWireBlockEntity wire) {
+                                     wire.setTeam(team);
+                                     wire.setLinkedWires(parts);
+                                  }
+                               }
+                            }
+                         } else if (msg.structureId == 15) {
+                            int cost = 25;
+                            List<BlockPos> wallParts = new ArrayList<>();
+                            List<BlockPos> wireParts = new ArrayList<>();
+                            boolean blocked = false;
+
+                            for (int x = -1; x <= 1; x++) {
+                               BlockPos pStep = getRelativePos(msg.pos, msg.rotation, x, 0, 0);
+                               BlockPos pWall1 = getRelativePos(msg.pos, msg.rotation, x, 0, -1);
+                               BlockPos pWall2 = getRelativePos(msg.pos, msg.rotation, x, 1, -1);
+                               BlockPos pWire = getRelativePos(msg.pos, msg.rotation, x, 0, -2);
+                               wallParts.add(pStep);
+                               wallParts.add(pWall1);
+                               wallParts.add(pWall2);
+                               wireParts.add(pWire);
+                            }
+
+                            for (BlockPos p : wallParts) {
+                               if (!canPlaceAt(level, p)) {
+                                  blocked = true;
+                                  break;
+                               }
+                            }
+
+                            for (BlockPos p : wireParts) {
+                               if (!canPlaceAt(level, p)) {
+                                  blocked = true;
+                                  break;
+                               }
+                            }
+
+                            if (blocked) {
+                               sendBlockedMessage(player);
+                               return;
+                            }
+
+                            if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
+                               sendNoMaterialsMessage(player, cost);
+                               return;
+                            }
+
+                            if (!isCreative) {
+                               consumeMaterials(level, msg.pos, team, cost);
+                            }
+
+                            BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
+                                     .defaultBlockState()
+                                     .setValue(WallBlock.FACING, facing))
+                                  .setValue(WallBlock.CONSTRUCTED, false))
+                               .setValue(WallBlock.VALID, true);
+                            BlockState wireState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.BARBED_WIRE_BLOCK.get())
+                                     .defaultBlockState()
+                                     .setValue(BarbedWireBlock.FACING, facing))
+                                  .setValue(BarbedWireBlock.CONSTRUCTED, false))
+                               .setValue(BarbedWireBlock.VALID, true);
+
+                            for (BlockPos p : wallParts) {
+                               level.setBlock(p, wallState, 3);
+                            }
+
+                            for (BlockPos p : wireParts) {
+                               level.setBlock(p, wireState, 3);
+                            }
+
+                            for (BlockPos p : wallParts) {
+                               setupWallEntity(level, p, team, true, wallParts);
+                            }
+
+                            for (BlockPos p : wireParts) {
+                               if (level.getBlockEntity(p) instanceof BarbedWireBlockEntity wire) {
+                                  wire.setTeam(team);
+                                  wire.setLinkedWires(wireParts);
+                               }
+                            }
+                         } else if (msg.structureId == 16) {
+                            int cost = 20;
+                            List<BlockPos> wallParts = new ArrayList<>();
+                            List<BlockPos> slabParts = new ArrayList<>();
+                            boolean blocked = false;
+
+                            for (int x = -1; x <= 1; x++) {
+                               for (int y = 0; y < 3; y++) {
+                                  BlockPos p = getRelativePos(msg.pos, msg.rotation, x, y, 0);
+                                  if (x == 0 && y == 1) {
+                                     slabParts.add(p);
+                                  } else {
+                                     wallParts.add(p);
+                                  }
+                               }
+                            }
+
+                            for (BlockPos p : wallParts) {
+                               if (!canPlaceAt(level, p)) {
+                                  blocked = true;
+                                  break;
+                               }
+                            }
+
+                            for (BlockPos p : slabParts) {
+                               if (!canPlaceAt(level, p)) {
+                                  blocked = true;
+                                  break;
+                               }
+                            }
+
+                            if (blocked) {
+                               sendBlockedMessage(player);
+                               return;
+                            }
+
+                            if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
+                               sendNoMaterialsMessage(player, cost);
+                               return;
+                            }
+
+                            if (!isCreative) {
+                               consumeMaterials(level, msg.pos, team, cost);
+                            }
+
+                            BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
+                                     .defaultBlockState()
+                                     .setValue(WallBlock.FACING, facing))
+                                  .setValue(WallBlock.CONSTRUCTED, false))
+                               .setValue(WallBlock.VALID, true);
+                            BlockState slabState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_SLAB_BLOCK.get())
+                                     .defaultBlockState()
+                                     .setValue(WallBlock.FACING, facing))
+                                  .setValue(WallBlock.CONSTRUCTED, false))
+                               .setValue(WallBlock.VALID, true);
+
+                            for (BlockPos p : wallParts) {
+                               level.setBlock(p, wallState, 3);
+                            }
+
+                            for (BlockPos p : slabParts) {
+                               level.setBlock(p, slabState, 3);
+                            }
+
+                            List<BlockPos> allParts = new ArrayList<>(wallParts);
+                            allParts.addAll(slabParts);
+                            for (BlockPos p : allParts) {
+                               setupWallEntity(level, p, team, true, allParts);
+                            }
+                         } else if (msg.structureId == 17) {
+                            int cost = 50;
+                            List<BlockPos> wallParts = new ArrayList<>();
+                            boolean blocked = false;
+
+                            for (int x = -1; x <= 1; x++) {
+                               for (int y = 0; y <= 2; y++) {
+                                  for (int z = -1; z <= 1; z++) {
+                                     if (x == 0 && z == 0 && y < 2) {
+                                        continue;
+                                     }
+                                     BlockPos p = getRelativePos(msg.pos, msg.rotation, x, y, z);
+                                     if (!canPlaceAt(level, p)) {
+                                        blocked = true;
+                                        break;
+                                     }
+                                     wallParts.add(p);
+                                  }
+                                  if (blocked) break;
+                               }
+                               if (blocked) break;
+                            }
+
+                            if (blocked) {
+                               sendBlockedMessage(player);
+                               return;
+                            }
+
+                            if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
+                               sendNoMaterialsMessage(player, cost);
+                               return;
+                            }
+
+                            if (!isCreative) {
+                               consumeMaterials(level, msg.pos, team, cost);
+                            }
+
+                            BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
+                                     .defaultBlockState()
+                                     .setValue(WallBlock.FACING, facing))
+                                  .setValue(WallBlock.CONSTRUCTED, false))
+                               .setValue(WallBlock.VALID, true);
+                            BlockState slabState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_SLAB_BLOCK.get())
+                                     .defaultBlockState()
+                                     .setValue(WallBlock.FACING, facing))
+                                  .setValue(WallBlock.CONSTRUCTED, false))
+                               .setValue(WallBlock.VALID, true);
+                            int steps = ((-msg.rotation) / 90 % 4 + 4) % 4;
+
+                            for (BlockPos p : wallParts) {
+                               BlockPos rel = p.subtract(msg.pos);
+                               boolean isNet = false;
+                               Direction outwardFacing = Direction.NORTH;
+                               if (rel.getX() == 0 && rel.getZ() == -1 && rel.getY() < 2) {
+                                  isNet = true;
+                                  outwardFacing = Direction.NORTH;
+                               } else if (rel.getX() == 0 && rel.getZ() == 1 && rel.getY() == 1) {
+                                  isNet = true;
+                                  outwardFacing = Direction.SOUTH;
+                               } else if (rel.getX() == -1 && rel.getZ() == 0 && rel.getY() == 1) {
+                                  isNet = true;
+                                  outwardFacing = Direction.WEST;
+                               } else if (rel.getX() == 1 && rel.getZ() == 0 && rel.getY() == 1) {
+                                  isNet = true;
+                                  outwardFacing = Direction.EAST;
+                               }
+
+                               boolean isRoof = rel.getY() == 2;
+                               level.setBlock(p, isRoof ? slabState : wallState, 3);
+
+                               if (level.getBlockEntity(p) instanceof WallBlockEntity wall) {
+                                  wall.setTeam(team);
+                                  if (isNet) {
+                                     Direction finalDir = outwardFacing;
+                                     for (int i = 0; i < steps; i++) {
+                                        finalDir = finalDir.getClockWise();
+                                     }
+                                     wall.setTransformTo("pwpwarfare:camo_net", finalDir.get2DDataValue());
+                                  }
+                               }
+                            }
+
+                            for (BlockPos p : wallParts) {
+                               setupWallEntity(level, p, team, true, wallParts);
+                            }
+                         } else if (msg.structureId == 18) {
+                            int cost = 100;
+                            if (!canPlaceAt(level, msg.pos)) {
+                               sendBlockedMessage(player);
+                               return;
+                            }
+
+                            if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
+                               sendNoMaterialsMessage(player, cost);
+                               return;
+                            }
+
+                            if (!isCreative) {
+                               consumeMaterials(level, msg.pos, team, cost);
+                            }
+
+                            BlockState state = (BlockState)((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get())
+                                  .defaultBlockState()
+                                  .setValue(MainSupplyBlock.FACING, facing)
+                                  .setValue(MainSupplyBlock.CONSTRUCTED, false);
+                            level.setBlock(msg.pos, state, 3);
+                            WarfareWorldData data = WarfareWorldData.get(level);
+                            data.mainSupplies.removeIf(s -> s.pos.equals(msg.pos));
+                            data.mainSupplies.add(new WarfareWorldData.MainSupplyInfo(msg.pos, team, level.dimension().location().toString()));
+                            data.setDirty();
+                            PacketHandler.sendToAllClients(level, data);
+                            if (level.getBlockEntity(msg.pos) instanceof MainSupplyBlockEntity supply) {
+                               supply.setTeam(team);
+                            }
                          } else if (msg.structureId == 22) {
                            int cost = 300;
                            if (!canPlaceAt(level, msg.pos)) {
@@ -267,6 +527,20 @@ public class PacketBuildRequest {
          return start.west(offset);
       } else {
          return facing == Direction.EAST ? start.south(offset) : start;
+      }
+   }
+
+   // Смещение с учётом поворота структуры (x - вправо, y - вверх, z - вперёд от направления взгляда)
+   private static BlockPos getRelativePos(BlockPos base, int rotation, int xOff, int yOff, int zOff) {
+      int rot = (rotation % 360 + 360) % 360;
+      if (rot == 90) {
+         return base.offset(zOff, yOff, -xOff);
+      } else if (rot == 180) {
+         return base.offset(-xOff, yOff, -zOff);
+      } else if (rot == 270) {
+         return base.offset(-zOff, yOff, xOff);
+      } else {
+         return base.offset(xOff, yOff, zOff);
       }
    }
 

@@ -1,9 +1,12 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.PathCache;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.*;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
+import com.pigeostudios.pwp.warfare.network.PacketPlacePath;
+import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import net.minecraft.ChatFormatting;
@@ -11,6 +14,8 @@ import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
+import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.PWPButton;
@@ -32,6 +37,7 @@ import net.minecraft.world.item.ItemStack;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import net.minecraft.client.gui.Font;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public class DeployScreen extends Screen {
@@ -169,10 +175,18 @@ public class DeployScreen extends Screen {
     final Set<Integer> expandedSquads = new HashSet<>();
     int activeTab = 1;
     private boolean kitsRequested;
+    private long lastKitRefreshTime;
     private boolean mapNeedsInit;
     private final Set<Integer> collapsedSections = new HashSet<>();
     private int rulesScrollOffset;
     private int rulesScrollMax;
+
+    // Состояние рисования путей (та же логика, что и в M-меню)
+    private boolean pathActive;
+    private List<List<PathPoint>> activeGroups;
+    private int activeSquadId = -1;
+    private int activeSquadKey = -1;
+    private int pathCounter;
 
     public DeployScreen() {
         super(Component.literal("ДЕПЛОЙ"));
@@ -284,6 +298,8 @@ public class DeployScreen extends Screen {
         int mapH = conH();
         int sz = Math.min(mapW, mapH);
         rightMapRenderer.init(loadoutX, conT(), sz, sz);
+        // Вписываем всю карту в квадрат, чтобы деплой показывал ту же карту, что и M-меню
+        rightMapRenderer.fitScale = ClientData.mapSizeBlocks / (double) Math.max(1, sz);
         rightMapRenderer.centerOnPlayer();
         mapNeedsInit = false;
     }
@@ -303,6 +319,14 @@ public class DeployScreen extends Screen {
         }
         if (ClientData.clientSquads.size() != lastSquadCount) {
             populateData();
+        }
+        // Периодический тихий рефреш китов, чтобы лимиты ролей и доступность обновлялись вживую
+        long now = System.currentTimeMillis();
+        if (now - lastKitRefreshTime > 10000L) {
+            lastKitRefreshTime = now;
+            if (!ClientData.availableKits.isEmpty()) {
+                PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+            }
         }
         var p = Minecraft.getInstance().player;
         if (p == null) return;
@@ -466,10 +490,13 @@ public class DeployScreen extends Screen {
 
             if (showMap) {
                 if (mapNeedsInit) initRightMap();
+                rightMapRenderer.tickAnim();
                 rightMapRenderer.render(gui, mx, my, pt);
                 mapCtx.render(gui, mx, my);
                 String pos = "X=" + (lp != null ? lp.blockPosition().getX() : 0) + " Z=" + (lp != null ? lp.blockPosition().getZ() : 0);
                 gui.drawString(f, pos, loadoutX+4, conY+2, PWPTheme.Colors.TEXT_ACCENT, false);
+                if (pathActive)
+                    gui.drawString(f, "LMB / Enter: place | ESC: cancel", loadoutX + 8, conY + 16, 0x44FF44, true);
             } else {
                 loadout.render(gui, loadoutX+4, conY+4, lx-8, ch-4, mx, my, selectedKit);
                 String desc = DeployData.kits.stream().filter(k -> k.name().equals(selectedKit))
@@ -700,7 +727,7 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
+        if (mapCtx.visible) return mapCtx.mouseClicked(mx, my, btn);
         if (contextMenu.isVisible()) {
             contextMenu.mouseClicked(mx, my, btn);
             return true;
@@ -771,20 +798,53 @@ public class DeployScreen extends Screen {
             // ── RIGHT MAP ──
             int rx = lw+cw, rw = width-rx;
             if (mx >= rx && mx <= rx+rw && my >= conY && my <= conY+ch) {
+                int wx = toWorldX(mx), wz = toWorldZ(my);
+
+                // Режим рисования пути: ЛКМ добавляет точку (как в M-меню)
+                if (pathActive && btn == 0) {
+                    if (rightMapRenderer.previewStart != null && rightMapRenderer.previewEnd != null) {
+                        if (activeSquadKey >= 0) {
+                            var sq = rightMapRenderer.pathGroupsSquad().get(activeSquadKey);
+                            if (sq != null) sq.add(new PathPoint(wx, wz));
+                        } else if (activeGroups != null && !activeGroups.isEmpty()) {
+                            activeGroups.get(activeGroups.size() - 1).add(new PathPoint(wx, wz));
+                        }
+                    }
+                    rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+                    pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                    return true;
+                }
+
                 if (btn == 1) {
-                    if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
+                    if (mapCtx.visible) return mapCtx.mouseClicked(mx, my, btn);
                     LocalPlayer p = Minecraft.getInstance().player;
+                    BiConsumer<String, String> pathCb = (cat, icon) -> {
+                        int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
+                        if ("cmd_squads".equals(cat)) {
+                            try {
+                                int squadId = Integer.parseInt(icon);
+                                startSquadPath(wx2, wz2, squadId);
+                            } catch (NumberFormatException e) { /* ignore */ }
+                            mapCtx.close();
+                        } else if ("arrow".equals(icon) || "player_self".equals(icon)) {
+                            if ("team".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroups());
+                            else if ("enemy".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroupsRed());
+                            else startPath(wx2, wz2, rightMapRenderer.pathGroupsYellow());
+                            mapCtx.close();
+                        } else place(cat, icon, wx2, wz2);
+                    };
+                    if (p != null) {
+                        MapMarker hit = rightMapRenderer.hitMarker((int)mx, (int)my, rightMapRenderer.getCenterX(p), rightMapRenderer.getCenterZ(p));
+                        if (hit != null) {
+                            Runnable del = () -> PacketHandler.INSTANCE.sendToServer(new PacketRemoveMarker(hit.id));
+                            boolean cmd2 = p != null && isPlayerCMD(p);
+                            mapCtx.open((int)mx, (int)my, cmd2, pathCb, del);
+                            return true;
+                        }
+                    }
                     if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
                     boolean cmd = p != null && isPlayerCMD(p);
-                    int wx = toWorldX(mx), wz = toWorldZ(my);
-                    mapCtx.open((int)mx, (int)my, cmd, (cat, icon) -> {
-                        if ("arrow".equals(icon) && ("enemy".equals(cat) || "cmd_top".equals(cat))) return;
-                        if ("cmd_squads".equals(cat)) return;
-                        String type = "squad";
-                        if ("enemy".equals(cat)) type = "enemy";
-                        else if ("cmd_top".equals(cat)) type = "team";
-                        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(type, cat, icon, new BlockPos(wx, 64, wz)));
-                    });
+                    mapCtx.open((int)mx, (int)my, cmd, pathCb);
                     return true;
                 }
                 if (!selectedSpawn.isEmpty() && btn == 0) {
@@ -803,9 +863,17 @@ public class DeployScreen extends Screen {
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
         if (activeTab == 1) {
             int rx = sqW()+roW();
-            if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
+            if (!mapCtx.visible && !pathActive && !selectedSpawn.isEmpty() && mx >= rx)
+                rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
         }
         return super.mouseDragged(mx, my, btn, dx, dy);
+    }
+
+    @Override
+    public void mouseMoved(double mx, double my) {
+        if (pathActive && rightMapRenderer.previewStart != null && rightMapRenderer.inMap(mx, my))
+            rightMapRenderer.previewEnd = new PathPoint(toWorldX(mx), toWorldZ(my));
+        super.mouseMoved(mx, my);
     }
 
     @Override
@@ -826,7 +894,7 @@ public class DeployScreen extends Screen {
         int lw = sqW(), cw = roW(), rx = lw+cw;
         int scroll = -(int)(delta * 20);
         if (mx >= lw && mx < rx) { roles.scrollOff += scroll; return true; }
-        if (!selectedSpawn.isEmpty() && mx >= rx) {
+        if (!mapCtx.visible && !selectedSpawn.isEmpty() && mx >= rx) {
             rightMapRenderer.mouseScrolled(mx, my, delta);
             return true;
         }
@@ -835,6 +903,20 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mod) {
+        if (key == 256 || key == 50) {
+            if (mapCtx.visible) { mapCtx.close(); return true; }
+            if (contextMenu.isVisible()) { contextMenu.hide(); return true; }
+            if (pathActive) {
+                if (activeSquadKey >= 0) {
+                    rightMapRenderer.pathGroupsSquad().remove(activeSquadKey);
+                } else if (activeGroups != null && !activeGroups.isEmpty()) {
+                    activeGroups.get(activeGroups.size() - 1).clear();
+                }
+                rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+                pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                return true;
+            }
+        }
         if (key == 257 && mySquadId < 0 && createSquadBtn.visible && squadInput.isFocused()) { createSquad(); return true; }
         if (key == 257 && chatInput.isFocused()) {
             String msg = chatInput.getValue().trim();
@@ -848,6 +930,7 @@ public class DeployScreen extends Screen {
         }
         if (chatInput.isFocused()) return chatInput.keyPressed(key, scan, mod);
         if (squadInput.isFocused()) return squadInput.keyPressed(key, scan, mod);
+        if ((key == 257 || key == 335) && pathActive) { confirmPath(); return true; }
         return super.keyPressed(key, scan, mod);
     }
 
@@ -872,13 +955,100 @@ public class DeployScreen extends Screen {
         return best;
     }
 
+    // ───── Рисование путей и маркеров (та же логика, что и в M-меню) ─────
+
+    private void place(String cat, String icon, int wx, int wz) {
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null) return;
+        String cleanIcon = icon.endsWith("_m") ? icon.substring(0, icon.length() - 2) : icon;
+        String type = "squad";
+        if ("enemy".equals(cat)) type = "enemy";
+        else if ("cmd_top".equals(cat)) type = icon.endsWith("_m") ? "team" : "squad";
+        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(type, cat, cleanIcon, new BlockPos(wx, 64, wz)));
+    }
+
+    private void startPath(int wx, int wz, List<List<PathPoint>> groups) {
+        List<PathPoint> sub = new ArrayList<>();
+        sub.add(new PathPoint(wx, wz));
+        groups.add(sub); activeGroups = groups; activeSquadId = -1;
+        rightMapRenderer.previewStart = new PathPoint(wx, wz); rightMapRenderer.previewEnd = null;
+        pathActive = true;
+    }
+
+    private void startSquadPath(int wx, int wz, int squadId) {
+        List<PathPoint> sub = new ArrayList<>();
+        sub.add(new PathPoint(wx, wz));
+        int key = pathCounter++;
+        rightMapRenderer.pathGroupsSquad().put(key, sub);
+        PathCache.squadNumForPath.put(key, squadId);
+        activeGroups = null; activeSquadId = squadId; activeSquadKey = key;
+        rightMapRenderer.previewStart = new PathPoint(wx, wz); rightMapRenderer.previewEnd = null;
+        pathActive = true;
+    }
+
+    private void confirmPath() {
+        if (rightMapRenderer.previewStart != null && rightMapRenderer.previewEnd != null) {
+            double dx = rightMapRenderer.previewEnd.x - rightMapRenderer.previewStart.x;
+            double dz = rightMapRenderer.previewEnd.z - rightMapRenderer.previewStart.z;
+            double segLen = Math.sqrt(dx * dx + dz * dz);
+            if (segLen < SquadMapRenderer.PATH_MIN_LENGTH || segLen > SquadMapRenderer.PATH_MAX_LENGTH) {
+                if (Minecraft.getInstance().player != null)
+                    Minecraft.getInstance().player.displayClientMessage(
+                        Component.literal("Путь: " + (int)segLen + "м (мин " + (int)SquadMapRenderer.PATH_MIN_LENGTH + "м, макс " + (int)SquadMapRenderer.PATH_MAX_LENGTH + "м)"), true);
+                rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+                pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                return;
+            }
+            List<PathPoint> finalPoints;
+            String pathType;
+            int squadNum = -1;
+            if (activeSquadKey >= 0) {
+                var sq = rightMapRenderer.pathGroupsSquad().get(activeSquadKey);
+                if (sq == null) {
+                    rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+                    pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                    return;
+                }
+                sq.add(new PathPoint(rightMapRenderer.previewEnd.x, rightMapRenderer.previewEnd.z));
+                finalPoints = new ArrayList<>(sq);
+                pathType = "cmd_squads"; squadNum = activeSquadId;
+            } else if (activeGroups != null && !activeGroups.isEmpty()) {
+                var grp = activeGroups.get(activeGroups.size() - 1);
+                grp.add(new PathPoint(rightMapRenderer.previewEnd.x, rightMapRenderer.previewEnd.z));
+                finalPoints = new ArrayList<>(grp);
+                if (activeGroups == rightMapRenderer.pathGroups()) pathType = "squad";
+                else if (activeGroups == rightMapRenderer.pathGroupsRed()) pathType = "enemy";
+                else pathType = "team";
+            } else {
+                rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+                pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                return;
+            }
+            long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+            if (activeSquadKey >= 0) {
+                PathCache.pathCreatedAt.put(activeSquadKey, gameTime);
+            } else if (activeGroups != null && !activeGroups.isEmpty()) {
+                int idx = activeGroups.size() - 1;
+                PathCache.pathCreatedAt.put(System.identityHashCode(activeGroups.get(idx)), gameTime);
+            }
+            rightMapRenderer.startPathAnim();
+            LocalPlayer p = Minecraft.getInstance().player;
+            String team = p != null && p.getTeam() != null ? p.getTeam().getName() : "";
+            java.util.UUID pathId = java.util.UUID.randomUUID();
+            PacketHandler.INSTANCE.sendToServer(new PacketPlacePath(pathId, team, pathType, squadNum, finalPoints));
+        }
+        rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+        pathActive = false; activeSquadId = -1;
+    }
+
     private void doDeploy() {
         if (selectedSpawn.isEmpty()) return;
         PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
         Minecraft.getInstance().player.respawn();
         ClientData.deployRequested = true;
-        ClientData.deployBlockedUntil = System.currentTimeMillis() + 3000;
+        ClientData.awaitingRespawn = true;
+        ClientData.deployBlockedUntil = System.currentTimeMillis() + 5000;
         Minecraft.getInstance().setScreen(null);
     }
 

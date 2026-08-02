@@ -39,6 +39,7 @@ public class PacketSyncGameData {
    public final String currentMapImage;
    public final List<WarfareWorldData.VehicleRecord> markedVehicles;
    public final List<WarfareWorldData.HubInfo> hubs;
+   public final List<WarfareWorldData.MainSupplyInfo> mainSupplies;
    public final String blueFaction;
    public final String redFaction;
     public final String blueCustomName;
@@ -97,6 +98,7 @@ public class PacketSyncGameData {
       String currentMapImage,
       List<WarfareWorldData.VehicleRecord> markedVehicles,
       List<WarfareWorldData.HubInfo> hubs,
+      List<WarfareWorldData.MainSupplyInfo> mainSupplies,
       String blueFaction,
       String redFaction,
        String blueCustomName,
@@ -156,6 +158,7 @@ public class PacketSyncGameData {
       this.currentMapImage = currentMapImage;
       this.markedVehicles = markedVehicles;
       this.hubs = hubs;
+      this.mainSupplies = mainSupplies;
       this.blueFaction = blueFaction;
       this.redFaction = redFaction;
        this.blueCustomName = blueCustomName;
@@ -232,6 +235,11 @@ public class PacketSyncGameData {
          b.writeUtf(h.dimension);
          b.writeBoolean(h.isBlocked);
          b.writeInt(h.materials);
+      });
+      buf.writeCollection(msg.mainSupplies, (b, s) -> {
+         b.writeBlockPos(s.pos);
+         b.writeUtf(s.team);
+         b.writeUtf(s.dimension);
       });
       buf.writeUtf(msg.blueFaction);
       buf.writeUtf(msg.redFaction);
@@ -319,6 +327,7 @@ public class PacketSyncGameData {
          h.materials = b.readInt();
          return h;
       });
+      List<WarfareWorldData.MainSupplyInfo> sL = buf.readList(b -> new WarfareWorldData.MainSupplyInfo(b.readBlockPos(), b.readUtf(), b.readUtf()));
       String bF = buf.readUtf();
       String rF = buf.readUtf();
       String bCN = buf.readUtf();
@@ -389,10 +398,11 @@ public class PacketSyncGameData {
          mCX,
          mCZ,
          mSB,
-         cMI,
-         vL,
-         hL,
-         bF,
+          cMI,
+          vL,
+          hL,
+          sL,
+          bF,
          rF,
           bCN,
           rCN,

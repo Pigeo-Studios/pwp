@@ -100,9 +100,9 @@ public class DefenseRadialScreen extends Screen {
          pose.popPose();
       }
 
-      this.drawLabel(gui, "1x1", centerX, centerY - 75, selected == 0);
-      this.drawLabel(gui, "2x2", centerX + 70, centerY - 25, selected == 1);
-      this.drawLabel(gui, "3x3", centerX + 45, centerY + 65, selected == 2);
+      this.drawLabel(gui, "Walls", centerX, centerY - 75, selected == 0);
+      this.drawLabel(gui, "Bunker", centerX + 70, centerY - 25, selected == 1);
+      this.drawLabel(gui, "Vehicle Station", centerX + 45, centerY + 65, selected == 2);
       this.drawLabel(gui, "WIRE", centerX - 45, centerY + 65, selected == 3);
       this.drawLabel(gui, "HUB", centerX - 70, centerY - 25, selected == 4);
    }
@@ -138,21 +138,20 @@ public class DefenseRadialScreen extends Screen {
             }
 
             int sector = (int)(shiftedAngle / 72.0);
-            int actionId = 10 + sector;
-            if (actionId == 10) {
-               ClientPlacementHandler.startPlacing(10);
+            if (sector == 0) {
+               this.isSwitching = true;
+               Minecraft.getInstance().setScreen(new WallRadialScreen(this));
+            } else if (sector == 1) {
+               ClientPlacementHandler.startPlacing(17);
                this.onClose();
-            } else if (actionId == 11) {
-               ClientPlacementHandler.startPlacing(11);
+            } else if (sector == 2) {
+               ClientPlacementHandler.startPlacing(18);
                this.onClose();
-            } else if (actionId == 12) {
-               ClientPlacementHandler.startPlacing(12);
-               this.onClose();
-            } else if (actionId == 13) {
+            } else if (sector == 3) {
                ClientPlacementHandler.startPlacing(13);
                this.onClose();
             } else {
-               PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(actionId));
+               PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(14));
                this.onClose();
             }
 

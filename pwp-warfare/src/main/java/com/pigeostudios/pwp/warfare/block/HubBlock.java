@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
@@ -39,10 +40,12 @@ import org.jetbrains.annotations.Nullable;
 public class HubBlock extends BaseEntityBlock {
    // Флаг завершения строительства хаба
    public static final BooleanProperty CONSTRUCTED = BooleanProperty.create("constructed");
+   // Стадия строительства (0 - чертёж, 1 - начало, 2 - почти готово)
+   public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
 
    public HubBlock() {
       super(Properties.of().mapColor(MapColor.METAL).strength(3.0F, 9.0F).noOcclusion());
-      this.registerDefaultState((BlockState)((BlockState)this.stateDefinition.any()).setValue(CONSTRUCTED, false));
+      this.registerDefaultState((BlockState)((BlockState)this.stateDefinition.any()).setValue(CONSTRUCTED, false).setValue(BUILD_STAGE, 0));
    }
 
    // Открывает меню хаба при взаимодействии (только для своей команды)
@@ -147,7 +150,7 @@ public class HubBlock extends BaseEntityBlock {
    }
 
    protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
-      builder.add(new Property[]{CONSTRUCTED});
+      builder.add(new Property[]{CONSTRUCTED, BUILD_STAGE});
    }
 
    public RenderShape getRenderShape(BlockState state) {

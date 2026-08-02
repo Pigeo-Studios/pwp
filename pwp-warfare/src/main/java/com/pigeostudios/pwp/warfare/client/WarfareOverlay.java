@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.block.HubBlock;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.MainSupplyBlock;
+import com.pigeostudios.pwp.warfare.block.MainSupplyBlockEntity;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
@@ -884,6 +885,10 @@ public class WarfareOverlay {
                   progress = hub.getPercentage();
                   structureTeam = hub.getTeam();
                   finished = (Boolean)state.getValue(HubBlock.CONSTRUCTED);
+               } else if (be instanceof MainSupplyBlockEntity supply) {
+                  progress = supply.getPercentage();
+                  structureTeam = supply.getTeam();
+                  finished = (Boolean)state.getValue(MainSupplyBlock.CONSTRUCTED);
                } else if (be instanceof WallBlockEntity wall) {
                   progress = wall.getPercentage();
                   structureTeam = wall.getTeam();

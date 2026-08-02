@@ -60,6 +60,7 @@ public class VoteTabRenderer {
     private int tooltipTarget = -1;
     private long tooltipHoverStart;
     private int tooltipMouseX, tooltipMouseY;
+    private int lastPacketPhase = -1;
 
     // Режим для подписей команд (приходит от сервера)
     private String mode = "aas";
@@ -78,17 +79,30 @@ public class VoteTabRenderer {
         voteDurationSec = pkt.remainingSeconds;
         if (pkt.mode != null) mode = pkt.mode;
 
+        // Визуальный выбор сбрасываем только при смене фазы голосования,
+        // иначе секундная синхронизация затирает выделение карточки
+        boolean phaseChanged = pkt.phase != lastPacketPhase;
+        lastPacketPhase = pkt.phase;
+        if (phaseChanged) {
+            selMap = -1; selMode = -1; selFact1 = -1; selFact2 = -1;
+            votMap = -1; votMode = -1; votFact1 = -1; votFact2 = -1;
+        }
+
         switch (pkt.phase) {
             case LobbyStatePacket.PHASE_MAP_VOTE -> {
                 rebuildMaps(pkt);
+                votMap = pkt.myMapVote;
                 setPhase(Phase.MAP);
             }
             case LobbyStatePacket.PHASE_MODE_VOTE -> {
                 rebuildModes(pkt);
+                votMode = pkt.myModeVote;
                 setPhase(Phase.MODE);
             }
             case LobbyStatePacket.PHASE_FACTION_VOTE -> {
                 rebuildFactions(pkt);
+                votFact1 = pkt.myFaction1;
+                votFact2 = pkt.myFaction2;
                 setPhase(Phase.FACTION);
             }
             case LobbyStatePacket.PHASE_MATCH_STARTING, LobbyStatePacket.PHASE_MATCH_PLAYING -> {
@@ -109,7 +123,14 @@ public class VoteTabRenderer {
         }
     }
 
+    /** Переиспользовать прогресс-бары прошлого списка — анимация продолжается, а не стартует с нуля. */
+    private static void reuseBars(List<Option> prev, List<Option> cur) {
+        int n = Math.min(prev.size(), cur.size());
+        for (int i = 0; i < n; i++) cur.get(i).bar = prev.get(i).bar;
+    }
+
     private void rebuildMaps(LobbyStatePacket pkt) {
+        List<Option> prev = new ArrayList<>(mapOpts);
         mapOpts.clear();
         int len = pkt.mapNames != null ? pkt.mapNames.length : 0;
         for (int i = 0; i < len; i++) {
@@ -122,11 +143,13 @@ public class VoteTabRenderer {
                     0xFF8B6B3D + i * 0x112233, null,
                     i < pkt.worldPaths.length ? pkt.worldPaths[i] : null, null));
         }
-        selMap = -1; votMap = -1;
+        reuseBars(prev, mapOpts);
+        if (selMap >= mapOpts.size()) selMap = -1;
         recalc(mapOpts);
     }
 
     private void rebuildModes(LobbyStatePacket pkt) {
+        List<Option> prev = new ArrayList<>(modeOpts);
         modeOpts.clear();
         int len = pkt.modeNames != null ? pkt.modeNames.length : 0;
         for (int i = 0; i < len; i++) {
@@ -137,11 +160,13 @@ public class VoteTabRenderer {
                     i < pkt.modeVoteCounts.length ? pkt.modeVoteCounts[i] : 0,
                     i == 0 ? 0xFFC8812A : 0xFF3D6FA5));
         }
-        selMode = -1; votMode = -1;
+        reuseBars(prev, modeOpts);
+        if (selMode >= modeOpts.size()) selMode = -1;
         recalc(modeOpts);
     }
 
     private void rebuildFactions(LobbyStatePacket pkt) {
+        List<Option> prev = new ArrayList<>(factOpts);
         factOpts.clear();
         java.util.Map<String,String> fnames = new java.util.HashMap<>();
         fnames.put("usa","США"); fnames.put("ukraine","Украина"); fnames.put("nato","НАТО");
@@ -160,7 +185,9 @@ public class VoteTabRenderer {
             String dn = fnames.getOrDefault(n, n.isEmpty() ? "-" : n.toUpperCase());
             factOpts.add(new Option(n, dn, null, null, null, v, 0xFFA53D3D, flag(n)));
         }
-        selFact1 = -1; selFact2 = -1; votFact1 = -1; votFact2 = -1;
+        reuseBars(prev, factOpts);
+        if (selFact1 >= 3) selFact1 = -1;
+        if (selFact2 >= 3) selFact2 = -1;
         factionPerTeamBars();
     }
 

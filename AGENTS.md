@@ -38,9 +38,11 @@ PWP — тактический шутер «Squad в Minecraft» (Forge 1.20.1, 
 ## Инфраструктура / запуск
 
 - MySQL (XAMPP), БД `pwp_core`; core-service на :8080; Caddy — HTTPS-прокси `https://pigeo.asuscomm.com` → localhost:8080 (Caddyfile в корне); MC-сервер :25565
+- Discord RPC: лаунчер слушает `127.0.0.1:42157` (`POST /status` с `{"state":"lobby|match|playing|idle","nickname":...,"faction":...}`) и ставит статус в Discord. Мод шлёт статус через `LauncherStatusReporter` (pwp-warfare/client): `handleSyncGameData` постит lobby/match (своя фракция против вражеской), отключение от сервера — playing
 - Матч-серверы поднимаются пер-матч из `match_template/` (директории `match_*` gitignored)
 - Сборка: `gradlew build -x test` (все моды), `gradlew shadowJar` (в `core-service`), `gradlew runClient` (dev-клиент)
 - Требования: JDK 17 (путь прописан в `gradle.properties`), Gradle 8.14 (wrapper), Forge 1.20.1-47.3.0, official mappings, кодировка UTF-8
+- Киты: дизайн в `docs/KITS_SQUAD_DESIGN.md` (Squad-адаптация, 6 фракций: usa/russia/ukraine/nato/insurgency/pmc, bluefor/redfor — заглушки). Генератор `tools/generate_kits.py` (Python, запуск `py -3`) → `maps/kits/<faction>.json` (KitDefinition для `/api/v1/kits/faction/{faction}/bulk`) + `maps/kits/import.sql`. Полная раскладка по слотам — `tools/generate_kits_doc.py` (пишет в `docs/KITS_SQUAD_DESIGN.md`). Варианты китов: Rifleman/Officer ×3 (Iron/Red Dot/Optic), Medic/LAT ×2, HAT/LMG/HMG ×2, Marksman ×2 (у инсургентов вариантов нет). Категории ролей: `DIRECT_COMBAT`/`FIRE_SUPPORT`/`SPECIALIST`/`SUPPORT`; сервер блокирует >3 FIRE_SUPPORT на отряд (меню деплоя + спавн). Меню деплоя перебирает все загруженные киты (не хардкод `KIT_NAMES`), API китов — источник истины (старые NBT-киты очищаются при загрузке). Формат предметов — как в `PacketSaveFactionKit` (tacz: `modern_kinetic_gun`+`GunId`/`AttachmentId`, патроны `tacz:ammo`+`AmmoId`, нож `lrtactical:melee`+`MeleeWeaponId`). Оружие: tacz-паки (cib/maxstuff/rfp) + FCL-пускачи из `pointblank/fcl-ext-0.1.zip` (РПГ-7В2/РПГ-26/M72/AT4/SMAW/Карл Густав) + SBW (только Javelin/Игла/C4/гранаты); броня — только `warbornrenewed:*`. Пистолетные патроны: P320 — `.45 ACP`; M2HB — `tacz:50bmg` (не 127x108); MRAD — `ea:416barrett`
 
 ## Конвенции кода
 
