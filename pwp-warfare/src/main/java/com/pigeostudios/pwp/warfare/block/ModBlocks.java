@@ -29,6 +29,7 @@ public class ModBlocks {
    public static final RegistryObject<Block> M2_CONSTRUCTION_BLOCK = BLOCKS.register("m2_construction", M2ConstructionBlock::new);
    public static final RegistryObject<Block> AGS_CONSTRUCTION_BLOCK = BLOCKS.register("ags_construction", AGSConstructionBlock::new);
    public static final RegistryObject<Block> MAIN_SUPPLY_BLOCK = BLOCKS.register("main_supply", MainSupplyBlock::new);
+   public static final RegistryObject<Block> VEHICLE_STATION_BLOCK = BLOCKS.register("vehicle_station", VehicleStationBlock::new);
    public static final RegistryObject<Block> SUPPLY_CRATE_VISUAL = BLOCKS.register(
       "crate_dropped", () -> new Block(Properties.of().mapColor(MapColor.METAL).noOcclusion())
    );
@@ -58,6 +59,9 @@ public class ModBlocks {
    );
    public static final RegistryObject<BlockEntityType<MainSupplyBlockEntity>> MAIN_SUPPLY_BE = BLOCK_ENTITIES.register(
       "main_supply_be", () -> Builder.of(MainSupplyBlockEntity::new, new Block[]{(Block)MAIN_SUPPLY_BLOCK.get()}).build(null)
+   );
+   public static final RegistryObject<BlockEntityType<VehicleStationBlockEntity>> VEHICLE_STATION_BE = BLOCK_ENTITIES.register(
+      "vehicle_station_be", () -> Builder.of(VehicleStationBlockEntity::new, new Block[]{(Block)VEHICLE_STATION_BLOCK.get()}).build(null)
    );
    public static final RegistryObject<BlockEntityType<MortarConstructionBlockEntity>> MORTAR_CONSTRUCTION_BE = BLOCK_ENTITIES.register(
       "mortar_construction_be", () -> Builder.of(MortarConstructionBlockEntity::new, new Block[]{(Block)MORTAR_CONSTRUCTION_BLOCK.get()}).build(null)

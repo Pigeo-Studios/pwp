@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import net.minecraft.core.BlockPos;
+import com.pigeostudios.pwp.warfare.item.ModItems;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -156,7 +157,7 @@ public class DeployData {
         LoadoutOption smokeRed = new LoadoutOption("smoke_red","Red Smoke",new ItemStack(Items.RED_DYE));
         LoadoutOption bag      = new LoadoutOption("ammo_bag","Ammo Bag",new ItemStack(Items.BUNDLE));
         LoadoutOption bandage  = new LoadoutOption("bandage","Bandage", new ItemStack(Items.PAPER));
-        LoadoutOption bino     = new LoadoutOption("bino",  "Binoculars",new ItemStack(Items.SPYGLASS));
+        LoadoutOption bino     = new LoadoutOption("bino",  "Binoculars",new ItemStack(ModItems.BINOCULARS.get()));
 
         int i = 0;
         for (var e : KIT_META.entrySet()) {

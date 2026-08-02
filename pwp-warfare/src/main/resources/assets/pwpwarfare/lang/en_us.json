@@ -59,7 +59,6 @@
     "block.pwpwarfare.vehicle_spawner": "Vehicle Spawner",
     "block.pwpwarfare.crate_dropped": "Supply Crate",
     "block.pwpwarfare.ammo_bag": "Ammo Bag",
-
     "subtitles.pwpwarfare.ags_shoot": "AGS-30 fires",
     "subtitles.pwpwarfare.m2_load": "M2 Browning loads",
     "subtitles.pwpwarfare.m2_shoot": "M2 Browning fires",
@@ -69,28 +68,22 @@
     "subtitles.pwpwarfare.siren_alarm": "Siren wails",
     "subtitles.pwpwarfare.player_downed": "Player is wounded",
     "subtitles.pwpwarfare.shovel_dig": "Shovel digs",
-
     "pwpwarfare.container.kit_editor": "Kit Editor",
     "pwpwarfare.container.vehicle_spawner": "Vehicle Spawner",
-
     "pwpwarfare.team_select.title": "Select Your Team",
     "pwpwarfare.team_select.blue": "BLUFOR",
     "pwpwarfare.team_select.red": "REDFOR",
-
     "pwpwarfare.squad.create": "Create Squad",
     "pwpwarfare.squad.join": "Join Squad",
     "pwpwarfare.squad.leave": "Leave Squad",
     "pwpwarfare.squad.disband": "Disband Squad",
-
     "pwpwarfare.kit.select": "Select Kit",
     "pwpwarfare.kit.unassigned": "Unassigned",
     "pwpwarfare.kit.locked": "Locked",
     "pwpwarfare.kit.locked_reason": "Requires rank %s",
-
     "pwpwarfare.vote.start": "Vote to Start",
     "pwpwarfare.vote.yes": "Ready",
     "pwpwarfare.vote.no": "Not Ready",
-
     "pwpwarfare.stats.title": "Match Statistics",
     "pwpwarfare.stats.kills": "Kills",
     "pwpwarfare.stats.deaths": "Deaths",
@@ -105,25 +98,21 @@
     "pwpwarfare.stats.damage_dealt": "Damage Dealt",
     "pwpwarfare.stats.healing_done": "Healing Done",
     "pwpwarfare.stats.supplies": "Supplies Delivered",
-
     "pwpwarfare.match.victory": "Victory!",
     "pwpwarfare.match.defeat": "Defeat",
     "pwpwarfare.match.xp_earned": "+%d XP",
     "pwpwarfare.match.coins_earned": "+%d Coins",
     "pwpwarfare.match.wait_for_server": "Waiting for match server...",
-
     "pwpwarfare.death.killed": "%s killed %s",
     "pwpwarfare.death.knockout": "%s finished %s",
     "pwpwarfare.death.vehicle": "%s destroyed %s with vehicle",
     "pwpwarfare.death.teamkill": "%s teamkilled %s",
     "pwpwarfare.death.bleed_out": "%s has bled out",
-
     "pwpwarfare.notification.xp": "+%d XP",
     "pwpwarfare.notification.coins": "+%d Coins",
     "pwpwarfare.notification.level_up": "Level Up! You are now level %d",
     "pwpwarfare.notification.rank_up": "New Rank: %s",
     "pwpwarfare.notification.kit_unlocked": "New kit unlocked: %s",
-
     "pwpwarfare.message.kit_reserved": "Kit reserved: %s",
     "pwpwarfare.message.kit_selected": "Kit selected: %s",
     "pwpwarfare.message.ejected_not_qualified": "Ejected: You do not have the required kit!",
@@ -134,7 +123,6 @@
     "pwpwarfare.message.teamkill_warn_subtitle": "Teamkill Warning",
     "pwpwarfare.message.teamkill_restrict_expired": "Base restriction expired",
     "pwpwarfare.message.teamkill_restrict_remaining": "Base restriction: %ds remaining",
-
     "pwpwarfare.marker.attack": "Attack",
     "pwpwarfare.marker.defend": "Defend",
     "pwpwarfare.marker.move": "Move",
@@ -158,9 +146,7 @@
     "pwpwarfare.marker.cas_fighter": "CAS Fighter",
     "pwpwarfare.marker.mobile_zu": "Mobile ZU",
     "pwpwarfare.marker.supply_truck": "Supply Truck",
-
     "itemGroup.pwpwarfare": "PWP Warfare",
-
     "gui.pwpwarfare.downed.title": "Wounded",
     "gui.pwpwarfare.downed.give_up": "Give Up",
     "gui.pwpwarfare.downed.call_medic": "Call Medic",
@@ -168,7 +154,6 @@
     "gui.pwpwarfare.downed.call_medic_cooldown": "Call Medic (%ds)",
     "gui.pwpwarfare.downed.closest_ally": "Closest: %dm - %s",
     "gui.pwpwarfare.downed.no_allies": "No allies nearby",
-
     "gui.pwpwarfare.config.title": "Warfare Config",
     "gui.pwpwarfare.config.save": "Save",
     "gui.pwpwarfare.config.dig_speed": "Dig Speed",
@@ -187,7 +172,6 @@
     "gui.pwpwarfare.config.blue_team_name": "BLUFOR Name",
     "gui.pwpwarfare.config.red_team_name": "REDFOR Name",
     "gui.pwpwarfare.config.revive_item_id": "Revive Item ID",
-
     "gui.pwpwarfare.kit_editor.leader_only": "Leader Only: ON",
     "gui.pwpwarfare.kit_editor.leader_only_off": "Leader Only: OFF",
     "gui.pwpwarfare.kit_editor.save": "Save",
@@ -197,23 +181,19 @@
     "gui.pwpwarfare.kit_editor.min_players": "Min Players",
     "gui.pwpwarfare.kit_editor.toggle_resupply": "Toggle Resupply",
     "gui.pwpwarfare.kit_editor.save_nbt": "Save NBT",
-
     "gui.pwpwarfare.faction_select.title": "Select Faction Kits",
     "gui.pwpwarfare.faction_select.loading": "Loading factions...",
     "gui.pwpwarfare.faction_kit_list.title_format": "Faction Kits - %s",
     "gui.pwpwarfare.kit_team_select.title": "Select Team Kits",
     "gui.pwpwarfare.kit_team_select.blue": "BLUFOR Kits",
     "gui.pwpwarfare.kit_team_select.red": "REDFOR Kits",
-
     "gui.pwpwarfare.kit_list.title_format": "Kits - %s",
     "gui.pwpwarfare.kit_list.copy_all": "Copy All",
     "gui.pwpwarfare.kit_list.paste_all": "Paste All",
     "gui.pwpwarfare.kit_list.copy": "Copy",
     "gui.pwpwarfare.kit_list.paste": "Paste",
-
     "gui.pwpwarfare.kit_preview.format": "Kit: %s",
     "gui.pwpwarfare.kit_preview.back": "Back",
-
     "gui.pwpwarfare.squad_select.title": "Squad Menu",
     "gui.pwpwarfare.squad_select.apply_cmd": "Apply as CMD",
     "gui.pwpwarfare.squad_select.squad_name": "Squad name...",
@@ -224,22 +204,16 @@
     "gui.pwpwarfare.squad_select.channel_squad": "SQUAD",
     "gui.pwpwarfare.squad_select.channel_unknown": "Unknown",
     "gui.pwpwarfare.squad_select.kit": "Kit",
- 
     "gui.pwpwarfare.map_marker.error": "Cannot place marker there!",
-
     "gui.pwpwarfare.vehicle_spawner.yaw": "Yaw",
     "gui.pwpwarfare.vehicle_spawner.vehicle_id": "Vehicle ID",
     "gui.pwpwarfare.vehicle_spawner.respawn_time": "Respawn",
     "gui.pwpwarfare.vehicle_spawner.initial_time": "Initial",
-
     "gui.pwpwarfare.victory.title": "Match Over",
     "gui.pwpwarfare.victory.continue": "Continue",
-
     "gui.pwpwarfare.team_select.title": "Select Your Team",
     "gui.pwpwarfare.team_select.join": "JOIN",
-
     "gui.pwpwarfare.kit_select.title": "Select Kit",
-
     "gui.pwpwarfare.radial.crate_supply": "Supply Crate",
     "gui.pwpwarfare.radial.defense": "Defense",
     "gui.pwpwarfare.radial.hub_supply": "FOB Supplies",
@@ -248,28 +222,22 @@
     "gui.pwpwarfare.radial.tactical": "Tactical",
     "gui.pwpwarfare.radial.markers": "Markers",
     "gui.pwpwarfare.radial.walls": "Walls",
-
     "gui.pwpwarfare.map_marker_select.title": "Select Marker Type",
-
     "gui.pwpwarfare.kit_skin_select.title": "Kit Weapon Skins",
     "gui.pwpwarfare.kit_editor.skins": "Skins",
-
     "gui.pwpwarfare.skin_list.title": "Skin Setup",
     "gui.pwpwarfare.skin_list.add": "+ Add Skin",
     "gui.pwpwarfare.skin_list.refresh": "Refresh",
-
     "gui.pwpwarfare.skin_editor.add": "Add Skin",
     "gui.pwpwarfare.skin_editor.edit": "Edit Skin",
     "gui.pwpwarfare.skin_editor.save": "Save",
     "gui.pwpwarfare.skin_editor.cancel": "Cancel",
-
     "gui.pwpwarfare.skin_editor.name": "Name",
     "gui.pwpwarfare.skin_editor.skin_id": "Skin ID",
     "gui.pwpwarfare.skin_editor.slot_type": "Slot Type",
     "gui.pwpwarfare.skin_editor.weapon_tag": "Weapon Tag",
     "gui.pwpwarfare.skin_editor.rarity": "Rarity",
     "gui.pwpwarfare.skin_editor.model_path": "Model Path",
-
     "gui.pwpwarfare.faction_vehicle_select.title": "Select Faction Vehicles",
     "gui.pwpwarfare.faction_vehicle_list.title": "Vehicles - %s",
     "gui.pwpwarfare.faction_vehicle_list.add": "+ Add",
@@ -277,5 +245,16 @@
     "gui.pwpwarfare.faction_vehicle_editor.title": "Vehicle Editor - %s",
     "gui.pwpwarfare.faction_vehicle_editor.save": "Save",
     "gui.pwpwarfare.faction_vehicle_editor.back": "Back",
-    "gui.pwpwarfare.faction_vehicle.saved": "Vehicle saved!"
+    "gui.pwpwarfare.faction_vehicle.saved": "Vehicle saved!",
+    "item.pwpwarfare.binoculars": "Binoculars",
+    "pwpwarfare.message.station_no_vehicle_team": "Vehicle has no team assigned!",
+    "pwpwarfare.message.station_no_team": "Station is neutral!",
+    "pwpwarfare.message.station_wrong_team": "Wrong team! This station belongs to %s",
+    "pwpwarfare.message.station_resupplying": "Resupplying: %s/%s",
+    "pwpwarfare.message.station_ammo_full": "Vehicle is fully resupplied!",
+    "pwpwarfare.message.station_resupplying_generic": "Resupplying vehicle...",
+    "subtitles.pwpwarfare.station_idle": "Station hums",
+    "block.pwpwarfare.vehicle_station": "Vehicle Station",
+    "block.pwpwarfare.wall_slab_block": "Wall Slab",
+    "block.pwpwarfare.camo_net": "Camo Net"
 }

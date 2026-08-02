@@ -13,6 +13,7 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -230,10 +231,24 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
                       entity.getPersistentData().putString("WARFARE_VehicleType", vType);
                       entity.getPersistentData().putBoolean("WARFARE_FreshVehicle", true);
                      entity.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
-                     if (maxMats > 0) {
-                        entity.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
-                        entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
-                     }
+                      if (maxMats > 0) {
+                         entity.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
+                         entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                      }
+
+                      // Сохраняем начальный лоудаут техники для станции пополнения (Vehicle Station)
+                      ListTag loadoutTag = new ListTag();
+                      for (int i = 0; i < 32; i++) {
+                         ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
+                         if (contentStack.isEmpty()) {
+                            continue;
+                         }
+                         CompoundTag itemTag = new CompoundTag();
+                         itemTag.putByte("Slot", (byte)i);
+                         contentStack.save(itemTag);
+                         loadoutTag.add(itemTag);
+                      }
+                      entity.getPersistentData().put("WARFARE_InitialLoadout", loadoutTag);
 
                       WarfareWorldData worldData = WarfareWorldData.get((ServerLevel)this.level);
                       worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));

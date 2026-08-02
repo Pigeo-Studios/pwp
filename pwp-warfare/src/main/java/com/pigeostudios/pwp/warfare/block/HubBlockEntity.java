@@ -232,6 +232,11 @@ public class HubBlockEntity extends BlockEntity {
 
          entity.activeDiggers = 0;
       } else {
+         // Миграция старых сейвов: построенный хаб без стадии -> полная стадия
+         if (state.getValue(HubBlock.BUILD_STAGE) == 0 && entity.dismantleProgress == 0) {
+            level.setBlock(pos, (BlockState)state.setValue(HubBlock.BUILD_STAGE, 2), 3);
+         }
+
          if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
             if (entity.activeDiggers > 0) {
                float speed = entity.activeDiggers == 1 ? 1.0F : (entity.activeDiggers == 2 ? 1.34F : (entity.activeDiggers == 3 ? 2.0F : 4.0F));
@@ -245,6 +250,12 @@ public class HubBlockEntity extends BlockEntity {
             if (entity.dismantleProgress >= 2400) {
                entity.dismantleProgress = 2400;
                entity.handleDismantleComplete(level, pos, state);
+            } else {
+               // Стадии при разборке идут в обратном порядке
+               int newStage = entity.dismantleProgress >= 1600 ? 0 : (entity.dismantleProgress >= 800 ? 1 : 2);
+               if (state.getValue(HubBlock.BUILD_STAGE) != newStage) {
+                  level.setBlock(pos, (BlockState)state.setValue(HubBlock.BUILD_STAGE, newStage), 3);
+               }
             }
 
             if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= 2400) {

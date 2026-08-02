@@ -7,9 +7,10 @@ import com.pigeostudios.pwp.warfare.block.HubBlock;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.MainSupplyBlock;
-import com.pigeostudios.pwp.warfare.block.MainSupplyBlockEntity;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
+import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
@@ -885,10 +886,10 @@ public class WarfareOverlay {
                   progress = hub.getPercentage();
                   structureTeam = hub.getTeam();
                   finished = (Boolean)state.getValue(HubBlock.CONSTRUCTED);
-               } else if (be instanceof MainSupplyBlockEntity supply) {
+               } else if (be instanceof VehicleStationBlockEntity supply) {
                   progress = supply.getPercentage();
                   structureTeam = supply.getTeam();
-                  finished = (Boolean)state.getValue(MainSupplyBlock.CONSTRUCTED);
+                  finished = (Boolean)state.getValue(VehicleStationBlock.CONSTRUCTED);
                } else if (be instanceof WallBlockEntity wall) {
                   progress = wall.getPercentage();
                   structureTeam = wall.getTeam();
@@ -921,6 +922,8 @@ public class WarfareOverlay {
                        dismantling = w.isDismantling();
                     } else if (be instanceof HubBlockEntity h) {
                        dismantling = h.isDismantling();
+                    } else if (be instanceof VehicleStationBlockEntity s) {
+                       dismantling = s.isDismantling();
                     }
 
                     boolean showDestroy = finished || dismantling;

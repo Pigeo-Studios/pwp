@@ -26,6 +26,7 @@ public class ModSounds {
    public static final RegistryObject<SoundEvent> RADIO_OPEN = registerSoundEvent("radio_open");
    public static final RegistryObject<SoundEvent> M2_SHOOT = registerSoundEvent("m2_shoot");
    public static final RegistryObject<SoundEvent> SHOVEL_DIG = registerSoundEvent("shovel_dig");
+   public static final RegistryObject<SoundEvent> STATION_IDLE = registerSoundEvent("station_idle");
    public static final Map<String, List<RegistryObject<SoundEvent>>> FACTION_SCREAMS = new HashMap<>();
 
    private static RegistryObject<SoundEvent> registerSoundEvent(String name) {

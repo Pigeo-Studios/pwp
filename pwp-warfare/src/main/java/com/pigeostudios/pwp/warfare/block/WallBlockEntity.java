@@ -244,8 +244,13 @@ public class WallBlockEntity extends BlockEntity {
                 }
              }
 
-             entity.activeDiggers = 0;
-          } else {
+              entity.activeDiggers = 0;
+           } else {
+            // Миграция старых сейвов: построенная стена без стадии -> полная стадия
+            if (state.getValue(WallBlock.BUILD_STAGE) == 0 && entity.dismantleProgress == 0) {
+               level.setBlock(pos, (BlockState)state.setValue(WallBlock.BUILD_STAGE, 2), 3);
+            }
+
             if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
                if (entity.activeDiggers > 0) {
                   float speed;
@@ -270,6 +275,12 @@ public class WallBlockEntity extends BlockEntity {
                if (entity.dismantleProgress >= max) {
                   entity.dismantleProgress = max;
                   entity.handleDismantleComplete(level, pos, state);
+               } else {
+                  // Стадии при разборке идут в обратном порядке
+                  int newStage = entity.dismantleProgress >= (max * 2) / 3 ? 0 : (entity.dismantleProgress >= max / 3 ? 1 : 2);
+                  if (state.getValue(WallBlock.BUILD_STAGE) != newStage) {
+                     level.setBlock(pos, (BlockState)state.setValue(WallBlock.BUILD_STAGE, newStage), 3);
+                  }
                }
 
                if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= max) {

@@ -5,11 +5,7 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.Packet;
-import net.minecraft.network.protocol.game.ClientGamePacketListener;
-import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -29,65 +25,19 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.registries.ForgeRegistries;
 
-// РЎСѓС‰РЅРѕСЃС‚СЊ Р±Р»РѕРєР° РіР»Р°РІРЅРѕРіРѕ СЃРЅР°Р±Р¶РµРЅРёСЏ
-// Р›РµС‡РёС‚ РёРіСЂРѕРєРѕРІ, РїРѕРїРѕР»РЅСЏРµС‚ Р±РѕРµРїСЂРёРїР°СЃС‹ РіСЂСѓР·РѕРІРёРєРѕРІ Рё РїРµСЂРµРІРѕРѕСЂСѓР¶Р°РµС‚/СЂРµРјРѕРЅС‚РёСЂСѓРµС‚ С‚РµС…РЅРёРєСѓ
+// ╨а╨О╨б╤У╨бтА░╨а╨Е╨а╤Х╨б╨Г╨бтАЪ╨б╨К ╨а┬▒╨а┬╗╨а╤Х╨а╤Ф╨а┬░ ╨а╤Ц╨а┬╗╨а┬░╨а╨Ж╨а╨Е╨а╤Х╨а╤Ц╨а╤Х ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П
+// ╨атА║╨а┬╡╨бтАб╨а╤С╨бтАЪ ╨а╤С╨а╤Ц╨б╨В╨а╤Х╨а╤Ф╨а╤Х╨а╨Ж, ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨б╨П╨а┬╡╨бтАЪ ╨а┬▒╨а╤Х╨а┬╡╨а╤Ч╨б╨В╨а╤С╨а╤Ч╨а┬░╨б╨Г╨бтА╣ ╨а╤Ц╨б╨В╨б╤У╨а┬╖╨а╤Х╨а╨Ж╨а╤С╨а╤Ф╨а╤Х╨а╨Ж ╨а╤С ╨а╤Ч╨а┬╡╨б╨В╨а┬╡╨а╨Ж╨а╤Х╨а╤Х╨б╨В╨б╤У╨а┬╢╨а┬░╨а┬╡╨бтАЪ/╨б╨В╨а┬╡╨а╤Ш╨а╤Х╨а╨Е╨бтАЪ╨а╤С╨б╨В╨б╤У╨а┬╡╨бтАЪ ╨бтАЪ╨а┬╡╨бтАж╨а╨Е╨а╤С╨а╤Ф╨б╤У
 public class MainSupplyBlockEntity extends BlockEntity {
-   // РўР°Р№РјРµСЂ РїСЂРѕРІРµСЂРєРё (РєР°Р¶РґС‹Рµ 20 С‚РёРєРѕРІ)
+   // ╨а╤Ю╨а┬░╨атДЦ╨а╤Ш╨а┬╡╨б╨В ╨а╤Ч╨б╨В╨а╤Х╨а╨Ж╨а┬╡╨б╨В╨а╤Ф╨а╤С (╨а╤Ф╨а┬░╨а┬╢╨а╥С╨бтА╣╨а┬╡ 20 ╨бтАЪ╨а╤С╨а╤Ф╨а╤Х╨а╨Ж)
    private int checkTimer = 0;
-   // РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ РїСЂРѕРіСЂРµСЃСЃ СЃС‚СЂРѕРёС‚РµР»СЊСЃС‚РІР° СЃС‚Р°РЅС†РёРё
-   public static final int MAX_PROGRESS = 3000;
-   private int currentProgress = 0;
-   private int activeDiggers = 0;
-   private String teamOwner = "NEUTRAL";
 
    public MainSupplyBlockEntity(BlockPos pos, BlockState state) {
       super((BlockEntityType)ModBlocks.MAIN_SUPPLY_BE.get(), pos, state);
    }
 
-   public void addProgress() {
-      if (this.currentProgress < MAX_PROGRESS) {
-         this.activeDiggers++;
-      }
-   }
-
-   public void addCreativeProgress(int amount) {
-      if (this.currentProgress < MAX_PROGRESS) {
-         this.currentProgress += amount;
-         if (this.currentProgress >= MAX_PROGRESS) {
-            this.currentProgress = MAX_PROGRESS;
-         }
-      }
-   }
-
-   public void setTeam(String team) {
-      this.teamOwner = team;
-      this.setChanged();
-      if (this.level != null) {
-         this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
-      }
-   }
-
-   public String getTeam() {
-      return this.teamOwner;
-   }
-
-   public float getPercentage() {
-      boolean constructed = this.level != null && this.level.getBlockState(this.worldPosition).hasProperty(MainSupplyBlock.CONSTRUCTED)
-         && (Boolean)this.level.getBlockState(this.worldPosition).getValue(MainSupplyBlock.CONSTRUCTED);
-      if (constructed) {
-         return 1.0F;
-      }
-      return this.currentProgress / (float)MAX_PROGRESS;
-   }
-
-   // РўРёРє СЃРЅР°Р±Р¶РµРЅРёСЏ: Р»РµС‡РµРЅРёРµ РёРіСЂРѕРєРѕРІ, РїРѕРїРѕР»РЅРµРЅРёРµ РіСЂСѓР·РѕРІРёРєРѕРІ, СЂРµРјРѕРЅС‚ С‚РµС…РЅРёРєРё
+   // ╨а╤Ю╨а╤С╨а╤Ф ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П: ╨а┬╗╨а┬╡╨бтАб╨а┬╡╨а╨Е╨а╤С╨а┬╡ ╨а╤С╨а╤Ц╨б╨В╨а╤Х╨а╤Ф╨а╤Х╨а╨Ж, ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨а┬╡╨а╨Е╨а╤С╨а┬╡ ╨а╤Ц╨б╨В╨б╤У╨а┬╖╨а╤Х╨а╨Ж╨а╤С╨а╤Ф╨а╤Х╨а╨Ж, ╨б╨В╨а┬╡╨а╤Ш╨а╤Х╨а╨Е╨бтАЪ ╨бтАЪ╨а┬╡╨бтАж╨а╨Е╨а╤С╨а╤Ф╨а╤С
    public static void tick(Level level, BlockPos pos, BlockState state, MainSupplyBlockEntity entity) {
       if (!level.isClientSide) {
-         if (!(Boolean)state.getValue(MainSupplyBlock.CONSTRUCTED)) {
-            entity.tickConstruction(level, pos, state, entity);
-            return;
-         }
-
          entity.checkTimer++;
          if (entity.checkTimer >= 20) {
             entity.checkTimer = 0;
@@ -235,41 +185,6 @@ public class MainSupplyBlockEntity extends BlockEntity {
       }
    }
 
-   // РЎС‚СЂРѕРёС‚РµР»СЊСЃС‚РІРѕ СЃС‚Р°РЅС†РёРё: РїСЂРѕРіСЂРµСЃСЃ РєРѕРїР°РЅРёСЏ Р»РѕРїР°С‚РѕР№ СЃРѕ СЃС‚Р°РґРёСЏРјРё
-   private static void tickConstruction(Level level, BlockPos pos, BlockState state, MainSupplyBlockEntity entity) {
-      if (state.getValue(MainSupplyBlock.BUILD_STAGE) == 0) {
-         level.setBlock(pos, (BlockState)state.setValue(MainSupplyBlock.BUILD_STAGE, 1), 3);
-      }
-
-      if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
-         if (entity.activeDiggers > 0) {
-            float speed = entity.activeDiggers == 1 ? 1.0F : (entity.activeDiggers == 2 ? 1.34F : (entity.activeDiggers == 3 ? 2.0F : 4.0F));
-            float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
-            speed *= multiplier;
-            entity.currentProgress = entity.currentProgress + (int)Math.ceil(speed);
-         }
-
-         if (entity.currentProgress >= MAX_PROGRESS) {
-            entity.currentProgress = MAX_PROGRESS;
-            level.setBlock(pos, (BlockState)((BlockState)state.setValue(MainSupplyBlock.CONSTRUCTED, true)).setValue(MainSupplyBlock.BUILD_STAGE, 2), 3);
-            if (!level.isClientSide) {
-               ((ServerLevel)level).sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 40, 1.0, 0.5, 1.0, 0.05);
-            }
-         } else {
-            int newStage = entity.currentProgress >= MAX_PROGRESS / 2 ? 2 : 1;
-            if (state.getValue(MainSupplyBlock.BUILD_STAGE) != newStage) {
-               level.setBlock(pos, (BlockState)state.setValue(MainSupplyBlock.BUILD_STAGE, newStage), 3);
-            }
-         }
-
-         if (level.getGameTime() % 5L == 0L || entity.currentProgress >= MAX_PROGRESS) {
-            level.sendBlockUpdated(pos, state, state, 3);
-         }
-      }
-
-      entity.activeDiggers = 0;
-   }
-
    private static void sendChatMessageToPassengers(Entity vehicle, String msg, ChatFormatting color) {
       for (Entity passenger : vehicle.getPassengers()) {
          if (passenger instanceof Player player) {
@@ -278,34 +193,10 @@ public class MainSupplyBlockEntity extends BlockEntity {
       }
    }
 
-   // РЎРїР°СѓРЅРёС‚ С‡Р°СЃС‚РёС†С‹ СЌС„С„РµРєС‚Р° РїРѕРїРѕР»РЅРµРЅРёСЏ
+   // ╨а╨О╨а╤Ч╨а┬░╨б╤У╨а╨Е╨а╤С╨бтАЪ ╨бтАб╨а┬░╨б╨Г╨бтАЪ╨а╤С╨бтАа╨бтА╣ ╨б╨М╨бтАЮ╨бтАЮ╨а┬╡╨а╤Ф╨бтАЪ╨а┬░ ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨а┬╡╨а╨Е╨а╤С╨б╨П
    private static void spawnEffects(Level level, Entity vehicle) {
       if (level instanceof ServerLevel serverLevel) {
          serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, vehicle.getX(), vehicle.getY() + 1.5, vehicle.getZ(), 10, 1.0, 1.0, 1.0, 0.1);
       }
-   }
-
-   protected void saveAdditional(CompoundTag tag) {
-      super.saveAdditional(tag);
-      tag.putInt("BuildProgress", this.currentProgress);
-      tag.putString("TeamOwner", this.teamOwner);
-   }
-
-   public void load(CompoundTag tag) {
-      super.load(tag);
-      this.currentProgress = tag.getInt("BuildProgress");
-      if (tag.contains("TeamOwner")) {
-         this.teamOwner = tag.getString("TeamOwner");
-      }
-   }
-
-   public CompoundTag getUpdateTag() {
-      CompoundTag tag = new CompoundTag();
-      this.saveAdditional(tag);
-      return tag;
-   }
-
-   public Packet<ClientGamePacketListener> getUpdatePacket() {
-      return ClientboundBlockEntityDataPacket.create(this);
    }
 }

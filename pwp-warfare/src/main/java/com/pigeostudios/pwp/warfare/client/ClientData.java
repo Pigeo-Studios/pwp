@@ -33,7 +33,7 @@ public class ClientData {
    public static int RED_PLAYER_COUNT = 0;
    public static List<WarfareWorldData.Squad> clientSquads = new ArrayList<>();
    public static List<WarfareWorldData.HubInfo> clientHubs = new ArrayList<>();
-   public static List<WarfareWorldData.MainSupplyInfo> clientMainSupplies = new ArrayList<>();
+   public static List<WarfareWorldData.VehicleStationInfo> clientvehicleStations = new ArrayList<>();
    public static String BLUE_FACTION = "none";
    public static String RED_FACTION = "none";
    public static final Set<Integer> DOWNED_PLAYERS = new HashSet<>();

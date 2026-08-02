@@ -2191,7 +2191,7 @@ public class GameLogicEvents {
          data.currentMapImage,
          data.markedVehicles,
          data.hubs,
-         data.mainSupplies,
+         data.vehicleStations,
           data.blueFaction,
           data.redFaction,
           bName,

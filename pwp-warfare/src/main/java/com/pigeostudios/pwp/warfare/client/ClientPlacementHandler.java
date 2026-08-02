@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.block.M2ConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlock;
+import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
@@ -203,10 +204,10 @@ public class ClientPlacementHandler {
                            }
                         }
                      } else if (structureId == 18) {
-                        BlockState stationState = (BlockState)((BlockState)((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get())
+                        BlockState stationState = (BlockState)((BlockState)((Block)ModBlocks.VEHICLE_STATION_BLOCK.get())
                               .defaultBlockState()
-                              .setValue(com.pigeostudios.pwp.warfare.block.MainSupplyBlock.FACING, Direction.NORTH))
-                           .setValue(com.pigeostudios.pwp.warfare.block.MainSupplyBlock.CONSTRUCTED, false);
+                              .setValue(VehicleStationBlock.FACING, Direction.NORTH))
+                           .setValue(VehicleStationBlock.VALID, isValid);
                         renderGhostBlock(mc, stationState, pose, 0, 0, 0);
                      } else {
                         BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())

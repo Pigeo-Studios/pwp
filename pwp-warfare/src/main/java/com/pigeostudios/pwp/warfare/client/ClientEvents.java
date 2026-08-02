@@ -10,6 +10,7 @@ import com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
+import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.item.SupplyTruckMarkerItem;
 import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
 import com.pigeostudios.pwp.warfare.network.PacketApplyMarker;
@@ -61,6 +62,7 @@ import net.minecraftforge.client.event.InputEvent.MouseButton.Pre;
 import net.minecraftforge.client.event.RenderLevelStageEvent.Stage;
 import net.minecraftforge.client.event.ScreenEvent.Opening;
 import net.minecraftforge.client.event.ViewportEvent.ComputeCameraAngles;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.TickEvent.ClientTickEvent;
 import net.minecraftforge.event.TickEvent.Phase;
 import net.minecraftforge.eventbus.api.EventPriority;
@@ -326,12 +328,41 @@ public class ClientEvents {
    public static void onComputeFov(ComputeFovModifierEvent event) {
       Minecraft mc = Minecraft.getInstance();
       if (mc.player != null) {
+         ItemStack activeStack = mc.player.getUseItem();
+         if (activeStack.getItem() == ModItems.BINOCULARS.get()) {
+            event.setNewFovModifier(event.getFovModifier() * 0.125F);
+         }
+
          Entity vehicle = mc.player.getVehicle();
          if (vehicle instanceof M2BrowningEntity m2 && m2.isAiming()) {
             event.setNewFovModifier(event.getFovModifier() * 0.6666667F);
          } else if (vehicle instanceof AGS30Entity ags && ags.isAiming()) {
             event.setNewFovModifier(event.getFovModifier() * 0.33333334F);
          }
+      }
+   }
+
+   private static final ResourceLocation BINOCULAR_SHADER = new ResourceLocation("pwpwarfare", "shaders/post/binoculars.json");
+   private static boolean wasUsingBinoculars = false;
+
+   @SubscribeEvent
+   public static void onClientTickShader(TickEvent.ClientTickEvent event) {
+      if (event.phase != TickEvent.Phase.END) {
+         return;
+      }
+
+      Minecraft mc = Minecraft.getInstance();
+      if (mc.player == null) {
+         return;
+      }
+
+      boolean isUsingBinoculars = mc.player.isUsingItem() && mc.player.getUseItem().getItem() == ModItems.BINOCULARS.get();
+      if (isUsingBinoculars && !wasUsingBinoculars) {
+         mc.execute(() -> mc.gameRenderer.loadEffect(BINOCULAR_SHADER));
+         wasUsingBinoculars = true;
+      } else if (!isUsingBinoculars && wasUsingBinoculars) {
+         mc.execute(() -> mc.gameRenderer.shutdownEffect());
+         wasUsingBinoculars = false;
       }
    }
 

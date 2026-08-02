@@ -8,13 +8,13 @@ import com.pigeostudios.pwp.warfare.block.CamoNetBlock;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
-import com.pigeostudios.pwp.warfare.block.MainSupplyBlock;
-import com.pigeostudios.pwp.warfare.block.MainSupplyBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
+import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
@@ -427,17 +427,16 @@ public class PacketBuildRequest {
                                consumeMaterials(level, msg.pos, team, cost);
                             }
 
-                            BlockState state = (BlockState)((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get())
+                            BlockState state = (BlockState)((Block)ModBlocks.VEHICLE_STATION_BLOCK.get())
                                   .defaultBlockState()
-                                  .setValue(MainSupplyBlock.FACING, facing)
-                                  .setValue(MainSupplyBlock.CONSTRUCTED, false);
+                                  .setValue(VehicleStationBlock.FACING, facing);
                             level.setBlock(msg.pos, state, 3);
                             WarfareWorldData data = WarfareWorldData.get(level);
-                            data.mainSupplies.removeIf(s -> s.pos.equals(msg.pos));
-                            data.mainSupplies.add(new WarfareWorldData.MainSupplyInfo(msg.pos, team, level.dimension().location().toString()));
+                            data.vehicleStations.removeIf(s -> s.pos.equals(msg.pos));
+                            data.vehicleStations.add(new WarfareWorldData.VehicleStationInfo(msg.pos, team, level.dimension().location().toString()));
                             data.setDirty();
                             PacketHandler.sendToAllClients(level, data);
-                            if (level.getBlockEntity(msg.pos) instanceof MainSupplyBlockEntity supply) {
+                            if (level.getBlockEntity(msg.pos) instanceof VehicleStationBlockEntity supply) {
                                supply.setTeam(team);
                             }
                          } else if (msg.structureId == 22) {

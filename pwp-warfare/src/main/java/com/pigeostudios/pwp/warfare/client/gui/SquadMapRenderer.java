@@ -501,7 +501,7 @@ public class SquadMapRenderer {
             }
         }
 
-        for (var supply : ClientData.clientMainSupplies) {
+        for (var supply : ClientData.clientvehicleStations) {
             if (!supply.team.equalsIgnoreCase(myTeam) && !isObserver) continue;
             float sx = (float)toScreenX(supply.pos.getX() + 0.5, cx);
             float sy = (float)toScreenZ(supply.pos.getZ() + 0.5, cz);

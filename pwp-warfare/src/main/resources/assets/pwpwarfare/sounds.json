@@ -37,6 +37,16 @@
       }
     ]
   },
+  "station_idle": {
+    "category": "block",
+    "subtitle": "subtitles.pwpwarfare.station_idle",
+    "sounds": [
+      {
+        "name": "pwpwarfare:station_idle",
+        "stream": true
+      }
+    ]
+  },
   "m2_load": {
     "category": "player",
     "subtitle": "subtitles.pwpwarfare.m2_load",

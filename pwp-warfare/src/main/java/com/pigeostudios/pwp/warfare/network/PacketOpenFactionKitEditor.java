@@ -49,16 +49,17 @@ public class PacketOpenFactionKitEditor {
                    WarfareWorldData.KitInfo kit = null;
                    String kitTeam = "BLUE";
 
-                   if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
-                      kit = data.blueKits.get(msg.kitName);
-                      kitTeam = "BLUE";
-                   } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
-                      kit = data.redKits.get(msg.kitName);
-                      kitTeam = "RED";
-                   } else {
-                      kit = loadFromApi(msg.faction, msg.kitName);
-                      if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
-                      else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
+                   // API — источник истины: в памяти (blueKits/redKits) могут лежать устаревшие NBT-киты
+                   kit = loadFromApi(msg.faction, msg.kitName);
+                   if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
+                   else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
+
+                   if (kit == null) { // фолбэк на загруженные в память киты
+                      if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
+                         kit = data.blueKits.get(msg.kitName);
+                      } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
+                         kit = data.redKits.get(msg.kitName);
+                      }
                    }
 
                    if (kit == null) {

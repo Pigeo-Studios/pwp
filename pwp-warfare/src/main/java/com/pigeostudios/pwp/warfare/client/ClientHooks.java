@@ -17,6 +17,7 @@ import com.pigeostudios.pwp.warfare.client.gui.VictoryScreen;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.client.sound.HubLoopingSound;
 import com.pigeostudios.pwp.warfare.client.sound.RallyLoopingSound;
+import com.pigeostudios.pwp.warfare.client.sound.StationLoopingSound;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSpawnGhost;
 import com.pigeostudios.pwp.warfare.network.PacketSyncGameData;
@@ -83,6 +84,27 @@ public class ClientHooks {
 
    public static void stopHubSound(Object sound) {
       if (sound instanceof HubLoopingSound s) {
+         s.stopSound();
+      }
+   }
+
+   public static Object playStationSound(com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity entity, Object currentSound) {
+      if (currentSound != null) {
+         StationLoopingSound sound = (StationLoopingSound)currentSound;
+         return sound.isStopped() ? playStationSoundInternal(entity) : currentSound;
+      } else {
+         return playStationSoundInternal(entity);
+      }
+   }
+
+   private static Object playStationSoundInternal(com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity entity) {
+      StationLoopingSound sound = new StationLoopingSound(entity);
+      Minecraft.getInstance().getSoundManager().play(sound);
+      return sound;
+   }
+
+   public static void stopStationSound(Object sound) {
+      if (sound instanceof StationLoopingSound s) {
          s.stopSound();
       }
    }
@@ -226,7 +248,7 @@ public class ClientHooks {
         ClientData.blueRallyBlocked = msg.blueBlocked;
         ClientData.redRallyBlocked = msg.redBlocked;
         ClientData.clientHubs = new ArrayList<>(msg.hubs);
-        ClientData.clientMainSupplies = new ArrayList<>(msg.mainSupplies);
+        ClientData.clientvehicleStations = new ArrayList<>(msg.vehicleStations);
         ClientData.BLUE_FACTION = msg.blueFaction;
         ClientData.RED_FACTION = msg.redFaction;
         if (msg.isGameStarted && ClientData.matchStartTime == 0L) ClientData.matchStartTime = System.currentTimeMillis();

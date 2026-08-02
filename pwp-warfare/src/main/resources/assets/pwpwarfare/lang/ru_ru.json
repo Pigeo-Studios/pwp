@@ -59,7 +59,6 @@
     "block.pwpwarfare.vehicle_spawner": "Вызов техники",
     "block.pwpwarfare.crate_dropped": "Грузовой контейнер",
     "block.pwpwarfare.ammo_bag": "Сумка с боеприпасами",
-
     "subtitles.pwpwarfare.ags_shoot": "АГС-30 стреляет",
     "subtitles.pwpwarfare.m2_load": "M2 Browning заряжается",
     "subtitles.pwpwarfare.m2_shoot": "M2 Browning стреляет",
@@ -69,28 +68,22 @@
     "subtitles.pwpwarfare.siren_alarm": "Сирена воет",
     "subtitles.pwpwarfare.player_downed": "Игрок ранен",
     "subtitles.pwpwarfare.shovel_dig": "Лопата копает",
-
     "pwpwarfare.container.kit_editor": "Редактор комплекта",
     "pwpwarfare.container.vehicle_spawner": "Вызов техники",
-
     "pwpwarfare.team_select.title": "Выберите команду",
     "pwpwarfare.team_select.blue": "BLUFOR",
     "pwpwarfare.team_select.red": "REDFOR",
-
     "pwpwarfare.squad.create": "Создать отряд",
     "pwpwarfare.squad.join": "Вступить в отряд",
     "pwpwarfare.squad.leave": "Покинуть отряд",
     "pwpwarfare.squad.disband": "Распустить отряд",
-
     "pwpwarfare.kit.select": "Выбрать класс",
     "pwpwarfare.kit.unassigned": "Без класса",
     "pwpwarfare.kit.locked": "Заблокировано",
     "pwpwarfare.kit.locked_reason": "Требуется ранг %s",
-
     "pwpwarfare.vote.start": "Голосование за начало",
     "pwpwarfare.vote.yes": "Готов",
     "pwpwarfare.vote.no": "Не готов",
-
     "pwpwarfare.stats.title": "Статистика матча",
     "pwpwarfare.stats.kills": "Убийства",
     "pwpwarfare.stats.deaths": "Смерти",
@@ -105,25 +98,21 @@
     "pwpwarfare.stats.damage_dealt": "Нанесено урона",
     "pwpwarfare.stats.healing_done": "Вылечено",
     "pwpwarfare.stats.supplies": "Доставлено припасов",
-
     "pwpwarfare.match.victory": "Победа!",
     "pwpwarfare.match.defeat": "Поражение",
     "pwpwarfare.match.xp_earned": "+%d опыта",
     "pwpwarfare.match.coins_earned": "+%d монет",
     "pwpwarfare.match.wait_for_server": "Ожидание игрового сервера...",
-
     "pwpwarfare.death.killed": "%s убил %s",
     "pwpwarfare.death.knockout": "%s добил %s",
     "pwpwarfare.death.vehicle": "%s уничтожил %s на технике",
     "pwpwarfare.death.teamkill": "%s совершил тимкилл %s",
     "pwpwarfare.death.bleed_out": "%s истёк кровью",
-
     "pwpwarfare.notification.xp": "+%d опыта",
     "pwpwarfare.notification.coins": "+%d монет",
     "pwpwarfare.notification.level_up": "Новый уровень! Теперь вы %d уровня",
     "pwpwarfare.notification.rank_up": "Новый ранг: %s",
     "pwpwarfare.notification.kit_unlocked": "Открыт новый класс: %s",
-
     "pwpwarfare.message.kit_reserved": "Комплект зарезервирован: %s",
     "pwpwarfare.message.kit_selected": "Комплект выбран: %s",
     "pwpwarfare.message.ejected_not_qualified": "Вы высажены: нет подходящего комплекта!",
@@ -134,7 +123,6 @@
     "pwpwarfare.message.teamkill_warn_subtitle": "Предупреждение о тимкилле",
     "pwpwarfare.message.teamkill_restrict_expired": "Ограничение базы снято",
     "pwpwarfare.message.teamkill_restrict_remaining": "Ограничение базы: %dс осталось",
-
     "pwpwarfare.marker.attack": "Атака",
     "pwpwarfare.marker.defend": "Оборона",
     "pwpwarfare.marker.move": "Движение",
@@ -158,9 +146,7 @@
     "pwpwarfare.marker.cas_fighter": "CAS Истребитель",
     "pwpwarfare.marker.mobile_zu": "Мобильная ЗУ",
     "pwpwarfare.marker.supply_truck": "Грузовик",
-
     "itemGroup.pwpwarfare": "PWP Warfare",
-
     "gui.pwpwarfare.downed.title": "Ранен",
     "gui.pwpwarfare.downed.give_up": "Сдаться",
     "gui.pwpwarfare.downed.call_medic": "Позвать медика",
@@ -168,7 +154,6 @@
     "gui.pwpwarfare.downed.call_medic_cooldown": "Позвать медика (%dс)",
     "gui.pwpwarfare.downed.closest_ally": "Ближайший: %dм - %s",
     "gui.pwpwarfare.downed.no_allies": "Рядом нет союзников",
-
     "gui.pwpwarfare.config.title": "Настройки войны",
     "gui.pwpwarfare.config.save": "Сохранить",
     "gui.pwpwarfare.config.dig_speed": "Скорость копания",
@@ -187,7 +172,6 @@
     "gui.pwpwarfare.config.blue_team_name": "Название BLUFOR",
     "gui.pwpwarfare.config.red_team_name": "Название REDFOR",
     "gui.pwpwarfare.config.revive_item_id": "ID предмета оживления",
-
     "gui.pwpwarfare.kit_editor.leader_only": "Только лидер: ВКЛ",
     "gui.pwpwarfare.kit_editor.leader_only_off": "Только лидер: ВЫКЛ",
     "gui.pwpwarfare.kit_editor.save": "Сохранить",
@@ -197,23 +181,19 @@
     "gui.pwpwarfare.kit_editor.min_players": "Мин. игроков",
     "gui.pwpwarfare.kit_editor.toggle_resupply": "Вкл/Выкл пополнение",
     "gui.pwpwarfare.kit_editor.save_nbt": "Сохранить NBT",
-
     "gui.pwpwarfare.faction_select.title": "Выбор комплектов фракции",
     "gui.pwpwarfare.faction_select.loading": "Загрузка фракций...",
     "gui.pwpwarfare.faction_kit_list.title_format": "Комплекты фракции - %s",
     "gui.pwpwarfare.kit_team_select.title": "Выбор комплектов",
     "gui.pwpwarfare.kit_team_select.blue": "Комплекты BLUFOR",
     "gui.pwpwarfare.kit_team_select.red": "Комплекты REDFOR",
-
     "gui.pwpwarfare.kit_list.title_format": "Комплекты - %s",
     "gui.pwpwarfare.kit_list.copy_all": "Копировать всё",
     "gui.pwpwarfare.kit_list.paste_all": "Вставить всё",
     "gui.pwpwarfare.kit_list.copy": "Копировать",
     "gui.pwpwarfare.kit_list.paste": "Вставить",
-
     "gui.pwpwarfare.kit_preview.format": "Комплект: %s",
     "gui.pwpwarfare.kit_preview.back": "Назад",
-
     "gui.pwpwarfare.squad_select.title": "Меню отряда",
     "gui.pwpwarfare.squad_select.apply_cmd": "Стать командиром",
     "gui.pwpwarfare.squad_select.squad_name": "Название отряда...",
@@ -224,22 +204,16 @@
     "gui.pwpwarfare.squad_select.channel_squad": "ОТРЯД",
     "gui.pwpwarfare.squad_select.channel_unknown": "Неизвестно",
     "gui.pwpwarfare.squad_select.kit": "Снаряжение",
- 
     "gui.pwpwarfare.map_marker.error": "Нельзя поставить метку сюда!",
-
     "gui.pwpwarfare.vehicle_spawner.yaw": "Рыскание",
     "gui.pwpwarfare.vehicle_spawner.vehicle_id": "ID техники",
     "gui.pwpwarfare.vehicle_spawner.respawn_time": "Возрождение",
     "gui.pwpwarfare.vehicle_spawner.initial_time": "Начальное",
-
     "gui.pwpwarfare.victory.title": "Матч окончен",
     "gui.pwpwarfare.victory.continue": "Продолжить",
-
     "gui.pwpwarfare.team_select.title": "Выберите команду",
     "gui.pwpwarfare.team_select.join": "ВСТУПИТЬ",
-
     "gui.pwpwarfare.kit_select.title": "Выбрать комплект",
-
     "gui.pwpwarfare.radial.crate_supply": "Грузовой контейнер",
     "gui.pwpwarfare.radial.defense": "Оборона",
     "gui.pwpwarfare.radial.hub_supply": "Припасы FOB",
@@ -248,16 +222,12 @@
     "gui.pwpwarfare.radial.tactical": "Тактика",
     "gui.pwpwarfare.radial.markers": "Метки",
     "gui.pwpwarfare.radial.walls": "Стены",
-
     "gui.pwpwarfare.map_marker_select.title": "Выберите тип метки",
-
     "gui.pwpwarfare.kit_editor.skins": "Скины",
     "gui.pwpwarfare.kit_skin_select.title": "Скины оружия",
-
     "gui.pwpwarfare.skin_list.title": "Настройка скинов",
     "gui.pwpwarfare.skin_list.add": "+ Добавить скин",
     "gui.pwpwarfare.skin_list.refresh": "Обновить",
-
     "gui.pwpwarfare.skin_editor.add": "Добавить скин",
     "gui.pwpwarfare.skin_editor.edit": "Редактировать скин",
     "gui.pwpwarfare.skin_editor.save": "Сохранить",
@@ -268,7 +238,6 @@
     "gui.pwpwarfare.skin_editor.weapon_tag": "Тег оружия",
     "gui.pwpwarfare.skin_editor.rarity": "Редкость",
     "gui.pwpwarfare.skin_editor.model_path": "Путь модели",
-
     "gui.pwpwarfare.faction_vehicle_select.title": "Выбор техники фракции",
     "gui.pwpwarfare.faction_vehicle_list.title": "Техника - %s",
     "gui.pwpwarfare.faction_vehicle_list.add": "+ Добавить",
@@ -276,5 +245,16 @@
     "gui.pwpwarfare.faction_vehicle_editor.title": "Редактор техники - %s",
     "gui.pwpwarfare.faction_vehicle_editor.save": "Сохранить",
     "gui.pwpwarfare.faction_vehicle_editor.back": "Назад",
-    "gui.pwpwarfare.faction_vehicle.saved": "Техника сохранена!"
+    "gui.pwpwarfare.faction_vehicle.saved": "Техника сохранена!",
+    "item.pwpwarfare.binoculars": "Бинокль",
+    "pwpwarfare.message.station_no_vehicle_team": "У техники нет команды!",
+    "pwpwarfare.message.station_no_team": "Станция нейтральна!",
+    "pwpwarfare.message.station_wrong_team": "Чужая команда! Станция принадлежит %s",
+    "pwpwarfare.message.station_resupplying": "Пополнение: %s/%s",
+    "pwpwarfare.message.station_ammo_full": "Техника полностью пополнена!",
+    "pwpwarfare.message.station_resupplying_generic": "Пополнение техники...",
+    "subtitles.pwpwarfare.station_idle": "Станция гудит",
+    "block.pwpwarfare.vehicle_station": "Станция техники",
+    "block.pwpwarfare.wall_slab_block": "Полустена",
+    "block.pwpwarfare.camo_net": "Маскировочная сетка"
 }

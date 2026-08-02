@@ -1,12 +1,13 @@
 package com.pigeostudios.pwp.warfare.client;
 
+import com.pigeostudios.pwp.warfare.client.renderer.BinocularsRenderer;
 import com.pigeostudios.pwp.warfare.client.renderer.EntrenchingToolRenderer;
 import com.pigeostudios.pwp.warfare.client.renderer.SquadRadioRenderer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 
 // Расширения клиентских предметов для кастомного рендера
-// Сапёрная лопатка и радиостанция имеют собственные 3D-модели
+// Сапёрная лопатка, радиостанция и бинокль имеют собственные 3D-модели
 public class ClientItemExtensions {
    public static final IClientItemExtensions ENTRENCHING_TOOL = new IClientItemExtensions() {
       private EntrenchingToolRenderer renderer;
@@ -25,6 +26,17 @@ public class ClientItemExtensions {
       public BlockEntityWithoutLevelRenderer getCustomRenderer() {
          if (this.renderer == null) {
             this.renderer = new SquadRadioRenderer();
+         }
+
+         return this.renderer;
+      }
+   };
+   public static final IClientItemExtensions BINOCULARS = new IClientItemExtensions() {
+      private BinocularsRenderer renderer;
+
+      public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+         if (this.renderer == null) {
+            this.renderer = new BinocularsRenderer();
          }
 
          return this.renderer;

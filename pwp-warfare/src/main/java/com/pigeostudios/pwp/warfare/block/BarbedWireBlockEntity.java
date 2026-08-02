@@ -201,6 +201,11 @@ public class BarbedWireBlockEntity extends BlockEntity {
 
              entity.activeDiggers = 0;
           } else {
+            // Миграция старых сейвов: построенная проволока без стадии -> полная стадия
+            if (state.getValue(BarbedWireBlock.BUILD_STAGE) == 0 && entity.dismantleProgress == 0) {
+               level.setBlock(pos, (BlockState)state.setValue(BarbedWireBlock.BUILD_STAGE, 2), 3);
+            }
+
             if (entity.activeDiggers > 0 || entity.dismantleProgress > 0) {
                if (entity.activeDiggers > 0) {
                   float speed = entity.activeDiggers >= 3 ? 2.0F : 1.0F;
@@ -211,10 +216,16 @@ public class BarbedWireBlockEntity extends BlockEntity {
                   entity.setChanged();
                }
 
-               if (entity.dismantleProgress >= 1200) {
-                  entity.dismantleProgress = 1200;
-                  entity.handleDismantleComplete(level, pos, state);
-               }
+                if (entity.dismantleProgress >= 1200) {
+                   entity.dismantleProgress = 1200;
+                   entity.handleDismantleComplete(level, pos, state);
+                } else {
+                   // Стадии при разборке идут в обратном порядке
+                   int newStage = entity.dismantleProgress >= 800 ? 0 : (entity.dismantleProgress >= 400 ? 1 : 2);
+                   if (state.getValue(BarbedWireBlock.BUILD_STAGE) != newStage) {
+                      level.setBlock(pos, (BlockState)state.setValue(BarbedWireBlock.BUILD_STAGE, newStage), 3);
+                   }
+                }
 
                if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= 1200) {
                   level.sendBlockUpdated(pos, state, state, 3);

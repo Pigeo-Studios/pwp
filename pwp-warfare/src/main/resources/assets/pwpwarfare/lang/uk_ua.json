@@ -59,7 +59,6 @@
     "block.pwpwarfare.vehicle_spawner": "Виклик техніки",
     "block.pwpwarfare.crate_dropped": "Вантажний контейнер",
     "block.pwpwarfare.ammo_bag": "Сумка з боєприпасами",
-
     "subtitles.pwpwarfare.ags_shoot": "АГС-30 стріляє",
     "subtitles.pwpwarfare.m2_load": "M2 Browning заряджається",
     "subtitles.pwpwarfare.m2_shoot": "M2 Browning стріляє",
@@ -69,28 +68,22 @@
     "subtitles.pwpwarfare.siren_alarm": "Сирена виє",
     "subtitles.pwpwarfare.player_downed": "Гравець поранений",
     "subtitles.pwpwarfare.shovel_dig": "Лопата копає",
-
     "pwpwarfare.container.kit_editor": "Редактор комплекту",
     "pwpwarfare.container.vehicle_spawner": "Виклик техніки",
-
     "pwpwarfare.team_select.title": "Оберіть команду",
     "pwpwarfare.team_select.blue": "BLUFOR",
     "pwpwarfare.team_select.red": "REDFOR",
-
     "pwpwarfare.squad.create": "Створити відділ",
     "pwpwarfare.squad.join": "Вступити у відділ",
     "pwpwarfare.squad.leave": "Покинути відділ",
     "pwpwarfare.squad.disband": "Розпустити відділ",
-
     "pwpwarfare.kit.select": "Обрати клас",
     "pwpwarfare.kit.unassigned": "Без класу",
     "pwpwarfare.kit.locked": "Заблоковано",
     "pwpwarfare.kit.locked_reason": "Потрібен ранг %s",
-
     "pwpwarfare.vote.start": "Голосування за початок",
     "pwpwarfare.vote.yes": "Готовий",
     "pwpwarfare.vote.no": "Не готовий",
-
     "pwpwarfare.stats.title": "Статистика матчу",
     "pwpwarfare.stats.kills": "Вбивства",
     "pwpwarfare.stats.deaths": "Смерті",
@@ -105,25 +98,21 @@
     "pwpwarfare.stats.damage_dealt": "Завдано шкоди",
     "pwpwarfare.stats.healing_done": "Виліковано",
     "pwpwarfare.stats.supplies": "Доставлено припасів",
-
     "pwpwarfare.match.victory": "Перемога!",
     "pwpwarfare.match.defeat": "Поразка",
     "pwpwarfare.match.xp_earned": "+%d досвіду",
     "pwpwarfare.match.coins_earned": "+%d монет",
     "pwpwarfare.match.wait_for_server": "Очікування ігрового сервера...",
-
     "pwpwarfare.death.killed": "%s убив %s",
     "pwpwarfare.death.knockout": "%s добив %s",
     "pwpwarfare.death.vehicle": "%s знищив %s на техніці",
     "pwpwarfare.death.teamkill": "%s вчинив тімкіл %s",
     "pwpwarfare.death.bleed_out": "%s сплив кров'ю",
-
     "pwpwarfare.notification.xp": "+%d досвіду",
     "pwpwarfare.notification.coins": "+%d монет",
     "pwpwarfare.notification.level_up": "Новий рівень! Тепер ви %d рівня",
     "pwpwarfare.notification.rank_up": "Новий ранг: %s",
     "pwpwarfare.notification.kit_unlocked": "Відкрито новий клас: %s",
-
     "pwpwarfare.message.kit_reserved": "Комплект зарезервовано: %s",
     "pwpwarfare.message.kit_selected": "Комплект обрано: %s",
     "pwpwarfare.message.ejected_not_qualified": "Вас висаджено: немає відповідного комплекту!",
@@ -134,7 +123,6 @@
     "pwpwarfare.message.teamkill_warn_subtitle": "Попередження про тімкіл",
     "pwpwarfare.message.teamkill_restrict_expired": "Обмеження бази знято",
     "pwpwarfare.message.teamkill_restrict_remaining": "Обмеження бази: %dс залишилось",
-
     "pwpwarfare.marker.attack": "Атака",
     "pwpwarfare.marker.defend": "Оборона",
     "pwpwarfare.marker.move": "Рух",
@@ -158,9 +146,7 @@
     "pwpwarfare.marker.cas_fighter": "CAS Винищувач",
     "pwpwarfare.marker.mobile_zu": "Мобільна ЗУ",
     "pwpwarfare.marker.supply_truck": "Вантажівка",
-
     "itemGroup.pwpwarfare": "PWP Warfare",
-
     "gui.pwpwarfare.downed.title": "Поранений",
     "gui.pwpwarfare.downed.give_up": "Здатися",
     "gui.pwpwarfare.downed.call_medic": "Покликати медика",
@@ -168,7 +154,6 @@
     "gui.pwpwarfare.downed.call_medic_cooldown": "Покликати медика (%dс)",
     "gui.pwpwarfare.downed.closest_ally": "Найближчий: %dм - %s",
     "gui.pwpwarfare.downed.no_allies": "Поруч немає союзників",
-
     "gui.pwpwarfare.config.title": "Налаштування війни",
     "gui.pwpwarfare.config.save": "Зберегти",
     "gui.pwpwarfare.config.dig_speed": "Швидкість копання",
@@ -187,7 +172,6 @@
     "gui.pwpwarfare.config.blue_team_name": "Назва BLUFOR",
     "gui.pwpwarfare.config.red_team_name": "Назва REDFOR",
     "gui.pwpwarfare.config.revive_item_id": "ID предмета оживлення",
-
     "gui.pwpwarfare.kit_editor.leader_only": "Тільки лідер: УВІМК",
     "gui.pwpwarfare.kit_editor.leader_only_off": "Тільки лідер: ВИМК",
     "gui.pwpwarfare.kit_editor.save": "Зберегти",
@@ -197,23 +181,19 @@
     "gui.pwpwarfare.kit_editor.min_players": "Мін. гравців",
     "gui.pwpwarfare.kit_editor.toggle_resupply": "Увімк/Вимк поповнення",
     "gui.pwpwarfare.kit_editor.save_nbt": "Зберегти NBT",
-
     "gui.pwpwarfare.faction_select.title": "Вибір комплектів фракції",
     "gui.pwpwarfare.faction_select.loading": "Завантаження фракцій...",
     "gui.pwpwarfare.faction_kit_list.title_format": "Комплекти фракції - %s",
     "gui.pwpwarfare.kit_team_select.title": "Вибір комплектів",
     "gui.pwpwarfare.kit_team_select.blue": "Комплекти BLUFOR",
     "gui.pwpwarfare.kit_team_select.red": "Комплекти REDFOR",
-
     "gui.pwpwarfare.kit_list.title_format": "Комплекти - %s",
     "gui.pwpwarfare.kit_list.copy_all": "Копіювати все",
     "gui.pwpwarfare.kit_list.paste_all": "Вставити все",
     "gui.pwpwarfare.kit_list.copy": "Копіювати",
     "gui.pwpwarfare.kit_list.paste": "Вставити",
-
     "gui.pwpwarfare.kit_preview.format": "Комплект: %s",
     "gui.pwpwarfare.kit_preview.back": "Назад",
-
     "gui.pwpwarfare.squad_select.title": "Меню відділу",
     "gui.pwpwarfare.squad_select.apply_cmd": "Стати командиром",
     "gui.pwpwarfare.squad_select.squad_name": "Назва відділу...",
@@ -224,22 +204,16 @@
     "gui.pwpwarfare.squad_select.channel_squad": "ВІДДІЛ",
     "gui.pwpwarfare.squad_select.channel_unknown": "Невідомо",
     "gui.pwpwarfare.squad_select.kit": "Спорядження",
-
     "gui.pwpwarfare.map_marker.error": "Не можна поставити позначку тут!",
-
     "gui.pwpwarfare.vehicle_spawner.yaw": "Рискання",
     "gui.pwpwarfare.vehicle_spawner.vehicle_id": "ID техніки",
     "gui.pwpwarfare.vehicle_spawner.respawn_time": "Відродження",
     "gui.pwpwarfare.vehicle_spawner.initial_time": "Початкове",
-
     "gui.pwpwarfare.victory.title": "Матч закінчено",
     "gui.pwpwarfare.victory.continue": "Продовжити",
-
     "gui.pwpwarfare.team_select.title": "Оберіть команду",
     "gui.pwpwarfare.team_select.join": "ВСТУПИТИ",
-
     "gui.pwpwarfare.kit_select.title": "Обрати комплект",
-
     "gui.pwpwarfare.radial.crate_supply": "Вантажний контейнер",
     "gui.pwpwarfare.radial.defense": "Оборона",
     "gui.pwpwarfare.radial.hub_supply": "Припаси FOB",
@@ -248,16 +222,12 @@
     "gui.pwpwarfare.radial.tactical": "Тактика",
     "gui.pwpwarfare.radial.markers": "Позначки",
     "gui.pwpwarfare.radial.walls": "Стіни",
-
     "gui.pwpwarfare.map_marker_select.title": "Оберіть тип позначки",
-
     "gui.pwpwarfare.kit_editor.skins": "Скіни",
     "gui.pwpwarfare.kit_skin_select.title": "Скіни зброї",
-
     "gui.pwpwarfare.skin_list.title": "Налаштування скінів",
     "gui.pwpwarfare.skin_list.add": "+ Додати скін",
     "gui.pwpwarfare.skin_list.refresh": "Оновити",
-
     "gui.pwpwarfare.skin_editor.add": "Додати скін",
     "gui.pwpwarfare.skin_editor.edit": "Редагувати скін",
     "gui.pwpwarfare.skin_editor.save": "Зберегти",
@@ -268,7 +238,6 @@
     "gui.pwpwarfare.skin_editor.weapon_tag": "Тег зброї",
     "gui.pwpwarfare.skin_editor.rarity": "Рідкість",
     "gui.pwpwarfare.skin_editor.model_path": "Шлях моделі",
-
     "gui.pwpwarfare.faction_vehicle_select.title": "Вибір техніки фракції",
     "gui.pwpwarfare.faction_vehicle_list.title": "Техніка - %s",
     "gui.pwpwarfare.faction_vehicle_list.add": "+ Додати",
@@ -276,5 +245,16 @@
     "gui.pwpwarfare.faction_vehicle_editor.title": "Редактор техніки - %s",
     "gui.pwpwarfare.faction_vehicle_editor.save": "Зберегти",
     "gui.pwpwarfare.faction_vehicle_editor.back": "Назад",
-    "gui.pwpwarfare.faction_vehicle.saved": "Техніку збережено!"
+    "gui.pwpwarfare.faction_vehicle.saved": "Техніку збережено!",
+    "item.pwpwarfare.binoculars": "Бінокль",
+    "pwpwarfare.message.station_no_vehicle_team": "У техніки немає команди!",
+    "pwpwarfare.message.station_no_team": "Станція нейтральна!",
+    "pwpwarfare.message.station_wrong_team": "Чужа команда! Станція належить %s",
+    "pwpwarfare.message.station_resupplying": "Поповнення: %s/%s",
+    "pwpwarfare.message.station_ammo_full": "Техніку повністю поповнено!",
+    "pwpwarfare.message.station_resupplying_generic": "Поповнення техніки...",
+    "subtitles.pwpwarfare.station_idle": "Станція гуде",
+    "block.pwpwarfare.vehicle_station": "Станція техніки",
+    "block.pwpwarfare.wall_slab_block": "Півстіна",
+    "block.pwpwarfare.camo_net": "Маскувальна сітка"
 }

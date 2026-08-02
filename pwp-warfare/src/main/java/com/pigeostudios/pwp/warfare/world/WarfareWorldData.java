@@ -41,7 +41,7 @@ public class WarfareWorldData extends SavedData {
    public List<BlockPos> blueRallies = new ArrayList<>();
    public List<BlockPos> redRallies = new ArrayList<>();
    public List<WarfareWorldData.HubInfo> hubs = new ArrayList<>();
-   public List<WarfareWorldData.MainSupplyInfo> mainSupplies = new ArrayList<>();
+   public List<WarfareWorldData.VehicleStationInfo> vehicleStations = new ArrayList<>();
    public List<WarfareWorldData.Squad> squads = new ArrayList<>();
    public int blueCMDId = -1;
    public int redCMDId = -1;
@@ -446,11 +446,11 @@ public class WarfareWorldData extends SavedData {
       tag.put("HubsData", hubList);
       ListTag supplyList = new ListTag();
 
-      for (WarfareWorldData.MainSupplyInfo s : this.mainSupplies) {
+      for (WarfareWorldData.VehicleStationInfo s : this.vehicleStations) {
          supplyList.add(s.save());
       }
 
-      tag.put("MainSupplies", supplyList);
+      tag.put("VehicleStations", supplyList);
       CompoundTag blueSpawnsTag = new CompoundTag();
       this.blueSpawns.forEach((dim, pos) -> blueSpawnsTag.putLong(dim, pos.asLong()));
       tag.put("BlueSpawnsMap", blueSpawnsTag);
@@ -639,11 +639,18 @@ public class WarfareWorldData extends SavedData {
          }
       }
 
-      if (tag.contains("MainSupplies")) {
+      if (tag.contains("VehicleStations")) {
+         ListTag list = tag.getList("VehicleStations", 10);
+
+         for (int i = 0; i < list.size(); i++) {
+            data.vehicleStations.add(WarfareWorldData.VehicleStationInfo.load(list.getCompound(i)));
+         }
+      } else if (tag.contains("MainSupplies")) {
+         // Миграция старых сохранений
          ListTag list = tag.getList("MainSupplies", 10);
 
          for (int i = 0; i < list.size(); i++) {
-            data.mainSupplies.add(WarfareWorldData.MainSupplyInfo.load(list.getCompound(i)));
+            data.vehicleStations.add(WarfareWorldData.VehicleStationInfo.load(list.getCompound(i)));
          }
       }
 
@@ -918,12 +925,12 @@ public class WarfareWorldData extends SavedData {
       }
    }
 
-   public static class MainSupplyInfo {
+   public static class VehicleStationInfo {
       public BlockPos pos;
       public String team;
       public String dimension;
 
-      public MainSupplyInfo(BlockPos pos, String team, String dimension) {
+      public VehicleStationInfo(BlockPos pos, String team, String dimension) {
          this.pos = pos;
          this.team = team;
          this.dimension = dimension;
@@ -937,11 +944,11 @@ public class WarfareWorldData extends SavedData {
          return tag;
       }
 
-      public static WarfareWorldData.MainSupplyInfo load(CompoundTag tag) {
+      public static WarfareWorldData.VehicleStationInfo load(CompoundTag tag) {
          BlockPos p = BlockPos.of(tag.getLong("Pos"));
          String t = tag.getString("Team");
          String d = tag.contains("Dimension") ? tag.getString("Dimension") : "minecraft:overworld";
-         return new WarfareWorldData.MainSupplyInfo(p, t, d);
+         return new WarfareWorldData.VehicleStationInfo(p, t, d);
       }
    }
 

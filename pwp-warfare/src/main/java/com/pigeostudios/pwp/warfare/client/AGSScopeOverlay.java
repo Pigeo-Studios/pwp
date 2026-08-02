@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
+import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -23,6 +24,13 @@ public class AGSScopeOverlay {
    public static void onRenderOverlay(Pre event) {
       Minecraft mc = Minecraft.getInstance();
       if (mc.player != null) {
+         // Бинокль скрывает стандартный прицел
+         if (mc.player.isUsingItem() && mc.player.getUseItem().getItem() == ModItems.BINOCULARS.get()
+            && event.getOverlay() == VanillaGuiOverlay.CROSSHAIR.type()) {
+            event.setCanceled(true);
+            return;
+         }
+
          if (mc.player.getVehicle() instanceof AGS30Entity ags && ags.isAiming() && event.getOverlay() == VanillaGuiOverlay.CROSSHAIR.type()) {
             event.setCanceled(true);
          }

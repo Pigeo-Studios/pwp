@@ -39,7 +39,7 @@ public class PacketSyncGameData {
    public final String currentMapImage;
    public final List<WarfareWorldData.VehicleRecord> markedVehicles;
    public final List<WarfareWorldData.HubInfo> hubs;
-   public final List<WarfareWorldData.MainSupplyInfo> mainSupplies;
+   public final List<WarfareWorldData.VehicleStationInfo> vehicleStations;
    public final String blueFaction;
    public final String redFaction;
     public final String blueCustomName;
@@ -98,7 +98,7 @@ public class PacketSyncGameData {
       String currentMapImage,
       List<WarfareWorldData.VehicleRecord> markedVehicles,
       List<WarfareWorldData.HubInfo> hubs,
-      List<WarfareWorldData.MainSupplyInfo> mainSupplies,
+      List<WarfareWorldData.VehicleStationInfo> vehicleStations,
       String blueFaction,
       String redFaction,
        String blueCustomName,
@@ -158,7 +158,7 @@ public class PacketSyncGameData {
       this.currentMapImage = currentMapImage;
       this.markedVehicles = markedVehicles;
       this.hubs = hubs;
-      this.mainSupplies = mainSupplies;
+      this.vehicleStations = vehicleStations;
       this.blueFaction = blueFaction;
       this.redFaction = redFaction;
        this.blueCustomName = blueCustomName;
@@ -236,7 +236,7 @@ public class PacketSyncGameData {
          b.writeBoolean(h.isBlocked);
          b.writeInt(h.materials);
       });
-      buf.writeCollection(msg.mainSupplies, (b, s) -> {
+      buf.writeCollection(msg.vehicleStations, (b, s) -> {
          b.writeBlockPos(s.pos);
          b.writeUtf(s.team);
          b.writeUtf(s.dimension);
@@ -327,7 +327,7 @@ public class PacketSyncGameData {
          h.materials = b.readInt();
          return h;
       });
-      List<WarfareWorldData.MainSupplyInfo> sL = buf.readList(b -> new WarfareWorldData.MainSupplyInfo(b.readBlockPos(), b.readUtf(), b.readUtf()));
+      List<WarfareWorldData.VehicleStationInfo> sL = buf.readList(b -> new WarfareWorldData.VehicleStationInfo(b.readBlockPos(), b.readUtf(), b.readUtf()));
       String bF = buf.readUtf();
       String rF = buf.readUtf();
       String bCN = buf.readUtf();
