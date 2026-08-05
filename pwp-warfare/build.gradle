@@ -1,8 +1,20 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
+    }
+}
+
 plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
 }
+apply plugin: 'org.spongepowered.mixin'
 
 group = 'com.pigeostudios.pwp'
 version = '1.0.1'
@@ -34,6 +46,42 @@ minecraft {
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
+mixin {
+    add sourceSets.main, "pwpwarfare.refmap.json"
+    config "pwpwarfare.mixins.json"
+    debug.export = true
+}
+
+// Рефмап — побочный выход Mixin AP. Инкрементальные и прерванные пересборки
+// теряют его, из-за чего в релизный jar рефмап не попадал (миксины не
+// работали в проде). Принудительно перекомпилируем модуль на каждой сборке.
+tasks.named('compileJava') {
+    outputs.upToDateWhen { false }
+}
+
+// Guard: в релизный jar обязаны попадать миксин-конфиг и рефмап, иначе
+// миксины не загрузятся (нет атрибута MixinConfigs) или не найдут таргеты
+// в проде (SRG). Если чего-то нет — сборка падает.
+tasks.named('jar') {
+    doLast {
+        def jarFile = archiveFile.get().asFile
+        def fs = java.nio.file.FileSystems.newFileSystem(jarFile.toPath(), [:] as Map)
+        try {
+            def manifest = fs.getPath('META-INF/MANIFEST.MF')
+            def manifestText = new String(java.nio.file.Files.readAllBytes(manifest), 'UTF-8')
+            def mixinConfigs = manifestText.contains('MixinConfigs: pwpwarfare.mixins.json')
+            def refmap = fs.getPath('pwpwarfare.refmap.json') != null
+                    && java.nio.file.Files.exists(fs.getPath('pwpwarfare.refmap.json'))
+            if (!mixinConfigs || !refmap) {
+                throw new GradleException("FAIL: $jarFile.name — MixinConfigs=$mixinConfigs refmap=$refmap — релизный jar без миксинов")
+            }
+            println "OK: $jarFile.name — MixinConfigs + pwpwarfare.refmap.json присутствуют"
+        } finally {
+            fs.close()
+        }
+    }
+}
+
 repositories {
     maven {
         name = "GeckoLib"
@@ -56,9 +104,20 @@ dependencies {
     implementation fg.deobf("top.theillusivec4.curios:curios-forge:5.14.1+1.20.1")
     implementation "de.maxhenkel.voicechat:voicechat-api:2.6.20"
 
+    // Прод-жарники чужих модов для компиляции (compileOnly, в jar не кладутся):
+    // tacz — GunShootEvent (предохранитель мейн-зоны), SBW/pointblank — миксины на стрельбу,
+    // uncomplicated-fpv — дроны FPV/Mavic (деплой-система)
+    def pwpfiles = System.getenv('PWPFILES_DIR') ?: 'C:/Users/maska/OneDrive/Desktop/Pwpfiles'
+    compileOnly files("${pwpfiles}/mods/tacz-1.20.1-1.1.8-hotfix.jar")
+    compileOnly files("${pwpfiles}/mods/superbwarfare-0.8.9-final-mc1.20.1-6effe4385-all.jar")
+    compileOnly files("${pwpfiles}/mods/pointblank-forge-1.20.1-1.11.1.jar")
+    compileOnly files("${pwpfiles}/mods/uncomplicated-fpv-1.0.0.jar")
+
     implementation project(':pwp-core-client')
     implementation project(':pwp-core-server')
     implementation project(':pwp-cosmetics')
+
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
 jar {

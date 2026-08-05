@@ -163,7 +163,7 @@ public class KitListScreen extends Screen {
             gui.fill(bx, by, bx + CARD_W, by + CARD_H, PWPTheme.Colors.SURFACE_LIGHT);
             gui.renderOutline(bx, by, CARD_W, CARD_H, PWPTheme.Colors.BORDER);
 
-            String iconPath = kitName.toLowerCase().replace(" ", "_").replace("-", "_");
+            String iconPath = DeployData.kitIconFileName(kitName);
             ResourceLocation iconLoc = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconPath + ".png");
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
             gui.blit(iconLoc, bx + (CARD_W - 24) / 2, by + 4, 0, 0, 24, 24, 24, 24);

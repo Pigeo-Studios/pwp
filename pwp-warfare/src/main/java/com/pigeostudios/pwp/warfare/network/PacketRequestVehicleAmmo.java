@@ -42,7 +42,7 @@ public class PacketRequestVehicleAmmo {
                int currentMats = vehicle.getPersistentData().getInt("WARFARE_VehicleMats");
                int cost = (Integer)WarfareConfig.HUB_RESUPPLY_COST.get();
                if (!player.isCreative() && currentMats < cost) {
-                  player.displayClientMessage(Component.literal("Not enough Materials in Vehicle! (" + currentMats + ")").withStyle(ChatFormatting.RED), true);
+                   player.displayClientMessage(Component.literal("Недостаточно материалов в технике! (" + currentMats + ")").withStyle(ChatFormatting.RED), true);
                } else {
                   String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
                   if (!kitName.isEmpty() && !kitName.equals("Unassigned")) {
@@ -57,14 +57,14 @@ public class PacketRequestVehicleAmmo {
                               vehicle.getPersistentData().putInt("WARFARE_VehicleMats", newMats);
                            }
 
-                           player.displayClientMessage(Component.literal("Kit Resupplied! Vehicle Mats: " + newMats).withStyle(ChatFormatting.GREEN), true);
+                           player.displayClientMessage(Component.literal("Кит пополнен! Материалы техники: " + newMats).withStyle(ChatFormatting.GREEN), true);
                            player.level().playSound(null, player.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
                         } else {
-                           player.displayClientMessage(Component.literal("Ammo already full! Vehicle Mats: " + currentMats).withStyle(ChatFormatting.YELLOW), true);
+                           player.displayClientMessage(Component.literal("БК уже полон! Материалы техники: " + currentMats).withStyle(ChatFormatting.YELLOW), true);
                         }
                      }
                   } else {
-                     player.displayClientMessage(Component.literal("No Kit equipped!").withStyle(ChatFormatting.RED), true);
+                      player.displayClientMessage(Component.literal("Кит не надет!").withStyle(ChatFormatting.RED), true);
                   }
                }
             }

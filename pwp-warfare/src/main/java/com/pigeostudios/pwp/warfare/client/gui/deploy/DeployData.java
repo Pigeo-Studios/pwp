@@ -109,6 +109,12 @@ public class DeployData {
         return KIT_DISPLAY_NAMES.getOrDefault(en, en);
     }
 
+    /** Имя файла иконки кита: нижний регистр, только [a-z0-9/._-] (скобки/пробелы → `_`). */
+    public static String kitIconFileName(String kitName) {
+        String s = kitName.toLowerCase().replaceAll("[^a-z0-9._/-]", "_");
+        return s.replaceAll("_+", "_").replaceAll("^_|_$", "");
+    }
+
     public static void populate() {
         populate(List.of());
     }

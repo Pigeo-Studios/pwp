@@ -100,11 +100,11 @@ public class DefenseRadialScreen extends Screen {
          pose.popPose();
       }
 
-      this.drawLabel(gui, "Walls", centerX, centerY - 75, selected == 0);
-      this.drawLabel(gui, "Bunker", centerX + 70, centerY - 25, selected == 1);
-      this.drawLabel(gui, "Vehicle Station", centerX + 45, centerY + 65, selected == 2);
-      this.drawLabel(gui, "WIRE", centerX - 45, centerY + 65, selected == 3);
-      this.drawLabel(gui, "HUB", centerX - 70, centerY - 25, selected == 4);
+      this.drawLabel(gui, "СТЕНЫ", centerX, centerY - 75, selected == 0);
+      this.drawLabel(gui, "БУНКЕР", centerX + 70, centerY - 25, selected == 1);
+      this.drawLabel(gui, "СТАНЦИЯ ТЕХНИКИ", centerX + 45, centerY + 65, selected == 2);
+      this.drawLabel(gui, "КОЛЮЧКА", centerX - 45, centerY + 65, selected == 3);
+      this.drawLabel(gui, "ФОБ", centerX - 70, centerY - 25, selected == 4);
    }
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected) {

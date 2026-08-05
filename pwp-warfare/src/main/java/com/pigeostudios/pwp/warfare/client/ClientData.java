@@ -60,6 +60,17 @@ public class ClientData {
    public static float voteTransition = 0.0F;
    public static boolean blueReady = false;
    public static boolean redReady = false;
+   public static boolean droneDeployActive = false;
+   public static float droneDeployProgress = 0.0F;
+   public static float droneDeployDisplayProgress = 0.0F;
+   public static int droneDeployX = 0;
+   public static int droneDeployY = 0;
+   public static int droneDeployZ = 0;
+   public static String droneDeployTypeId = "";
+   public static int droneDeployTotalTicks = 80;
+   public static int droneDeployMode = 0;
+   public static int droneDeployLastUpdate = 0;
+   public static int clientTickCounter = 0;
    public static double mapScale = 4.0;
    public static int mapCenterX = 0;
    public static int mapCenterZ = 0;
@@ -117,8 +128,23 @@ public class ClientData {
       public static boolean awaitingRespawn = false;
       public static long deployBlockedUntil = 0L;
    public static int downedBleedoutDuration = 0;
-   public static List<Component> menuChatHistory = new ArrayList<>();
-   public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();
+    public static List<Component> menuChatHistory = new ArrayList<>();
+    public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();
+    public static Map<Integer, VehicleStatus> vehicleStatuses = new ConcurrentHashMap<>();
+
+   // Статус техники от сервера (PacketVehicleStatus). Клиент сам тикает таймер вниз.
+   public static class VehicleStatus {
+      public final int kind;
+      public int secondsLeft;
+      public final long receivedAt;
+
+      public VehicleStatus(int kind, int secondsLeft) {
+         this.kind = kind;
+         this.secondsLeft = secondsLeft;
+         this.receivedAt = System.currentTimeMillis();
+      }
+   }
+
 
    public static void zoomMap(double delta) {
       double zoomFactor = 1.2;

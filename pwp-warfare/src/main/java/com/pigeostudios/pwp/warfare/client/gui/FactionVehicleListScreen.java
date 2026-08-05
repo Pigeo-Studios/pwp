@@ -42,11 +42,13 @@ public class FactionVehicleListScreen extends Screen {
         String vehicleName;
         String displayName;
         String vehicleId;
+        String category;
 
-        VehicleEntry(String vehicleName, String displayName, String vehicleId) {
+        VehicleEntry(String vehicleName, String displayName, String vehicleId, String category) {
             this.vehicleName = vehicleName;
             this.displayName = displayName;
             this.vehicleId = vehicleId;
+            this.category = category;
         }
     }
 
@@ -97,7 +99,8 @@ public class FactionVehicleListScreen extends Screen {
                 String vn = obj.has("vehicleName") ? obj.get("vehicleName").getAsString() : "";
                 String dn = obj.has("displayName") ? obj.get("displayName").getAsString() : "";
                 String vi = obj.has("vehicleId") ? obj.get("vehicleId").getAsString() : "";
-                loaded.add(new VehicleEntry(vn, dn, vi));
+                String cat = obj.has("category") ? obj.get("category").getAsString() : "";
+                loaded.add(new VehicleEntry(vn, dn, vi, cat));
             }
             vehicles = loaded;
             loading = false;
@@ -111,7 +114,8 @@ public class FactionVehicleListScreen extends Screen {
         for (VehicleEntry v : vehicles) {
             if (searchText.isEmpty() || v.vehicleName.toLowerCase().contains(searchText)
                 || v.displayName.toLowerCase().contains(searchText)
-                || v.vehicleId.toLowerCase().contains(searchText)) {
+                || v.vehicleId.toLowerCase().contains(searchText)
+                || v.category.toLowerCase().contains(searchText)) {
                 filtered.add(v);
             }
         }
@@ -210,6 +214,9 @@ public class FactionVehicleListScreen extends Screen {
                 gui.drawString(PWPTheme.Fonts.display(), entry.vehicleName, cx + 14, by + 4, PWPTheme.Colors.TEXT_ACCENT, false);
                 String info = entry.displayName.isEmpty() ? entry.vehicleId : entry.displayName;
                 gui.drawString(PWPTheme.Fonts.display(), info, cx + 14, by + 16, PWPTheme.Colors.TEXT_DIM, false);
+                if (!entry.category.isEmpty()) {
+                    gui.drawString(PWPTheme.Fonts.display(), entry.category, cx + panelW - 60, by + 16, PWPTheme.Colors.TEXT_SECONDARY, false);
+                }
             }
         }
 

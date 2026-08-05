@@ -77,8 +77,12 @@ public class WallBlockEntity extends BlockEntity {
    }
 
    public float getPercentage() {
-      boolean constructed = this.level != null && this.level.getBlockState(this.worldPosition).hasProperty(WallBlock.CONSTRUCTED)
-         && (Boolean)this.level.getBlockState(this.worldPosition).getValue(WallBlock.CONSTRUCTED);
+      // camo_net (трансформ стены) — уже построенный блок: property нет,
+      // считаем построенным, чтобы HUD показывал «Destroy», а не «Build».
+      boolean constructed = this.level != null && this.level.getBlockState(this.worldPosition).is(ModBlocks.CAMO_NET_BLOCK.get());
+      if (!constructed && this.level != null && this.level.getBlockState(this.worldPosition).hasProperty(WallBlock.CONSTRUCTED)) {
+         constructed = (Boolean)this.level.getBlockState(this.worldPosition).getValue(WallBlock.CONSTRUCTED);
+      }
       if (constructed && this.dismantleProgress > 0) {
          return (float)this.dismantleProgress / this.getMaxProgress();
       }
@@ -307,6 +311,35 @@ public class WallBlockEntity extends BlockEntity {
 
       this.returnMaterials(level, pos);
       level.destroyBlock(pos, false);
+      this.removeOrphanCamoNets(level);
+   }
+
+   // Fallback: camo_net-блоки входа/окон бункера не всегда попадают в linkedWalls
+   // (стена превращается в camo_net через transformTo). Сканируем bounding box
+   // структуры и сносим оставшиеся camo_net — иначе они висят абразурой
+   // без коллизии после полного разбора лопатой.
+   private void removeOrphanCamoNets(Level level) {
+      if (level.isClientSide || this.linkedWalls.isEmpty()) return;
+      int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+      int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+      for (BlockPos p : this.linkedWalls) {
+         minX = Math.min(minX, p.getX());
+         minY = Math.min(minY, p.getY());
+         minZ = Math.min(minZ, p.getZ());
+         maxX = Math.max(maxX, p.getX());
+         maxY = Math.max(maxY, p.getY());
+         maxZ = Math.max(maxZ, p.getZ());
+      }
+      for (int x = minX; x <= maxX; x++) {
+         for (int y = minY; y <= maxY; y++) {
+            for (int z = minZ; z <= maxZ; z++) {
+               BlockPos p = new BlockPos(x, y, z);
+               if (level.getBlockState(p).is(ModBlocks.CAMO_NET_BLOCK.get())) {
+                  level.destroyBlock(p, false);
+               }
+            }
+         }
+      }
    }
 
    private void returnMaterials(Level level, BlockPos pos) {

@@ -48,7 +48,7 @@ public class PacketConfirmArtStrike {
                            level.getServer()
                               .getPlayerList()
                               .broadcastSystemMessage(
-                                 Component.literal("STRATEGIC: Artillery Strike Confirmed by Commander!")
+                                  Component.literal("СТРАТЕГИЧЕСКИ: Артиллерийский удар подтверждён командиром!")
                                     .withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD}),
                                  false
                               );

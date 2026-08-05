@@ -3,6 +3,7 @@
     "item.pwpwarfare.faction_kit_setup": "Настройка комплектов фракций",
     "item.pwpwarfare.faction_vehicle_setup": "Настройка техники фракций",
     "item.pwpwarfare.entrenching_tool": "Сапёрная лопатка",
+    "item.pwpwarfare.drone_ammo_pouch": "Дрон-подсумок с гранатами",
     "item.pwpwarfare.squad_leader_radio": "Рация командира",
     "item.pwpwarfare.blue_apc": "БТР (BLUFOR)",
     "item.pwpwarfare.blue_tank": "Танк (BLUFOR)",
@@ -256,5 +257,9 @@
     "subtitles.pwpwarfare.station_idle": "Станция гудит",
     "block.pwpwarfare.vehicle_station": "Станция техники",
     "block.pwpwarfare.wall_slab_block": "Полустена",
-    "block.pwpwarfare.camo_net": "Маскировочная сетка"
+    "block.pwpwarfare.camo_net": "Маскировочная сетка",
+    "safety.mainzone.blocked": "Вы в мейн-зоне — стрельба запрещена",
+    "safety.mainzone.enter": "Вы вошли в мейн-зону. Здесь стрельба запрещена",
+    "squad.leader_kit_warning": "ВНИМАНИЕ: выберите кит ЛИДЕРА, иначе отряд распадётся!",
+    "squad.disbanded_leader": "Отряд расформирован: лидер не использует кит лидера!"
 }

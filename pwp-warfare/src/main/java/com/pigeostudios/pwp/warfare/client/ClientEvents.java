@@ -113,6 +113,7 @@ public class ClientEvents {
    @SubscribeEvent
    public static void onClientTick(ClientTickEvent event) {
       if (event.phase == Phase.END) {
+         ClientData.clientTickCounter++;
          Minecraft mc = Minecraft.getInstance();
          if (mc.player != null) {
             if (ClientData.voteActive && ClientData.voteTimer > 0 && mc.level.getGameTime() % 20L == 0L) {
@@ -430,13 +431,13 @@ public class ClientEvents {
             if (!isCandidate) {
                if (event.getKey() == 296 && event.getAction() == 1) {
                   PacketHandler.INSTANCE.sendToServer(new PacketCMDVote(true));
-                  mc.player.displayClientMessage(Component.literal("Voted: YES").withStyle(ChatFormatting.GREEN), true);
+                   mc.player.displayClientMessage(Component.literal("Голос: ЗА").withStyle(ChatFormatting.GREEN), true);
                   return;
                }
 
                if (event.getKey() == 297 && event.getAction() == 1) {
                   PacketHandler.INSTANCE.sendToServer(new PacketCMDVote(false));
-                  mc.player.displayClientMessage(Component.literal("Voted: NO").withStyle(ChatFormatting.RED), true);
+                   mc.player.displayClientMessage(Component.literal("Голос: ПРОТИВ").withStyle(ChatFormatting.RED), true);
                   return;
                }
             }
@@ -499,7 +500,7 @@ public class ClientEvents {
             && mc.player.getVehicle() != null
             && (event.getScreen() instanceof InventoryScreen || event.getScreen() instanceof AbstractContainerScreen)) {
             event.setCanceled(true);
-            mc.player.displayClientMessage(Component.literal("Inventory is disabled while inside a vehicle!").withStyle(ChatFormatting.RED), true);
+             mc.player.displayClientMessage(Component.literal("Инвентарь отключён, пока вы в технике!").withStyle(ChatFormatting.RED), true);
          }
       }
    }

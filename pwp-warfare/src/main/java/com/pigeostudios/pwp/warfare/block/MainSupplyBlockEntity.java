@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -8,6 +10,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
@@ -23,6 +26,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
 // ╨а╨О╨б╤У╨бтА░╨а╨Е╨а╤Х╨б╨Г╨бтАЪ╨б╨К ╨а┬▒╨а┬╗╨а╤Х╨а╤Ф╨а┬░ ╨а╤Ц╨а┬╗╨а┬░╨а╨Ж╨а╨Е╨а╤Х╨а╤Ц╨а╤Х ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П
@@ -66,8 +70,8 @@ public class MainSupplyBlockEntity extends BlockEntity {
             long currentTime = level.getGameTime();
 
             for (Entity vehicle : nearbyEntities) {
-               StringBuilder statusMessage = new StringBuilder();
-               boolean showActionBar = false;
+               int statusKind = 0;
+               int statusSeconds = 0;
                long lastSeenTime = vehicle.getPersistentData().getLong("WARFARE_LastSupplyTime");
                if (vehicle.getPersistentData().contains("WARFARE_VehicleMaxMats")) {
                   int maxMats = vehicle.getPersistentData().getInt("WARFARE_VehicleMaxMats");
@@ -88,13 +92,13 @@ public class MainSupplyBlockEntity extends BlockEntity {
                      if (++supplyTimer >= 15) {
                         vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", currentAmmo + 1);
                         vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
-                        sendChatMessageToPassengers(vehicle, "[Supply] +1 Crate Loaded (" + (currentAmmo + 1) + "/" + maxCrates + ")", ChatFormatting.GOLD);
+                         sendChatMessageToPassengers(vehicle, "[Снабжение] +1 ящик загружен (" + (currentAmmo + 1) + "/" + maxCrates + ")", ChatFormatting.GOLD);
                         spawnEffects(level, vehicle);
-                     } else {
-                        vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", supplyTimer);
-                        statusMessage.append(ChatFormatting.YELLOW).append("Loading Crate: ").append(15 - supplyTimer).append("s  ");
-                        showActionBar = true;
-                     }
+                      } else {
+                         vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", supplyTimer);
+                         statusKind = PacketVehicleStatus.KIND_LOADING_CRATE;
+                         statusSeconds = 15 - supplyTimer;
+                      }
                   } else {
                      vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
                   }
@@ -102,12 +106,12 @@ public class MainSupplyBlockEntity extends BlockEntity {
 
                if (vehicle.getPersistentData().contains("WARFARE_SpawnerPos")) {
                   long nextSupplyTime = vehicle.getPersistentData().getLong("WARFARE_NextSupplyTime");
-                  if (currentTime < nextSupplyTime) {
-                     long secondsLeft = (nextSupplyTime - currentTime) / 20L;
-                     vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
-                     statusMessage.append(ChatFormatting.RED).append("Rearm Cooldown: ").append(secondsLeft).append("s");
-                     showActionBar = true;
-                  } else {
+                   if (currentTime < nextSupplyTime) {
+                      long secondsLeft = (nextSupplyTime - currentTime) / 20L;
+                      vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
+                      statusKind = PacketVehicleStatus.KIND_REARM_COOLDOWN;
+                      statusSeconds = (int)secondsLeft;
+                   } else {
                      int repairTimer = vehicle.getPersistentData().getInt("WARFARE_RepairTimer");
                      if (++repairTimer >= 30) {
                         if (vehicle instanceof LivingEntity living) {
@@ -133,37 +137,36 @@ public class MainSupplyBlockEntity extends BlockEntity {
                                  }
                               }
 
-                              Item batteryItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery"));
-                              if (batteryItem != null) {
-                                 for (int i = 0; i < vehInv.getSlots(); i++) {
-                                    if (vehInv.getStackInSlot(i).isEmpty()) {
-                                       insertItem(vehInv, i, new ItemStack(batteryItem));
-                                       break;
-                                    }
-                                 }
-                              }
+                               Item batteryItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery_pack"));
+                               if (batteryItem != null) {
+                                  for (int i = 0; i < vehInv.getSlots(); i++) {
+                                     if (vehInv.getStackInSlot(i).isEmpty()) {
+                                        ItemStack battery = new ItemStack(batteryItem);
+                                        // Полный заряд (ёмкость large_battery_pack = 20 000 000), иначе техника встанет без энергии
+                                        battery.getOrCreateTag().putInt("Energy", 20000000);
+                                        insertItem(vehInv, i, battery);
+                                        break;
+                                     }
+                                  }
+                               }
                            });
                         }
 
                         vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
                         vehicle.getPersistentData().putLong("WARFARE_NextSupplyTime", currentTime + 600L);
-                        sendChatMessageToPassengers(vehicle, "[Base] Vehicle Fully Rearmed & Repaired!", ChatFormatting.GREEN);
+                         sendChatMessageToPassengers(vehicle, "[База] Техника полностью пополнена и отремонтирована!", ChatFormatting.GREEN);
                         spawnEffects(level, vehicle);
-                     } else {
-                        vehicle.getPersistentData().putInt("WARFARE_RepairTimer", repairTimer);
-                        statusMessage.append(ChatFormatting.AQUA).append("Rearming: ").append(30 - repairTimer).append("s");
-                        showActionBar = true;
-                     }
-                  }
-               }
+                      } else {
+                         vehicle.getPersistentData().putInt("WARFARE_RepairTimer", repairTimer);
+                         statusKind = PacketVehicleStatus.KIND_REARMING;
+                         statusSeconds = 30 - repairTimer;
+                      }
+                   }
+                }
 
-               if (showActionBar && statusMessage.length() > 0) {
-                  for (Entity passenger : vehicle.getPassengers()) {
-                     if (passenger instanceof Player player) {
-                        player.displayClientMessage(Component.literal(statusMessage.toString()), true);
-                     }
-                  }
-               }
+                if (statusKind != 0) {
+                   sendVehicleStatus(vehicle, statusKind, statusSeconds);
+                }
             }
          }
       }
@@ -177,10 +180,11 @@ public class MainSupplyBlockEntity extends BlockEntity {
       }
    }
 
-   private static void sendActionBarToPassengers(Entity vehicle, String msg, ChatFormatting color) {
+   private static void sendVehicleStatus(Entity vehicle, int kind, int secondsLeft) {
+      PacketVehicleStatus pkt = new PacketVehicleStatus(vehicle.getId(), kind, secondsLeft);
       for (Entity passenger : vehicle.getPassengers()) {
-         if (passenger instanceof Player player) {
-            player.displayClientMessage(Component.literal(msg).withStyle(color), true);
+         if (passenger instanceof ServerPlayer sp) {
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), pkt);
          }
       }
    }

@@ -4,6 +4,8 @@ import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +21,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -38,6 +41,7 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.network.NetworkHooks;
+import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
 // РЎСѓС‰РЅРѕСЃС‚СЊ СЏС‰РёРєР° СЃРЅР°Р±Р¶РµРЅРёСЏ
@@ -195,7 +199,7 @@ public class SupplyCrateEntity extends Entity {
                if (needsService) {
                   this.currentTargetUUID = vehicle.getUUID();
                   vehicle.getPersistentData().putInt("WARFARE_CrateTimer", 0);
-                  sendMessageToPassengers(vehicle, "Connecting to Supply Crate...", ChatFormatting.YELLOW);
+                   sendMessageToPassengers(vehicle, "Подключение к ящику снабжения...", ChatFormatting.YELLOW);
                   return;
                }
             }
@@ -234,20 +238,23 @@ public class SupplyCrateEntity extends Entity {
                      }
                   }
 
-                  Item batteryItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery"));
-                  if (batteryItem != null) {
-                     for (int i = 0; i < vehInv.getSlots(); i++) {
-                        if (vehInv.getStackInSlot(i).isEmpty()) {
-                           insertItem(vehInv, i, new ItemStack(batteryItem));
-                           break;
-                        }
-                     }
-                  }
+                   Item batteryItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery_pack"));
+                   if (batteryItem != null) {
+                      for (int i = 0; i < vehInv.getSlots(); i++) {
+                         if (vehInv.getStackInSlot(i).isEmpty()) {
+                            ItemStack battery = new ItemStack(batteryItem);
+                            // Полный заряд (ёмкость large_battery_pack = 20 000 000)
+                            battery.getOrCreateTag().putInt("Energy", 20000000);
+                            insertItem(vehInv, i, battery);
+                            break;
+                         }
+                      }
+                   }
                });
             }
 
             vehicle.getPersistentData().putLong("WARFARE_NextSupplyTime", this.level().getGameTime() + 600L);
-            sendMessageToPassengers(vehicle, "Vehicle Repaired & Rearmed by Crate!", ChatFormatting.GREEN);
+             sendMessageToPassengers(vehicle, "Техника отремонтирована и пополнена ящиком!", ChatFormatting.GREEN);
             actionDone = true;
          }
 
@@ -265,7 +272,17 @@ public class SupplyCrateEntity extends Entity {
          }
       } else {
          vehicle.getPersistentData().putInt("WARFARE_CrateTimer", timer);
-         sendMessageToPassengers(vehicle, "Resupplying: " + (timeToWait - timer) + "s", ChatFormatting.AQUA);
+         sendVehicleStatus(vehicle, PacketVehicleStatus.KIND_CRATE_RESUPPLY, timeToWait - timer);
+      }
+   }
+
+   // Статус техники в HUD вместо спама в actionbar
+   private static void sendVehicleStatus(Entity vehicle, int kind, int secondsLeft) {
+      PacketVehicleStatus pkt = new PacketVehicleStatus(vehicle.getId(), kind, secondsLeft);
+      for (Entity passenger : vehicle.getPassengers()) {
+         if (passenger instanceof ServerPlayer sp) {
+            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), pkt);
+         }
       }
    }
 
@@ -314,7 +331,7 @@ public class SupplyCrateEntity extends Entity {
                          Player player = currentLevel.getPlayerByUUID(this.ownerId);
                          if (player != null) {
                             ChatFormatting color = this.getTeamOwner().equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-                            player.displayClientMessage(Component.literal("FOB Resupplied! (+" + this.getMaterials() + " Mats)").withStyle(color), true);
+                             player.displayClientMessage(Component.literal("ФОБ пополнен! (+" + this.getMaterials() + " материалов)").withStyle(color), true);
                             if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
                                com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordSuppliesDelivered(sp, this.getMaterials());
                             }

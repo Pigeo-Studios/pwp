@@ -3,6 +3,7 @@
     "item.pwpwarfare.faction_kit_setup": "Faction Kit Setup",
     "item.pwpwarfare.faction_vehicle_setup": "Faction Vehicle Setup",
     "item.pwpwarfare.entrenching_tool": "Entrenching Tool",
+    "item.pwpwarfare.drone_ammo_pouch": "Drone Grenade Pouch",
     "item.pwpwarfare.squad_leader_radio": "Squad Leader Radio",
     "item.pwpwarfare.blue_apc": "APC (BLUFOR)",
     "item.pwpwarfare.blue_tank": "Tank (BLUFOR)",
@@ -256,5 +257,9 @@
     "subtitles.pwpwarfare.station_idle": "Station hums",
     "block.pwpwarfare.vehicle_station": "Vehicle Station",
     "block.pwpwarfare.wall_slab_block": "Wall Slab",
-    "block.pwpwarfare.camo_net": "Camo Net"
+    "block.pwpwarfare.camo_net": "Camo Net",
+    "safety.mainzone.blocked": "You are in the main base — firing is prohibited",
+    "safety.mainzone.enter": "You entered the main base. Firing is prohibited here",
+    "squad.leader_kit_warning": "WARNING: Select a LEADER ONLY kit or the squad will disband!",
+    "squad.disbanded_leader": "Squad disbanded: the leader is not using a Leader kit!"
 }

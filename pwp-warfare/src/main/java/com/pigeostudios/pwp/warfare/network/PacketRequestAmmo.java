@@ -61,13 +61,13 @@ public class PacketRequestAmmo {
                            long currentTime = player.level().getGameTime();
                            if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
                               long secondsLeft = (lastFobUse + 1200L - currentTime) / 20L;
-                              player.sendSystemMessage(Component.literal("Resupply on cooldown: " + secondsLeft + "s").withStyle(ChatFormatting.RED));
+                               player.sendSystemMessage(Component.literal("Пополнение на кулдауне: " + secondsLeft + "с").withStyle(ChatFormatting.RED));
                               return;
                            }
 
                            cost = (Integer)WarfareConfig.HUB_RESUPPLY_COST.get();
                            if (!player.isCreative() && hub.getMaterials() < cost) {
-                              player.sendSystemMessage(Component.literal("Not enough Materials! Need: " + cost).withStyle(ChatFormatting.RED));
+                               player.sendSystemMessage(Component.literal("Недостаточно материалов! Нужно: " + cost).withStyle(ChatFormatting.RED));
                               return;
                            }
 
@@ -80,7 +80,7 @@ public class PacketRequestAmmo {
                               }
 
                               player.level().sendBlockUpdated(msg.pos, hub.getBlockState(), hub.getBlockState(), 3);
-                              player.sendSystemMessage(Component.literal("New Kit Equipped! (-" + cost + " Mats)").withStyle(ChatFormatting.GREEN));
+                               player.sendSystemMessage(Component.literal("Новый кит надет! (-" + cost + " материалов)").withStyle(ChatFormatting.GREEN));
                            } else {
                               String t = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
                               WarfareWorldData.KitInfo kit = t.equals("BLUE") ? data.blueKits.get(currentKitName) : data.redKits.get(currentKitName);
@@ -92,17 +92,17 @@ public class PacketRequestAmmo {
                                     }
 
                                     player.level().sendBlockUpdated(msg.pos, hub.getBlockState(), hub.getBlockState(), 3);
-                                    player.sendSystemMessage(Component.literal("Kit Resupplied! (-" + cost + " Mats)").withStyle(ChatFormatting.GREEN));
-                                 } else {
-                                    player.sendSystemMessage(Component.literal("Ammo already full!").withStyle(ChatFormatting.YELLOW));
-                                 }
+                                     player.sendSystemMessage(Component.literal("Кит пополнен! (-" + cost + " материалов)").withStyle(ChatFormatting.GREEN));
+                                  } else {
+                                     player.sendSystemMessage(Component.literal("БК уже полон!").withStyle(ChatFormatting.YELLOW));
+                                  }
                               }
                            }
 
                            return;
                         }
 
-                        player.sendSystemMessage(Component.literal("No Kit equipped!").withStyle(ChatFormatting.RED));
+                         player.sendSystemMessage(Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
                         return;
                      case 3:
                         cost = 20;
@@ -120,12 +120,12 @@ public class PacketRequestAmmo {
                   }
 
                   if (!player.isCreative() && isOnCooldown) {
-                     player.sendSystemMessage(Component.literal("Supply on Cooldown!").withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Снабжение на кулдауне!").withStyle(ChatFormatting.RED));
                      return;
                   }
 
                   if (!player.isCreative() && hub.getMaterials() < cost) {
-                     player.sendSystemMessage(Component.literal("Not enough Construction Materials! Need: " + cost).withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Недостаточно строительных материалов! Нужно: " + cost).withStyle(ChatFormatting.RED));
                      return;
                   }
 
@@ -166,7 +166,7 @@ public class PacketRequestAmmo {
                         hub.setCooldown(msg.type, cooldownTime);
                      }
 
-                     player.sendSystemMessage(Component.literal("Resupplied! (-" + cost + " Mats)").withStyle(ChatFormatting.GREEN));
+                      player.sendSystemMessage(Component.literal("Пополнено! (-" + cost + " материалов)").withStyle(ChatFormatting.GREEN));
                      player.level().sendBlockUpdated(msg.pos, hub.getBlockState(), hub.getBlockState(), 3);
                   }
                }

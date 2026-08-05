@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreserver.CoreServerApi;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -85,18 +86,37 @@ public class PacketRequestData {
                        JsonObject params = parseJson(msg.params);
                        String faction = params.has("faction") ? params.get("faction").getAsString() : "";
                        if (!faction.isEmpty()) {
-                           WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
                            JsonArray arr = new JsonArray();
-                           Map<String, WarfareWorldData.KitInfo> target =
-                               faction.equalsIgnoreCase(data.blueFaction) ? data.blueKits : data.redKits;
-                           if (target != null) {
-                               for (WarfareWorldData.KitInfo k : target.values()) {
-                                   JsonObject entry = new JsonObject();
-                                   entry.addProperty("kitName", k.name);
-                                   entry.addProperty("category", k.category);
-                                   entry.addProperty("description", k.description);
-                                   arr.add(entry);
+                           JsonObject response = null;
+                           try {
+                              response = CoreServerApi.getFactionKits(faction);
+                           } catch (Exception ignored) {
+                           }
+                            if (response != null && response.has("data")) {
+                               // API отдаёт полные KitDefinition (items) — клиенту нужны только метаданные,
+                               // иначе ответ превышает лимит пакета (32767 байт) и загрузка виснет
+                               for (JsonElement el : response.getAsJsonArray("data")) {
+                                  JsonObject kit = el.getAsJsonObject();
+                                  JsonObject entry = new JsonObject();
+                                  entry.addProperty("kitName", kit.has("kitName") ? kit.get("kitName").getAsString() : "");
+                                  entry.addProperty("category", kit.has("category") ? kit.get("category").getAsString() : "");
+                                  entry.addProperty("description", kit.has("description") ? kit.get("description").getAsString() : "");
+                                  arr.add(entry);
                                }
+                            } else {
+                              // Фолбэк: киты текущего матча из памяти (API недоступен)
+                              WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                              Map<String, WarfareWorldData.KitInfo> target =
+                                  faction.equalsIgnoreCase(data.blueFaction) ? data.blueKits : data.redKits;
+                              if (target != null) {
+                                  for (WarfareWorldData.KitInfo k : target.values()) {
+                                      JsonObject entry = new JsonObject();
+                                      entry.addProperty("kitName", k.name);
+                                      entry.addProperty("category", k.category);
+                                      entry.addProperty("description", k.description);
+                                      arr.add(entry);
+                                  }
+                              }
                            }
                            jsonResult = "{\"data\":" + arr.toString() + "}";
                        }

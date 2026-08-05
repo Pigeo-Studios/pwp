@@ -11,5 +11,6 @@ public class FactionVehicleData {
     public float yaw;
     public int respawnTime = 60;
     public int initialTime = 60;
+    public String category = "";
     public NonNullList<ItemStack> inventory = NonNullList.withSize(33, ItemStack.EMPTY);
 }

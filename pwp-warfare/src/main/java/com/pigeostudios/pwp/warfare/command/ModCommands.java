@@ -44,6 +44,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
@@ -525,13 +526,13 @@ public class ModCommands {
                    WarfareWorldData data = WarfareWorldData.get(level);
 
                    if (!data.isGameStarted) {
-                      player.sendSystemMessage(Component.literal("Game is not active!").withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Игра не активна!").withStyle(ChatFormatting.RED));
                       return 0;
                    }
 
                    String team = player.getTeam() != null ? player.getTeam().getName() : "";
                    if (!team.equalsIgnoreCase("Blue") && !team.equalsIgnoreCase("Red")) {
-                      player.sendSystemMessage(Component.literal("You must be on a team to use this!").withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Вы должны быть в команде, чтобы использовать это!").withStyle(ChatFormatting.RED));
                       return 0;
                    }
 
@@ -542,7 +543,7 @@ public class ModCommands {
 
                    if (elapsed < cooldownTicks && !player.isCreative()) {
                       long remaining = (cooldownTicks - elapsed) / 20;
-                      player.sendSystemMessage(Component.literal("Wait " + remaining + "s before using /pwp respawn again.").withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Подождите " + remaining + "с перед повторным использованием /pwp respawn.").withStyle(ChatFormatting.RED));
                       return 0;
                    }
 
@@ -566,11 +567,11 @@ public class ModCommands {
                ServerLevel level = player.serverLevel();
                WarfareWorldData data = WarfareWorldData.get(level);
                if (!data.voteActive || data.isGameStarted) {
-                  player.sendSystemMessage(Component.literal("No active voting.").withStyle(ChatFormatting.RED));
+                   player.sendSystemMessage(Component.literal("Нет активного голосования.").withStyle(ChatFormatting.RED));
                   return 0;
                }
                data.votes.put(player.getUUID(), true);
-               player.sendSystemMessage(Component.literal("You voted YES to start the match!").withStyle(ChatFormatting.GREEN));
+                player.sendSystemMessage(Component.literal("Вы проголосовали ЗА старт матча!").withStyle(ChatFormatting.GREEN));
                PacketHandler.sendToAllClients(level, data);
                return 1;
             })
@@ -637,14 +638,14 @@ public class ModCommands {
          data.playedBlueSiren = false;
          data.playedRedSiren = false;
          GameLogicEvents.startGameCountdown(level);
-         source.sendSuccess(() -> Component.literal("Countdown started in this world!").withStyle(ChatFormatting.GREEN), true);
+          source.sendSuccess(() -> Component.literal("Отсчёт запущен в этом мире!").withStyle(ChatFormatting.GREEN), true);
        } else {
           data.isGameStarted = false;
           data.invasionSetupActive = false;
           GameLogicEvents.cancelCountdown(level);
           data.setDirty();
           syncDataToAll(level, data);
-          source.sendSuccess(() -> Component.literal("Game Stopped in this world!").withStyle(ChatFormatting.RED), true);
+          source.sendSuccess(() -> Component.literal("Игра остановлена в этом мире!").withStyle(ChatFormatting.RED), true);
        }
 
       return 1;
@@ -699,7 +700,7 @@ public class ModCommands {
       data.respawnTimer = seconds;
       data.setDirty();
       syncDataToAll(level, data);
-      source.sendSuccess(() -> Component.literal("Respawn timer set to " + seconds + "s for current world").withStyle(ChatFormatting.GREEN), true);
+       source.sendSuccess(() -> Component.literal("Таймер возрождения установлен на " + seconds + "с для этого мира").withStyle(ChatFormatting.GREEN), true);
       return 1;
    }
 
@@ -755,8 +756,6 @@ public class ModCommands {
       WarfareWorldData data = WarfareWorldData.get(level);
       PacketSquadAction.leaveCurrentSquad(player, data);
       data.setDirty();
-      syncDataToAll(level, data);
-      PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
       Scoreboard scoreboard = source.getServer().getScoreboard();
       String internalTeamName = teamName.equalsIgnoreCase("blue") ? "Blue" : "Red";
       ChatFormatting color = teamName.equalsIgnoreCase("blue") ? ChatFormatting.BLUE : ChatFormatting.RED;
@@ -766,10 +765,30 @@ public class ModCommands {
       }
 
       team.setColor(color);
-       scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
-       MarkerManager.syncToPlayer(player);
-       PathManager.syncToPlayer(player);
-       source.sendSuccess(() -> Component.literal("Player joined " + internalTeamName).withStyle(color), true);
+      team.setSeeFriendlyInvisibles(true);
+      scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
+      player.setGameMode(GameType.SURVIVAL);
+      player.inventoryMenu.broadcastChanges();
+      // Переотправляем фракцию/кит на все клиенты — иначе скины и иконки
+      // остаются на старой фракции и мерцают (ClientSkinManager.applyAllSkins)
+      PacketHandler.broadcastPlayerSkin(player);
+      MarkerManager.syncToPlayer(player);
+      PathManager.syncToPlayer(player);
+      syncDataToAll(level, data);
+      PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
+      if (data.isGameStarted) {
+         String currentDim = player.level().dimension().location().toString();
+         BlockPos mainSpawn = internalTeamName.equals("Blue") ? data.blueSpawns.get(currentDim) : data.redSpawns.get(currentDim);
+         if (mainSpawn != null) {
+            player.teleportTo(mainSpawn.getX() + 0.5, mainSpawn.getY(), mainSpawn.getZ() + 0.5);
+             player.sendSystemMessage(Component.literal("Матч идёт! Телепортация на главную базу...").withStyle(ChatFormatting.YELLOW));
+         } else {
+             player.sendSystemMessage(Component.literal("Внимание: точка спавна главной базы не установлена для этой команды!").withStyle(ChatFormatting.RED));
+         }
+      }
+
+       player.sendSystemMessage(Component.literal("Вы присоединились к команде " + internalTeamName + "!").withStyle(color));
+       source.sendSuccess(() -> Component.literal("Игрок присоединился к " + internalTeamName).withStyle(color), true);
       return 1;
    }
 
@@ -823,7 +842,7 @@ public class ModCommands {
          source.sendSuccess(() -> Component.literal("Point '" + name + "' removed from " + level.dimension().location()).withStyle(ChatFormatting.RED), true);
          return 1;
       } else {
-         source.sendFailure(Component.literal("Point '" + name + "' not found in THIS world!"));
+         source.sendFailure(Component.literal("Точка '" + name + "' не найдена в ЭТОМ мире!"));
          return 0;
       }
    }
@@ -839,12 +858,12 @@ public class ModCommands {
             point.capturingTeam = "NONE";
             data.setDirty();
             syncDataToAll(level, data);
-            source.sendSuccess(() -> Component.literal("Point '" + name + "' reset to NEUTRAL in this world!").withStyle(ChatFormatting.YELLOW), true);
+            source.sendSuccess(() -> Component.literal("Точка '" + name + "' сброшена на НЕЙТРАЛЬНУЮ в этом мире!").withStyle(ChatFormatting.YELLOW), true);
             return 1;
          }
       }
 
-      source.sendFailure(Component.literal("Point '" + name + "' not found in THIS world!"));
+      source.sendFailure(Component.literal("Точка '" + name + "' не найдена в ЭТОМ мире!"));
       return 0;
    }
 
@@ -853,7 +872,7 @@ public class ModCommands {
       WarfareWorldData data = WarfareWorldData.get(level);
       String targetTeam = teamInput.toUpperCase();
       if (!targetTeam.equals("BLUE") && !targetTeam.equals("RED")) {
-         source.sendFailure(Component.literal("Invalid team! Please use 'blue' or 'red'."));
+          source.sendFailure(Component.literal("Неверная команда! Используйте 'blue' или 'red'."));
          return 0;
       }
 
@@ -865,17 +884,17 @@ public class ModCommands {
             data.setDirty();
             syncDataToAll(level, data);
             ChatFormatting color = targetTeam.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-            source.sendSuccess(() -> Component.literal("Point '" + name + "' forcefully captured by " + targetTeam + "!").withStyle(color), true);
-            level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("[ADMIN] Point " + name + " forcefully captured by " + targetTeam).withStyle(color), false);
+             source.sendSuccess(() -> Component.literal("Точка '" + name + "' принудительно захвачена командой " + targetTeam + "!").withStyle(color), true);
+             level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("[АДМИН] Точка " + name + " принудительно захвачена командой " + targetTeam).withStyle(color), false);
             return 1;
          }
       }
 
-      source.sendFailure(Component.literal("Point '" + name + "' not found in THIS world!"));
-      return 0;
-   }
+       source.sendFailure(Component.literal("Точка '" + name + "' не найдена в ЭТОМ мире!"));
+       return 0;
+    }
 
-   private static int setTeamSpawn(CommandSourceStack source, String teamName, BlockPos pos) {
+    private static int setTeamSpawn(CommandSourceStack source, String teamName, BlockPos pos) {
       ServerLevel level = source.getLevel();
       WarfareWorldData data = WarfareWorldData.get(level);
       String currentDim = level.dimension().location().toString();
@@ -889,7 +908,7 @@ public class ModCommands {
 
       data.setDirty();
       syncDataToAll(level, data);
-      source.sendSuccess(() -> Component.literal("Spawn set for this dimension.").withStyle(ChatFormatting.GREEN), true);
+       source.sendSuccess(() -> Component.literal("Спавн установлен для этого измерения.").withStyle(ChatFormatting.GREEN), true);
       return 1;
    }
 
@@ -898,18 +917,18 @@ public class ModCommands {
       target.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(message).withStyle(ChatFormatting.YELLOW)));
       target.connection
          .send(
-            new ClientboundSetTitleTextPacket(Component.literal("!WARNING!").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD}))
+             new ClientboundSetTitleTextPacket(Component.literal("!ВНИМАНИЕ!").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD}))
          );
       target.playNotifySound(SoundEvents.ANVIL_LAND, SoundSource.MASTER, 1.0F, 0.8F);
-      target.sendSystemMessage(Component.literal("[ADMIN WARN] " + message).withStyle(new ChatFormatting[]{ChatFormatting.RED, ChatFormatting.BOLD}));
-      source.sendSuccess(() -> Component.literal("Successfully warned " + target.getScoreboardName() + "!").withStyle(ChatFormatting.GREEN), true);
+      target.sendSystemMessage(Component.literal("[АДМИН ПРЕДУПРЕЖДЕНИЕ] " + message).withStyle(new ChatFormatting[]{ChatFormatting.RED, ChatFormatting.BOLD}));
+       source.sendSuccess(() -> Component.literal("Игрок " + target.getScoreboardName() + " успешно предупреждён!").withStyle(ChatFormatting.GREEN), true);
       return 1;
    }
 
    private static int voiceMutePlayer(CommandSourceStack source, ServerPlayer target, int minutes, String reason) {
       ServerPlayer admin = source.getPlayer();
       if (admin == null) {
-         source.sendFailure(Component.literal("Only players can use this command."));
+          source.sendFailure(Component.literal("Эту команду могут использовать только игроки."));
          return 0;
       }
       try {
@@ -1041,9 +1060,9 @@ public class ModCommands {
       boolean removed = data.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
       if (removed) {
          data.setDirty();
-         source.sendSuccess(() -> Component.literal(team.toUpperCase() + " Main Protection Zone removed!").withStyle(ChatFormatting.GREEN), true);
-      } else {
-         source.sendFailure(Component.literal("No protection zone found for team: " + team.toUpperCase()));
+          source.sendSuccess(() -> Component.literal(team.toUpperCase() + " — защитная зона базы удалена!").withStyle(ChatFormatting.GREEN), true);
+       } else {
+          source.sendFailure(Component.literal("Защитная зона не найдена для команды: " + team.toUpperCase()));
       }
 
       return 1;
@@ -1094,7 +1113,7 @@ public class ModCommands {
           if (s.id == squadId) { team = s.team; break; }
        }
        if (team == null) {
-          source.sendFailure(Component.literal("Squad not found"));
+          source.sendFailure(Component.literal("Отряд не найден"));
           return 0;
        }
         boolean isBlue = team.toUpperCase().contains("BLUE");
@@ -1103,7 +1122,7 @@ public class ModCommands {
         data.setDirty();
         PacketHandler.sendToAllClients(level, data);
         String finalTeam = team;
-        source.sendSuccess(() -> Component.literal("CMD set to squad " + squadId + " (" + finalTeam + ")").withStyle(ChatFormatting.GREEN), true);
+         source.sendSuccess(() -> Component.literal("КМД назначен отряду " + squadId + " (" + finalTeam + ")").withStyle(ChatFormatting.GREEN), true);
         return 1;
     }
 
@@ -1119,15 +1138,15 @@ public class ModCommands {
          PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
          if (blueTeam != null) blueTeam.setAllowFriendlyFire(false);
          if (redTeam != null) redTeam.setAllowFriendlyFire(false);
-         String title = "\u00a7c\u00a7lGAME PAUSED";
-         String subtitle = "\u00a7eUse /pwpwarfare pause to resume";
+          String title = "\u00a7c\u00a7lИГРА НА ПАУЗЕ";
+          String subtitle = "\u00a7eИспользуйте /pwpwarfare pause для возобновления";
          for (ServerPlayer p : level.players()) {
             p.connection.send(new ClientboundSetTitlesAnimationPacket(10, 999999, 10));
             p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(subtitle)));
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(title)));
          }
-         source.sendSuccess(() -> Component.literal("\u00a7cGame Paused! Tickets, captures, PVP frozen."), true);
-         level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("\u00a7c\u00a7lGAME PAUSED by admin"), false);
+          source.sendSuccess(() -> Component.literal("\u00a7cИгра на паузе! Тикеты, захваты, ПВП заморожены."), true);
+          level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("\u00a7c\u00a7lИГРА НА ПАУЗЕ администратором"), false);
       } else {
          Scoreboard scoreboard = level.getScoreboard();
          PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
@@ -1139,8 +1158,8 @@ public class ModCommands {
             p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("")));
             p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
          }
-         source.sendSuccess(() -> Component.literal("\u00a7aGame Resumed!"), true);
-         level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("\u00a7a\u00a7lGAME RESUMED by admin"), false);
+          source.sendSuccess(() -> Component.literal("\u00a7aИгра возобновлена!"), true);
+          level.getServer().getPlayerList().broadcastSystemMessage(Component.literal("\u00a7a\u00a7lИГРА ВОЗОБНОВЛЕНА администратором"), false);
       }
       return 1;
    }

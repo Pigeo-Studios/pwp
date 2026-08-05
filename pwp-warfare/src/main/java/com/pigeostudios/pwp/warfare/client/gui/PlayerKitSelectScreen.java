@@ -131,7 +131,7 @@ public class PlayerKitSelectScreen extends Screen {
             gui.fill(bx, by, bx + CARD_W, by + CARD_H, cardBg);
             gui.renderOutline(bx, by, CARD_W, CARD_H, cardBorder);
 
-            String iconName = kit.name.toLowerCase().replace(" ", "_").replace("-", "_");
+            String iconName = DeployData.kitIconFileName(kit.name);
             ResourceLocation iconLoc = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconName + ".png");
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, kit.available ? 1.0F : 0.4F);
             gui.blit(iconLoc, bx + (CARD_W - 24) / 2, by + 3, 0, 0, 24, 24, 24, 24);

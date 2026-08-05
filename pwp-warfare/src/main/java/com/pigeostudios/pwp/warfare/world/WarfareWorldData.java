@@ -187,6 +187,7 @@ public class WarfareWorldData extends SavedData {
             veh.yaw = obj.has("yaw") ? obj.get("yaw").getAsFloat() : 0;
             veh.respawnTime = obj.has("respawnTime") ? obj.get("respawnTime").getAsInt() : 60;
             veh.initialTime = obj.has("initialTime") ? obj.get("initialTime").getAsInt() : 60;
+            veh.category = obj.has("category") ? obj.get("category").getAsString() : "";
             if (obj.has("inventory")) {
                 try {
                     JsonArray invArr = obj.getAsJsonArray("inventory");
@@ -201,11 +202,12 @@ public class WarfareWorldData extends SavedData {
                                 var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(new net.minecraft.resources.ResourceLocation(id));
                                 if (item != null && item != net.minecraft.world.item.Items.AIR) {
                                     net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item, count);
-                                    if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
-                                        var tag = WarfareWorldData.KitInfo.jsonToCompound(itemData.getAsJsonObject("tag"));
-                                        if (!tag.isEmpty()) stack.setTag(tag);
-                                    }
-                                    veh.inventory.set(slot, stack);
+                    if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
+                        var tag = WarfareWorldData.KitInfo.jsonToCompound(itemData.getAsJsonObject("tag"));
+                        if (!tag.isEmpty()) stack.setTag(tag);
+                    }
+                    if (slot == 0) stack = remapTeamMarker(stack, team);
+                    veh.inventory.set(slot, stack);
                                 }
                             }
                         }
@@ -214,7 +216,25 @@ public class WarfareWorldData extends SavedData {
             }
             target.put(veh.vehicleName, veh);
         }
-    }
+   }
+
+   // Переопределяет маркер в слоте 0 под команду (blue_/red_), чтобы пул фракции
+   // корректно работал, когда фракция играет за любую команду на любой карте
+   private static net.minecraft.world.item.ItemStack remapTeamMarker(net.minecraft.world.item.ItemStack stack, String team) {
+      if (stack.isEmpty()) return stack;
+      net.minecraft.world.item.Item item = stack.getItem();
+      net.minecraft.resources.ResourceLocation key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(item);
+      if (key == null || !key.getNamespace().equals("pwpwarfare")) return stack;
+      String path = key.getPath();
+      if (!path.startsWith("blue_") && !path.startsWith("red_")) return stack;
+      String prefix = team.equalsIgnoreCase("BLUE") ? "blue_" : "red_";
+      net.minecraft.world.item.Item mapped = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
+         new net.minecraft.resources.ResourceLocation("pwpwarfare", prefix + path.substring(5)));
+      if (mapped == null || mapped == net.minecraft.world.item.Items.AIR) return stack;
+      net.minecraft.world.item.ItemStack out = new net.minecraft.world.item.ItemStack(mapped, stack.getCount());
+      if (stack.hasTag()) out.setTag(stack.getTag().copy());
+      return out;
+   }
 
     public void parseConfigVehicleSpawners(JsonArray spawners, String team, ServerLevel level) {
         if (spawners == null) return;
@@ -222,7 +242,8 @@ public class WarfareWorldData extends SavedData {
             JsonObject obj = el.getAsJsonObject();
             ConfigVehicleSpawner spawner = new ConfigVehicleSpawner();
             spawner.team = team;
-            spawner.vehicleName = obj.get("vehicleName").getAsString();
+            if (obj.has("vehicleName")) spawner.vehicleName = obj.get("vehicleName").getAsString();
+            if (obj.has("role")) spawner.role = obj.get("role").getAsString();
             spawner.x = obj.get("x").getAsInt();
             spawner.y = obj.get("y").getAsInt();
             spawner.z = obj.get("z").getAsInt();
@@ -232,33 +253,73 @@ public class WarfareWorldData extends SavedData {
         }
     }
 
+    // Слоты, чей чанк на момент старта матча не был загружен — доустанавливаются
+    // retryPendingVehicleSpawners() по мере прогрузки чанков (ретрай в тике GameLogicEvents)
+    public List<ConfigVehicleSpawner> pendingVehicleSpawners = new ArrayList<>();
+
     public void fillVehicleSpawnersFromFactionDefaults(ServerLevel level) {
-        Map<String, FactionVehicleData> blueVehicles = this.blueFactionVehicles;
-        Map<String, FactionVehicleData> redVehicles = this.redFactionVehicles;
+        pendingVehicleSpawners.clear();
 
         for (ConfigVehicleSpawner cfg : configVehicleSpawners) {
             BlockPos pos = new BlockPos(cfg.x, cfg.y, cfg.z);
-            Map<String, FactionVehicleData> factionData = cfg.team.equalsIgnoreCase("BLUE") ? blueVehicles : redVehicles;
-            FactionVehicleData veh = factionData.get(cfg.vehicleName);
-            if (veh == null) continue;
+            if (!level.isLoaded(pos)) {
+                // Чанк ещё не прогружен — не теряем слот, дождёмся загрузки
+                pendingVehicleSpawners.add(cfg);
+                continue;
+            }
+            applyConfigVehicleSpawner(cfg, level);
+        }
+    }
 
-            if (level.isLoaded(pos)) {
-                var be = level.getBlockEntity(pos);
-                if (be instanceof VehicleSpawnerBlockEntity spawner) {
-                    if (!cfg.fixed) {
-                        spawner.vehicleName = cfg.vehicleName;
-                        spawner.loadDefaultsFromFactionVehicle(veh);
-                        if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
-                    }
-                } else {
-                    level.setBlock(pos, com.pigeostudios.pwp.warfare.block.ModBlocks.VEHICLE_SPAWNER_BLOCK.get().defaultBlockState(), 3);
-                    be = level.getBlockEntity(pos);
-                    if (be instanceof VehicleSpawnerBlockEntity spawner) {
-                        spawner.vehicleName = cfg.vehicleName;
-                        spawner.loadDefaultsFromFactionVehicle(veh);
-                        if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
-                    }
+    // Доустанавливает спавнеры, пропущенные на старте матча из-за незагруженного чанка
+    public void retryPendingVehicleSpawners(ServerLevel level) {
+        if (pendingVehicleSpawners.isEmpty()) return;
+        var it = pendingVehicleSpawners.iterator();
+        while (it.hasNext()) {
+            ConfigVehicleSpawner cfg = it.next();
+            if (level.isLoaded(new BlockPos(cfg.x, cfg.y, cfg.z))) {
+                applyConfigVehicleSpawner(cfg, level);
+                it.remove();
+            }
+        }
+        if (!pendingVehicleSpawners.isEmpty()) setDirty();
+    }
+
+    private void applyConfigVehicleSpawner(ConfigVehicleSpawner cfg, ServerLevel level) {
+        BlockPos pos = new BlockPos(cfg.x, cfg.y, cfg.z);
+        Map<String, FactionVehicleData> factionData = cfg.team.equalsIgnoreCase("BLUE") ? this.blueFactionVehicles : this.redFactionVehicles;
+        FactionVehicleData veh = null;
+        if (cfg.vehicleName != null && !cfg.vehicleName.isEmpty()) {
+            // Слот с явно указанной машиной (обратная совместимость)
+            veh = factionData.get(cfg.vehicleName);
+        } else if (cfg.role != null && !cfg.role.isEmpty()) {
+            // Squad-стиль: слот задаёт роль, машину подставляет пул фракции из БД
+            for (FactionVehicleData candidate : factionData.values()) {
+                if (cfg.role.equalsIgnoreCase(candidate.category)
+                        && (veh == null || candidate.vehicleName.compareTo(veh.vehicleName) < 0)) {
+                    veh = candidate;
                 }
+            }
+        }
+        if (veh == null) return;
+
+        // Имя машины, выбранной по роли, фиксируем в конфиге (стабильный выбор)
+        String effectiveVehicleName = (cfg.vehicleName != null && !cfg.vehicleName.isEmpty()) ? cfg.vehicleName : veh.vehicleName;
+
+        var be = level.getBlockEntity(pos);
+        if (be instanceof VehicleSpawnerBlockEntity spawner) {
+            if (!cfg.fixed) {
+                spawner.vehicleName = effectiveVehicleName;
+                spawner.loadDefaultsFromFactionVehicle(veh);
+                if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
+            }
+        } else {
+            level.setBlock(pos, com.pigeostudios.pwp.warfare.block.ModBlocks.VEHICLE_SPAWNER_BLOCK.get().defaultBlockState(), 3);
+            be = level.getBlockEntity(pos);
+            if (be instanceof VehicleSpawnerBlockEntity spawner) {
+                spawner.vehicleName = effectiveVehicleName;
+                spawner.loadDefaultsFromFactionVehicle(veh);
+                if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
             }
         }
     }
@@ -1044,6 +1105,8 @@ public class WarfareWorldData extends SavedData {
 
       public static WarfareWorldData.KitInfo loadFromJson(JsonObject json) {
          WarfareWorldData.KitInfo k = new WarfareWorldData.KitInfo(json.get("kitName").getAsString());
+         if (json.has("category") && !json.get("category").isJsonNull()) k.category = json.get("category").getAsString();
+         if (json.has("description") && !json.get("description").isJsonNull()) k.description = json.get("description").getAsString();
          k.isLeaderOnly = json.has("leaderOnly") && json.get("leaderOnly").getAsBoolean();
          k.maxPerTeam = json.has("maxPerTeam") ? json.get("maxPerTeam").getAsInt() : -1;
          k.maxPerSquad = json.has("maxPerSquad") ? json.get("maxPerSquad").getAsInt() : -1;
@@ -1477,6 +1540,7 @@ public class WarfareWorldData extends SavedData {
     public static class ConfigVehicleSpawner {
         public String team;
         public String vehicleName;
+        public String role;
         public int x, y, z;
         public float yaw;
         public boolean fixed;

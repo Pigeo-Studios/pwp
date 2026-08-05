@@ -45,14 +45,14 @@ public class SupplyTruckMarkerItem extends Item {
 
    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
       ChatFormatting color = this.team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-      tooltip.add(Component.literal("Team: " + this.team).withStyle(color));
-      tooltip.add(Component.literal("Type: " + this.vehicleType).withStyle(ChatFormatting.GRAY));
-      tooltip.add(Component.literal("Max " + WarfareConfig.SUPPLY_TRUCK_CRATES.get() + " Crates. Press X to drop.").withStyle(ChatFormatting.YELLOW));
+      tooltip.add(Component.literal("Команда: " + this.team).withStyle(color));
+      tooltip.add(Component.literal("Тип: " + this.vehicleType).withStyle(ChatFormatting.GRAY));
+      tooltip.add(Component.literal("Макс. " + WarfareConfig.SUPPLY_TRUCK_CRATES.get() + " ящиков. Нажмите X, чтобы сбросить.").withStyle(ChatFormatting.YELLOW));
       if (this.maxMats > 0) {
-         tooltip.add(Component.literal("Contains: " + this.maxMats + " Materials").withStyle(ChatFormatting.YELLOW));
+         tooltip.add(Component.literal("Внутри: " + this.maxMats + " материалов").withStyle(ChatFormatting.YELLOW));
       }
 
-      tooltip.add(Component.literal("Loss Penalty: -" + this.penalty + " Tickets").withStyle(ChatFormatting.RED));
+      tooltip.add(Component.literal("Штраф при потере: -" + this.penalty + " тикетов").withStyle(ChatFormatting.RED));
       tooltip.add(Component.literal("thank exactly").withStyle(ChatFormatting.DARK_PURPLE).withStyle(ChatFormatting.ITALIC));
    }
 }

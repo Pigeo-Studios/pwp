@@ -93,9 +93,11 @@ public class ResupplyHandler {
          }
       }
 
-      player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
-      // Apply slot selections (alternatives chosen in deploy screen)
-      applySlotSelections(player, kit);
+         player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
+         // Синхронизируем применённый кит клиенту (ClientData.myCurrentKit)
+         com.pigeostudios.pwp.warfare.events.KitUtil.syncMyKit(player);
+         // Apply slot selections (alternatives chosen in deploy screen)
+         applySlotSelections(player, kit);
 
       PacketHandler.broadcastPlayerSkin(player);
    }
@@ -240,17 +242,18 @@ public class ResupplyHandler {
          int desiredIdx = selTag.getInt(label);
          if (desiredIdx <= 0) continue;
 
-         // Find the desiredIdx-th __ALT__label slot in slotSkins
-         int found = -1, count = 0;
-         for (var e : kit.slotSkins.entrySet()) {
-            for (String skinVal : e.getValue()) {
-               if (skinVal.equals(prefix + label)) {
-                  if (count == desiredIdx) { found = e.getKey(); break; }
-                  count++;
-               }
-            }
-            if (found >= 0) break;
-         }
+          // Find the desiredIdx-th __ALT__label slot in slotSkins
+          // Индекс из меню деплоя: 1 = первая альтернатива, 2 = вторая (0 = дефолт, пропускается выше)
+          int found = -1, count = 0;
+          for (var e : kit.slotSkins.entrySet()) {
+             for (String skinVal : e.getValue()) {
+                if (skinVal.equals(prefix + label)) {
+                   if (count == desiredIdx - 1) { found = e.getKey(); break; }
+                   count++;
+                }
+             }
+             if (found >= 0) break;
+          }
 
          if (found >= 0 && found < 49) {
             int tgt = targetSlots.get(label);
@@ -358,7 +361,7 @@ public class ResupplyHandler {
                   if (allowed) {
                      applyKitToPlayer(player, kit);
                   } else {
-                     player.sendSystemMessage(Component.literal("Kit " + pending + " is full or blocked! Spawning as Unassigned.").withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Кит " + pending + " полон или заблокирован! Спавн без кита.").withStyle(ChatFormatting.RED));
                      WarfareWorldData.KitInfo unassigned = teamName.equals("BLUE") ? data.blueKits.get("Unassigned") : data.redKits.get("Unassigned");
                      if (unassigned != null) {
                         applyKitToPlayer(player, unassigned);

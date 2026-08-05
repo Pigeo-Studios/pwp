@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.MainSupplyBlock;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.RebConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
@@ -20,6 +21,7 @@ import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
+import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -111,6 +113,7 @@ public class WarfareOverlay {
 
             renderBuildProgress(gui, mc, width, height);
             renderHubMaterials(gui, mc, width, height);
+            renderVehicleHud(gui, mc, width, height);
             renderVehicleAmmo(gui, mc, width, height);
             renderSupplyTruckInfo(gui, mc, width, height);
             renderPlacementHints(gui, mc, width, height);
@@ -131,7 +134,7 @@ public class WarfareOverlay {
                RenderSystem.enableDepthTest();
             }
 
-            String currentKit = mc.player.getPersistentData().getString("WARFARE_CurrentKit");
+            String currentKit = ClientData.myCurrentKit;
             if ("Medic".equalsIgnoreCase(currentKit)) {
                renderMedicUI(gui, mc, width);
             }
@@ -723,7 +726,7 @@ public class WarfareOverlay {
    }
 
    private static void renderDownedUI(GuiGraphics gui, Minecraft mc, int width) {
-      String currentKit = mc.player.getPersistentData().getString("WARFARE_CurrentKit");
+      String currentKit = ClientData.myCurrentKit;
       boolean amIMedic = "Medic".equalsIgnoreCase(ClientData.myCurrentKit);
       long now = mc.level.getGameTime();
       int yOffset = 60;
@@ -853,10 +856,10 @@ public class WarfareOverlay {
                teamColor = -43691;
             }
 
-            String text = "Materials: " + mats;
+            String text = "Материалы: " + mats;
             int textWidth = PWPTheme.Fonts.display().width(text);
             int textX = (width - textWidth) / 2;
-            int textY = height - 70;
+            int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
             PoseStack pose = gui.pose();
             pose.pushPose();
             pose.translate(width / 2.0F, textY - 12, 0.0F);
@@ -867,6 +870,119 @@ public class WarfareOverlay {
             drawOutlinedString(gui, mc, text, textX, textY, -22016);
          }
       }
+   }
+
+   private static float vehicleHintAlpha = 0.0F;
+
+   // Единый HUD-блок техники: подсказка при наведении прицела (спецкит/шифт+ПКМ)
+   // и статус-бар при нахождении в технике. Позиция — ярус look-at подсказок
+   // (height - 112, выше ленты h-76/h-94 и фидбек-блока h-58, коллизий нет),
+   // появляется и исчезает плавно.
+   private static void renderVehicleHud(GuiGraphics gui, Minecraft mc, int width, int height) {
+      String text = null;
+      int color = -1;
+      float target = 0.0F;
+      if (mc.player.isSpectator() || ClientPlacementHandler.isPlacing()) {
+         target = 0.0F;
+      } else if (mc.player.getVehicle() != null) {
+         ClientData.VehicleStatus st = ClientData.vehicleStatuses.get(mc.player.getVehicle().getId());
+         if (st != null && System.currentTimeMillis() - st.receivedAt < 5000L) {
+            text = vehicleStatusText(st);
+            if (text != null) {
+               color = vehicleStatusColor(st.kind);
+               target = 1.0F;
+            }
+         }
+      } else if (mc.hitResult != null && mc.hitResult.getType() == Type.ENTITY) {
+         Entity targetEntity = ((EntityHitResult)mc.hitResult).getEntity();
+         WarfareWorldData.VehicleRecord record = null;
+
+         for (WarfareWorldData.VehicleRecord r : ClientData.clientVehicles) {
+            if (r.uuid.equals(targetEntity.getUUID())) {
+               record = r;
+               break;
+            }
+         }
+
+         if (record != null && isFriendlyVehicle(record, mc.player)) {
+            if (isSpecialistVehicle(record.type) && !hasCorrectKit(record.type, ClientData.myCurrentKit)) {
+               text = "Нужен кит Механик/Пилот";
+               color = -43691;
+            } else {
+               text = "Шифт+ПКМ — пополнить БК";
+               color = -1;
+            }
+            target = 1.0F;
+         }
+      }
+
+      vehicleHintAlpha += (target - vehicleHintAlpha) * 0.2F;
+      if (vehicleHintAlpha <= 0.02F || text == null) return;
+
+      int alpha = Math.min(255, (int)(vehicleHintAlpha * 255.0F));
+      int textWidth = PWPTheme.Fonts.display().width(text);
+      int textX = (width - textWidth) / 2;
+      int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
+      gui.fill(textX - 8, textY - 3, textX + textWidth + 8, textY + 12, (alpha / 4) << 24);
+      drawVehicleHintText(gui, mc, text, textX, textY, color, alpha);
+   }
+
+   // Текст с полной прозрачностью (и обводка, и сам текст) для плавного фейда
+   private static void drawVehicleHintText(GuiGraphics gui, Minecraft mc, String text, int x, int y, int color, int alpha) {
+      int outline = alpha << 24;
+      int textColor = (alpha << 24) | (color & 0xFFFFFF);
+      gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, outline, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x + 1, y, outline, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, outline, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, outline, false);
+      gui.drawString(PWPTheme.Fonts.display(), text, x, y, textColor, false);
+   }
+
+   private static String vehicleStatusText(ClientData.VehicleStatus st) {
+      int left = Math.max(0, st.secondsLeft - (int)((System.currentTimeMillis() - st.receivedAt) / 1000L));
+      return switch (st.kind) {
+         case PacketVehicleStatus.KIND_REARMING -> "Пополнение БК: " + left + "с";
+         case PacketVehicleStatus.KIND_LOADING_CRATE -> "Загрузка ящика: " + left + "с";
+         case PacketVehicleStatus.KIND_REARM_COOLDOWN -> "Перезарядка БК: " + left + "с";
+         case PacketVehicleStatus.KIND_CRATE_RESUPPLY -> "Пополнение: " + left + "с";
+         default -> null;
+      };
+   }
+
+   private static int vehicleStatusColor(int kind) {
+      return switch (kind) {
+         case PacketVehicleStatus.KIND_LOADING_CRATE -> 16776917;
+         case PacketVehicleStatus.KIND_REARM_COOLDOWN -> 16733525;
+         default -> 5636095;
+      };
+   }
+
+   private static boolean isFriendlyVehicle(WarfareWorldData.VehicleRecord record, Player player) {
+      if (record.team == null || record.team.isEmpty() || record.team.equalsIgnoreCase("NEUTRAL")) return true;
+      String pTeam = player.getTeam() != null ? player.getTeam().getName() : "";
+      return record.team.equalsIgnoreCase(pTeam);
+   }
+
+   // Те же условия, что на сервере (InteractionEvents) — подсказка информационная,
+   // сервер всё равно валидирует посадку
+   private static boolean isSpecialistVehicle(String vType) {
+      if (vType == null) return false;
+      if (vType.equalsIgnoreCase("TANK")) return true;
+      if (vType.equalsIgnoreCase("APC")) return true;
+      if (vType.equalsIgnoreCase("Mobile ZU")) return true;
+      if (vType.equalsIgnoreCase("HELICOPTER")) return true;
+      if (vType.toUpperCase().contains("CAS")) return true;
+      return vType.toUpperCase().contains("SUPPLY HELICOPTER");
+   }
+
+   private static boolean hasCorrectKit(String vType, String kit) {
+      if (vType.equalsIgnoreCase("HELICOPTER") || vType.toUpperCase().contains("CAS") || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
+         return kit.equals("Pilot") || kit.equals("Pilot Officer");
+      }
+      if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
+         return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
+      }
+      return true;
    }
 
    private static void renderBuildProgress(GuiGraphics gui, Minecraft mc, int width, int height) {
@@ -890,11 +1006,12 @@ public class WarfareOverlay {
                   progress = supply.getPercentage();
                   structureTeam = supply.getTeam();
                   finished = (Boolean)state.getValue(VehicleStationBlock.CONSTRUCTED);
-               } else if (be instanceof WallBlockEntity wall) {
-                  progress = wall.getPercentage();
-                  structureTeam = wall.getTeam();
-                  finished = (Boolean)state.getValue(WallBlock.CONSTRUCTED);
-               } else if (be instanceof BarbedWireBlockEntity wire) {
+                } else if (be instanceof WallBlockEntity wall) {
+                   progress = wall.getPercentage();
+                   structureTeam = wall.getTeam();
+                   // camo_net — трансформ стены без property CONSTRUCTED: построен.
+                   finished = !state.hasProperty(WallBlock.CONSTRUCTED) || (Boolean)state.getValue(WallBlock.CONSTRUCTED);
+                } else if (be instanceof BarbedWireBlockEntity wire) {
                   progress = wire.getPercentage();
                   structureTeam = wire.getTeam();
                   finished = (Boolean)state.getValue(BarbedWireBlock.CONSTRUCTED);
@@ -907,10 +1024,13 @@ public class WarfareOverlay {
                } else if (be instanceof MortarConstructionBlockEntity mortar) {
                   progress = mortar.getPercentage();
                   structureTeam = mortar.getTeam();
-               } else if (be instanceof TOWConstructionBlockEntity tow) {
-                  progress = tow.getPercentage();
-                  structureTeam = tow.getTeam();
-               }
+                } else if (be instanceof TOWConstructionBlockEntity tow) {
+                   progress = tow.getPercentage();
+                   structureTeam = tow.getTeam();
+                } else if (be instanceof RebConstructionBlockEntity reb) {
+                   progress = reb.getPercentage();
+                   structureTeam = reb.getTeam();
+                }
 
                  if (!(progress < 0.0F)) {
                     String playerTeam = mc.player.getTeam() != null ? mc.player.getTeam().getName() : "NEUTRAL";
@@ -1298,13 +1418,13 @@ public class WarfareOverlay {
                color = -43691;
             }
 
-            String text = "Supplies: " + crates + " / " + maxCrates;
+            String text = "Припасы: " + crates + " / " + maxCrates;
             int textWidth = PWPTheme.Fonts.display().width(text);
             int x = width - textWidth - 10;
             int y = height - 25;
             drawOutlinedString(gui, mc, text, x, y, color);
             if (isCharging) {
-               String reloadText = "RELOADING...";
+                String reloadText = "ЗАГРУЗКА...";
                drawOutlinedString(gui, mc, reloadText, width - PWPTheme.Fonts.display().width(reloadText) - 10, y - 10, -11141291);
             }
          }
@@ -1333,7 +1453,7 @@ public class WarfareOverlay {
       }
 
       if (currentAmmo != -1) {
-         String text = "Ammo: " + currentAmmo + " / " + maxAmmo;
+         String text = "БК: " + currentAmmo + " / " + maxAmmo;
          int x = 10;
          int y = height - 40;
          int color = currentAmmo == 0 ? -43691 : -1;

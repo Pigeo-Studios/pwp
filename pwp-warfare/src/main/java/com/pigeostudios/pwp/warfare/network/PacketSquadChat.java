@@ -44,18 +44,18 @@ public class PacketSquadChat {
       String senderName = sender.getScoreboardName();
       String senderTeam = sender.getTeam() != null ? sender.getTeam().getName() : "NEUTRAL";
       if (mode == 0) {
-         MutableComponent formattedMessage = Component.literal("[ALL] ")
+          MutableComponent formattedMessage = Component.literal("[ВСЕ] ")
             .withStyle(ChatFormatting.LIGHT_PURPLE)
             .append(Component.literal(senderName + ": ").withStyle(ChatFormatting.WHITE))
             .append(Component.literal(message).withStyle(ChatFormatting.LIGHT_PURPLE));
          sender.server.getPlayerList().broadcastSystemMessage(formattedMessage, false);
       } else if (mode == 1) {
          if (senderTeam.equals("NEUTRAL")) {
-            sender.sendSystemMessage(Component.literal("You are not in a team!").withStyle(ChatFormatting.RED));
+             sender.sendSystemMessage(Component.literal("Вы не в команде!").withStyle(ChatFormatting.RED));
             return;
          }
 
-         MutableComponent formattedMessage = Component.literal("[TEAM] ")
+          MutableComponent formattedMessage = Component.literal("[КОМАНДА] ")
             .withStyle(ChatFormatting.BLUE)
             .append(Component.literal(senderName + ": ").withStyle(ChatFormatting.WHITE))
             .append(Component.literal(message).withStyle(ChatFormatting.BLUE));
@@ -77,11 +77,11 @@ public class PacketSquadChat {
          }
 
          if (playerSquad == null) {
-            sender.sendSystemMessage(Component.literal("You are not in a squad!").withStyle(ChatFormatting.RED));
+             sender.sendSystemMessage(Component.literal("Вы не в отряде!").withStyle(ChatFormatting.RED));
             return;
          }
 
-         MutableComponent formattedMessage = Component.literal("[SQUAD] ")
+          MutableComponent formattedMessage = Component.literal("[ОТРЯД] ")
             .withStyle(ChatFormatting.GREEN)
             .append(Component.literal(senderName + ": ").withStyle(ChatFormatting.WHITE))
             .append(Component.literal(message).withStyle(ChatFormatting.GREEN));

@@ -1,10 +1,10 @@
-{
+﻿{
   "variants": {
     "build_stage=0,constructed=false": { "model": "pwpwarfare:block/hub_base" },
     "build_stage=1,constructed=false": { "model": "pwpwarfare:block/hub_stage1" },
     "build_stage=2,constructed=false": { "model": "pwpwarfare:block/hub_stage2" },
-    "build_stage=0,constructed=true": { "model": "pwpwarfare:block/hub_solid" },
-    "build_stage=1,constructed=true": { "model": "pwpwarfare:block/hub_solid" },
+    "build_stage=0,constructed=true": { "model": "pwpwarfare:block/hub_stage1" },
+    "build_stage=1,constructed=true": { "model": "pwpwarfare:block/hub_stage2" },
     "build_stage=2,constructed=true": { "model": "pwpwarfare:block/hub_solid" }
   }
 }

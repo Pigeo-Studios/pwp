@@ -37,20 +37,20 @@ public class VehicleSpawnerRenderer implements BlockEntityRenderer<VehicleSpawne
          String respawnText;
          int respawnColor;
          if (entity.hasSpawnedOnce && entity.targetSpawnTick > currentTick) {
-            respawnText = "Respawning: " + this.formatTime(timeLeft);
+            respawnText = "Возрождение: " + this.formatTime(timeLeft);
             respawnColor = 16755200;
          } else {
-            respawnText = "Respawn Set: " + this.formatTime(entity.respawnTimeSettings);
+            respawnText = "Таймер возрождения: " + this.formatTime(entity.respawnTimeSettings);
             respawnColor = 11184810;
          }
 
          String initialText;
          int initialColor;
          if (!entity.hasSpawnedOnce && entity.targetSpawnTick > currentTick) {
-            initialText = "Starting: " + this.formatTime(timeLeft);
+            initialText = "Старт: " + this.formatTime(timeLeft);
             initialColor = 5635925;
          } else {
-            initialText = "Initial Set: " + this.formatTime(entity.initialTimeSettings);
+            initialText = "Таймер старта: " + this.formatTime(entity.initialTimeSettings);
             initialColor = 11184810;
          }
 

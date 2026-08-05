@@ -32,6 +32,7 @@ public class FactionVehicleEditorScreen extends Screen {
     private EditBox yawField;
     private EditBox respawnTimeField;
     private EditBox initialTimeField;
+    private EditBox categoryField;
 
     private String vehicleName = "";
     private String displayName = "";
@@ -39,6 +40,7 @@ public class FactionVehicleEditorScreen extends Screen {
     private float yaw = 0;
     private int respawnTime = 60;
     private int initialTime = 60;
+    private String category = "";
     private ItemStack[] vehicleInv = new ItemStack[33];
     private Inventory playerInv;
 
@@ -126,6 +128,12 @@ public class FactionVehicleEditorScreen extends Screen {
         addRenderableWidget(initialTimeField);
         addRenderableWidget(new PWPButton(fieldLeft + 272, 74, 16, 16, Component.literal("+"), b -> adjustTimer(true, 5), PWPButton.Style.PRIMARY));
 
+        categoryField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 296, 74, 86, 16, Component.literal(""));
+        categoryField.setMaxLength(32);
+        categoryField.setValue(category);
+        categoryField.setResponder(val -> category = val.trim().toUpperCase());
+        addRenderableWidget(categoryField);
+
         addRenderableWidget(new PWPButton(cx + panelW - 120, panelH - 28, 100, 20,
             Component.translatable("gui.pwpwarfare.faction_vehicle_editor.save"),
             b -> saveVehicle(),
@@ -163,6 +171,7 @@ public class FactionVehicleEditorScreen extends Screen {
             if (data.has("yaw")) yaw = data.get("yaw").getAsFloat();
             if (data.has("respawnTime")) respawnTime = data.get("respawnTime").getAsInt();
             if (data.has("initialTime")) initialTime = data.get("initialTime").getAsInt();
+            if (data.has("category")) category = data.get("category").getAsString();
 
             if (data.has("inventory")) {
                 try {
@@ -196,17 +205,18 @@ public class FactionVehicleEditorScreen extends Screen {
             yawField.setValue(String.valueOf((int) yaw));
             respawnTimeField.setValue(String.valueOf(respawnTime));
             initialTimeField.setValue(String.valueOf(initialTime));
+            categoryField.setValue(category);
             loading = false;
         }
     }
 
     private void saveVehicle() {
         if (vehicleName.trim().isEmpty()) {
-            minecraft.player.displayClientMessage(Component.literal("Vehicle name cannot be empty!"), true);
+             minecraft.player.displayClientMessage(Component.literal("Название техники не может быть пустым!"), true);
             return;
         }
         PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionVehicle(
-            faction, vehicleName.trim(), displayName, vehicleId, yaw, respawnTime, initialTime, vehicleInv
+            faction, vehicleName.trim(), displayName, vehicleId, yaw, respawnTime, initialTime, category, vehicleInv
         ));
         minecraft.setScreen(new FactionVehicleListScreen(faction));
     }
@@ -249,6 +259,7 @@ public class FactionVehicleEditorScreen extends Screen {
         gui.drawString(PWPTheme.Fonts.display(), "Yaw:", fl + 260, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
         gui.drawString(PWPTheme.Fonts.display(), "Respawn:", fl, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
         gui.drawString(PWPTheme.Fonts.display(), "Initial:", fl + 152, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Category:", fl + 296, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         gui.drawString(PWPTheme.Fonts.display(), "Modifier", modX, modY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
         gui.drawString(PWPTheme.Fonts.display(), "Items (32)", vInvX, vInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);

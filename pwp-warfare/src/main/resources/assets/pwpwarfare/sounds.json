@@ -8,6 +8,33 @@
       }
     ]
   },
+  "drone_deploy_start": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "pwpwarfare:radio_open",
+        "stream": false
+      }
+    ]
+  },
+  "drone_deploy_loop": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "pwpwarfare:station_idle",
+        "stream": true
+      }
+    ]
+  },
+  "drone_ready": {
+    "category": "player",
+    "sounds": [
+      {
+        "name": "pwpwarfare:m2_load",
+        "stream": false
+      }
+    ]
+  },
   "shovel_dig": {
     "category": "player",
     "subtitle": "subtitles.pwpwarfare.shovel_dig",

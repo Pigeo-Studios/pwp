@@ -124,14 +124,24 @@ public class ClientHooks {
             }
         }
 
-        var p = Minecraft.getInstance().player;
-        if (p != null && p.isAlive() && !p.isDeadOrDying()) {
-            var s = Minecraft.getInstance().screen;
-            if (s instanceof com.pigeostudios.pwp.warfare.client.gui.DeployScreen ds) {
-                ds.populateData();
+        // Деплой уже открыт — обновляем данные на месте, не пересоздаём экран.
+        // Иначе выбранная точка/кит сбрасываются, меню «мерцает» и заспавниться нельзя.
+        var s = Minecraft.getInstance().screen;
+        if (s instanceof com.pigeostudios.pwp.warfare.client.gui.DeployScreen ds) {
+            var p = Minecraft.getInstance().player;
+            // Флаг нужен только мёртвому (глушит ванильный DeathScreen поверх меню).
+            // Живому (меню по K) его ставить нельзя: тик-страховка ClientEvents
+            // посчитает «респавн завершён» и закроет экран в тот же тик.
+            if (p != null && p.isDeadOrDying()) {
+                ClientData.deployRequested = true;
             }
+            ds.populateData();
             return;
         }
+        // Во время респавна меню заново не открываем (запоздавший ответ на запрос китов)
+        if (ClientData.awaitingRespawn || System.currentTimeMillis() < ClientData.deployBlockedUntil) return;
+        var p = Minecraft.getInstance().player;
+        if (p == null || !p.isDeadOrDying()) return;
         ClientData.deployRequested = true;
         Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
     }
@@ -168,7 +178,7 @@ public class ClientHooks {
       if (player.isCreative()) {
          openRadioMenu();
       } else if (player.getTeam() == null) {
-         player.displayClientMessage(Component.literal("You must join a TEAM (Blue/Red) first!").withStyle(ChatFormatting.RED), true);
+          player.displayClientMessage(Component.literal("Сначала вступите в КОМАНДУ (Синяя/Красная)!").withStyle(ChatFormatting.RED), true);
       } else {
          String playerName = player.getScoreboardName();
          boolean isInSquad = false;
@@ -185,9 +195,9 @@ public class ClientHooks {
          }
 
          if (!isInSquad) {
-            player.displayClientMessage(Component.literal("You must join a SQUAD first! Press 'K'.").withStyle(ChatFormatting.RED), true);
+             player.displayClientMessage(Component.literal("Сначала вступите в ОТРЯД! Нажмите 'K'.").withStyle(ChatFormatting.RED), true);
          } else if (!isLeader) {
-            player.displayClientMessage(Component.literal("You must be a Squad Leader to use this!").withStyle(ChatFormatting.RED), true);
+             player.displayClientMessage(Component.literal("Для этого нужно быть командиром отряда!").withStyle(ChatFormatting.RED), true);
          } else {
             openRadioMenu();
          }

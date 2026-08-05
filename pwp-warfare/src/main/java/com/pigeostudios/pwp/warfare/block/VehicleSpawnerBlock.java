@@ -43,7 +43,7 @@ public class VehicleSpawnerBlock extends BaseEntityBlock {
                NetworkHooks.openScreen((ServerPlayer)player, spawner, pos);
             }
          } else {
-            player.displayClientMessage(Component.literal("Access Denied: Creative Mode Only"), true);
+             player.displayClientMessage(Component.literal("Доступ запрещён: только креатив"), true);
          }
       }
 

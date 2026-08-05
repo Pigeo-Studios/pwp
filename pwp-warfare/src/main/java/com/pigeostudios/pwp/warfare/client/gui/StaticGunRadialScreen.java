@@ -106,25 +106,22 @@ public class StaticGunRadialScreen extends Screen {
          boolean isSelected = i == selected;
          float scale = isSelected ? 1.15F : 1.0F;
          pose.scale(scale, scale, 1.0F);
-          pose.translate(-size / 2.0F, -size, 0.0F);
-          boolean disabled = i == 0 || i == 2;
-          if (disabled) {
-             RenderSystem.setShaderColor(1.0F, 0.4F, 0.4F, 1.0F);
-          } else if (isSelected) {
-             RenderSystem.setShaderColor(0.4F, 1.0F, 0.4F, 1.0F);
-          } else {
-             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-          }
+           pose.translate(-size / 2.0F, -size, 0.0F);
+           if (isSelected) {
+              RenderSystem.setShaderColor(0.4F, 1.0F, 0.4F, 1.0F);
+           } else {
+              RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+           }
 
-          gui.blit(SECTOR_TEXTURE, 0, 0, 0.0F, 0.0F, size, size, size, size);
-          pose.popPose();
-       }
+           gui.blit(SECTOR_TEXTURE, 0, 0, 0.0F, 0.0F, size, size, size, size);
+           pose.popPose();
+        }
 
-       RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-       this.drawLabel(gui, "M2 Browning", centerX + 60, centerY, false);
-       this.drawLabel(gui, "Mortar", centerX, centerY + 60, selected == 1);
-       this.drawLabel(gui, "AGS-30", centerX - 60, centerY, false);
-       this.drawLabel(gui, "TOW", centerX, centerY - 60, selected == 3);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        this.drawLabel(gui, "РЭБ", centerX + 60, centerY, selected == 0);
+        this.drawLabel(gui, "МИНОМЁТ", centerX, centerY + 60, selected == 1);
+        this.drawLabel(gui, "МИНИ-РЭБ", centerX - 60, centerY, selected == 2);
+        this.drawLabel(gui, "ПТРК", centerX, centerY - 60, selected == 3);
    }
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected) {
@@ -158,8 +155,16 @@ public class StaticGunRadialScreen extends Screen {
                var17 = 0;
             }
 
+             if (var17 == 0) {
+                ClientPlacementHandler.startPlacing(24);
+             }
+
              if (var17 == 1) {
                 ClientPlacementHandler.startPlacing(22);
+             }
+
+             if (var17 == 2) {
+                ClientPlacementHandler.startPlacing(25);
              }
 
              if (var17 == 3) {

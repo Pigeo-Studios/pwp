@@ -89,9 +89,12 @@ public class ModItems {
       "main_supply", () -> new BlockItem((Block)ModBlocks.MAIN_SUPPLY_BLOCK.get(), new Properties())
    );
    public static final RegistryObject<Item> AMMO_BAG = ITEMS.register("ammo_bag", () -> new BlockItem((Block)ModBlocks.AMMO_BAG_BLOCK.get(), new Properties()));
-   public static final RegistryObject<Item> GAME_START_TRIGGER_ITEM = ITEMS.register(
-      "game_start_trigger", () -> new BlockItem((Block)ModBlocks.GAME_START_TRIGGER.get(), new Properties())
-   );
+    public static final RegistryObject<Item> GAME_START_TRIGGER_ITEM = ITEMS.register(
+       "game_start_trigger", () -> new BlockItem((Block)ModBlocks.GAME_START_TRIGGER.get(), new Properties())
+    );
+    public static final RegistryObject<Item> DRONE_AMMO_POUCH = ITEMS.register(
+       "drone_ammo_pouch", () -> new Item(new Properties().stacksTo(8))
+    );
 
    public static void register(IEventBus eventBus) {
       ITEMS.register(eventBus);

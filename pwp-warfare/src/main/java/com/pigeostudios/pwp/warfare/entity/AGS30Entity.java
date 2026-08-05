@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.entity;
 
+import com.pigeostudios.pwp.warfare.events.MainZoneFireGuard;
 import com.pigeostudios.pwp.warfare.item.AGSAmmoItem;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -176,9 +177,15 @@ public class AGS30Entity extends Entity implements GeoEntity {
       }
    }
 
-   // Попытка выстрелить из гранатомёта
-   public void tryShoot(Player shooter) {
-      if (!this.level().isClientSide) {
+    // Попытка выстрелить из гранатомёта
+    public void tryShoot(Player shooter) {
+       // Предохранитель мейн-зоны: в мейн-зоне стрельба запрещена
+       if (MainZoneFireGuard.isFireBlocked(shooter)) {
+          if (shooter instanceof ServerPlayer serverPlayer) MainZoneFireGuard.notifyBlocked(serverPlayer);
+          return;
+       }
+
+       if (!this.level().isClientSide) {
          if ((!this.hasMagazine() || this.getAmmoCount() <= 0) && !shooter.isCreative()) {
             this.setFiring(false);
          } else {
@@ -190,13 +197,13 @@ public class AGS30Entity extends Entity implements GeoEntity {
       if (this.shootCooldown <= 0) {
          if (!shooter.isCreative()) {
             if (!this.hasMagazine()) {
-               shooter.displayClientMessage(Component.literal("No Ammo Box!").withStyle(ChatFormatting.RED), true);
+               shooter.displayClientMessage(Component.literal("Нет ящика с боеприпасами!").withStyle(ChatFormatting.RED), true);
                this.shootCooldown = 20;
                return;
             }
 
             if (this.getAmmoCount() <= 0) {
-               shooter.displayClientMessage(Component.literal("Empty!").withStyle(ChatFormatting.RED), true);
+               shooter.displayClientMessage(Component.literal("Пусто!").withStyle(ChatFormatting.RED), true);
                this.shootCooldown = 20;
                return;
             }
@@ -251,11 +258,11 @@ public class AGS30Entity extends Entity implements GeoEntity {
                }
 
                this.playSound((SoundEvent)ModSounds.M2_LOAD.get(), 1.0F, 1.0F);
-               player.displayClientMessage(Component.literal("AGS Loaded: " + ammo + " rounds"), true);
+               player.displayClientMessage(Component.literal("АГС заряжен: " + ammo + " выстрелов"), true);
                return InteractionResult.SUCCESS;
             }
 
-            player.displayClientMessage(Component.literal("Already loaded!"), true);
+            player.displayClientMessage(Component.literal("Уже заряжено!"), true);
             return InteractionResult.FAIL;
          }
 
@@ -267,7 +274,7 @@ public class AGS30Entity extends Entity implements GeoEntity {
             this.setHasMagazine(false);
             this.setAmmoCount(0);
             this.playSound((SoundEvent)ModSounds.M2_UNLOAD.get(), 1.0F, 1.0F);
-            player.displayClientMessage(Component.literal("AGS Unloaded (" + remaining + ")"), true);
+            player.displayClientMessage(Component.literal("АГС разряжен (" + remaining + ")"), true);
             return InteractionResult.SUCCESS;
          }
 

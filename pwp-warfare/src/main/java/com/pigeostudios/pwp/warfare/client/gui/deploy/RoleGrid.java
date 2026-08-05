@@ -106,12 +106,12 @@ public class RoleGrid {
         RoundedRect.fill(gui, x, y, size, size, 4, bg);
         RoundedRect.border(gui, x, y, size, size, 4, 1, bd);
 
-        String iconName = kit.name().toLowerCase().replace(" ", "_");
-        ResourceLocation ic = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconName + ".png");
+        String iconName = DeployData.kitIconFileName(kit.name());
         RenderSystem.enableBlend();
         if (!avail) RenderSystem.setShaderColor(0.45f, 0.45f, 0.45f, 1f);
         int ix = x + (size - iconS) / 2, iy = y + (size - iconS) / 2 - 2;
         try {
+            ResourceLocation ic = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconName + ".png");
             gui.blit(ic, ix, iy, 0, 0, iconS, iconS, iconS, iconS);
         } catch (Exception e) {
             String dn = DeployData.getDisplayName(kit.name());

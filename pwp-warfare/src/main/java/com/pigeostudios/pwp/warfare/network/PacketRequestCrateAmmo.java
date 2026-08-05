@@ -61,14 +61,14 @@ public class PacketRequestCrateAmmo {
                   if (msg.type == 0) {
                      String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
                      if (kitName.isEmpty()) {
-                        player.sendSystemMessage(Component.literal("No Kit equipped!").withStyle(ChatFormatting.RED));
+                         player.sendSystemMessage(Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
                      } else {
                         long lastFobUse = player.getPersistentData().getLong("WARFARE_LastFobResupply");
                         long currentTime = player.level().getGameTime();
                         if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
-                           player.sendSystemMessage(Component.literal("Kit Resupply is on cooldown!").withStyle(ChatFormatting.RED));
+                            player.sendSystemMessage(Component.literal("Пополнение кита на кулдауне!").withStyle(ChatFormatting.RED));
                         } else if (!player.isCreative() && crate.getMaterials() < cost) {
-                           player.sendSystemMessage(Component.literal("Not enough Materials in Crate! Need: " + cost).withStyle(ChatFormatting.RED));
+                           player.sendSystemMessage(Component.literal("Недостаточно материалов в ящике! Нужно: " + cost).withStyle(ChatFormatting.RED));
                         } else {
                            WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
                            String t = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
@@ -80,15 +80,15 @@ public class PacketRequestCrateAmmo {
                                     player.getPersistentData().putLong("WARFARE_LastFobResupply", currentTime);
                                  }
 
-                                 player.sendSystemMessage(Component.literal("Kit Resupplied! (-" + cost + " Mats)").withStyle(ChatFormatting.GREEN));
-                              } else {
-                                 player.sendSystemMessage(Component.literal("Ammo already full!").withStyle(ChatFormatting.YELLOW));
-                              }
+                                  player.sendSystemMessage(Component.literal("Кит пополнен! (-" + cost + " материалов)").withStyle(ChatFormatting.GREEN));
+                               } else {
+                                  player.sendSystemMessage(Component.literal("БК уже полон!").withStyle(ChatFormatting.YELLOW));
+                               }
                            }
                         }
                      }
                   } else if (!player.isCreative() && crate.getMaterials() < cost) {
-                     player.sendSystemMessage(Component.literal("Not enough Materials in Crate! Need: " + cost).withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Недостаточно материалов в ящике! Нужно: " + cost).withStyle(ChatFormatting.RED));
                   } else {
                       boolean success = false;
                       if (msg.type == 3) {
@@ -126,7 +126,7 @@ public class PacketRequestCrateAmmo {
                            crate.setMaterials(0);
                         }
 
-                        player.sendSystemMessage(Component.literal("Heavy Ammo Resupplied! Crate consumed.").withStyle(ChatFormatting.GREEN));
+                         player.sendSystemMessage(Component.literal("Тяжёлый БК пополнен! Ящик израсходован.").withStyle(ChatFormatting.GREEN));
                      }
                   }
                }

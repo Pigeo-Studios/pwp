@@ -99,7 +99,7 @@ public class KitSkinSelectScreen extends Screen {
         }
         if (this.minecraft.player != null) {
             this.minecraft.player.displayClientMessage(
-                Component.literal("В§aSkin settings saved! Click 'Save' in kit editor."), true);
+                Component.literal("§aНастройки скинов сохранены! Нажмите 'Сохранить' в редакторе китов."), true);
         }
         if (parentScreen != null) {
             this.minecraft.setScreen(parentScreen);

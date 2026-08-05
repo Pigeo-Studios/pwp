@@ -27,7 +27,7 @@ public class PacketDropCrate {
             Entity vehicle = player.getVehicle();
             if (vehicle != null && vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
                if (vehicle.getFirstPassenger() != player) {
-                  player.displayClientMessage(Component.literal("Only the driver can drop supplies!").withStyle(ChatFormatting.RED), true);
+                   player.displayClientMessage(Component.literal("Сбрасывать припасы может только водитель!").withStyle(ChatFormatting.RED), true);
                   return;
                }
 
@@ -45,9 +45,9 @@ public class PacketDropCrate {
                   double y = vehicle.getY() + 1.5;
                   SupplyCrateEntity crate = new SupplyCrateEntity(player.level(), x, y, z, team, player.getUUID());
                   player.level().addFreshEntity(crate);
-                  player.displayClientMessage(Component.literal("Supply Crate Dropped!").withStyle(ChatFormatting.YELLOW), true);
+                   player.displayClientMessage(Component.literal("Ящик снабжения сброшен!").withStyle(ChatFormatting.YELLOW), true);
                } else {
-                  player.displayClientMessage(Component.literal("No Supplies! Return to Main Base.").withStyle(ChatFormatting.RED), true);
+                   player.displayClientMessage(Component.literal("Нет припасов! Вернитесь на основную базу.").withStyle(ChatFormatting.RED), true);
                }
             }
          }

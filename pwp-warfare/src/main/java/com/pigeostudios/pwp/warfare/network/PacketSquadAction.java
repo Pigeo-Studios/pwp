@@ -111,32 +111,32 @@ public class PacketSquadAction {
                            giveRadio(player);
                         }
 
-                         player.sendSystemMessage(Component.literal("Squad created: " + finalName).withStyle(ChatFormatting.GOLD));
+                          player.sendSystemMessage(Component.literal("Отряд создан: " + finalName).withStyle(ChatFormatting.GOLD));
                          PacketRequestKitMenu.sendKitMenu(player, data);
                       } else if (msg.action == 1) {
                         for (WarfareWorldData.Squad s : data.squads) {
                            if (s.id == msg.squadId && s.team.equalsIgnoreCase(pTeam)) {
                               if (s.isLocked && !player.isCreative()) {
-                                 player.sendSystemMessage(Component.literal("Squad is LOCKED!").withStyle(ChatFormatting.RED));
+                                  player.sendSystemMessage(Component.literal("Отряд ЗАКРЫТ!").withStyle(ChatFormatting.RED));
                                  return;
                               }
 
                               if (s.members.size() >= 9) {
-                                 player.sendSystemMessage(Component.literal("Squad is full!").withStyle(ChatFormatting.RED));
+                                  player.sendSystemMessage(Component.literal("Отряд полон!").withStyle(ChatFormatting.RED));
                                  return;
                               }
 
                               leaveCurrentSquad(player, data);
                                s.members.add(pName);
                               updatePlayerTags(player, s.id, false);
-                               player.sendSystemMessage(Component.literal("Joined squad: " + s.name).withStyle(ChatFormatting.GREEN));
+                                player.sendSystemMessage(Component.literal("Вы вступили в отряд: " + s.name).withStyle(ChatFormatting.GREEN));
                                PacketRequestKitMenu.sendKitMenu(player, data);
                                break;
                            }
                         }
                      } else if (msg.action == 2) {
                          leaveCurrentSquad(player, data);
-                         player.sendSystemMessage(Component.literal("You left the squad.").withStyle(ChatFormatting.YELLOW));
+                          player.sendSystemMessage(Component.literal("Вы вышли из отряда.").withStyle(ChatFormatting.YELLOW));
                          PacketRequestKitMenu.sendKitMenu(player, data);
                       } else if (msg.action == 3) {
                         WarfareWorldData.Squad targetSquad = null;
@@ -166,7 +166,7 @@ public class PacketSquadAction {
                                     }
 
                                   newLeader.sendSystemMessage(
-                                     Component.literal("The previous leader was offline and removed. You are the new Leader!")
+                                      Component.literal("Предыдущий лидер был оффлайн и удалён. Теперь вы лидер отряда!")
                                         .withStyle(ChatFormatting.GOLD)
                                   );
                                   PacketRequestKitMenu.sendKitMenu(newLeader, data);
@@ -176,14 +176,14 @@ public class PacketSquadAction {
                                if (targetEntity != null) {
                                   removePlayerTags(targetEntity);
                                   removeRadio(targetEntity);
-                                  targetEntity.displayClientMessage(Component.literal("You were kicked!").withStyle(ChatFormatting.RED), true);
+                                   targetEntity.displayClientMessage(Component.literal("Вы были кикнуты!").withStyle(ChatFormatting.RED), true);
                                   PacketRequestKitMenu.sendKitMenu(targetEntity, data);
                                }
 
                               player.server
                                  .getPlayerList()
                                  .broadcastSystemMessage(
-                                    Component.literal("Offline leader " + targetName + " was removed from squad " + targetSquad.name)
+                                     Component.literal("Оффлайн-лидер " + targetName + " был удалён из отряда " + targetSquad.name)
                                        .withStyle(ChatFormatting.YELLOW),
                                     false
                                  );
@@ -209,11 +209,11 @@ public class PacketSquadAction {
                                   }
 
                                   mySquad.leader = targetName;
-                                  target.displayClientMessage(Component.literal("You have been promoted to Squad Leader!").withStyle(ChatFormatting.GOLD), true);
+                                   target.displayClientMessage(Component.literal("Вы были повышены до командира отряда!").withStyle(ChatFormatting.GOLD), true);
                                   PacketRequestKitMenu.sendKitMenu(target, data);
                                }
 
-                               player.sendSystemMessage(Component.literal("Promoted " + targetName).withStyle(ChatFormatting.GOLD));
+                               player.sendSystemMessage(Component.literal("Повышен " + targetName).withStyle(ChatFormatting.GOLD));
                                PacketRequestKitMenu.sendKitMenu(player, data);
                            }
                         }
@@ -221,9 +221,9 @@ public class PacketSquadAction {
                         WarfareWorldData.Squad mySquad = getPlayerSquad(pName, data);
                         if (mySquad != null && mySquad.leader.equals(pName)) {
                            mySquad.isLocked = !mySquad.isLocked;
-                           String status = mySquad.isLocked ? "LOCKED" : "UNLOCKED";
+                           String status = mySquad.isLocked ? "ЗАКРЫТ" : "ОТКРЫТ";
                            ChatFormatting color = mySquad.isLocked ? ChatFormatting.RED : ChatFormatting.GREEN;
-                           player.sendSystemMessage(Component.literal("Squad is now " + status).withStyle(color));
+                           player.sendSystemMessage(Component.literal("Отряд теперь " + status).withStyle(color));
                         }
                      } else if (msg.action == 6) {
                         WarfareWorldData.Squad mySquad = getPlayerSquad(pName, data);
@@ -236,7 +236,7 @@ public class PacketSquadAction {
                                  mySquad.bravoMembers.add(target);
                               }
 
-                              player.sendSystemMessage(Component.literal("Assigned " + target + " as Bravo FTL").withStyle(ChatFormatting.GOLD));
+                               player.sendSystemMessage(Component.literal("Назначен " + target + " командиром огневой группы Браво").withStyle(ChatFormatting.GOLD));
                            }
                         }
                      } else if (msg.action == 7) {
@@ -250,7 +250,7 @@ public class PacketSquadAction {
                                  mySquad.charlieMembers.add(target);
                               }
 
-                              player.sendSystemMessage(Component.literal("Assigned " + target + " as Charlie FTL").withStyle(ChatFormatting.GOLD));
+                               player.sendSystemMessage(Component.literal("Назначен " + target + " командиром огневой группы Чарли").withStyle(ChatFormatting.GOLD));
                            }
                         }
                      } else if (msg.action == 8) {
@@ -293,14 +293,14 @@ public class PacketSquadAction {
                                if (mem != null) {
                                   removePlayerTags(mem);
                                   removeRadio(mem);
-                                  mem.displayClientMessage(Component.literal("Squad disbanded by leader.").withStyle(ChatFormatting.RED), true);
+                                   mem.displayClientMessage(Component.literal("Отряд расформирован лидером.").withStyle(ChatFormatting.RED), true);
                                   PacketRequestKitMenu.sendKitMenu(mem, data);
                                }
                            }
                            if (mySquad.id == data.blueCMDId) data.blueCMDId = -1;
                            if (mySquad.id == data.redCMDId) data.redCMDId = -1;
                            data.squads.remove(mySquad);
-                           player.sendSystemMessage(Component.literal("Squad disbanded.").withStyle(ChatFormatting.GOLD));
+                            player.sendSystemMessage(Component.literal("Отряд расформирован.").withStyle(ChatFormatting.GOLD));
                         }
                      }
 
@@ -401,9 +401,9 @@ public class PacketSquadAction {
       player.containerMenu.broadcastChanges();
       removePlayerTags(player);
       if (!data.isGameStarted) {
-         player.displayClientMessage(Component.literal("В§eLeft squad. Pre-game kit cleared."), true);
-      } else {
-         player.displayClientMessage(Component.literal("В§eLeft squad. Equipment reset."), true);
+          player.displayClientMessage(Component.literal("§eВы вышли из отряда. Кит до игры очищен."), true);
+       } else {
+          player.displayClientMessage(Component.literal("§eВы вышли из отряда. Снаряжение сброшено."), true);
       }
 
       data.setDirty();

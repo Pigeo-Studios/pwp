@@ -185,16 +185,20 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         menu.category = menu.category != null ? menu.category : "INFANTRY";
         menu.description = descBox.getValue();
 
-        String team = menu.team;
-        if (team.equals("BLUE") || team.equals("RED")) {
+        // Регулярные киты команд: faction = "BLUE"/"RED" (PacketOpenKitEditor).
+        // Фракционные киты: faction = имя фракции ("usa" и т.п., PacketOpenFactionKitEditor).
+        // Раньше ветвили по menu.team, который в faction-редакторе ВСЕГДА "BLUE"/"RED" —
+        // PacketSaveFactionKit никогда не отправлялся, сохранение в БД не попадало.
+        String faction = menu.faction;
+        if (faction.equals("BLUE") || faction.equals("RED")) {
             PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
-                team, menu.kitName, menu.category, menu.description,
+                faction, menu.kitName, menu.category, menu.description,
                 menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
                 menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
             ));
         } else {
             PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionKit(
-                menu.faction, menu.kitName, team, menu.category, menu.description,
+                faction, menu.kitName, menu.team, menu.category, menu.description,
                 menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
                 menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
             ));

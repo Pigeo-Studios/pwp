@@ -44,11 +44,11 @@ public class VehicleMarkerItem extends Item {
 
    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
       ChatFormatting color = this.team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-      tooltip.add(Component.literal("Team: " + this.team).withStyle(color));
-      tooltip.add(Component.literal("Type: " + this.type).withStyle(ChatFormatting.GRAY));
-      tooltip.add(Component.literal("Loss Penalty: -" + this.penalty + " Tickets").withStyle(ChatFormatting.DARK_RED));
+      tooltip.add(Component.literal("Команда: " + this.team).withStyle(color));
+      tooltip.add(Component.literal("Тип: " + this.type).withStyle(ChatFormatting.GRAY));
+      tooltip.add(Component.literal("Штраф при потере: -" + this.penalty + " тикетов").withStyle(ChatFormatting.DARK_RED));
       if (this.maxMats > 0) {
-         tooltip.add(Component.literal("Contains: " + this.maxMats + " Materials").withStyle(ChatFormatting.YELLOW));
+         tooltip.add(Component.literal("Внутри: " + this.maxMats + " материалов").withStyle(ChatFormatting.YELLOW));
       }
    }
 }

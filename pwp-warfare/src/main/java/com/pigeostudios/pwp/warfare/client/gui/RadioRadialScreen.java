@@ -127,16 +127,16 @@ public class RadioRadialScreen extends Screen {
          pose.popPose();
       }
 
-      String rallyText = "RALLY POINT";
+      String rallyText = "ТОЧКА СБОРА";
       int rallyColor = selected == 0 ? -16711936 : -1;
       if (rallyOnCooldown) {
-         rallyText = "WAIT: " + secondsLeft + "s";
+         rallyText = "ОЖИДАНИЕ: " + secondsLeft + "с";
          rallyColor = -43691;
       }
 
       this.drawLabel(gui, rallyText, centerX, centerY - 70, selected == 0, rallyColor);
-      this.drawLabel(gui, "DEFENSES", centerX + 60, centerY + 35, selected == 1, selected == 1 ? -16711936 : -1);
-      this.drawLabel(gui, "STATIC GUN", centerX - 60, centerY + 35, selected == 2, selected == 2 ? -16711936 : -1);
+      this.drawLabel(gui, "ОБОРОНА", centerX + 60, centerY + 35, selected == 1, selected == 1 ? -16711936 : -1);
+      this.drawLabel(gui, "УСТАНОВКИ", centerX - 60, centerY + 35, selected == 2, selected == 2 ? -16711936 : -1);
    }
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected, int color) {

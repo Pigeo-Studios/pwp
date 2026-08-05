@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // Миксин: исправление отображения рук в первом лице
 // Принудительно показывает руку игрока, даже если предмет в руке пуст
 public class FirstPersonArmFixMixin {
-    @Inject(method = "renderArmWithItem", at = @At("HEAD"), remap = false)
+    @Inject(method = "renderArmWithItem", at = @At("HEAD"))
    private void pwpwarfare$forceShowArm(
       AbstractClientPlayer player,
       float partialTicks,

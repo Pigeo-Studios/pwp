@@ -47,7 +47,7 @@ public class PacketVehicleDriveRequest {
         String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
         if (!isSpecialistVehicle(vType)) return;
 
-        String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+        String pKit = com.pigeostudios.pwp.warfare.events.KitUtil.getEffectiveKit(player);
         if (!hasCorrectKit(vType, pKit)) return;
 
         int squadId = player.getPersistentData().getInt("WARFARE_SquadID");

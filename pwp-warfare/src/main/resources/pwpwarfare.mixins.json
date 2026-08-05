@@ -3,12 +3,20 @@
   "minVersion": "0.8",
   "package": "com.pigeostudios.pwp.warfare.mixin",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "pwpwarfare.refmap.json",
   "mixins": [
+     "SbwFireMixin",
+     "SbwVehicleEffectsMixin",
+     "DroneConnectMixin"
   ],
   "client": [
      "PlayerModelMixin",
     "FirstPersonArmFixMixin",
-    "MouseSensitivityMixin"
+    "MouseSensitivityMixin",
+    "PointblankFireMixin",
+    "GuiOverlayMessageMixin",
+    "SbwVehicleHudMixin",
+    "SbwAmmoBarMixin"
   ],
   "injectors": {
     "defaultRequire": 1

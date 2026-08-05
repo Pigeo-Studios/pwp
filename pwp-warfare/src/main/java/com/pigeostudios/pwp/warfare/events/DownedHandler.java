@@ -154,12 +154,12 @@ public class DownedHandler {
             if (killerName != null && !killerName.isEmpty()) {
                logMsg = Component.literal(victimName)
                   .withStyle(ChatFormatting.WHITE)
-                  .append(Component.literal(" was finished by ").withStyle(ChatFormatting.GRAY))
+                  .append(Component.literal(" был добит игроком ").withStyle(ChatFormatting.GRAY))
                   .append(Component.literal(killerName).withStyle(ChatFormatting.GOLD));
             } else {
                logMsg = Component.literal(victimName)
                   .withStyle(ChatFormatting.WHITE)
-                  .append(Component.literal(" has bled out").withStyle(ChatFormatting.GRAY));
+                  .append(Component.literal(" истёк кровью").withStyle(ChatFormatting.GRAY));
             }
 
             player.server.getPlayerList().broadcastSystemMessage(logMsg, false);
@@ -187,7 +187,7 @@ public class DownedHandler {
           if (target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
              if (var6.getTeam() == null || target.getTeam() == null || !var6.getTeam().isAlliedTo(target.getTeam())) {
                 if (!var6.level().isClientSide) {
-                   var6.displayClientMessage(Component.literal("You cannot revive an ENEMY!").withStyle(ChatFormatting.RED), true);
+                   var6.displayClientMessage(Component.literal("Нельзя поднять врага!").withStyle(ChatFormatting.RED), true);
                 }
 
                 event.setCanceled(true);
@@ -210,7 +210,7 @@ public class DownedHandler {
                    held.shrink(1);
                 }
 
-               var6.displayClientMessage(Component.literal("Teammate revived!").withStyle(ChatFormatting.GREEN), true);
+                var6.displayClientMessage(Component.literal("Союзник поднят!").withStyle(ChatFormatting.GREEN), true);
             }
          }
       }
@@ -249,7 +249,7 @@ public class DownedHandler {
       target.connection.send(new ClientboundSetSubtitleTextPacket(Component.translatable("pwpwarfare.message.teamkill_warn_subtitle").withStyle(ChatFormatting.YELLOW)));
       target.connection
          .send(
-            new ClientboundSetTitleTextPacket(Component.literal("!WARNING!").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD}))
+             new ClientboundSetTitleTextPacket(Component.literal("!ВНИМАНИЕ!").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD}))
          );
       target.playNotifySound(net.minecraft.sounds.SoundEvents.ANVIL_LAND, SoundSource.MASTER, 1.0F, 0.8F);
    }
@@ -305,7 +305,7 @@ public class DownedHandler {
       if (wasSpectator && player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
          player.setGameMode(GameType.SURVIVAL);
       }
-      player.sendSystemMessage(Component.literal("Your teamkill punishment has been cleared.").withStyle(ChatFormatting.GREEN));
+       player.sendSystemMessage(Component.literal("Наказание за тимкилл снято.").withStyle(ChatFormatting.GREEN));
    }
 
    public static void revivePlayer(ServerPlayer player) {

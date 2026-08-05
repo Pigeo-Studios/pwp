@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 // Миксин: изменение чувствительности мыши при прицеливании на турелях
 // Уменьшает чувствительность при использовании AGS-30 и M2 Browning
 public class MouseSensitivityMixin {
-    @Redirect(method = "turnPlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;"), remap = false)
+    @Redirect(method = "turnPlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/OptionInstance;get()Ljava/lang/Object;"))
    private Object pwpwarfare$modifySensitivity(OptionInstance<?> instance) {
       Object value = instance.get();
       Minecraft mc = Minecraft.getInstance();

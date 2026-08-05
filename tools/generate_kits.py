@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Генератор китов PWP (Squad-адаптация v2).
@@ -7,12 +7,16 @@
        maps/kits/import.sql (INSERT ... ON DUPLICATE KEY UPDATE для прямого mysql)
 
 v2: Squad-шаблон:
-  - варианты китов: Rifleman/Officer ×3 (Iron/Red Dot/Optic), Medic/LAT ×2, HAT/LMG/HMG ×2, Marksman ×2
+  - роли-варианты свернуты: 19 базовых ролей на фракцию (как у инсургентов), без суффиксов Iron/Red Dot/Optic/Javelin
+  - альтернативы оружия — внутри кита на слотах 41-42 с маркерами __ALT__PRIMARY/__ALT__SPECIAL (выбор в меню деплоя):
+    Rifleman/Officer: ред-дот + оптика; Medic: оптика (дефолт ред-дот); LMG/HMG: оптика;
+    Marksman: глушитель; HAT: винтовка с ред-дотом. Альт-трубы не делаем: у всех труб разный БП
+    (у LAT/HAT труба всегда одна — только стволы с одинаковым БП получают альты)
   - пистолеты только у половины ролей (нет у Rifleman/Grenadier/LAT/HAT/Sapper)
-  - трубачи: винтовка (слот 0) + труба (слот 1, вторая рука как в Squad)
-  - гренадёр: винтовка + M320 + 10×40-мм
-  - у всех: фраг ×2, дым ×2, бинт ×2, бинокль (слот 9), лопата (кроме лидеров/пилотов/ПВО)
-  - медик: бинты ×9 + аптечка, maxPerSquad 2; офицер: рация + арт-индикатор, без лопаты
+  - трубачи: винтовка (слот 0) + труба (слот 3 — СПЕЦ, фирменное оружие роли)
+  - гренадёр: винтовка + M320 + 10?40-мм
+  - у всех: фраг ?2, дым ?2, бинт ?2, бинокль (слот 9), лопата (кроме лидеров/пилотов/ПВО)
+  - медик: бинты ?9 + аптечка, maxPerSquad 2; офицер: рация + арт-индикатор, без лопаты
   - фракционные трубы по истории; исправлены патроны (M2HB=50bmg, MRAD=ea:416barrett, P320=45acp)
 
 Формат предметов — как в PacketSaveFactionKit (pwp-warfare):
@@ -55,7 +59,7 @@ ROLES_META = {
 }
 
 # Варианты китов: роль -> [(суффикс EN, подпись RU, прицел-ключ, бинокль, фрагов)]
-# scope-ключ: None = му́шка, "reddot", "optic" (выбор прицела — из FACTION_SCOPES)
+# scope-ключ: None = му?шка, "reddot", "optic" (выбор прицела — из FACTION_SCOPES)
 # Marksman "Suppressed" — как Optic + глушитель
 VARIANTS = {
     "Rifleman": [("Iron", "мушка",     None,     True,  2),
@@ -69,7 +73,9 @@ VARIANTS = {
     "LAT":      [("Iron", "мушка",     None,     True,  2),
                  ("Optic", "оптика",    "optic",  False, 1)],
     "HAT":      [("Iron", "мушка",     None,     True,  2),
-                 ("Red Dot", "ред-дот", "reddot", True,  2)],
+                 ("Red Dot", "ред-дот", "reddot", True,  2),
+                 ("Javelin", "Джавелин", None,    False, 1)],
+    "Grenadier": [("Optic", "оптика",   "optic",  True,  1)],
     "LMG":      [("Iron", "мушка",     None,     True,  2),
                  ("Optic", "оптика",    "optic",  False, 1)],
     "HMG":      [("Iron", "мушка",     None,     True,  2),
@@ -106,14 +112,25 @@ GUNS = {
     "ПКП":         ("cib:pkp",          "tacz:762x54", 70, "AUTO", False),
     "Mk14 EBR":    ("tacz:mk14",        "tacz:308",    10, "SEMI", False),
     "M700":        ("tacz:m700",        "tacz:30_06",  5,  "SEMI", False),
-    "AWP":         ("tacz:ai_awp",      "tacz:338",    5,  "SEMI", False),
+    "AWP":         ("maxstuff:ai_awp",  "tacz:308",    10, "SEMI", False),
     "MRAD":        ("maxstuff:mrad",    "ea:416barrett", 10, "SEMI", False),
+    "Z-15":        ("maxstuff:z15_a",   "tacz:545x39", 30, "AUTO", False),
     "Kar98k":      ("tacz:kar98",       "tacz:792x57", 4,  "SEMI", False),
     "ППШ-41":      ("cib:ppsh41",       "tacz:762x25", 20, "AUTO", False),
     "MP7":         ("maxstuff:mp7",     "tacz:46x30",  40, "AUTO", False),
     "MP5A5":       ("tacz:hk_mp5a5",    "tacz:9mm",    30, "AUTO", False),
     "Вектор":      ("maxstuff:vector9", "tacz:9mm",    24, "AUTO", False),
-    "M320":        ("tacz:m320",        "tacz:40mm",   1,  "SEMI", False),
+    "HK416D":      ("tacz:hk416d",      "tacz:556x45", 30, "AUTO", True),
+    "MK47":        ("maxstuff:mk47",    "tacz:762x39", 30, "AUTO", False),
+    "HK417":       ("maxstuff:hk417",   "tacz:308",    20, "AUTO", True),
+    "MK11":        ("maxstuff:mk11",    "tacz:308",    20, "SEMI", False),
+    "FN Evolys":   ("tacz:fn_evolys",   "tacz:308",    75, "AUTO", False),
+    "LWMMG":       ("rfp:lwmmg",        "rfp:nm338",   75, "AUTO", False),
+    "M95":         ("tacz:m95",         "tacz:50bmg",  5,  "SEMI", False),
+    "MSR":         ("maxstuff:msr",     "tacz:30_06",  7,  "SEMI", False),
+    "ДП-27":       ("maxstuff:dp28",    "tacz:762x54", 47, "AUTO", False),
+    "СКС":         ("maxstuff:sks_wooden", "tacz:762x39", 9, "SEMI", False),
+    "M320":        ("maxstuff:m320t",  "tacz:40mm",   1,  "SEMI", False),
 }
 
 PISTOLS = {
@@ -160,13 +177,19 @@ RESUPPLY_IDS = {
     "pwp_medicine:bandage", "pwp_medicine:medkit",
     "superbwarfare:claymore_mine", "superbwarfare:tm_62", "superbwarfare:c4_bomb",
     "superbwarfare:swarm_drone",
+    # дроны uncomplicated-fpv (деплой по кулдауну — пополнение даёт только предмет)
+    "uncomplicatedfpv:fpv_drone", "uncomplicatedfpv:mavic_drone_no_drop", "uncomplicatedfpv:mavic_drone_with_drop",
     # ракеты пускачей (FCL/SBW)
     "pointblank:fcl_m72_rocket", "pointblank:fcl_rpg26_rocket", "pointblank:fcl_at4_rocket",
     "pointblank:fcl_rpg7v2_og7v", "pointblank:fcl_rpg7v2_pg7vm", "pointblank:fcl_rpg7v2_pg7vr",
     "pointblank:fcl_smaw_heaa", "pointblank:fcl_smaw_hedm",
     "pointblank:fcl_carlgustaf_he448", "pointblank:fcl_carlgustaf_heat551crs",
     "pointblank:fcl_carlgustaf_heat758", "pointblank:fcl_carlgustaf_hedp502",
+    "pointblank:fcl_panzerfaust3_heat", "pointblank:fcl_panzerfaust3_tandem",
+    "pointblank:fcl_rpg28_rocket",
+    "pointblank:fcl_pf98_heat", "pointblank:fcl_pf98_he", "pointblank:fcl_pf98_hei",
     "superbwarfare:javelin_missile", "superbwarfare:medium_anti_air_missile",
+    "superbwarfare:blu_43_mine", "superbwarfare:lunge_mine",
 }
 
 # Предметы, чей NBT сохраняется при смерти (пушки с обвесами/магазином, заряды, цели арты)
@@ -196,13 +219,16 @@ def free_slot(items, prefer):
         i += 1
     return i
 
-def tacz_gun(gun_id, mag, fire_mode, scope=None, muzzle=None, grip=None, stock=None):
+def tacz_gun(gun_id, mag, fire_mode, scope=None, muzzle=None, grip=None, stock=None, display_name=None):
     tag = {
         "HasBulletInBarrel": 1,
         "GunId": gun_id,
         "GunFireMode": fire_mode,
         "GunCurrentAmmoCount": mag,
     }
+    if display_name:
+        # Приписка к имени ствола (как в Squad: "M4A1 (Red Dot)") — видна в меню деплоя и в инвентаре
+        tag["display"] = {"Name": '{"text":"%s"}' % display_name}
     def att(att_id):
         return item("tacz:attachment", 1, {"AttachmentId": att_id})
     if scope:  tag["AttachmentSCOPE"] = att(scope)
@@ -274,9 +300,9 @@ FACTIONS = {
             "HMG":              ("MG-43",   None,   False, None),
             "Marksman":         ("Mk14 EBR", None,  False, None),
             "Sniper":           ("M700",    None,   False, None),
-            "Sapper":           ("MK18 MOD", None,  True,  None),
+            "Sapper":           ("MK18 MOD", None,  False, None),
             "Scout":            ("MK18 MOD", None,  False, None),
-            "Anti_air":         ("Igla",    None,   False, "IGLA"),
+            "Anti_air":         ("MK18 MOD", None,  False, "IGLA"),
             "Drone Operator":   ("MK18 MOD", None,  False, None),
             "Mechanic":         ("MP7",     None,   False, None),
             "Mechanic Officer": ("MP7",     None,   False, None),
@@ -308,9 +334,9 @@ FACTIONS = {
             "HMG":              ("PKP 6П41", None,  False, None),
             "Marksman":         ("СВД",     None,   False, None),
             "Sniper":           ("СВ-98",   None,   False, None),
-            "Sapper":           ("АКС-74У", None,   True,  None),
+            "Sapper":           ("АКС-74У", None,   False, None),
             "Scout":            ("АКС-74У", None,   False, None),
-            "Anti_air":         ("Igla",    None,   False, "IGLA"),
+            "Anti_air":         ("АКС-74У", None,   False, "IGLA"),
             "Drone Operator":   ("АКС-74У", None,   False, None),
             "Mechanic":         ("АКС-74У", None,   False, None),
             "Mechanic Officer": ("АКС-74У", None,   False, None),
@@ -321,8 +347,8 @@ FACTIONS = {
     "ukraine": {
         "ru": "Украина", "motto": "Универсальность",
         "frag": rgo, "knife": "cs2_wt:m9", "knife_officer": "cs2_wt:m9emerald",
-        "helmet": "warbornrenewed:nato-wood-helmet",
-        "vest": "warbornrenewed:nato-wood-chestplate",
+        "helmet": "warbornrenewed:opscore-mm14",
+        "vest": "warbornrenewed:warmor-mm14",
         "helmet_officer": "warbornrenewed:gpngv-nato-wood",
         "ghillie": "jungle",
         "pistol": "Глок-17",
@@ -332,24 +358,24 @@ FACTIONS = {
         "scout_scope": None, "drone_scope": "OKP-7", "sapper_scope": "OKP-7",
         "roles": {
             "Rifleman":         ("АК-74М",  None,   True,  None),
-            "Assault":          ("HK416",   None,   False, None),
-            "Officer":          ("HK416",   None,   False, None),
+            "Assault":          ("HK416D",  None,   False, None),
+            "Officer":          ("HK416D",  None,   False, None),
             "Medic":            ("АК-74М",  None,   False, None),
             "Grenadier":        ("АК-74М",  None,   False, "M320"),
             "LAT":              ("АК-74М",  None,   True,  "LAT"),
             "HAT":              ("АК-74М",  None,   True,  "HAT"),
             "LMG":              ("РПК-16",  None,   False, None),
             "HMG":              ("PKP 6П41", None,  False, None),
-            "Marksman":         ("СВД",     None,   False, None),
-            "Sniper":           ("СВ-98",   None,   False, None),
-            "Sapper":           ("АКС-74У", None,   True,  None),
-            "Scout":            ("АКС-74У", None,   False, None),
-            "Anti_air":         ("Igla",    None,   False, "IGLA"),
-            "Drone Operator":   ("АКС-74У", None,   False, None),
-            "Mechanic":         ("АКС-74У", None,   False, None),
-            "Mechanic Officer": ("АКС-74У", None,   False, None),
-            "Pilot":            ("АКС-74У", None,   False, None),
-            "Pilot Officer":    ("АКС-74У", None,   False, None),
+            "Marksman":         ("Mk14 EBR", None, False, None),
+            "Sniper":           ("M95",     None,   False, None),
+            "Sapper":           ("Z-15",    None,   False, None),
+            "Scout":            ("Z-15",    None,   False, None),
+            "Anti_air":         ("Z-15",    None,   False, "IGLA"),
+            "Drone Operator":   ("Z-15",    None,   False, None),
+            "Mechanic":         ("Z-15",    None,   False, None),
+            "Mechanic Officer": ("Z-15",    None,   False, None),
+            "Pilot":            ("Z-15",    None,   False, None),
+            "Pilot Officer":    ("Z-15",    None,   False, None),
         },
     },
     "nato": {
@@ -372,13 +398,13 @@ FACTIONS = {
             "Grenadier":        ("G36K",    None,   False, "M320"),
             "LAT":              ("G36K",    None,   True,  "LAT"),
             "HAT":              ("G36K",    None,   True,  "HAT"),
-            "LMG":              ("M249 SAW", None,  False, None),
-            "HMG":              ("MG-43",   None,   False, None),
-            "Marksman":         ("Mk14 EBR", None,  False, None),
+            "LMG":              ("FN Evolys", None, False, None),
+            "HMG":              ("LWMMG",   None,   False, None),
+            "Marksman":         ("HK417",   None,   False, None),
             "Sniper":           ("AWP",     None,   False, None),
-            "Sapper":           ("MP5A5",   None,   True,  None),
+            "Sapper":           ("MP5A5",   None,   False, None),
             "Scout":            ("MP7",     None,   False, None),
-            "Anti_air":         ("Igla",    None,   False, "IGLA"),
+            "Anti_air":         ("MP7",     None,   False, "IGLA"),
             "Drone Operator":   ("MP7",     None,   False, None),
             "Mechanic":         ("MP7",     None,   False, None),
             "Mechanic Officer": ("MP7",     None,   False, None),
@@ -411,11 +437,11 @@ FACTIONS = {
             "HAT":              ("АК-47",   None,   True,  "HAT"),
             "LMG":              ("РПК",     None,   False, None),
             "HMG":              ("ПКП",     None,   False, None),
-            "Marksman":         ("СВД",     "ELCAN-4x", False, None),
+            "Marksman":         ("СКС",     "ELCAN-4x", False, None),
             "Sniper":           ("Kar98k",  "98k",  False, None),
-            "Sapper":           ("ППШ-41",  None,   True,  None),
+            "Sapper":           ("ППШ-41",  None,   False, None),
             "Scout":            ("АКС-74У", None,   False, None),
-            "Anti_air":         ("Igla",    None,   False, "IGLA"),
+            "Anti_air":         ("АКС-74У", None,   False, "IGLA"),
             "Drone Operator":   ("АКС-74У", None,   False, None),
             "Mechanic":         ("ППШ-41",  None,   False, None),
             "Mechanic Officer": ("ППШ-41",  None,   False, None),
@@ -437,7 +463,7 @@ FACTIONS = {
         "scout_scope": "Holosun", "drone_scope": "T2", "sapper_scope": "T2",
         "roles": {
             "Rifleman":         ("HK416",   None,   True,  None),
-            "Assault":          ("SCAR-L",  None,   False, None),
+            "Assault":          ("MK47",    None,   False, None),
             "Officer":          ("HK416",   None,   False, None),
             "Medic":            ("SCAR-L",  None,   False, None),
             "Grenadier":        ("HK416",   None,   False, "M320"),
@@ -445,11 +471,11 @@ FACTIONS = {
             "HAT":              ("HK416",   None,   True,  "HAT"),
             "LMG":              ("M249 SAW", None,  False, None),
             "HMG":              ("MG-43",   None,   False, None),
-            "Marksman":         ("Mk14 EBR", None,  False, None),
-            "Sniper":           ("MRAD",    None,   False, None),
-            "Sapper":           ("MP7",     None,   True,  None),
+            "Marksman":         ("MK11",    None,   False, None),
+            "Sniper":           ("MSR",     None,   False, None),
+            "Sapper":           ("MP7",     None,   False, None),
             "Scout":            ("Вектор",  None,   False, None),
-            "Anti_air":         ("Igla",    None,   False, "IGLA"),
+            "Anti_air":         ("MP7",     None,   False, "IGLA"),
             "Drone Operator":   ("MP7",     None,   False, None),
             "Mechanic":         ("Вектор",  None,   False, None),
             "Mechanic Officer": ("Вектор",  None,   False, None),
@@ -460,14 +486,14 @@ FACTIONS = {
 }
 
 # ---------------------------------------------------------------- трубы
-# LAT/HAT по фракциям (винтовка в слоте 0, труба в слоте 1)
+# LAT/HAT по фракциям (винтовка в слоте 0, труба в слоте 3 — СПЕЦ)
 LAT_LAUNCHERS = {
-    "usa":       {"Iron": "AT4", "Optic": "M72 LAW"},
-    "nato":      {"Iron": "AT4", "Optic": "M72 LAW"},
-    "pmc":       {"Iron": "M72 LAW", "Optic": "AT4"},
-    "russia":    {"Iron": "РПГ-26", "Optic": "РПГ-26"},
-    "ukraine":   {"Iron": "РПГ-26", "Optic": "РПГ-26"},
-    "insurgency": {"Iron": "РПГ-7В2 INS", "Optic": "РПГ-7В2 INS"},
+    "usa":       {"Iron": "AT4",           "Optic": "M72 LAW"},
+    "nato":      {"Iron": "M72 LAW",       "Optic": "Panzerfaust 3"},
+    "pmc":       {"Iron": "M72 LAW",       "Optic": "RPG-28"},
+    "russia":    {"Iron": "РПГ-26",        "Optic": "РПГ-26"},
+    "ukraine":   {"Iron": "РПГ-26",        "Optic": "РПГ-26"},
+    "insurgency": {"Iron": "РПГ-26",       "Optic": "PF-98"},
 }
 
 HAT_LAUNCHERS = {
@@ -486,17 +512,23 @@ TUBES = {
     "AT4":            ("pointblank:fcl_at4",            [("pointblank:fcl_at4_rocket", 1)],                  None),
     "РПГ-7В2":        ("pointblank:fcl_rpg7v2",         [("pointblank:fcl_rpg7v2_pg7vm", 1),
                                                          ("pointblank:fcl_rpg7v2_pg7vr", 1)],                 "pointblank:fcl_pgo7"),
-    "РПГ-7В2 INS":    ("pointblank:fcl_rpg7v2",         [("pointblank:fcl_rpg7v2_og7v", 2),
-                                                         ("pointblank:fcl_rpg7v2_pg7vm", 2)],                None),
+    "РПГ-7В2 INS":    ("pointblank:fcl_rpg7v2",         [("pointblank:fcl_rpg7v2_og7v", 1),
+                                                         ("pointblank:fcl_rpg7v2_pg7vm", 1)],                None),
     "SMAW":           ("pointblank:fcl_smaw",           [("pointblank:fcl_smaw_heaa", 1),
                                                          ("pointblank:fcl_smaw_hedm", 1)],                   "pointblank:fcl_smaw_scope"),
     "Карл Густав M4": ("pointblank:fcl_carlgustafm4",   [("pointblank:fcl_carlgustaf_heat551crs", 1),
                                                          ("pointblank:fcl_carlgustaf_hedp502", 1)],          "pointblank:fcl_carlgustaf_scope"),
+    "Panzerfaust 3":  ("pointblank:fcl_panzerfaust3",   [("pointblank:fcl_panzerfaust3_heat", 1),
+                                                         ("pointblank:fcl_panzerfaust3_tandem", 1)],         None),
+    "RPG-28":         ("pointblank:fcl_rpg28",          [("pointblank:fcl_rpg28_rocket", 1)],               None),
+    "PF-98":          ("pointblank:fcl_pf98",           [("pointblank:fcl_pf98_heat", 1),
+                                                         ("pointblank:fcl_pf98_he", 1)],                    None),
+    "Javelin":        ("superbwarfare:javelin",         [("superbwarfare:javelin_missile", 2)],              None),
     "IGLA":           ("superbwarfare:igla_9k38",       [("superbwarfare:medium_anti_air_missile", 2)],      None),
 }
 
-# HAT INS: ОГ×2 + ПГ-7ВМ×1 + ПГ-7ВР×1 + прицел (как Squad INS)
-TUBES["РПГ-7В2 INS HAT"] = ("pointblank:fcl_rpg7v2", [("pointblank:fcl_rpg7v2_og7v", 2),
+# HAT INS: ОГ?1 + ПГ-7ВМ?1 + ПГ-7ВР?1 + прицел (как Squad INS)
+TUBES["РПГ-7В2 INS HAT"] = ("pointblank:fcl_rpg7v2", [("pointblank:fcl_rpg7v2_og7v", 1),
                                                       ("pointblank:fcl_rpg7v2_pg7vm", 1),
                                                       ("pointblank:fcl_rpg7v2_pg7vr", 1)], "pointblank:fcl_pgo7")
 
@@ -541,7 +573,7 @@ def ammo_stacks_for(role, gun_name):
     if role == "HMG":
         return 8
     if role in ("Marksman", "Sniper"):
-        return 2 if gun_name != "Kar98k" else 1
+        return 2
     if role in ("Mechanic", "Mechanic Officer", "Pilot", "Pilot Officer"):
         return 3
     if gun_name in ("ППШ-41", "MP7", "MP5A5", "Вектор"):
@@ -558,7 +590,8 @@ def main_scope(faction, role, variant, fixed_scope):
               "scout": faction["scout_scope"], "drone_operator": faction["drone_scope"]}[key]
         return SCOPES[sk] if sk else None
     if role == "Grenadier":
-        sk = faction["grenadier_scope"]
+        # вариант Optic — прицел крупнее (ACOG/1П87), базовый — ред-дот
+        sk = faction["optic"] if variant == "Optic" else faction["grenadier_scope"]
         return SCOPES[sk] if sk else None
     if role == "LMG":
         # как в Squad: 1-й пулемётчик без оптики, 2-й (Optic) — с прицелом
@@ -575,6 +608,9 @@ def main_scope(faction, role, variant, fixed_scope):
         return SCOPES[faction["marksman_scope"]]
     if role == "Sniper":
         return SCOPES[faction["sniper_scope"]]
+    if role == "Medic" and variant is None and faction.get("reddot"):
+        # свернутый кит: медик по умолчанию с ред-дотом (как старый вариант Red Dot)
+        return SCOPES[faction["reddot"]]
     # роли с вариантами (Rifleman/Officer/Medic/LAT/HAT): ключ варианта
     if variant == "Red Dot":
         return SCOPES[faction["reddot"]]
@@ -603,56 +639,93 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
         gid, ammo_id, mag, mode, is_ar = GUNS[gun_name]
         silencer = suppressed and gun_name not in ("ППШ-41", "АКС-74У")
         is_mg = role in ("LMG", "HMG")
-        muzzle = MUZZLE_SIL if silencer else (MUZZLE_COMP if (is_ar or is_mg) else None)
-        grip = GRIP_BIPOD if is_mg else (GRIP_VERT if (is_ar or gun_name in STOCKLESS_AR) else None)
+        vector = gun_name == "Вектор"
+        # Вектор без атачментов слаб: ставим разрешённые (maxstuff:a3_grip / supressed_brake)
+        muzzle = "maxstuff:supressed_brake" if vector else (MUZZLE_SIL if silencer else (MUZZLE_COMP if (is_ar or is_mg) else None))
+        grip = GRIP_BIPOD if (is_mg and gun_name != "LWMMG") else ("maxstuff:a3_grip" if vector else (GRIP_VERT if (is_ar or gun_name in STOCKLESS_AR) else None))
         stock = STOCK_HK416 if gun_name == "HK416" else (STOCK_AR if (is_ar and gun_name not in STOCKLESS_AR) else None)
         items.append(slot(0, tacz_gun(gid, mag, mode, scope_id, muzzle, grip, stock)))
         has_launcher = tube_type is not None
         launcher = tube_type
 
-    # --- альтернатива PRIMARY (слот 41): выбор прицела прямо в меню деплоя (__ALT__PRIMARY)
+    # --- альтернативы оружия внутри кита (слоты 41+, __ALT__): выбор в меню деплоя
+    # Роли-варианты (Iron/Red Dot/Optic/Javelin) свернуты: одна роль, альты пушек/труб внутри.
+    # Альт-стволы получают приписку к имени (как в Squad): "M4A1 (Red Dot)", "M4A1 (Optic)"
     slot_skins = {}
-    alt_scope = None
-    alt_needed = False
-    if gun_name != "Igla":
-        if role in ("Rifleman", "Officer", "Medic"):
-            if variant == "Red Dot":
-                alt_scope, alt_needed = SCOPES[faction["optic"]], True
-            elif variant == "Optic" and faction["reddot"]:
-                alt_scope, alt_needed = SCOPES[faction["reddot"]], True
-            elif variant == "Iron" and faction["reddot"]:
-                alt_scope, alt_needed = SCOPES[faction["reddot"]], True
-        elif role == "LMG":
-            if variant == "Iron" and faction["lmg_scope"]:
-                alt_scope, alt_needed = SCOPES[faction["lmg_scope"]], True
-            elif variant == "Optic":
-                alt_scope, alt_needed = None, True
-        elif role == "HMG":
-            if variant == "Iron":
-                alt_scope, alt_needed = SCOPES[faction["optic"]], True
-            elif variant == "Optic":
-                alt_scope, alt_needed = None, True
-        if alt_needed:
-            items.append(slot(41, tacz_gun(gid, mag, mode, alt_scope, muzzle, grip, stock)))
-            slot_skins["41"] = ["__ALT__PRIMARY"]
+    alt_names = []
+    desc_alts = []
+    if gun_name != "Igla" and faction_key != "insurgency":
 
-    # --- труба / M320 (слот 1 — SECONDARY, как в Squad) / пистолет
+        def alt_primary(scope_id, slot_idx, suffix, desc_ru=None):
+            items.append(slot(slot_idx, tacz_gun(gid, mag, mode, scope_id, muzzle, grip, stock,
+                                                 display_name=f"{gun_name} ({suffix})")))
+            slot_skins[str(slot_idx)] = ["__ALT__PRIMARY"]
+            alt_names.append(suffix)
+            if desc_ru:
+                desc_alts.append(desc_ru)
+
+        if role in ("Rifleman", "Officer"):
+            # альтернативы прицелов: ред-дот + оптика (дефолт — мушка)
+            if faction.get("reddot"):
+                alt_primary(SCOPES[faction["reddot"]], 41, "Red Dot", "ред-дот")
+            if faction.get("optic"):
+                alt_primary(SCOPES[faction["optic"]], 42, "Optic", "оптика")
+        elif role == "Medic":
+            # дефолт — ред-дот (см. main_scope), альтернатива — оптика
+            if faction.get("optic"):
+                alt_primary(SCOPES[faction["optic"]], 41, "Optic", "оптика")
+        elif role == "LMG":
+            # дефолт — без прицела, альтернатива — оптика (2-й пулемётчик)
+            if faction.get("lmg_scope"):
+                alt_primary(SCOPES[faction["lmg_scope"]], 41, "Optic", "оптика")
+        elif role == "HMG":
+            if faction.get("optic"):
+                alt_primary(SCOPES[faction["optic"]], 41, "Optic", "оптика")
+        elif role == "Marksman":
+            # альтернатива — с глушителем
+            items.append(slot(41, tacz_gun(gid, mag, mode, SCOPES[faction["marksman_scope"]], MUZZLE_SIL, grip, stock,
+                                           display_name=f"{gun_name} (Suppressed)")))
+            slot_skins["41"] = ["__ALT__PRIMARY"]
+            alt_names.append("Suppressed")
+            desc_alts.append("с глушителем")
+        elif role == "HAT":
+            # альтернатива — винтовка с ред-дотом (труба одна, вариант Iron)
+            if faction.get("reddot"):
+                alt_primary(SCOPES[faction["reddot"]], 41, "Red Dot", "ред-дот")
+
+    # --- труба / M320 / Игла (слот 3 — СПЕЦ, как в Squad: фирменное оружие роли) / пистолет
     pistol_ammo_id = None
     if has_launcher and gun_name != "Igla":
         if launcher == "M320":
-            items.append(slot(1, item("tacz:m320", 1)))
+            # M320 — maxstuff-пушка (tacz:m320 не существует): tacz-предмет modern_kinetic_gun + GunId
+            items.append(slot(3, tacz_gun("maxstuff:m320t", 1, "SEMI")))
+        elif launcher == "IGLA":
+            main, rockets, sight = TUBES["IGLA"]
+            items.append(slot(3, sbw_gun(main)))
+            items.append(slot(9, item(rockets[0][0], rockets[0][1])))
+            # ПВО несёт пистолет в вторичке (как раньше, когда Игла была на слоте 0)
+            pid, pam, pmag, _ = PISTOLS[faction["pistol"]]
+            items.append(slot(1, tacz_pistol(pid, pmag)))
+            pistol_ammo_id = pam
         else:
             tube_name = None
             if launcher == "LAT":
                 tube_name = LAT_LAUNCHERS[faction_key][variant or "Iron"]
             else:
-                tube_name, hat_kind = HAT_LAUNCHERS[faction_key]
-                if hat_kind == "PG7_INS":
-                    tube_name = "РПГ-7В2 INS HAT"
+                if variant == "Javelin":
+                    tube_name = "Javelin"
+                else:
+                    tube_name, hat_kind = HAT_LAUNCHERS[faction_key]
+                    if hat_kind == "PG7_INS":
+                        tube_name = "РПГ-7В2 INS HAT"
             main, rockets, sight = TUBES[tube_name]
-            items.append(slot(1, item(main, 1)))
+            if tube_name == "Javelin":
+                # SBW-формат (GunData UUID), как у Иглы
+                items.append(slot(3, sbw_gun(main)))
+            else:
+                items.append(slot(3, item(main, 1)))
             for i, (rid, cnt) in enumerate(rockets):
-                items.append(slot(5 + i, item(rid, cnt)))
+                items.append(slot(6 + i, item(rid, cnt)))
             if sight:
                 items.append(slot(free_slot(items, 9), item(sight, 1)))
     elif not no_pistol and gun_name != "Igla":
@@ -665,7 +738,8 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
         pistol_ammo_id = pam
 
     # --- слоты 2-8 (снаряга)
-    frags = 4 if role == "Assault" else (2 if variant not in ("Optic", "Suppressed") else 1)
+    # фрагов по варианту: оптические/глушёные варианты несут на один меньше
+    frags = 2 if variant not in ("Optic", "Suppressed", "Javelin") else 1
     if role in ("Sniper", "Marksman"):
         frags = 1
 
@@ -678,7 +752,7 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
         items.append(slot(6, item("superbwarfare:artillery_indicator", 1)))
         items.append(slot(7, bandage(2)))
         items.append(slot(8, knife(faction["knife_officer"])))
-        if variant in ("Iron", "Red Dot"):
+        if variant is None or variant in ("Iron", "Red Dot"):
             items.append(slot(9, item("warbornrenewed:binocular", 1)))
         # без лопаты
     elif role == "Medic":
@@ -688,20 +762,28 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
         items.append(slot(6, item("pwp_medicine:medkit", 1)))
         items.append(slot(7, item("pwpwarfare:entrenching_tool", 1)))
         items.append(slot(8, knife(faction["knife"])))
-        if variant == "Red Dot":
+        if variant is None or variant == "Red Dot":
             items.append(slot(9, item("warbornrenewed:binocular", 1)))
     elif role == "Sapper":
-        items.append(slot(3, smoke(2)))
-        items.append(slot(4, bandage(2)))
-        items.append(slot(5, item("superbwarfare:claymore_mine", 2)))
-        items.append(slot(6, item("superbwarfare:tm_62", 2)))
+        # мины — фирменное снаряжение сапёра (СПЕЦ, слот 3), дым и бинт сдвигаются
+        if faction_key in ("usa", "nato", "pmc"):
+            items.append(slot(3, item("superbwarfare:claymore_mine", 2)))       # M18A1 — западное
+            items.append(slot(6, item("superbwarfare:blu_43_mine", 2)))         # BLU-43B Dragontooth вместо советской ТМ-62
+        elif faction_key in ("russia", "ukraine"):
+            items.append(slot(3, item("superbwarfare:tm_62", 3)))               # 3?ТМ-62, чисто советский арсенал
+        else:  # insurgency
+            items.append(slot(3, item("superbwarfare:tm_62", 1)))               # меньше, "бедная" фракция
+            items.append(slot(6, item("superbwarfare:lunge_mine", 2)))          # импровизированная ПТ-мина, флейвор
+        items.append(slot(4, smoke(2)))
+        items.append(slot(5, bandage(2)))
         items.append(slot(7, item("pwpwarfare:entrenching_tool", 1)))
         items.append(slot(8, knife(faction["knife"])))
         items.append(slot(9, item("superbwarfare:detonator", 1)))
         items.append(slot(10, item("warbornrenewed:binocular", 1)))
         if faction_key != "insurgency":
             items.append(slot(11, item("superbwarfare:repair_tool", 1, {"Energy": 100000})))
-        items.append(slot(33, item("superbwarfare:c4_bomb", 2, {"Control": 1})))
+        c4_count = 1 if faction_key == "insurgency" else 2
+        items.append(slot(33, item("superbwarfare:c4_bomb", c4_count, {"Control": 1})))
     elif role == "Mechanic" or role == "Mechanic Officer":
         items.append(slot(3, smoke(2)))
         items.append(slot(4, bandage(2)))
@@ -725,18 +807,24 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
     elif role == "Scout":
         items.append(slot(3, smoke(2)))
         items.append(slot(4, bandage(2)))
+        items.append(slot(5, item("uncomplicatedfpv:mavic_drone_no_drop", 1)))  # развед-мавик
+        items.append(slot(6, item("superbwarfare:monitor", 1)))                # пульт управления
         items.append(slot(7, item("pwpwarfare:entrenching_tool", 1)))
         items.append(slot(8, knife(faction["knife"])))
         items.append(slot(9, item("warbornrenewed:binocular", 1)))
     elif role == "Drone Operator":
         items.append(slot(3, smoke(2)))
         items.append(slot(4, bandage(2)))
-        items.append(slot(5, item("superbwarfare:swarm_drone", 1)))
-        items.append(slot(7, item("pwpwarfare:entrenching_tool", 1)))
-        items.append(slot(8, knife(faction["knife"])))
+        items.append(slot(5, item("uncomplicatedfpv:fpv_drone", 1)))           # FPV-камикадзе
+        items.append(slot(6, item("uncomplicatedfpv:mavic_drone_with_drop", 1)))  # мавик со сбросом
+        items.append(slot(7, item("superbwarfare:monitor", 1)))                # пульт управления
+        items.append(slot(8, item("pwpwarfare:entrenching_tool", 1)))
+        items.append(slot(10, item("pwpwarfare:drone_ammo_pouch", 2)))  # дрон-подсумок: перезарядка мавика
+        items.append(slot(9, knife(faction["knife"])))
     elif role == "Anti_air":
-        items.append(slot(3, smoke(2)))
-        items.append(slot(4, bandage(2)))
+        # Игла на слоте 3 (СПЕЦ, фирменное оружие ПВО), дым и бинт сдвигаются
+        items.append(slot(4, smoke(2)))
+        items.append(slot(5, bandage(2)))
         items.append(slot(8, knife(faction["knife"])))
         # без лопаты
     elif role == "Rifleman":
@@ -745,25 +833,43 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
         items.append(slot(5, item("pwpwarfare:ammo_bag", 1)))
         items.append(slot(7, item("pwpwarfare:entrenching_tool", 1)))
         items.append(slot(8, knife(faction["knife"])))
-        if variant in ("Iron", "Red Dot"):
+        if variant is None or variant in ("Iron", "Red Dot"):
             items.append(slot(9, item("warbornrenewed:binocular", 1)))
     elif role == "Grenadier":
-        items.append(slot(3, smoke(2)))
-        items.append(slot(4, bandage(2)))
-        items.append(slot(5, ammo("tacz:40mm", 10)))
+        # M320 на слоте 3 (СПЕЦ), дым и бинт сдвигаются
+        items.append(slot(4, smoke(2)))
+        items.append(slot(5, bandage(2)))
+        items.append(slot(6, ammo("tacz:40mm", 10)))
         items.append(slot(7, item("pwpwarfare:entrenching_tool", 1)))
         items.append(slot(8, knife(faction["knife"])))
         items.append(slot(9, item("warbornrenewed:binocular", 1)))
     else:
         # Assault / LMG / HMG / Marksman / Sniper / LAT / HAT
-        items.append(slot(3, smoke(2)))
-        items.append(slot(4, bandage(2)))
-        items.append(slot(free_slot(items, 8), knife(faction["knife"])))
-        items.append(slot(free_slot(items, 7), item("pwpwarfare:entrenching_tool", 1)))
-        if role in ("Assault", "LMG", "HMG", "Marksman", "Sniper"):
+        if role in ("LAT", "HAT"):
+            # труба уже на слоте 3 (СПЕЦ) — дым и бинт сдвигаются
+            items.append(slot(4, smoke(2)))
+            items.append(slot(5, bandage(2)))
+            items.append(slot(free_slot(items, 8), knife(faction["knife"])))
+            items.append(slot(free_slot(items, 7), item("pwpwarfare:entrenching_tool", 1)))
+            if variant is None or variant in ("Iron", "Red Dot"):
+                items.append(slot(free_slot(items, 9), item("warbornrenewed:binocular", 1)))
+        elif role == "Sniper":
+            # клеймор — фирменное снаряжение снайпера (СПЕЦ, слот 3), дым и бинт сдвигаются
+            items.append(slot(3, item("superbwarfare:claymore_mine", 1)))
+            items.append(slot(4, smoke(2)))
+            items.append(slot(5, bandage(2)))
+            items.append(slot(free_slot(items, 8), knife(faction["knife"])))
+            items.append(slot(free_slot(items, 7), item("pwpwarfare:entrenching_tool", 1)))
             items.append(slot(free_slot(items, 9), item("warbornrenewed:binocular", 1)))
-        elif variant in ("Iron", "Red Dot"):
-            items.append(slot(free_slot(items, 9), item("warbornrenewed:binocular", 1)))
+        else:
+            items.append(slot(3, smoke(2)))
+            items.append(slot(4, bandage(2)))
+            items.append(slot(free_slot(items, 8), knife(faction["knife"])))
+            items.append(slot(free_slot(items, 7), item("pwpwarfare:entrenching_tool", 1)))
+            if role in ("Assault", "LMG", "HMG", "Marksman"):
+                items.append(slot(free_slot(items, 9), item("warbornrenewed:binocular", 1)))
+            elif variant in ("Iron", "Red Dot"):
+                items.append(slot(free_slot(items, 9), item("warbornrenewed:binocular", 1)))
 
     # --- броня
     items.append(slot(36, armor("survival_instinct:military_boots")))
@@ -813,6 +919,8 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
     if (role, variant) in VARIANT_LIMITS:
         max_squad, min_squad = VARIANT_LIMITS[(role, variant)]
     desc = f"{faction['ru']} · {ROLE_RU[role]} — {DESC_PHRASE[role]}"
+    if desc_alts:
+        desc += f" · Альтернативы: {', '.join(desc_alts)}"
     if variant:
         desc += f" · вариант: {variant_ru} (альтернатива)"
     return {
@@ -839,19 +947,19 @@ def main():
     for faction_key, faction in FACTIONS.items():
         kits = []
         for role in ROLES_META:
-            if role in VARIANTS and faction_key != "insurgency":
-                for suffix, ru, _, _, _ in VARIANTS[role]:
-                    kits.append(build_kit(faction_key, faction, role, suffix, ru))
-            else:
-                kits.append(build_kit(faction_key, faction, role, None, None))
+            # роли-варианты свернуты: одна базовая роль, альтернативы оружия внутри (__ALT__ на 41-42)
+            kits.append(build_kit(faction_key, faction, role, None, None))
         out = os.path.join(OUT_DIR, f"{faction_key}.json")
         with open(out, "w", encoding="utf-8") as f:
             json.dump(kits, f, ensure_ascii=False, indent=2)
         print(f"OK {faction_key}: {len(kits)} китов -> {out}")
         for k in kits:
-            items_esc = k["items"].replace("'", "''")
-            desc_esc = k["description"].replace("'", "''")
-            skins_esc = k["slotSkins"].replace("'", "''")
+            # MySQL съедает backslash-escape: \" внутри JSON (display.Name) превращается в " — удваиваем
+            def sql_esc(s):
+                return s.replace("\\", "\\\\").replace("'", "''")
+            items_esc = sql_esc(k["items"])
+            desc_esc = sql_esc(k["description"])
+            skins_esc = sql_esc(k["slotSkins"])
             values.append(
                 f"('{k['faction']}', '{k['kitName']}', '{k['category']}', '{desc_esc}', "
                 f"{1 if k['leaderOnly'] else 0}, {k['maxPerTeam']}, {k['maxPerSquad']}, {k['minSquadPlayers']}, "

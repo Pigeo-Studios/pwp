@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pwp.coreserver.CoreServerApi;
+import com.pwp.coreserver.TransferHosts;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import net.minecraft.network.chat.Component;
@@ -308,11 +309,13 @@ public class MatchStatsTracker {
                 server.execute(() -> {
                     try {
                         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+                            // Локальные игроки получают LAN-адрес лобби, внешние — домен
+                            String host = TransferHosts.resolveTransferHost(player);
                             player.sendSystemMessage(
-                                    Component.literal("§e[PWP] Returning to lobby..."), false);
+                                    Component.literal("§e[PWP] Возврат в лобби..."), false);
                             PacketHandler.INSTANCE.send(
                                     PacketDistributor.PLAYER.with(() -> player),
-                                    new ConnectToServerPacket("pigeo.asuscomm.com", 25565));
+                                    new ConnectToServerPacket(host, 25565));
                         }
                         Thread.sleep(2000);
                     } catch (Exception ex) {

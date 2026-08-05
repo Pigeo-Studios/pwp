@@ -46,7 +46,7 @@ public class PacketTeamSelect {
          int targetCount = targetTeam.equals("Blue") ? blueCount : redCount;
          int otherCount = targetTeam.equals("Blue") ? redCount : blueCount;
          if (targetCount >= otherCount + 2) {
-            player.sendSystemMessage(Component.literal("Team " + targetTeam + " is too full! Join the other team or wait.").withStyle(ChatFormatting.RED));
+             player.sendSystemMessage(Component.literal("Команда " + targetTeam + " переполнена! Вступите в другую или подождите.").withStyle(ChatFormatting.RED));
             return;
          }
 
@@ -77,13 +77,13 @@ public class PacketTeamSelect {
             BlockPos mainSpawn = msg.teamName.equalsIgnoreCase("BLUE") ? data.blueSpawns.get(currentDim) : data.redSpawns.get(currentDim);
             if (mainSpawn != null) {
                player.teleportTo(mainSpawn.getX() + 0.5, mainSpawn.getY(), mainSpawn.getZ() + 0.5);
-               player.sendSystemMessage(Component.literal("Match in progress! Teleporting to Main Base...").withStyle(ChatFormatting.YELLOW));
-            } else {
-               player.sendSystemMessage(Component.literal("Warning: Main Base spawn point is not set for this team!").withStyle(ChatFormatting.RED));
-            }
-         }
+                player.sendSystemMessage(Component.literal("Матч идёт! Телепортация на главную базу...").withStyle(ChatFormatting.YELLOW));
+             } else {
+                player.sendSystemMessage(Component.literal("Внимание: точка спавна главной базы не установлена для этой команды!").withStyle(ChatFormatting.RED));
+             }
+          }
 
-         player.sendSystemMessage(Component.literal("You joined the " + internalTeamName + " team!").withStyle(color));
+          player.sendSystemMessage(Component.literal("Вы присоединились к команде " + internalTeamName + "!").withStyle(color));
       });
       ctx.get().setPacketHandled(true);
    }

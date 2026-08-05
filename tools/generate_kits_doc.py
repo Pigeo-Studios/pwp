@@ -131,45 +131,46 @@ FACTION_RU = {"usa": "США", "russia": "Россия", "ukraine": "Украи�
 HEADER = """# Киты PWP — дизайн по Squad (v2.1, полная раскладка по слотам)
 
 Документ сгенерирован из `maps/kits/*.json` (см. `tools/generate_kits.py`).
-Для каждой из 6 фракций перечислены ВСЕ роли и варианты (альтернативы) с раскладкой каждого слота:
-слот 0 — праймари (ган + обвесы), слот 1 — пистолет или труба, 2–8 — хотбар, 9+ — инвентарь,
+Для каждой из 6 фракций перечислены ВСЕ роли (19 базовых, без вариантов-суффиксов) с раскладкой каждого слота:
+слот 0 — праймари (ган + обвесы), слот 1 — пистолет, слот 2 — гранаты, слот 3 — СПЕЦ (фирменное оружие роли: труба LAT/HAT, M320 гренадёра, мины сапёра, клеймор снайпера, Игла ПВО), 4–8 — хотбар, 9+ — инвентарь,
 33 — доп. заряд, 36/37 — сапоги/штаны, 38 — жилет, 39 — шлем, 42/44/46 — гилли.
+Альтернативы оружия (прицелы/трубы) лежат внутри кита на слотах 41-42 с маркерами `__ALT__PRIMARY`/`__ALT__SPECIAL` — выбор в меню деплоя.
 
 Метки: `R` — ресапплай из мейн-блока (resupply), `NBT` — сохранение NBT при смерти (saveNbt).
 `bluefor`/`redfor` — заглушки, не трогаем.
 
-## Лимиты ролей (команда / отряд / мин. отряд) и варианты
+## Лимиты ролей (команда / отряд / мин. отряд)
 
-| Роль | Варианты | Команда | Отряд | Мин. | Лидер |
-|---|---|---|---|---|---|
-| Rifleman | (Iron) / (Red Dot) / (Optic) | ∞ | ∞/∞/3 | 0/0/3 | |
-| Assault | — | 6 | 1 | 0 | |
-| Officer | (Iron) / (Red Dot) / (Optic) | 9 | 1 | 0 | ✔ |
-| Medic | (Red Dot) / (Optic) | 9 | 2 | 0 | |
-| Grenadier | — | 4 | 1 | 0 | |
-| LAT | (Iron) / (Optic) | 4 | 2 | 0 | |
-| HAT | (Iron) / (Red Dot) | 2 | 1 | 3 | |
-| LMG | (Iron) / (Optic) | 4 | 1 | 0 | |
-| HMG | (Iron) / (Optic) | 2 | 1 | 2 | |
-| Marksman | (Optic) / (Suppressed) | 4 | 1 | 0 | |
-| Sniper | — | 2 | 1 | 0 | |
-| Sapper | — | 2 | 1 | 2 | |
-| Scout | — | 4 | 1 | 0 | |
-| Anti_air | — | 2 | 1 | 2 | |
-| Drone Operator | — | 2 | 1 | 2 | |
-| Mechanic | — | 4 | 1 | 0 | |
-| Mechanic Officer | — | 3 | 1 | 0 | ✔ |
-| Pilot | — | 3 | 1 | 0 | |
-| Pilot Officer | — | 3 | 1 | 0 | ✔ |
+| Роль | Команда | Отряд | Мин. | Лидер |
+|---|---|---|---|---|
+| Rifleman | ∞ | ∞ | 0 | |
+| Assault | 6 | 1 | 0 | |
+| Officer | 9 | 1 | 0 | ✔ |
+| Medic | 9 | 2 | 0 | |
+| Grenadier | 4 | 1 | 0 | |
+| LAT | 4 | 2 | 0 | |
+| HAT | 2 | 1 | 3 | |
+| LMG | 4 | 1 | 0 | |
+| HMG | 2 | 1 | 2 | |
+| Marksman | 4 | 1 | 0 | |
+| Sniper | 2 | 1 | 0 | |
+| Sapper | 2 | 1 | 2 | |
+| Scout | 4 | 1 | 0 | |
+| Anti_air | 2 | 1 | 2 | |
+| Drone Operator | 2 | 1 | 2 | |
+| Mechanic | 4 | 1 | 0 | |
+| Mechanic Officer | 3 | 1 | 0 | ✔ |
+| Pilot | 3 | 1 | 0 | |
+| Pilot Officer | 3 | 1 | 0 | ✔ |
 
-Инсургенты — без вариантов (по одному киту на роль, как в Squad INS).
+У всех фракций одинаковый набор из 19 ролей — вариантов (Iron/Red Dot/Optic/Javelin) нет, альтернативы оружия выбираются в меню деплоя внутри роли.
 
 ## Категории ролей (лимит «≤3 огневой поддержки на отряд»)
 
 | Категория | Роли | Ограничение |
 |---|---|---|
-| `DIRECT_COMBAT` | Rifleman (все вар.), Assault, LMG (Iron) | нет |
-| `FIRE_SUPPORT` | Grenadier, LAT (все вар.), **LMG (Optic)**, Marksman (все вар.) | **не больше 3 на отряд** |
+| `DIRECT_COMBAT` | Rifleman, Assault, LMG | нет |
+| `FIRE_SUPPORT` | Grenadier, LAT, **LMG (при выборе оптики в деплое)**, Marksman | **не больше 3 на отряд** |
 | `SPECIALIST` | HAT, HMG, Sniper, Sapper | нет |
 | `SUPPORT` | Officer, Medic, Scout, Anti_air, Drone Operator, Mechanic, Mechanic Officer, Pilot, Pilot Officer | нет |
 
@@ -179,12 +180,14 @@ HEADER = """# Киты PWP — дизайн по Squad (v2.1, полная ра�
 
 | Фракция | LAT | HAT |
 |---|---|---|
-| usa | Iron: `fcl_at4` + 1×ракета · Optic: `fcl_m72` + 1×ракета | `fcl_carlgustafm4` + 1×HEAT + 1×HEDP + прицел |
-| russia | `fcl_rpg26` + 1×ракета (оба варианта) | `fcl_rpg7v2` + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
-| ukraine | `fcl_rpg26` + 1×ракета (оба варианта) | `fcl_rpg7v2` + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
-| nato | Iron: `fcl_at4` + 1×ракета · Optic: `fcl_m72` + 1×ракета | `fcl_smaw` + 1×HEAA + 1×HEDM + прицел |
-| insurgency | `fcl_rpg7v2` + 2×ОГ-7В + 2×ПГ-7ВМ | `fcl_rpg7v2` + 2×ОГ-7В + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
-| pmc | Iron: `fcl_m72` + 1×ракета · Optic: `fcl_at4` + 1×ракета | `fcl_carlgustafm4` + 1×HEAT + 1×HEDP + прицел |
+| usa | `fcl_at4` + 1×ракета | `fcl_carlgustafm4` + 1×HEAT + 1×HEDP + прицел |
+| russia | `fcl_rpg26` + 1×ракета | `fcl_rpg7v2` + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
+| ukraine | `fcl_rpg26` + 1×ракета | `fcl_rpg7v2` + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
+| nato | `fcl_m72` + 1×ракета | `fcl_smaw` + 1×HEAA + 1×HEDM + прицел |
+| insurgency | `fcl_rpg26` + 1×ракета | `fcl_rpg7v2` + 2×ОГ-7В + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
+| pmc | `fcl_m72` + 1×ракета | `fcl_carlgustafm4` + 1×HEAT + 1×HEDP + прицел |
+
+У каждой роли труба одна (у всех труб разный боеприпас, поэтому альт-труб нет — альты только у стволов с тем же БП).
 
 ---
 

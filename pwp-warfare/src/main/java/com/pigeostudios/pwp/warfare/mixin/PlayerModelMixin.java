@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // Миксин: принудительное отображение частей модели игрока
 // Включает все части тела для корректного отображения скинов фракций
 public class PlayerModelMixin {
-    @Inject(method = "setModelProperties", at = @At("RETURN"), remap = false)
+    @Inject(method = "setModelProperties", at = @At("RETURN"))
    private void pwpwarfare$forceModelParts(AbstractClientPlayer player, CallbackInfo ci) {
       PlayerRenderer renderer = (PlayerRenderer)(Object)this;
       PlayerModel<AbstractClientPlayer> model = (PlayerModel<AbstractClientPlayer>)renderer.getModel();

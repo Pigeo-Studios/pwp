@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.entity;
 
+import com.pigeostudios.pwp.warfare.events.MainZoneFireGuard;
 import com.pigeostudios.pwp.warfare.item.M2AmmoItem;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -183,9 +184,15 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
       }
    }
 
-   // Попытка выстрелить из пулемёта
-   public void tryShoot(Player shooter) {
-      if (!this.level().isClientSide) {
+    // Попытка выстрелить из пулемёта
+    public void tryShoot(Player shooter) {
+       // Предохранитель мейн-зоны: в мейн-зоне стрельба запрещена
+       if (MainZoneFireGuard.isFireBlocked(shooter)) {
+          if (shooter instanceof ServerPlayer serverPlayer) MainZoneFireGuard.notifyBlocked(serverPlayer);
+          return;
+       }
+
+       if (!this.level().isClientSide) {
          this.setFiring(true);
          this.firingResetTimer = 5;
       }
@@ -193,13 +200,13 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
       if (this.shootCooldown <= 0) {
          if (!shooter.isCreative()) {
             if (!this.hasMagazine()) {
-               shooter.displayClientMessage(Component.literal("No Magazine!").withStyle(ChatFormatting.RED), true);
+               shooter.displayClientMessage(Component.literal("Нет магазина!").withStyle(ChatFormatting.RED), true);
                this.shootCooldown = 20;
                return;
             }
 
             if (this.getAmmoCount() <= 0) {
-               shooter.displayClientMessage(Component.literal("Empty!").withStyle(ChatFormatting.RED), true);
+               shooter.displayClientMessage(Component.literal("Пусто!").withStyle(ChatFormatting.RED), true);
                this.shootCooldown = 20;
                return;
             }
@@ -278,7 +285,7 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
             this.setHasMagazine(false);
             this.setAmmoCount(0);
             this.playSound((SoundEvent)ModSounds.M2_UNLOAD.get(), 1.0F, 1.0F);
-            player.displayClientMessage(Component.literal("Unloaded (" + remainingAmmo + ")"), true);
+            player.displayClientMessage(Component.literal("Разряжен (" + remainingAmmo + ")"), true);
             return InteractionResult.SUCCESS;
          }
 
@@ -292,11 +299,11 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
                }
 
                this.playSound((SoundEvent)ModSounds.M2_LOAD.get(), 1.0F, 1.0F);
-               player.displayClientMessage(Component.literal("Loaded: " + ammoInBox + " rounds"), true);
+               player.displayClientMessage(Component.literal("Заряжено: " + ammoInBox + " патронов"), true);
                return InteractionResult.SUCCESS;
             }
 
-            player.displayClientMessage(Component.literal("Already loaded!"), true);
+            player.displayClientMessage(Component.literal("Уже заряжено!"), true);
             return InteractionResult.FAIL;
          }
 

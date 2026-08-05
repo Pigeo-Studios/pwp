@@ -22,11 +22,12 @@ public class PacketSaveFactionVehicle {
     private final float yaw;
     private final int respawnTime;
     private final int initialTime;
+    private final String category;
     private final ItemStack[] inventory;
 
     public PacketSaveFactionVehicle(String faction, String vehicleName, String displayName,
                                     String vehicleId, float yaw, int respawnTime, int initialTime,
-                                    ItemStack[] inventory) {
+                                    String category, ItemStack[] inventory) {
         this.faction = faction;
         this.vehicleName = vehicleName;
         this.displayName = displayName;
@@ -34,6 +35,7 @@ public class PacketSaveFactionVehicle {
         this.yaw = yaw;
         this.respawnTime = respawnTime;
         this.initialTime = initialTime;
+        this.category = category;
         this.inventory = inventory;
     }
 
@@ -45,6 +47,7 @@ public class PacketSaveFactionVehicle {
         buf.writeFloat(msg.yaw);
         buf.writeInt(msg.respawnTime);
         buf.writeInt(msg.initialTime);
+        buf.writeUtf(msg.category != null ? msg.category : "");
             for (int i = 0; i < 33; i++) {
                 buf.writeItem(msg.inventory[i]);
             }
@@ -58,11 +61,12 @@ public class PacketSaveFactionVehicle {
         float yaw = buf.readFloat();
         int respawnTime = buf.readInt();
         int initialTime = buf.readInt();
+        String category = buf.readUtf();
         ItemStack[] inv = new ItemStack[33];
         for (int i = 0; i < 33; i++) {
             inv[i] = buf.readItem();
         }
-        return new PacketSaveFactionVehicle(faction, vehicleName, displayName, vehicleId, yaw, respawnTime, initialTime, inv);
+        return new PacketSaveFactionVehicle(faction, vehicleName, displayName, vehicleId, yaw, respawnTime, initialTime, category, inv);
     }
 
     public static void handle(PacketSaveFactionVehicle msg, Supplier<Context> ctx) {
@@ -96,6 +100,7 @@ public class PacketSaveFactionVehicle {
                 payload.addProperty("yaw", msg.yaw);
                 payload.addProperty("respawnTime", msg.respawnTime);
                 payload.addProperty("initialTime", msg.initialTime);
+                payload.addProperty("category", msg.category);
                 payload.addProperty("inventory", itemsArray.toString());
 
                 CoreServerApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload);

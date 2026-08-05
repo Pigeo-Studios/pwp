@@ -50,6 +50,6 @@ public class M2AmmoItem extends Item {
    }
 
    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-      tooltip.add(Component.literal("Ammo: " + getAmmo(stack) + " / 200"));
+      tooltip.add(Component.literal("БК: " + getAmmo(stack) + " / 200"));
    }
 }

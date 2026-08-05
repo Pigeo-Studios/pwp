@@ -67,7 +67,7 @@ public class PacketPlaceMapMarker {
                   if (p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(team)) {
                      int pSqId = p.getPersistentData().getInt("WARFARE_SquadID");
                      if (p.getPersistentData().getBoolean("WARFARE_IsSquadLeader") || pSqId == cmdId && cmdId != -1) {
-                        p.sendSystemMessage(Component.literal("[STRATEGIC] Artillery requested at " + msg.x + ", " + msg.z).withStyle(ChatFormatting.GOLD));
+                         p.sendSystemMessage(Component.literal("[СТРАТЕГИЧЕСКИ] Артиллерия запрошена в " + msg.x + ", " + msg.z).withStyle(ChatFormatting.GOLD));
                      }
                   }
                }

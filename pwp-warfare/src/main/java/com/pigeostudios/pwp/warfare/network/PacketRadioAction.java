@@ -71,17 +71,17 @@ public class PacketRadioAction {
 
             if (!player.isCreative()) {
                if (player.getTeam() == null) {
-                  player.sendSystemMessage(Component.literal("Access Denied: You must be in a TEAM!").withStyle(ChatFormatting.RED));
+                   player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть в команде!").withStyle(ChatFormatting.RED));
                   return;
                }
 
                if (playerSquad == null) {
-                  player.sendSystemMessage(Component.literal("Access Denied: You must be in a SQUAD in this world!").withStyle(ChatFormatting.RED));
+                   player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть в отряде в этом мире!").withStyle(ChatFormatting.RED));
                   return;
                }
 
                if (!isLeader) {
-                  player.sendSystemMessage(Component.literal("Access Denied: You must be a Squad Leader!").withStyle(ChatFormatting.RED));
+                   player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть командиром отряда!").withStyle(ChatFormatting.RED));
                   return;
                }
             }
@@ -92,7 +92,7 @@ public class PacketRadioAction {
                long lastUse = playerSquad.nextRallyAvailableTick;
                if (currentGameTime < lastUse && !player.isCreative()) {
                   long timeLeft = (lastUse - currentGameTime) / 20L;
-                  player.sendSystemMessage(Component.literal("Rally Point Cooldown: " + timeLeft + "s").withStyle(ChatFormatting.RED));
+                   player.sendSystemMessage(Component.literal("Кулдаун рали: " + timeLeft + "с").withStyle(ChatFormatting.RED));
                   return;
                }
 
@@ -112,9 +112,9 @@ public class PacketRadioAction {
 
                if (trySpawnRally(player, currentLevel, team, playerSquad, data)) {
                   playerSquad.nextRallyAvailableTick = currentGameTime + 6000L;
-                  player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
-               } else {
-                  playerSquad.nextRallyAvailableTick = currentGameTime + 300L;
+                   player.sendSystemMessage(Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
+                } else {
+                   playerSquad.nextRallyAvailableTick = currentGameTime + 300L;
                }
 
                data.setDirty();
@@ -138,14 +138,14 @@ public class PacketRadioAction {
          String playerTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
          long hubCount = data.hubs.stream().filter(h -> h.team.equalsIgnoreCase(playerTeam)).count();
          if (hubCount >= ((Integer)WarfareConfig.MAX_HUBS_PER_TEAM.get()).intValue() && !player.isCreative()) {
-            player.sendSystemMessage(Component.literal("FOB Limit Reached for this world!").withStyle(ChatFormatting.RED));
+             player.sendSystemMessage(Component.literal("Достигнут лимит ФОБ для этого мира!").withStyle(ChatFormatting.RED));
             return;
          }
 
          for (WarfareWorldData.HubInfo existingHub : data.hubs) {
             if (existingHub.team.equalsIgnoreCase(playerTeam)
                && existingHub.pos.distSqr(targetPos) < (Integer)WarfareConfig.MIN_HUB_DISTANCE.get() * (Integer)WarfareConfig.MIN_HUB_DISTANCE.get()) {
-               player.sendSystemMessage(Component.literal("Too close to friendly FOB!").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.literal("Слишком близко к союзному ФОБ!").withStyle(ChatFormatting.RED));
                return;
             }
          }
@@ -159,12 +159,12 @@ public class PacketRadioAction {
                .findFirst()
                .orElse(null);
             if (targetCrate == null) {
-               player.sendSystemMessage(Component.literal("FOB placement requires a Supply Crate within 50 blocks!").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.literal("Для установки ФОБ нужен ящик снабжения в радиусе 50 блоков!").withStyle(ChatFormatting.RED));
                return;
             }
 
-            targetCrate.discard();
-            player.sendSystemMessage(Component.literal("Supply Crate consumed for FOB placement.").withStyle(ChatFormatting.YELLOW));
+             targetCrate.discard();
+             player.sendSystemMessage(Component.literal("Ящик снабжения израсходован на установку ФОБ.").withStyle(ChatFormatting.YELLOW));
          }
 
          level.setBlock(targetPos, ((Block)ModBlocks.HUB_BLOCK.get()).defaultBlockState(), 3);
@@ -176,7 +176,7 @@ public class PacketRadioAction {
          data.hubs.add(new WarfareWorldData.HubInfo(targetPos, playerTeam, false, level.dimension().location().toString()));
          data.setDirty();
          PacketHandler.sendToAllClients(level, data);
-         player.sendSystemMessage(Component.literal("FOB Blueprint placed!").withStyle(ChatFormatting.GREEN));
+          player.sendSystemMessage(Component.literal("Блюпринт ФОБ установлен!").withStyle(ChatFormatting.GREEN));
       } else if (actionId == 22) {
          placeBlueprint(
             level,
@@ -211,7 +211,7 @@ public class PacketRadioAction {
             tow.setTeam(pTeam);
          }
 
-         player.sendSystemMessage(Component.literal(name + " Blueprint placed.").withStyle(ChatFormatting.GREEN));
+          player.sendSystemMessage(Component.literal(name + " — блюпринт установлен.").withStyle(ChatFormatting.GREEN));
       }
    }
 
@@ -224,7 +224,7 @@ public class PacketRadioAction {
          Vec3 center = point.area.getCenter();
          if (pos.distToCenterSqr(center.x, center.y, center.z)
             < (Integer)WarfareConfig.MIN_RALLY_POINT_DISTANCE.get() * (Integer)WarfareConfig.MIN_RALLY_POINT_DISTANCE.get()) {
-            player.sendSystemMessage(Component.literal("Too close to Capture Point!").withStyle(ChatFormatting.RED));
+             player.sendSystemMessage(Component.literal("Слишком близко к точке захвата!").withStyle(ChatFormatting.RED));
             return false;
          }
       }
@@ -234,7 +234,7 @@ public class PacketRadioAction {
 
       for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, enemyBox)) {
          if (!p.isSpectator() && p.getTeam() != null && !p.getTeam().getName().equalsIgnoreCase(team)) {
-            player.sendSystemMessage(Component.literal("Enemies nearby! Cannot deploy Rally.").withStyle(ChatFormatting.RED));
+             player.sendSystemMessage(Component.literal("Рядом враги! Нельзя развернуть рали.").withStyle(ChatFormatting.RED));
             return false;
          }
       }
@@ -253,7 +253,7 @@ public class PacketRadioAction {
       }
 
       if (squadMatesNearby < 1 && !player.isCreative()) {
-         player.sendSystemMessage(Component.literal("Need at least 1 SQUAD MEMBER nearby!").withStyle(ChatFormatting.RED));
+          player.sendSystemMessage(Component.literal("Нужен минимум 1 участник отряда рядом!").withStyle(ChatFormatting.RED));
          return false;
       }
 
@@ -279,7 +279,7 @@ public class PacketRadioAction {
          rbe.setExpiryTick(squad.rallyExpiryTick);
       }
 
-      player.sendSystemMessage(Component.literal("Squad Rally Point Deployed!").withStyle(ChatFormatting.GREEN));
+       player.sendSystemMessage(Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
       if (team.equals("BLUE")) {
          data.blueRallies.add(pos);
       } else {

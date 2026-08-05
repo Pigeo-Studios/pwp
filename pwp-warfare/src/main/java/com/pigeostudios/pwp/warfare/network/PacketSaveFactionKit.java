@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.network;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mojang.logging.LogUtils;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreserver.CoreServerApi;
@@ -162,7 +163,10 @@ public class PacketSaveFactionKit {
             kitPayload.addProperty("items", itemsArray.toString());
             kitPayload.addProperty("slotSkins", slotSkinsJson.toString());
 
-            CoreServerApi.saveFactionKit(msg.faction, msg.kitName, kitPayload);
+            JsonObject saveResult = CoreServerApi.saveFactionKit(msg.faction, msg.kitName, kitPayload);
+            if (saveResult == null) {
+                LogUtils.getLogger().warn("Core API save failed for faction kit {}/{}", msg.faction, msg.kitName);
+            }
 
             WarfareWorldData.KitInfo kit = null;
             if (msg.team.equalsIgnoreCase("BLUE")) {

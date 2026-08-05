@@ -98,11 +98,11 @@ public class WallRadialScreen extends Screen {
          pose.popPose();
       }
 
-      this.drawLabel(gui, "1x1", centerX, centerY - 75, selected == 0);
-      this.drawLabel(gui, "2x2", centerX + 70, centerY - 25, selected == 1);
-      this.drawLabel(gui, "3x3", centerX + 45, centerY + 65, selected == 2);
-      this.drawLabel(gui, "WIRE", centerX - 45, centerY + 65, selected == 3);
-      this.drawLabel(gui, "LOOPHOLE", centerX - 70, centerY - 25, selected == 4);
+      this.drawLabel(gui, "СТЕНА 1x1", centerX, centerY - 75, selected == 0);
+      this.drawLabel(gui, "СТЕНА 2x2", centerX + 70, centerY - 25, selected == 1);
+      this.drawLabel(gui, "СТЕНА 3x3", centerX + 45, centerY + 65, selected == 2);
+      this.drawLabel(gui, "КОЛЮЧКА", centerX - 45, centerY + 65, selected == 3);
+      this.drawLabel(gui, "БОЙНИЦА", centerX - 70, centerY - 25, selected == 4);
    }
 
    private void drawLabel(GuiGraphics gui, String text, int x, int y, boolean selected) {

@@ -48,13 +48,15 @@ public class PacketSelectKit {
          ServerPlayer player = ctx.get().getSender();
          if (player != null) {
             WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-            player.getPersistentData().putString("WARFARE_PendingKit", msg.kitName);
-            CompoundTag selTag = new CompoundTag();
-            for (var e : msg.slotSelections.entrySet()) {
-               selTag.putInt(e.getKey(), e.getValue());
-            }
-            player.getPersistentData().put("WARFARE_SlotSelections", selTag);
-            PacketHandler.sendToAllClients(player.serverLevel(), data);
+             player.getPersistentData().putString("WARFARE_PendingKit", msg.kitName);
+             CompoundTag selTag = new CompoundTag();
+             for (var e : msg.slotSelections.entrySet()) {
+                selTag.putInt(e.getKey(), e.getValue());
+             }
+             player.getPersistentData().put("WARFARE_SlotSelections", selTag);
+             // Синхронизируем выбранный кит клиенту (ClientData.myCurrentKit)
+             com.pigeostudios.pwp.warfare.events.KitUtil.syncMyKit(player);
+             PacketHandler.sendToAllClients(player.serverLevel(), data);
             String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
             boolean isReserved = !data.isGameStarted || (data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender));
             if (isReserved) {

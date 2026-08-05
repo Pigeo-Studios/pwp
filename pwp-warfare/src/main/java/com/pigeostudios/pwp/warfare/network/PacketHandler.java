@@ -115,7 +115,14 @@ public class PacketHandler {
         INSTANCE.registerMessage(id++, PacketSyncPath.class, PacketSyncPath::encode, PacketSyncPath::decode, PacketSyncPath::handle);
         INSTANCE.registerMessage(id++, PacketRemovePath.class, PacketRemovePath::encode, PacketRemovePath::decode, PacketRemovePath::handle);
         INSTANCE.registerMessage(id++, PacketForceCMD.class, PacketForceCMD::encode, PacketForceCMD::decode, PacketForceCMD::handle);
-     }
+         INSTANCE.registerMessage(id++, PacketMainZoneState.class, PacketMainZoneState::encode, PacketMainZoneState::decode, PacketMainZoneState::handle);
+         INSTANCE.registerMessage(id++, PacketNotification.class, PacketNotification::encode, PacketNotification::decode, PacketNotification::handle);
+          // Регистрируется ПОСЛЕДНИМ, чтобы не сдвигать индексы существующих пакетов
+          // (клиенты со старым jar остаются совместимы до обновления).
+          INSTANCE.registerMessage(id++, PacketVehicleStatus.class, PacketVehicleStatus::encode, PacketVehicleStatus::decode, PacketVehicleStatus::handle);
+          // Тоже в конец: деплой дронов (сервер -> клиент).
+          INSTANCE.registerMessage(id++, PacketDroneDeployState.class, PacketDroneDeployState::encode, PacketDroneDeployState::decode, PacketDroneDeployState::handle);
+       }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {
       if (currentFaction != null && !currentFaction.equals("none") && !currentFaction.equals("bluefor") && !currentFaction.equals("redfor")) {

@@ -75,18 +75,18 @@ public class PacketRespawnRequest {
                      WarfareWorldData.Squad mySquad = getPlayerSquad(pName, data);
                      if (mySquad != null && mySquad.rallyPos != null) {
                         if (mySquad.isRallyBlocked && !player.isCreative()) {
-                           player.sendSystemMessage(Component.literal("Spawn Failed: Squad Rally is OVERRUN!").withStyle(ChatFormatting.RED));
+                            player.sendSystemMessage(Component.literal("Спавн невозможен: рали отряда ПОД УГРОЗОЙ!").withStyle(ChatFormatting.RED));
                            return;
                         }
 
                         String rallyDim = mySquad.rallyDimension != null ? mySquad.rallyDimension : "minecraft:overworld";
                         if (!rallyDim.equals(currentDim)) {
-                           player.sendSystemMessage(Component.literal("Rally Point is in another dimension!").withStyle(ChatFormatting.RED));
+                            player.sendSystemMessage(Component.literal("Рали в другом измерении!").withStyle(ChatFormatting.RED));
                            return;
                         }
 
                         if (!level.isLoaded(mySquad.rallyPos) || !(level.getBlockState(mySquad.rallyPos).getBlock() instanceof RallyPointBlock)) {
-                           player.sendSystemMessage(Component.literal("Rally Point destroyed!").withStyle(ChatFormatting.RED));
+                            player.sendSystemMessage(Component.literal("Рали уничтожено!").withStyle(ChatFormatting.RED));
                            return;
                         }
 
@@ -94,7 +94,7 @@ public class PacketRespawnRequest {
                         useCustomSpawn = true;
                         if (targetPos == null) {
                            targetPos = mainSpawns.get(currentDim);
-                           player.sendSystemMessage(Component.literal("Rally spawn blocked! Redirecting to Main Base.").withStyle(ChatFormatting.YELLOW));
+                            player.sendSystemMessage(Component.literal("Спавн у рали заблокирован! Перенаправление на основную базу.").withStyle(ChatFormatting.YELLOW));
                         }
                      }
                   } else if (msg.type.startsWith("HUB")) {
@@ -109,7 +109,7 @@ public class PacketRespawnRequest {
                                  int hubEnemiesReq = (Integer)WarfareConfig.HUB_BLOCK_ENEMY_COUNT.get();
                                  int enemyCount = GameLogicEvents.getEnemyCount(level, reqPos, team);
                                  if ((h.isBlocked || enemyCount >= hubEnemiesReq) && !player.isCreative()) {
-                                    player.sendSystemMessage(Component.literal("Spawn Failed: FOB is OVERRUN!").withStyle(ChatFormatting.RED));
+                                     player.sendSystemMessage(Component.literal("Спавн невозможен: ФОБ ПОД УГРОЗОЙ!").withStyle(ChatFormatting.RED));
                                     return;
                                  }
 
@@ -118,15 +118,15 @@ public class PacketRespawnRequest {
                                  if (spawnCosts) {
                                     level.getChunkSource().getChunk(reqPos.getX() >> 4, reqPos.getZ() >> 4, true);
                                     if (!(level.getBlockEntity(reqPos) instanceof HubBlockEntity hubBe)) {
-                                       player.sendSystemMessage(Component.literal("Spawn Failed: FOB block missing!").withStyle(ChatFormatting.RED));
+                                        player.sendSystemMessage(Component.literal("Спавн невозможен: блок ФОБ отсутствует!").withStyle(ChatFormatting.RED));
                                        return;
                                     }
 
                                     if (hubBe.getMaterials() < spawnCost) {
-                                       player.sendSystemMessage(
-                                          Component.literal("Spawn Failed: Not enough materials! (" + hubBe.getMaterials() + "/" + spawnCost + ")")
-                                             .withStyle(ChatFormatting.RED)
-                                       );
+                                        player.sendSystemMessage(
+                                           Component.literal("Спавн невозможен: не хватает материалов! (" + hubBe.getMaterials() + "/" + spawnCost + ")")
+                                              .withStyle(ChatFormatting.RED)
+                                        );
                                        return;
                                     }
 
@@ -140,7 +140,7 @@ public class PacketRespawnRequest {
                                  useCustomSpawn = true;
                                  if (targetPos == null) {
                                     targetPos = mainSpawns.get(currentDim);
-                                    player.sendSystemMessage(Component.literal("FOB spawn blocked! Redirecting to Main Base.").withStyle(ChatFormatting.YELLOW));
+                                     player.sendSystemMessage(Component.literal("Спавн у ФОБ заблокирован! Перенаправление на основную базу.").withStyle(ChatFormatting.YELLOW));
                                  }
                                  break;
                               }
@@ -176,7 +176,7 @@ public class PacketRespawnRequest {
                             }
                          }
                     } else {
-                     player.sendSystemMessage(Component.literal("Spawn point is currently unavailable!").withStyle(ChatFormatting.RED));
+                      player.sendSystemMessage(Component.literal("Точка спавна сейчас недоступна!").withStyle(ChatFormatting.RED));
                   }
                }
             }

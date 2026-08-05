@@ -13,6 +13,7 @@ import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
+import com.pigeostudios.pwp.warfare.network.PacketNotification;
 import com.pigeostudios.pwp.warfare.network.PacketOpenVictoryScreen;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
@@ -28,6 +29,7 @@ import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pwp.coreserver.CoreServerApi;
+import com.pwp.coreserver.TransferHosts;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.cosmetics.CosmeticManager;
 import com.google.gson.JsonArray;
@@ -157,11 +159,11 @@ public class GameLogicEvents {
                if (preventAll) {
                   event.setCanceled(true);
                   player.getInventory().add(event.getEntity().getItem());
-                  player.displayClientMessage(Component.literal("Item dropping is DISABLED during the game!").withStyle(ChatFormatting.RED), true);
+                   player.displayClientMessage(Component.literal("Выбрасывание предметов ОТКЛЮЧЕНО во время игры!").withStyle(ChatFormatting.RED), true);
                } else if (isHeavyItem(event.getEntity().getItem().getItem())) {
                   event.setCanceled(true);
                   player.getInventory().add(event.getEntity().getItem());
-                  player.displayClientMessage(Component.literal("Cannot drop heavy ammo during combat!").withStyle(ChatFormatting.RED), true);
+                   player.displayClientMessage(Component.literal("Нельзя выбрасывать тяжёлый БК во время боя!").withStyle(ChatFormatting.RED), true);
                }
             }
          }
@@ -226,8 +228,8 @@ public class GameLogicEvents {
                          player.getPersistentData().remove("WARFARE_DriveKickTimer");
                          return;
                       }
-                      String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
-                      if (!hasCorrectKit(vType, pKit)) {
+                       String pKit = KitUtil.getEffectiveKit(player);
+                       if (!hasCorrectKit(vType, pKit)) {
                          player.stopRiding();
                          player.displayClientMessage(Component.literal("Вам нужен кит Механик/Пилот").withStyle(ChatFormatting.RED), true);
                       } else {
@@ -545,18 +547,27 @@ public class GameLogicEvents {
                                  squad.slNoOfficerSince = level.getGameTime();
                               }
 
-                              long remaining = 2400L - (level.getGameTime() - squad.slNoOfficerSince);
-                              if (remaining > 0L) {
-                                 leader.displayClientMessage(
-                                    Component.literal("В§6WARNING: В§eSelect a В§nLEADER ONLYВ§e kit or squad disbands in В§c" + remaining / 20L + "s!"), true
-                                 );
-                              } else {
-                                 broadcastMessage(level, "Squad " + squad.name + " disbanded: Leader is not using a Leader kit!", ChatFormatting.RED);
+                               long remaining = 2400L - (level.getGameTime() - squad.slNoOfficerSince);
+                               if (remaining > 0L) {
+                                  // Предупреждение лидеру — в ленту уведомлений (раз в секунду, дедик на клиенте)
+                                  if (level.getGameTime() % 20L == 0L) {
+                                     PacketHandler.INSTANCE.send(
+                                        PacketDistributor.PLAYER.with(() -> leader),
+                                        new PacketNotification("squad.leader_kit_warning", (byte)0)
+                                     );
+                                  }
+                               } else {
+                                  broadcastMessage(level, "Squad " + squad.name + " disbanded: Leader is not using a Leader kit!", ChatFormatting.RED);
 
-                                 for (String memberName : new ArrayList<>(squad.members)) {
-                                    ServerPlayer m = server.getPlayerList().getPlayerByName(memberName);
-                                    if (m != null) {
-                                       m.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
+                                  for (String memberName : new ArrayList<>(squad.members)) {
+                                     ServerPlayer m = server.getPlayerList().getPlayerByName(memberName);
+                                     if (m != null) {
+                                        // Важное событие отряда — плашка в ленте уведомлений
+                                        PacketHandler.INSTANCE.send(
+                                           PacketDistributor.PLAYER.with(() -> m),
+                                           new PacketNotification("squad.disbanded_leader", (byte)1)
+                                        );
+                                        m.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
                                        m.getPersistentData().remove("WARFARE_PendingKit");
                                        m.getPersistentData().remove("WARFARE_SquadID");
                                        m.getPersistentData().remove("WARFARE_IsSquadLeader");
@@ -565,7 +576,7 @@ public class GameLogicEvents {
                                        ResupplyHandler.clearCurios(m);
                                        m.inventoryMenu.broadcastChanges();
                                        m.containerMenu.broadcastChanges();
-                                       m.displayClientMessage(Component.literal("В§cYour squad was disbanded (No Officer kit)!"), true);
+                                        m.displayClientMessage(Component.literal("§cВаш отряд расформирован (нет кита Офицера)!"), true);
                                     }
                                  }
 
@@ -624,6 +635,11 @@ public class GameLogicEvents {
                       data.setDirty();
                       PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
                    }
+                }
+
+                if (data.isGameStarted && globalTick % 20 == 0) {
+                    // Доустановка спавнеров техники, чей чанк не был загружен на старте матча
+                    data.retryPendingVehicleSpawners(level);
                 }
 
                 if (data.isGameStarted && globalTick % 100 == 0) {
@@ -805,11 +821,12 @@ public class GameLogicEvents {
            if (returnToLobbyTimer > 0) {
               returnToLobbyTimer--;
               if (returnToLobbyTimer == 0 && returnToLobbyServer != null) {
-                  String lobbyHost = "pigeo.asuscomm.com";
                  int lobbyPort = 25565;
                  for (ServerPlayer player : returnToLobbyServer.getPlayerList().getPlayers()) {
+                    // Локальные игроки получают LAN-адрес лобби, внешние — домен
+                    String lobbyHost = TransferHosts.resolveTransferHost(player);
                     player.sendSystemMessage(
-                       Component.literal("§e[PWP] Returning to lobby..."), false);
+                        Component.literal("§e[PWP] Возврат в лобби..."), false);
                     com.pwp.coreclient.network.PacketHandler.INSTANCE.send(
                        net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
                        new ConnectToServerPacket(lobbyHost, lobbyPort));
@@ -1178,13 +1195,13 @@ public class GameLogicEvents {
                                  player.connection
                                     .send(
                                        new ClientboundSetSubtitleTextPacket(
-                                          Component.literal("You will be killed in " + secLeft + "s!").withStyle(ChatFormatting.RED)
+                                           Component.literal("Вы будете убиты через " + secLeft + "с!").withStyle(ChatFormatting.RED)
                                        )
                                     );
                                  player.connection
                                     .send(
                                        new ClientboundSetTitleTextPacket(
-                                          Component.literal("ENEMY MAIN BASE").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD})
+                                           Component.literal("ВРАЖЕСКАЯ ОСНОВНАЯ БАЗА").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD})
                                        )
                                     );
                               }
@@ -1323,7 +1340,7 @@ public class GameLogicEvents {
          WarfareWorldData data = WarfareWorldData.get(level);
          PacketSquadAction.leaveCurrentSquad(player, data);
          PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
-         player.sendSystemMessage(Component.literal("You were removed from the squad because you changed worlds.").withStyle(ChatFormatting.YELLOW));
+          player.sendSystemMessage(Component.literal("Вы покинули отряд, потому что сменили мир.").withStyle(ChatFormatting.YELLOW));
       }
    }
 
@@ -1346,11 +1363,12 @@ public class GameLogicEvents {
 
      @SubscribeEvent
       public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-          if (!event.getEntity().level().isClientSide) {
-             ServerPlayer player = (ServerPlayer)event.getEntity();
-             loadCosmeticsForPlayer(player);
-            PacketHandler.broadcastPlayerSkin(player);
-            ServerLevel level = player.serverLevel();
+           if (!event.getEntity().level().isClientSide) {
+              ServerPlayer player = (ServerPlayer)event.getEntity();
+              loadCosmeticsForPlayer(player);
+             PacketHandler.broadcastPlayerSkin(player);
+             KitUtil.syncMyKit(player);
+             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
            sendSyncPacket(level, data);
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squads));
@@ -1360,10 +1378,10 @@ public class GameLogicEvents {
             String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
            if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
                player.setGameMode(GameType.ADVENTURE);
-              player.sendSystemMessage(Component.literal("Choose a team to start playing!").withStyle(ChatFormatting.GOLD));
+               player.sendSystemMessage(Component.literal("Выберите команду, чтобы начать игру!").withStyle(ChatFormatting.GOLD));
            }
            if (!data.isGameStarted && !data.waitingActive && player.hasPermissions(2)) {
-               player.sendSystemMessage(Component.literal("PWP Warfare is paused. /pwpwarfare gamestart true to start.").withStyle(ChatFormatting.YELLOW));
+                player.sendSystemMessage(Component.literal("PWP Warfare на паузе. /pwpwarfare gamestart true для старта.").withStyle(ChatFormatting.YELLOW));
             }
         }
      }
@@ -2295,7 +2313,7 @@ public class GameLogicEvents {
       player.inventoryMenu.broadcastChanges();
       player.containerMenu.broadcastChanges();
       PacketSquadAction.removePlayerTags(player);
-      player.displayClientMessage(Component.literal("В§eSquad left. Kit and reservations cleared."), true);
+       player.displayClientMessage(Component.literal("§eВы вышли из отряда. Кит и брони очищены."), true);
       data.setDirty();
       PacketHandler.sendToAllClients(player.serverLevel(), data);
    }
@@ -2401,7 +2419,7 @@ public class GameLogicEvents {
                      }
                   }
 
-                  player.displayClientMessage(Component.literal("You can only carry up to 8 Mortar Shells!").withStyle(ChatFormatting.RED), true);
+                  player.displayClientMessage(Component.literal("Можно нести максимум 8 миномётных снарядов!").withStyle(ChatFormatting.RED), true);
                }
             }
          }

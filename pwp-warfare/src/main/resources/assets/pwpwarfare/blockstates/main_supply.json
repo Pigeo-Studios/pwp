@@ -1,5 +1,8 @@
 {
 	"variants": {
-		"": { "model": "pwpwarfare:block/main_supply" }
+		"facing=north": { "model": "pwpwarfare:block/main_supply" },
+		"facing=east": { "model": "pwpwarfare:block/main_supply", "y": 90 },
+		"facing=south": { "model": "pwpwarfare:block/main_supply", "y": 180 },
+		"facing=west": { "model": "pwpwarfare:block/main_supply", "y": 270 }
 	}
 }

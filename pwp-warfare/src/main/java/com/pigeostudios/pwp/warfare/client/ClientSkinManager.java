@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client;
 
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.logging.LogUtils;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketSyncPlayerSkin;
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -33,7 +34,7 @@ public class ClientSkinManager {
             String factionLower = faction.toLowerCase();
             String kitFileName = kitName == null || kitName.isEmpty() || kitName.equals("Unassigned")
                     ? "base"
-                    : kitName.toLowerCase().replace(" ", "_").replace("-", "_");
+                    : DeployData.kitIconFileName(kitName);
             return new ResourceLocation("pwpwarfare", "textures/skins/" + factionLower + "/" + kitFileName + ".png");
         }
     }
