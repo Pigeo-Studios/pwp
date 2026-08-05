@@ -495,13 +495,21 @@ public class PacketBuildRequest {
                                   player.sendSystemMessage(Component.literal("Блюпринт ПТРК установлен!").withStyle(ChatFormatting.GREEN));
                               }
                            }
-                        } else if (msg.structureId == 24 || msg.structureId == 25) {
-                           boolean mini = msg.structureId == 25;
-                           int cost = mini ? (Integer)WarfareConfig.REB_MINI_BUILD_COST.get() : (Integer)WarfareConfig.REB_BUILD_COST.get();
-                           if (!canPlaceAt(level, msg.pos)) {
-                              sendBlockedMessage(player);
-                              return;
-                           }
+                         } else if (msg.structureId == 24 || msg.structureId == 25) {
+                            boolean mini = msg.structureId == 25;
+                            int cost = mini ? (Integer)WarfareConfig.REB_MINI_BUILD_COST.get() : (Integer)WarfareConfig.REB_BUILD_COST.get();
+                            if (!canPlaceAt(level, msg.pos)) {
+                               sendBlockedMessage(player);
+                               return;
+                            }
+
+                            // Нельзя строить РЭБ внутри уже стоящей сущности РЭБ
+                            // (визуал большой — сущность 1x2 хитбоксом не перекрывает место)
+                            if (!rebAreaFree(level, msg.pos, mini)) {
+                               player.sendSystemMessage(Component.literal("Здесь уже стоит РЭБ!").withStyle(ChatFormatting.RED));
+                               return;
+                            }
+
 
                            if (!isCreative && countTeamRebs(level, team) >= (Integer)WarfareConfig.REB_MAX_PER_TEAM.get()) {
                               player.sendSystemMessage(Component.literal("Слишком много РЭБ у команды!").withStyle(ChatFormatting.RED));
@@ -540,6 +548,25 @@ public class PacketBuildRequest {
     // Проверяет, можно ли разместить блок в указанной позиции
     private static boolean canPlaceAt(ServerLevel level, BlockPos pos) {
        return level.getBlockState(pos).canBeReplaced();
+    }
+
+    // Свободна ли зона для нового РЭБ: не пересекается ли с уже стоящей сущностью
+    // reb/reb_mini (у сущностей маленький хитбокс 1x2, но визуал большой —
+    // проверяем весь объём модели, иначе можно построить РЭБ внутри РЭБ).
+    private static boolean rebAreaFree(ServerLevel level, BlockPos pos, boolean mini) {
+       double half = mini ? 1.5 : 2.5;
+       double height = mini ? 2.5 : 5.0;
+       AABB area = new AABB(
+          pos.getX() + 0.5 - half, pos.getY(), pos.getZ() + 0.5 - half,
+          pos.getX() + 0.5 + half, pos.getY() + height, pos.getZ() + 0.5 + half
+       );
+       for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity)null, area)) {
+          ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(e.getType());
+          if (eid != null && (eid.toString().equals("uncomplicatedfpv:reb") || eid.toString().equals("uncomplicatedfpv:reb_mini"))) {
+             return false;
+          }
+       }
+       return true;
     }
 
     // Считает построенные РЭБ/мини-РЭБ команды (лимит на команду).

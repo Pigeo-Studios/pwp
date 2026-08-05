@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -67,19 +68,36 @@ public class RebConstructionBlock extends BaseEntityBlock {
       return createTickerHelper(type, (BlockEntityType)ModBlocks.REB_CONSTRUCTION_BE.get(), RebConstructionBlockEntity::tick);
    }
 
-   // Завершение стройки: спавн сущности РЭБ uncomplicated-fpv с тегом команды.
-   public void finishConstruction(ServerLevel level, BlockPos pos, BlockState state) {
-      boolean mini = (Boolean)state.getValue(MINI);
-      String entityId = mini ? "uncomplicatedfpv:reb_mini" : "uncomplicatedfpv:reb";
-      EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(entityId));
-      if (type == null) {
-         level.removeBlock(pos, false);
-         return;
-      }
-      Entity reb = type.create(level);
-      if (reb == null) {
-         level.removeBlock(pos, false);
-         return;
+    // Завершение стройки: спавн сущности РЭБ uncomplicated-fpv с тегом команды.
+    public void finishConstruction(ServerLevel level, BlockPos pos, BlockState state) {
+       boolean mini = (Boolean)state.getValue(MINI);
+       String entityId = mini ? "uncomplicatedfpv:reb_mini" : "uncomplicatedfpv:reb";
+       EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(entityId));
+       if (type == null) {
+          level.removeBlock(pos, false);
+          return;
+       }
+
+       // Страховка: если в зоне уже стоит РЭБ (появился после установки блюпринта),
+       // сущность не спавним — блюпринт просто сносится.
+       double half = mini ? 1.5 : 2.5;
+       double height = mini ? 2.5 : 5.0;
+       AABB area = new AABB(
+          pos.getX() + 0.5 - half, pos.getY(), pos.getZ() + 0.5 - half,
+          pos.getX() + 0.5 + half, pos.getY() + height, pos.getZ() + 0.5 + half
+       );
+       for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity)null, area)) {
+          ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(e.getType());
+          if (eid != null && (eid.toString().equals("uncomplicatedfpv:reb") || eid.toString().equals("uncomplicatedfpv:reb_mini"))) {
+             level.removeBlock(pos, false);
+             return;
+          }
+       }
+
+       Entity reb = type.create(level);
+       if (reb == null) {
+          level.removeBlock(pos, false);
+          return;
       }
 
       String team = "NEUTRAL";
