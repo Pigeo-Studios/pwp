@@ -50,7 +50,7 @@ public class AmmoBagBlock extends Block {
    }
 
    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return Shapes.empty();
+      return SHAPE;
    }
 
    public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
@@ -95,7 +95,7 @@ public class AmmoBagBlock extends Block {
          if (!level.isClientSide) {
             String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
             if (kitName.isEmpty() || kitName.equals("Unassigned")) {
-               player.sendSystemMessage(Component.literal("No kit assigned!").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.literal("Кит не назначен!").withStyle(ChatFormatting.RED));
                return InteractionResult.SUCCESS;
             }
 
@@ -104,7 +104,7 @@ public class AmmoBagBlock extends Block {
             WarfareWorldData.KitInfo kit = t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
             if (kit != null) {
                if (ResupplyHandler.resupplyPlayer((ServerPlayer)player, kit, true)) {
-                  player.sendSystemMessage(Component.literal("Kit Resupplied! (Ammo Bags not refilled)").withStyle(ChatFormatting.GREEN));
+                   player.sendSystemMessage(Component.literal("Кит пополнен! (Мешки БК не пополняются)").withStyle(ChatFormatting.GREEN));
                   level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
                   int currentUses = state.getValue(USES);
                   if (currentUses <= 1) {
@@ -113,7 +113,7 @@ public class AmmoBagBlock extends Block {
                      level.setBlock(pos, state.setValue(USES, currentUses - 1), 3);
                   }
                } else {
-                  player.sendSystemMessage(Component.literal("Ammo already full!").withStyle(ChatFormatting.YELLOW));
+                   player.sendSystemMessage(Component.literal("БК уже полон!").withStyle(ChatFormatting.YELLOW));
                }
             }
          }

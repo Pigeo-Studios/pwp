@@ -82,7 +82,7 @@ public class MortarShellStackBlock extends Block {
    }
 
    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return Shapes.empty();
+      return SHAPE;
    }
 
    public boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {

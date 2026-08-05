@@ -52,7 +52,7 @@ public class RallyPointBlock extends BaseEntityBlock {
    }
 
    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return Shapes.empty();
+      return SHAPE;
    }
 
    @Nullable

@@ -55,7 +55,7 @@ public class VehicleStationBlock extends BaseEntityBlock {
    }
 
    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return state.getValue(CONSTRUCTED) ? SHAPE : Shapes.empty();
+      return SHAPE;
    }
 
    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {

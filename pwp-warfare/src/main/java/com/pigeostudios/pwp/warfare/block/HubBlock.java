@@ -64,7 +64,7 @@ public class HubBlock extends BaseEntityBlock {
             String hubTeam = hub.getTeam();
             if (!hubTeam.equals("NEUTRAL") && !playerTeam.equalsIgnoreCase(hubTeam)) {
                if (level.isClientSide) {
-                  player.displayClientMessage(Component.literal("Cannot access ENEMY Hub!").withStyle(ChatFormatting.RED), true);
+                   player.displayClientMessage(Component.literal("Нельзя получить доступ к хабу врага!").withStyle(ChatFormatting.RED), true);
                }
 
                return InteractionResult.FAIL;
@@ -166,7 +166,7 @@ public class HubBlock extends BaseEntityBlock {
    }
 
    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return !state.getValue(CONSTRUCTED) ? Shapes.empty() : Shapes.block();
+      return Shapes.block();
    }
 
    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {

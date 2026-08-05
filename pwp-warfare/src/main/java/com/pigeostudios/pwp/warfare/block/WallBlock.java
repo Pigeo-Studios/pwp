@@ -68,7 +68,7 @@ public class WallBlock extends BaseEntityBlock {
    }
 
    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return !state.getValue(CONSTRUCTED) ? Shapes.empty() : SHAPE;
+      return SHAPE;
    }
 
    public RenderShape getRenderShape(BlockState state) {

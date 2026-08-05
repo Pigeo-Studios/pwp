@@ -19,4 +19,8 @@ public class WallSlabBlock extends WallBlock {
    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
       return SHAPE;
    }
+
+   public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+      return SHAPE;
+   }
 }
