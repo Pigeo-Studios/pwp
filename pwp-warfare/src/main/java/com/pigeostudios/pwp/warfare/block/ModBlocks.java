@@ -35,6 +35,7 @@ public class ModBlocks {
    );
    public static final RegistryObject<Block> MORTAR_CONSTRUCTION_BLOCK = BLOCKS.register("mortar_construction", MortarConstructionBlock::new);
    public static final RegistryObject<Block> TOW_CONSTRUCTION_BLOCK = BLOCKS.register("tow_construction", TOWConstructionBlock::new);
+   public static final RegistryObject<Block> REB_CONSTRUCTION_BLOCK = BLOCKS.register("reb_construction", RebConstructionBlock::new);
    public static final RegistryObject<Block> AGS_AMMO_STACK_BLOCK = BLOCKS.register("ags_ammo_stack", AGSAmmoStackBlock::new);
    public static final RegistryObject<Block> M2_AMMO_STACK_BLOCK = BLOCKS.register("m2_ammo_stack", M2AmmoStackBlock::new);
    public static final RegistryObject<Block> MORTAR_SHELL_STACK_BLOCK = BLOCKS.register("mortar_shell_stack", MortarShellStackBlock::new);
@@ -68,6 +69,9 @@ public class ModBlocks {
    );
    public static final RegistryObject<BlockEntityType<TOWConstructionBlockEntity>> TOW_CONSTRUCTION_BE = BLOCK_ENTITIES.register(
       "tow_construction_be", () -> Builder.of(TOWConstructionBlockEntity::new, new Block[]{(Block)TOW_CONSTRUCTION_BLOCK.get()}).build(null)
+   );
+   public static final RegistryObject<BlockEntityType<RebConstructionBlockEntity>> REB_CONSTRUCTION_BE = BLOCK_ENTITIES.register(
+      "reb_construction_be", () -> Builder.of(RebConstructionBlockEntity::new, new Block[]{(Block)REB_CONSTRUCTION_BLOCK.get()}).build(null)
    );
    public static final RegistryObject<Block> VEHICLE_SPAWNER_BLOCK = BLOCKS.register("vehicle_spawner", VehicleSpawnerBlock::new);
    public static final RegistryObject<BlockEntityType<VehicleSpawnerBlockEntity>> VEHICLE_SPAWNER_BE = BLOCK_ENTITIES.register(

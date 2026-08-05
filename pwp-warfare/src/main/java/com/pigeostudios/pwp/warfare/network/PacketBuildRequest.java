@@ -11,6 +11,8 @@ import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.RebConstructionBlock;
+import com.pigeostudios.pwp.warfare.block.RebConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
@@ -29,12 +31,14 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.network.NetworkEvent.Context;
+import net.minecraftforge.registries.ForgeRegistries;
 
 // Пакет запроса на строительство сооружения (стены, M2, АГС, миномёт, TOW)
 // Отправляется клиентом при размещении чертежа конструкции
@@ -462,10 +466,10 @@ public class PacketBuildRequest {
                                     mortar.setTeam(team);
                                  }
 
-                                 player.sendSystemMessage(Component.literal("Mortar Blueprint placed!").withStyle(ChatFormatting.GREEN));
+                                  player.sendSystemMessage(Component.literal("Блюпринт миномёта установлен!").withStyle(ChatFormatting.GREEN));
                               }
                            }
-                        } else if (msg.structureId == 23) {
+                         } else if (msg.structureId == 23) {
                            int cost = 200;
                            if (!canPlaceAt(level, msg.pos)) {
                               sendBlockedMessage(player);
@@ -488,7 +492,40 @@ public class PacketBuildRequest {
                                     tow.setTeam(team);
                                  }
 
-                                 player.sendSystemMessage(Component.literal("TOW Blueprint placed!").withStyle(ChatFormatting.GREEN));
+                                  player.sendSystemMessage(Component.literal("Блюпринт ПТРК установлен!").withStyle(ChatFormatting.GREEN));
+                              }
+                           }
+                        } else if (msg.structureId == 24 || msg.structureId == 25) {
+                           boolean mini = msg.structureId == 25;
+                           int cost = mini ? (Integer)WarfareConfig.REB_MINI_BUILD_COST.get() : (Integer)WarfareConfig.REB_BUILD_COST.get();
+                           if (!canPlaceAt(level, msg.pos)) {
+                              sendBlockedMessage(player);
+                              return;
+                           }
+
+                           if (!isCreative && countTeamRebs(level, team) >= (Integer)WarfareConfig.REB_MAX_PER_TEAM.get()) {
+                              player.sendSystemMessage(Component.literal("Слишком много РЭБ у команды!").withStyle(ChatFormatting.RED));
+                              return;
+                           }
+
+                           if (!isCreative && !hasMaterials(level, msg.pos, team, cost)) {
+                              sendNoMaterialsMessage(player, cost);
+                           } else {
+                              if (!isCreative) {
+                                 consumeMaterials(level, msg.pos, team, cost);
+                              }
+
+                              BlockState state = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.REB_CONSTRUCTION_BLOCK.get())
+                                    .defaultBlockState()
+                                    .setValue(RebConstructionBlock.FACING, facing))
+                                 .setValue(RebConstructionBlock.VALID, true))
+                                 .setValue(RebConstructionBlock.MINI, mini);
+                              if (level.setBlock(msg.pos, state, 3)) {
+                                 if (level.getBlockEntity(msg.pos) instanceof RebConstructionBlockEntity reb) {
+                                    reb.setTeam(team);
+                                 }
+
+                                 player.sendSystemMessage(Component.literal("Блюпринт РЭБ установлен!").withStyle(ChatFormatting.GREEN));
                               }
                            }
                         }
@@ -500,17 +537,31 @@ public class PacketBuildRequest {
       ctx.get().setPacketHandled(true);
    }
 
-   // Проверяет, можно ли разместить блок в указанной позиции
-   private static boolean canPlaceAt(ServerLevel level, BlockPos pos) {
-      return level.getBlockState(pos).canBeReplaced();
-   }
+    // Проверяет, можно ли разместить блок в указанной позиции
+    private static boolean canPlaceAt(ServerLevel level, BlockPos pos) {
+       return level.getBlockState(pos).canBeReplaced();
+    }
+
+    // Считает построенные РЭБ/мини-РЭБ команды (лимит на команду).
+    private static int countTeamRebs(ServerLevel level, String team) {
+       int count = 0;
+       for (net.minecraft.world.entity.Entity e : level.getEntities().getAll()) {
+          String t = e.getPersistentData().getString("WARFARE_VehicleTeam");
+          if (t == null || t.isEmpty() || !t.equalsIgnoreCase(team)) continue;
+          ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(e.getType());
+          if (eid != null && (eid.toString().equals("uncomplicatedfpv:reb") || eid.toString().equals("uncomplicatedfpv:reb_mini"))) {
+             count++;
+          }
+       }
+       return count;
+    }
 
    private static void sendBlockedMessage(ServerPlayer player) {
-      player.sendSystemMessage(Component.literal("Space is blocked!").withStyle(ChatFormatting.RED));
+       player.sendSystemMessage(Component.literal("Место занято!").withStyle(ChatFormatting.RED));
    }
 
    private static void sendNoMaterialsMessage(ServerPlayer player, int cost) {
-      player.sendSystemMessage(Component.literal("Need " + cost + " Materials!").withStyle(ChatFormatting.RED));
+       player.sendSystemMessage(Component.literal("Нужно " + cost + " материалов!").withStyle(ChatFormatting.RED));
    }
 
    private static BlockPos getRelativePos(BlockPos start, Direction facing) {

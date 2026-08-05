@@ -60,9 +60,11 @@ public class InteractionEvents {
       "superbwarfare:mortar",
       "fpvdrone:drone",
       "superbwarfare:drone",
-      "wrbdrones:fpv_drone",
-      "wrbdrones:mavic_drone_no_drop",
-      "wrbdrones:mavic_drone_with_drop",
+      "uncomplicatedfpv:fpv_drone",
+      "uncomplicatedfpv:mavic_drone_no_drop",
+      "uncomplicatedfpv:mavic_drone_with_drop",
+      "uncomplicatedfpv:reb",
+      "uncomplicatedfpv:reb_mini",
       "pwpwarfare:supply_crate",
       "vvp:mi8_mtv3",
       "vvp:mi8",
@@ -90,7 +92,7 @@ public class InteractionEvents {
                      int currentMats = target.getPersistentData().getInt("WARFARE_VehicleMats");
                      int cost = (Integer)WarfareConfig.HUB_RESUPPLY_COST.get();
                      if (currentMats < cost) {
-                        sPlayer.displayClientMessage(Component.literal("Not enough Materials in Vehicle! (" + currentMats + ")").withStyle(ChatFormatting.RED), true);
+                        sPlayer.displayClientMessage(Component.literal("Недостаточно материалов в технике! (" + currentMats + ")").withStyle(ChatFormatting.RED), true);
                         event.setCanceled(true);
                         event.setCancellationResult(InteractionResult.SUCCESS);
                         return;
@@ -108,7 +110,7 @@ public class InteractionEvents {
                               target.getPersistentData().putInt("WARFARE_VehicleMats", currentMats - cost);
                            }
 
-                           sPlayer.displayClientMessage(Component.literal("New Kit Equipped! Vehicle Mats: " + (currentMats - cost)).withStyle(ChatFormatting.GREEN), true);
+                           sPlayer.displayClientMessage(Component.literal("Новый кит надет! Материалы техники: " + (currentMats - cost)).withStyle(ChatFormatting.GREEN), true);
                            sPlayer.level().playSound(null, sPlayer.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
                         } else {
                            WarfareWorldData.KitInfo kit = pTeam.equalsIgnoreCase("BLUE") ? data.blueKits.get(currentKit) : data.redKits.get(currentKit);
@@ -119,11 +121,11 @@ public class InteractionEvents {
                                  }
 
                                  sPlayer.displayClientMessage(
-                                    Component.literal("Kit Resupplied! Vehicle Mats: " + (currentMats - cost)).withStyle(ChatFormatting.GREEN), true
+                                    Component.literal("Кит пополнен! Материалы техники: " + (currentMats - cost)).withStyle(ChatFormatting.GREEN), true
                                  );
                                  sPlayer.level().playSound(null, sPlayer.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
                               } else {
-                                 sPlayer.displayClientMessage(Component.literal("Ammo already full! Vehicle Mats: " + currentMats).withStyle(ChatFormatting.YELLOW), true);
+                                 sPlayer.displayClientMessage(Component.literal("БК уже полон! Материалы техники: " + currentMats).withStyle(ChatFormatting.YELLOW), true);
                               }
                            }
                         }
@@ -133,7 +135,7 @@ public class InteractionEvents {
                         return;
                      }
 
-                     sPlayer.displayClientMessage(Component.literal("No Kit equipped!").withStyle(ChatFormatting.RED), true);
+                     sPlayer.displayClientMessage(Component.literal("Кит не надет!").withStyle(ChatFormatting.RED), true);
                      event.setCanceled(true);
                      event.setCancellationResult(InteractionResult.SUCCESS);
                      return;
@@ -144,7 +146,7 @@ public class InteractionEvents {
                   event.setCanceled(true);
                   event.setCancellationResult(InteractionResult.SUCCESS);
                   if (event.getLevel().isClientSide) {
-                     player.displayClientMessage(Component.literal("Inventory access is disabled!").withStyle(ChatFormatting.RED), true);
+                     player.displayClientMessage(Component.literal("Доступ к инвентарю отключён!").withStyle(ChatFormatting.RED), true);
                   }
                }
             }
@@ -238,7 +240,8 @@ public class InteractionEvents {
       } else if (!state.is((Block)ModBlocks.M2_CONSTRUCTION_BLOCK.get())
          && !state.is((Block)ModBlocks.AGS_CONSTRUCTION_BLOCK.get())
          && !state.is((Block)ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get())
-         && !state.is((Block)ModBlocks.TOW_CONSTRUCTION_BLOCK.get())) {
+         && !state.is((Block)ModBlocks.TOW_CONSTRUCTION_BLOCK.get())
+         && !state.is((Block)ModBlocks.REB_CONSTRUCTION_BLOCK.get())) {
           boolean isDefense = state.is((Block)ModBlocks.WALL_BLOCK.get()) || state.is((Block)ModBlocks.BARBED_WIRE_BLOCK.get());
           boolean allowDefenses = (Boolean)WarfareConfig.ALLOW_BREAKING_DEFENSES.get();
           return state.is((Block)ModBlocks.BLUE_RALLY_BLOCK.get())
@@ -267,7 +270,7 @@ public class InteractionEvents {
                 ServerPlayer sPlayer = (ServerPlayer)player;
                 WarfareWorldData data = WarfareWorldData.get(sPlayer.serverLevel());
                 if (!data.isGameStarted && !sPlayer.isCreative()) {
-                   sPlayer.sendSystemMessage(Component.literal("Game hasn't started yet!").withStyle(ChatFormatting.RED));
+                   sPlayer.sendSystemMessage(Component.literal("Игра ещё не началась!").withStyle(ChatFormatting.RED));
                    event.setCanceled(true);
                    return;
                 }
@@ -275,7 +278,7 @@ public class InteractionEvents {
                 if (data.invasionSetupActive && !sPlayer.isCreative()) {
                    String pTeam = sPlayer.getTeam() != null ? sPlayer.getTeam().getName().toUpperCase() : "";
                    if (!pTeam.equalsIgnoreCase(data.invasionDefender)) {
-                      sPlayer.sendSystemMessage(Component.literal("Main Supply недоступен во время подготовки!").withStyle(ChatFormatting.RED));
+                       sPlayer.sendSystemMessage(Component.literal("Основное снабжение недоступно во время подготовки!").withStyle(ChatFormatting.RED));
                       event.setCanceled(true);
                       return;
                    }
@@ -285,7 +288,7 @@ public class InteractionEvents {
                long currentTime = sPlayer.level().getGameTime();
                if (!sPlayer.isCreative() && currentTime < lastMainUse + 1200L) {
                   long secondsLeft = (lastMainUse + 1200L - currentTime) / 20L;
-                  sPlayer.displayClientMessage(Component.literal("Main Supply Cooldown: " + secondsLeft + "s").withStyle(ChatFormatting.RED), true);
+                   sPlayer.displayClientMessage(Component.literal("Кулдаун основной базы: " + secondsLeft + "с").withStyle(ChatFormatting.RED), true);
                   event.setCanceled(true);
                   return;
                }
@@ -300,11 +303,11 @@ public class InteractionEvents {
                      WarfareWorldData.KitInfo kit = t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
                      if (kit != null) {
                         if (ResupplyHandler.resupplyPlayer(sPlayer, kit, false)) {
-                           sPlayer.sendSystemMessage(Component.literal("Kit Resupplied!").withStyle(ChatFormatting.GREEN));
+                           sPlayer.sendSystemMessage(Component.literal("Кит пополнен!").withStyle(ChatFormatting.GREEN));
                            sPlayer.level().playSound(null, sPlayer.blockPosition(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
                            sPlayer.getPersistentData().putLong("WARFARE_LastMainResupply", currentTime);
                         } else {
-                           sPlayer.sendSystemMessage(Component.literal("Kit is already full!").withStyle(ChatFormatting.YELLOW));
+                           sPlayer.sendSystemMessage(Component.literal("Кит уже полон!").withStyle(ChatFormatting.YELLOW));
                         }
                      }
                   }
@@ -435,7 +438,7 @@ public class InteractionEvents {
                   if (!vTeam.equalsIgnoreCase(pTeam)) {
                      event.setCanceled(true);
                      event.setCancellationResult(InteractionResult.FAIL);
-                     player.displayClientMessage(Component.literal("Access Denied: Enemy Vehicle!").withStyle(ChatFormatting.RED), true);
+                      player.displayClientMessage(Component.literal("Доступ запрещён: техника врага!").withStyle(ChatFormatting.RED), true);
                   }
                }
             }
@@ -460,7 +463,7 @@ public class InteractionEvents {
 
       if (!vehicle.getPassengers().isEmpty()) return;
 
-      String pKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+      String pKit = KitUtil.getEffectiveKit(player);
       if (!hasCorrectKit(vType, pKit)) {
          event.setCanceled(true);
          player.displayClientMessage(Component.literal("Вам нужен кит Механик/Пилот для этой техники").withStyle(ChatFormatting.RED), true);

@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlock;
+import com.pigeostudios.pwp.warfare.block.RebConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
@@ -203,13 +204,20 @@ public class ClientPlacementHandler {
                               }
                            }
                         }
-                     } else if (structureId == 18) {
-                        BlockState stationState = (BlockState)((BlockState)((Block)ModBlocks.VEHICLE_STATION_BLOCK.get())
-                              .defaultBlockState()
-                              .setValue(VehicleStationBlock.FACING, Direction.NORTH))
-                           .setValue(VehicleStationBlock.VALID, isValid);
-                        renderGhostBlock(mc, stationState, pose, 0, 0, 0);
-                     } else {
+      } else if (structureId == 18) {
+         BlockState stationState = (BlockState)((BlockState)((Block)ModBlocks.VEHICLE_STATION_BLOCK.get())
+               .defaultBlockState()
+               .setValue(VehicleStationBlock.FACING, Direction.NORTH))
+            .setValue(VehicleStationBlock.VALID, isValid);
+         renderGhostBlock(mc, stationState, pose, 0, 0, 0);
+      } else if (structureId == 24 || structureId == 25) {
+         BlockState rebState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.REB_CONSTRUCTION_BLOCK.get())
+                  .defaultBlockState()
+                  .setValue(RebConstructionBlock.FACING, Direction.NORTH))
+               .setValue(RebConstructionBlock.VALID, isValid))
+            .setValue(RebConstructionBlock.MINI, structureId == 25);
+         renderGhostBlock(mc, rebState, pose, 0, 0, 0);
+      } else {
                         BlockState wallState = (BlockState)((BlockState)((BlockState)((Block)ModBlocks.WALL_BLOCK.get())
                                  .defaultBlockState()
                                  .setValue(WallBlock.FACING, Direction.NORTH))
@@ -274,7 +282,7 @@ public class ClientPlacementHandler {
                         PacketHandler.INSTANCE.sendToServer(new PacketBuildRequest(structureId, placePos, (int)rotationY));
                         stopPlacing();
                      } else {
-                        mc.player.displayClientMessage(Component.literal("Not enough materials or out of range!").withStyle(ChatFormatting.RED), true);
+                         mc.player.displayClientMessage(Component.literal("Недостаточно материалов или вне досягаемости!").withStyle(ChatFormatting.RED), true);
                      }
                   }
 
@@ -287,6 +295,13 @@ public class ClientPlacementHandler {
 
    private static boolean validatePlacement(Minecraft mc, BlockPos pos) {
       if (mc.player == null) {
+         return false;
+      }
+
+      // Место занято (или любая часть multi-структуры занята) — макет красный,
+      // как серверный canPlaceAt. Без этого макет зелёный поверх построек,
+      // а сервер потом отвечает «Место занято!».
+      if (!allPartsFree(mc, pos)) {
          return false;
       }
 
@@ -351,6 +366,14 @@ public class ClientPlacementHandler {
          cost = 100;
       }
 
+      if (structureId == 24) {
+         cost = (Integer)WarfareConfig.REB_BUILD_COST.get();
+      }
+
+      if (structureId == 25) {
+         cost = (Integer)WarfareConfig.REB_MINI_BUILD_COST.get();
+      }
+
       if (playerTeam.equals("NEUTRAL") && !mc.player.isCreative()) {
          return false;
       }
@@ -366,16 +389,14 @@ public class ClientPlacementHandler {
          for (WarfareWorldData.HubInfo hubInfo : ClientData.clientHubs) {
             if (hubInfo.dimension == null || hubInfo.dimension.equals(currentDimension)) {
                BlockPos hubPos = hubInfo.pos;
-               if (hubPos.distSqr(pos) <= maxDistSqHub && mc.level.isLoaded(hubPos)) {
-                  BlockEntity be = mc.level.getBlockEntity(hubPos);
-                  BlockState hubState = mc.level.getBlockState(hubPos);
-                  if (be instanceof HubBlockEntity hub
-                     && (hub.getTeam().equalsIgnoreCase(playerTeam) || hub.getTeam().equals("NEUTRAL"))
-                     && (!hubState.hasProperty(HubBlock.CONSTRUCTED) || (Boolean)hubState.getValue(HubBlock.CONSTRUCTED))) {
-                     isInRange = true;
-                     totalMaterials += hub.getMaterials();
-                  }
-               }
+                if (hubPos.distSqr(pos) <= maxDistSqHub && mc.level.isLoaded(hubPos)) {
+                   BlockEntity be = mc.level.getBlockEntity(hubPos);
+                   if (be instanceof HubBlockEntity hub
+                      && (hub.getTeam().equalsIgnoreCase(playerTeam) || hub.getTeam().equals("NEUTRAL"))) {
+                      isInRange = true;
+                      totalMaterials += hub.getMaterials();
+                   }
+                }
             }
          }
       }
@@ -395,5 +416,75 @@ public class ClientPlacementHandler {
       } else {
          return mc.player.isCreative() ? true : totalMaterials >= cost;
       }
+   }
+
+   // Проверка занятости: базовая позиция и все части multi-структур
+   // (как серверный canPlaceAt). Части считаются с учётом поворота —
+   // та же формула, что в PacketBuildRequest.getRelativePos.
+   private static boolean allPartsFree(Minecraft mc, BlockPos pos) {
+      java.util.List<BlockPos> parts = new java.util.ArrayList<>();
+      parts.add(pos);
+      int rot = (int) rotationY;
+      switch (structureId) {
+         case 11 -> {
+            parts.add(pos.above());
+            parts.add(rel(pos, rot, 1, 0, 0));
+            parts.add(rel(pos, rot, 1, 1, 0));
+         }
+         case 12 -> {
+            for (int x = 0; x < 3; x++) {
+               for (int y = 0; y < 3; y++) {
+                  parts.add(rel(pos, rot, x, y, 0));
+               }
+            }
+         }
+         case 13 -> {
+            for (int h = 0; h < 3; h++) {
+               parts.add(rel(pos, rot, h, 0, 0));
+            }
+         }
+         case 15 -> {
+            for (int x = -1; x <= 1; x++) {
+               parts.add(rel(pos, rot, x, 0, 0));
+               parts.add(rel(pos, rot, x, 0, -1));
+               parts.add(rel(pos, rot, x, 1, -1));
+               parts.add(rel(pos, rot, x, 0, -2));
+            }
+         }
+         case 16 -> {
+            for (int x = -1; x <= 1; x++) {
+               for (int y = 0; y < 3; y++) {
+                  parts.add(rel(pos, rot, x, y, 0));
+               }
+            }
+         }
+         case 17 -> {
+            for (int x = -1; x <= 1; x++) {
+               for (int y = 0; y <= 2; y++) {
+                  for (int z = -1; z <= 1; z++) {
+                     if (x == 0 && z == 0 && y < 2) continue;
+                     parts.add(rel(pos, rot, x, y, z));
+                  }
+               }
+            }
+         }
+         default -> {
+         }
+      }
+
+      for (BlockPos p : parts) {
+         if (!mc.level.getBlockState(p).canBeReplaced()) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+   private static BlockPos rel(BlockPos base, int rotation, int xOff, int yOff, int zOff) {
+      int rot = (rotation % 360 + 360) % 360;
+      if (rot == 90) return base.offset(zOff, yOff, -xOff);
+      if (rot == 180) return base.offset(-xOff, yOff, -zOff);
+      if (rot == 270) return base.offset(-zOff, yOff, xOff);
+      return base.offset(xOff, yOff, zOff);
    }
 }

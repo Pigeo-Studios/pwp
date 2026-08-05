@@ -1,0 +1,21 @@
+{
+  "variants": {
+    "facing=north,mini=false,valid=true":  { "model": "pwpwarfare:block/reb_construction" },
+    "facing=east,mini=false,valid=true":   { "model": "pwpwarfare:block/reb_construction", "y": 90 },
+    "facing=south,mini=false,valid=true":  { "model": "pwpwarfare:block/reb_construction", "y": 180 },
+    "facing=west,mini=false,valid=true":   { "model": "pwpwarfare:block/reb_construction", "y": 270 },
+    "facing=north,mini=true,valid=true":   { "model": "pwpwarfare:block/reb_mini_construction" },
+    "facing=east,mini=true,valid=true":    { "model": "pwpwarfare:block/reb_mini_construction", "y": 90 },
+    "facing=south,mini=true,valid=true":   { "model": "pwpwarfare:block/reb_mini_construction", "y": 180 },
+    "facing=west,mini=true,valid=true":    { "model": "pwpwarfare:block/reb_mini_construction", "y": 270 },
+
+    "facing=north,mini=false,valid=false": { "model": "pwpwarfare:block/reb_construction_invalid" },
+    "facing=east,mini=false,valid=false":  { "model": "pwpwarfare:block/reb_construction_invalid", "y": 90 },
+    "facing=south,mini=false,valid=false": { "model": "pwpwarfare:block/reb_construction_invalid", "y": 180 },
+    "facing=west,mini=false,valid=false":  { "model": "pwpwarfare:block/reb_construction_invalid", "y": 270 },
+    "facing=north,mini=true,valid=false":  { "model": "pwpwarfare:block/reb_mini_construction_invalid" },
+    "facing=east,mini=true,valid=false":   { "model": "pwpwarfare:block/reb_mini_construction_invalid", "y": 90 },
+    "facing=south,mini=true,valid=false":  { "model": "pwpwarfare:block/reb_mini_construction_invalid", "y": 180 },
+    "facing=west,mini=true,valid=false":   { "model": "pwpwarfare:block/reb_mini_construction_invalid", "y": 270 }
+  }
+}

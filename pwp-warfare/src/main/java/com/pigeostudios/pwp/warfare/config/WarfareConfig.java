@@ -88,6 +88,42 @@ public static final BooleanValue REQUIRE_SPECIALIST_TO_DRIVE = BUILDER.comment(
     public static final ConfigValue<String> BLUE_TEAM_CUSTOM_NAME = BUILDER.define("blueTeamCustomName", "BLUEFOR");
     public static final ConfigValue<String> RED_TEAM_CUSTOM_NAME = BUILDER.define("redTeamCustomName", "REDFOR");
 
+    // ===== Дроны (деплой каналом, uncomplicated-fpv) =====
+
+    public static final IntValue DRONE_DEPLOY_TIME_TICKS = BUILDER.comment("Drone deployment channel time (ticks)")
+        .defineInRange("droneDeployTimeTicks", 80, 20, 400);
+    public static final IntValue DRONE_DEPLOY_CD_TICKS = BUILDER.comment(
+            "Drone deployment cooldown (ticks). Counted from the START of the deployment,",
+            "so losing the drone never extends it - the class stays playable."
+        )
+        .defineInRange("droneDeployCooldownTicks", 900, 100, 7200);
+    public static final IntValue DRONE_IDLE_DESPAWN_TICKS = BUILDER.comment(
+            "A drone that landed and has no active control link despawns after N ticks",
+            "(abandoned drones must not litter the map or hold the active limit)"
+        )
+        .defineInRange("droneIdleDespawnTicks", 1200, 40, 2400);
+    public static final IntValue DRONE_MAX_ACTIVE_PER_PLAYER = BUILDER.comment("Max active drones per player (total)")
+        .defineInRange("droneMaxActivePerPlayer", 2, 1, 8);
+    public static final IntValue DRONE_MAX_ACTIVE_PER_TYPE = BUILDER.comment("Max active drones of the SAME type per player (e.g. 1 FPV + 1 Mavic)")
+        .defineInRange("droneMaxActivePerType", 1, 1, 4);
+    public static final IntValue DRONE_RELOAD_TIME_TICKS = BUILDER.comment(
+            "Mavic grenade reload channel time (ticks) via drone_ammo_pouch"
+        )
+        .defineInRange("droneReloadTimeTicks", 40, 10, 200);
+
+    // ===== РЭБ (uncomplicated-fpv reb / reb_mini через стройку) =====
+
+    public static final IntValue REB_BUILD_TIME_TICKS = BUILDER.comment("REB construction progress (ticks of digging, ~25s at 1/s)")
+        .defineInRange("rebBuildTimeTicks", 500, 100, 3600);
+    public static final IntValue REB_MINI_BUILD_TIME_TICKS = BUILDER.comment("Mini REB construction progress (ticks of digging)")
+        .defineInRange("rebMiniBuildTimeTicks", 250, 50, 3600);
+    public static final IntValue REB_BUILD_COST = BUILDER.comment("Materials cost to build an REB")
+        .defineInRange("rebBuildCost", 150, 10, 1000);
+    public static final IntValue REB_MINI_BUILD_COST = BUILDER.comment("Materials cost to build a mini REB")
+        .defineInRange("rebMiniBuildCost", 60, 10, 1000);
+    public static final IntValue REB_MAX_PER_TEAM = BUILDER.comment("Max REB/mini-REB entities per team (anti-spam)")
+        .defineInRange("rebMaxPerTeam", 3, 1, 20);
+
    static {
       BUILDER.push("Gameplay Settings");
       BUILDER.pop();

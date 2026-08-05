@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlockEntity;
+import com.pigeostudios.pwp.warfare.block.RebConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
@@ -206,11 +207,15 @@ public class EntrenchingToolItem extends Item implements GeoItem {
    private boolean isWarfareConstruction(BlockState state) {
       return state.is((Block)ModBlocks.HUB_BLOCK.get())
          || state.is((Block)ModBlocks.WALL_BLOCK.get())
+         || state.is((Block)ModBlocks.WALL_SLAB_BLOCK.get())
+         || state.is((Block)ModBlocks.CAMO_NET_BLOCK.get())
          || state.is((Block)ModBlocks.BARBED_WIRE_BLOCK.get())
          || state.is((Block)ModBlocks.M2_CONSTRUCTION_BLOCK.get())
          || state.is((Block)ModBlocks.AGS_CONSTRUCTION_BLOCK.get())
          || state.is((Block)ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get())
-         || state.is((Block)ModBlocks.TOW_CONSTRUCTION_BLOCK.get());
+         || state.is((Block)ModBlocks.TOW_CONSTRUCTION_BLOCK.get())
+         || state.is((Block)ModBlocks.REB_CONSTRUCTION_BLOCK.get())
+         || state.is((Block)ModBlocks.VEHICLE_STATION_BLOCK.get());
    }
 
    private String getStructureTeam(BlockEntity be) {
@@ -226,8 +231,12 @@ public class EntrenchingToolItem extends Item implements GeoItem {
          return m.getTeam();
       } else if (be instanceof MortarConstructionBlockEntity mo) {
          return mo.getTeam();
+       } else if (be instanceof TOWConstructionBlockEntity t) {
+         return t.getTeam();
+      } else if (be instanceof RebConstructionBlockEntity r) {
+         return r.getTeam();
       } else {
-         return be instanceof TOWConstructionBlockEntity t ? t.getTeam() : "NEUTRAL";
+         return be instanceof VehicleStationBlockEntity v ? v.getTeam() : "NEUTRAL";
       }
    }
 
@@ -248,10 +257,15 @@ public class EntrenchingToolItem extends Item implements GeoItem {
          b.addCreativeProgress(multiplier);
       } else if (be instanceof TOWConstructionBlockEntity b) {
          b.addCreativeProgress(multiplier);
+      } else if (be instanceof RebConstructionBlockEntity b) {
+         b.addCreativeProgress(multiplier);
       }
    }
 
    private boolean isConstructed(BlockState state) {
+      if (state.is((Block)ModBlocks.CAMO_NET_BLOCK.get())) {
+         return true;
+      }
       if (state.hasProperty(WallBlock.CONSTRUCTED)) {
          return (Boolean)state.getValue(WallBlock.CONSTRUCTED);
       } else if (state.hasProperty(HubBlock.CONSTRUCTED)) {
@@ -279,6 +293,8 @@ public class EntrenchingToolItem extends Item implements GeoItem {
       } else if (be instanceof MortarConstructionBlockEntity b) {
          b.addProgress();
       } else if (be instanceof TOWConstructionBlockEntity b) {
+         b.addProgress();
+      } else if (be instanceof RebConstructionBlockEntity b) {
          b.addProgress();
       }
    }
