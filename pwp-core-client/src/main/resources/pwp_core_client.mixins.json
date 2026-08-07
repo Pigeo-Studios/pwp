@@ -9,6 +9,7 @@
     "LevelLoadingScreenMixin",
     "LevelTransitionMixin",
     "ConnectScreenMixin",
+    "ConnectScreenAccessor",
     "ScreenInvoker",
     "DisconnectedScreenAccessor"
   ],

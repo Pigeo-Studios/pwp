@@ -3,9 +3,7 @@ from enum import Enum
 class State(Enum):
     MAIN = "main"
     PRIVACY = "privacy"
-    PRIVACY_READ = "privacy_read"
     ACCOUNT = "account"
-    PROFILE = "profile"
     PASSWORD = "password"
     PASS_OLD = "pass_old"
     PASS_NEW = "pass_new"
@@ -15,25 +13,20 @@ class State(Enum):
     LOGIN_PASS = "login_pass"
     LOGIN_RAW_LOGIN = "login_raw_login"
     LOGIN_RAW_PASS = "login_raw_pass"
-    LOGOUT = "logout"
     SECURITY = "security"
     SECURITY_2FA = "security_2fa"
     GAME = "game"
-    GAME_LAUNCHER = "game_launcher"
+    STATUS = "status"
+    NOTIFY = "notify"
     REG_LOGIN = "reg_login"
     REG_EMAIL = "reg_email"
     REG_PASSWORD = "reg_password"
     REG_CONFIRM = "reg_confirm"
     ADMIN = "admin"
     ADMIN_SEARCH = "admin_search"
-    ADMIN_USER = "admin_user"
-    ADMIN_ROLE = "admin_role"
     ADMIN_BAN_REASON = "admin_ban_reason"
-    ADMIN_RESETS = "admin_resets"
     ADMIN_BROADCAST = "admin_broadcast"
     ADMIN_BROADCAST_PREVIEW = "admin_broadcast_preview"
-    ADMIN_LOGS = "admin_logs"
-    ADMIN_STATS = "admin_stats"
     RESET_NEW = "reset_new"
     RESET_CONFIRM = "reset_confirm"
 
@@ -43,7 +36,7 @@ class UserSession:
         "role", "login", "email", "nickname", "registered_at",
         "last_login", "last_ip", "twofa_enabled", "panel_id",
         "reg_login", "reg_email", "reg_password",
-        "pass_old", "pass_new",
+        "pass_old", "pass_new", "reset_pass",
         "admin_uuid", "admin_broadcast", "processing",
     )
 
@@ -67,6 +60,7 @@ class UserSession:
         self.reg_password = ""
         self.pass_old = ""
         self.pass_new = ""
+        self.reset_pass = ""
         self.admin_uuid = ""
         self.admin_broadcast = ""
         self.processing = False
@@ -77,6 +71,7 @@ class UserSession:
         self.reg_password = ""
         self.pass_old = ""
         self.pass_new = ""
+        self.reset_pass = ""
         self.admin_uuid = ""
         self.admin_broadcast = ""
         self.state = State.MAIN
@@ -95,6 +90,3 @@ def get_session(uid: int) -> UserSession:
     if uid not in _sessions:
         _sessions[uid] = UserSession(uid)
     return _sessions[uid]
-
-def drop_session(uid: int):
-    _sessions.pop(uid, None)

@@ -60,6 +60,7 @@ public class FactionVehicleController {
         obj.addProperty("yaw", v.yaw);
         obj.addProperty("respawnTime", v.respawnTime);
         obj.addProperty("initialTime", v.initialTime);
+        obj.addProperty("category", v.category);
         if (v.inventory != null && !v.inventory.isEmpty()) {
             try {
                 obj.add("inventory", GSON.fromJson(v.inventory, JsonArray.class));

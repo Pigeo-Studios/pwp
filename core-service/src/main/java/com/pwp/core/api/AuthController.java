@@ -305,18 +305,10 @@ public class AuthController {
                 if (req.newPassword.length() < 8) {
                     ctx.json(ApiResponse.error("password must be at least 8 characters")); return;
                 }
-                // Verify there's been a reset request
-                var resets = PlayerRepository.findPendingResets();
-                boolean hasRequest = false;
-                if (resets != null) {
-                    for (var r : resets) {
-                        if (r.playerUuid != null && r.playerUuid.equals(req.uuid)) {
-                            hasRequest = true; break;
-                        }
-                    }
-                }
-                if (!hasRequest) {
-                    ctx.json(ApiResponse.error("no reset request found")); return;
+                // Только после ОДОБРЕНИЯ заявки администратором (pending/любые другие — нельзя)
+                var approved = PlayerRepository.findApprovedReset(req.uuid);
+                if (approved == null) {
+                    ctx.json(ApiResponse.error("no approved reset request found")); return;
                 }
                 Player pl = PlayerRepository.findByUuid(req.uuid);
                 if (pl == null) {
@@ -324,6 +316,7 @@ public class AuthController {
                 }
                 String newHash = BCrypt.hashpw(req.newPassword, BCrypt.gensalt(12));
                 PlayerRepository.updatePassword(req.uuid, newHash);
+                PlayerRepository.markResetUsed(approved.id);
                 PlayerRepository.log(req.uuid, "reset_password_set", ctx.ip(), "new password set after reset approval");
                 ctx.json(ApiResponse.ok("password updated"));
             } catch (Exception e) {

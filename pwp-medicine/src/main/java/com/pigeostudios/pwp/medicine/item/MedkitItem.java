@@ -64,7 +64,7 @@ implements GeoItem {
             Player player2 = toHeal = target != null ? target : player;
             if (toHeal.hasEffect(ModEffects.BLEEDING.get())) {
                 if (player.tickCount % 20 == 0) {
-                    player.sendSystemMessage(Component.literal("§cCannot heal: Target is bleeding!"));
+                    player.sendSystemMessage(Component.literal("§cНельзя лечить: цель истекает кровью!"));
                 }
                 return;
             }

@@ -125,6 +125,13 @@ public class DroneDeploymentEvents {
          return;
       }
 
+      // Мейн-зона: установка дрона (снаряжается ракетой/гранатами) приравнена
+      // к стрельбе — тот же гейт MainZoneFireGuard, что и у всего оружия.
+      if (MainZoneFireGuard.isFireBlocked(player)) {
+         MainZoneFireGuard.notifyBlocked(player);
+         return;
+      }
+
       // Кит: только оператор дрона / разведчик.
       if (!player.isCreative()) {
          String kit = KitUtil.getEffectiveKit(player);
@@ -134,17 +141,32 @@ public class DroneDeploymentEvents {
          }
       }
 
-      // Кулдаун от старта установки. Единый источник времени — серверный
-      // tickCount (НЕ level.getGameTime: сохранённое время мира на порядки
-      // больше, и elapsed = tick - start был вечно отрицательным — деплой
-      // зависал, частицы/звук/пакеты шли бесконечно).
-      long now = level.getServer().getTickCount();
+      // Уже деплоим — проверка РАНЬШЕ кулдауна (спам ПКМ во время установки
+      // не должен показывать «Кулдаун» вместо «Установка уже идёт»).
+      if (!player.getPersistentData().getString(P_DEPLOY_TYPE).isEmpty()) {
+         player.displayClientMessage(net.minecraft.network.chat.Component.literal("Установка уже идёт!").withStyle(net.minecraft.ChatFormatting.RED), true);
+         return;
+      }
+
+      // Кулдаун от старта установки. Время — МИРОВОЕ (level.getGameTime(), тики
+      // сохраняются в level.dat): серверный tickCount сбрасывается при рестарте
+      // сервера/матча, а cdUntil в persistentData игрока переживает рестарт —
+      // после него tickCount мал, cdUntil велик, и кулдаун «висел» бесконечно.
+      // Каждый новый деплой ПЕРЕЗАПИСЫВАЕТ cdUntil абсолютным значением
+      // (gameTime + CD) — обновление, а не прибавление к старому значению.
+      // ВАЖНО: это НЕ тот же gameTime, что в P_DEPLOY_START — прогресс деплоя
+      // считает elapsed от серверного tickCount (сессионно, чистится при логине).
+      long now = level.getGameTime();
       long cdUntil = player.getPersistentData().getLong(P_CD_UNTIL);
       if (!player.isCreative() && now < cdUntil) {
          long sec = (cdUntil - now) / 20L;
          player.displayClientMessage(net.minecraft.network.chat.Component.literal("Кулдаун деплоя: " + sec + "с").withStyle(net.minecraft.ChatFormatting.RED), true);
          return;
       }
+      // Прогресс установки — ОТДЕЛЬНЫЙ источник: серверный tickCount (сессия).
+      // НЕ level.getGameTime() — иначе elapsed = tick - start вечно отрицательный
+      // и установка зависает на полном прогрессе (инцидент 06.08.2026).
+      long deployStartTick = level.getServer().getTickCount();
 
       // Лимиты активных дронов.
       int activeTotal = 0;
@@ -164,12 +186,6 @@ public class DroneDeploymentEvents {
       }
       if (activeType >= WarfareConfig.DRONE_MAX_ACTIVE_PER_TYPE.get()) {
          player.displayClientMessage(net.minecraft.network.chat.Component.literal("Дрон этого типа уже активен!").withStyle(net.minecraft.ChatFormatting.RED), true);
-         return;
-      }
-
-      // Уже деплоим.
-      if (!player.getPersistentData().getString(P_DEPLOY_TYPE).isEmpty()) {
-         player.displayClientMessage(net.minecraft.network.chat.Component.literal("Установка уже идёт!").withStyle(net.minecraft.ChatFormatting.RED), true);
          return;
       }
 
@@ -201,7 +217,7 @@ public class DroneDeploymentEvents {
 
       // Состояние деплоя.
       player.getPersistentData().putString(P_DEPLOY_TYPE, droneId);
-      player.getPersistentData().putLong(P_DEPLOY_START, now);
+      player.getPersistentData().putLong(P_DEPLOY_START, deployStartTick);
       player.getPersistentData().putDouble(P_DEPLOY_X, x);
       player.getPersistentData().putDouble(P_DEPLOY_Y, y);
       player.getPersistentData().putDouble(P_DEPLOY_Z, z);
@@ -261,9 +277,13 @@ public class DroneDeploymentEvents {
       double dx = player.getX() - x;
       double dz = player.getZ() - z;
       boolean moved = dx * dx + dz * dz > 6.25;
+      // Вход в мейн-зону во время канала тоже отменяет установку (флаг
+      // пересчитывается раз в 0.5с — без этого дрон «добилдился» бы в зоне,
+      // если канал стартовал впритык к границе).
+      boolean inMainZone = MainZoneFireGuard.isFireBlocked(player);
 
-      if (dead || moved) {
-         cancelDeploy(player, drone, tick, moved);
+      if (dead || moved || inMainZone) {
+         cancelDeploy(player, drone, tick, moved, inMainZone);
          return;
       }
 
@@ -272,14 +292,12 @@ public class DroneDeploymentEvents {
       long elapsed = tick - start;
       float progress = total <= 0 ? 1.0F : Math.min(1.0F, (float) elapsed / total);
 
-      // Звук-гул и партиклы установки. Короткий ванильный бип вместо
-      // перезапуска stream-звука (рестарт стрима каждые 2с жрёт клиент).
+      // Звук-гул установки (каждые 20 тиков). Партиклы во время канала НЕ
+      // спавним вообще — ELECTRIC_SPARK каждые 4 тика у точки, на которую
+      // смотрит игрок, заметно ронял ФПС (юзер: «партиклы очень лагают,
+      // смотришь и фпс в 9»). Одноразовые партиклы остались на старте/завершении.
       if (elapsed % 20L == 0L) {
          player.level().playSound(null, x, y, z, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.5F, 1.0F);
-      }
-      if (tick % 4L == 0L && drone != null && !drone.isRemoved()) {
-         ServerLevel level = (ServerLevel) player.level();
-         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, y + 0.4, z, 1, 0.3, 0.2, 0.3, 0.0);
       }
 
       if (syncNow) {
@@ -291,8 +309,9 @@ public class DroneDeploymentEvents {
       }
    }
 
-   private static void cancelDeploy(ServerPlayer player, Entity drone, int tick, boolean movedAway) {
+   private static void cancelDeploy(ServerPlayer player, Entity drone, int tick, boolean movedAway, boolean inMainZone) {
       var data = player.getPersistentData();
+      String droneId = data.getString(P_DEPLOY_TYPE);
       data.remove(P_DEPLOY_TYPE);
       data.remove(P_DEPLOY_START);
       data.remove(P_DEPLOY_X);
@@ -302,10 +321,28 @@ public class DroneDeploymentEvents {
       if (drone != null && !drone.isRemoved()) {
          drone.remove(Entity.RemovalReason.DISCARDED);
       }
+      // Установка не удалась — возвращаем предмет дрона (в инвентарь, если
+      // живы, иначе дроп рядом). Кулдаун при этом остаётся (от старта) —
+      // анти-спам по-прежнему работает.
+      returnDroneItem(player, droneId);
       sendDeployState(player, false, 0.0F, 0, 0, 0, "", 0);
       player.displayClientMessage(net.minecraft.network.chat.Component.literal(
-         movedAway ? "Установка прервана — вы сдвинулись с места!" : "Установка прервана!"
+         inMainZone ? "Установка прервана — вход в мейн-зону!" : movedAway ? "Установка прервана — вы сдвинулись с места!" : "Установка прервана!"
       ).withStyle(net.minecraft.ChatFormatting.RED), true);
+   }
+
+   private static void returnDroneItem(ServerPlayer player, String droneId) {
+      if (droneId == null || droneId.isEmpty() || player.isCreative()) return;
+      Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(droneId));
+      if (item == null) return;
+      ItemStack stack = new ItemStack(item, 1);
+      if (player.isAlive()) {
+         if (!player.addItem(stack)) {
+            player.drop(stack, false);
+         }
+      } else {
+         player.drop(stack, false);
+      }
    }
 
    private static void completeDeploy(ServerPlayer player, Entity drone, String deployType, int tick) {
@@ -332,8 +369,8 @@ public class DroneDeploymentEvents {
       drone.setYRot(player.getYRot() + 180.0F);
 
       ServerLevel level = (ServerLevel) player.level();
-      level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, drone.getX(), drone.getY() + 0.5, drone.getZ(), 12, 0.4, 0.3, 0.4, 0.02);
-      level.sendParticles(ParticleTypes.ELECTRIC_SPARK, drone.getX(), drone.getY() + 0.5, drone.getZ(), 20, 0.5, 0.3, 0.5, 0.1);
+      level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, drone.getX(), drone.getY() + 0.5, drone.getZ(), 6, 0.4, 0.3, 0.4, 0.02);
+      level.sendParticles(ParticleTypes.ELECTRIC_SPARK, drone.getX(), drone.getY() + 0.5, drone.getZ(), 8, 0.5, 0.3, 0.5, 0.1);
       level.playSound(null, drone.getX(), drone.getY(), drone.getZ(), sound("pwpwarfare:drone_ready"), SoundSource.PLAYERS, 1.0F, 1.0F);
 
       sendDeployState(player, false, 1.0F, 0, 0, 0, "", 0);
@@ -453,6 +490,11 @@ public class DroneDeploymentEvents {
          player.displayClientMessage(net.minecraft.network.chat.Component.literal("Перезарядка уже идёт!").withStyle(net.minecraft.ChatFormatting.RED), true);
          return;
       }
+      // Мейн-зона: перезарядка снаряжает мавик гранатами — тот же гейт, что у деплоя.
+      if (MainZoneFireGuard.isFireBlocked(player)) {
+         MainZoneFireGuard.notifyBlocked(player);
+         return;
+      }
       if (!player.isCreative()) {
          ItemStack stack = player.getMainHandItem();
          if (stack.isEmpty() || !stack.is(ModItems.DRONE_AMMO_POUCH.get())) {
@@ -489,12 +531,14 @@ public class DroneDeploymentEvents {
       double y = data.getDouble(P_RELOAD_Y);
       double z = data.getDouble(P_RELOAD_Z);
 
-      // Отмена: смерть игрока, дрон пропал/взлетел/под управлением/в установке.
+      // Отмена: смерть игрока, дрон пропал/взлетел/под управлением/в установке,
+      // или игрок вошёл в мейн-зону (канал снаряжает дрон гранатами).
       boolean cancelled = !player.isAlive()
          || drone == null || drone.isRemoved()
          || isDroneControlled(drone)
          || !drone.onGround()
-         || drone.getPersistentData().getBoolean(E_DEPLOYING);
+         || drone.getPersistentData().getBoolean(E_DEPLOYING)
+         || MainZoneFireGuard.isFireBlocked(player);
       if (cancelled) {
          cancelReload(player);
          return;
@@ -505,12 +549,9 @@ public class DroneDeploymentEvents {
       long elapsed = tick - start;
       float progress = total <= 0 ? 1.0F : Math.min(1.0F, (float) elapsed / total);
 
+      // Звук-гул перезарядки. Партиклы не спавним (см. tickPlayerDeploy — лагают).
       if (elapsed % 20L == 0L) {
          player.level().playSound(null, x, y, z, SoundEvents.NOTE_BLOCK_BIT.value(), SoundSource.PLAYERS, 0.5F, 1.0F);
-      }
-      if (tick % 4L == 0L) {
-         ServerLevel level = (ServerLevel) player.level();
-         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, x, y + 0.4, z, 1, 0.3, 0.2, 0.3, 0.0);
       }
 
       if (syncNow) {
@@ -559,7 +600,7 @@ public class DroneDeploymentEvents {
       }
 
       ServerLevel level = (ServerLevel) player.level();
-      level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, drone.getX(), drone.getY() + 0.5, drone.getZ(), 10, 0.4, 0.3, 0.4, 0.02);
+      level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, drone.getX(), drone.getY() + 0.5, drone.getZ(), 6, 0.4, 0.3, 0.4, 0.02);
       level.playSound(null, drone.getX(), drone.getY(), drone.getZ(), sound("pwpwarfare:drone_ready"), SoundSource.PLAYERS, 1.0F, 1.0F);
       sendDeployState(player, false, 1.0F, 0, 0, 0, "", 1);
       player.displayClientMessage(net.minecraft.network.chat.Component.literal("Мавик перезаряжен!").withStyle(net.minecraft.ChatFormatting.GREEN), true);

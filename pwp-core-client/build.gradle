@@ -47,24 +47,67 @@ mixin {
     debug.export = true
 }
 
-// The Mixin AP fails to emit an obfuscation mapping for the generic
-// Screen.addRenderableWidget @Invoker (duplicate tsrg entries). Inject the
-// refmap entry manually so the invoker resolves in production (SRG) runs.
+// Mixin AP нестабильно эмитит маппинг генерик-метода Screen.addRenderableWidget
+// для @Invoker (в tsrg метод дублируется — наследуется всеми подклассами
+// Screen). Без записи кнопка отмены в ConnectScreen не зарегистрируется
+// в проде (SRG). Вписываем запись принудительно после компиляции; если
+// рефмап не сгенерирован — падаем.
 tasks.named('compileJava') {
+    // Рефмап — побочный выход Mixin AP. Инкрементальные и прерванные
+    // пересборки теряют его (классы остаются, рефмап исчезает), из-за чего
+    // в релизный jar рефмап не попадал (краш клиента в проде). Принудительно
+    // перекомпилируем модуль на каждой сборке — AP перегенерирует рефмап.
+    outputs.upToDateWhen { false }
     doLast {
-        def injectEntry = {
-            File refmap ->
+        def entry = [
+                addRenderableWidget: "Lnet/minecraft/client/gui/screens/Screen;m_142416_(Lnet/minecraft/client/gui/components/events/GuiEventListener;)Lnet/minecraft/client/gui/components/events/GuiEventListener;"
+        ]
+        def refmaps = [
+                file("${buildDir}/tmp/compileJava/compileJava-refmap.json"),
+                file("${buildDir}/tmp/compileJava/pwp_core_client.refmap.json")
+        ]
+        // Именованный рефмап MixinGradle создаёт после compileJava (из
+        // compileJava-refmap.json), поэтому его инжектим только если он уже
+        // появился. Отсутствие главного рефмапа — фатально.
+        def primary = refmaps[0]
+        if (!primary.exists()) {
+            throw new GradleException("FAIL: рефмап не сгенерирован Mixin AP: $primary")
+        }
+        refmaps.each { refmap ->
             if (!refmap.exists()) return
             def json = new groovy.json.JsonSlurper().parse(refmap)
-            def entry = [
-                    addRenderableWidget: "Lnet/minecraft/client/gui/screens/Screen;m_142416_(Lnet/minecraft/client/gui/components/events/GuiEventListener;)Lnet/minecraft/client/gui/components/events/GuiEventListener;"
-            ]
             json.mappings["com/pwp/coreclient/mixin/ScreenInvoker"] = entry
             json.data.searge["com/pwp/coreclient/mixin/ScreenInvoker"] = entry
             refmap.setText(new groovy.json.JsonBuilder(json).toPrettyString(), 'UTF-8')
         }
-        injectEntry(file("${buildDir}/tmp/compileJava/compileJava-refmap.json"))
-        injectEntry(file("${buildDir}/tmp/compileJava/pwp_core_client.refmap.json"))
+        println "OK: запись ScreenInvoker вписана в рефмап"
+    }
+}
+
+// Guard: в релизный jar обязан попадать рефмап с записью для ScreenInvoker,
+// иначе миксины не найдут таргеты в проде (SRG) и клиент упадёт при
+// загрузке или при открытии ConnectScreen. Если чего-то нет — сборка падает.
+tasks.named('jar') {
+    doLast {
+        def refmapName = "pwp_core_client.refmap.json"
+        def jarFile = archiveFile.get().asFile
+        def refmapText = null
+        def fs = java.nio.file.FileSystems.newFileSystem(jarFile.toPath(), [:] as Map)
+        try {
+            def p = fs.getPath(refmapName)
+            if (p != null && java.nio.file.Files.exists(p)) {
+                refmapText = new String(java.nio.file.Files.readAllBytes(p), 'UTF-8')
+            }
+        } finally {
+            fs.close()
+        }
+        if (refmapText == null) {
+            throw new GradleException("FAIL: $jarFile.name не содержит $refmapName — релизный jar сломает миксины в проде")
+        }
+        if (!refmapText.contains('"com/pwp/coreclient/mixin/ScreenInvoker"') || !refmapText.contains('m_142416_')) {
+            throw new GradleException("FAIL: $jarFile.name — в $refmapName нет записи ScreenInvoker (addRenderableWidget)")
+        }
+        println "OK: $jarFile.name — рефмап + запись ScreenInvoker присутствуют"
     }
 }
 

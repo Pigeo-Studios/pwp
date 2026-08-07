@@ -148,6 +148,7 @@ public class DeployScreen extends Screen {
     );
 
     private static final int TAB_H = 22, TOP_H = 34, BOT_H = 36;
+    private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
 
     private int sqW() { return width * 22 / 100; }
     private int roW() { return width * 34 / 100; }
@@ -404,7 +405,8 @@ public class DeployScreen extends Screen {
         }
         gui.drawString(f, customName, flagX + 36, 10, teamColor, false);
         int tickets = isBlue ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
-        gui.drawString(f, "\u2665 " + tickets, flagX + 36, 22, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.blit(TICKET_ICON, flagX + 36, 21, 10, 10, 0, 0, 16, 16, 16, 16);
+        gui.drawString(f, String.valueOf(tickets), flagX + 36 + 12, 22, PWPTheme.Colors.TEXT_ACCENT, false);
 
         if (activeTab == 0) {
             PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);

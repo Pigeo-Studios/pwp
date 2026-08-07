@@ -3,8 +3,12 @@ package com.pigeostudios.pwp.warfare.client.gui.deploy;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LoadoutPanel {
 
@@ -146,18 +150,48 @@ public class LoadoutPanel {
             cy += 2;
         }
 
-        if (cy + 50 < y + maxH) {
+        // Описание роли — внизу панели (на месте прежних захардкоженных статов), с переносом строк
+        if (cy + 24 < y + maxH) {
             cy += 6;
             gui.fill(x, cy, x + w, cy + 1, PWPTheme.Colors.BORDER);
             cy += 4;
-            gui.drawString(f, "Magazine Capacity: 30", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
-            cy += 10;
-            gui.drawString(f, "Caliber: 7.62mm", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
-            cy += 10;
-            gui.drawString(f, "Rate of Fire: 600", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
-            cy += 10;
-            gui.drawString(f, "Fire Mode: Semi/Auto", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
+            int maxW = w - pad - 6;
+            int maxLines = Math.max(1, (y + maxH - cy - 4) / 10);
+            List<String> lines = wrapText(f, kit.description(), maxW, maxLines);
+            for (String line : lines) {
+                gui.drawString(f, line, x + pad, cy, PWPTheme.Colors.TEXT_SECONDARY, false);
+                cy += 10;
+            }
         }
+    }
+
+    // Перенос текста по словам: не длиннее maxW пикселей, не больше maxLines строк
+    // (последняя строка при обрезке заканчивается «…»)
+    private static List<String> wrapText(Font f, String text, int maxW, int maxLines) {
+        List<String> lines = new ArrayList<>();
+        if (text == null || text.isEmpty()) return lines;
+        String[] words = text.split("\\s+");
+        StringBuilder cur = new StringBuilder();
+        for (String w : words) {
+            String test = cur.length() == 0 ? w : cur + " " + w;
+            if (f.width(test) > maxW && cur.length() > 0) {
+                lines.add(cur.toString());
+                cur.setLength(0);
+                cur.append(w);
+            } else {
+                cur.setLength(0);
+                cur.append(test);
+            }
+            if (lines.size() >= maxLines) break;
+        }
+        if (cur.length() > 0 && lines.size() < maxLines) lines.add(cur.toString());
+        if (lines.size() > maxLines) lines = new ArrayList<>(lines.subList(0, maxLines));
+        if (lines.size() == maxLines && !lines.isEmpty()) {
+            String last = lines.get(maxLines - 1);
+            String trimmed = last.length() > 1 ? last.substring(0, last.length() - 1) : last;
+            lines.set(maxLines - 1, trimmed + "…");
+        }
+        return lines;
     }
 
     private static int multiplyAlpha(int color, float alpha) {

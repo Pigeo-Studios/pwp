@@ -34,10 +34,11 @@ public class FactionVehicleRepository {
     }
 
     public static void save(FactionVehicleDefinition v) throws SQLException {
-        String sql = "INSERT INTO faction_vehicles (faction, vehicle_name, display_name, vehicle_id, yaw, respawn_time, initial_time, inventory) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+        String sql = "INSERT INTO faction_vehicles (faction, vehicle_name, display_name, vehicle_id, yaw, respawn_time, initial_time, category, inventory) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE display_name=VALUES(display_name), vehicle_id=VALUES(vehicle_id), "
-                + "yaw=VALUES(yaw), respawn_time=VALUES(respawn_time), initial_time=VALUES(initial_time), inventory=VALUES(inventory)";
+                + "yaw=VALUES(yaw), respawn_time=VALUES(respawn_time), initial_time=VALUES(initial_time), "
+                + "category=VALUES(category), inventory=VALUES(inventory)";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, v.faction);
@@ -47,7 +48,8 @@ public class FactionVehicleRepository {
             ps.setFloat(5, v.yaw);
             ps.setInt(6, v.respawnTime);
             ps.setInt(7, v.initialTime);
-            ps.setString(8, v.inventory);
+            ps.setString(8, v.category);
+            ps.setString(9, v.inventory);
             ps.executeUpdate();
         }
     }
@@ -71,6 +73,7 @@ public class FactionVehicleRepository {
         v.yaw = rs.getFloat("yaw");
         v.respawnTime = rs.getInt("respawn_time");
         v.initialTime = rs.getInt("initial_time");
+        v.category = rs.getString("category");
         v.inventory = rs.getString("inventory");
         return v;
     }

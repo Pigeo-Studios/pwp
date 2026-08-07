@@ -11,7 +11,6 @@ import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,9 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ConnectScreen.class)
 public class ConnectScreenMixin {
-
-    @Shadow
-    private Screen parent;
 
     @Unique
     private long pwp_openTime;
@@ -44,7 +40,10 @@ public class ConnectScreenMixin {
 
         if (pwp_cancelButton == null) {
             pwp_cancelButton = new PWPButton(0, 0, 200, 20, Component.literal("Отмена"),
-                    btn -> Minecraft.getInstance().setScreen(parent), PWPButton.Style.GHOST);
+                    btn -> Minecraft.getInstance().setScreen(((ConnectScreenAccessor) (Object) this).pwpGetParent()),
+                    PWPButton.Style.GHOST);
+            // Регистрация через addRenderableWidget: рефмап-запись для
+            // @Invoker вписывается в build.gradle (compileJava.doLast).
             ((ScreenInvoker) (Object) this).pwpInvokeAddRenderableWidget(pwp_cancelButton);
         }
         pwp_cancelButton.setPosition(w / 2 - 100, boxY + 54 + 40);

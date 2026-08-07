@@ -1,0 +1,118 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
+    }
+}
+
+plugins {
+    id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
+}
+apply plugin: 'org.spongepowered.mixin'
+
+group = 'com.pigeostudios.sbwchunkload'
+version = '2.2.1'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+    runs {
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.debug.export', 'true'
+            args '-mixin.config=sbwchunkload.mixins.json'
+            mods {
+                sbwchunkload {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+mixin {
+    add sourceSets.main, "sbwchunkload.refmap.json"
+    config "sbwchunkload.mixins.json"
+    debug.export = true
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+// Прод-жарники модов-таргетов для компиляции миксинов (compileOnly, в jar не кладутся)
+def pwpfiles = System.getenv('PWPFILES_DIR') ?: 'C:/Users/maska/OneDrive/Desktop/Pwpfiles'
+def sbwJar = file("${pwpfiles}/mods/superbwarfare-0.8.9-final-mc1.20.1-6effe4385-all.jar")
+def pbJar = file("${pwpfiles}/mods/pointblank-forge-1.20.1-1.11.1.jar")
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    compileOnly files(sbwJar)
+    compileOnly files(pbJar)
+    // DroneEntity extends GeckoLib GeoEntity — статическое поле CONTROLLER
+    // требует загрузки иерархии класса (class file for GeoEntity not found).
+    compileOnly files("${pwpfiles}/mods/geckolib-forge-1.20.1-4.8.4.jar")
+}
+
+jar {
+    manifest {
+        attributes([
+                "Specification-Title": "sbwchunkload",
+                "Specification-Vendor": "pigeostudios",
+                "Specification-Version": "1",
+                "Implementation-Title": project.name,
+                "Implementation-Version": project.version,
+                "Implementation-Vendor": "pigeostudios",
+        ])
+    }
+}
+
+// Guard: без MixinConfigs в манифесте и refmap в jar сборка падает (миксины по
+// официальным именам не найдут таргеты в проде — краш старта).
+tasks.named('jar') {
+    doLast {
+        // Гигиена build\libs: gradle НЕ удаляет старые jar при смене version, а
+        // build.bat копирует ВСЕ sbwchunkload-*.jar на сервер -> Forge грузит
+        // случайную версию (инцидент 05.08.2026: на сервер вернулись 11 копий
+        // 1.0.0-2.1.0, из них 2.0.0 без DroneTracker — чанки дронов не грузились).
+        // Оставляем только только что собранный jar.
+        def built = archiveFile.get().asFile
+        fileTree('build/libs') { include 'sbwchunkload-*.jar' }.each { f ->
+            if (!f.canonicalPath.equalsIgnoreCase(built.canonicalPath)) {
+                f.delete()
+                println "Removed stale jar: ${f.name}"
+            }
+        }
+        def jarFile = built
+        def fs = java.nio.file.FileSystems.newFileSystem(jarFile.toPath(), [:] as Map)
+        try {
+            def manifest = fs.getPath('META-INF/MANIFEST.MF')
+            def manifestText = new String(java.nio.file.Files.readAllBytes(manifest), 'UTF-8')
+            def mixinConfigs = manifestText.contains('MixinConfigs: sbwchunkload.mixins.json')
+            def refmap = java.nio.file.Files.exists(fs.getPath('sbwchunkload.refmap.json'))
+            if (!mixinConfigs || !refmap) {
+                throw new GradleException("FAIL: ${jarFile.name} — MixinConfigs=$mixinConfigs refmap=$refmap — сборка прервана")
+            }
+            println "OK: ${jarFile.name} — MixinConfigs + sbwchunkload.refmap.json на месте"
+        } finally {
+            fs.close()
+        }
+    }
+}

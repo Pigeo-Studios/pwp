@@ -158,7 +158,7 @@ public class VotingManager {
         if (winner != null) {
             MapConfig cfg = MapRegistry.get(winner);
             String display = cfg != null ? cfg.displayName : winner;
-            LobbyMod.serverBroadcast("§e[PWP] §aПобедила карта: §e" + display + " §a— матч запускается!");
+            LobbyMod.serverBroadcast("§e[PWP] §aПобедила карта: §e" + display + " §a— дальше голосование за режим");
             log.info("Vote finished. Winner: {}", winner);
             LobbyMod.recordResult("MAP", winner, counts.getOrDefault(winner, 0));
             LobbyMod.broadcastLobbyState();

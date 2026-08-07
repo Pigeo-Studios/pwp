@@ -39,10 +39,10 @@ OUT_DIR = os.path.join(BASE, "maps", "kits")
 ROLES_META = {
     "Rifleman":         (-1, -1, 0, False),
     "Assault":          (6, 1, 0, False),
-    "Officer":          (9, 1, 0, True),
-    "Medic":            (9, 2, 0, False),
+    "Officer":          (6, 1, 0, True),
+    "Medic":            (10, 2, 0, False),
     "Grenadier":        (4, 1, 0, False),
-    "LAT":              (4, 2, 0, False),
+    "LAT":              (6, 2, 0, False),
     "HAT":              (2, 1, 3, False),
     "LMG":              (4, 1, 0, False),
     "HMG":              (2, 1, 2, False),
@@ -558,13 +558,25 @@ ROLE_RU = {
 }
 
 DESC_PHRASE = {
-    "Rifleman": "основа отряда", "Assault": "штурм в первом эшелоне", "Officer": "командир отряда и рация",
-    "Medic": "спасает жизни", "Grenadier": "40-мм поддержка", "LAT": "лёгкая противотанковая",
-    "HAT": "охота на технику", "LMG": "подавляющий огонь", "HMG": "тяжёлая огневая точка",
-    "Marksman": "точные выстрелы на дистанции", "Sniper": "одна пуля — одна цель", "Sapper": "мины и подрывы",
-    "Scout": "глаза отряда", "Anti_air": "защита неба", "Drone Operator": "разведка с воздуха",
-    "Mechanic": "ремонт техники", "Mechanic Officer": "руководит ремонтами", "Pilot": "управляет небом",
-    "Pilot Officer": "командир экипажа",
+    "Rifleman": "основа отряда — держит линию огня и снабжает бойцов патронами",
+    "Assault": "штурм в первом эшелоне — прорывает оборону противника в ближнем бою",
+    "Officer": "командир отряда — ставит рали, держит рацию и вызывает арту",
+    "Medic": "спасает жизни — бинты, аптечка и подъём бойцов с земли",
+    "Grenadier": "40-мм поддержка — накрывает позиции противника из гранатомёта",
+    "LAT": "лёгкая противотанковая — одноразовая труба против лёгкой техники",
+    "HAT": "охота на технику — тяжёлая труба с кумулятивными боеприпасами",
+    "LMG": "подавляющий огонь — длинная очередь держит противника в укрытии",
+    "HMG": "тяжёлая огневая точка — крупный калибр против брони и укреплений",
+    "Marksman": "точные выстрелы на дистанции — прикрывает отряд с дальней позиции",
+    "Sniper": "одна пуля — одна цель — работает из глубокого тыла",
+    "Sapper": "мины и подрывы — ставит мины и сносит вражеские постройки",
+    "Scout": "глаза отряда — разведывательный дрон и скрытное продвижение",
+    "Anti_air": "защита неба — ПЗРК сбивает вражескую воздушную технику",
+    "Drone Operator": "разведка с воздуха — FPV-камикадзе и мавик со сбросом",
+    "Mechanic": "ремонт техники — чинит и обслуживает машины на поле боя",
+    "Mechanic Officer": "руководит ремонтами — лидер экипажей и ремзоны",
+    "Pilot": "управляет небом — вертолёты и воздушная поддержка",
+    "Pilot Officer": "командир экипажа — ведёт группу воздушной техники",
 }
 
 def ammo_stacks_for(role, gun_name):
@@ -627,6 +639,7 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
     suppressed = variant == "Suppressed" or role in ("Sapper", "Scout") or (role == "Assault" and faction_key != "insurgency")
     scope_id = main_scope(faction, role, variant, fixed_scope)
     items = []
+    special_name = None  # труба/M320/Игла для строки «Оружие»
 
     # --- основное (слот 0)
     if gun_name == "Igla":
@@ -699,6 +712,7 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
         if launcher == "M320":
             # M320 — maxstuff-пушка (tacz:m320 не существует): tacz-предмет modern_kinetic_gun + GunId
             items.append(slot(3, tacz_gun("maxstuff:m320t", 1, "SEMI")))
+            special_name = "M320"
         elif launcher == "IGLA":
             main, rockets, sight = TUBES["IGLA"]
             items.append(slot(3, sbw_gun(main)))
@@ -707,6 +721,7 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
             pid, pam, pmag, _ = PISTOLS[faction["pistol"]]
             items.append(slot(1, tacz_pistol(pid, pmag)))
             pistol_ammo_id = pam
+            special_name = "Игла"
         else:
             tube_name = None
             if launcher == "LAT":
@@ -718,6 +733,7 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
                     tube_name, hat_kind = HAT_LAUNCHERS[faction_key]
                     if hat_kind == "PG7_INS":
                         tube_name = "РПГ-7В2 INS HAT"
+            special_name = "РПГ-7В2" if tube_name == "РПГ-7В2 INS HAT" else tube_name
             main, rockets, sight = TUBES[tube_name]
             if tube_name == "Javelin":
                 # SBW-формат (GunData UUID), как у Иглы
@@ -919,6 +935,8 @@ def build_kit(faction_key, faction, role, variant, variant_ru):
     if (role, variant) in VARIANT_LIMITS:
         max_squad, min_squad = VARIANT_LIMITS[(role, variant)]
     desc = f"{faction['ru']} · {ROLE_RU[role]} — {DESC_PHRASE[role]}"
+    weapon_line = gun_name if special_name is None else f"{gun_name} + {special_name}"
+    desc += f" · Оружие: {weapon_line}"
     if desc_alts:
         desc += f" · Альтернативы: {', '.join(desc_alts)}"
     if variant:

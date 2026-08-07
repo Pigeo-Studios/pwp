@@ -632,6 +632,38 @@ public class PlayerRepository {
         }
     }
 
+    /** Последняя ОДОБРЕННАЯ заявка на сброс игрока (для set-password-after-reset). */
+    public static PasswordResetEntry findApprovedReset(String uuid) throws SQLException {
+        String sql = "SELECT pr.*, p.nickname, p.login FROM password_resets pr JOIN players p ON pr.player_uuid = p.uuid "
+                + "WHERE pr.player_uuid = ? AND pr.status = 'approved' ORDER BY pr.id DESC LIMIT 1";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, uuid);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    PasswordResetEntry e = new PasswordResetEntry();
+                    e.id = rs.getInt("id");
+                    e.playerUuid = rs.getString("player_uuid");
+                    e.login = rs.getString("login");
+                    e.status = rs.getString("status");
+                    e.createdAt = rs.getString("created_at");
+                    return e;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Заявка использована — новый пароль задан, повторный сброс не нужен. */
+    public static void markResetUsed(int id) throws SQLException {
+        String sql = "UPDATE password_resets SET status = 'used' WHERE id = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        }
+    }
+
     // в”Ђв”Ђ Logs в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     // в”Ђв”Ђ Auth Tokens (v2) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ

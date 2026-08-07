@@ -153,6 +153,8 @@ public class DatabaseManager {
 
             "CREATE TABLE IF NOT EXISTS kit_definitions ("
             + "faction VARCHAR(32) NOT NULL, kit_name VARCHAR(32) NOT NULL, "
+            + "category VARCHAR(32) NOT NULL DEFAULT 'INFANTRY', "
+            + "description TEXT, "
             + "leader_only BOOLEAN NOT NULL DEFAULT FALSE, "
             + "max_per_team INT NOT NULL DEFAULT -1, "
             + "max_per_squad INT NOT NULL DEFAULT -1, "
@@ -416,9 +418,11 @@ public class DatabaseManager {
                 + "kind VARCHAR(64) NOT NULL DEFAULT '', "
                 + "pattern VARCHAR(512) NOT NULL, "
                 + "match_type VARCHAR(16) NOT NULL DEFAULT 'substring', "
+                + "hash VARCHAR(64) NOT NULL DEFAULT '', "
                 + "severity INT NOT NULL DEFAULT 0, "
                 + "enabled BOOLEAN NOT NULL DEFAULT TRUE, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
+                + "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, "
                 + "UNIQUE KEY uk_ac_pattern (pattern(255)))",
 
                 "CREATE TABLE IF NOT EXISTS anticheat_sessions ("
@@ -427,6 +431,7 @@ public class DatabaseManager {
                 + "launch_token VARCHAR(64) NOT NULL UNIQUE, "
                 + "hwid VARCHAR(64) DEFAULT NULL, "
                 + "last_heartbeat DATETIME DEFAULT NULL, "
+                + "revoked TINYINT NOT NULL DEFAULT 0, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                 + "expires_at DATETIME NOT NULL, "
                 + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE CASCADE, "
@@ -439,6 +444,7 @@ public class DatabaseManager {
                 + "source VARCHAR(16) NOT NULL DEFAULT 'launcher', "
                 + "type VARCHAR(32) NOT NULL, "
                 + "signature TEXT, "
+                + "details TEXT, "
                 + "severity INT NOT NULL DEFAULT 0, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                 + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE SET NULL, "
@@ -458,8 +464,38 @@ public class DatabaseManager {
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) {}
             }
+
+            // ── Миграции античита для существующих БД ──
+            migrateAddColumn(s, "anticheat_blacklist", "hash",
+                "ALTER TABLE anticheat_blacklist ADD COLUMN hash VARCHAR(64) NOT NULL DEFAULT '' AFTER match_type");
+            migrateAddColumn(s, "anticheat_blacklist", "updated_at",
+                "ALTER TABLE anticheat_blacklist ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at");
+            migrateAddColumn(s, "anticheat_sessions", "revoked",
+                "ALTER TABLE anticheat_sessions ADD COLUMN revoked TINYINT NOT NULL DEFAULT 0 AFTER last_heartbeat");
+            migrateAddColumn(s, "anticheat_detections", "details",
+                "ALTER TABLE anticheat_detections ADD COLUMN details TEXT AFTER signature");
         } catch (Exception e) {
             log.warn("Could not create tables (may already exist): {}", e.getMessage());
+        }
+    }
+
+    /** Добавляет колонку, если её ещё нет (information_schema). Ошибки не роняют старт. */
+    private static void migrateAddColumn(java.sql.Statement s, String table, String column, String alterSql) {
+        try {
+            String db = s.getConnection().getCatalog();
+            try (var ps = s.getConnection().prepareStatement(
+                    "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?")) {
+                ps.setString(1, db);
+                ps.setString(2, table);
+                ps.setString(3, column);
+                try (var rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        s.execute(alterSql);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("migrate column {}.{} failed: {}", table, column, e.getMessage());
         }
     }
 

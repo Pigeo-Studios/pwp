@@ -53,6 +53,23 @@ public class AuthMiddleware {
             throw new TooManyRequestsResponse("Rate limit exceeded");
         }
 
+        // ── Агент античита: аутентификация по launch-токену (X-Launch-Token) ──
+        // Агент ходит на сервер напрямую (архитектура PJM) и не может подписать
+        // X-PWP-Sign. Валидность токена проверяется по anticheat_sessions. Если токен
+        // не предъявлен — падаем в обычную проверку (API key / HMAC лаунчера).
+        // Heartbeat может «воскресить» истёкшую сессию (провал сети > 30 мин) — для
+        // него достаточно факта существования токена; expiry продлит сам хэндлер.
+        if (path.startsWith("/api/v1/launcher/anticheat/")
+                && !path.startsWith("/api/v1/launcher/anticheat/artifact/")) {
+            String launchToken = ctx.header("X-Launch-Token");
+            if (launchToken != null && validLaunchToken(launchToken)) {
+                return;
+            }
+            if (launchToken != null && path.endsWith("/heartbeat") && launchTokenExists(launchToken)) {
+                return;
+            }
+        }
+
         // ── API key auth (server-to-server) ──
         String authHeader = ctx.header("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -101,6 +118,37 @@ public class AuthMiddleware {
         if (!hmacVerify(signData, signature, sessionSecret)) {
             log.warn("Invalid signature for {} from {} (path={})", ctx.method(), ctx.ip(), path);
             throw new UnauthorizedResponse("Access denied: invalid signature");
+        }
+    }
+
+    /** true, если launch-токен существует и не истёк (аутентификация агента). */
+    private static boolean validLaunchToken(String launchToken) {
+        if (launchToken == null || launchToken.isEmpty()) return false;
+        try (var c = com.pwp.core.db.DatabaseManager.getConnection();
+             var ps = c.prepareStatement(
+                 "SELECT 1 FROM anticheat_sessions WHERE launch_token = ? AND expires_at > CURRENT_TIMESTAMP LIMIT 1")) {
+            ps.setString(1, launchToken);
+            try (var rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            log.warn("launch token check failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /** true, если launch-токен существует (без проверки срока — для heartbeat). */
+    private static boolean launchTokenExists(String launchToken) {
+        if (launchToken == null || launchToken.isEmpty()) return false;
+        try (var c = com.pwp.core.db.DatabaseManager.getConnection();
+             var ps = c.prepareStatement(
+                 "SELECT 1 FROM anticheat_sessions WHERE launch_token = ? LIMIT 1")) {
+            ps.setString(1, launchToken);
+            try (var rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            return false;
         }
     }
 

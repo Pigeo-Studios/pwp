@@ -1,0 +1,110 @@
+// ============================================================
+//  Корневой build.gradle PWP: задача обфускации pwp-модов
+//  Запуск: gradlew obfuscatePwpMods (используется build.bat /
+//  build-obfuscate.bat после обычной сборки).
+//  Вход:  build/libs/<module>-<version>.jar каждого модуля
+//  Выход: build/obfuscated/<module>-<version>.jar (обфусцированный)
+//         build/obfuscated/mapping.txt (для retrace стектрейсов)
+// ============================================================
+
+configurations {
+    proguard
+    obfuscationLibs
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    proguard 'com.guardsquare:proguard-base:7.4.2'
+    // Внешние библиотеки, на которые ссылаются модули (не зашиты в jar)
+    obfuscationLibs 'com.google.code.gson:gson:2.11.0'
+    obfuscationLibs 'org.slf4j:slf4j-api:2.0.16'
+}
+
+def pwpModules = [
+    'pwp-core-server', 'pwp-core-client', 'pwp-cosmetics', 'pwp-limits',
+    'pwp-lobby', 'pwp-medicine', 'pwp-movement', 'pwp-warfare', 'pwp-blast-protection',
+    'sbwchunkload'
+]
+
+def forgeVersion = '1.20.1-47.3.0'
+
+// SRG-маппинг Minecraft+Forge из кэша ForgeGradle (тот же, что использует reobfJar).
+// Без него ProGuard не распознает переопределения vanilla-методов и может
+// переименовать override — игра молча перестанет вызывать их.
+def findSrgJar(String forgeVersion) {
+    def home = System.getProperty('user.home')
+    def base = new File(home, '.gradle/caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge')
+    def dir = new File(base, forgeVersion)
+    def exact = new File(dir, "forge-${forgeVersion}-srg.jar")
+    if (exact.isFile()) return exact
+    if (dir.isDirectory()) {
+        def srg = dir.listFiles({ f -> f.name.endsWith('-srg.jar') } as FileFilter)
+        if (srg) return srg[0]
+    }
+    throw new GradleException("Не найден SRG-жарник forge ${forgeVersion} в кэше ForgeGradle: ${dir}")
+}
+
+// Прод-жарники модов-зависимостей (уже SRG) — для распознавания переопределений
+// их интерфейсов (GeckoLib GeoItem/GeoEntity, Curios API, Voicechat API).
+def findProdModJars() {
+    def pwpfiles = System.getenv('PWPFILES_DIR') ?: 'C:/Users/maska/OneDrive/Desktop/Pwpfiles'
+    def names = [
+        'geckolib-forge-1.20.1-4.8.4.jar',
+        'curios-forge-5.14.1+1.20.1.jar',
+        'voicechat-forge-1.20.1-2.6.20.jar',
+        // Таргеты sbwchunkload (instanceof-проверки на их классы)
+        'superbwarfare-0.8.9-final-mc1.20.1-6effe4385-all.jar',
+        'pointblank-forge-1.20.1-1.11.1.jar'
+    ]
+    def jars = names.collect { new File(pwpfiles, "mods/${it}") }
+    jars.each { if (!it.isFile()) throw new GradleException("Отсутствует прод-жарник-библиотека: ${it}") }
+    return jars
+}
+
+tasks.register('obfuscatePwpMods', JavaExec) {
+    group = 'pwp'
+    description = 'Обфусцирует все pwp-моды через ProGuard (только переименование, -dontshrink -dontoptimize)'
+
+    classpath = configurations.proguard
+    mainClass = 'proguard.ProGuard'
+
+    def outDir = layout.buildDirectory.dir('obfuscated').get().asFile
+    def cfgDir = layout.buildDirectory.dir('tmp/obfuscate').get().asFile
+
+    dependsOn pwpModules.collect { project(":${it}").tasks.jar }
+    inputs.files(pwpModules.collect { project(":${it}").tasks.jar.archiveFile })
+    outputs.dir(outDir)
+
+    doFirst {
+        outDir.mkdirs()
+        cfgDir.mkdirs()
+
+        def sb = new StringBuilder()
+        pwpModules.each { m ->
+            def jar = project(":${m}").tasks.jar.archiveFile.get().asFile
+            def out = new File(outDir, jar.name)
+            sb.append("-injars '${jar.absolutePath.replace('\\', '/')}'\n")
+            sb.append("-outjars '${out.absolutePath.replace('\\', '/')}'\n")
+        }
+
+        // Библиотеки: SRG Minecraft+Forge, прод-моды, gson/slf4j, JRE
+        def libs = [findSrgJar(forgeVersion)] + findProdModJars() + configurations.obfuscationLibs.files
+        def jmod = new File(System.getProperty('java.home'), 'jmods/java.base.jmod')
+        if (jmod.isFile()) libs += jmod
+        libs.each { f ->
+            sb.append("-libraryjars '${f.absolutePath.replace('\\', '/')}'\n")
+        }
+
+        sb.append("-include '${file('proguard.pro').absolutePath.replace('\\', '/')}'\n")
+        sb.append("-printmapping '${new File(outDir, 'mapping.txt').absolutePath.replace('\\', '/')}'\n")
+
+        def cfg = new File(cfgDir, 'proguard-config.txt')
+        cfg.text = sb.toString()
+
+        args "@${cfg.absolutePath}"
+        logger.lifecycle("ObfuscatePwpMods: {} входных jar -> {}", pwpModules.size(), outDir)
+    }
+}

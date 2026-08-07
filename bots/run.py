@@ -91,7 +91,7 @@ async def main():
 
     if config.TELEGRAM_TOKEN:
         import telegram_bot
-        tasks.append(telegram_bot.start())
+        tasks.append(telegram_bot.start(shared))
 
     if not tasks:
         print("No tokens set. Add TELEGRAM_TOKEN and/or DISCORD_TOKEN to .env")

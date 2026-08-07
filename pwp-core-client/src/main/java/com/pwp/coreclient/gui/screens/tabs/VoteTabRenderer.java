@@ -527,8 +527,15 @@ public class VoteTabRenderer {
 
         Option wMap = mapOpts.stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
         Option wMode = modeOpts.stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
-        Option wF1 = factOpts.subList(0,3).stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
-        Option wF2 = factOpts.subList(3,6).stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+        // factOpts может быть пустым/неполным, если фаза faction-vote не приходила
+        // в этой сессии (заход в лобби уже на экране результатов) — subList упал бы.
+        Option wF1 = null, wF2 = null;
+        if (factOpts.size() >= 6) {
+            wF1 = factOpts.subList(0,3).stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+            wF2 = factOpts.subList(3,6).stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+        } else if (!factOpts.isEmpty()) {
+            wF1 = factOpts.stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+        }
 
         long animStart = finishedAnimStart;
         int cardW = 190, cardH = 160, gap = 16;

@@ -14,7 +14,7 @@ public class PWPConfigScreen extends Screen {
     private EditBox chanceBox;
 
     public PWPConfigScreen(Screen parent) {
-        super(Component.literal("PWP: РќР°СЃС‚СЂРѕР№РєРё РјРµРґРёС†РёРЅС‹"));
+        super(Component.literal("PWP: Настройки медицины"));
         this.parent = parent;
     }
 
@@ -22,21 +22,21 @@ public class PWPConfigScreen extends Screen {
         super.init();
         int cx = this.width / 2;
 
-        this.medkitTimeBox = new EditBox(this.font, cx - 100, 60, 200, 20, Component.literal("Р’СЂРµРјСЏ Р°РїС‚РµС‡РєРё"));
+        this.medkitTimeBox = new EditBox(this.font, cx - 100, 60, 200, 20, Component.literal("Время аптечки"));
         this.medkitTimeBox.setValue(String.valueOf(PWPConfig.MEDKIT_APPLY_TIME.get()));
         this.addRenderableWidget(this.medkitTimeBox);
 
-        this.thresholdBox = new EditBox(this.font, cx - 100, 110, 200, 20, Component.literal("РџРѕСЂРѕРі СѓСЂРѕРЅР°"));
+        this.thresholdBox = new EditBox(this.font, cx - 100, 110, 200, 20, Component.literal("Порог урона"));
         this.thresholdBox.setValue(String.valueOf(PWPConfig.BLEEDING_DAMAGE_THRESHOLD.get()));
         this.addRenderableWidget(this.thresholdBox);
 
-        this.chanceBox = new EditBox(this.font, cx - 100, 160, 200, 20, Component.literal("РЁР°РЅСЃ РєСЂРѕРІРѕС‚РµС‡РµРЅРёСЏ"));
+        this.chanceBox = new EditBox(this.font, cx - 100, 160, 200, 20, Component.literal("Шанс кровотечения"));
         this.chanceBox.setValue(String.valueOf(PWPConfig.BLEEDING_CHANCE.get()));
         this.addRenderableWidget(this.chanceBox);
 
-        this.addRenderableWidget(Button.builder(Component.literal("РЎРѕС…СЂР°РЅРёС‚СЊ"), b -> this.saveAndClose())
+        this.addRenderableWidget(Button.builder(Component.literal("Сохранить"), b -> this.saveAndClose())
             .bounds(cx - 105, 200, 100, 22).build());
-        this.addRenderableWidget(Button.builder(Component.literal("РћС‚РјРµРЅР°"), b -> this.minecraft.setScreen(this.parent))
+        this.addRenderableWidget(Button.builder(Component.literal("Отмена"), b -> this.minecraft.setScreen(this.parent))
             .bounds(cx + 5, 200, 100, 22).build());
     }
 
@@ -57,8 +57,8 @@ public class PWPConfigScreen extends Screen {
         super.render(gui, mouseX, mouseY, partialTick);
         int cx = this.width / 2;
         gui.drawCenteredString(this.font, "\u2699 " + this.title.getString(), cx, 20, 0xFFC8812A);
-        gui.drawString(this.font, "Р’СЂРµРјСЏ РїСЂРёРјРµРЅРµРЅРёСЏ Р°РїС‚РµС‡РєРё (С‚РёРєРё, 20 = 1СЃ):", cx - 100, 48, 0xFF7A7D84, false);
-        gui.drawString(this.font, "РџРѕСЂРѕРі СѓСЂРѕРЅР° РґР»СЏ РєСЂРѕРІРѕС‚РµС‡РµРЅРёСЏ (HP):", cx - 100, 98, 0xFF7A7D84, false);
-        gui.drawString(this.font, "РЁР°РЅСЃ РєСЂРѕРІРѕС‚РµС‡РµРЅРёСЏ (0.0 РґРѕ 1.0):", cx - 100, 148, 0xFF7A7D84, false);
+        gui.drawString(this.font, "Время применения аптечки (тики, 20 = 1с):", cx - 100, 48, 0xFF7A7D84, false);
+        gui.drawString(this.font, "Порог урона для кровотечения (HP):", cx - 100, 98, 0xFF7A7D84, false);
+        gui.drawString(this.font, "Шанс кровотечения (0.0 до 1.0):", cx - 100, 148, 0xFF7A7D84, false);
     }
 }

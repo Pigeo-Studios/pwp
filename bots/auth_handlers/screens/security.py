@@ -1,4 +1,4 @@
-from .base import Screen, btn, row, back_kb, NAV_CANCEL
+from .base import Screen, btn, row, back_kb, back_row
 from ..utils import api_call
 from ..session import State
 
@@ -9,10 +9,12 @@ class SecurityScreen(Screen):
     def render(self, session):
         session.state = State.SECURITY
         return ("🛡 <b>Безопасность</b>",
-                [row(btn("🛡 2FA", "security:2fa")), back_kb().inline_keyboard[0]])
+                [row(btn("🛡 2FA", "security:2fa")), back_row()])
 
     async def on_callback(self, data, session, ctx):
         if data == "security:2fa":
+            if not session.authorized:
+                return "❌ Сначала войдите в аккаунт.", back_kb()
             session.state = State.SECURITY_2FA
             return self._show_2fa(session)
         if data == "security:2fa_toggle":
@@ -24,7 +26,7 @@ class SecurityScreen(Screen):
         text = f"🛡 <b>Двухфакторная защита</b>\n\nСтатус: {s}\n\n"
         text += "🔒 Вход с нового IP требует подтверждения." if session.twofa_enabled else "🔒 Включите для защиты аккаунта."
         lbl = "🔒 Включить" if not session.twofa_enabled else "🔓 Выключить"
-        return text, [row(btn(lbl, "security:2fa_toggle")), back_kb().inline_keyboard[0]]
+        return text, [row(btn(lbl, "security:2fa_toggle")), back_row()]
 
     async def _toggle_2fa(self, session, ctx):
         enabled = not session.twofa_enabled

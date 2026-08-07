@@ -1,5 +1,5 @@
 import re
-from .base import Screen, btn, row, back_cancel_kb
+from .base import Screen, btn, row
 from ..utils import api_call, api_get
 from ..session import State
 
@@ -8,11 +8,53 @@ class RegistrationScreen(Screen):
     parent = "main"
     accepts_text = True
 
+    REG_STATES = (State.REG_LOGIN, State.REG_EMAIL, State.REG_PASSWORD, State.REG_CONFIRM)
+
     def render(self, session):
-        session.state = State.REG_LOGIN
+        st = session.state if session.state in self.REG_STATES else State.REG_LOGIN
+        if st == State.REG_EMAIL:
+            text, kb = self._step_email()
+        elif st == State.REG_PASSWORD:
+            text, kb = self._step_password()
+        elif st == State.REG_CONFIRM:
+            text, kb = self._step_confirm(session)
+        else:
+            text, kb = self._step_login()
+        session.state = st
+        return text, kb
+
+    def _step_login(self):
         return ("📝 <b>Регистрация</b>  —  Шаг 1 из 4\n\n"
                 "Введите желаемый логин:\n• 3-32 символа, латиница, цифры, _",
                 [[btn("❌ Отмена", "nav:cancel")]])
+
+    def _step_nav(self):
+        return [btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]
+
+    def _step_email(self):
+        return ("📝 <b>Регистрация</b>  —  Шаг 2 из 4\n\nВведите e-mail:",
+                [self._step_nav()])
+
+    def _step_password(self):
+        return ("📝 <b>Регистрация</b>  —  Шаг 3 из 4\n\nПридумайте пароль:\n"
+                "• от 8 символов\n• заглавная буква\n• цифра",
+                [self._step_nav()])
+
+    def _step_confirm(self, session):
+        return (f"📝 <b>Регистрация</b>  —  Шаг 4 из 4\n\n"
+                f"Проверьте данные:\n\n"
+                f"Логин: <code>{session.reg_login}</code>\n"
+                f"Email: <code>{session.reg_email}</code>\n\n"
+                f"Всё верно?",
+                [[btn("✅ Создать", "reg:confirm"), btn("✏️ Изменить", "reg:change")],
+                 [btn("❌ Отмена", "nav:cancel")]])
+
+    def _step_change(self):
+        return ("✏️ <b>Что изменить?</b>\n\n"
+                "Введённые данные сохранятся, вы вернётесь к подтверждению.",
+                [[btn("🔑 Логин", "reg:change_login"), btn("📧 Email", "reg:change_email")],
+                 [btn("🔒 Пароль", "reg:change_password")],
+                 [btn("❌ Отмена", "nav:cancel")]])
 
     async def on_text(self, text, session, ctx):
         if session.state == State.REG_LOGIN:
@@ -25,9 +67,16 @@ class RegistrationScreen(Screen):
 
     async def on_callback(self, data, session, ctx):
         if data == "reg:change":
+            return self._step_change()
+        if data == "reg:change_login":
             session.state = State.REG_LOGIN
-            return ("📝 <b>Регистрация</b>  —  Шаг 1 из 4\n\nВведите желаемый логин:",
-                    [[btn("❌ Отмена", "nav:cancel")]])
+            return self._step_login()
+        if data == "reg:change_email":
+            session.state = State.REG_EMAIL
+            return self._step_email()
+        if data == "reg:change_password":
+            session.state = State.REG_PASSWORD
+            return self._step_password()
         if data == "reg:confirm":
             return await self._confirm(session, ctx)
         return None
@@ -43,22 +92,19 @@ class RegistrationScreen(Screen):
             return "❌ Этот логин уже занят. Попробуйте другой:", [[btn("❌ Отмена", "nav:cancel")]]
         session.reg_login = text
         session.state = State.REG_EMAIL
-        return ("📝 <b>Регистрация</b>  —  Шаг 2 из 4\n\nВведите e-mail:",
-                [[btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]])
+        return self._step_email()
 
     async def _email(self, text, session, ctx):
         if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', text):
-            return "❌ Некорректный e-mail. Попробуйте ещё раз:", [[btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]]
+            return "❌ Некорректный e-mail. Попробуйте ещё раз:", [self._step_nav()]
         r = await api_get("/api/v1/auth/check-email", {"email": text})
         if not r.get("success"):
-            return "❌ Сервис недоступен.", [[btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]]
+            return "❌ Сервис недоступен.", [self._step_nav()]
         if not r["data"].get("available", True):
-            return "❌ Этот e-mail уже занят. Попробуйте другой:", [[btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]]
+            return "❌ Этот e-mail уже занят. Попробуйте другой:", [self._step_nav()]
         session.reg_email = text
         session.state = State.REG_PASSWORD
-        return ("📝 <b>Регистрация</b>  —  Шаг 3 из 4\n\nПридумайте пароль:\n"
-                "• от 8 символов\n• заглавная буква\n• цифра",
-                [[btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]])
+        return self._step_password()
 
     async def _password(self, text, session, ctx):
         errs = []
@@ -67,16 +113,10 @@ class RegistrationScreen(Screen):
         if not re.search(r'[0-9]', text): errs.append("• хотя бы одна цифра")
         if errs:
             return ("❌ Пароль не подходит:\n" + "\n".join(errs) + "\n\nПопробуйте ещё раз:",
-                    [[btn("⬅ Назад", "nav:back"), btn("❌ Отмена", "nav:cancel")]])
+                    [self._step_nav()])
         session.reg_password = text
         session.state = State.REG_CONFIRM
-        return (f"📝 <b>Регистрация</b>  —  Шаг 4 из 4\n\n"
-                f"Проверьте данные:\n\n"
-                f"Логин: <code>{session.reg_login}</code>\n"
-                f"Email: <code>{session.reg_email}</code>\n\n"
-                f"Всё верно?",
-                [[btn("✅ Создать", "reg:confirm"), btn("✏️ Изменить", "reg:change")],
-                 [btn("❌ Отмена", "nav:cancel")]])
+        return self._step_confirm(session)
 
     async def _confirm(self, session, ctx):
         r = await api_call("/api/v1/auth/register", {
@@ -99,4 +139,13 @@ class RegistrationScreen(Screen):
             session.role = d["role"]; session.email = d.get("email", "")
             session.registered_at = d.get("registered_at", "")
             await api_call("/api/v1/auth/accept-privacy", {"uuid": d["uuid"]})
-        return f"✅ <b>Аккаунт создан!</b>\n\n🆔 {session.uuid}\n📝 {session.login}", "main"
+        return (f"✅ <b>Аккаунт создан!</b>\n\n"
+                f"👋 Привет, {login}!\n"
+                f"Теперь осталось 3 шага:\n\n"
+                f"1️⃣ Скачай лаунчер\n"
+                f"2️⃣ Войди логином и паролем\n"
+                f"3️⃣ Нажми «ИГРАТЬ»\n\n"
+                f"Сервер: <code>pigeo.asuscomm.com:25565</code>",
+                [row(btn("📥 Скачать лаунчер", "screen:game")),
+                 row(btn("🖥 Статус сервера", "screen:status")),
+                 row(btn("🏠 В главное меню", "nav:home"))])

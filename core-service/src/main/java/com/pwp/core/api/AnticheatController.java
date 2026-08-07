@@ -83,6 +83,44 @@ public class AnticheatController {
             ctx.json(items);
         });
 
+        // ── Правила для Java-агента (PJM-контракт): правила + версия для инкрементального
+        //    ре-фетча. Агент шлёт совпадения на /detect с severity правила; кик решает сервер.
+        app.get("/api/v1/launcher/anticheat/rules", ctx -> {
+            if (!validLaunchToken(ctx.header("X-Launch-Token"))) {
+                ctx.status(401).json(ApiResponse.error("invalid token"));
+                return;
+            }
+            List<Map<String, Object>> rules = new ArrayList<>();
+            String sql = "SELECT pattern, match_type, hash, severity FROM anticheat_blacklist WHERE enabled = TRUE ORDER BY severity DESC";
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("pattern", rs.getString("pattern") == null ? "" : rs.getString("pattern"));
+                    m.put("matchType", rs.getString("match_type") == null ? "substring" : rs.getString("match_type"));
+                    m.put("hash", rs.getString("hash") == null ? "" : rs.getString("hash"));
+                    m.put("severity", rs.getInt("severity"));
+                    rules.add(m);
+                }
+            } catch (Exception e) {
+                log.warn("rules load failed: {}", e.getMessage());
+                ctx.json(ApiResponse.error("rules load failed"));
+                return;
+            }
+            long version = 0;
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(
+                     "SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM anticheat_blacklist")) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) version = rs.getLong(1);
+                }
+            } catch (Exception e) {
+                log.warn("rules version failed: {}", e.getMessage());
+            }
+            ctx.json(Map.of("version", version, "rules", rules));
+        });
+
         // ── Init (handshake перед запуском игры) ──
         app.post("/api/v1/launcher/anticheat/init", ctx -> {
             InitReq req = parseBody(ctx, InitReq.class);
@@ -107,7 +145,7 @@ public class AnticheatController {
             // Логируем детекты, пришедшие с init
             List<Map<String, Object>> detections = req.detections != null ? req.detections : Collections.emptyList();
             for (Map<String, Object> d : detections) {
-                insertDetection(playerUuid, null, "launcher", str(d.get("kind")), str(d.get("signature")), 0);
+                insertDetection(playerUuid, null, "launcher", str(d.get("kind")), str(d.get("signature")), "", 0);
             }
             // Выдаём launch-token (30 мин)
             String token = randomToken(48);
@@ -142,13 +180,16 @@ public class AnticheatController {
                     touchHeartbeat(req.launchToken);
                 }
             }
-            insertDetection(playerUuid, req.launchToken, req.source, req.type, req.signature, req.severity);
+            String detail = req.details != null && req.details.get("name") != null
+                ? str(req.details.get("name")) : "";
+            insertDetection(playerUuid, req.launchToken, req.source, req.type, req.signature, detail, req.severity);
             // Авто-бан при критическом severity (порог из конфига)
             int banSeverity = CoreApplication.config.anticheat.banSeverity;
-            if (req.severity >= banSeverity && playerUuid != null) {
+            boolean kick = req.severity >= banSeverity;
+            if (kick && playerUuid != null) {
                 autoBan(playerUuid, req.type, req.signature);
             }
-            ctx.json(ApiResponse.ok("detect received"));
+            ctx.json(Map.of("action", kick ? "kick" : "none"));
         });
 
         // ── Инвентарь модов (whitelist: сверка с манифестом) ──
@@ -200,14 +241,57 @@ public class AnticheatController {
                 if (expected == null) {
                     unknown.add(path);
                     insertDetection(playerUuid, req.launchToken, "agent", "unknown-mod",
-                        path + " (нет в манифесте)", 9);
+                        path + " (нет в манифесте)", "", 9);
                 } else if (!expected.isEmpty() && !expected.equals(sha)) {
                     unknown.add(path);
                     insertDetection(playerUuid, req.launchToken, "agent", "tampered-mod",
-                        path + " (SHA-256 не совпадает)", 9);
+                        path + " (SHA-256 не совпадает)", "", 9);
                 }
             }
-            ctx.json(ApiResponse.ok(Map.of("unknown", unknown)));
+            ctx.json(Map.of("unknown", unknown, "action", unknown.isEmpty() ? "none" : "kick"));
+        });
+
+        // ── Heartbeat агента (PJM-контракт): пингует сессию, отвечает киком при отзыве
+        //    и отдаёт версию правил для инкрементального ре-фетча. Сеть = fail-open.
+        app.post("/api/v1/launcher/anticheat/heartbeat", ctx -> {
+            HeartbeatReq req = parseBody(ctx, HeartbeatReq.class);
+            if (req == null || req.launchToken == null || req.launchToken.isEmpty()) {
+                ctx.status(400).json(ApiResponse.error("invalid body"));
+                return;
+            }
+            String playerUuid = findUuidByLaunchToken(req.launchToken);
+            String action = "none";
+            String reason = "";
+            if (playerUuid == null) {
+                // Сессия не найдена/истекла — агент работает с чужим токеном
+                action = "kick";
+                reason = "session-invalid";
+            } else {
+                touchHeartbeat(req.launchToken);
+                // Отозванная сессия или бан игрока → кик
+                if (isSessionRevoked(req.launchToken)) {
+                    action = "kick";
+                    reason = "session-revoked";
+                } else if (isPlayerBanned(playerUuid)) {
+                    action = "kick";
+                    reason = "account-banned";
+                }
+            }
+            long version = 0;
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(
+                     "SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM anticheat_blacklist")) {
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) version = rs.getLong(1);
+                }
+            } catch (Exception e) {
+                log.warn("rules version failed: {}", e.getMessage());
+            }
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("action", action);
+            resp.put("blacklistVersion", version);
+            if (!reason.isEmpty()) resp.put("reason", reason);
+            ctx.json(resp);
         });
 
         // ── Скриншот от агента (base64 BMP → JPEG + БД) ──
@@ -230,7 +314,7 @@ public class AnticheatController {
                 byte[] bmp = java.util.Base64.getMimeDecoder().decode(req.data);
                 java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(bmp));
                 if (img == null) {
-                    insertDetection(playerUuid, req.launchToken, "agent", "screenshot-error", "не удалось декодировать кадр", 7);
+                    insertDetection(playerUuid, req.launchToken, "agent", "screenshot-error", "не удалось декодировать кадр", "", 7);
                     ctx.json(ApiResponse.error("decode failed"));
                     return;
                 }
@@ -255,7 +339,7 @@ public class AnticheatController {
                 ctx.json(ApiResponse.ok(Map.of("saved", name)));
             } catch (Exception e) {
                 log.warn("screenshot save failed: {}", e.getMessage());
-                insertDetection(playerUuid, req.launchToken, "agent", "screenshot-error", "ошибка сохранения", 7);
+                insertDetection(playerUuid, req.launchToken, "agent", "screenshot-error", "ошибка сохранения", "", 7);
                 ctx.json(ApiResponse.error("screenshot save failed"));
             }
         });
@@ -380,7 +464,8 @@ public class AnticheatController {
     private static void touchHeartbeat(String launchToken) {
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "UPDATE anticheat_sessions SET last_heartbeat = CURRENT_TIMESTAMP WHERE launch_token = ?")) {
+                 "UPDATE anticheat_sessions SET last_heartbeat = CURRENT_TIMESTAMP, "
+                 + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 MINUTE) WHERE launch_token = ?")) {
             ps.setString(1, launchToken);
             ps.executeUpdate();
         } catch (Exception ignored) {}
@@ -400,6 +485,63 @@ public class AnticheatController {
         return null;
     }
 
+    /** true, если launch-токен существует и не истёк (для рулзов/правил агента). */
+    private static boolean validLaunchToken(String launchToken) {
+        if (launchToken == null || launchToken.isEmpty()) return false;
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT 1 FROM anticheat_sessions WHERE launch_token = ? AND expires_at > CURRENT_TIMESTAMP LIMIT 1")) {
+            ps.setString(1, launchToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            log.warn("launch token check failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /** true, если сессия помечена отозванной (админ/другой поток). */
+    private static boolean isSessionRevoked(String launchToken) {
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT revoked FROM anticheat_sessions WHERE launch_token = ? LIMIT 1")) {
+            ps.setString(1, launchToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) == 1;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean isPlayerBanned(String playerUuid) {
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                 "SELECT is_banned FROM players WHERE uuid = ? LIMIT 1")) {
+            ps.setString(1, playerUuid);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getBoolean(1)) {
+                    return true; // бан до banned_until уже обрабатывается на входе
+                }
+                // Временный бан: is_banned может быть FALSE при истёкшем сроке — проверяем отдельно
+                try (PreparedStatement ps2 = c.prepareStatement(
+                        "SELECT banned_until FROM players WHERE uuid = ?")) {
+                    ps2.setString(1, playerUuid);
+                    try (ResultSet rs2 = ps2.executeQuery()) {
+                        if (rs2.next()) {
+                            java.sql.Timestamp until = rs2.getTimestamp("banned_until");
+                            return until != null && until.after(new java.util.Date());
+                        }
+                    }
+                }
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static String findAccessTokenByUuid(String playerUuid) {
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(
@@ -415,22 +557,43 @@ public class AnticheatController {
         return null;
     }
 
-    private static void insertDetection(String playerUuid, String launchToken, String source, String type, String signature, int severity) {
+    private static void insertDetection(String playerUuid, String launchToken, String source, String type, String signature, String detail, int severity) {
         if (type == null || type.isEmpty()) return;
+        // Дедуп: тот же (player, type, signature) в окне 10 минут — один буст детектов,
+        // одна запись (иначе каждый запуск игры флудил БД и TG одним и тем же сигналом).
+        if (playerUuid != null && signature != null && !signature.isEmpty()) {
+            try (Connection c = DatabaseManager.getConnection();
+                 PreparedStatement ps = c.prepareStatement(
+                     "SELECT COUNT(*) FROM anticheat_detections WHERE player_uuid = ? AND type = ? AND signature = ? "
+                     + "AND created_at > DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE)")) {
+                ps.setString(1, playerUuid);
+                ps.setString(2, type);
+                ps.setString(3, signature);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        return; // дубликат — не флудим БД и алерты
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("detection dedupe failed: {}", e.getMessage());
+            }
+        }
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(
-                 "INSERT INTO anticheat_detections (player_uuid, launch_token, source, type, signature, severity) VALUES (?, ?, ?, ?, ?, ?)")) {
+                 "INSERT INTO anticheat_detections (player_uuid, launch_token, source, type, signature, details, severity) VALUES (?, ?, ?, ?, ?, ?, ?)")) {
             ps.setString(1, playerUuid);
             ps.setString(2, launchToken);
             ps.setString(3, source == null ? "launcher" : source);
             ps.setString(4, type);
             if (signature != null && signature.length() > 1000) signature = signature.substring(0, 1000);
             ps.setString(5, signature);
-            ps.setInt(6, severity);
+            if (detail != null && detail.length() > 2000) detail = detail.substring(0, 2000);
+            ps.setString(6, detail);
+            ps.setInt(7, severity);
             ps.executeUpdate();
             if (severity > 0) {
-                log.warn("AC detection: uuid={} source={} type={} sig={} severity={}", playerUuid, source, type, signature, severity);
-                notifyTelegramAdmins(type, signature, playerUuid, severity);
+                log.warn("AC detection: uuid={} source={} type={} sig={} details={} severity={}", playerUuid, source, type, signature, detail, severity);
+                notifyTelegramAdmins(type, signature, playerUuid, severity, detail);
             }
         } catch (Exception e) {
             log.warn("detection insert failed: {}", e.getMessage());
@@ -438,7 +601,7 @@ public class AnticheatController {
     }
 
     /** Алерт админам в Telegram через файл-команду для бота (PWP/bots). */
-    private static void notifyTelegramAdmins(String type, String signature, String playerUuid, int severity) {
+    private static void notifyTelegramAdmins(String type, String signature, String playerUuid, int severity, String detail) {
         String tgIds = CoreApplication.config.api.adminTelegramIds;
         if (tgIds == null || tgIds.trim().isEmpty()) return;
         String nickname = playerUuid == null ? "—" : playerUuid;
@@ -450,6 +613,7 @@ public class AnticheatController {
             + "\uD83D\uDC64 Игрок: <b>" + escapeHtml(nickname) + "</b>\n"
             + "\uD83D\uDD17 Тип: <b>" + escapeHtml(type) + "</b>\n"
             + "\uD83D\uDCCB Сигнатура: " + escapeHtml(signature) + "\n"
+            + (detail == null || detail.isEmpty() ? "" : "\uD83D\uDCC4 Детали: " + escapeHtml(detail) + "\n")
             + "\uD83D\uDCA5 Severity: <b>" + severity + "</b>";
         for (String id : tgIds.split(",")) {
             String chatId = id.trim();
@@ -579,11 +743,16 @@ public class AnticheatController {
         public String type;
         public String signature;
         public int severity;
+        public Map<String, Object> details;
     }
 
     public static class FilesReq {
         public String launchToken;
         public List<Map<String, Object>> files;
+    }
+
+    public static class HeartbeatReq {
+        public String launchToken;
     }
 
     public static class ShotReq {

@@ -259,7 +259,7 @@ public class AdminController {
             int offset = Math.max(parseInt(ctx.queryParam("offset"), 0), 0);
             List<Map<String, Object>> items = new ArrayList<>();
             String sql = "SELECT d.id, d.player_uuid, p.nickname, d.launch_token, d.source, d.type, "
-                + "d.signature, d.severity, d.created_at "
+                + "d.signature, d.details, d.severity, d.created_at "
                 + "FROM anticheat_detections d LEFT JOIN players p ON p.uuid = d.player_uuid "
                 + "ORDER BY d.id DESC LIMIT ? OFFSET ?";
             try (var c = com.pwp.core.db.DatabaseManager.getConnection();
@@ -276,6 +276,7 @@ public class AdminController {
                         m.put("source", rs.getString("source"));
                         m.put("type", rs.getString("type"));
                         m.put("signature", rs.getString("signature"));
+                        m.put("details", rs.getString("details"));
                         m.put("severity", rs.getInt("severity"));
                         m.put("created_at", String.valueOf(rs.getTimestamp("created_at")));
                         items.add(m);
@@ -291,7 +292,7 @@ public class AdminController {
         app.get("/api/v1/admin/anticheat/signatures", ctx -> {
             verifyAdmin(ctx);
             List<Map<String, Object>> items = new ArrayList<>();
-            String sql = "SELECT id, kind, pattern, match_type, severity, enabled, created_at "
+            String sql = "SELECT id, kind, pattern, match_type, hash, severity, enabled, created_at "
                 + "FROM anticheat_blacklist ORDER BY id DESC LIMIT 500";
             try (var c = com.pwp.core.db.DatabaseManager.getConnection();
                  var ps = c.prepareStatement(sql);
@@ -302,6 +303,7 @@ public class AdminController {
                     m.put("kind", rs.getString("kind"));
                     m.put("pattern", rs.getString("pattern"));
                     m.put("matchType", rs.getString("match_type"));
+                    m.put("hash", rs.getString("hash"));
                     m.put("severity", rs.getInt("severity"));
                     m.put("enabled", rs.getBoolean("enabled"));
                     m.put("created_at", String.valueOf(rs.getTimestamp("created_at")));
@@ -317,24 +319,34 @@ public class AdminController {
         app.post("/api/v1/admin/anticheat/signatures", ctx -> {
             verifyAdmin(ctx);
             SigReq req = ctx.bodyAsClass(SigReq.class);
-            if (req.pattern == null || req.pattern.isEmpty()) {
-                ctx.json(ApiResponse.error("pattern required"));
+            String matchType = req.matchType == null || req.matchType.isEmpty() ? "substring" : req.matchType;
+            if (!List.of("substring", "exact", "word", "regex", "hash", "string-literal").contains(matchType)) {
+                ctx.json(ApiResponse.error("invalid matchType"));
                 return;
             }
-            String matchType = req.matchType == null || req.matchType.isEmpty() ? "substring" : req.matchType;
-            if (!List.of("substring", "exact", "word").contains(matchType)) {
-                ctx.json(ApiResponse.error("invalid matchType"));
+            // Для hash-правил паттерн пустой, обязателен хеш; для остальных — паттерн
+            String pattern = req.pattern == null ? "" : req.pattern;
+            String hash = req.hash == null ? "" : req.hash.trim();
+            if ("hash".equals(matchType)) {
+                if (hash.isEmpty() || !hash.matches("[0-9a-fA-F]{64}")) {
+                    ctx.json(ApiResponse.error("hash required (64 hex)"));
+                    return;
+                }
+                pattern = "";
+            } else if (pattern.isEmpty()) {
+                ctx.json(ApiResponse.error("pattern required"));
                 return;
             }
             String kind = req.kind == null ? "" : req.kind;
             try (var c = com.pwp.core.db.DatabaseManager.getConnection();
                  var ps = c.prepareStatement(
-                     "INSERT INTO anticheat_blacklist (kind, pattern, match_type, severity) VALUES (?, ?, ?, ?) "
-                     + "ON DUPLICATE KEY UPDATE kind = VALUES(kind), match_type = VALUES(match_type), severity = VALUES(severity), enabled = TRUE")) {
+                     "INSERT INTO anticheat_blacklist (kind, pattern, match_type, hash, severity) VALUES (?, ?, ?, ?, ?) "
+                     + "ON DUPLICATE KEY UPDATE kind = VALUES(kind), match_type = VALUES(match_type), hash = VALUES(hash), severity = VALUES(severity), enabled = TRUE")) {
                 ps.setString(1, kind);
-                ps.setString(2, req.pattern);
+                ps.setString(2, pattern);
                 ps.setString(3, matchType);
-                ps.setInt(4, req.severity);
+                ps.setString(4, hash);
+                ps.setInt(5, req.severity);
                 ps.executeUpdate();
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("signature add failed"));
@@ -620,5 +632,5 @@ public class AdminController {
     public static class ResolveResetReq { public int resetId; public String adminUuid; public String status; }
     public static class BroadcastReq { public String adminUuid; public String message; }
     public static class DeleteAccountReq { public String uuid; public long telegramId; }
-    public static class SigReq { public String kind; public String pattern; public String matchType; public int severity; }
+    public static class SigReq { public String kind; public String pattern; public String matchType; public String hash; public int severity; }
 }

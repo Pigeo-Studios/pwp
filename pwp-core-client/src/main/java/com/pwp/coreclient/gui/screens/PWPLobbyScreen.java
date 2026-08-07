@@ -42,8 +42,8 @@ public class PWPLobbyScreen extends Screen {
     private int onlinePlayers = 0;
     private int prevPacketPhase = -1;
 
-    // GUI не открывается принудительно, если игрок сам закрыл его недавно
-    private static long lastManualClose = 0;
+    // GUI не открывается принудительно, если игрок сам закрыл его в этой фазе (закрытие привязано к фазе голосования)
+    private static int closedPhase = -1;
     private static int lastSeenPhase = -1;
 
     private final long openTime;
@@ -58,36 +58,76 @@ public class PWPLobbyScreen extends Screen {
     @Override
     public void onClose() {
         super.onClose();
-        lastManualClose = System.currentTimeMillis();
+        closedPhase = lastSeenPhase;
         instance = null;
     }
 
     /** Единственный источник данных GUI — серверный state-пакет (каждую секунду + при изменениях). */
     public static void updateLobbyState(LobbyStatePacket pkt) {
         boolean screenOpen = instance != null && !instance.isMinecraftScreenInvalid();
+        // Закрытие привязано к фазе: как только фаза сменилась — забываем, что игрок закрывал GUI
+        if (pkt.phase != closedPhase) closedPhase = -1;
+
         if (!screenOpen) {
             boolean open = pkt.requestOpen;
-            if (!open) {
-                long sinceClose = System.currentTimeMillis() - lastManualClose;
-                open = pkt.phase != lastSeenPhase || sinceClose > 60_000;
+            if (open) {
+                // Вход на сервер: открыть, но уважать явный отказ игрока в этом голосовании
+                if (isVotePhase(pkt.phase) && !hasVotedInPhase(pkt) && closedPhase == pkt.phase) {
+                    open = false;
+                }
+            } else {
+                // Экран закрыт: не спамим по КД. Открываем только при переходе в фазу матча
+                // или если игрок уже голосовал в этой фазе (показать прогресс/итоги)
+                open = pkt.phase != lastSeenPhase && closedPhase != pkt.phase
+                        && (isMatchPhase(pkt.phase) || (isVotePhase(pkt.phase) && hasVotedInPhase(pkt)));
             }
             lastSeenPhase = pkt.phase;
             if (open) {
-                ensureOpenOrCreate(s -> s.applyState(pkt));
+                ensureOpenOrCreate(s -> s.applyState(pkt, false));
             }
         } else {
             lastSeenPhase = pkt.phase;
-            instance.applyState(pkt);
+            instance.applyState(pkt, true);
         }
     }
 
-    private void applyState(LobbyStatePacket pkt) {
+    private static boolean isVotePhase(int phase) {
+        return phase == LobbyStatePacket.PHASE_MAP_VOTE
+                || phase == LobbyStatePacket.PHASE_MODE_VOTE
+                || phase == LobbyStatePacket.PHASE_FACTION_VOTE;
+    }
+
+    private static boolean isMatchPhase(int phase) {
+        return phase == LobbyStatePacket.PHASE_MATCH_STARTING
+                || phase == LobbyStatePacket.PHASE_MATCH_PLAYING;
+    }
+
+    private static boolean hasVotedInPhase(LobbyStatePacket pkt) {
+        return switch (pkt.phase) {
+            case LobbyStatePacket.PHASE_MAP_VOTE -> pkt.myMapVote >= 0;
+            case LobbyStatePacket.PHASE_MODE_VOTE -> pkt.myModeVote >= 0;
+            case LobbyStatePacket.PHASE_FACTION_VOTE -> pkt.myFaction1 >= 0 || pkt.myFaction2 >= 0;
+            default -> false;
+        };
+    }
+
+    private void applyState(LobbyStatePacket pkt, boolean screenWasOpen) {
+        // Автовыбор вкладки при первом состоянии (вход/автооткрытие) — ручной выбор игрока не перезаписываем
+        if (lastState == null) {
+            currentTab = switch (pkt.phase) {
+                case LobbyStatePacket.PHASE_MAP_VOTE,
+                     LobbyStatePacket.PHASE_MODE_VOTE,
+                     LobbyStatePacket.PHASE_FACTION_VOTE -> LobbyTab.GOLOSOVANIE;
+                default -> LobbyTab.IGRA;
+            };
+        }
         lastState = pkt;
         onlinePlayers = pkt.onlinePlayers;
         playTab.applyState(pkt);
         voteTab.applyState(pkt);
 
-        if (prevPacketPhase >= 0 && pkt.phase != prevPacketPhase) {
+        // Тост — только если игрок уже сидит в GUI (иначе экран откроется сам и тост будет дублем)
+        if (screenWasOpen && prevPacketPhase >= 0 && pkt.phase != prevPacketPhase) {
             switch (pkt.phase) {
                 case LobbyStatePacket.PHASE_MAP_VOTE ->
                     PWPToastManager.show("Голосование за карту началось!", PWPToastManager.ToastType.INFO);
@@ -121,7 +161,7 @@ public class PWPLobbyScreen extends Screen {
         instance = null;
         imageCache.clear();
         lastSeenPhase = -1;
-        lastManualClose = 0;
+        closedPhase = -1;
     }
 
     public static ResourceLocation getTexture(String mapName, String worldPath, String prefix) {

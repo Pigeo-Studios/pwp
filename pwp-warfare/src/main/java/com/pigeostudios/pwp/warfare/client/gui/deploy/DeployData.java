@@ -55,27 +55,37 @@ public class DeployData {
     public static Map<String, Long> animStart = new HashMap<>();
     public static Map<String, Boolean> animDir = new HashMap<>(); // true=expanding
 
-    private static final Map<String, String[]> KIT_META = new LinkedHashMap<>();
+    // Имена китов для dev-фолбэка (populateHardcoded), когда сервер не прислал DTO
+    private static final String[] HARDCODED_KIT_NAMES = {
+        "Officer", "Pilot Officer", "Mechanic Officer",
+        "Rifleman", "Medic", "LMG", "Assault", "Grenadier", "Marksman",
+        "Sniper", "HMG", "LAT", "HAT", "Sapper", "Scout",
+        "Pilot", "Mechanic", "Drone Operator", "Anti_air"
+    };
+
+    // Группировка сетки ролей (RoleGrid): роль -> группа. «Офицерские» первыми вверху.
+    // Группы берутся на клиенте (как раньше в KIT_META), категории из БД на сетку не влияют.
+    private static final Map<String, String> KIT_GROUP = new HashMap<>();
     static {
-        KIT_META.put("Officer", new String[]{"COMMANDER", "Squad leader. Leads infantry elements."});
-        KIT_META.put("Pilot Officer", new String[]{"COMMANDER", "Helicopter pilot squad leader."});
-        KIT_META.put("Mechanic Officer", new String[]{"COMMANDER", "Vehicle squad leader."});
-        KIT_META.put("Rifleman", new String[]{"INFANTRY", "Standard infantry."});
-        KIT_META.put("Medic", new String[]{"INFANTRY", "Combat medic."});
-        KIT_META.put("LMG", new String[]{"INFANTRY", "Light machine gunner."});
-        KIT_META.put("Assault", new String[]{"INFANTRY", "Close quarters assault."});
-        KIT_META.put("Grenadier", new String[]{"SPECIALIST", "Grenade launcher."});
-        KIT_META.put("Marksman", new String[]{"SPECIALIST", "Designated marksman."});
-        KIT_META.put("Sniper", new String[]{"SPECIALIST", "Sniper."});
-        KIT_META.put("HMG", new String[]{"SPECIALIST", "Heavy machine gunner."});
-        KIT_META.put("LAT", new String[]{"SPECIALIST", "Light anti-tank."});
-        KIT_META.put("HAT", new String[]{"SPECIALIST", "Heavy anti-tank."});
-        KIT_META.put("Sapper", new String[]{"SPECIALIST", "Combat engineer."});
-        KIT_META.put("Scout", new String[]{"SPECIALIST", "Reconnaissance."});
-        KIT_META.put("Pilot", new String[]{"CREWMAN", "Helicopter pilot."});
-        KIT_META.put("Mechanic", new String[]{"CREWMAN", "Vehicle crewman."});
-        KIT_META.put("Drone Operator", new String[]{"CREWMAN", "Drone operator."});
-        KIT_META.put("Anti_air", new String[]{"CREWMAN", "Anti-air specialist."});
+        KIT_GROUP.put("Officer", "COMMANDER");
+        KIT_GROUP.put("Pilot Officer", "COMMANDER");
+        KIT_GROUP.put("Mechanic Officer", "COMMANDER");
+        KIT_GROUP.put("Rifleman", "INFANTRY");
+        KIT_GROUP.put("Medic", "INFANTRY");
+        KIT_GROUP.put("LMG", "INFANTRY");
+        KIT_GROUP.put("Assault", "INFANTRY");
+        KIT_GROUP.put("Grenadier", "SPECIALIST");
+        KIT_GROUP.put("Marksman", "SPECIALIST");
+        KIT_GROUP.put("Sniper", "SPECIALIST");
+        KIT_GROUP.put("HMG", "SPECIALIST");
+        KIT_GROUP.put("LAT", "SPECIALIST");
+        KIT_GROUP.put("HAT", "SPECIALIST");
+        KIT_GROUP.put("Sapper", "SPECIALIST");
+        KIT_GROUP.put("Scout", "SPECIALIST");
+        KIT_GROUP.put("Pilot", "CREWMAN");
+        KIT_GROUP.put("Mechanic", "CREWMAN");
+        KIT_GROUP.put("Drone Operator", "CREWMAN");
+        KIT_GROUP.put("Anti_air", "CREWMAN");
     }
 
     public static final Map<String, String> KIT_DISPLAY_NAMES = new LinkedHashMap<>();
@@ -103,6 +113,10 @@ public class DeployData {
         KIT_DISPLAY_NAMES.put("INFANTRY", "ПЕХОТА");
         KIT_DISPLAY_NAMES.put("SPECIALIST", "СПЕЦИАЛИСТ");
         KIT_DISPLAY_NAMES.put("CREWMAN", "ЭКИПАЖ");
+        // Страховка для нестандартных китов с категориями из БД
+        KIT_DISPLAY_NAMES.put("DIRECT_COMBAT", "ПЕХОТА");
+        KIT_DISPLAY_NAMES.put("FIRE_SUPPORT", "ОГНЕВАЯ ПОДДЕРЖКА");
+        KIT_DISPLAY_NAMES.put("SUPPORT", "ПОДДЕРЖКА");
     }
 
     public static String getDisplayName(String en) {
@@ -126,21 +140,9 @@ public class DeployData {
 
         if (serverKits != null && !serverKits.isEmpty()) {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
-                String[] meta = KIT_META.get(dto.name);
-                if (meta == null) {
-                    String dtoNorm = dto.name.toLowerCase().replace(" ", "").replace("-", "").replace("_", "");
-                    for (var entry : KIT_META.entrySet()) {
-                        String keyNorm = entry.getKey().toLowerCase().replace(" ", "").replace("-", "").replace("_", "");
-                        if (keyNorm.equals(dtoNorm) || dtoNorm.contains(keyNorm) || keyNorm.contains(dtoNorm)) {
-                            meta = entry.getValue();
-                            break;
-                        }
-                    }
-                }
-                String cat = meta != null ? meta[0]
-                    : (dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
-                String desc = (dto.description != null && !dto.description.isEmpty()) ? dto.description
-                    : (meta != null ? meta[1] : "");
+                String cat = KIT_GROUP.getOrDefault(dto.name,
+                    dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
+                String desc = dto.description != null ? dto.description : "";
                 List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items, dto.slotSkins);
                 List<ItemStack> armor = extractArmorFromItems(dto.items);
                 int inTeam = 0, maxTeam = -1;
@@ -166,9 +168,7 @@ public class DeployData {
         LoadoutOption bino     = new LoadoutOption("bino",  "Binoculars",new ItemStack(ModItems.BINOCULARS.get()));
 
         int i = 0;
-        for (var e : KIT_META.entrySet()) {
-            String name = e.getKey();
-            String[] meta = e.getValue();
+        for (String name : HARDCODED_KIT_NAMES) {
             boolean avail = true;
             List<LoadoutSlot> loadout = List.of(
                 new LoadoutSlot("PRIMARY", List.of(rifleM4, rifleAk, rifleM16, i % 2 == 0 ? rifleAug : rifleM4), 0),
@@ -177,7 +177,7 @@ public class DeployData {
                 new LoadoutSlot("SPECIAL", List.of(bandage), 0),
                 new LoadoutSlot("BACKPACK", List.of(bag, bino), 0)
             );
-            kits.add(new KitRecord(name, meta[0], meta[1], avail, "", 0, -1, loadout, List.of()));
+            kits.add(new KitRecord(name, "INFANTRY", "", avail, "", 0, -1, loadout, List.of()));
             i++;
         }
     }
@@ -210,9 +210,11 @@ public class DeployData {
                         case "SPECIAL" -> special.add(opt);
                         default -> backpack.add(opt);
                     }
-                } else if (isWeapon(stack)) {
-                    primary.add(opt);
                 } else {
+                    // Слоты 4-8 без __ALT__-метки: всегда в рюкзак.
+                    // Метки PRIMARY/SECONDARY/THROWABLE/SPECIAL задаются только слотами 0-3
+                    // или __ALT__-метками на слотах 41+ — эвристика isWeapon() тут не нужна
+                    // (иначе ракеты/трубы в рюкзаке получали метку «СТВОЛ»)
                     backpack.add(opt);
                 }
             }
@@ -256,16 +258,6 @@ public class DeployData {
             if (s.startsWith(prefix)) return s.substring(prefix.length());
         }
         return null;
-    }
-
-    private static boolean isWeapon(ItemStack stack) {
-        var item = stack.getItem();
-        String id = item.getDescriptionId();
-        return id.contains("gun") || id.contains("rifle") || id.contains("pistol") || id.contains("smg")
-            || id.contains("shotgun") || id.contains("sniper") || id.contains("lmg") || id.contains("rocket")
-            || id.contains("launcher") || id.contains("sword") || id.contains("axe")
-            || item instanceof net.minecraft.world.item.SwordItem
-            || item instanceof net.minecraft.world.item.AxeItem;
     }
 
     private static List<ItemStack> extractArmorFromItems(List<ItemStack> items) {

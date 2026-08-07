@@ -180,6 +180,37 @@
         }
     ],
 
+    "vehicleSpawners": {
+        "BLUE": [
+            { "role": "SUPPLY", "x": -1145, "y": 65, "z": -837, "yaw": 270 },
+            { "role": "SUPPLY", "x": -1145, "y": 65, "z": -848, "yaw": 270 },
+            { "role": "TRANSPORT", "x": -1066, "y": 65, "z": -813, "yaw": 180 },
+            { "role": "TRANSPORT", "x": -1073, "y": 65, "z": -813, "yaw": 180 },
+            { "role": "MRAP", "x": -1183, "y": 65, "z": -844, "yaw": 270 },
+            { "role": "APC", "x": -1183, "y": 65, "z": -834, "yaw": 270 },
+            { "role": "IFV", "x": -1183, "y": 65, "z": -824, "yaw": 270 },
+            { "role": "TANK", "x": -1183, "y": 65, "z": -814, "yaw": 270 },
+            { "role": "AA", "x": -1183, "y": 65, "z": -804, "yaw": 270 },
+            { "role": "HELI_TRANSPORT", "x": -1086, "y": 67, "z": -846, "yaw": 0 },
+            { "role": "HELI_ATTACK", "x": -1067, "y": 67, "z": -846, "yaw": 0 },
+            { "role": "CAS_FIGHTER", "x": -1112, "y": 65, "z": -872, "yaw": 180 }
+        ],
+        "RED": [
+            { "role": "SUPPLY", "x": 1123, "y": 65, "z": 890, "yaw": 90 },
+            { "role": "SUPPLY", "x": 1057, "y": 65, "z": 890, "yaw": 90 },
+            { "role": "TRANSPORT", "x": 1043, "y": 65, "z": 832, "yaw": 0 },
+            { "role": "TRANSPORT", "x": 1050, "y": 65, "z": 832, "yaw": 0 },
+            { "role": "MRAP", "x": 1160, "y": 65, "z": 862, "yaw": 90 },
+            { "role": "APC", "x": 1160, "y": 65, "z": 852, "yaw": 90 },
+            { "role": "IFV", "x": 1160, "y": 65, "z": 842, "yaw": 90 },
+            { "role": "TANK", "x": 1160, "y": 65, "z": 832, "yaw": 90 },
+            { "role": "AA", "x": 1160, "y": 65, "z": 822, "yaw": 90 },
+            { "role": "HELI_TRANSPORT", "x": 1063, "y": 67, "z": 864, "yaw": 180 },
+            { "role": "HELI_ATTACK", "x": 1044, "y": 67, "z": 864, "yaw": 180 },
+            { "role": "CAS_FIGHTER", "x": 1089, "y": 65, "z": 930, "yaw": 0 }
+        ]
+    },
+
     "mapBounds": {
         "centerX": -10,
         "centerZ": -15,

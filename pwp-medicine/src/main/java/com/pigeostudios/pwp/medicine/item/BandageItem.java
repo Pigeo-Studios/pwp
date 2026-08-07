@@ -62,7 +62,7 @@ implements GeoItem {
         Player toHeal = target != null ? target : pPlayer;
         if (target != null && target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
             if (!pLevel.isClientSide && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
-                pPlayer.sendSystemMessage(Component.literal("§cYou cannot revive an ENEMY!"));
+                pPlayer.sendSystemMessage(Component.literal("§cНельзя поднять врага!"));
                 return InteractionResultHolder.fail(pPlayer.getItemInHand(pUsedHand));
             }
             pPlayer.getItemInHand(pUsedHand).getOrCreateTag().putBoolean("Reviving", true);
@@ -73,9 +73,9 @@ implements GeoItem {
         if (toHeal.getHealth() >= 14.0f && !toHeal.hasEffect(ModEffects.BLEEDING.get())) {
             if (!pLevel.isClientSide) {
                 if (toHeal == pPlayer) {
-                    pPlayer.sendSystemMessage(Component.literal("§cNeed a medkit"));
+                    pPlayer.sendSystemMessage(Component.literal("§cНужна аптечка"));
                 } else {
-                    pPlayer.sendSystemMessage(Component.literal("§cPlayer doesn't need a bandage"));
+                    pPlayer.sendSystemMessage(Component.literal("§cИгроку не нужен бинт"));
                 }
             }
             return InteractionResultHolder.fail(pPlayer.getItemInHand(pUsedHand));
@@ -93,7 +93,7 @@ implements GeoItem {
             if (target != null && target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
                 com.pigeostudios.pwp.warfare.events.DownedHandler.revivePlayer((net.minecraft.server.level.ServerPlayer)target);
                 com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().recordRevive((net.minecraft.server.level.ServerPlayer)player);
-                player.sendSystemMessage(Component.literal("§aTeammate revived!"));
+                player.sendSystemMessage(Component.literal("§aСоюзник поднят!"));
             } else {
                 float currentHealth = toHeal.getHealth();
                 if (currentHealth < 14.0f) {
@@ -146,7 +146,7 @@ implements GeoItem {
         if (pInteractionTarget instanceof Player target) {
             if (target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
                 if (!pPlayer.level().isClientSide && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
-                    pPlayer.sendSystemMessage(Component.literal("§cYou cannot revive an ENEMY!"));
+                pPlayer.sendSystemMessage(Component.literal("§cНельзя поднять врага!"));
                     return InteractionResult.FAIL;
                 }
                 pStack.getOrCreateTag().putBoolean("Reviving", true);
@@ -156,7 +156,7 @@ implements GeoItem {
             }
             if (target.getHealth() >= 14.0f && !target.hasEffect(ModEffects.BLEEDING.get())) {
                 if (!pPlayer.level().isClientSide) {
-                    pPlayer.sendSystemMessage(Component.literal("§cPlayer doesn't need a bandage"));
+                    pPlayer.sendSystemMessage(Component.literal("§cИгроку не нужен бинт"));
                 }
                 return InteractionResult.FAIL;
             }

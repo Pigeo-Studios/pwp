@@ -58,7 +58,7 @@ public class PWPMainMenuScreen extends Screen {
                 if (connecting) return;
                 connecting = true;
                 Minecraft.getInstance().setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
-                ClientConnectHandler.connect("pigeo.asuscomm.com", 25565);
+                ClientConnectHandler.connect(serverHost(), 25565);
             },
             PWPButton.Style.ACCENT
         ));
@@ -92,6 +92,10 @@ public class PWPMainMenuScreen extends Screen {
                 PWPButton.Style.GHOST
             ));
         }
+    }
+
+    private static String serverHost() {
+        return System.getProperty("pwp.serverHost", "pigeo.asuscomm.com");
     }
 
     private void openReplayViewer() {

@@ -17,8 +17,9 @@ public class PortraitRenderer {
 
     public void render(GuiGraphics gui, int x, int y, int w, int h, int mx, int my,
                        String desc, ItemStack weapon, List<ItemStack> armorPieces) {
-        var f = PWPTheme.Fonts.display();
-        int panelH = h - 16;
+        // Описание роли под портретом не рисуем (некуда — нет места), портрет занимает всю панель.
+        // Текст описания живёт в БД (единый источник) и доступен через API китов.
+        int panelH = h;
 
         RoundedRect.fill(gui, x, y, w, panelH, 6, 0xFF0E1117);
         RoundedRect.border(gui, x, y, w, panelH, 6, 1, PWPTheme.Colors.BORDER);
@@ -51,8 +52,6 @@ public class PortraitRenderer {
             restore(p);
             if (dead) p.deathTime = savedDeathTime;
         }
-
-        gui.drawString(f, desc, x + 6, y + panelH + 2, PWPTheme.Colors.TEXT_SECONDARY, false);
     }
 
     private void swap(net.minecraft.world.entity.player.Player p, ItemStack weapon, List<ItemStack> armor) {

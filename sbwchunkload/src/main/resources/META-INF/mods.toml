@@ -1,0 +1,47 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="sbwchunkload"
+version="2.2.0"
+displayName="[SBW] Projectile Chunk Loading"
+credits="PWP"
+authors="PWP"
+description='''
+    Server-side addon: forces SuperbWarfare projectiles (NURS rockets,
+    auto-cannon shells, bombs, RPG rockets) and PointBlank (FCL) rocket
+    entities (RPG-7V2, AT4, M72, SMAW, Carl Gustaf) to keep their
+    trajectory chunks loaded, preventing them from freezing in unloaded
+    terrain. Configured via server config (sbwchunkload-server.toml).
+    '''
+[[mixins]]
+config="sbwchunkload.mixins.json"
+
+[[dependencies.sbwchunkload]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.sbwchunkload]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.sbwchunkload]]
+modId="superbwarfare"
+mandatory=true
+versionRange="[0.8.9,)"
+ordering="NONE"
+side="SERVER"
+
+[[dependencies.sbwchunkload]]
+modId="pointblank"
+mandatory=true
+versionRange="[1.11,)"
+ordering="NONE"
+side="SERVER"

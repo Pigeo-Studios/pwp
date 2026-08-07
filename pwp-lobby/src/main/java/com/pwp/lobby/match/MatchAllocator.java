@@ -3,6 +3,7 @@ package com.pwp.lobby.match;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.coreserver.CoreServerApi;
+import com.pwp.coreserver.TransferHosts;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerConfig;
 import com.pwp.lobby.ServerManager;
@@ -144,7 +145,7 @@ public class MatchAllocator {
             player.sendSystemMessage(Component.literal("§cНет активного матча для подключения"), false);
             return;
         }
-        connectPlayerToMatch(player, mi, "pigeo.asuscomm.com");
+        connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
     }
 
     public static void joinMatchById(int serverId, ServerPlayer player) {
@@ -153,7 +154,7 @@ public class MatchAllocator {
             player.sendSystemMessage(Component.literal("§cМатч недоступен для подключения"), false);
             return;
         }
-        connectPlayerToMatch(player, mi, "pigeo.asuscomm.com");
+        connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
     }
 
     private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
@@ -205,12 +206,11 @@ public class MatchAllocator {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
 
-        String host = "pigeo.asuscomm.com";
-        log.info("Transferring players to {}:{} for match {}", host, mi.port, mi.mapName);
-
-        // Переносим ВСЕХ игроков лобби — голосовать не обязательно
+        // Локальные игроки получают LAN-адрес сервера (NAT-loopback роутера
+        // теряет обратные пакеты после первого соединения), внешние — домен
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!lobbyPlayers.contains(player.getStringUUID())) continue;
+            String host = TransferHosts.resolveTransferHost(player);
             player.sendSystemMessage(
                     Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."),
                     false);
@@ -218,6 +218,7 @@ public class MatchAllocator {
                     PacketDistributor.PLAYER.with(() -> player),
                     new ConnectToServerPacket(host, mi.port));
         }
+        log.info("Transferring {} players to match {} on port {}", lobbyPlayers.size(), mi.mapName, mi.port);
     }
 
     private static final long STOP_TIMEOUT_MS = 30_000;

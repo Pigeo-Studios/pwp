@@ -72,16 +72,16 @@ public class DroneDeployOverlay {
       }
 
       // Маркер над дроном (на высоте корпуса, только когда дрон в кадре).
+      // Максимально дешёвый: статичный пин-квадрат, без пульсации радиуса и
+      // без анимации alpha (кольцо с 12 сегментами + пересчёт радиуса на каждый
+      // кадр заметно проседало на слабых ПК — юзер: «метка лагает, фпс в 9»).
       int[] screen = projectToScreen(
          mc,
          new Vec3(ClientData.droneDeployX + 0.5, ClientData.droneDeployY + 1.3, ClientData.droneDeployZ + 0.5)
       );
       if (screen != null) {
-         float phase = (time % 36.0F) / 36.0F;
-         float radius = 5.0F + phase * 9.0F;
-         int alpha = (int) (100 * (1.0F - phase)) + 30;
-         drawCircle(gui, screen[0], screen[1], radius, deploying ? 0xFFAA55 : 0xFFC96A, alpha);
-         gui.fill(screen[0] - 1, screen[1] - 1, screen[0] + 2, screen[1] + 2, 0x99FFFFFF);
+         gui.fill(screen[0] - 4, screen[1] - 4, screen[0] + 5, screen[1] + 5, 0x66FFFFFF);
+         gui.fill(screen[0] - 2, screen[1] - 2, screen[0] + 3, screen[1] + 3, 0xCCFFC96A);
       }
 
       // Текст под прицелом: имя дрона + таймер.
@@ -100,28 +100,13 @@ public class DroneDeployOverlay {
 
    /** Кольцо прогресса: сегменты заполняются пропорционально progress. */
    private static void drawRing(GuiGraphics gui, int cx, int cy, float radius, float progress) {
-      int segments = 16;
+      int segments = 12;
       int filled = (int) (segments * progress);
       for (int i = 0; i < filled; i++) {
          double a = i * Math.PI * 2.0 / segments;
          int x = (int) (cx + Math.cos(a) * radius);
          int y = (int) (cy + Math.sin(a) * radius);
          gui.fill(x - 1, y - 1, x + 1, y + 1, 0xCC9AFF6A);
-      }
-   }
-
-   private static void drawCircle(GuiGraphics gui, int cx, int cy, float radius, int rgb, int alpha) {
-      int segments = 12;
-      double step = Math.PI * 2.0 / segments;
-      int color = (alpha << 24) | rgb;
-      for (int i = 0; i < segments; i++) {
-         double a1 = i * step;
-         double a2 = (i + 1) * step;
-         int x1 = (int) (cx + Math.cos(a1) * radius);
-         int y1 = (int) (cy + Math.sin(a1) * radius);
-         int x2 = (int) (cx + Math.cos(a2) * radius);
-         int y2 = (int) (cy + Math.sin(a2) * radius);
-         gui.fill(x1, y1, x2 + 1, y2 + 1, color);
       }
    }
 

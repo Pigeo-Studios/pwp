@@ -709,7 +709,7 @@ public class LobbyMod {
                 .map(Map.Entry::getKey)
                 .orElse("aas");
 
-        serverBroadcast("§e[PWP] §aРежим: §e" + modeVoteWinner.toUpperCase() + " §a— запуск матча!");
+        serverBroadcast("§e[PWP] §aРежим: §e" + modeVoteWinner.toUpperCase() + " §a— дальше голосование за фракции");
         recordResult("MODE", modeVoteWinner, counts.getOrDefault(modeVoteWinner, 0));
         broadcastLobbyState();
 

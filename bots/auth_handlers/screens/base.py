@@ -13,12 +13,21 @@ def btn(text, cb):
 def row(*btns):
     return list(btns)
 
+def back_row():
+    return [btn("⬅ Назад", NAV_BACK), btn("🏠 Главная", NAV_HOME)]
+
+def as_rows(x):
+    """Приводит клавиатуру к виду «список рядов»: InlineKeyboardMarkup -> inline_keyboard."""
+    if isinstance(x, InlineKeyboardMarkup):
+        return list(x.inline_keyboard)
+    return x
+
 def back_kb():
     return kb([row(btn("⬅ Назад", NAV_BACK), btn("🏠 Главная", NAV_HOME))])
 
 def back_cancel_kb():
-    return kb([row(btn("⬅ Назад", NAV_BACK), btn("🏠 Главная", NAV_HOME)),
-               row(btn("❌ Отмена", NAV_CANCEL))])
+    """«Назад» — в меню категории, «Отмена» — сброс в главное меню."""
+    return kb([row(btn("⬅ Назад", NAV_BACK), btn("❌ Отмена", NAV_CANCEL))])
 
 class Screen:
     """Base screen. name, parent, accepts_text are class attrs.

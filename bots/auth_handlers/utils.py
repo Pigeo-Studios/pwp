@@ -31,12 +31,6 @@ async def safe_edit_by_id(bot, chat_id, message_id, text, **kwargs):
         if "Message is not modified" not in err and "message can't be edited" not in err:
             print(f"[safe_edit_by_id] {err}")
 
-async def delete_user_message(bot, chat_id, message_id):
-    try:
-        await bot.delete_message(chat_id=chat_id, message_id=message_id)
-    except Exception:
-        pass
-
 async def typing(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     try:
         await ctx.bot.send_chat_action(update.effective_chat.id, "typing")
