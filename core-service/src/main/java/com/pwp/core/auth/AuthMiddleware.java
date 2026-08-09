@@ -100,7 +100,10 @@ public class AuthMiddleware {
         try {
             long ts = Long.parseLong(timestamp);
             long now = System.currentTimeMillis();
-            if (Math.abs(now - ts) > 30_000) {
+            // Окно 5 минут вместо 30с: подпись всё равно привязана к HMAC-секрету сессии,
+            // а жёсткое окно убивало сессии лаунчера на ПК с неточными часами
+            // (каждый запрос 401 → клиент стирал сессию → «Сессия истекла»).
+            if (Math.abs(now - ts) > 300_000) {
                 throw new UnauthorizedResponse("Access denied: expired request");
             }
         } catch (NumberFormatException e) {

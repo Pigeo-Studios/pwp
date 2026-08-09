@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.security.SecureRandom;
 
 public class PlayerRepository {
@@ -470,7 +471,9 @@ public class PlayerRepository {
                 if (rs.next()) return rs.getString("hmac_secret");
             }
         }
-        return null;
+        // Токен ротирован при refresh, чей ответ клиент мог потерять (обрыв сети) —
+        // в grace-окне отдаём прежний секрет, чтобы клиент со старыми токенами не умер.
+        return lookupGracePrevHmac(accessToken);
     }
 
     public static String findHmacSecretByRefreshToken(String refreshToken) throws SQLException {
@@ -482,7 +485,7 @@ public class PlayerRepository {
                 if (rs.next()) return rs.getString("hmac_secret");
             }
         }
-        return null;
+        return lookupGracePrevHmac(refreshToken);
     }
 
     public static String findUuidByAccessToken(String accessToken) throws SQLException {
@@ -527,6 +530,94 @@ public class PlayerRepository {
             ps.setString(5, newHmacSecret);
             ps.setString(6, refreshToken);
             return ps.executeUpdate() > 0;
+        }
+    }
+
+    // ── Grace-окно ротации токенов (против гонки «ответ refresh потерялся при обрыве сети») ──
+    // Сервер ротирует refresh_token/access_token/hmac_secret на каждый refresh. Если ответ
+    // до лаунчера не дошёл (обрыв сети ровно в этот момент), лаунчер остаётся со старыми
+    // токенами и старым секретом: middleware не находил сессию → 401 → «Сессия истекла».
+    // В течение GRACE_TTL_MS после ротации старые токены продолжают «работать»: middleware
+    // принимает их HMAC (prevHmacSecret), а refresh-хэндлер отдаёт ТЕКУЩИЕ токены (ресинк).
+    // In-memory кэш (без миграции БД); потеря при рестарте core-service приемлема (окно 2 мин).
+
+    public static final class TokenGrace {
+        public final String prevHmacSecret;
+        public final String currentAccessToken;
+        public final String currentRefreshToken;
+        public final String currentSessionKey;
+        public final String currentHmacSecret;
+        public final long rotatedAtMillis;
+
+        TokenGrace(String prevHmacSecret, String currentAccessToken, String currentRefreshToken,
+                   String currentSessionKey, String currentHmacSecret, long rotatedAtMillis) {
+            this.prevHmacSecret = prevHmacSecret;
+            this.currentAccessToken = currentAccessToken;
+            this.currentRefreshToken = currentRefreshToken;
+            this.currentSessionKey = currentSessionKey;
+            this.currentHmacSecret = currentHmacSecret;
+            this.rotatedAtMillis = rotatedAtMillis;
+        }
+    }
+
+    private static final Map<String, TokenGrace> TOKEN_GRACE = new ConcurrentHashMap<>();
+    private static final long GRACE_TTL_MS = 2 * 60 * 1000L;
+
+    /** Запомнить старые токены после ротации (старые ключи → текущие значения). */
+    public static void storeTokenGrace(String oldAccessToken, String oldRefreshToken,
+                                       String newAccessToken, String newRefreshToken,
+                                       String newSessionKey, String newHmacSecret,
+                                       String prevHmacSecret) {
+        if (oldAccessToken == null || oldRefreshToken == null) return;
+        long now = System.currentTimeMillis();
+        TokenGrace g = new TokenGrace(prevHmacSecret, newAccessToken, newRefreshToken,
+                newSessionKey, newHmacSecret, now);
+        TOKEN_GRACE.put(oldAccessToken, g);
+        TOKEN_GRACE.put(oldRefreshToken, g);
+        if (TOKEN_GRACE.size() > 2000) cleanupTokenGrace(now);
+    }
+
+    private static void cleanupTokenGrace(long now) {
+        TOKEN_GRACE.entrySet().removeIf(e -> now - e.getValue().rotatedAtMillis > GRACE_TTL_MS);
+    }
+
+    /** Секрет, которым клиент со старыми токенами подпишет запрос (или null вне окна). */
+    private static String lookupGracePrevHmac(String token) {
+        if (token == null) return null;
+        TokenGrace g = TOKEN_GRACE.get(token);
+        if (g == null) return null;
+        long now = System.currentTimeMillis();
+        if (now - g.rotatedAtMillis > GRACE_TTL_MS) {
+            TOKEN_GRACE.remove(token);
+            return null;
+        }
+        return g.prevHmacSecret;
+    }
+
+    /** Grace по refresh-токену для ресинка (потребляет запись — ресинк случился один раз). */
+    public static TokenGrace consumeRefreshTokenGrace(String refreshToken) {
+        if (refreshToken == null) return null;
+        TokenGrace g = TOKEN_GRACE.get(refreshToken);
+        if (g == null) return null;
+        if (System.currentTimeMillis() - g.rotatedAtMillis > GRACE_TTL_MS) {
+            TOKEN_GRACE.remove(refreshToken);
+            return null;
+        }
+        TOKEN_GRACE.remove(refreshToken);
+        return g;
+    }
+
+    /** Текущие (access, refresh, hmac) строки сессии по refresh-токену — ДО ротации. */
+    public static String[] findSessionTokensByRefresh(String refreshToken) throws SQLException {
+        String sql = "SELECT access_token, refresh_token, hmac_secret FROM sessions "
+                    + "WHERE refresh_token = ? AND expires_at > CURRENT_TIMESTAMP";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, refreshToken);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) return null;
+                return new String[]{rs.getString(1), rs.getString(2), rs.getString(3)};
+            }
         }
     }
 

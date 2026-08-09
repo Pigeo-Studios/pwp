@@ -409,14 +409,36 @@ public class AuthController {
             if (req.refreshToken == null) {
                 ctx.json(ApiResponse.error("refresh_token required")); return;
             }
+            // Grace-ресинк: этот refresh-токен уже был ротирован, но ответ предыдущего
+            // refresh мог потеряться у клиента (обрыв сети в момент ответа). Отдаём
+            // ТЕКУЩИЕ токены без повторной ротации — лаунчер досинхронизируется,
+            // а не получает «invalid or expired refresh token».
+            try {
+                PlayerRepository.TokenGrace grace = PlayerRepository.consumeRefreshTokenGrace(req.refreshToken);
+                if (grace != null) {
+                    ctx.json(ApiResponse.ok(Map.of(
+                        "session_key", grace.currentSessionKey,
+                        "access_token", grace.currentAccessToken,
+                        "refresh_token", grace.currentRefreshToken,
+                        "hmac_secret", grace.currentHmacSecret
+                    )));
+                    return;
+                }
+            } catch (Exception e) {
+                // Grace — необязательный слой; сбой кэша не роняет refresh.
+            }
             try {
                 String newAccess = PlayerRepository.generateTokenPart();
                 String newRefresh = PlayerRepository.generateTokenPart();
                 String newKey = PlayerRepository.generateSessionKey();
                 String newHmacSecret = generateHmacSecret();
+                String[] old = PlayerRepository.findSessionTokensByRefresh(req.refreshToken);
                 boolean ok = PlayerRepository.refreshSession(req.refreshToken, newAccess, newRefresh, newKey, newHmacSecret);
                 if (!ok) {
                     ctx.json(ApiResponse.error("invalid or expired refresh token")); return;
+                }
+                if (old != null) {
+                    PlayerRepository.storeTokenGrace(old[0], old[1], newAccess, newRefresh, newKey, newHmacSecret, old[2]);
                 }
                 ctx.json(ApiResponse.ok(Map.of(
                     "session_key", newKey,
