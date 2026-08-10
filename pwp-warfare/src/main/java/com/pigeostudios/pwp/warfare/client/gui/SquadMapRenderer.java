@@ -11,10 +11,12 @@ import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.ModKeyBindings;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,6 +44,10 @@ public class SquadMapRenderer {
     // Минимальный скейл (блоков на пиксель) для вписывания всей карты в область рендера.
     // 0 = использовать глобальный ClientData.mapScale (поведение M-меню).
     public double fitScale = 0.0;
+
+    /** Пользовательский зум деплоя: 1.0 = вписана вся карта, <1 = приближение. */
+    public double userZoom = 1.0;
+    private static final int ZOOM_BTN = 16;
 
     private double panX, panZ;
     private boolean isDraggingMap;
@@ -90,8 +96,49 @@ public class SquadMapRenderer {
         panZ = 0;
     }
 
+    /** Центрировать карту на точке (выбор спавна). */
+    public void centerOn(BlockPos pos) {
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null) return;
+        panX = pos.getX() + 0.5 - p.getX();
+        panZ = pos.getZ() + 0.5 - p.getZ();
+    }
+
     public double effectiveScale() {
-        return fitScale > 0 ? Math.max(ClientData.mapScale, fitScale) : ClientData.mapScale;
+        double base = fitScale > 0 ? Math.max(ClientData.mapScale, fitScale) : ClientData.mapScale;
+        return base * userZoom;
+    }
+
+    public void zoomIn() {
+        userZoom = Math.max(0.45, userZoom * 0.8);
+    }
+
+    public void zoomOut() {
+        userZoom = Math.min(4.0, userZoom * 1.25);
+    }
+
+    /** Кнопки [+]/[−] внизу-справа карты. */
+    public void renderZoomButtons(GuiGraphics g, int mx, int my) {
+        int bx = mapX + mapWidth - ZOOM_BTN * 2 - 8;
+        int by = mapY + mapHeight - ZOOM_BTN - 6;
+        drawZoomBtn(g, bx, by, "+", mx, my);
+        drawZoomBtn(g, bx + ZOOM_BTN + 2, by, "\u2212", mx, my);
+    }
+
+    private void drawZoomBtn(GuiGraphics g, int x, int y, String label, int mx, int my) {
+        boolean hover = mx >= x && mx <= x + ZOOM_BTN && my >= y && my <= y + ZOOM_BTN;
+        RoundedRect.fill(g, x, y, ZOOM_BTN, ZOOM_BTN, 4, hover ? 0x6612151A : 0xCC0E1117);
+        RoundedRect.border(g, x, y, ZOOM_BTN, ZOOM_BTN, 4, 1, hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
+        g.drawCenteredString(Minecraft.getInstance().font, label, x + ZOOM_BTN / 2, y + 3,
+            hover ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
+    }
+
+    public boolean handleZoomClick(double mx, double my) {
+        int bx = mapX + mapWidth - ZOOM_BTN * 2 - 8;
+        int by = mapY + mapHeight - ZOOM_BTN - 6;
+        if (mx >= bx && mx <= bx + ZOOM_BTN && my >= by && my <= by + ZOOM_BTN) { zoomIn(); return true; }
+        if (mx >= bx + ZOOM_BTN + 2 && mx <= bx + ZOOM_BTN + 2 + ZOOM_BTN && my >= by && my <= by + ZOOM_BTN) { zoomOut(); return true; }
+        return false;
     }
 
     public double getBlocksPerPixel() {
@@ -131,6 +178,7 @@ public class SquadMapRenderer {
         renderMainBases(g, cx, cz, bpp);
         renderArtilleryZones(g, cx, cz, bpp);
         renderStructures(g, cx, cz, bpp);
+        renderSpawnStatusRings(g, cx, cz, bpp);
         renderVehicles(g, cx, cz, bpp);
         renderAllPlayers(g, p, cx, cz, bpp);
         renderSquadMarkerLogic(g, cx, cz, bpp);
@@ -142,6 +190,74 @@ public class SquadMapRenderer {
         drawPreview(g, cx, cz);
 
         g.disableScissor();
+
+        renderZoomButtons(g, mx, my);
+        renderSpawnTooltip(g, mx, my, cx, cz, bpp);
+    }
+
+    /** Статус-кольца вокруг точек спавна: зелёное SAFE / жёлтое COOLDOWN / красное BLOCKED. */
+    private void renderSpawnStatusRings(GuiGraphics g, double cx, double cz, double bpp) {
+        for (DeployData.SpawnPoint sp : DeployData.spawns) {
+            float sx = (float) toScreenX(sp.pos().getX() + 0.5, cx);
+            float sy = (float) toScreenZ(sp.pos().getZ() + 0.5, cz);
+            if (!inMap((int) sx, (int) sy)) continue;
+            int color = switch (sp.status()) {
+                case SAFE, HEALTHY -> 0xAA3D7A40;
+                case COOLDOWN -> 0xAAC8812A;
+                case BLOCKED, DESTROYED -> 0xAAA53D3D;
+            };
+            drawSmoothCircle(g, sx, sy, 11f, color);
+        }
+    }
+
+    /** Тултип-карточка точки спавна под курсором: название, статус, дистанция, припасы. */
+    private void renderSpawnTooltip(GuiGraphics g, int mx, int my, double cx, double cz, double bpp) {
+        if (!isMouseOver(mx, my)) return;
+        DeployData.SpawnPoint hit = hitSpawn(mx, my, cx, cz, bpp);
+        if (hit == null) return;
+
+        var f = Minecraft.getInstance().font;
+        String line1 = hit.name() + "  (" + getKP(hit.pos().getX(), hit.pos().getZ()) + ")";
+        String line2 = spawnStatusText(hit);
+        if (hit.distance() > 0) line2 += "  \u00B7  " + hit.distance() + "м";
+        if (hit.supplies() > 0) line2 += "  \u00B7  припасы: " + hit.supplies();
+
+        int w = Math.max(f.width(line1), f.width(line2)) + 12;
+        int h = 26;
+        int tx = mx + 12, ty = my + 12;
+        if (tx + w > mapX + mapWidth - 2) tx = mapX + mapWidth - w - 2;
+        if (ty + h > mapY + mapHeight - 2) ty = mapY + mapHeight - h - 2;
+
+        RoundedRect.fill(g, tx, ty, w, h, 4, 0xE606080A);
+        RoundedRect.border(g, tx, ty, w, h, 4, 1, PWPTheme.Colors.BORDER);
+        g.drawString(f, line1, tx + 4, ty + 2, 0xFFFFFFFF, false);
+        g.drawString(f, line2, tx + 4, ty + 13, spawnStatusColor(hit), false);
+    }
+
+    private DeployData.SpawnPoint hitSpawn(double mx, double my, double cx, double cz, double bpp) {
+        for (DeployData.SpawnPoint sp : DeployData.spawns) {
+            float sx = (float) toScreenX(sp.pos().getX() + 0.5, cx);
+            float sy = (float) toScreenZ(sp.pos().getZ() + 0.5, cz);
+            if (Math.hypot(mx - sx, my - sy) <= 11) return sp;
+        }
+        return null;
+    }
+
+    private static String spawnStatusText(DeployData.SpawnPoint sp) {
+        return switch (sp.status()) {
+            case SAFE, HEALTHY -> "БЕЗОПАСНО";
+            case COOLDOWN -> "КД";
+            case BLOCKED -> "ЗАБЛОКИРОВАНО";
+            case DESTROYED -> "УНИЧТОЖЕНО";
+        };
+    }
+
+    private static int spawnStatusColor(DeployData.SpawnPoint sp) {
+        return switch (sp.status()) {
+            case SAFE, HEALTHY -> PWPTheme.Colors.SUCCESS_LIGHT;
+            case COOLDOWN -> PWPTheme.Colors.WARNING;
+            case BLOCKED, DESTROYED -> PWPTheme.Colors.DANGER;
+        };
     }
 
     private void renderMapTexture(GuiGraphics g, double cx, double cz, double bpp) {

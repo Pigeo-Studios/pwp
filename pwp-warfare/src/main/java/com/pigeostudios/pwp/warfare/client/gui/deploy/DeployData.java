@@ -26,6 +26,7 @@ public class DeployData {
         String name, String category, String description,
         boolean available, String reason,
         int inTeamCount, int maxInTeam,
+        int inSquadCount, int maxInSquad,
         List<LoadoutSlot> loadout,
         List<ItemStack> armor
     ) {}
@@ -142,12 +143,16 @@ public class DeployData {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
                 String cat = KIT_GROUP.getOrDefault(dto.name,
                     dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
+                // Серверные категории (в которые не попала KIT_GROUP) тоже переводим
+                cat = getDisplayName(cat);
                 String desc = dto.description != null ? dto.description : "";
                 List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items, dto.slotSkins);
                 List<ItemStack> armor = extractArmorFromItems(dto.items);
-                int inTeam = 0, maxTeam = -1;
                 kits.add(new KitRecord(dto.name, cat, desc, dto.available,
-                    dto.available ? "" : dto.reason, inTeam, maxTeam, loadout, armor));
+                    dto.available ? "" : dto.reason,
+                    dto.inTeamCount, dto.maxInTeam,
+                    dto.inSquadCount, dto.maxInSquad,
+                    loadout, armor));
             }
         } else {
             populateHardcoded();
@@ -173,11 +178,10 @@ public class DeployData {
             List<LoadoutSlot> loadout = List.of(
                 new LoadoutSlot("PRIMARY", List.of(rifleM4, rifleAk, rifleM16, i % 2 == 0 ? rifleAug : rifleM4), 0),
                 new LoadoutSlot("SECONDARY", List.of(pistolM9), 0),
-                new LoadoutSlot("THROWABLE", List.of(frag, smoke, i % 3 == 0 ? smokeRed : smoke), 0),
                 new LoadoutSlot("SPECIAL", List.of(bandage), 0),
-                new LoadoutSlot("BACKPACK", List.of(bag, bino), 0)
+                new LoadoutSlot("BACKPACK", List.of(frag, smoke, i % 3 == 0 ? smokeRed : smoke, bag, bino), 0)
             );
-            kits.add(new KitRecord(name, "INFANTRY", "", avail, "", 0, -1, loadout, List.of()));
+            kits.add(new KitRecord(name, "INFANTRY", "", avail, "", 0, -1, 0, -1, loadout, List.of()));
             i++;
         }
     }
@@ -186,7 +190,6 @@ public class DeployData {
         List<LoadoutSlot> slots = new ArrayList<>();
         var primary = new ArrayList<LoadoutOption>();
         var secondary = new ArrayList<LoadoutOption>();
-        var throwable = new ArrayList<LoadoutOption>();
         var special = new ArrayList<LoadoutOption>();
         var backpack = new ArrayList<LoadoutOption>();
 
@@ -198,7 +201,7 @@ public class DeployData {
             LoadoutOption opt = new LoadoutOption(id, name.isEmpty() ? stack.getItem().toString() : name, stack);
             if (i == 0) primary.add(opt);
             else if (i == 1) secondary.add(opt);
-            else if (i == 2) throwable.add(opt);
+            else if (i == 2) backpack.add(opt);
             else if (i == 3) special.add(opt);
             else {
                 String cat = getAltCategory(i, slotSkins);
@@ -206,13 +209,13 @@ public class DeployData {
                     switch (cat) {
                         case "PRIMARY" -> primary.add(opt);
                         case "SECONDARY" -> secondary.add(opt);
-                        case "THROWABLE" -> throwable.add(opt);
+                        case "THROWABLE" -> backpack.add(opt);
                         case "SPECIAL" -> special.add(opt);
                         default -> backpack.add(opt);
                     }
                 } else {
                     // Слоты 4-8 без __ALT__-метки: всегда в рюкзак.
-                    // Метки PRIMARY/SECONDARY/THROWABLE/SPECIAL задаются только слотами 0-3
+                    // Метки PRIMARY/SECONDARY/SPECIAL задаются только слотами 0-3
                     // или __ALT__-метками на слотах 41+ — эвристика isWeapon() тут не нужна
                     // (иначе ракеты/трубы в рюкзаке получали метку «СТВОЛ»)
                     backpack.add(opt);
@@ -232,7 +235,7 @@ public class DeployData {
                 switch (cat) {
                     case "PRIMARY" -> primary.add(opt);
                     case "SECONDARY" -> secondary.add(opt);
-                    case "THROWABLE" -> throwable.add(opt);
+                    case "THROWABLE" -> backpack.add(opt);
                     case "SPECIAL" -> special.add(opt);
                     default -> backpack.add(opt);
                 }
@@ -241,10 +244,12 @@ public class DeployData {
             }
         }
 
-        if (!primary.isEmpty()) slots.add(new LoadoutSlot("PRIMARY", primary, 0));
-        if (!secondary.isEmpty()) slots.add(new LoadoutSlot("SECONDARY", secondary, 0));
-        if (!throwable.isEmpty()) slots.add(new LoadoutSlot("THROWABLE", throwable, 0));
-        if (!special.isEmpty()) slots.add(new LoadoutSlot("SPECIAL", special, 0));
+        // Слоты добавляются ВСЕГДА (пустая вторичка/спец = «—»), чтобы парная карточка
+        // и ховеры не разваливались на пустых опциях.
+        LoadoutOption empty = new LoadoutOption("empty", "—", ItemStack.EMPTY);
+        slots.add(new LoadoutSlot("PRIMARY", primary.isEmpty() ? List.of(empty) : primary, 0));
+        slots.add(new LoadoutSlot("SECONDARY", secondary.isEmpty() ? List.of(empty) : secondary, 0));
+        slots.add(new LoadoutSlot("SPECIAL", special.isEmpty() ? List.of(empty) : special, 0));
         if (!backpack.isEmpty()) slots.add(new LoadoutSlot("BACKPACK", backpack, 0));
         return slots;
     }

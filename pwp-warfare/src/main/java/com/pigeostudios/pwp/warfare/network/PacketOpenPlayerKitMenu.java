@@ -28,7 +28,7 @@ public class PacketOpenPlayerKitMenu {
    }
 
      public static void encode(PacketOpenPlayerKitMenu msg, FriendlyByteBuf buf) {
-        buf.writeByte(3);
+        buf.writeByte(4);
         buf.writeInt(msg.kits.size());
 
        for (PacketOpenPlayerKitMenu.KitDTO k : msg.kits) {
@@ -38,6 +38,11 @@ public class PacketOpenPlayerKitMenu {
           buf.writeBoolean(k.available);
           buf.writeUtf(k.reason);
           buf.writeBoolean(k.isSelected);
+          // Счётчики лимитов ролей (v4): в команде и в отряде
+          buf.writeInt(k.inTeamCount);
+          buf.writeInt(k.maxInTeam);
+          buf.writeInt(k.inSquadCount);
+          buf.writeInt(k.maxInSquad);
           buf.writeInt(k.items.size());
 
           for (ItemStack stack : k.items) {
@@ -71,17 +76,25 @@ public class PacketOpenPlayerKitMenu {
           String name = buf.readUtf();
           String category = version >= 2 ? buf.readUtf() : "INFANTRY";
           String description = version >= 2 ? buf.readUtf() : "";
-          boolean avail = buf.readBoolean();
-          String reason = buf.readUtf();
-          boolean isSelected = buf.readBoolean();
-          int itemCount = buf.readInt();
-          List<ItemStack> items = new ArrayList<>();
+boolean avail = buf.readBoolean();
+           String reason = buf.readUtf();
+           boolean isSelected = buf.readBoolean();
+           int inTeam = version >= 4 ? buf.readInt() : 0;
+           int maxTeam = version >= 4 ? buf.readInt() : -1;
+           int inSquad = version >= 4 ? buf.readInt() : 0;
+           int maxSquad = version >= 4 ? buf.readInt() : -1;
+           int itemCount = buf.readInt();
+           List<ItemStack> items = new ArrayList<>();
 
-          for (int j = 0; j < itemCount; j++) {
-             items.add(buf.readItem());
-          }
+           for (int j = 0; j < itemCount; j++) {
+              items.add(buf.readItem());
+           }
 
-          PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(name, category, description, avail, reason, isSelected, items);
+           PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(name, category, description, avail, reason, isSelected, items);
+           dto.inTeamCount = inTeam;
+           dto.maxInTeam = maxTeam;
+           dto.inSquadCount = inSquad;
+           dto.maxInSquad = maxSquad;
           // slotSkins
           int ssSize = buf.readInt();
           for (int j = 0; j < ssSize; j++) {
@@ -122,6 +135,14 @@ public class PacketOpenPlayerKitMenu {
         public boolean isSelected;
         public List<ItemStack> items;
         public Map<Integer, List<String>> slotSkins = new HashMap<>();
+        /** Сколько игроков команды уже используют эту роль (для бейджа x/y). */
+        public int inTeamCount;
+        /** Лимит роли на команду (0 = нет лимита). */
+        public int maxInTeam;
+        /** Сколько игроков отряда уже использует роль. */
+        public int inSquadCount;
+        /** Лимит роли на отряд (0 = нет лимита). */
+        public int maxInSquad;
 
         public KitDTO(String n, String cat, String desc, boolean a, String r, boolean sel, List<ItemStack> items) {
            this.name = n;

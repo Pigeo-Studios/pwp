@@ -3,18 +3,41 @@ package com.pigeostudios.pwp.warfare.client.gui.deploy;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 import java.util.*;
 
+/**
+ * Squad-стиль: каждая категория — заголовок + горизонтальные ряды иконок.
+ * Иконки не меньше 22px; если ряд не помещается — перенос на следующий.
+ * Высота бокса = ровно по контенту (заголовки + ряды). Sticky hover:
+ * {@link #hoveredKit} живёт, пока не наведён другой кит.
+ *
+ * <p>Ховер по ВСЕМ ролям (включая недоступные) — превью лоадаута перестраивается.
+ * Клик по недоступной ничего не выбирает. На иконках НИЧЕГО не пишется.
+ * Тултип роли рисуется ОТДЕЛЬНО (последним слоем экрана) — методом
+ * {@link #renderTooltip(gui)}.</p>
+ */
 public class RoleGrid {
 
-    public int scrollOff;
+    private static final int HEADER_H = 13;
+    private static final int ICON_SIZE = 28;
+    private static final int MIN_CELL = 22;
+    private static final int GAP = 4;
+    private static final Set<String> missingIcons = new HashSet<>();
+
     public String hoveredKit;
-    public int hoveredCellX, hoveredCellY, hoveredCellSize, popupGridX, popupGridY, popupGridW;
-    private String tooltipText;
-    private int tooltipX, tooltipY, tooltipW;
+    private int scrollOff;
+    private int scrollMax;
+
+    // Роль под курсором в последнем render() — для тултипа на верхнем слое
+    private DeployData.KitRecord tipKit;
+    private int tipX, tipY, tipCell;
+
     private Map<String, List<DeployData.KitRecord>> cachedCats;
     private int cacheVersion = -1;
 
@@ -28,141 +51,189 @@ public class RoleGrid {
         return cachedCats;
     }
 
-    public void render(GuiGraphics gui, int x, int y, int w, int h, int mx, int my, String selectedKit) {
-        var f = PWPTheme.Fonts.display();
-        int cols = 4, gap = 2;
-        int cell = Math.min(42, Math.max(32, (w - (cols - 1) * gap) / cols));
-        int iconS = cell - 12;
+    /** Сколько иконок в ряду: адаптивно по ширине, минимум MIN_CELL на иконку. */
+    private static int countPerRow(int count, int w) {
+        int maxPerRow = Math.max(1, (w - 8 + GAP) / (MIN_CELL + GAP));
+        return Math.min(count, maxPerRow);
+    }
 
-        popupGridX = x; popupGridY = y; popupGridW = w;
+    /** Размер иконки: подогнать под perRow в ширину w, максимум ICON_SIZE, минимум MIN_CELL. */
+    private static int cellSize(int w, int perRow) {
+        return Math.max(MIN_CELL, Math.min(ICON_SIZE, (w - 8 - (perRow - 1) * GAP) / perRow));
+    }
 
-        int totalH = 0;
-        var cats = getCategories();
-        for (var e : cats.entrySet()) {
-            var list = e.getValue();
-            int rows = (list.size() + cols - 1) / cols;
-            totalH += 12 + rows * (cell + gap) + 4;
+    /** Полная высота контента без учёта обрезки (для расчёта бокса ролей в DeployScreen). */
+    public int contentHeight(int w) {
+        int h = 0;
+        for (var e : getCategories().entrySet()) {
+            int n = e.getValue().size();
+            int pr = countPerRow(n, w);
+            int rows = (n + pr - 1) / pr;
+            h += HEADER_H + GAP;
+            h += rows * (MIN_CELL + GAP) - GAP;
         }
-        int maxScroll = Math.max(0, totalH - h);
-        if (scrollOff > maxScroll) scrollOff = maxScroll;
-        if (scrollOff < 0) scrollOff = 0;
+        return h;
+    }
 
-        gui.enableScissor(x, y, x + w, y + h);
+    public boolean isHovered(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx <= x + w && my >= y && my <= y + h;
+    }
 
-        hoveredKit = null;
-        tooltipText = null;
+    public void render(GuiGraphics gui, int x, int y, int w, int maxH, int mx, int my, String selectedKit) {
+        var f = PWPTheme.Fonts.display();
+        int totalH = contentHeight(w);
+        scrollMax = Math.max(0, totalH - maxH);
+        scrollOff = Mth.clamp(scrollOff, 0, scrollMax);
+
+        gui.enableScissor(x, y, x + w, y + maxH);
         int cy = y - scrollOff;
-        for (var e : cats.entrySet()) {
-            var list = e.getValue();
-            int rows = (list.size() + cols - 1) / cols;
-            if (cy + 12 + rows * (cell + gap) + 4 >= y && cy < y + h) {
-                gui.drawString(f, DeployData.getDisplayName(e.getKey()), x, cy, PWPTheme.Colors.TEXT_ACCENT, false);
-            }
-            cy += 12;
+        boolean anyHover = false;
 
-            for (int r = 0; r < rows; r++)
-                for (int c = 0; c < cols; c++) {
-                    int idx = r * cols + c;
-                    if (idx >= list.size()) break;
-                    int cx2 = x + c * (cell + gap), cy2 = cy + r * (cell + gap);
-                    if (cy2 + cell >= y && cy2 < y + h) {
-                        boolean hovered = mx >= cx2 && mx <= cx2 + cell && my >= cy2 && my <= cy2 + cell;
-                        if (hovered) {
-                            hoveredKit = list.get(idx).name();
-                            hoveredCellX = cx2; hoveredCellY = cy2; hoveredCellSize = cell;
+        for (var e : getCategories().entrySet()) {
+            String catName = e.getKey();
+            List<DeployData.KitRecord> list = e.getValue();
+            int pr = countPerRow(list.size(), w);
+            int cell = cellSize(w, pr);
+            int rows = (list.size() + pr - 1) / pr;
+
+            if (cy + HEADER_H > y && cy < y + maxH) {
+                gui.fill(x, cy, x + w, cy + HEADER_H, 0x1412181A);
+                gui.drawString(f, DeployData.getDisplayName(catName), x + 4, cy + 2,
+                    PWPTheme.Colors.TEXT_ACCENT, false);
+            }
+            cy += HEADER_H + GAP;
+
+            for (int r = 0; r < rows; r++) {
+                int rowY = cy + r * (cell + GAP);
+                if (rowY + cell > y && rowY < y + maxH) {
+                    for (int ci = 0; ci < pr; ci++) {
+                        int idx = r * pr + ci;
+                        if (idx >= list.size()) break;
+                        DeployData.KitRecord kit = list.get(idx);
+                        int cx = x + 4 + ci * (cell + GAP);
+                        boolean sel = selectedKit.equals(kit.name());
+                        boolean hover = mx >= cx && mx <= cx + cell && my >= rowY && my <= rowY + cell;
+                        // Ховер по ВСЕМ ролям (недоступные тоже перестраивают превью лоадаута)
+                        if (hover) { anyHover = true; hoveredKit = kit.name(); }
+                        if (hover) { tipKit = kit; tipX = cx; tipY = rowY; tipCell = cell; }
+
+                        int bg = sel ? 0x44C8812A : (hover ? 0x2212151A : 0);
+                        if (bg != 0) RoundedRect.fill(gui, cx, rowY, cell, cell, 4, bg);
+                        // Чёткая обводка выбранной роли (авто-скролла нет — только маркер)
+                        if (sel) RoundedRect.border(gui, cx, rowY, cell, cell, 4, 2, PWPTheme.Colors.ACCENT);
+
+                        int iconSize = Math.max(12, cell - 6);
+                        int iconX = cx + (cell - iconSize) / 2;
+                        int iconY = rowY + (cell - iconSize) / 2 - 1;
+                        RenderSystem.enableBlend();
+                        if (!kit.available()) RenderSystem.setShaderColor(0.45f, 0.45f, 0.45f, 1f);
+                        String iconName = DeployData.kitIconFileName(kit.name());
+                        if (!missingIcons.contains(iconName)) {
+                            ResourceLocation ic = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconName + ".png");
+                            if (Minecraft.getInstance().getResourceManager().getResource(ic).isPresent()) {
+                                gui.blit(ic, iconX, iconY, 0, 0, iconSize, iconSize, iconSize, iconSize);
+                            } else {
+                                missingIcons.add(iconName);
+                                drawIconFallback(gui, f, kit, cx, rowY, cell);
+                            }
+                        } else {
+                            drawIconFallback(gui, f, kit, cx, rowY, cell);
                         }
-                        renderCell(gui, cx2, cy2, cell, iconS, list.get(idx), selectedKit, hovered);
+                        RenderSystem.setShaderColor(1, 1, 1, 1);
                     }
                 }
-            cy += rows * (cell + gap) + 4;
-        }
-
-        gui.disableScissor();
-
-        if (tooltipText != null) {
-            int tx = Math.max(x, tooltipX);
-            int tw = tooltipW;
-            if (tx + tw > x + w) tx = x + w - tw;
-            if (tooltipY + 14 > y + h) {
-                tooltipY = Math.max(y, hoveredCellY - 14 - 2);
             }
-            gui.fill(tx, tooltipY, tx + tw, tooltipY + 14, 0xDD000000);
-            gui.drawString(f, tooltipText, tx + 4, tooltipY + 3, PWPTheme.Colors.DANGER, false);
-        }
+            cy += rows * (cell + GAP) - GAP;
 
-        if (hoveredKit != null) {
+            // Причина недоступности выбранной роли — справа от заголовка
+            for (DeployData.KitRecord kit : list) {
+                if (selectedKit.equals(kit.name()) && !kit.available()) {
+                    String reason = kit.reason() != null && !kit.reason().isEmpty() ? kit.reason() : "НЕДОСТУПНО";
+                    gui.drawString(f, reason, x + w - f.width(reason) - 6, y + 2,
+                        PWPTheme.Colors.DANGER, false);
+                }
+            }
         }
+        gui.disableScissor();
+        // Тултип живёт только пока курсор НАД иконкой: ушёл — тултип гаснет
+        // (иначе «висел» вечно и вылезал на других вкладках)
+        if (!anyHover) tipKit = null;
     }
 
-    private void renderCell(GuiGraphics gui, int x, int y, int size, int iconS,
-                            DeployData.KitRecord kit, String sel, boolean hovered) {
-        boolean selected = sel.equals(kit.name());
-        boolean avail = kit.available();
+    /** Короткий тултип роли — вызывается ПОСЛЕДНИМ слоем в DeployScreen.render(). */
+    public void renderTooltip(GuiGraphics gui) {
+        if (tipKit == null) return;
         var f = PWPTheme.Fonts.display();
+        DeployData.KitRecord kit = tipKit;
+        int cx = tipX, cy = tipY, cell = tipCell;
 
-        int bg = selected ? 0x44C8812A : (hovered && avail ? PWPTheme.Colors.SURFACE_LIGHT :
-            (avail ? PWPTheme.Colors.SURFACE : 0xFF181818));
-        int bd = selected ? PWPTheme.Colors.ACCENT : (hovered && avail ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
-        RoundedRect.fill(gui, x, y, size, size, 4, bg);
-        RoundedRect.border(gui, x, y, size, size, 4, 1, bd);
+        List<String> lines = new ArrayList<>();
+        lines.add(DeployData.getDisplayName(kit.name()));
+        if (kit.available()) lines.add("ДОСТУПНО");
+        else lines.add(kit.reason() != null && !kit.reason().isEmpty() ? kit.reason() : "НЕДОСТУПНО");
 
-        String iconName = DeployData.kitIconFileName(kit.name());
-        RenderSystem.enableBlend();
-        if (!avail) RenderSystem.setShaderColor(0.45f, 0.45f, 0.45f, 1f);
-        int ix = x + (size - iconS) / 2, iy = y + (size - iconS) / 2 - 2;
-        try {
-            ResourceLocation ic = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + iconName + ".png");
-            gui.blit(ic, ix, iy, 0, 0, iconS, iconS, iconS, iconS);
-        } catch (Exception e) {
-            String dn = DeployData.getDisplayName(kit.name());
-            String letter = dn.isEmpty() ? "?" : dn.substring(0, 1);
-            gui.drawCenteredString(f, letter, x + size / 2, iy + 2, PWPTheme.Colors.TEXT_PRIMARY);
-        }
-        RenderSystem.setShaderColor(1, 1, 1, 1);
+        int w = 0;
+        for (String ln : lines) w = Math.max(w, f.width(ln) + 16);
+        int h = lines.size() * 10 + 7;
 
-        if (kit.maxInTeam() > 0) {
-            String cnt = kit.inTeamCount() + "/" + kit.maxInTeam();
-            int cc = kit.inTeamCount() >= kit.maxInTeam() ? PWPTheme.Colors.DANGER : PWPTheme.Colors.TEXT_SECONDARY;
-            gui.drawCenteredString(f, cnt, x + size / 2, y + size - 8, cc);
-        }
+        int tx = cx + cell + 3;
+        int ty = cy + cell + 3;
+        int gw = gui.guiWidth(), gh = gui.guiHeight();
+        if (tx + w > gw - 2) tx = Math.max(2, cx - w - 3);
+        if (ty + h > gh - 2) ty = Math.max(2, cy - h - 3);
 
-        if (hovered && !avail && !kit.reason().isEmpty()) {
-            tooltipText = kit.reason();
-            int rw = f.width(tooltipText) + 10;
-            tooltipX = x + (size - rw) / 2;
-            tooltipY = y + size + 2;
-            tooltipW = rw;
+        gui.fill(tx, ty, tx + w, ty + h, 0xE60E1117);
+        gui.renderOutline(tx, ty, w, h, PWPTheme.Colors.BORDER);
+        int ly = ty + 4;
+        for (int i = 0; i < lines.size(); i++) {
+            String ln = lines.get(i);
+            int col = i == 0 ? PWPTheme.Colors.TEXT_ACCENT
+                : (kit.available() ? PWPTheme.Colors.SUCCESS : PWPTheme.Colors.DANGER);
+            gui.drawString(f, ln, tx + 4, ly, col, false);
+            ly += 10;
         }
     }
 
-    private void renderPopup(GuiGraphics gui, int mx, int my, String selectedKit) {
-    }
-
-    public String mouseClicked(double mx, double my, int btn, int x, int y, int w, int h) {
+    public String mouseClicked(double mx, double my, int btn, int x, int y, int w, int maxH) {
         if (btn != 0) return null;
-        int cols = 4, gap = 2;
-        int cell = Math.min(42, Math.max(32, (w - (cols - 1) * gap) / cols));
-
-        var cats = getCategories();
         int cy = y - scrollOff;
-        for (var e : cats.entrySet()) {
-            var list = e.getValue();
-            int rows = (list.size() + cols - 1) / cols;
-            cy += 12;
-            for (int r = 0; r < rows; r++)
-                for (int c = 0; c < cols; c++) {
-                    int idx = r * cols + c;
+        for (var c : getCategories().entrySet()) {
+            var list = c.getValue();
+            int pr = countPerRow(list.size(), w);
+            int cell = cellSize(w, pr);
+            int rows = (list.size() + pr - 1) / pr;
+            cy += HEADER_H + GAP;
+            for (int r = 0; r < rows; r++) {
+                int rowY = cy + r * (cell + GAP);
+                for (int ci = 0; ci < pr; ci++) {
+                    int idx = r * pr + ci;
                     if (idx >= list.size()) break;
-                    int cx2 = x + c * (cell + gap), cy2 = cy + r * (cell + gap);
-                    if (cy2 < y || cy2 + cell > y + h) continue;
-                    if (mx >= cx2 && mx <= cx2 + cell && my >= cy2 && my <= cy2 + cell) {
-                        var kit = list.get(idx);
-                        if (kit.available()) { DeployData.expandedSlots.clear(); return kit.name(); }
-                        return "";
+                    DeployData.KitRecord kit = list.get(idx);
+                    int cx = x + 4 + ci * (cell + GAP);
+                    if (mx >= cx && mx <= cx + cell && my >= rowY && my <= rowY + cell) {
+                        // Клик по недоступной роли — ничего не выбираем (только ховер-превью)
+                        if (!kit.available()) return "";
+                        DeployData.expandedSlots.clear();
+                        hoveredKit = kit.name();
+                        return kit.name();
                     }
                 }
-            cy += rows * (cell + gap) + 4;
+            }
+            cy += rows * (cell + GAP) - GAP;
         }
         return null;
+    }
+
+    public boolean mouseScrolled(double mx, double my, double delta, int x, int y, int w, int maxH) {
+        if (!isHovered(mx, my, x, y, w, maxH)) return false;
+        scrollOff = Mth.clamp(scrollOff - (int) delta * 16, 0, scrollMax);
+        return true;
+    }
+
+    private void drawIconFallback(GuiGraphics gui, Font f, DeployData.KitRecord kit, int cx, int cy, int cell) {
+        String name = DeployData.getDisplayName(kit.name());
+        String letter = name.isEmpty() ? "?" : name.substring(0, 1);
+        gui.drawCenteredString(f, letter, cx + cell / 2, cy + cell / 2 - 3,
+            kit.available() ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM);
     }
 }

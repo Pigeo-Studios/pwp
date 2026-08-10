@@ -150,19 +150,35 @@ public class DeployScreen extends Screen {
     private static final int TAB_H = 22, TOP_H = 34, BOT_H = 36;
     private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
 
-    private int sqW() { return width * 22 / 100; }
-    private int roW() { return width * 34 / 100; }
-    private int loW() { return width * 24 / 100; }
-    private int poW() { return width - sqW() - roW() - loW(); }
+    // Squad-раскладка: отряды 20% | роли+спавны+чат 30% | карта/лоадаут 50%
+    private int sqW() { return width * 20 / 100; }
+    private int midW() { return width * 30 / 100; }
+    private int dynX() { return sqW() + midW(); }
+    private int dynW() { return width - dynX(); }
     private int conT() { return TOP_H + TAB_H; }
     private int conH() { return height - conT() - BOT_H; }
+
+    /**
+     * Карта ⇄ лоадаут — ЕДИНАЯ логика пиннинга (клик-пин переживает ховер-превью):
+     * <pre>
+     * вход в меню                  → карта
+     * ховер зоны ролей             → лоадаут-превью (без пин)
+     * клик в зоне ролей            → ЛОУДАУТ ПИН (держится)
+     * ховер зоны спавн-бокса       → карта-превью  (без пин)
+     * клик в зоне спавн-бокса      → КАРТА ПИН (держится)
+     * мышь вне зон                 → последний клик-пин
+     * </pre>
+     */
+    private boolean kitPinned;   // пин «лоадаут» кликом в зоне ролей
+    private boolean roleUI;      // текущий режим правой панели (карта/лоадаут)
+    private float roleFade;
 
     private final SquadMapRenderer rightMapRenderer = new SquadMapRenderer();
     private final SquadContextMenu mapCtx = new SquadContextMenu();
     private final RoleGrid   roles    = new RoleGrid();
     private final SpawnPanel spawns   = new SpawnPanel();
     private final LoadoutPanel loadout = new LoadoutPanel();
-    private final PortraitRenderer portrait = new PortraitRenderer();
+    private final WeaponTooltipRenderer weaponTooltip = new WeaponTooltipRenderer();
     private final PWPContextMenu contextMenu = new PWPContextMenu();
 
     private PWPButton selectSpawnBtn, createSquadBtn, applyCmdBtn;
@@ -254,14 +270,21 @@ public class DeployScreen extends Screen {
         }
         lastSquadCount = ClientData.clientSquads.size();
 
-        String pen = p.getPersistentData().getString("WARFARE_PendingKit");
-        String cur = p.getPersistentData().getString("WARFARE_CurrentKit");
-        if (!pen.isEmpty()) selectedKit = pen;
-        else if (!cur.isEmpty()) selectedKit = cur;
-        // Fallback: use isSelected from server data
-        if (selectedKit.equals("Rifleman")) {
+        // Выбранный кит: серверный isSelected из DTO → ClientData.myCurrentKit → первый доступный
+        for (var dto : ClientData.availableKits) {
+            if (dto.isSelected) { selectedKit = dto.name; break; }
+        }
+        if (selectedKit.equals("Rifleman") && !ClientData.myCurrentKit.equals("Unassigned")) {
+            selectedKit = ClientData.myCurrentKit;
+        }
+        if (selectedKit.equals("Rifleman") && !ClientData.availableKits.isEmpty()) {
             for (var dto : ClientData.availableKits) {
-                if (dto.isSelected) { selectedKit = dto.name; break; }
+                if (dto.available) { selectedKit = dto.name; break; }
+            }
+        }
+        if (selectedKit.equals("Rifleman")) {
+            for (var kr : DeployData.kits) {
+                if (kr.available()) { selectedKit = kr.name(); break; }
             }
         }
     }
@@ -269,8 +292,9 @@ public class DeployScreen extends Screen {
     @Override
     protected void init() {
         clearWidgets();
-        selectSpawnBtn = addRenderableWidget(new PWPButton(width - 152, height - BOT_H + 6, 140, 24,
-            Component.literal("ВОЗРОДИТЬСЯ"), b -> doDeploy(), PWPButton.Style.ACCENT));
+        SquadUIHelper.setWidth(sqW() - 8);
+        selectSpawnBtn = addRenderableWidget(new PWPButton(width - 198, height - BOT_H + 6, 190, 24,
+            Component.literal("DEPLOY"), b -> doDeploy(), PWPButton.Style.ACCENT));
         squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 90, 16, Component.literal("")));
         squadInput.setMaxLength(12);
         squadInput.setVisible(false);
@@ -293,12 +317,174 @@ public class DeployScreen extends Screen {
         mapNeedsInit = true;
     }
 
+    private long lastFrameMs;
+
+    // ── Динамическая панель: карта ──
+    private void renderDeployMap(GuiGraphics gui, int mx, int my, float pt, int conY, int ch, Font f) {
+        if (mapNeedsInit) initRightMap();
+        rightMapRenderer.tickAnim();
+        rightMapRenderer.render(gui, mx, my, pt);
+        mapCtx.render(gui, mx, my);
+
+        // Чип выбранной точки — сверху-справа карты
+        var sp = selectedSpawnPoint();
+        if (sp != null) {
+            String label = sp.name() + " \u00B7 " + spawnStatusText(sp);
+            int tw = f.width(label) + 10;
+            int cx = rightMapRenderer.mapX + rightMapRenderer.mapWidth - tw - 4;
+            int cy = rightMapRenderer.mapY + 2;
+            gui.fill(cx, cy, cx + tw, cy + 14, 0xAA06080A);
+            gui.drawString(f, label, cx + 4, cy + 3, spawnStatusColor(sp), false);
+        }
+        if (pathActive)
+            gui.drawString(f, "LMB / Enter: place | ESC: cancel",
+                rightMapRenderer.mapX + 8, rightMapRenderer.mapY + 16, 0x44FF44, true);
+    }
+
+    // ── Динамическая панель: лоадаут (fade+slide поверх вуали) ──
+    private void renderDeployLoadout(GuiGraphics gui, int mx, int my, int conY, int ch, float fadeV) {
+        int rx = dynX(), rw = dynW();
+        // Непрозрачный фон лоадаута (сам лоаут внутренне сбрасывает alpha, рисуем фон цельн)
+        float a = Math.min(1f, fadeV * 1.15f);
+        int bg = ((int) (a * 255f) << 24) | 0x000E1117;
+        gui.fill(rx, conY, rx + rw, conY + ch, bg);
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(1f, 1f, 1f, Math.min(1f, fadeV * 1.15f));
+        gui.pose().pushPose();
+        gui.pose().translate((1f - fadeV) * 10f, 0, 0);
+        loadout.render(gui, rx + 4, conY + 2, rw - 8, ch - 4, mx, my, roles.hoveredKit != null ? roles.hoveredKit : selectedKit);
+        gui.pose().popPose();
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.disableBlend();
+    }
+
+    /**
+     * Единый прямоугольник чата средней колонки. Чат ПРИжат к НИЗУ колонки:
+     * высота = весь остаток после ролей + спавн-бокса + раскрытого списка +
+     * отдельной полоски-кнопки (без жёсткого капа 150 — дыры внизу нет),
+     * мягкий предел ~45% колонки, минимум 24px. Открытый список спавна
+     * сжимает чат снизу же.
+     */
+    private int[] chatRect(int conY, int ch, int roleH, int spawnBlockH) {
+        int openH = spawns.openListHeight();
+        int stripH = spawns.buttonStripHeight();
+        int rest = ch - 6 - roleH - spawnBlockH - openH - stripH;
+        int maxChat = Math.max(24, ch * 45 / 100);
+        int h = Math.max(0, Math.min(maxChat, rest));
+        int top = conY + ch - 2 - h;
+        return new int[]{top, h};
+    }
+
+    // ── Чат внизу средней колонки: новые сообщения ВНИЗУ, скролл колесом ──
+    // menuChatHistory ПРЕПЕНДИТСЯ (add(0)): индекс 0 = самое новое.
+    // chatScroll = сколько последних сообщений прокручено колесом (0 = прижат к новым).
+    private int chatScroll;
+
+    private static int chatViewLines(int h) {
+        return Math.max(1, (h - 22) / 10);
+    }
+
+    private void renderDeployChat(GuiGraphics gui, int x, int y, int w, int h, int mx, int my) {
+        var f = PWPTheme.Fonts.display();
+        if (h <= 24) {
+            chatInput.setVisible(false);
+            return;
+        }
+        RoundedRect.fill(gui, x, y, w, h, 4, 0xE60E1117);
+        RoundedRect.border(gui, x, y, w, h, 4, 1, PWPTheme.Colors.BORDER);
+
+        int inputH = 14;
+        int inputY = y + h - inputH - 2;
+
+        int viewLines = chatViewLines(h);
+        int size = ClientData.menuChatHistory.size();
+        int maxScroll = Math.max(0, size - viewLines);
+        // Прилипание к низу: если игрок был у новых сообщений, новые видны сразу
+        boolean atBottom = chatScroll == 0;
+        chatScroll = Math.max(0, Math.min(chatScroll, maxScroll));
+        if (atBottom || size <= viewLines) chatScroll = 0;
+
+        gui.enableScissor(x + 2, y + 2, x + w - 2, inputY - 2);
+        int ly = inputY - 2 - 10;
+        int from = Math.min(chatScroll, Math.max(0, size - 1));
+        int to = Math.min(size, from + viewLines);
+        for (int ci = from; ci < to && ly >= y + 2; ci++) {
+            var msg = ClientData.menuChatHistory.get(ci);
+            String t = msg.getString();
+            int col = msg.getStyle().getColor() != null ? msg.getStyle().getColor().getValue() : PWPTheme.Colors.TEXT_SECONDARY;
+            if (f.width(t) > w - 12) t = f.plainSubstrByWidth(t, w - 16) + "\u2026";
+            gui.drawString(f, t, x + 4, ly, col, false);
+            ly -= 10;
+        }
+        gui.disableScissor();
+
+        int chBoxW = f.width("SQD") + 8;
+        int chBoxCol = chatChannel.equals("ALL") ? PWPTheme.Colors.TEXT_DIM
+            : (chatChannel.equals("TEAM") ? PWPTheme.Colors.INFO : PWPTheme.Colors.SUCCESS);
+        boolean chBoxHover = mx >= x + 4 && mx <= x + 4 + chBoxW
+            && my >= inputY - 1 && my <= inputY + inputH - 1;
+        gui.fill(x + 4, inputY - 1, x + 4 + chBoxW, inputY + inputH - 1,
+            chBoxHover ? 0x44FFFFFF : 0x2212151A);
+        gui.renderOutline(x + 4, inputY - 1, chBoxW, inputH, chBoxCol);
+        gui.drawString(f, chatChannel, x + 6, inputY + 1, chBoxCol, false);
+
+        chatInput.setX(x + 6 + chBoxW); chatInput.setY(inputY);
+        chatInput.setWidth(w - 10 - chBoxW); chatInput.setVisible(true);
+    }
+
+    // ── Нижняя полоса: точка слева, таймер, DEPLOY справа ──
+    private void renderDeployBottomBar(GuiGraphics gui, Font f) {
+        int bbY = height - BOT_H + 2;
+        var sp = selectedSpawnPoint();
+        String left;
+        int lc;
+        if (sp == null) {
+            left = "ТОЧКА НЕ ВЫБРАНА";
+            lc = PWPTheme.Colors.TEXT_DIM;
+        } else {
+            left = sp.name() + " (" + SquadMapRenderer.getKP(sp.pos().getX(), sp.pos().getZ())
+                + ") \u00B7 " + spawnStatusText(sp);
+            lc = spawnStatusColor(sp);
+        }
+        gui.drawString(f, left, 8, bbY + 10, lc, false);
+
+        long dt = ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
+        int el = (int)((System.currentTimeMillis() - dt) / 1000);
+        int sec = Math.max(0, DeployData.deployTimer - el);
+        String ts = sec > 0 ? "RESPAWN IN " + String.format("%02d:%02d", sec / 60, sec % 60)
+            : (selectedSpawn.isEmpty() ? "ВЫБЕРИТЕ ТОЧКУ" : "ГОТОВ");
+        gui.drawCenteredString(f, ts, width / 2, bbY + 10,
+            sec > 0 ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_ACCENT);
+    }
+
+    private DeployData.SpawnPoint selectedSpawnPoint() {
+        for (DeployData.SpawnPoint sp : DeployData.spawns)
+            if (sp.id().equals(selectedSpawn)) return sp;
+        return null;
+    }
+
+    private static String spawnStatusText(DeployData.SpawnPoint sp) {
+        return switch (sp.status()) {
+            case SAFE, HEALTHY -> "БЕЗОПАСНО";
+            case COOLDOWN -> "КД";
+            case BLOCKED -> "ЗАБЛОКИРОВАНО";
+            case DESTROYED -> "УНИЧТОЖЕНО";
+        };
+    }
+
+    private static int spawnStatusColor(DeployData.SpawnPoint sp) {
+        return switch (sp.status()) {
+            case SAFE, HEALTHY -> PWPTheme.Colors.SUCCESS_LIGHT;
+            case COOLDOWN -> PWPTheme.Colors.WARNING;
+            case BLOCKED, DESTROYED -> PWPTheme.Colors.DANGER;
+        };
+    }
+
     private void initRightMap() {
-        int loadoutX = sqW() + roW();
-        int mapW = width - loadoutX;
-        int mapH = conH();
-        int sz = Math.min(mapW, mapH);
-        rightMapRenderer.init(loadoutX, conT(), sz, sz);
+        int dx = dynX(), dw = dynW();
+        int sz = Math.min(dw, conH());
+        int mx = dx + (dw - sz) / 2;
+        rightMapRenderer.init(mx, conT(), sz, sz);
         // Вписываем всю карту в квадрат, чтобы деплой показывал ту же карту, что и M-меню
         rightMapRenderer.fitScale = ClientData.mapSizeBlocks / (double) Math.max(1, sz);
         rightMapRenderer.centerOnPlayer();
@@ -320,6 +506,8 @@ public class DeployScreen extends Screen {
         }
         if (ClientData.clientSquads.size() != lastSquadCount) {
             populateData();
+            int viewH = Math.max(1, conH() - 40 - (SquadUIHelper.isApplyCmdVisible() ? 22 : 0));
+            SquadUIHelper.autoRevealMySquad(viewH);
         }
         // Периодический тихий рефреш китов, чтобы лимиты ролей и доступность обновлялись вживую
         long now = System.currentTimeMillis();
@@ -341,25 +529,22 @@ public class DeployScreen extends Screen {
         long dt = ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
         int el = (int)((System.currentTimeMillis() - dt) / 1000);
         int s = Math.max(0, DeployData.deployTimer - el);
-        if (s > 0) {
-            selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("ЖДАТЬ " + String.format("%02d:%02d", s/60, s%60)));
-        } else if (selectedSpawn.isEmpty()) {
-            selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("ВЫБРАТЬ ТОЧКУ"));
-        } else {
-            selectSpawnBtn.active = true;
-            selectSpawnBtn.setMessage(Component.literal("ВОЗРОДИТЬСЯ"));
-        }
+        selectSpawnBtn.setMessage(Component.literal("DEPLOY"));
+        selectSpawnBtn.active = s <= 0 && !selectedSpawn.isEmpty();
     }
 
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
-        int lw = sqW(), cw = roW(), lx = loW(), pw = poW();
-        int loadoutX = lw + cw, portraitX = lw + cw + lx;
+        int lw = sqW(), mw = midW();
+        int midX = lw + 4, midW2 = mw - 8;
         int conY = conT(), ch = conH();
         var f = PWPTheme.Fonts.display();
         var lp = Minecraft.getInstance().player;
+
+        // Плавный fade карта ⇄ лоадаут (по реальному времени)
+        long nowMs = System.currentTimeMillis();
+        float dtMs = lastFrameMs == 0 ? 16f : Math.min(100f, nowMs - lastFrameMs);
+        lastFrameMs = nowMs;
 
         // Background
         gui.fill(0, 0, width, height, PWPTheme.Colors.BACKGROUND);
@@ -384,8 +569,7 @@ public class DeployScreen extends Screen {
         // Column dividers (deploy layout only)
         if (activeTab == 1) {
             gui.fill(lw, conY, lw+1, height-BOT_H, PWPTheme.Colors.BORDER);
-            gui.fill(lw+cw, conY, lw+cw+1, height-BOT_H, PWPTheme.Colors.BORDER);
-            gui.fill(lw+cw+lx, conY, lw+cw+lx+1, height-BOT_H, PWPTheme.Colors.BORDER);
+            gui.fill(lw+mw, conY, lw+mw+1, height-BOT_H, PWPTheme.Colors.BORDER);
         }
 
         // Top bar
@@ -412,110 +596,81 @@ public class DeployScreen extends Screen {
             PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);
             renderTeamTab(gui, mx, my, conY, ch, f);
         } else if (activeTab == 1) {
-            // ── LEFT: SQUADS (SquadUIHelper) ──
-            int sqX = 4, sqW2 = Math.min(lw-8, SquadUIHelper.getSidebarWidth());
-            int sqY = conY, sqMaxH = ch - 110;
+            // ── LEFT: SQUADS ──
+            int sqX = 4, sqW2 = lw - 8;
+            int sqY = conY;
 
             mySquadId = -1;
             for (var sq : DeployData.squads) {
                 if (lp != null && sq.members().contains(lp.getScoreboardName())) { mySquadId = sq.id(); break; }
             }
 
+            // Строка командира сверху колонки
             applyCmdBtn.setX(sqX + 4);
             applyCmdBtn.setY(sqY + 2);
-            applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
+            boolean cmdVis = SquadUIHelper.isApplyCmdVisible();
+            applyCmdBtn.visible = cmdVis;
+            int listTop = sqY + (cmdVis ? 22 : 0);
 
-            gui.enableScissor(sqX, sqY, sqX+sqW2, sqY+sqMaxH);
+            gui.enableScissor(sqX, listTop, sqX + sqW2, sqY + ch - 40);
             gui.pose().pushPose();
-            gui.pose().translate(0, sqY, 0);
-            SquadUIHelper.renderSquadList(gui, mx, my - sqY, expandedSquads, SquadUIHelper.isApplyCmdVisible());
+            gui.pose().translate(0, listTop, 0);
+            SquadUIHelper.renderSquadList(gui, mx, my - listTop, expandedSquads, cmdVis);
             gui.pose().popPose();
             gui.disableScissor();
 
-            // Squad bottom: CREATE + CHAT
-            int bottomY = sqY + sqMaxH + 2;
-            gui.fill(sqX, bottomY-1, sqX+sqW2, bottomY, PWPTheme.Colors.BORDER);
+            // Низ колонки: CREATE SQUAD
+            int bottomY = sqY + ch - 40;
+            gui.fill(sqX, bottomY - 1, sqX + sqW2, bottomY, PWPTheme.Colors.BORDER);
             if (mySquadId < 0) {
-                gui.drawString(f, "СОЗДАТЬ ОТРЯД", sqX, bottomY+2, PWPTheme.Colors.ACCENT, false);
-                squadInput.setX(sqX+78); squadInput.setWidth(80); squadInput.setY(bottomY+1); squadInput.setVisible(true);
-                createSquadBtn.setX(sqX+158); createSquadBtn.setY(bottomY+1); createSquadBtn.visible = true;
+                gui.drawString(f, "СОЗДАТЬ ОТРЯД", sqX + 4, bottomY + 2, PWPTheme.Colors.ACCENT, false);
+                int lblW = f.width("СОЗДАТЬ ОТРЯД") + 8;
+                int inpW = Math.min(80, sqW2 - lblW - 64);
+                squadInput.setX(sqX + lblW); squadInput.setWidth(inpW); squadInput.setY(bottomY + 1); squadInput.setVisible(true);
+                createSquadBtn.setX(sqX + lblW + inpW + 2); createSquadBtn.setY(bottomY + 1); createSquadBtn.visible = true;
             } else {
                 squadInput.setVisible(false);
                 createSquadBtn.visible = false;
             }
 
-            // ── LEFT CHAT ──
-            int chatTop = mySquadId < 0 ? bottomY + 18 : bottomY + 4;
-            int chatH = height - BOT_H - 4 - chatTop;
-            if (chatH > 20) {
-                RoundedRect.fill(gui, sqX, chatTop-2, sqW2, chatH+4, 4, 0xE60E1117);
-                RoundedRect.border(gui, sqX, chatTop-2, sqW2, chatH+4, 4, 1, PWPTheme.Colors.BORDER);
-                gui.drawString(f, "ЧАТ", sqX + 4, chatTop, PWPTheme.Colors.TEXT_DIM, false);
+            // ── MIDDLE: РОЛИ + СПАВН + ЧАТ ──
+            int spawnBlockH = spawns.blockHeight();
+            int minChat = 40;
+            int maxRoleH = Math.max(100, ch - spawnBlockH - 6 - minChat);
+            int roleH = Math.min(maxRoleH, roles.contentHeight(midW2) + 6);
+            int[] chatRect = chatRect(conY, ch, roleH, spawnBlockH);
+            int chatTopY = chatRect[0], chatH = chatRect[1];
 
-                gui.enableScissor(sqX+2, chatTop+12, sqX+sqW2-2, chatTop+chatH-18);
-                int mcy2 = chatTop + 14, cc2 = 0, maxMsgs = (chatH - 32) / 10;
-                for (int ci = 0; ci < ClientData.menuChatHistory.size() && cc2 < maxMsgs; ci++) {
-                    String t = ClientData.menuChatHistory.get(ci).getString();
-                    if (f.width(t) > sqW2 - 12) t = f.plainSubstrByWidth(t, sqW2 - 16) + "\u2026";
-                    gui.drawString(f, t, sqX + 4, mcy2, PWPTheme.Colors.TEXT_SECONDARY, false);
-                    mcy2 += 10; cc2++;
-                }
-                gui.disableScissor();
+            roles.render(gui, midX, conY + 2, midW2, Math.max(40, roleH - 2), mx, my, selectedKit);
+            int spawnY = conY + 2 + roleH;
+            int spawnMaxY = spawnY + spawnBlockH;
+            spawns.render(gui, midX, spawnY, midW2, spawnMaxY, mx, my, selectedSpawn);
+            renderDeployChat(gui, midX, chatTopY, midW2, chatH, mx, my);
 
-                // Channel selector block + chat input
-                int chBoxW = f.width("SQD") + 8;
-                int chBoxCol = chatChannel.equals("ALL") ? PWPTheme.Colors.TEXT_DIM
-                    : (chatChannel.equals("TEAM") ? PWPTheme.Colors.INFO : PWPTheme.Colors.SUCCESS);
-                boolean chBoxHover = mx >= sqX + 4 && mx <= sqX + 4 + chBoxW
-                    && my >= chatTop + chatH - 18 && my <= chatTop + chatH - 2;
-                gui.fill(sqX + 4, chatTop + chatH - 17, sqX + 4 + chBoxW, chatTop + chatH - 3,
-                    chBoxHover ? 0x44FFFFFF : 0x2212151A);
-                gui.renderOutline(sqX + 4, chatTop + chatH - 17, chBoxW, 14, chBoxCol);
-                gui.drawString(f, chatChannel, sqX + 6, chatTop + chatH - 15, chBoxCol, false);
+            // ── RIGHT: ДИНАМИЧЕСКАЯ ПАНЕЛЬ (карта ⇄ лоадаут) — ЕДИНАЯ логика пина ──
+            boolean inRoleSel = roles.isHovered(mx, my, midX, conY + 2, midW2, Math.max(40, roleH - 2));
+            int inZoneH = spawnBlockH + spawns.buttonStripHeight();
+            boolean inSpawnZone = mx >= midX && mx <= midX + midW2 && my >= spawnY && my <= spawnY + inZoneH;
+            if (inRoleSel) roleUI = true;              // ховер зоны ролей → лоадаут-превью
+            else if (inSpawnZone) roleUI = false;      // ховер зоны спавна → карта-превью
+            else roleUI = kitPinned;                   // вне зон (и в правой панели) — клик-пин
+            // Превью лоадаута живёт только пока мышь в ролях или закреплена кликом
+            if (!inRoleSel && !kitPinned) roles.hoveredKit = null;
+            float target = roleUI ? 1f : 0f;
+            roleFade += (target - roleFade) * Math.min(1f, dtMs / 180f);
+            float fadeV = Anim.easeInOutCubic(roleFade);
 
-                chatInput.setX(sqX + 6 + chBoxW); chatInput.setY(chatTop + chatH - 16);
-                chatInput.setWidth(sqW2 - 10 - chBoxW); chatInput.setVisible(true);
-            } else {
-                chatInput.setVisible(false);
-            }
-
-            // ── CENTER TOP: ROLES ──
-            int roleH = ch * 55 / 100;
-            roles.render(gui, lw+4, conY+4, cw-8, roleH, mx, my, selectedKit);
-
-            // ── CENTER BOTTOM: SPAWNS ──
-            int spawnY = conY+4+roleH+2, spawnH = ch-roleH-6;
-            spawns.render(gui, lw+4, spawnY, cw-8, spawnH, mx, my, selectedSpawn);
-
-            // ── RIGHT: MAP or PORTRAIT ──
-            boolean showMap = !selectedSpawn.isEmpty();
-
-            if (showMap) {
-                if (mapNeedsInit) initRightMap();
-                rightMapRenderer.tickAnim();
-                rightMapRenderer.render(gui, mx, my, pt);
-                mapCtx.render(gui, mx, my);
-                String pos = "X=" + (lp != null ? lp.blockPosition().getX() : 0) + " Z=" + (lp != null ? lp.blockPosition().getZ() : 0);
-                gui.drawString(f, pos, loadoutX+4, conY+2, PWPTheme.Colors.TEXT_ACCENT, false);
-                if (pathActive)
-                    gui.drawString(f, "LMB / Enter: place | ESC: cancel", loadoutX + 8, conY + 16, 0x44FF44, true);
-            } else {
-                loadout.render(gui, loadoutX+4, conY+4, lx-8, ch-4, mx, my, selectedKit);
-                String desc = DeployData.kits.stream().filter(k -> k.name().equals(selectedKit))
-                    .map(DeployData.KitRecord::description).findFirst().orElse("");
-                ItemStack wpn = getSelectedWeapon();
-                List<ItemStack> arm = getSelectedArmor();
-                portrait.render(gui, portraitX, conY, pw, ch, mx, my, desc, wpn, arm);
+            // Карта рисуется только пока fade не перешагнул половину: при открытом
+            // лоадауте карта ПРОСТО НЕ РИСУЕТСЯ (ни меток, ни фоб/хабов/путей сзади),
+            // вуаль и disableDepthTest-хак не нужны.
+            if (fadeV < 0.5f) renderDeployMap(gui, mx, my, pt, conY, ch, f);
+            if (fadeV > 0.0005f) {
+                int rx2 = dynX(), rw2 = dynW();
+                renderDeployLoadout(gui, mx, my, conY, ch, fadeV);
             }
 
             // ── BOTTOM BAR ──
-            int bbY = height-BOT_H+2;
-            gui.drawString(f, "\u265E " + DeployData.getDisplayName(selectedKit), 8, bbY+10, PWPTheme.Colors.ACCENT, false);
-            long dt = ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
-            int el = (int)((System.currentTimeMillis()-dt)/1000);
-            int sec = Math.max(0, DeployData.deployTimer-el);
-            String ts = sec>0 ? String.format("ОЖИДАНИЕ %02d:%02d", sec/60, sec%60) : "ГОТОВ";
-            gui.drawCenteredString(f, ts, width/2, bbY+10, PWPTheme.Colors.TEXT_PRIMARY);
+            renderDeployBottomBar(gui, f);
         } else if (activeTab == 2) {
             PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);
             renderRulesTab(gui, mx, my, conY, ch, f);
@@ -531,6 +686,35 @@ public class DeployScreen extends Screen {
 
         for (var w : renderables) w.render(gui, mx, my, pt);
         contextMenu.render(gui, mx, my);
+
+        // 3D-тултип оружия — самый верхний слой, только когда лоадаут виден
+        if (activeTab == 1 && roleFade > 0.5f) {
+            String kitName = roles.hoveredKit != null ? roles.hoveredKit : selectedKit;
+            int rx = dynX(), rw = dynW();
+
+            if (weaponTooltip.isPinned()) {
+                // Тултип запинен — таргет заморожен, ховером слот не обновляем
+            } else if (weaponTooltip.isActive() && weaponTooltip.contains(mx, my)) {
+                // Мышь НАД панелью тултипа: таргет заморожен. Не перехватываем слот
+                // лоадаута под панелью (иначе тултип перескакивал и fade уходил вниз —
+                // панель становилась полупрозрачной и «просвечивала» предметами снизу).
+            } else {
+                // Ховер слота оружия → панель вариантов (карточки с мини-3D)
+                var slotInfo = loadout.hoveredSlotFull(mx, my, rx + 4, conY + 2, rw - 8, ch - 4, kitName);
+                if (slotInfo != null) {
+                    DeployData.LoadoutOption sel = slotInfo.slot().options().get(slotInfo.selectedIndex());
+                    weaponTooltip.updateSlot(slotInfo.kitName(), slotInfo.slotLabel(),
+                        slotInfo.slot().options(), slotInfo.selectedIndex(), sel.stack());
+                } else {
+                    weaponTooltip.updateSlot(null, null, null, 0, ItemStack.EMPTY);
+                }
+            }
+            weaponTooltip.render(gui, mx, my);
+        }
+
+        // Тултип роли — последний слой экрана, только на вкладке ДЕПЛОЙ
+        // (иначе «выпадал» с прошлого ховера на вкладках КОМАНДЫ/ПРАВИЛА)
+        if (activeTab == 1) roles.renderTooltip(gui);
     }
 
     // ══════════════════ TEAM TAB ══════════════════
@@ -683,25 +867,6 @@ public class DeployScreen extends Screen {
         return p != null && p.getTeam() != null ? p.getTeam().getName() : "NEUTRAL";
     }
 
-    // ══════════════════ ITEMS ══════════════════
-
-    private ItemStack getSelectedWeapon() {
-        var ko = DeployData.kits.stream().filter(k -> k.name().equals(selectedKit)).findFirst();
-        if (ko.isEmpty()) return ItemStack.EMPTY;
-        for (var sl : ko.get().loadout()) {
-            if (sl.label().equals("PRIMARY")) {
-                int s = DeployData.getSelectedIndex(ko.get().name(), sl.label());
-                if (s >= 0 && s < sl.options().size()) return sl.options().get(s).stack();
-            }
-        }
-        return ItemStack.EMPTY;
-    }
-
-    private List<ItemStack> getSelectedArmor() {
-        var ko = DeployData.kits.stream().filter(k -> k.name().equals(selectedKit)).findFirst();
-        return ko.map(DeployData.KitRecord::armor).orElse(List.of());
-    }
-
     // ══════════════════ MOUSE ══════════════════
 
     private static boolean isPlayerCMD(LocalPlayer p) {
@@ -729,6 +894,27 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
+        // Тултип вариантов: ЛКМ по карточке — выбор + ЗАКРЫТИЕ; ПКМ — просто закрыть.
+        // Пин: если тултип запинен и клик МИМО него — отпин + закрытие.
+        if (btn == 0 && weaponTooltip.isActive()) {
+            int sel = weaponTooltip.variantHit(mx, my);
+            if (sel >= 0) {
+                String kitName = weaponTooltip.kit() != null ? weaponTooltip.kit() : selectedKit;
+                DeployData.setSelectedIndex(kitName, weaponTooltip.slot(), sel);
+                PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kitName, DeployData.getSlotSelections(kitName)));
+                weaponTooltip.closeNow();
+                return true;
+            }
+            // Клик мимо тултипа при запиненном состоянии — отпин + закрытие
+            if (weaponTooltip.isPinned() && !weaponTooltip.contains(mx, my)) {
+                weaponTooltip.unpin();
+                return true;
+            }
+        }
+        if (btn == 1 && weaponTooltip.isActive()) {
+            weaponTooltip.unpin();
+        }
+
         if (mapCtx.visible) return mapCtx.mouseClicked(mx, my, btn);
         if (contextMenu.isVisible()) {
             contextMenu.mouseClicked(mx, my, btn);
@@ -736,7 +922,8 @@ public class DeployScreen extends Screen {
         }
         if (super.mouseClicked(mx, my, btn)) return true;
 
-        int lw = sqW(), cw = roW(), conY = conT(), ch = conH();
+        int lw = sqW(), mw = midW(), conY = conT(), ch = conH();
+        int midW2 = mw - 8;
 
         // Tabs
         if (my >= TOP_H && my < TOP_H+TAB_H) {
@@ -750,122 +937,186 @@ public class DeployScreen extends Screen {
         }
 
         if (activeTab == 1) {
-            // ── SQUADS (via SquadUIHelper) ──
-            int sqX = 4, sqW2 = Math.min(lw-8, SquadUIHelper.getSidebarWidth());
-            int sqY = conY, sqMaxH = ch-110;
-            int bottomY = sqY + sqMaxH + 2;
+            // ── SQUADS (SquadUIHelper) ──
+            int sqX = 4, sqW2 = Math.min(lw - 8, SquadUIHelper.getSidebarWidth());
+            int sqY = conY;
+            boolean cmdVis = SquadUIHelper.isApplyCmdVisible();
+            int listTop = sqY + (cmdVis ? 22 : 0);
+            int bottomY = sqY + ch - 40;
 
-            if (btn == 0 && mx < lw) {
-                if (mx < sqX+sqW2 && my > sqY && my < bottomY-2) {
-                    SquadUIHelper.handleSquadClick(mx, my - sqY, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
-                    if (!contextMenu.isVisible()) return true;
-                }
-                // Chat channel selector click (block next to input)
-                int chTop2 = mySquadId < 0 ? bottomY + 18 : bottomY + 4;
-                int chH2 = height - BOT_H - 4 - chTop2;
-                if (chH2 > 20) {
-                    int chBoxW2 = PWPTheme.Fonts.display().width("SQD") + 8;
-                    if (mx >= sqX + 4 && mx <= sqX + 4 + chBoxW2
-                        && my >= chTop2 + chH2 - 18 && my <= chTop2 + chH2 - 3) {
-                        String[] chOpts = {"ALL", "TEAM", "SQD"};
-                        int chIdx = java.util.Arrays.asList(chOpts).indexOf(chatChannel);
-                        chatChannel = chOpts[(chIdx + 1) % 3];
-                        return true;
-                    }
-                }
+            if (btn == 0 && mx < lw && mx < sqX + sqW2 && my > listTop && my < bottomY - 2) {
+                SquadUIHelper.handleSquadClick(mx, my - listTop, expandedSquads, contextMenu, cmdVis);
+                if (!contextMenu.isVisible()) return true;
             }
 
             // ── ROLES ──
-            int roleH = ch*55/100;
-            String kit = roles.mouseClicked(mx, my, btn, lw+4, conY+4, cw-8, roleH);
+            int spawnBlockH = spawns.blockHeight();
+            int minChat = 40;
+            int maxRoleH = Math.max(100, ch - spawnBlockH - 6 - minChat);
+            int roleH = Math.min(maxRoleH, roles.contentHeight(midW2) + 6);
+            int roleH2 = Math.max(40, roleH - 2);
+            String kit = roles.mouseClicked(mx, my, btn, lw + 4, conY + 2, midW2, roleH2);
             if (kit != null) {
-                selectedKit = kit;
-                PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit, DeployData.getSlotSelections(kit)));
-                selectedSpawn = "";
-                rightMapRenderer.selectedSpawnId = "";
+                if (!kit.isEmpty()) {
+                    selectedKit = kit;
+                    PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit, DeployData.getSlotSelections(kit)));
+                    // Клик по ДОСТУПНОЙ роли — ПИН ЛОУДАУТА (недоступная не пинит)
+                    kitPinned = true;
+                }
                 return true;
             }
 
-            // ── SPAWNS ──
-            int spawnY = conY+4+roleH+2, spawnH = ch-roleH-6;
-            String sp = spawns.mouseClicked(mx, my, btn, lw+4, spawnY, cw-8, spawnH);
-            if (sp != null) { selectedSpawn = sp; rightMapRenderer.selectedSpawnId = sp; mapNeedsInit = true; return true; }
-
-            // ── RIGHT: LOADOUT (only when no spawn selected; map shows instead) ──
-            if (selectedSpawn.isEmpty()) {
-                int lx = loW(), loadoutX = lw + cw;
-                if (loadout.mouseClicked(mx, my, btn, loadoutX+4, conY+4, lx-8, ch-4, selectedKit)) return true;
+            // ── SPAWNS (средняя колонка) ──
+            // Список НЕ закрывается кликами в другом месте экрана: единственный
+            // способ закрыть — кнопка-полоска «Свернуть» под блоком (SpawnPanel).
+            int spawnRowY = conY + 2 + roleH;
+            String sp = spawns.mouseClicked(mx, my, btn, lw + 4, spawnRowY, midW2, spawnRowY + spawnBlockH);
+            if (sp != null) {
+                if (!sp.isEmpty()) {
+                    selectSpawn(sp);
+                    // Клик в зоне спавн-бокса → ПИН КАРТЫ
+                    kitPinned = false;
+                }
+                return true;
             }
 
-            // ── RIGHT MAP ──
-            int rx = lw+cw, rw = width-rx;
-            if (mx >= rx && mx <= rx+rw && my >= conY && my <= conY+ch) {
-                int wx = toWorldX(mx), wz = toWorldZ(my);
+            // ── CHAT: переключатель канала (единый рект с рендером) ──
+            int[] chatR = chatRect(conY, ch, roleH, spawnBlockH);
+            if (btn == 0 && chatR[1] > 24) {
+                var cf = PWPTheme.Fonts.display();
+                int chBoxW2 = cf.width("SQD") + 8;
+                int chY = chatR[0] + chatR[1] - 16;
+                if (mx >= lw + 4 && mx <= lw + 4 + chBoxW2 && my >= chY - 1 && my <= chY + 13) {
+                    String[] chOpts = {"ALL", "TEAM", "SQD"};
+                    int chIdx = java.util.Arrays.asList(chOpts).indexOf(chatChannel);
+                    chatChannel = chOpts[(chIdx + 1) % 3];
+                    return true;
+                }
+            }
 
-                // Режим рисования пути: ЛКМ добавляет точку (как в M-меню)
-                if (pathActive && btn == 0) {
-                    if (rightMapRenderer.previewStart != null && rightMapRenderer.previewEnd != null) {
-                        if (activeSquadKey >= 0) {
-                            var sq = rightMapRenderer.pathGroupsSquad().get(activeSquadKey);
-                            if (sq != null) sq.add(new PathPoint(wx, wz));
-                        } else if (activeGroups != null && !activeGroups.isEmpty()) {
-                            activeGroups.get(activeGroups.size() - 1).add(new PathPoint(wx, wz));
-                        }
+            // ── RIGHT: динамическая область ──
+            int rx = dynX();
+            if (!(mx >= rx && mx <= width && my >= conY && my <= conY + ch)) return false;
+
+            if (roleFade >= 0.5f) {
+                // LOADOUT + кукла
+                int rw = dynW();
+                String kitName = roles.hoveredKit != null ? roles.hoveredKit : selectedKit;
+                int ldx = rx + 4, ldy = conY + 2, ldw = rw - 8, ldh = ch - 4;
+
+                // ЛКМ по слоту оружия с вариантами → пин тултипа (выбор вариантов мышью)
+                if (btn == 0 && !weaponTooltip.isPinned()) {
+                    var slotInfo = loadout.hoveredSlotFull(mx, my, ldx, ldy, ldw, ldh, kitName);
+                    if (slotInfo != null && slotInfo.slot().hasAlternatives()) {
+                        weaponTooltip.pin((int) mx, (int) my);
+                        return true;
                     }
-                    rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
-                    pathActive = false; activeSquadId = -1; activeSquadKey = -1;
-                    return true;
                 }
 
-                if (btn == 1) {
-                    if (mapCtx.visible) return mapCtx.mouseClicked(mx, my, btn);
-                    LocalPlayer p = Minecraft.getInstance().player;
-                    BiConsumer<String, String> pathCb = (cat, icon) -> {
-                        int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
-                        if ("cmd_squads".equals(cat)) {
-                            try {
-                                int squadId = Integer.parseInt(icon);
-                                startSquadPath(wx2, wz2, squadId);
-                            } catch (NumberFormatException e) { /* ignore */ }
-                            mapCtx.close();
-                        } else if ("arrow".equals(icon) || "player_self".equals(icon)) {
-                            if ("team".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroups());
-                            else if ("enemy".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroupsRed());
-                            else startPath(wx2, wz2, rightMapRenderer.pathGroupsYellow());
-                            mapCtx.close();
-                        } else place(cat, icon, wx2, wz2);
-                    };
-                    if (p != null) {
-                        MapMarker hit = rightMapRenderer.hitMarker((int)mx, (int)my, rightMapRenderer.getCenterX(p), rightMapRenderer.getCenterZ(p));
-                        if (hit != null) {
-                            Runnable del = () -> PacketHandler.INSTANCE.sendToServer(new PacketRemoveMarker(hit.id));
-                            boolean cmd2 = p != null && isPlayerCMD(p);
-                            mapCtx.open((int)mx, (int)my, cmd2, pathCb, del);
-                            return true;
-                        }
+                // Кукла: ЛКМ (драг-вращение) / ПКМ (сброс ракурса) — только в правой половине панели
+                int gearW = (int) (ldw * 0.54f);
+                if (btn == 0 && mx >= ldx + gearW + 2) {
+                    // Тултип запинен и клик вне тултипа → отпин. Иначе — вращение куклы.
+                    if (weaponTooltip.isPinned() && !weaponTooltip.contains(mx, my)) {
+                        weaponTooltip.unpin();
+                        return true;
                     }
-                    if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
-                    boolean cmd = p != null && isPlayerCMD(p);
-                    mapCtx.open((int)mx, (int)my, cmd, pathCb);
+                    loadout.portrait().startRotate();
                     return true;
                 }
-                if (!selectedSpawn.isEmpty() && btn == 0) {
-                    String sid = getSpawnAtMap(mx, my);
-                    if (sid != null) { selectedSpawn = sid; rightMapRenderer.selectedSpawnId = sid; return true; }
-                    rightMapRenderer.mouseClicked(mx, my, btn);
+                if (btn == 1 && mx >= ldx + gearW + 2) { loadout.portrait().resetView(); return true; }
+
+                // Клик в зоне снаряжения при запиненном тултипе (но не по тултипу) → отпин
+                if (weaponTooltip.isPinned() && !weaponTooltip.contains(mx, my)) {
+                    weaponTooltip.unpin();
                     return true;
                 }
+                return false;
+            }
+
+            // MAP
+            if (rightMapRenderer.handleZoomClick(mx, my)) return true;
+            int wx = toWorldX(mx), wz = toWorldZ(my);
+
+            // Режим рисования пути: ЛКМ добавляет точку (как в M-меню)
+            if (pathActive && btn == 0) {
+                if (rightMapRenderer.previewStart != null && rightMapRenderer.previewEnd != null) {
+                    if (activeSquadKey >= 0) {
+                        var sq = rightMapRenderer.pathGroupsSquad().get(activeSquadKey);
+                        if (sq != null) sq.add(new PathPoint(wx, wz));
+                    } else if (activeGroups != null && !activeGroups.isEmpty()) {
+                        activeGroups.get(activeGroups.size() - 1).add(new PathPoint(wx, wz));
+                    }
+                }
+                rightMapRenderer.previewStart = null; rightMapRenderer.previewEnd = null;
+                pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                return true;
+            }
+
+            if (btn == 1) {
+                if (mapCtx.visible) return mapCtx.mouseClicked(mx, my, btn);
+                LocalPlayer p = Minecraft.getInstance().player;
+                BiConsumer<String, String> pathCb = (cat, icon) -> {
+                    int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
+                    if ("cmd_squads".equals(cat)) {
+                        try {
+                            int squadId = Integer.parseInt(icon);
+                            startSquadPath(wx2, wz2, squadId);
+                        } catch (NumberFormatException e) { /* ignore */ }
+                        mapCtx.close();
+                    } else if ("arrow".equals(icon) || "player_self".equals(icon)) {
+                        if ("team".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroups());
+                        else if ("enemy".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroupsRed());
+                        else startPath(wx2, wz2, rightMapRenderer.pathGroupsYellow());
+                        mapCtx.close();
+                    } else place(cat, icon, wx2, wz2);
+                };
+                if (p != null) {
+                    MapMarker hit = rightMapRenderer.hitMarker((int)mx, (int)my, rightMapRenderer.getCenterX(p), rightMapRenderer.getCenterZ(p));
+                    if (hit != null) {
+                        Runnable del = () -> PacketHandler.INSTANCE.sendToServer(new PacketRemoveMarker(hit.id));
+                        boolean cmd2 = p != null && isPlayerCMD(p);
+                        mapCtx.open((int)mx, (int)my, cmd2, pathCb, del);
+                        return true;
+                    }
+                }
+                if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
+                boolean cmd = p != null && isPlayerCMD(p);
+                mapCtx.open((int)mx, (int)my, cmd, pathCb);
+                return true;
+            }
+            if (btn == 0) {
+                String sid = getSpawnAtMap(mx, my);
+                if (sid != null) { selectSpawn(sid); return true; }
+                rightMapRenderer.mouseClicked(mx, my, btn);
+                return true;
             }
         }
 
         return false;
     }
 
+    /** Выбор точки спавна: запоминает + центрирует карту (единая точка входа). */
+    private void selectSpawn(String id) {
+        selectedSpawn = id;
+        rightMapRenderer.selectedSpawnId = id;
+        for (DeployData.SpawnPoint sp : DeployData.spawns) {
+            if (sp.id().equals(id)) {
+                rightMapRenderer.centerOn(sp.pos());
+                break;
+            }
+        }
+    }
+
     @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        if (activeTab == 1) {
-            int rx = sqW()+roW();
-            if (!mapCtx.visible && !pathActive && !selectedSpawn.isEmpty() && mx >= rx)
+        // Вращение куклы: живёт пока ЛКМ зажата, даже если курсор ушёл за панель.
+        if (loadout.portrait().isRotating() && btn == 0) {
+            loadout.portrait().rotateBy((float) dx);
+            return true;
+        }
+        if (activeTab == 1 && roleFade < 0.5f) {
+            if (!mapCtx.visible && !pathActive && mx >= dynX())
                 rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
         }
         return super.mouseDragged(mx, my, btn, dx, dy);
@@ -880,10 +1131,8 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int btn) {
-        if (activeTab == 1) {
-            int rx = sqW()+roW();
-            if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseReleased(btn);
-        }
+        if (btn == 0) loadout.portrait().stopRotate();
+        if (activeTab == 1 && roleFade < 0.5f && mx >= dynX()) rightMapRenderer.mouseReleased(btn);
         return super.mouseReleased(mx, my, btn);
     }
 
@@ -893,12 +1142,30 @@ public class DeployScreen extends Screen {
             rulesScrollOffset = (int) Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset - delta * 16));
             return true;
         }
-        int lw = sqW(), cw = roW(), rx = lw+cw;
-        int scroll = -(int)(delta * 20);
-        if (mx >= lw && mx < rx) { roles.scrollOff += scroll; return true; }
-        if (!mapCtx.visible && !selectedSpawn.isEmpty() && mx >= rx) {
-            rightMapRenderer.mouseScrolled(mx, my, delta);
-            return true;
+        if (activeTab == 1) {
+            int lw = sqW(), mw = midW(), conY = conT(), ch = conH();
+            int spawnBlockH = spawns.blockHeight();
+            int maxRoleH = Math.max(100, ch - spawnBlockH - 6 - 40);
+            int roleH = Math.min(maxRoleH, roles.contentHeight(mw - 8) + 6);
+            int midX = lw + 4, midW2 = mw - 8;
+            // Список отрядов (левая колонка) — скролл
+            if (mx < lw) {
+                int viewH = Math.max(1, ch - 40 - (SquadUIHelper.isApplyCmdVisible() ? 22 : 0));
+                if (SquadUIHelper.scrollSquads(mx, my - conY, delta, viewH)) return true;
+            }
+            if (roles.mouseScrolled(mx, my, delta, midX, conY + 2, midW2, Math.max(40, roleH - 2))) return true;
+            // Чат — скролл колесом по области чата
+            int[] chatR = chatRect(conY, ch, roleH, spawnBlockH);
+            if (chatR[1] > 24 && mx >= midX && mx <= midX + midW2 && my >= chatR[0] && my <= chatR[0] + chatR[1]) {
+                int maxScroll = Math.max(0, ClientData.menuChatHistory.size() - chatViewLines(chatR[1]));
+                chatScroll = Math.max(0, Math.min(maxScroll, chatScroll + (int) delta));
+                return true;
+            }
+            if (roleFade < 0.5f && !mapCtx.visible && mx >= dynX()) {
+                // Единый зум карты в деплое: колесо и кнопки [±] — через userZoom
+                if (delta > 0) rightMapRenderer.zoomIn(); else rightMapRenderer.zoomOut();
+                return true;
+            }
         }
         return super.mouseScrolled(mx, my, delta);
     }

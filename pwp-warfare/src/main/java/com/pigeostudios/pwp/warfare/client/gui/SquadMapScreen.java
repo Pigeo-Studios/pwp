@@ -52,6 +52,7 @@ public class SquadMapScreen extends Screen {
     private PWPButton createSquadBtn;
     private EditBox squadInput;
     private int mySquadId = -1;
+    private int lastSquadCount = -1;
 
     private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
 
@@ -65,6 +66,7 @@ public class SquadMapScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+        SquadUIHelper.setWidth(LEFT_PANEL_W);
         int availW = width - LEFT_PANEL_W - RIGHT_PANEL_W;
         int availH = height - TOP_BAR_H - BOTTOM_BAR_H;
         mMapW = availW - 4;
@@ -80,10 +82,8 @@ public class SquadMapScreen extends Screen {
         createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 50, 18,
             Component.literal("Создать"), b -> {
                 String n = squadInput.getValue().trim();
-                if (!n.isEmpty()) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
-                    squadInput.setValue("");
-                }
+                PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
+                squadInput.setValue("");
             }, PWPButton.Style.DARK));
         createSquadBtn.visible = false;
 
@@ -103,6 +103,11 @@ public class SquadMapScreen extends Screen {
     public void tick() {
         super.tick();
         if (applyCmdBtn != null) applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
+        if (ClientData.clientSquads.size() != lastSquadCount) {
+            lastSquadCount = ClientData.clientSquads.size();
+            int viewH = Math.max(1, height - 55 - (applyCmdBtn != null && applyCmdBtn.visible ? 20 : 2));
+            SquadUIHelper.autoRevealMySquad(viewH);
+        }
         mySquadId = -1;
         LocalPlayer p = Minecraft.getInstance().player;
         if (p != null) {
@@ -148,7 +153,10 @@ public class SquadMapScreen extends Screen {
         int listBottom = height - 55;
 
         g.enableScissor(0, listTop, LEFT_PANEL_W, listBottom);
-        SquadUIHelper.renderSquadList(g, mx, my, expandedSquads, SquadUIHelper.isApplyCmdVisible());
+        g.pose().pushPose();
+        g.pose().translate(0, listTop, 0);
+        SquadUIHelper.renderSquadList(g, mx, my - listTop, expandedSquads, SquadUIHelper.isApplyCmdVisible());
+        g.pose().popPose();
         g.disableScissor();
 
         if (!SquadUIHelper.isPlayerInSquad()) {
@@ -240,7 +248,8 @@ public class SquadMapScreen extends Screen {
 
         if (btn == 0 && mx < LEFT_PANEL_W) {
             if (super.mouseClicked(mx, my, btn)) return true;
-            SquadUIHelper.handleSquadClick(mx, my, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
+            int listTop = applyCmdBtn != null && applyCmdBtn.visible ? 20 : 2;
+            SquadUIHelper.handleSquadClick(mx, my - listTop, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
             return true;
         }
 
@@ -313,6 +322,12 @@ public class SquadMapScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double d) {
+        // Список отрядов (левая панель) — прокрутка
+        if (mx < LEFT_PANEL_W) {
+            int listTop = applyCmdBtn != null && applyCmdBtn.visible ? 20 : 2;
+            int viewH = Math.max(1, height - 55 - listTop);
+            if (SquadUIHelper.scrollSquads(mx, my - listTop, d, viewH)) return true;
+        }
         return !ctx.visible && map.isMouseOver(mx, my) && map.mouseScrolled(mx, my, d);
     }
 

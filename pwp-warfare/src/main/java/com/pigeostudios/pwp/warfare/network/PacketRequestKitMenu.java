@@ -89,12 +89,27 @@ public class PacketRequestKitMenu {
              boolean isSelected = myCurrentKit.equals(kitName);
              List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
              PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems);
+             dto.inTeamCount = tCount;
+             dto.maxInTeam = kit.maxPerTeam;
+             dto.inSquadCount = sCount;
+             dto.maxInSquad = kit.maxPerSquad;
              if (kit.slotSkins != null) {
                 for (var e : kit.slotSkins.entrySet()) dto.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
              }
              dtoList.add(dto);
           }
        }
+
+        // Если ни PendingKit, ни CurrentKit не заданы — отметим первый доступный кит
+        boolean anySelected = false;
+        for (var dto : dtoList) {
+            if (dto.isSelected) { anySelected = true; break; }
+        }
+        if (!anySelected) {
+            for (var dto : dtoList) {
+                if (dto.available) { dto.isSelected = true; break; }
+            }
+        }
 
         // Attach player's saved slot selections for persistent UI state
         Map<String, Integer> restoredSelections = new HashMap<>();
