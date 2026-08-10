@@ -173,6 +173,15 @@ public class DeployScreen extends Screen {
     private boolean roleUI;      // текущий режим правой панели (карта/лоадаут)
     private float roleFade;
 
+    /**
+     * Кит для правой панели (лоадаут/тултип/клики): закреплено кликом — ВСЕГДА
+     * {@link #selectedKit} (hoveredKit может быть «протёрт» мышью по дороге в панель).
+     * Без пина — ховер-превью из сетки ролей.
+     */
+    private String loadoutKit() {
+        return kitPinned ? selectedKit : (roles.hoveredKit != null ? roles.hoveredKit : selectedKit);
+    }
+
     private final SquadMapRenderer rightMapRenderer = new SquadMapRenderer();
     private final SquadContextMenu mapCtx = new SquadContextMenu();
     private final RoleGrid   roles    = new RoleGrid();
@@ -270,21 +279,26 @@ public class DeployScreen extends Screen {
         }
         lastSquadCount = ClientData.clientSquads.size();
 
-        // Выбранный кит: серверный isSelected из DTO → ClientData.myCurrentKit → первый доступный
-        for (var dto : ClientData.availableKits) {
-            if (dto.isSelected) { selectedKit = dto.name; break; }
-        }
-        if (selectedKit.equals("Rifleman") && !ClientData.myCurrentKit.equals("Unassigned")) {
-            selectedKit = ClientData.myCurrentKit;
-        }
-        if (selectedKit.equals("Rifleman") && !ClientData.availableKits.isEmpty()) {
+        // Выбранный кит: серверный isSelected из DTO → ClientData.myCurrentKit → первый доступный.
+        // Если пользователь УЖЕ выбрал роль кликом (kitPinned) — не перезаписывать:
+        // фоновые ответы китов (рефреш 10с, смена состава отрядов) могут нести устаревший
+        // isSelected (сгенерирован до клика) и перекидывали выделение на чужую роль.
+        if (!kitPinned) {
             for (var dto : ClientData.availableKits) {
-                if (dto.available) { selectedKit = dto.name; break; }
+                if (dto.isSelected) { selectedKit = dto.name; break; }
             }
-        }
-        if (selectedKit.equals("Rifleman")) {
-            for (var kr : DeployData.kits) {
-                if (kr.available()) { selectedKit = kr.name(); break; }
+            if (selectedKit.equals("Rifleman") && !ClientData.myCurrentKit.equals("Unassigned")) {
+                selectedKit = ClientData.myCurrentKit;
+            }
+            if (selectedKit.equals("Rifleman") && !ClientData.availableKits.isEmpty()) {
+                for (var dto : ClientData.availableKits) {
+                    if (dto.available) { selectedKit = dto.name; break; }
+                }
+            }
+            if (selectedKit.equals("Rifleman")) {
+                for (var kr : DeployData.kits) {
+                    if (kr.available()) { selectedKit = kr.name(); break; }
+                }
             }
         }
     }
@@ -352,7 +366,7 @@ public class DeployScreen extends Screen {
         RenderSystem.setShaderColor(1f, 1f, 1f, Math.min(1f, fadeV * 1.15f));
         gui.pose().pushPose();
         gui.pose().translate((1f - fadeV) * 10f, 0, 0);
-        loadout.render(gui, rx + 4, conY + 2, rw - 8, ch - 4, mx, my, roles.hoveredKit != null ? roles.hoveredKit : selectedKit);
+        loadout.render(gui, rx + 4, conY + 2, rw - 8, ch - 4, mx, my, loadoutKit());
         gui.pose().popPose();
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.disableBlend();
@@ -689,7 +703,7 @@ public class DeployScreen extends Screen {
 
         // 3D-тултип оружия — самый верхний слой, только когда лоадаут виден
         if (activeTab == 1 && roleFade > 0.5f) {
-            String kitName = roles.hoveredKit != null ? roles.hoveredKit : selectedKit;
+            String kitName = loadoutKit();
             int rx = dynX(), rw = dynW();
 
             if (weaponTooltip.isPinned()) {
@@ -1001,7 +1015,7 @@ public class DeployScreen extends Screen {
             if (roleFade >= 0.5f) {
                 // LOADOUT + кукла
                 int rw = dynW();
-                String kitName = roles.hoveredKit != null ? roles.hoveredKit : selectedKit;
+                String kitName = loadoutKit();
                 int ldx = rx + 4, ldy = conY + 2, ldw = rw - 8, ldh = ch - 4;
 
                 // ЛКМ по слоту оружия с вариантами → пин тултипа (выбор вариантов мышью)
