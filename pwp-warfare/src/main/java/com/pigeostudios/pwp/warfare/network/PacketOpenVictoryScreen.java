@@ -22,13 +22,16 @@ public class PacketOpenVictoryScreen {
    public final int matchHeadshots;
    public final int matchScore;
    public final int matchDurationSec;
+   public final int matchDamageDealt;
+   public final int matchHealingDone;
+   public final int matchSuppliesDelivered;
 
    public PacketOpenVictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner,
                                    int matchKills, int matchDeaths,
                                    int matchVehicleKills, int matchVehiclesDestroyed,
                                    int matchAirVehiclesDestroyed, int matchCaptures,
                                    int matchRevives, int matchHeadshots, int matchScore,
-                                   int matchDurationSec) {
+                                   int matchDurationSec, int matchDamageDealt, int matchHealingDone, int matchSuppliesDelivered) {
       this.winnerName = winnerName;
       this.winnerFaction = winnerFaction;
       this.subText = subText;
@@ -43,6 +46,9 @@ public class PacketOpenVictoryScreen {
       this.matchHeadshots = matchHeadshots;
       this.matchScore = matchScore;
       this.matchDurationSec = matchDurationSec;
+      this.matchDamageDealt = matchDamageDealt;
+      this.matchHealingDone = matchHealingDone;
+      this.matchSuppliesDelivered = matchSuppliesDelivered;
    }
 
    public static void encode(PacketOpenVictoryScreen msg, FriendlyByteBuf buf) {
@@ -60,6 +66,9 @@ public class PacketOpenVictoryScreen {
       buf.writeInt(msg.matchHeadshots);
       buf.writeInt(msg.matchScore);
       buf.writeInt(msg.matchDurationSec);
+      buf.writeInt(msg.matchDamageDealt);
+      buf.writeInt(msg.matchHealingDone);
+      buf.writeInt(msg.matchSuppliesDelivered);
    }
 
    public static PacketOpenVictoryScreen decode(FriendlyByteBuf buf) {
@@ -68,7 +77,8 @@ public class PacketOpenVictoryScreen {
          buf.readInt(), buf.readInt(),
          buf.readInt(), buf.readInt(), buf.readInt(),
          buf.readInt(), buf.readInt(), buf.readInt(),
-         buf.readInt(), buf.readInt()
+         buf.readInt(), buf.readInt(),
+         buf.readInt(), buf.readInt(), buf.readInt()
       );
    }
 
@@ -81,7 +91,7 @@ public class PacketOpenVictoryScreen {
                   msg.matchVehicleKills, msg.matchVehiclesDestroyed,
                   msg.matchAirVehiclesDestroyed, msg.matchCaptures,
                   msg.matchRevives, msg.matchHeadshots, msg.matchScore,
-                  msg.matchDurationSec)
+                  msg.matchDurationSec, msg.matchDamageDealt, msg.matchHealingDone, msg.matchSuppliesDelivered)
             )
          );
       ctx.get().setPacketHandled(true);

@@ -362,12 +362,13 @@ public class ClientHooks {
                                           int matchVehicleKills, int matchVehiclesDestroyed,
                                           int matchAirVehiclesDestroyed, int matchCaptures,
                                           int matchRevives, int matchHeadshots, int matchScore,
-                                          int matchDurationSec) {
+                                          int matchDurationSec, int matchDamageDealt, int matchHealingDone, int matchSuppliesDelivered) {
        Minecraft.getInstance().setScreen(new VictoryScreen(winnerName, winnerFaction, subText, isBlueWinner,
           matchKills, matchDeaths,
           matchVehicleKills, matchVehiclesDestroyed,
           matchAirVehiclesDestroyed, matchCaptures,
-          matchRevives, matchHeadshots, matchScore, matchDurationSec));
+          matchRevives, matchHeadshots, matchScore, matchDurationSec,
+          matchDamageDealt, matchHealingDone, matchSuppliesDelivered));
     }
 
     public static void openSkinInventory() {

@@ -2042,21 +2042,23 @@ public class GameLogicEvents {
 
        String subText = (blueWon ? data.blueTickets : data.redTickets) + " tickets remaining";
 
-       for (net.minecraft.server.level.ServerPlayer player : level.players()) {
-           String uuid = player.getStringUUID();
-           com.pigeostudios.pwp.warfare.stats.PlayerMatchStats ps = matchStatsSnapshot.get(uuid);
-           if (ps == null) {
-               PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                   new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
-                       0, 0, 0, 0, 0, 0, 0, 0, 0, matchDurationSec));
-           } else {
-               PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                   new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
-                       ps.kills, ps.deaths,
-                       ps.vehicleKills, ps.vehiclesDestroyed, ps.airVehiclesDestroyed,
-                       ps.captures, ps.revives, 0, ps.score, matchDurationSec));
-           }
-       }
+        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
+            String uuid = player.getStringUUID();
+            com.pigeostudios.pwp.warfare.stats.PlayerMatchStats ps = matchStatsSnapshot.get(uuid);
+            if (ps == null) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, matchDurationSec,
+                        0, 0, 0));
+            } else {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                    new PacketOpenVictoryScreen(winnerName, winnerFaction, subText, blueWon,
+                        ps.kills, ps.deaths,
+                        ps.vehicleKills, ps.vehiclesDestroyed, ps.airVehiclesDestroyed,
+                        ps.captures, ps.revives, 0, ps.score, matchDurationSec,
+                        (int) ps.damageDealt, (int) ps.healingDone, ps.suppliesDelivered));
+            }
+        }
        } catch (Exception e) {
            org.slf4j.LoggerFactory.getLogger("executeVictory").error("Error in victory sequence: {}", e.getMessage(), e);
        }
