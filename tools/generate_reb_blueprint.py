@@ -179,6 +179,25 @@ def fit_into_block(cubes):
     return scaled
 
 
+def fit_into_two_blocks(cubes):
+    """Масштаб большого РЭБ: высота в 2 блока (32 юнита), реалистичная стойка.
+
+    Ось Y масштабируется от земли (y=0) до 32, оси X/Z — вокруг центра 8.
+    Модель может выходить за пределы блока по X/Z — это разрешено (прецеденты
+    hub_base 26x22, m2 X=32) и отражает реальную широкую стойку РЭБ.
+    """
+    max_y = max(o[1] + s[1] for o, s in cubes)
+    scale = 32.0 / max_y
+    scaled = []
+    for (ox, oy, oz), (sx, sy, sz) in cubes:
+        scaled.append((
+            (8.0 + (ox - 8.0) * scale, oy * scale, 8.0 + (oz - 8.0) * scale),
+            (sx * scale, sy * scale, sz * scale),
+        ))
+    print(f"масштаб {scale:.3f} (высота РЭБ {max_y:.1f} -> 2 блока)")
+    return scaled
+
+
 def build_model(cubes, texture):
     elements = []
     for i, (origin, size) in enumerate(cubes):
@@ -244,7 +263,9 @@ def main():
 
         cubes, dropped = prepare_cubes(load_cubes(geo_path))
         cubes = normalize(cubes)
-        cubes = fit_into_block(cubes)
+        # Большой РЭБ — превью в 2 блока (bl_sub), мини-РЭБ — в 1 блок (bl_sub_mini)
+        fit = fit_into_two_blocks if geo_name == "reb_max" else fit_into_block
+        cubes = fit(cubes)
         if dropped:
             print(f"{geo_name}: пропущено повёрнутых тонких кубов: {dropped}")
 

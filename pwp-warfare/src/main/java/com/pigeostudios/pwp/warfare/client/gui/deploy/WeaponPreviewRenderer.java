@@ -7,6 +7,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.BlockItem;
@@ -20,7 +21,10 @@ import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.item.SwordItem;
 import org.joml.Vector3f;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -52,6 +56,13 @@ public class WeaponPreviewRenderer {
     private static final float FIT_PAD = 14f;
 
     /**
+     * TTL фита: гео аттачей догружается асинхронно, релоад паков меняет модели —
+     * силуэт может вырасти после первого замера. Раз в 10с замер переснимается
+     * (стоит микросекунды и происходит только при активном ховере ствола).
+     */
+    private static final long FIT_TTL_MS = 10_000L;
+
+    /**
      * Знак оси Y работает от FIXED-цепочки TACZ (нода fixed сама разворачивает ствол
      * боком при yaw=0 — «в лоб» даёт yaw=90). BARREL_TO_RIGHT — только знак оси.
      */
@@ -77,18 +88,35 @@ public class WeaponPreviewRenderer {
             "lmg", 0.65f, "sniper", 0.65f, "mg", 0.55f, "rpg", 0.70f);
 
     private final Map<String, Float> scaleCache = new HashMap<>();
-    /** Кэш пиксельных фитов: ключ = стек+ориентация, значение = Fit (может быть null). */
+    /** Кэш пиксельных фитов: ключ = сигнатура силуэта+ориентация, null не хранится. */
     private final Map<String, Fit> fitCache = new HashMap<>();
+
+    // DEBUG (временный): лог фита по одному разу на ствол+рамку. Убрать после выяснения размера.
+    private static final java.util.Set<String> DEBUG_ONCE = new java.util.HashSet<>();
+    private static void debugLogOnce(String key, String... parts) {
+        if (key == null) return;
+        String k = String.join(" | ", parts);
+        if (DEBUG_ONCE.add(key + " # " + k)) {
+            System.out.println("[PWFIT] " + k);
+        }
+    }
 
     /**
      * Результат капчи: реальные отрендеренные размеры/центр при внешнем масштабе 1.
      *
-     * @param width    ширина бокса в пикселях
-     * @param height   высота бокса в пикселях
-     * @param centerX  центр бокса по X
-     * @param centerY  центр бокса по Y
+     * @param width      ширина бокса в пикселях
+     * @param height     высота бокса в пикселях
+     * @param centerX    центр бокса по X
+     * @param centerY    центр бокса по Y
+     * @param capturedAt время замера (для TTL — модель/аттачи могли догрузиться)
      */
-    public record Fit(float width, float height, float centerX, float centerY) {}
+    public record Fit(float width, float height, float centerX, float centerY, long capturedAt) {
+
+        /** Свежий ли замер — протухшие фиты переснимаются в {@link #fitFor}. */
+        boolean fresh() {
+            return System.currentTimeMillis() - capturedAt < FIT_TTL_MS;
+        }
+    }
 
     /** Пресет для стека: оружие — по типу из индекса TACZ, иначе по классу предмета. */
     public Preset presetFor(ItemStack stack) {
@@ -131,18 +159,28 @@ public class WeaponPreviewRenderer {
         Fit fit = fitFor(stack, yawDeg, pitchDeg, zRotDeg);
         float s;
         if (fit != null) {
-            // Вписать отрендеренный пиксельный бокс целиком в рамку (с запасом FIT_PAD).
-            float s1 = (width - FIT_PAD) / Math.max(0.05f, fit.width());
-            float s2 = (height - FIT_PAD) / Math.max(0.05f, fit.height());
-            s = Mth.clamp(Math.min(s1, s2), 0.3f, 6.0f);
+            // Каптчер мерит модель на чистом identity-стеке, а реальный рендер идёт через
+            // gui.pose() c базой scale(1/guiScale) — иначе скармливаем в формулу размеры
+            // в guiScale раз больше рамки и пушка рисуется в 1/guiScale (мелкая при
+            // guiScale > 1). Нормируем фит на точное отношение осей экрана (не округлённый
+            // getGuiScale() — работает и на дробном Auto-масштабе).
+            float guiScaleX = (float) mc.getWindow().getScreenWidth() / mc.getWindow().getGuiScaledWidth();
+            float guiScaleY = (float) mc.getWindow().getScreenHeight() / mc.getWindow().getGuiScaledHeight();
+            float s1 = (width - FIT_PAD) * guiScaleX / Math.max(0.05f, fit.width());
+            float s2 = (height - FIT_PAD) * guiScaleY / Math.max(0.05f, fit.height());
+            // Верхний лимит БОЛЬШОЙ: каптчер мерит модель в post-BEWLR-единицах (~2-3 у
+            // винтовки), а не пикселях — честный s для заполнения рамки ~18-100. Старый
+            // cap 6.0 (от эры, когда s был 0.3-2.2) обрезал фит и рисовал пушку в ~8px
+            // (инцидент 12.08.2026 «пушка мелкая в лоадауте и тултипе»).
+            s = Mth.clamp(Math.min(s1, s2), 0.3f, 200.0f);
+            debugLogOnce(gunId(stack), "box=" + width + "x" + height,
+                "guiScaleX=" + guiScaleX, "fit=" + fit.width() + "x" + fit.height()
+                    + " cx=" + fit.centerX() + " cy=" + fit.centerY(),
+                "raw=" + ((width - FIT_PAD) / Math.max(0.05f, fit.width())), "s=" + s);
         } else {
             s = fallbackScale(stack, width, height);
+            debugLogOnce(stack.getItem().toString(), "box=" + width + "x" + height, "FIT=null", "s=" + s);
         }
-        // DEBUG-TMP: реальные числа капчи и итоговый масштаб. Убрать после фикса размеров.
-        System.out.println("[PWFIT] gun=" + gunId(stack)
-                + " box=" + width + "x" + height
-                + " fit=" + (fit != null ? fit.width() + "x" + fit.height() : "null")
-                + " s=" + s);
 
         PoseStack pose = gui.pose();
         pose.pushPose();
@@ -191,9 +229,11 @@ public class WeaponPreviewRenderer {
     private Fit fitFor(ItemStack stack, float yawDeg, float pitchDeg, float zRotDeg) {
         String key = fitCacheKey(stack, yawDeg, pitchDeg, zRotDeg);
         Fit cached = fitCache.get(key);
-        if (cached != null) return cached;
+        if (cached != null && cached.fresh()) return cached;
         Fit measured = doCapture(stack, yawDeg, pitchDeg, zRotDeg);
-        fitCache.put(key, measured);
+        // null (модель не готова/пусто) НЕ кэшируем: следующий ховер перемерит
+        // уже полную модель — иначе замер плейсхолдера жил бы в кэше вечно.
+        if (measured != null) fitCache.put(key, measured);
         return measured;
     }
 
@@ -219,19 +259,25 @@ public class WeaponPreviewRenderer {
                     // буфер из глобального bufferSource(), перехваченный миксином.
                     done = TaczHolder.renderFullModel(stack, gun, pose, null);
                 } catch (RuntimeException | LinkageError ignored) { done = false; }
-            }
-            if (!done) {
+                if (!done) {
+                    // TACZ-модель ещё не готова: фолбэк поймал бы только слот-бокс
+                    // (16×16), а не силуэт — такой замер нельзя кэшировать, иначе
+                    // после догрузки полная модель масштабируется по фиту бокса
+                    // и вылезает за рамку (инцидент 12.08.2026 «вылезает»).
+                    return null;
+                }
+            } else {
                 markHighDetail();
                 mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED,
                         LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                         pose, cap, mc.level, 0);
             }
             if (cap.isEmpty()) return null;
-            // DEBUG-TMP: одна строка на ствол (первый замер, дальше кэш). Убрать после фикса.
-            System.out.println("[PWFIT-measure] gun=" + gunId(stack)
-                    + " w=" + cap.width() + " h=" + cap.height()
+            debugLogOnce(gunId(stack) + ":measure",
+                "w=" + cap.width() + " h=" + cap.height()
                     + " cx=" + cap.centerX() + " cy=" + cap.centerY());
-            return new Fit(cap.width(), cap.height(), cap.centerX(), cap.centerY());
+            return new Fit(cap.width(), cap.height(), cap.centerX(), cap.centerY(),
+                    System.currentTimeMillis());
         } catch (RuntimeException | LinkageError e) {
             return null;
         } finally {
@@ -242,8 +288,32 @@ public class WeaponPreviewRenderer {
 
     private String fitCacheKey(ItemStack stack, float yawDeg, float pitchDeg, float zRotDeg) {
         String gun = gunId(stack);
-        String base = (gun != null) ? gun : stack.getItem().getDescriptionId();
+        String base = (gun != null) ? gun + "#" + attachmentSignature(stack)
+                                    : stack.getItem().getDescriptionId();
         return base + "#" + yawDeg + ";" + pitchDeg + ";" + zRotDeg;
+    }
+
+    /**
+     * Сигнатура силуэта ствола: навешенные аттачи из NBT (ключи {@code Attachment*}
+     * → вложенный {@code tag.AttachmentId}). Один GunId живёт в лоадаутах с разными
+     * конфигами (голый / Red Dot / Optic — глушитель, прицел и цевьё удлиняют силуэт):
+     * без сигнатуры они делили один замер и разъезжались по размеру
+     * (инцидент 12.08.2026 «пушка вылезает за карточку/тултип»).
+     * Косметика (display.Name) и состояние (патроны) на силуэт не влияют.
+     */
+    private String attachmentSignature(ItemStack stack) {
+        CompoundTag tag = stack.getTag();
+        if (tag == null) return "";
+        List<String> parts = new ArrayList<>();
+        for (String key : tag.getAllKeys()) {
+            if (!key.startsWith("Attachment")) continue;
+            CompoundTag slot = tag.getCompound(key);
+            String id = slot.getCompound("tag").getString("AttachmentId");
+            if (id.isEmpty()) id = slot.getString("AttachmentId");
+            parts.add(key + "=" + id);
+        }
+        Collections.sort(parts);
+        return String.join(",", parts);
     }
 
     /** Фолбэк без капчи (модель ещё не догружена): база от рамки × коэффициент типа. */
