@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pwp.coreclient.NameGradient;
+import com.pwp.coreclient.donor.DonorLevel;
 import com.pwp.coreclient.gui.components.PWPScrollPanel;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -33,7 +34,7 @@ public class LeaderTabRenderer {
             name = p.has("nickname") ? p.get("nickname").getAsString() : "—";
             uuid = p.has("uuid") ? p.get("uuid").getAsString() : "";
             tier = p.has("donateTier") && !p.get("donateTier").isJsonNull() ? p.get("donateTier").getAsString().toUpperCase() : null;
-            if (tier != null && !NameGradient.isSupported(tier)) tier = null;
+            if (tier != null && !DonorLevel.isSupported(tier)) tier = null;
             role = p.has("role") && !p.get("role").isJsonNull() ? p.get("role").getAsString() : null;
             kills =          getInt(s, "kills", 0);
             deaths =         getInt(s, "deaths", 0);
@@ -132,7 +133,7 @@ public class LeaderTabRenderer {
         String star = "★ TOP SCORE ★";
         g.drawString(font, Component.literal(star), sw/2-font.width(star)/2, cardY+8, PWPTheme.Colors.TEXT_ACCENT, false);
         String topName = top.name;
-        String topLevel = NameGradient.resolve(top.role, top.tier);
+        String topLevel = DonorLevel.resolve(top.role, top.tier);
         if (topLevel != null) {
             int tw = NameGradient.width(font, topName);
             NameGradient.drawGlow(g, font, topName, sw/2 - tw/2, cardY+24, topLevel);
@@ -193,7 +194,7 @@ public class LeaderTabRenderer {
             g.drawString(font, Component.literal(String.valueOf(rank)), tblX+4, ry+2, rc, false);
             String n = e.name;
             if (font.width(n) > 160) n = font.plainSubstrByWidth(n, 158)+".";
-            String level = NameGradient.resolve(e.role, e.tier);
+            String level = DonorLevel.resolve(e.role, e.tier);
             if (level != null) {
                 NameGradient.drawGlow(g, font, n, tblX+30, ry+2, level);
             } else {

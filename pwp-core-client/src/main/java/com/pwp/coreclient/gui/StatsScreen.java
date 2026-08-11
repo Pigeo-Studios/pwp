@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pwp.coreclient.NameGradient;
 import com.pwp.coreclient.PlayerData;
+import com.pwp.coreclient.donor.DonorLevel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientResponseCache;
 import com.pwp.coreclient.network.PacketDataRequest;
@@ -482,7 +483,7 @@ public class StatsScreen extends Screen {
 
             String nameStr = e.nickname;
             if (PWPTheme.Fonts.display().width(nameStr) > 120) nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
-            String level = NameGradient.resolve(e.role, e.tier);
+            String level = DonorLevel.resolve(e.role, e.tier);
             if (level != null) {
                 NameGradient.drawGlow(gui, PWPTheme.Fonts.display(), nameStr, leftX + 28, rowY + 3, level);
             } else {
@@ -614,7 +615,7 @@ public class StatsScreen extends Screen {
             nickname = get(p, "nickname", "");
             if (p.has("donateTier") && !p.get("donateTier").isJsonNull()) {
                 tier = p.get("donateTier").getAsString().toUpperCase();
-                if (!NameGradient.isSupported(tier)) tier = null;
+                if (!DonorLevel.isSupported(tier)) tier = null;
             } else {
                 tier = null;
             }

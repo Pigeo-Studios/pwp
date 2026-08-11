@@ -2,6 +2,8 @@ package com.pwp.coreclient.particles;
 
 import com.pwp.coreclient.CoreClientMod;
 import com.pwp.coreclient.DonatorCache;
+import com.pwp.coreclient.donor.DonorLevel;
+import com.pwp.coreclient.donor.FxPattern;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.player.Player;
@@ -10,23 +12,82 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Клиентский спавн донат-FX: по DonatorCache знаем уровни игроков и спавним частицы
- * свечения через штатный партикл-движок (level.addParticle) — без серверных пакетов.
- * Дробный аккумулятор по игроку (rate/сек -> штуки в тик), LOD по дистанции,
- * бюджет частиц на тик. Дизайн траекторий задаёт Spawner, поведение частицы — GlowParticle.
+ * Клиентский спавн донат-FX: по DonatorCache знаем уровни игроков, уровень = взвешенный
+ * набор FxPattern (см. STYLES), каждая частица — через штатный партикл-движок.
+ * Дробный аккумулятор — по (игрок, паттерн): доли паттернов не теряются и не дают
+ * «залпов». Гигиена: записи игроков вне level.players() чистятся каждый тик, накопление
+ * ограничено. Бюджет — честный round-robin со сдвигом начала обхода. LOD — плавное
+ * затухание rate от 16 блоков до LOD_FAR, без ступенек.
  */
 @Mod.EventBusSubscriber(modid = CoreClientMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class DonorParticleSpawner {
 
-    private static final double RING = Math.PI * 2.0;
-    private static final Map<UUID, Double> ACCUM = new HashMap<>();
+    /** Накопленные доли частиц: uuid игрока -> паттерн -> дробное число к спавну. */
+    private static final Map<UUID, Map<FxPattern, Double>> ACCUM = new HashMap<>();
+
+    /** Кап накопления на паттерн (защита от «залпа» после паузы/лаг-спайка). */
+    private static final double ACCUM_CAP = 3.0;
+
+    /** Кап спавнов на одного игрока за тик. */
+    private static final int PER_PLAYER_CAP = 4;
+
+    /** Зона LOD без затухания (внутри — полная плотность). */
+    private static final double LOD_FULL = 16.0;
+
+    /** Взвешенные паттерны уровней. Паттерны — синглтоны уровня (ключи аккумуляторов). */
+    private static final Map<DonorLevel, LinkedHashMap<FxPattern, Integer>> STYLES = buildStyles();
 
     private DonorParticleSpawner() {}
+
+    private static Map<DonorLevel, LinkedHashMap<FxPattern, Integer>> buildStyles() {
+        Map<DonorLevel, LinkedHashMap<FxPattern, Integer>> m = new EnumMap<>(DonorLevel.class);
+        m.put(DonorLevel.SILVER, style(
+                // Серебряная пыль вокруг тела + редкие восходящие искры (раз в ~4.5с вспышка)
+                entry(new FxPattern.Cloud(PwpParticleTypes.SILVER.get(), 0.35, 0.1, 1.5, 0.03, 0.01), 4),
+                entry(new FxPattern.Gated(new FxPattern.SparkUp(PwpParticleTypes.SILVER.get(), 0.05, 0.16, 0.30), 90, 12, 4), 1)));
+        m.put(DonorLevel.GOLD, style(
+                // Золотая вращающаяся спираль вокруг тела + периодические вспышки (раз в ~4.5с)
+                entry(new FxPattern.Orbit(PwpParticleTypes.GOLD.get(), 0.55, 0.5, 1.15, 0.24, 0.02, 0.35), 4),
+                entry(new FxPattern.Gated(new FxPattern.Burst(PwpParticleTypes.GOLD.get(), 0.22, 0.15, 0.4, 1.1), 90, 10, 5), 1)));
+        m.put(DonorLevel.PLATINUM, style(
+                // Аура: кольцо у ног + две встречные спирали + редкие яркие всплески (раз в ~6.5с)
+                entry(new FxPattern.Ring(PwpParticleTypes.PLATINUM.get(), 0.5, 0.15, 0.35, 0, 0), 1),
+                entry(new FxPattern.Orbit(PwpParticleTypes.PLATINUM.get(), 0.55, 0.5, 1.0, 0.26, 0.015, 0.4), 2),
+                entry(new FxPattern.Orbit(PwpParticleTypes.PLATINUM.get(), 0.55, 0.5, 1.0, -0.26, 0.015, 0.2), 2),
+                entry(new FxPattern.Gated(new FxPattern.Burst(PwpParticleTypes.PLATINUM.get(), 0.3, 0.2, 0.5, 1.4), 130, 8, 6), 1)));
+        m.put(DonorLevel.MODERATOR, style(
+                // Спокойная служебная аура: лёгкая пыль + небольшая спираль, без агрессивных эффектов
+                entry(new FxPattern.Cloud(PwpParticleTypes.MODERATOR.get(), 0.4, 0.15, 1.4, 0.025, 0.01), 3),
+                entry(new FxPattern.Orbit(PwpParticleTypes.MODERATOR.get(), 0.35, 0.4, 0.8, 0.18, 0.01, 0.3), 2)));
+        m.put(DonorLevel.ADMIN, style(
+                // Агрессивный Scanner: сегментированное кольцо у ног, вращающиеся дуги,
+                // полоса сканирования снизу вверх, резкие импульсы наружу, искры при беге
+                entry(new FxPattern.Ring(PwpParticleTypes.ADMIN.get(), 0.7, 0.1, 0.5, 8, 0.45), 2),
+                entry(new FxPattern.ScanArc(PwpParticleTypes.ADMIN.get(), 0.85, 0.9, 1.3, 0.55, 0.4, 2), 2),
+                entry(new FxPattern.ScanBand(PwpParticleTypes.ADMIN.get(), 0.55, 0.55, 0.018, 2.2), 1),
+                entry(new FxPattern.Gated(new FxPattern.PulseRing(PwpParticleTypes.ADMIN.get(), 0.45, 0.15, 0.7), 40, 6, 7), 1),
+                entry(new FxPattern.MotionSparks(PwpParticleTypes.ADMIN.get(), 0.25, 0.14), 2)));
+        return m;
+    }
+
+    private static LinkedHashMap<FxPattern, Integer> style(FxPattern.Weighted... entries) {
+        LinkedHashMap<FxPattern, Integer> m = new LinkedHashMap<>();
+        for (FxPattern.Weighted e : entries) m.put(e.pattern(), e.weight());
+        return m;
+    }
+
+    private static FxPattern.Weighted entry(FxPattern pattern, int weight) {
+        return new FxPattern.Weighted(pattern, weight);
+    }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -35,140 +96,62 @@ public final class DonorParticleSpawner {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || mc.isPaused()) return;
         ClientLevel level = (ClientLevel) mc.level;
+        java.util.List<? extends Player> players = level.players();
+        if (players.isEmpty()) return;
 
         int far = DonorFxConfig.LOD_FAR.get();
-        long farSq = (long) far * far;
+        double farD = far;
         int budget = DonorFxConfig.BUDGET.get();
+        long t = level.getGameTime();
         int spawned = 0;
 
-        for (Player p : level.players()) {
-            String lvl = DonatorCache.levelOf(p.getUUID());
+        // Гигиена: записи игроков вне level.players() чистим ДО бюджет-break,
+        // чтобы у хвоста очереди аккумуляторы не стирались каждый тик
+        Set<UUID> uuids = new HashSet<>(players.size());
+        for (Player p : players) uuids.add(p.getUUID());
+        ACCUM.keySet().retainAll(uuids);
+
+        // Честный round-robin: начало обхода сдвигается каждый тик
+        int start = (int) (t % players.size());
+        for (int k = 0; k < players.size() && spawned < budget; k++) {
+            Player p = players.get((start + k) % players.size());
+            DonorLevel lvl = DonorLevel.byName(DonatorCache.levelOf(p.getUUID()));
             if (lvl == null || !DonorFxConfig.enabled(lvl)) continue;
-            double distSq = p.distanceToSqr(mc.player);
-            if (distSq > farSq) continue;
-            // Дальше 16 блоков — вдвое реже
-            double rate = DonorFxConfig.rate(lvl) * (distSq < 256.0 ? 1.0 : 0.5);
-            double accum = ACCUM.merge(p.getUUID(), rate / 20.0, Double::sum);
-            int n = (int) accum;
-            if (n <= 0) continue;
-            ACCUM.put(p.getUUID(), accum - n);
-            spawned += spawn(level, p, lvl, n);
-            if (spawned >= budget) break;
-        }
-    }
+            double dist = Math.sqrt(p.distanceToSqr(mc.player));
+            if (dist > farD) continue;
+            // Плавное затухание плотности от LOD_FULL до LOD_FAR
+            double fade = dist <= LOD_FULL ? 1.0 : 1.0 - (dist - LOD_FULL) / (farD - LOD_FULL);
+            if (fade <= 0.0) continue;
+            double rate = DonorFxConfig.rate(lvl) * fade / 20.0;
 
-    // ====== Паттерны эффектов по уровням ======
+            LinkedHashMap<FxPattern, Integer> styles = STYLES.get(lvl);
+            Map<FxPattern, Double> acc = ACCUM.computeIfAbsent(p.getUUID(), u -> new HashMap<>());
+            acc.keySet().retainAll(styles.keySet());
 
-    private static int spawn(ClientLevel level, Player p, String lvl, int n) {
-        return switch (lvl) {
-            case "SILVER" -> silver(level, p, n);
-            case "GOLD" -> gold(level, p, n);
-            case "PLATINUM" -> platinum(level, p, n);
-            case "MODERATOR" -> moderator(level, p, n);
-            case "ADMIN" -> admin(level, p, n);
-            default -> 0;
-        };
-    }
+            // Сумма динамических долей (паттерны с share=0 сейчас не участвуют)
+            long totalW = 0;
+            for (Map.Entry<FxPattern, Integer> e : styles.entrySet()) {
+                totalW += (long) e.getKey().share(level, p, t) * e.getValue();
+            }
+            if (totalW == 0) continue;
 
-    /** SILVER — мягкий световой шорох: медленно всплывающие мотесы в облачке вокруг тела. */
-    private static int silver(ClientLevel level, Player p, int n) {
-        double x = p.getX(), y = p.getY(), z = p.getZ();
-        var rnd = level.random;
-        for (int i = 0; i < n; i++) {
-            level.addParticle(PwpParticleTypes.SILVER.get(),
-                    x + (rnd.nextDouble() - 0.5) * 0.6,
-                    y + 0.2 + rnd.nextDouble() * 1.4,
-                    z + (rnd.nextDouble() - 0.5) * 0.6,
-                    (rnd.nextDouble() - 0.5) * 0.01,
-                    0.02 + rnd.nextDouble() * 0.02,
-                    (rnd.nextDouble() - 0.5) * 0.01);
-        }
-        return n;
-    }
-
-    /** GOLD — вращающееся кольцо-спираль свечений (тангенциальная скорость даёт орбиту). */
-    private static int gold(ClientLevel level, Player p, int n) {
-        double x = p.getX(), y = p.getY(), z = p.getZ();
-        var rnd = level.random;
-        long t = level.getGameTime();
-        for (int i = 0; i < n; i++) {
-            double a = rnd.nextDouble() * RING;
-            double r = 0.55;
-            double h = 0.5 + 0.35 * Math.sin(a * 0.7 + t * 0.05);
-            level.addParticle(PwpParticleTypes.GOLD.get(),
-                    x + Math.cos(a) * r, y + h, z + Math.sin(a) * r,
-                    -Math.sin(a) * 0.22, 0.01, Math.cos(a) * 0.22);
-        }
-        return n;
-    }
-
-    /** PLATINUM — пульсирующее гало над головой + орбитальные точки. */
-    private static int platinum(ClientLevel level, Player p, int n) {
-        double x = p.getX(), y = p.getY(), z = p.getZ();
-        var rnd = level.random;
-        long t = level.getGameTime();
-        for (int i = 0; i < n; i++) {
-            double a = rnd.nextDouble() * RING;
-            if (rnd.nextDouble() < 0.65) {
-                double r = 0.45 + 0.1 * Math.abs(Math.sin(t * 0.05));
-                level.addParticle(PwpParticleTypes.PLATINUM.get(),
-                        x + Math.cos(a) * r, y + 1.85, z + Math.sin(a) * r,
-                        -Math.sin(a) * 0.12, 0.0, Math.cos(a) * 0.12);
-            } else {
-                double r = 0.6;
-                double h = 0.9 + 0.35 * Math.sin(a * 0.8 + t * 0.1);
-                level.addParticle(PwpParticleTypes.PLATINUM.get(),
-                        x + Math.cos(a) * r, y + h, z + Math.sin(a) * r,
-                        -Math.sin(a) * 0.3, 0.01, Math.cos(a) * 0.3);
+            int perPlayer = Math.min(PER_PLAYER_CAP, budget - spawned);
+            for (Map.Entry<FxPattern, Integer> e : styles.entrySet()) {
+                FxPattern pat = e.getKey();
+                int share = pat.share(level, p, t);
+                if (share <= 0) continue;
+                double accV = acc.merge(pat, rate * share * e.getValue() / totalW, Double::sum);
+                if (accV >= 1.0) {
+                    int n = Math.min((int) Math.min(accV, ACCUM_CAP), perPlayer);
+                    acc.put(pat, Math.min(accV - n, ACCUM_CAP));
+                    if (n > 0) {
+                        pat.emit(level, p, level.random, n, t);
+                        spawned += n;
+                        perPlayer -= n;
+                        if (perPlayer <= 0 || spawned >= budget) break;
+                    }
+                }
             }
         }
-        return n;
-    }
-
-    /** MODERATOR — холодное облако мотесов вокруг тела. */
-    private static int moderator(ClientLevel level, Player p, int n) {
-        double x = p.getX(), y = p.getY(), z = p.getZ();
-        var rnd = level.random;
-        for (int i = 0; i < n; i++) {
-            double a = rnd.nextDouble() * RING;
-            double r = 0.5 * rnd.nextDouble();
-            level.addParticle(PwpParticleTypes.MODERATOR.get(),
-                    x + Math.cos(a) * r, y + 0.3 + rnd.nextDouble() * 1.3, z + Math.sin(a) * r,
-                    (rnd.nextDouble() - 0.5) * 0.015, 0.015, (rnd.nextDouble() - 0.5) * 0.015);
-        }
-        return n;
-    }
-
-    /** ADMIN — огненное шоу: восходящие искры, кольцо у ног, периодический пульс. */
-    private static int admin(ClientLevel level, Player p, int n) {
-        double x = p.getX(), y = p.getY(), z = p.getZ();
-        var rnd = level.random;
-        long t = level.getGameTime();
-        boolean pulsePhase = t % 40 < 5;
-        for (int i = 0; i < n; i++) {
-            int roll = rnd.nextInt(3);
-            double a = rnd.nextDouble() * RING;
-            if (pulsePhase && roll == 2) {
-                // Расширяющееся кольцо-пульс
-                double r = 0.15 + rnd.nextDouble() * 0.2;
-                double v = 0.35 + rnd.nextDouble() * 0.3;
-                level.addParticle(PwpParticleTypes.ADMIN.get(),
-                        x + Math.cos(a) * r, y + 0.7, z + Math.sin(a) * r,
-                        Math.cos(a) * v, 0.02, Math.sin(a) * v);
-            } else if (roll == 0) {
-                // Восходящая искра
-                level.addParticle(PwpParticleTypes.ADMIN.get(),
-                        x + (rnd.nextDouble() - 0.5) * 0.3, y + 0.15, z + (rnd.nextDouble() - 0.5) * 0.3,
-                        (rnd.nextDouble() - 0.5) * 0.02, 0.05 + rnd.nextDouble() * 0.04,
-                        (rnd.nextDouble() - 0.5) * 0.02);
-            } else {
-                // Сегменты огненного кольца у ног
-                double r = 0.65;
-                level.addParticle(PwpParticleTypes.ADMIN.get(),
-                        x + Math.cos(a) * r, y + 0.1, z + Math.sin(a) * r,
-                        -Math.sin(a) * 0.3, 0.02, Math.cos(a) * 0.3);
-            }
-        }
-        return n;
     }
 }

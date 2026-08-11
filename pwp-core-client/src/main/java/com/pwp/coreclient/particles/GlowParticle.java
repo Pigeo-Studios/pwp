@@ -1,12 +1,14 @@
 package com.pwp.coreclient.particles;
 
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.pwp.coreclient.donor.DonorLevel;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -16,42 +18,26 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.particles.ParticleOptions;
-import com.mojang.blaze3d.systems.RenderSystem;
-import org.joml.Vector3f;
 
 /**
- * Аддитивная частица свечения для донат-FX: билборд-спрайт (мягкая точка glow.png)
- * либо плоское кольцо. Через штатный партикл-движок — без кастомной геометрии.
- * Профиль уровня задаёт цвет-градиент, твитч размера, скорость роста и плавность
- * затухания. Рендер — аддитивный (SrcAlpha/One), depth mask выключен.
+ * Аддитивная частица свечения донат-FX: билборд-спрайт (мягкая точка glow.png)
+ * на штатном партикл-движке. Цвет — из DonorLevel (с учётом оверрайда конфига),
+ * размер живёт по кривой «рост -> плато -> таяние», альфа — по полуволне.
+ * Рендер аддитивный (SrcAlpha/One), depth mask выключен.
  */
 public class GlowParticle extends TextureSheetParticle {
 
-    /** Профили уровней (параметры сведены под "мягкое свечение", масштаб чуть различается). */
-    static final StyleProfile SILVER = new StyleProfile(0.78f, 0.83f, 0.95f, 0.75f, 0.35f, 1.0f, 1.4f, 0.35f);
-    static final StyleProfile GOLD = new StyleProfile(1.00f, 0.82f, 0.28f, 0.90f, 0.45f, 1.0f, 1.4f, 0.30f);
-    static final StyleProfile PLATINUM = new StyleProfile(0.62f, 0.93f, 1.00f, 0.95f, 0.40f, 1.0f, 1.5f, 0.28f);
-    static final StyleProfile MODERATOR = new StyleProfile(0.40f, 0.72f, 1.00f, 0.95f, 0.45f, 1.0f, 1.5f, 0.28f);
-    static final StyleProfile ADMIN = new StyleProfile(1.00f, 0.22f, 0.10f, 1.00f, 0.55f, 1.0f, 1.6f, 0.36f);
-
-    private final StyleProfile profile;
-    /** 0 — точка-блик спрайта; >0 — плоское кольцо радиуса r (вторичный спрайт-кольцо). */
-    private final float ringRadius;
-    private final float speed;
+    private final float baseSize;
     private final float maxAlpha;
-    private final double vr;
 
-    protected GlowParticle(ClientLevel level, double x, double y, double z, StyleProfile profile, float ringRadius) {
+    protected GlowParticle(ClientLevel level, double x, double y, double z, DonorLevel donorLevel, float baseSize) {
         super(level, x, y, z);
-        this.profile = profile;
-        this.ringRadius = ringRadius;
-        this.speed = profile.speed;
-        float r = (float) Math.max(0.08f, Math.min(0.55, ringRadius <= 0 ? 0.34 : 0.5));
-        this.setSize(r, r);
-        this.vr = 0.02D;
-        this.maxAlpha = profile.maxAlpha;
-        this.lifetime = (int) (profile.life * 20.0f);
-        this.setColor(profile.color.x(), profile.color.y(), profile.color.z());
+        this.baseSize = baseSize;
+        this.maxAlpha = maxAlphaOf(donorLevel);
+        this.lifetime = lifeOf(donorLevel);
+        this.setSize(baseSize, baseSize);
+        float[] c = donorLevel.rgb();
+        this.setColor(c[0], c[1], c[2]);
     }
 
     @Override
@@ -65,8 +51,14 @@ public class GlowParticle extends TextureSheetParticle {
             return;
         }
         float t = this.age / (float) this.lifetime;
-        float a = 1.0f - t;
+        // Альфа — полуволна: мягкий вход и выход
         this.alpha = maxAlpha * (float) Math.sin(Math.PI * t);
+        // Размер: быстрый рост (20%), плато, плавное таяние (45%)
+        float c;
+        if (t < 0.2f) c = t / 0.2f;
+        else if (t < 0.55f) c = 1.0f;
+        else c = 1.0f - (t - 0.55f) / 0.45f;
+        this.quadSize = baseSize * Math.max(0.05f, c);
         this.xd *= 0.96D;
         this.yd += 0.0008D;
         this.zd *= 0.96D;
@@ -89,10 +81,10 @@ public class GlowParticle extends TextureSheetParticle {
         public void begin(BufferBuilder buffer, TextureManager textureManager) {
             RenderSystem.enableBlend();
             RenderSystem.blendFuncSeparate(
-                    com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE,
-                    com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
-                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
+                    GlStateManager.SourceFactor.SRC_ALPHA,
+                    GlStateManager.DestFactor.ONE,
+                    GlStateManager.SourceFactor.ONE,
+                    GlStateManager.DestFactor.ZERO);
             RenderSystem.depthMask(false);
             RenderSystem.setShader(GameRenderer::getParticleShader);
             RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
@@ -108,45 +100,47 @@ public class GlowParticle extends TextureSheetParticle {
         }
     };
 
-    /** Профиль уровня: цвет, прозрачность, скорость роста, жизнь, начальный размер. */
-    static final class StyleProfile {
-        final Vector3f color;
-        final float sizeMul;
-        final float speed;
-        final float maxAlpha;
-        final Vector3f gradient;
-        final float life;
-        final float ringMult;
+    // ====== Параметры по уровням (цвет — DonorLevel, здесь — физика свечения) ======
 
-        StyleProfile(float r, float g, float b, float sizeMul, float speed, float maxAlpha, float life, float ringMult) {
-            this.color = new Vector3f(r, g, b);
-            this.gradient = null;
-            this.sizeMul = sizeMul;
-            this.speed = speed;
-            this.maxAlpha = maxAlpha;
-            this.life = life;
-            this.ringMult = ringMult;
-        }
+    private static float maxAlphaOf(DonorLevel level) {
+        return switch (level) {
+            case SILVER -> 0.55f;
+            case GOLD -> 0.75f;
+            case PLATINUM -> 0.80f;
+            case MODERATOR -> 0.70f;
+            case ADMIN -> 0.85f;
+        };
     }
 
-    /** Фабрика частиц уровня. */
+    private static int lifeOf(DonorLevel level) {
+        return switch (level) {
+            case SILVER, MODERATOR -> 30;
+            case PLATINUM -> 26;
+            case GOLD -> 22;
+            case ADMIN -> 18;
+        };
+    }
+
+    private static float sizeOf(DonorLevel level) {
+        return switch (level) {
+            case ADMIN -> 0.34f;
+            case PLATINUM -> 0.32f;
+            default -> 0.30f;
+        };
+    }
+
+    /** Фабрика частиц уровня (цвет и физика берутся из DonorLevel). */
     public static class Provider<T extends ParticleOptions> implements ParticleEngine.SpriteParticleRegistration<T> {
-        private final StyleProfile profile;
-        private final float ringRadius;
+        private final DonorLevel donorLevel;
 
-        public Provider(StyleProfile profile) {
-            this(profile, 0f);
-        }
-
-        public Provider(StyleProfile profile, float ringRadius) {
-            this.profile = profile;
-            this.ringRadius = ringRadius;
+        public Provider(DonorLevel donorLevel) {
+            this.donorLevel = donorLevel;
         }
 
         @Override
         public ParticleProvider<T> create(SpriteSet spriteSet) {
             return (type, level, x, y, z, dx, dy, dz) -> {
-                GlowParticle p = new GlowParticle(level, x, y, z, profile, ringRadius);
+                GlowParticle p = new GlowParticle(level, x, y, z, donorLevel, sizeOf(donorLevel));
                 p.setSpriteFromAge(spriteSet);
                 return p;
             };

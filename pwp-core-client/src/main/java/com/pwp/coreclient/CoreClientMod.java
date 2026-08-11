@@ -1,5 +1,6 @@
 package com.pwp.coreclient;
 
+import com.pwp.coreclient.donor.DonorLevel;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.coreclient.particles.DonorFxConfig;
 import com.pwp.coreclient.particles.PwpParticleTypes;
@@ -7,6 +8,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
@@ -24,6 +26,7 @@ public class CoreClientMod {
         log.error("MODID=" + MODID);
         PwpParticleTypes.register(FMLJavaModLoadingContext.get().getModEventBus());
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(DonorLevel::onModConfig);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, DonorFxConfig.SPEC, "pwp_core_client/donor_fx.toml");
             ClientScreenHandler.init();

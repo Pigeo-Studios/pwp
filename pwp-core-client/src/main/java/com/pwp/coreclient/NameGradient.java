@@ -1,5 +1,6 @@
 package com.pwp.coreclient;
 
+import com.pwp.coreclient.donor.DonorLevel;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -11,64 +12,21 @@ public final class NameGradient {
     // Цикл «живого» перелива цвета по строке
     private static final long CYCLE_MS = 2800L;
 
-    // Палитры тиров (старт, конец) в ARGB
-    private static final int SILVER_START   = 0xFF8E9AA6;
-    private static final int SILVER_END     = 0xFFF3F6F9;
-    private static final int GOLD_START     = 0xFFB8860B;
-    private static final int GOLD_END       = 0xFFFFF3B0;
-    private static final int PLATINUM_START = 0xFF6FB6D6;
-    private static final int PLATINUM_END   = 0xFFF6FBFF;
-
-    // Роли — ярче тиров: ADMIN огненный красный (3 стопа), MODERATOR сине-голубой
-    private static final int MODERATOR_START = 0xFF2A5B8F;
-    private static final int MODERATOR_END   = 0xFF9FD0FF;
-    // Старт палитры яркий (0xFF5C0000 был почти чёрным — первый «сегмент» ника читался чёрной плашкой)
-    private static final int[] ADMIN_PALETTE = {0xFFD50000, 0xFFFF4D4D, 0xFFFFD980};
-
-    // Цвет мягкого свечения по уровню (зарезервировано)
-    private static final int GLOW_WHITE      = 0x40FFFFFF;
-    private static final int GLOW_ADMIN      = 0x40FF3030;
-    private static final int GLOW_MODERATOR  = 0x4030A0FF;
-
-    /** Нормализация роли из core-service (admin/owner/support/moderator) в display-уровень или null. */
-    public static String normalizeRole(String role) {
-        if (role == null) return null;
-        return switch (role.trim().toLowerCase()) {
-            case "admin", "owner" -> "ADMIN";
-            case "support", "moderator" -> "MODERATOR";
-            default -> null;
-        };
-    }
-
-    /** Итоговый уровень для отображения: роль приоритетнее тира (ADMIN > MODERATOR > тир). */
-    public static String resolve(String role, String tier) {
-        String r = normalizeRole(role);
-        if (r != null) return r;
-        if (tier == null) return null;
-        String t = tier.toUpperCase();
-        return isSupported(t) ? t : null;
-    }
-
-    public static boolean isSupported(String level) {
-        if (level == null) return false;
-        return switch (level.toUpperCase()) {
-            case "SILVER", "GOLD", "PLATINUM", "ADMIN", "MODERATOR" -> true;
-            default -> false;
-        };
-    }
+    // Альфа дилатационного ореола (8 копий по ±1px)
+    private static final int GLOW_ALPHA = 0x2A;
 
     /** Цвет по пиксельной позиции px внутри строки шириной totalWidth. Плавно, без ступеней по символам. */
     public static int colorAt(String level, double px, double totalWidth, long timeMs) {
-        if (level == null) return 0xFFFFFFFF;
+        DonorLevel lvl = DonorLevel.byName(level);
+        if (lvl == null) return 0xFFFFFFFF;
         double t = totalWidth > 1 ? px / totalWidth : 0.0;
         // Косинус-перелив вперёд-назад (0->1->0 плавно, производная 0 на краях) — вместо
         // пилообразного возврата, при котором в момент оборота цикла цвет резко прыгал
-        // с выцветшего конца палитры на стартовый (у ADMIN — красный «вспыхивал» рывком)
         double raw = (timeMs % CYCLE_MS) / (double) CYCLE_MS;
         double phase = 0.5 - 0.5 * Math.cos(raw * 2.0 * Math.PI);
         t = t + phase;
         t -= Math.floor(t);
-        return grade(level, t);
+        return grade(lvl.stops(), t);
     }
 
     /** Ширина градиентного текста (без draw) — для центрирования. */
@@ -91,28 +49,25 @@ public final class NameGradient {
         return cursor - x;
     }
 
-    /** Отрисовка с мягким свечением вокруг текста (для лидербордов). Цвет свечения зависит от уровня. */
+    /** Отрисовка с мягким ореолом вокруг текста (для лидербордов). Ореол — дилатация на 8 направлений
+     *  цветом уровня (низкая альфа, по ±1px), сверху градиент — без ванильной тени. */
     public static int drawGlow(GuiGraphics g, Font font, String text, int x, int y, String level) {
-        // Раньше было 4 «призрачные» копии в ±1px (0x40 см. цвет) — они складывались и давали
-        // эффект «двух элементов» ника. Оставляем один проход градиента с тенью — без наложения.
-        return draw(g, font, text, x, y, level, true);
+        if (text.isEmpty()) return 0;
+        DonorLevel lvl = DonorLevel.byName(level);
+        if (lvl == null) return draw(g, font, text, x, y, level, true);
+        int glow = (lvl.glowColor() & 0xFFFFFF) | (GLOW_ALPHA << 24);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+                g.drawString(font, text, x + dx, y + dy, glow, false);
+            }
+        }
+        return draw(g, font, text, x, y, level, false);
     }
 
-    private static int grade(String level, double t) {
-        switch (level) {
-            case "SILVER":
-                return lerp(SILVER_START, SILVER_END, t);
-            case "GOLD":
-                return lerp(GOLD_START, GOLD_END, t);
-            case "PLATINUM":
-                return lerp(PLATINUM_START, PLATINUM_END, t);
-            case "MODERATOR":
-                return lerp(MODERATOR_START, MODERATOR_END, t);
-            case "ADMIN":
-                return triple(ADMIN_PALETTE[0], ADMIN_PALETTE[1], ADMIN_PALETTE[2], t);
-            default:
-                return lerp(GOLD_START, GOLD_END, t);
-        }
+    private static int grade(int[] stops, double t) {
+        if (stops.length >= 3) return triple(stops[0], stops[1], stops[2], t);
+        return lerp(stops[0], stops[1], t);
     }
 
     private static int triple(int c0, int c1, int c2, double t) {

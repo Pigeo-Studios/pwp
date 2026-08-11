@@ -2,7 +2,7 @@
   "providers": [
     {
       "type": "ttf",
-      "file": "pwp_core_client:font/inter_regular.ttf",
+      "file": "pwp_core_client:inter_regular.ttf",
       "shift": [0.0, 0.0],
       "size": 9.0,
       "oversample": 2.0

@@ -1,25 +1,32 @@
 package com.pwp.coreclient;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.pwp.coreclient.donor.DonorLevel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderNameTagEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RenderNameTagEvent;
 import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 /**
- * Донат-надмид: рисует «живой» градиент (тиры золото/серебро/платина и роли ADMIN/MODERATOR)
- * вместо ванильного имени. Уровни приходят только с лобби-сервера (PacketDonatorTiers).
+ * Донат-надмид: «живой» градиент (тиры золото/серебро/платина и роли ADMIN/MODERATOR)
+ * вместо ванильного имени + мягкий ореол цветом уровня (дилатация на 8 направлений,
+ * низкая альфа — в отличие от старой «тени из 4 копий» не даёт двойного ника).
+ * Плавный фейд по дистанции 32->64 блока. Уровни приходят только с лобби-сервера.
  */
 @Mod.EventBusSubscriber(modid = CoreClientMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class DonatorNameTagRenderer {
+
+    private static final double FADE_START = 48.0;
+    private static final double FADE_END = 64.0;
+    private static final int GLOW_ALPHA = 0x2A;
 
     private DonatorNameTagRenderer() {}
 
@@ -42,8 +49,13 @@ public final class DonatorNameTagRenderer {
     private static void renderWorldGradient(Entity entity, String level, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
-        double distSq = mc.getEntityRenderDispatcher().distanceToSqr(entity);
-        if (distSq > 4096.0) return;
+        DonorLevel lvl = DonorLevel.byName(level);
+        if (lvl == null) return;
+
+        // Плавный фейд по дистанции вместо жёсткого обрыва
+        double dist = Math.sqrt(mc.getEntityRenderDispatcher().distanceToSqr(entity));
+        float fade = dist <= FADE_START ? 1.0f : (float) Math.max(0.0, 1.0 - (dist - FADE_START) / (FADE_END - FADE_START));
+        if (fade <= 0.0f) return;
 
         String text = entity.getName().getString();
         if (text.isEmpty()) return;
@@ -58,13 +70,28 @@ public final class DonatorNameTagRenderer {
         int x = -totalWidth / 2;
         long now = System.currentTimeMillis();
         Matrix4f mat = new Matrix4f(poseStack.last().pose());
+
+        // Ореол: 8 копий по ±1px цветом уровня с низкой альфой (дилатация)
+        int glowA = (int) (GLOW_ALPHA * fade);
+        int glowCol = (lvl.glowColor() & 0xFFFFFF) | (glowA << 24);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+                font.drawInBatch(text, x + dx, dy, glowCol, false, mat, buffer,
+                        Font.DisplayMode.NORMAL, 0, packedLight);
+            }
+        }
+
+        // Градиентный текст поверх
         int cursor = x;
         for (int i = 0; i < text.length(); i++) {
             String ch = String.valueOf(text.charAt(i));
             int w = font.width(ch);
-            font.drawInBatch(ch, cursor, 0,
-                NameGradient.colorAt(level, cursor + w / 2.0 - x, totalWidth, now), false, mat, buffer,
-                Font.DisplayMode.NORMAL, 0, packedLight);
+            int c = NameGradient.colorAt(level, cursor + w / 2.0 - x, totalWidth, now);
+            int a = (int) ((c >> 24 & 0xFF) * fade);
+            c = (c & 0xFFFFFF) | (a << 24);
+            font.drawInBatch(ch, cursor, 0, c, false, mat, buffer,
+                    Font.DisplayMode.NORMAL, 0, packedLight);
             cursor += w;
         }
         poseStack.popPose();

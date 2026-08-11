@@ -1,5 +1,7 @@
 package com.pwp.coreclient;
 
+import com.pwp.coreclient.donor.DonorLevel;
+
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +28,7 @@ public final class DonatorCache {
             }
             String t = tiers[i] == null ? "" : tiers[i];
             if (!t.isEmpty() && !"NONE".equalsIgnoreCase(t)) TIERS.put(id, t.toUpperCase());
-            String r = NameGradient.normalizeRole(roles[i]);
+            String r = DonorLevel.normalizeRole(roles[i]);
             if (r != null) ROLES.put(id, r);
         }
     }
