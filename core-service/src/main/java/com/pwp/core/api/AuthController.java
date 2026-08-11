@@ -446,6 +446,11 @@ public class AuthController {
                     "refresh_token", newRefresh,
                     "hmac_secret", newHmacSecret
                 )));
+            } catch (java.sql.SQLException e) {
+                // БД временно недоступна — НЕ «сессия мертва». 503 (а не success:false)
+                // сохраняет сессию у клиента: лаунчер классифицирует его как Network.
+                log.warn("refresh DB error: {}", e.getMessage());
+                ctx.status(503).json(ApiResponse.error("database temporarily unavailable"));
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("refresh failed: " + e.getMessage()));
             }
@@ -476,6 +481,11 @@ public class AuthController {
                 PlayerRepository.updateHeartbeat(req.accessToken);
                 PlayerRepository.log(uuid, "heartbeat", ctx.ip(), null);
                 ctx.json(ApiResponse.ok(Map.of("extended", true, "expires_in", 30)));
+            } catch (java.sql.SQLException e) {
+                // БД временно недоступна — НЕ «сессия мертва». 503 (а не success:false)
+                // сохраняет сессию у клиента: лаунчер классифицирует его как Network.
+                log.warn("heartbeat DB error: {}", e.getMessage());
+                ctx.status(503).json(ApiResponse.error("database temporarily unavailable"));
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("heartbeat failed"));
             }

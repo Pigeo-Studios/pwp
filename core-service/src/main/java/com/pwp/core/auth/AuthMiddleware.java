@@ -111,7 +111,16 @@ public class AuthMiddleware {
         }
 
         String signData = timestamp + ":" + path;
-        String sessionSecret = findSessionSecret(ctx);
+        String sessionSecret;
+        try {
+            sessionSecret = findSessionSecret(ctx);
+        } catch (java.sql.SQLException e) {
+            // БД временно недоступна — это НЕ «сессия мертва». 401 отправил бы
+            // лаунчер на чистку сессии (refresh → 401 → AuthRejected). 503 клиент
+            // классифицирует как Network — сессия сохраняется, запрос повторится.
+            log.warn("DB unavailable while resolving session secret (path={}): {}", path, e.getMessage());
+            throw new io.javalin.http.ServiceUnavailableResponse("Database temporarily unavailable");
+        }
 
         if (sessionSecret == null) {
             log.warn("No session secret for {} from {} (path={})", ctx.method(), ctx.ip(), path);
@@ -223,7 +232,7 @@ public class AuthMiddleware {
 
     private static final Gson GSON = new Gson();
 
-    private static String findSessionSecret(Context ctx) {
+    private static String findSessionSecret(Context ctx) throws java.sql.SQLException {
         try {
             String body = ctx.body();
             if (body != null && !body.isBlank()) {
@@ -245,6 +254,9 @@ public class AuthMiddleware {
             if (token == null) token = ctx.queryParam("access_token");
             if (token == null) token = ctx.queryParam("token");
             if (token != null) return PlayerRepository.findHmacSecretByAccessToken(token);
+        } catch (java.sql.SQLException e) {
+            // Пробрасываем наверх — handle() превратит в 503, а не в 401
+            throw e;
         } catch (Exception e) {
             log.debug("Failed to find session secret: {}", e.getMessage());
         }
