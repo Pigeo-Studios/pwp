@@ -7,8 +7,10 @@
   "mixins": [
      "SbwFireMixin",
      "SbwVehicleEffectsMixin",
-     "DroneConnectMixin"
-  ],
+      "DroneConnectMixin",
+      "FcpVehicleContainerSizeMixin",
+      "FcpVehicleNoInventoryDropMixin"
+   ],
   "client": [
      "PlayerModelMixin",
     "FirstPersonArmFixMixin",
