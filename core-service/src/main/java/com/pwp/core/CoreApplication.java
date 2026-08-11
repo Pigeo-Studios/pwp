@@ -71,6 +71,8 @@ public class CoreApplication {
         new KitController(app);
         new FactionVehicleController(app);
         new VoiceMuteController(app);
+        new ChatMuteController(app);
+        new PunishmentController(app);
         new AuthController(app, config);
         new AdminController(app);
         new NetworkController(app);

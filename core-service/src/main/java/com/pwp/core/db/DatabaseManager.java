@@ -171,6 +171,15 @@ public class DatabaseManager {
             + "expires_at BIGINT NOT NULL DEFAULT 0, "
             + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
 
+            "CREATE TABLE IF NOT EXISTS chat_mutes ("
+            + "uuid VARCHAR(36) PRIMARY KEY, "
+            + "muted_by_uuid VARCHAR(36) NOT NULL, "
+            + "muted_by_nickname VARCHAR(64) NOT NULL, "
+            + "reason VARCHAR(256) DEFAULT '', "
+            + "muted_at BIGINT NOT NULL, "
+            + "expires_at BIGINT NOT NULL DEFAULT 0, "
+            + "FOREIGN KEY (uuid) REFERENCES players(uuid) ON DELETE CASCADE)",
+
             "CREATE TABLE IF NOT EXISTS ip_confirmations ("
             + "id INT AUTO_INCREMENT PRIMARY KEY, "
             + "player_uuid VARCHAR(36) NOT NULL, "

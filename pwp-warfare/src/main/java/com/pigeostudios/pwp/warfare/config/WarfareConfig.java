@@ -97,6 +97,13 @@ public static final BooleanValue REQUIRE_SPECIALIST_TO_DRIVE = BUILDER.comment(
             "so losing the drone never extends it - the class stays playable."
         )
         .defineInRange("droneDeployCooldownTicks", 900, 100, 7200);
+    public static final IntValue DRONE_DEPLOY_MAX_RANGE = BUILDER.comment(
+            "Max horizontal distance (blocks) from the player to pull the drone placement",
+            "back on a far click (accidental clicks at reach edge must not spawn the drone",
+            "beyond the stand-still threshold and instantly cancel, burning the cooldown).",
+            "Must stay below ~2.5 (the stand-still cancel threshold) to prevent instant cancel."
+        )
+        .defineInRange("droneDeployMaxRange", 2, 1, 2);
     public static final IntValue DRONE_IDLE_DESPAWN_TICKS = BUILDER.comment(
             "A drone that landed and has no active control link despawns after N ticks",
             "(abandoned drones must not litter the map or hold the active limit)"

@@ -376,18 +376,18 @@ public class CoreServerApi {
 
     // ====== VOICE MUTE ======
 
-    public static JsonObject voiceMute(String uuid, String mutedByUuid, String mutedByNickname,
+    public static JsonObject voiceMute(String target, String mutedByUuid, String mutedByNickname,
                                         String reason, int durationMinutes) {
         return post("/api/v1/voicemute", map(
-                "uuid", uuid,
+                "target", target,
                 "mutedByUuid", mutedByUuid,
                 "mutedByNickname", mutedByNickname,
                 "reason", reason != null ? reason : "",
                 "durationMinutes", durationMinutes));
     }
 
-    public static JsonObject voiceUnmute(String uuid) {
-        return post("/api/v1/voiceunmute", map("uuid", uuid));
+    public static JsonObject voiceUnmute(String target) {
+        return post("/api/v1/voiceunmute", map("target", target));
     }
 
     public static JsonObject getVoiceMute(String uuid) {
@@ -396,6 +396,68 @@ public class CoreServerApi {
 
     public static JsonObject getVoiceMutes() {
         return get("/api/v1/voicemutes");
+    }
+
+    // ====== MODERATION (/pwp) ======
+
+    public static JsonObject ban(String target, String reason, String duration, String adminUuid) {
+        return post("/api/v1/launcher/ban", map(
+                "target", target,
+                "reason", reason != null ? reason : "",
+                "duration", duration != null ? duration : "perm",
+                "adminUuid", adminUuid != null ? adminUuid : ""));
+    }
+
+    public static JsonObject unban(String target, String adminUuid) {
+        return post("/api/v1/launcher/unban", map(
+                "target", target,
+                "adminUuid", adminUuid != null ? adminUuid : ""));
+    }
+
+    public static JsonObject warn(String target, String reason, String adminUuid) {
+        return post("/api/v1/launcher/warn", map(
+                "target", target,
+                "reason", reason != null ? reason : "",
+                "adminUuid", adminUuid != null ? adminUuid : ""));
+    }
+
+    public static JsonObject kick(String target, String reason, String adminUuid) {
+        return post("/api/v1/launcher/kick", map(
+                "target", target,
+                "reason", reason != null ? reason : "",
+                "adminUuid", adminUuid != null ? adminUuid : ""));
+    }
+
+    public static JsonObject chatMute(String target, String mutedByUuid, String mutedByNickname,
+                                       String reason, int durationMinutes) {
+        return post("/api/v1/chatmute", map(
+                "target", target,
+                "mutedByUuid", mutedByUuid,
+                "mutedByNickname", mutedByNickname,
+                "reason", reason != null ? reason : "",
+                "durationMinutes", durationMinutes));
+    }
+
+    public static JsonObject chatUnmute(String target, String unmutedByUuid) {
+        return post("/api/v1/chatunmute", map(
+                "target", target,
+                "unmutedByUuid", unmutedByUuid != null ? unmutedByUuid : ""));
+    }
+
+    public static JsonObject getChatMute(String uuid) {
+        return get("/api/v1/chatmute/" + uuid);
+    }
+
+    public static JsonObject getChatMutes() {
+        return get("/api/v1/chatmutes");
+    }
+
+    public static JsonObject getBannedPlayers() {
+        return get("/api/v1/punishments/banned");
+    }
+
+    public static JsonObject getPunishments(String uuid) {
+        return get("/api/v1/punishments/" + uuid);
     }
 
     private static void addAuthHeaders(HttpURLConnection conn, String path) {

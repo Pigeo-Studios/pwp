@@ -2,6 +2,7 @@ package com.pwp.coreclient.gui;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.pwp.coreclient.NameGradient;
 import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientResponseCache;
@@ -481,7 +482,11 @@ public class StatsScreen extends Screen {
 
             String nameStr = e.nickname;
             if (PWPTheme.Fonts.display().width(nameStr) > 120) nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
-            gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
+            if (e.tier != null) {
+                NameGradient.drawGlow(gui, PWPTheme.Fonts.display(), nameStr, leftX + 28, rowY + 3, e.tier);
+            } else {
+                gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
+            }
 
             String colVal = truncateText(getColValue(e, lbOrderBy), 70);
             gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
@@ -594,7 +599,7 @@ public class StatsScreen extends Screen {
     }
 
     private static class LeaderboardEntry {
-        String uuid, nickname;
+        String uuid, nickname, tier;
         int kills, deaths, wins, vehicleKills, captures, headshots;
         int vehiclesDestroyed, airVehiclesDestroyed;
         int level, matchesPlayed;
@@ -606,6 +611,12 @@ public class StatsScreen extends Screen {
             JsonObject st = obj.has("stats") ? obj.getAsJsonObject("stats") : obj;
             uuid = get(p, "uuid", "");
             nickname = get(p, "nickname", "");
+            if (p.has("donateTier") && !p.get("donateTier").isJsonNull()) {
+                tier = p.get("donateTier").getAsString().toUpperCase();
+                if (!NameGradient.isSupported(tier)) tier = null;
+            } else {
+                tier = null;
+            }
             kills = get(st, "kills", 0);
             deaths = get(st, "deaths", 0);
             wins = get(st, "wins", 0);

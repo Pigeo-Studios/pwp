@@ -189,6 +189,24 @@ public class DroneDeploymentEvents {
          return;
       }
 
+      // Дальний клик (край досягаемости / случайно кликнул далеко) не должен
+      // ставить дрон за порогом «стоять на месте» (2.5 блока XZ) и мгновенно
+      // отменять установку, сжигая кулдаун. Точка установки затягивается к
+      // игроку на DRONE_DEPLOY_MAX_RANGE (ниже порога отмены — канал всегда
+      // стартует нормально). Y при клампе — уровень ног игрока, чтобы фолбэк
+      // высоты не оказался на высоте далёкой стены.
+      int maxRange = WarfareConfig.DRONE_DEPLOY_MAX_RANGE.get();
+      double pdx = placePos.getX() + 0.5 - player.getX();
+      double pdz = placePos.getZ() + 0.5 - player.getZ();
+      double pdist2 = pdx * pdx + pdz * pdz;
+      if (pdist2 > maxRange * maxRange) {
+         double pscale = maxRange / Math.sqrt(pdist2);
+         placePos = new BlockPos(
+            (int) Math.floor(player.getX() + pdx * pscale),
+            player.blockPosition().getY(),
+            (int) Math.floor(player.getZ() + pdz * pscale));
+      }
+
       // Спавн дрона в точке установки (на земле).
       EntityType<?> type = ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation(droneId));
       if (type == null) return;

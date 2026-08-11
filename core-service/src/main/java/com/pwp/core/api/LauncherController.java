@@ -521,6 +521,40 @@ public class LauncherController {
                 ctx.status(500).json(ApiResponse.error(e.getMessage()));
             }
         });
+
+        // ── Kick player (запись в историю; дисконнект делает сервер локально) ──
+        app.post("/api/v1/launcher/kick", ctx -> {
+            KickReq req = ctx.bodyAsClass(KickReq.class);
+            if (req.target == null) {
+                ctx.json(ApiResponse.error("target required"));
+                return;
+            }
+            try (Connection c = DatabaseManager.getConnection()) {
+                String uuid = null;
+                String nickname = null;
+                String lookupSql = "SELECT uuid, nickname FROM players WHERE uuid = ? OR nickname = ?";
+                try (PreparedStatement ps = c.prepareStatement(lookupSql)) {
+                    ps.setString(1, req.target);
+                    ps.setString(2, req.target);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            uuid = rs.getString("uuid");
+                            nickname = rs.getString("nickname");
+                        }
+                    }
+                }
+                if (uuid == null) {
+                    ctx.json(ApiResponse.error("player not found"));
+                    return;
+                }
+                PunishmentRepository.addRecord(uuid, "KICK", req.reason, req.adminUuid, null, null);
+                log.info("Player {} ({}) kicked by {}: {}", nickname, uuid, req.adminUuid, req.reason);
+                ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname)));
+            } catch (Exception e) {
+                log.error("Kick error", e);
+                ctx.status(500).json(ApiResponse.error(e.getMessage()));
+            }
+        });
     }
 
     private static final String TG_COMMANDS_DIR = "C:/Users/maska/OneDrive/Desktop/PWP/bots/commands";
@@ -722,6 +756,12 @@ public class LauncherController {
     }
 
     public static class WarnReq {
+        public String target;
+        public String reason;
+        public String adminUuid;
+    }
+
+    public static class KickReq {
         public String target;
         public String reason;
         public String adminUuid;

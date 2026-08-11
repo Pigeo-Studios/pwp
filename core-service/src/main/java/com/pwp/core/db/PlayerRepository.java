@@ -365,6 +365,16 @@ public class PlayerRepository {
         }
     }
 
+    public static void setDonateTier(String uuid, String tier) throws SQLException {
+        String sql = "UPDATE players SET donate_tier = ? WHERE uuid = ?";
+        try (Connection c = DatabaseManager.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, tier);
+            ps.setString(2, uuid);
+            ps.executeUpdate();
+        }
+    }
+
     // в”Ђв”Ђ Trusted IPs в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
     public static boolean isIpTrusted(String playerUuid, String ip) throws SQLException {

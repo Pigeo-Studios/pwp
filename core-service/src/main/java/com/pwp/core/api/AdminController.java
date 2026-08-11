@@ -45,7 +45,8 @@ public class AdminController {
             Map<String, Object> m = new HashMap<>();
             m.put("uuid", pl.uuid); m.put("login", pl.login); m.put("nickname", pl.nickname);
             m.put("email", maskEmail(pl.email)); m.put("telegram_id", pl.telegramId);
-            m.put("role", pl.role); m.put("is_banned", pl.isBanned); m.put("ban_reason", pl.banReason);
+            m.put("role", pl.role); m.put("donate_tier", pl.donateTier);
+            m.put("is_banned", pl.isBanned); m.put("ban_reason", pl.banReason);
             m.put("registered_at", pl.firstJoin); m.put("last_login", pl.lastJoin); m.put("last_ip", pl.lastIp);
             m.put("2fa_enabled", pl.launcher2faEnabled); m.put("privacy_accepted", pl.privacyPolicyAccepted);
             ctx.json(ApiResponse.ok(m));
@@ -111,6 +112,21 @@ public class AdminController {
             PlayerRepository.setRole(req.uuid, req.role);
             PlayerRepository.log(req.uuid, "role_change", ctx.ip(), "new role: " + req.role);
             ctx.json(ApiResponse.ok("role changed to " + req.role));
+        });
+
+        app.post("/api/v1/admin/set-donate-tier", ctx -> {
+            SetDonateTierReq req = ctx.bodyAsClass(SetDonateTierReq.class);
+            if (PlayerRepository.findByUuid(req.uuid) == null) {
+                ctx.json(ApiResponse.error("user not found")); return;
+            }
+            List<String> valid = List.of("NONE", "SILVER", "GOLD", "PLATINUM");
+            if (req.tier == null || !valid.contains(req.tier.toUpperCase())) {
+                ctx.json(ApiResponse.error("invalid tier: " + String.join(", ", valid))); return;
+            }
+            String tier = req.tier.toUpperCase();
+            PlayerRepository.setDonateTier(req.uuid, tier.equals("NONE") ? null : tier);
+            PlayerRepository.log(req.uuid, "donate_tier_change", ctx.ip(), "new tier: " + tier);
+            ctx.json(ApiResponse.ok("donate tier set to " + tier));
         });
 
         app.get("/api/v1/admin/pending-resets", ctx -> {
@@ -498,7 +514,7 @@ public class AdminController {
             int offset = Math.max(parseInt(ctx.queryParam("offset"), 0), 0);
             String q = ctx.queryParam("q");
             List<Map<String, Object>> items = new ArrayList<>();
-            String sql = "SELECT uuid, nickname, login, role, is_banned, ban_reason, banned_until, last_ip, hwid, "
+            String sql = "SELECT uuid, nickname, login, role, donate_tier, is_banned, ban_reason, banned_until, last_ip, hwid, "
                 + "first_join, last_join FROM players";
             if (q != null && !q.isEmpty()) {
                 sql += " WHERE nickname LIKE ? OR login LIKE ? OR uuid LIKE ?";
@@ -522,6 +538,7 @@ public class AdminController {
                         m.put("nickname", rs.getString("nickname"));
                         m.put("login", rs.getString("login"));
                         m.put("role", rs.getString("role"));
+                        m.put("donate_tier", rs.getString("donate_tier"));
                         boolean isBanned = rs.getBoolean("is_banned");
                         java.sql.Timestamp until = rs.getTimestamp("banned_until");
                         if (isBanned && until != null && until.before(new java.util.Date())) {
@@ -629,6 +646,7 @@ public class AdminController {
     public static class BanReq { public String uuid; public String reason; public String duration; }
     public static class ReqUuid { public String uuid; }
     public static class SetRoleReq { public String uuid; public String role; }
+    public static class SetDonateTierReq { public String uuid; public String tier; }
     public static class ResolveResetReq { public int resetId; public String adminUuid; public String status; }
     public static class BroadcastReq { public String adminUuid; public String message; }
     public static class DeleteAccountReq { public String uuid; public long telegramId; }

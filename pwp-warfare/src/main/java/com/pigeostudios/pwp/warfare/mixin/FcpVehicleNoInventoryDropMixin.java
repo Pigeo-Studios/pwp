@@ -26,6 +26,6 @@ public abstract class FcpVehicleNoInventoryDropMixin {
       remap = false,
       require = 0
    )
-   private static void pwp$noFcpInventoryDrop(Level level, Entity entity, Container container) {
+   private void pwp$noFcpInventoryDrop(Level level, Entity entity, Container container) {
    }
 }

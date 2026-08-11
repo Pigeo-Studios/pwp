@@ -1,27 +1,28 @@
 package com.pwp.core.api;
 
-import com.pwp.core.db.PunishmentRepository;
-import com.pwp.core.db.VoiceMuteRepository;
-import com.pwp.core.db.VoiceMuteRepository.VoiceMuteData;
+import com.pwp.core.db.ChatMuteRepository;
+import com.pwp.core.db.ChatMuteRepository.ChatMuteData;
 import com.pwp.core.db.DatabaseManager;
 import com.pwp.core.db.PlayerId;
+import com.pwp.core.db.PunishmentRepository;
 import com.pwp.core.model.ApiResponse;
 import io.javalin.Javalin;
 
 import java.sql.Connection;
 import java.util.List;
 
-public class VoiceMuteController {
+public class ChatMuteController {
 
-    public VoiceMuteController(Javalin app) {
-        app.post("/api/v1/voicemute", ctx -> {
+    public ChatMuteController(Javalin app) {
+        // ── Текстовый мут (чат) ─────────────────────────────
+        app.post("/api/v1/chatmute", ctx -> {
             MuteRequest req = ctx.bodyAsClass(MuteRequest.class);
-            if (req.mutedByUuid == null || req.mutedByNickname == null) {
-                ctx.json(ApiResponse.error("mutedByUuid and mutedByNickname are required"));
+            if (req.mutedByUuid == null || req.mutedByNickname == null || req.target == null) {
+                ctx.json(ApiResponse.error("target, mutedByUuid and mutedByNickname are required"));
                 return;
             }
             try (Connection c = DatabaseManager.getConnection()) {
-                String uuid = resolveTarget(c, req);
+                String uuid = PlayerId.resolve(c, req.target);
                 if (uuid == null) {
                     ctx.json(ApiResponse.error("player not found"));
                     return;
@@ -29,13 +30,13 @@ public class VoiceMuteController {
                 long expiresAt = req.durationMinutes > 0
                         ? System.currentTimeMillis() + req.durationMinutes * 60000L
                         : 0L;
-                VoiceMuteRepository.setMute(uuid, req.mutedByUuid, req.mutedByNickname,
+                ChatMuteRepository.setMute(uuid, req.mutedByUuid, req.mutedByNickname,
                         req.reason, expiresAt);
                 try {
                     Integer durationMin = req.durationMinutes > 0 ? req.durationMinutes : null;
                     java.sql.Timestamp expiresTs = expiresAt > 0
                             ? new java.sql.Timestamp(expiresAt) : null;
-                    PunishmentRepository.addRecord(uuid, "VOICE_MUTE", req.reason,
+                    PunishmentRepository.addRecord(uuid, "CHAT_MUTE", req.reason,
                             req.mutedByUuid, durationMin, expiresTs);
                 } catch (Exception ignored) {}
                 ctx.json(ApiResponse.ok("muted"));
@@ -44,17 +45,21 @@ public class VoiceMuteController {
             }
         });
 
-        app.post("/api/v1/voiceunmute", ctx -> {
+        app.post("/api/v1/chatunmute", ctx -> {
             UnmuteRequest req = ctx.bodyAsClass(UnmuteRequest.class);
+            if (req.target == null) {
+                ctx.json(ApiResponse.error("target is required"));
+                return;
+            }
             try (Connection c = DatabaseManager.getConnection()) {
-                String uuid = resolveTarget(c, req);
+                String uuid = PlayerId.resolve(c, req.target);
                 if (uuid == null) {
                     ctx.json(ApiResponse.error("player not found"));
                     return;
                 }
-                VoiceMuteRepository.removeMute(uuid);
+                ChatMuteRepository.removeMute(uuid);
                 try {
-                    PunishmentRepository.addRecord(uuid, "VOICE_UNMUTE", null,
+                    PunishmentRepository.addRecord(uuid, "CHAT_UNMUTE", null,
                             req.unmutedByUuid, null, null);
                 } catch (Exception ignored) {}
                 ctx.json(ApiResponse.ok("unmuted"));
@@ -63,9 +68,9 @@ public class VoiceMuteController {
             }
         });
 
-        app.get("/api/v1/voicemute/{uuid}", ctx -> {
+        app.get("/api/v1/chatmute/{uuid}", ctx -> {
             String uuid = ctx.pathParam("uuid");
-            VoiceMuteData data = VoiceMuteRepository.findByUuid(uuid);
+            ChatMuteData data = ChatMuteRepository.findByUuid(uuid);
             if (data == null || !data.isActive()) {
                 ctx.json(ApiResponse.ok(new MuteStatusResponse(false, null)));
                 return;
@@ -73,26 +78,14 @@ public class VoiceMuteController {
             ctx.json(ApiResponse.ok(new MuteStatusResponse(true, data)));
         });
 
-        app.get("/api/v1/voicemutes", ctx -> {
-            VoiceMuteRepository.cleanupExpired();
-            List<VoiceMuteData> list = VoiceMuteRepository.getAllActive();
+        app.get("/api/v1/chatmutes", ctx -> {
+            ChatMuteRepository.cleanupExpired();
+            List<ChatMuteData> list = ChatMuteRepository.getAllActive();
             ctx.json(ApiResponse.ok(list));
         });
     }
 
-    private static String resolveTarget(Connection c, Object req) throws java.sql.SQLException {
-        if (req instanceof MuteRequest m) return resolve(m.target, m.uuid, c);
-        if (req instanceof UnmuteRequest u) return resolve(u.target, u.uuid, c);
-        return null;
-    }
-
-    private static String resolve(String target, String uuid, Connection c) throws java.sql.SQLException {
-        if (uuid != null && !uuid.isEmpty()) return uuid;
-        return PlayerId.resolve(c, target);
-    }
-
-    private static class MuteRequest {
-        public String uuid;
+    public static class MuteRequest {
         public String target;
         public String mutedByUuid;
         public String mutedByNickname;
@@ -100,17 +93,16 @@ public class VoiceMuteController {
         public int durationMinutes;
     }
 
-    private static class UnmuteRequest {
-        public String uuid;
+    public static class UnmuteRequest {
         public String target;
         public String unmutedByUuid;
     }
 
-    private static class MuteStatusResponse {
+    public static class MuteStatusResponse {
         public boolean muted;
-        public VoiceMuteData mute;
+        public ChatMuteData mute;
 
-        MuteStatusResponse(boolean muted, VoiceMuteData mute) {
+        MuteStatusResponse(boolean muted, ChatMuteData mute) {
             this.muted = muted;
             this.mute = mute;
         }

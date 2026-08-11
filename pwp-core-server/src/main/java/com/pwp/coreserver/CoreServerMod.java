@@ -26,6 +26,8 @@ public class CoreServerMod {
         if (FMLEnvironment.dist.isDedicatedServer()) {
             FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
             MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+            MinecraftForge.EVENT_BUS.addListener(this::onPlayerLoggedIn);
+            MinecraftForge.EVENT_BUS.addListener(this::onServerChat);
             new BanEnforcer();
             log.info("PWP Core Server initialized");
         } else {
@@ -48,9 +50,27 @@ public class CoreServerMod {
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
-        BanCommand.register(event.getDispatcher());
-        UnbanCommand.register(event.getDispatcher());
-        log.info("Ban/Unban commands registered");
+        PwpAdminCommand.register(event.getDispatcher());
+        log.info("PWP /pwp moderation commands registered");
+    }
+
+    @net.minecraftforge.eventbus.api.SubscribeEvent
+    public void onPlayerLoggedIn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp && !sp.level().isClientSide) {
+            PlayerPermissions.autoOpIfAdminAsync(sp.server, sp.getStringUUID());
+        }
+    }
+
+    // Текстовый мут «везде»: первичный гейт на ванильном чате (лобби + матчи).
+    // На матчах дополнительный гейт стоит в PacketSquadChat.processChat (обход прямым пакетом).
+    public void onServerChat(net.minecraftforge.event.ServerChatEvent event) {
+        net.minecraft.server.level.ServerPlayer player = event.getPlayer();
+        if (player == null || player.level().isClientSide) return;
+        if (ChatMuteGuard.isChatMuted(player.getStringUUID())) {
+            if (event.isCancelable()) event.setCanceled(true);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                "§cВаш текстовый чат отключён администратором"));
+        }
     }
 
     private static String loadApiKey() {

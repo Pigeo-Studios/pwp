@@ -4,11 +4,11 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VoiceMuteRepository {
+public class ChatMuteRepository {
 
-    public static VoiceMuteData findByUuid(String uuid) throws SQLException {
+    public static ChatMuteData findByUuid(String uuid) throws SQLException {
         String sql = "SELECT m.uuid, m.muted_by_uuid, m.muted_by_nickname, m.reason, m.muted_at, m.expires_at, "
-                + "p.nickname AS player_nickname FROM voice_mutes m LEFT JOIN players p ON p.uuid = m.uuid WHERE m.uuid = ?";
+                + "p.nickname AS player_nickname FROM chat_mutes m LEFT JOIN players p ON p.uuid = m.uuid WHERE m.uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, uuid);
@@ -21,7 +21,7 @@ public class VoiceMuteRepository {
 
     public static void setMute(String uuid, String mutedByUuid, String mutedByNickname,
                                 String reason, long expiresAt) throws SQLException {
-        String sql = "INSERT INTO voice_mutes (uuid, muted_by_uuid, muted_by_nickname, reason, muted_at, expires_at) "
+        String sql = "INSERT INTO chat_mutes (uuid, muted_by_uuid, muted_by_nickname, reason, muted_at, expires_at) "
                 + "VALUES (?, ?, ?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE muted_by_uuid = VALUES(muted_by_uuid), "
                 + "muted_by_nickname = VALUES(muted_by_nickname), reason = VALUES(reason), "
@@ -39,7 +39,7 @@ public class VoiceMuteRepository {
     }
 
     public static void removeMute(String uuid) throws SQLException {
-        String sql = "DELETE FROM voice_mutes WHERE uuid = ?";
+        String sql = "DELETE FROM chat_mutes WHERE uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, uuid);
@@ -47,10 +47,10 @@ public class VoiceMuteRepository {
         }
     }
 
-    public static List<VoiceMuteData> getAllActive() throws SQLException {
-        List<VoiceMuteData> result = new ArrayList<>();
+    public static List<ChatMuteData> getAllActive() throws SQLException {
+        List<ChatMuteData> result = new ArrayList<>();
         String sql = "SELECT m.uuid, m.muted_by_uuid, m.muted_by_nickname, m.reason, m.muted_at, m.expires_at, "
-                + "p.nickname AS player_nickname FROM voice_mutes m LEFT JOIN players p ON p.uuid = m.uuid "
+                + "p.nickname AS player_nickname FROM chat_mutes m LEFT JOIN players p ON p.uuid = m.uuid "
                 + "WHERE m.expires_at = 0 OR m.expires_at > ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
@@ -63,7 +63,7 @@ public class VoiceMuteRepository {
     }
 
     public static void cleanupExpired() throws SQLException {
-        String sql = "DELETE FROM voice_mutes WHERE expires_at > 0 AND expires_at <= ?";
+        String sql = "DELETE FROM chat_mutes WHERE expires_at > 0 AND expires_at <= ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, System.currentTimeMillis());
@@ -71,8 +71,8 @@ public class VoiceMuteRepository {
         }
     }
 
-    private static VoiceMuteData mapMute(ResultSet rs) throws SQLException {
-        VoiceMuteData data = new VoiceMuteData();
+    private static ChatMuteData mapMute(ResultSet rs) throws SQLException {
+        ChatMuteData data = new ChatMuteData();
         data.uuid = rs.getString("uuid");
         data.mutedByUuid = rs.getString("muted_by_uuid");
         data.mutedByNickname = rs.getString("muted_by_nickname");
@@ -83,7 +83,7 @@ public class VoiceMuteRepository {
         return data;
     }
 
-    public static class VoiceMuteData {
+    public static class ChatMuteData {
         public String uuid;
         public String mutedByUuid;
         public String mutedByNickname;
@@ -98,11 +98,6 @@ public class VoiceMuteRepository {
 
         public boolean isPermanent() {
             return expiresAt == 0;
-        }
-
-        public long remainingMs() {
-            if (expiresAt == 0) return -1;
-            return Math.max(0, expiresAt - System.currentTimeMillis());
         }
     }
 }

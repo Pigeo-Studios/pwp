@@ -3,6 +3,7 @@ package com.pwp.coreclient.gui.screens.tabs;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pwp.coreclient.NameGradient;
 import com.pwp.coreclient.gui.components.PWPScrollPanel;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -22,7 +23,7 @@ public class LeaderTabRenderer {
     private static final int CAT_PADDING = 14;
 
     private static class Entry implements Comparable<Entry> {
-        String name, uuid; int kills, deaths, wins, losses, captures, revives, vehicleKills;
+        String name, uuid, tier; int kills, deaths, wins, losses, captures, revives, vehicleKills;
         int damage, healing, score, playtimeSec, kd100, wr100;
         int catVal;
 
@@ -31,6 +32,8 @@ public class LeaderTabRenderer {
             JsonObject s = json.has("stats") ? json.getAsJsonObject("stats") : json;
             name = p.has("nickname") ? p.get("nickname").getAsString() : "—";
             uuid = p.has("uuid") ? p.get("uuid").getAsString() : "";
+            tier = p.has("donateTier") && !p.get("donateTier").isJsonNull() ? p.get("donateTier").getAsString().toUpperCase() : null;
+            if (tier != null && !NameGradient.isSupported(tier)) tier = null;
             kills =          getInt(s, "kills", 0);
             deaths =         getInt(s, "deaths", 0);
             wins =           getInt(s, "wins", 0);
@@ -128,7 +131,12 @@ public class LeaderTabRenderer {
         String star = "★ TOP SCORE ★";
         g.drawString(font, Component.literal(star), sw/2-font.width(star)/2, cardY+8, PWPTheme.Colors.TEXT_ACCENT, false);
         String topName = top.name;
-        g.drawString(font, Component.literal(topName), sw/2-font.width(topName)/2, cardY+24, 0xFFFFFF, false);
+        if (top.tier != null) {
+            int tw = NameGradient.width(font, topName);
+            NameGradient.drawGlow(g, font, topName, sw/2 - tw/2, cardY+24, top.tier);
+        } else {
+            g.drawString(font, Component.literal(topName), sw/2-font.width(topName)/2, cardY+24, 0xFFFFFF, false);
+        }
         String scoreStr = String.format("%,d", top.score) + " очков";
         g.drawString(font, Component.literal(scoreStr), sw/2-font.width(scoreStr)/2, cardY+40, PWPTheme.Colors.TEXT_ACCENT, false);
         String detail = "Убийств: "+top.kills+"  |  Побед: "+top.wins+"  |  WinRate: "+(top.wins+top.losses>0 ? String.format("%.0f%%", top.wins*100f/(top.wins+top.losses)) : "0%");
@@ -183,7 +191,11 @@ public class LeaderTabRenderer {
             g.drawString(font, Component.literal(String.valueOf(rank)), tblX+4, ry+2, rc, false);
             String n = e.name;
             if (font.width(n) > 160) n = font.plainSubstrByWidth(n, 158)+".";
-            g.drawString(font, Component.literal(n), tblX+30, ry+2, me ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY, false);
+            if (e.tier != null) {
+                NameGradient.drawGlow(g, font, n, tblX+30, ry+2, e.tier);
+            } else {
+                g.drawString(font, Component.literal(n), tblX+30, ry+2, me ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY, false);
+            }
             String val = formatCatValue(sortCat, e);
             if (font.width(val) > 100) val = font.plainSubstrByWidth(val, 98);
             g.drawString(font, Component.literal(val), tblX+200, ry+2, PWPTheme.Colors.TEXT_PRIMARY, false);

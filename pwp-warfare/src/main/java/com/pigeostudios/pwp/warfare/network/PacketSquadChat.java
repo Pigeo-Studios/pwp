@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.coreserver.ChatMuteGuard;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
@@ -39,8 +40,13 @@ public class PacketSquadChat {
       ctx.get().setPacketHandled(true);
    }
 
-   // Отправляет сообщение в соответствующий канал: mode 0-ALL, 1-TEAM, 2-SQUAD
-   public static void processChat(ServerPlayer sender, String message, int mode) {
+    // Отправляет сообщение в соответствующий канал: mode 0-ALL, 1-TEAM, 2-SQUAD
+    public static void processChat(ServerPlayer sender, String message, int mode) {
+      // Текстовый мут «везде»: единая точка для ВСЕХ каналов и всех путей входа
+      // (в т.ч. прямой сетевой пакет — защита от обхода ServerChatEvent).
+      if (ChatMuteGuard.isChatMuted(sender.getStringUUID())) {
+         return;
+      }
       String senderName = sender.getScoreboardName();
       String senderTeam = sender.getTeam() != null ? sender.getTeam().getName() : "NEUTRAL";
       if (mode == 0) {

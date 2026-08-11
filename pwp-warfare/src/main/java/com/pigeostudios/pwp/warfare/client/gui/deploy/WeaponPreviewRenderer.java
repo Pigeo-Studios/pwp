@@ -138,6 +138,11 @@ public class WeaponPreviewRenderer {
         } else {
             s = fallbackScale(stack, width, height);
         }
+        // DEBUG-TMP: реальные числа капчи и итоговый масштаб. Убрать после фикса размеров.
+        System.out.println("[PWFIT] gun=" + gunId(stack)
+                + " box=" + width + "x" + height
+                + " fit=" + (fit != null ? fit.width() + "x" + fit.height() : "null")
+                + " s=" + s);
 
         PoseStack pose = gui.pose();
         pose.pushPose();
@@ -222,6 +227,10 @@ public class WeaponPreviewRenderer {
                         pose, cap, mc.level, 0);
             }
             if (cap.isEmpty()) return null;
+            // DEBUG-TMP: одна строка на ствол (первый замер, дальше кэш). Убрать после фикса.
+            System.out.println("[PWFIT-measure] gun=" + gunId(stack)
+                    + " w=" + cap.width() + " h=" + cap.height()
+                    + " cx=" + cap.centerX() + " cy=" + cap.centerY());
             return new Fit(cap.width(), cap.height(), cap.centerX(), cap.centerY());
         } catch (RuntimeException | LinkageError e) {
             return null;

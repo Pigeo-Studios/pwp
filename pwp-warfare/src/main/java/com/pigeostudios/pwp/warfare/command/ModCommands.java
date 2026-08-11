@@ -11,11 +11,7 @@ import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveRequest;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveAnswer;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
-import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -42,13 +38,10 @@ import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import com.pwp.coreserver.CoreServerApi;
 import net.minecraftforge.network.PacketDistributor;
 
 public class ModCommands {
@@ -282,24 +275,8 @@ public class ModCommands {
                                                 )
                                           )
                                     ))
-                                 .then(
-                                    Commands.literal("warn")
-                                       .then(
-                                          Commands.argument("target", EntityArgument.player())
-                                             .then(
-                                                Commands.argument("message", StringArgumentType.greedyString())
-                                                   .executes(
-                                                      ctx -> issueWarning(
-                                                         (CommandSourceStack)ctx.getSource(),
-                                                         EntityArgument.getPlayer(ctx, "target"),
-                                                         StringArgumentType.getString(ctx, "message")
-                                                      )
-                                                   )
-                                             )
-                                       )
-                                 ))
-                              .then(
-                                 Commands.literal("removepoint")
+                               .then(
+                                  Commands.literal("removepoint")
                                     .then(
                                        Commands.argument("name", StringArgumentType.greedyString())
                                           .suggests((ctx, builder) -> suggestLocalPoints(ctx, builder))
@@ -452,47 +429,10 @@ public class ModCommands {
                 ((CommandSourceStack)ctx.getSource()).sendSuccess(() -> Component.literal("Voting process " + status), true);
                 return 1;
                           })))
-              .then(Commands.literal("voicemute")
-                 .then(Commands.argument("target", EntityArgument.player())
-                    .executes(ctx -> voiceMutePlayer(
-                       (CommandSourceStack)ctx.getSource(),
-                       EntityArgument.getPlayer(ctx, "target"),
-                       0,
-                       ""
-                    ))
-                    .then(Commands.argument("minutes", IntegerArgumentType.integer(1))
-                       .executes(ctx -> voiceMutePlayer(
-                          (CommandSourceStack)ctx.getSource(),
-                          EntityArgument.getPlayer(ctx, "target"),
-                          IntegerArgumentType.getInteger(ctx, "minutes"),
-                          ""
-                       ))
-                       .then(Commands.argument("reason", StringArgumentType.greedyString())
-                          .executes(ctx -> voiceMutePlayer(
-                             (CommandSourceStack)ctx.getSource(),
-                             EntityArgument.getPlayer(ctx, "target"),
-                             IntegerArgumentType.getInteger(ctx, "minutes"),
-                             StringArgumentType.getString(ctx, "reason")
-                          ))
-                       )
-                    )
-                 )
-                 .then(Commands.literal("list")
-                    .executes(ctx -> voiceMuteList((CommandSourceStack)ctx.getSource()))
-                 )
-              )
                .then(Commands.literal("pause")
                   .executes(ctx -> togglePause((CommandSourceStack)ctx.getSource()))
                )
-               .then(Commands.literal("voiceunmute")
-                 .then(Commands.argument("target", EntityArgument.player())
-                    .executes(ctx -> voiceUnmutePlayer(
-                       (CommandSourceStack)ctx.getSource(),
-                       EntityArgument.getPlayer(ctx, "target")
-                    ))
-                 )
-              )
-        );
+         ));
 
         dispatcher.register(
            Commands.literal("pwpwarfare")
@@ -910,117 +850,6 @@ public class ModCommands {
       syncDataToAll(level, data);
        source.sendSuccess(() -> Component.literal("Спавн установлен для этого измерения.").withStyle(ChatFormatting.GREEN), true);
       return 1;
-   }
-
-   private static int issueWarning(CommandSourceStack source, ServerPlayer target, String message) {
-      target.connection.send(new ClientboundSetTitlesAnimationPacket(10, 140, 20));
-      target.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(message).withStyle(ChatFormatting.YELLOW)));
-      target.connection
-         .send(
-             new ClientboundSetTitleTextPacket(Component.literal("!ВНИМАНИЕ!").withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.BOLD}))
-         );
-      target.playNotifySound(SoundEvents.ANVIL_LAND, SoundSource.MASTER, 1.0F, 0.8F);
-      target.sendSystemMessage(Component.literal("[АДМИН ПРЕДУПРЕЖДЕНИЕ] " + message).withStyle(new ChatFormatting[]{ChatFormatting.RED, ChatFormatting.BOLD}));
-       source.sendSuccess(() -> Component.literal("Игрок " + target.getScoreboardName() + " успешно предупреждён!").withStyle(ChatFormatting.GREEN), true);
-      return 1;
-   }
-
-   private static int voiceMutePlayer(CommandSourceStack source, ServerPlayer target, int minutes, String reason) {
-      ServerPlayer admin = source.getPlayer();
-      if (admin == null) {
-          source.sendFailure(Component.literal("Эту команду могут использовать только игроки."));
-         return 0;
-      }
-      try {
-          JsonObject result = CoreServerApi.voiceMute(
-            target.getUUID().toString(),
-            admin.getUUID().toString(),
-            admin.getScoreboardName(),
-            reason,
-            minutes
-         );
-         if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
-            WarfareVoicechatPlugin.invalidateMuteCache(target.getUUID());
-            String duration = minutes > 0 ? " на " + minutes + " мин." : " навсегда";
-            target.sendSystemMessage(
-               Component.literal("Ваш голосовой чат отключён администратором " + admin.getScoreboardName() + duration)
-                  .withStyle(ChatFormatting.RED)
-            );
-            source.sendSuccess(
-               () -> Component.literal("Голосовой чат игрока " + target.getScoreboardName() + " отключён" + duration)
-                  .withStyle(ChatFormatting.GREEN),
-               true
-            );
-            return 1;
-         }
-         source.sendFailure(Component.literal("Ошибка при выполнении мута"));
-      } catch (Exception e) {
-         source.sendFailure(Component.literal("Ошибка API: " + e.getMessage()));
-      }
-      return 0;
-   }
-
-   private static int voiceUnmutePlayer(CommandSourceStack source, ServerPlayer target) {
-      try {
-                   JsonObject result = CoreServerApi.voiceUnmute(target.getUUID().toString());
-         if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
-            WarfareVoicechatPlugin.invalidateMuteCache(target.getUUID());
-            target.sendSystemMessage(
-               Component.literal("Ваш голосовой чат снова включён").withStyle(ChatFormatting.GREEN)
-            );
-            source.sendSuccess(
-               () -> Component.literal("Голосовой чат игрока " + target.getScoreboardName() + " включён")
-                  .withStyle(ChatFormatting.GREEN),
-               true
-            );
-            return 1;
-         }
-         source.sendFailure(Component.literal("Ошибка при снятии мута"));
-      } catch (Exception e) {
-         source.sendFailure(Component.literal("Ошибка API: " + e.getMessage()));
-      }
-      return 0;
-   }
-
-   private static int voiceMuteList(CommandSourceStack source) {
-      try {
-          JsonObject result = CoreServerApi.getVoiceMutes();
-         if (result != null && result.has("success") && result.get("success").getAsBoolean()
-                 && result.has("data") && !result.get("data").isJsonNull()) {
-            JsonArray list = result.getAsJsonArray("data");
-            if (list.size() == 0) {
-               source.sendSuccess(() -> Component.literal("Нет активных мутов").withStyle(ChatFormatting.YELLOW), false);
-               return 1;
-            }
-            source.sendSuccess(() -> Component.literal("=== Активные Voice Mute ===").withStyle(ChatFormatting.GOLD), false);
-            for (int idx = 0; idx < list.size(); idx++) {
-               final int displayIdx = idx + 1;
-               JsonObject mute = list.get(idx).getAsJsonObject();
-               String nickname = mute.has("mutedByNickname") ? mute.get("mutedByNickname").getAsString() : "?";
-               String reason = mute.has("reason") && !mute.get("reason").getAsString().isEmpty()
-                       ? mute.get("reason").getAsString() : "не указана";
-               String targetUuid = mute.get("uuid").getAsString();
-               ServerPlayer target = source.getServer().getPlayerList().getPlayer(UUID.fromString(targetUuid));
-               String targetName = target != null ? target.getScoreboardName() : targetUuid.substring(0, 8) + "...";
-               boolean permanent = mute.has("expiresAt") && mute.get("expiresAt").getAsLong() == 0;
-               String duration = permanent ? "навсегда" : "временный";
-               int fIdx = displayIdx;
-               String fTargetName = targetName;
-               String fNickname = nickname;
-               String fDuration = duration;
-               String fReason = reason;
-               source.sendSuccess(() -> Component.literal(
-                  fIdx + ". " + fTargetName + " | мут от: " + fNickname + " | " + fDuration
-                  + " | причина: " + fReason
-               ).withStyle(ChatFormatting.WHITE), false);
-            }
-            return 1;
-         }
-         source.sendFailure(Component.literal("Не удалось получить список мутов"));
-      } catch (Exception e) {
-         source.sendFailure(Component.literal("Ошибка API: " + e.getMessage()));
-      }
-      return 0;
    }
 
    private static void syncDataToAll(ServerLevel level, WarfareWorldData data) {

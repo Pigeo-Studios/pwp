@@ -9,6 +9,10 @@ import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
 import com.pwp.lobby.match.MatchAllocator.MatchInfo;
+import com.pwp.lobby.donate.DonatorStatusManager;
+import com.pwp.lobby.donate.particles.DonatorParticleConfig;
+import com.pwp.lobby.donate.particles.DonatorParticleController;
+import com.pwp.lobby.donate.particles.RoleParticleConfig;
 import com.mojang.brigadier.Command;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -19,6 +23,8 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig.Type;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.network.PacketDistributor;
@@ -73,6 +79,8 @@ public class LobbyMod {
     }
 
     public LobbyMod() {
+        ModLoadingContext.get().registerConfig(Type.SERVER, DonatorParticleConfig.SPEC, "pwp_lobby/donator_particles.toml");
+        ModLoadingContext.get().registerConfig(Type.SERVER, RoleParticleConfig.SPEC, "pwp_lobby/role_particles.toml");
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -105,6 +113,7 @@ public class LobbyMod {
 
     private int heartbeatTicks = 0;
     private int stateBroadcastTicks = 0;
+    private int donatorFlightTicks = 0;
 
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
@@ -113,6 +122,18 @@ public class LobbyMod {
         FactionVotingManager.tick();
         tickModeVote();
         MatchAllocator.tick();
+        DonatorStatusManager.serverTick();
+        DonatorParticleController.tick();
+
+        // Флай донатеров: каждый тик дёшево, держим/снимаем по фазе лобби
+        if (++donatorFlightTicks >= 20) {
+            donatorFlightTicks = 0;
+            try {
+                DonatorStatusManager.refreshAllFlight();
+            } catch (Exception e) {
+                // не ломаем тик
+            }
+        }
 
         // Авторитетное состояние лобби — раз в секунду всем игрокам
         if (++stateBroadcastTicks >= 20) {
@@ -337,6 +358,13 @@ public class LobbyMod {
         int online = MatchAllocator.getLobbyPlayerCount();
 
         serverBroadcast("§7[PWP] §e" + name + " §fзашёл в лобби. §7Онлайн: §e" + online);
+
+        // Донат-статус: фетч тира/роли, флай, рассылка клиентам
+        try {
+            DonatorStatusManager.onPlayerJoin(player);
+        } catch (Exception e) {
+            log.error("donator status on join failed for {}: {}", name, e.getMessage());
+        }
 
         // Сразу отправляем актуальное состояние новому игроку
         sendLobbyStateToPlayer(player);

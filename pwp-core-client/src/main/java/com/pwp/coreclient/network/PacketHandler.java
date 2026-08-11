@@ -59,6 +59,10 @@ public class PacketHandler {
                 LobbyStatePacket::encode,
                 LobbyStatePacket::decode,
                 LobbyStatePacket::handle);
+        INSTANCE.registerMessage(id++, PacketDonatorTiers.class,
+                PacketDonatorTiers::encode,
+                PacketDonatorTiers::decode,
+                PacketDonatorTiers::handle);
 
     }
 }

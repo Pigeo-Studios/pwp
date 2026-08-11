@@ -16,7 +16,8 @@
     "FirstPersonArmFixMixin",
     "MouseSensitivityMixin",
     "PointblankFireMixin",
-    "GuiOverlayMessageMixin",
+     "GuiOverlayMessageMixin",
+     "SelectedItemNameMixin",
      "SbwVehicleHudMixin",
      "SbwAmmoBarMixin",
      "RenderBuffersCaptureMixin"
