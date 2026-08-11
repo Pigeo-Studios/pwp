@@ -1,6 +1,7 @@
 package com.pwp.lobby;
 
 import com.google.gson.JsonObject;
+import com.pwp.coreserver.ChatMuteGuard;
 import com.pwp.coreserver.CoreServerApi;
 
 import com.pwp.coreclient.network.LobbyStatePacket;
@@ -14,11 +15,13 @@ import com.pwp.lobby.donate.particles.DonatorParticleConfig;
 import com.pwp.lobby.donate.particles.DonatorParticleController;
 import com.pwp.lobby.donate.particles.RoleParticleConfig;
 import com.mojang.brigadier.Command;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
+import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -390,6 +393,33 @@ public class LobbyMod {
         if (event.getEntity() instanceof ServerPlayer player) {
             MatchAllocator.playerLeft(player.getStringUUID());
             broadcastLobbyState();
+        }
+    }
+
+    /** Префикс ролей ADMIN/MODERATOR в чате — только в лобби. Мут остаётся за CoreServerMod (гейт тут, чтобы не дублировать сообщение). */
+    @SubscribeEvent
+    public void onServerChat(ServerChatEvent event) {
+        ServerPlayer player = event.getPlayer();
+        if (player == null || player.level().isClientSide) return;
+        if (isMatchServer) return;
+        String role = DonatorStatusManager.displayRole(player);
+        if (role.isEmpty()) return;
+        if (ChatMuteGuard.isChatMuted(player.getStringUUID())) return;
+
+        event.setCanceled(true);
+        boolean admin = "ADMIN".equals(role);
+        // Яркие цвета: DARK_RED/BLUE на тёмном фоне чата читались почти чёрными
+        ChatFormatting tagColor = admin ? ChatFormatting.RED : ChatFormatting.AQUA;
+        ChatFormatting nameColor = admin ? ChatFormatting.RED : ChatFormatting.AQUA;
+        Component line = Component.empty()
+                .append(Component.literal("[" + role + "]").withStyle(tagColor, ChatFormatting.BOLD))
+                .append(Component.literal(" "))
+                .append(Component.literal(player.getScoreboardName()).withStyle(nameColor, ChatFormatting.BOLD))
+                .append(Component.literal(": "))
+                .append(event.getMessage());
+        var server = player.getServer();
+        if (server != null) {
+            server.getPlayerList().broadcastSystemMessage(line, false);
         }
     }
 

@@ -124,7 +124,7 @@ public class AdminController {
                 ctx.json(ApiResponse.error("invalid tier: " + String.join(", ", valid))); return;
             }
             String tier = req.tier.toUpperCase();
-            PlayerRepository.setDonateTier(req.uuid, tier.equals("NONE") ? null : tier);
+            PlayerRepository.setDonateTier(req.uuid, tier);
             PlayerRepository.log(req.uuid, "donate_tier_change", ctx.ip(), "new tier: " + tier);
             ctx.json(ApiResponse.ok("donate tier set to " + tier));
         });

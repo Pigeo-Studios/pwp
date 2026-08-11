@@ -48,7 +48,7 @@ public class DatabaseManager {
             + "first_join DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
             + "last_join DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
             + "last_ip VARCHAR(45) DEFAULT NULL,"
-            + "donate_tier VARCHAR(32) DEFAULT NULL,"
+            + "donate_tier VARCHAR(16) NOT NULL DEFAULT 'NONE',"
             + "role VARCHAR(32) DEFAULT 'PLAYER',"
             + "is_banned BOOLEAN NOT NULL DEFAULT FALSE,"
             + "ban_reason TEXT DEFAULT NULL)",

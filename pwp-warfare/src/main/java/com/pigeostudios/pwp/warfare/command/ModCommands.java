@@ -707,7 +707,10 @@ public class ModCommands {
       team.setColor(color);
       team.setSeeFriendlyInvisibles(true);
       scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
-      player.setGameMode(GameType.SURVIVAL);
+      // Креатив не трогаем (по конвенции respawn) — иначе флай в креативе пропадает
+      if (player.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
+         player.setGameMode(GameType.SURVIVAL);
+      }
       player.inventoryMenu.broadcastChanges();
       // Переотправляем фракцию/кит на все клиенты — иначе скины и иконки
       // остаются на старой фракции и мерцают (ClientSkinManager.applyAllSkins)

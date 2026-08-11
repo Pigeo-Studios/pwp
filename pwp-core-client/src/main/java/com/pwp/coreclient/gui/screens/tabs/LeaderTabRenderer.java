@@ -23,7 +23,7 @@ public class LeaderTabRenderer {
     private static final int CAT_PADDING = 14;
 
     private static class Entry implements Comparable<Entry> {
-        String name, uuid, tier; int kills, deaths, wins, losses, captures, revives, vehicleKills;
+        String name, uuid, tier, role; int kills, deaths, wins, losses, captures, revives, vehicleKills;
         int damage, healing, score, playtimeSec, kd100, wr100;
         int catVal;
 
@@ -34,6 +34,7 @@ public class LeaderTabRenderer {
             uuid = p.has("uuid") ? p.get("uuid").getAsString() : "";
             tier = p.has("donateTier") && !p.get("donateTier").isJsonNull() ? p.get("donateTier").getAsString().toUpperCase() : null;
             if (tier != null && !NameGradient.isSupported(tier)) tier = null;
+            role = p.has("role") && !p.get("role").isJsonNull() ? p.get("role").getAsString() : null;
             kills =          getInt(s, "kills", 0);
             deaths =         getInt(s, "deaths", 0);
             wins =           getInt(s, "wins", 0);
@@ -131,9 +132,10 @@ public class LeaderTabRenderer {
         String star = "★ TOP SCORE ★";
         g.drawString(font, Component.literal(star), sw/2-font.width(star)/2, cardY+8, PWPTheme.Colors.TEXT_ACCENT, false);
         String topName = top.name;
-        if (top.tier != null) {
+        String topLevel = NameGradient.resolve(top.role, top.tier);
+        if (topLevel != null) {
             int tw = NameGradient.width(font, topName);
-            NameGradient.drawGlow(g, font, topName, sw/2 - tw/2, cardY+24, top.tier);
+            NameGradient.drawGlow(g, font, topName, sw/2 - tw/2, cardY+24, topLevel);
         } else {
             g.drawString(font, Component.literal(topName), sw/2-font.width(topName)/2, cardY+24, 0xFFFFFF, false);
         }
@@ -191,8 +193,9 @@ public class LeaderTabRenderer {
             g.drawString(font, Component.literal(String.valueOf(rank)), tblX+4, ry+2, rc, false);
             String n = e.name;
             if (font.width(n) > 160) n = font.plainSubstrByWidth(n, 158)+".";
-            if (e.tier != null) {
-                NameGradient.drawGlow(g, font, n, tblX+30, ry+2, e.tier);
+            String level = NameGradient.resolve(e.role, e.tier);
+            if (level != null) {
+                NameGradient.drawGlow(g, font, n, tblX+30, ry+2, level);
             } else {
                 g.drawString(font, Component.literal(n), tblX+30, ry+2, me ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY, false);
             }

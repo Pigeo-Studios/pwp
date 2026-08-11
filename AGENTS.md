@@ -46,8 +46,8 @@ PWP — тактический шутер «Squad в Minecraft» (Forge 1.20.1, 
 Косметические тиры `NONE/SILVER/GOLD/PLATINUM` (не P2W): выдача только админом через веб-админку. Контур (11.08.2026):
 - core-service: `POST /api/v1/admin/set-donate-tier`, поле `donateTier` в профиле (`/player/{uuid}`, `/player/load`, `/admin/find-user`, `/admin/players`) — см. `docs/rules/core-service.md`.
 - dashboard (админка «Пользователи»): блок «Донат-тир» с Select.
-- pwp-lobby `donate/`: `DonatorStatusManager` (тир+role из core-service профиля, флай GOLD/PLATINUM только в лобби) и `particles/`: `DonatorParticleConfig`/`RoleParticleConfig` (serverconfig `pwp_lobby/donator_particles.toml`, `role_particles.toml`) + `DonatorParticleController` (эффекты/бюджет/LOD, приоритет ADMIN > MODERATOR > PLATINUM > GOLD > SILVER).
-- pwp-core-client: `PacketDonatorTiers`+`DonatorCache`, `NameGradient`, `DonatorNameTagRenderer` (градиентный надмид), свечение имён в `LeaderTabRenderer`/`StatsScreen`.
+- pwp-lobby `donate/`: `DonatorStatusManager` (тир+role из core-service профиля, `displayRole()` → ADMIN/MODERATOR, флай GOLD/PLATINUM только в лобби) и `particles/`: `DonatorParticleConfig`/`RoleParticleConfig` (serverconfig `pwp_lobby/donator_particles.toml`, `role_particles.toml`) + `DonatorParticleController` (эффекты/бюджет/LOD, приоритет ADMIN > MODERATOR > PLATINUM > GOLD > SILVER). Префикс `[ADMIN]`/`[MODERATOR]` в чате — только лобби (`LobbyMod.onServerChat`: cancel + `broadcastSystemMessage`, гвард мута через `ChatMuteGuard`).
+- pwp-core-client: `PacketDonatorTiers` (uuids+tiers+roles) + `DonatorCache` (тиры и роли, `levelOf` — роль приоритетнее тира), `NameGradient` (палитры тиров + ADMIN огненный красный 3-стоп/MODERATOR сине-голубой, плавный цвет по пиксельной позиции через `colorAt`), `DonatorNameTagRenderer` (градиентный надмид), свечение имён (`resolve(role, tier)`) в `LeaderTabRenderer`/`StatsScreen` (роль из payload `player.role` — приоритетнее тира, лидерборды работают и на матчах).
 
 ### Домены вне модульной карты
 

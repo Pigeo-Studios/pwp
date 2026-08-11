@@ -68,7 +68,10 @@ public class PacketTeamSelect {
          }
 
          scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
-         player.setGameMode(GameType.SURVIVAL);
+         // Креатив не трогаем (по конвенции respawn) — иначе флай в креативе пропадает
+         if (player.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
+            player.setGameMode(GameType.SURVIVAL);
+         }
          PacketHandler.broadcastPlayerSkin(player);
          PacketHandler.sendToAllClients(player.serverLevel(), data);
          PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension), new PacketSyncSquads(data.squads));

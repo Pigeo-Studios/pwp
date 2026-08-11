@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.game.ClientboundPlayerAbilitiesPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Abilities;
+import net.minecraft.world.level.GameType;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
@@ -64,6 +65,17 @@ public final class DonatorStatusManager {
         return p.getPersistentData().getString(ROLE_TAG);
     }
 
+    /** Display-уровень роли (ADMIN/MODERATOR) или пусто, если роли нет. */
+    public static String displayRole(ServerPlayer p) {
+        String r = roleOf(p);
+        if (r == null || r.isEmpty()) return "";
+        return switch (r.toLowerCase()) {
+            case "admin", "owner" -> "ADMIN";
+            case "support", "moderator" -> "MODERATOR";
+            default -> "";
+        };
+    }
+
     // ====== Вход / фетч ======
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -98,7 +110,9 @@ public final class DonatorStatusManager {
 
     private static void applyStatus(ServerPlayer p, String tier, String role) {
         CompoundTag tag = p.getPersistentData();
-        if (!tier.isEmpty()) tag.putString(TIER_TAG, tier.toUpperCase());
+        String norm = tier == null ? "" : tier.toUpperCase();
+        // "NONE" трактуем как отсутствие тира (колонка БД хранит строку "NONE", а не NULL)
+        if (!norm.isEmpty() && !"NONE".equals(norm)) tag.putString(TIER_TAG, norm);
         else tag.remove(TIER_TAG);
         if (!role.isEmpty()) tag.putString(ROLE_TAG, role);
         else tag.remove(ROLE_TAG);
@@ -120,19 +134,22 @@ public final class DonatorStatusManager {
 
     // ====== Рассылка клиентам ======
 
-    /** Полный снапшот донатеров лобби (tier != NONE) всем игрокам. */
+    /** Полный снапшот донатеров и ролей лобби (tier != NONE или роль ADMIN/MODERATOR) всем игрокам. */
     public static void broadcastDonators() {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null || server.getPlayerList().getPlayers().isEmpty()) return;
         List<String> uuids = new ArrayList<>();
         List<String> tiers = new ArrayList<>();
+        List<String> roles = new ArrayList<>();
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             String t = tierOf(p);
-            if (t.isEmpty()) continue;
+            String r = displayRole(p);
+            if ((t.isEmpty() || "NONE".equalsIgnoreCase(t)) && r.isEmpty()) continue;
             uuids.add(p.getStringUUID());
             tiers.add(t);
+            roles.add(r);
         }
-        PacketDonatorTiers pkt = new PacketDonatorTiers(uuids.toArray(new String[0]), tiers.toArray(new String[0]));
+        PacketDonatorTiers pkt = new PacketDonatorTiers(uuids.toArray(new String[0]), tiers.toArray(new String[0]), roles.toArray(new String[0]));
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             try {
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt);
@@ -150,6 +167,10 @@ public final class DonatorStatusManager {
     /** Обновляет полёт по текущему статусу; вызывает правильные сетты + синк клиенту. */
     public static void refreshFlight(ServerPlayer p) {
         Abilities ab = p.getAbilities();
+        // Креатив и спектатор летают по своему режиму — донат-логика их не трогает
+        // (иначе секундная проверка в лобби снимала бы mayfly у креатива)
+        GameType gt = p.gameMode.getGameModeForPlayer();
+        if (gt == GameType.CREATIVE || gt == GameType.SPECTATOR) return;
         boolean allow = flightAllowed(p);
         if (allow && !ab.mayfly) {
             ab.mayfly = true;

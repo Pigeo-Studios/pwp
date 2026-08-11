@@ -482,8 +482,9 @@ public class StatsScreen extends Screen {
 
             String nameStr = e.nickname;
             if (PWPTheme.Fonts.display().width(nameStr) > 120) nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
-            if (e.tier != null) {
-                NameGradient.drawGlow(gui, PWPTheme.Fonts.display(), nameStr, leftX + 28, rowY + 3, e.tier);
+            String level = NameGradient.resolve(e.role, e.tier);
+            if (level != null) {
+                NameGradient.drawGlow(gui, PWPTheme.Fonts.display(), nameStr, leftX + 28, rowY + 3, level);
             } else {
                 gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
             }
@@ -599,7 +600,7 @@ public class StatsScreen extends Screen {
     }
 
     private static class LeaderboardEntry {
-        String uuid, nickname, tier;
+        String uuid, nickname, tier, role;
         int kills, deaths, wins, vehicleKills, captures, headshots;
         int vehiclesDestroyed, airVehiclesDestroyed;
         int level, matchesPlayed;
@@ -617,6 +618,7 @@ public class StatsScreen extends Screen {
             } else {
                 tier = null;
             }
+            role = p.has("role") && !p.get("role").isJsonNull() ? p.get("role").getAsString() : null;
             kills = get(st, "kills", 0);
             deaths = get(st, "deaths", 0);
             wins = get(st, "wins", 0);

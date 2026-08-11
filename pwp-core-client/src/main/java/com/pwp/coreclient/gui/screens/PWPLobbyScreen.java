@@ -62,6 +62,11 @@ public class PWPLobbyScreen extends Screen {
         instance = null;
     }
 
+    /** Открыт ли лобби-экран и активен на экране Minecraft (для локального открытия по /pwp). */
+    public static boolean isOpen() {
+        return instance != null && !instance.isMinecraftScreenInvalid();
+    }
+
     /** Единственный источник данных GUI — серверный state-пакет (каждую секунду + при изменениях). */
     public static void updateLobbyState(LobbyStatePacket pkt) {
         boolean screenOpen = instance != null && !instance.isMinecraftScreenInvalid();

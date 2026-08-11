@@ -15,8 +15,8 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 /**
- * Донат-надмид: рисует «живой» золотой/серебряный/платиновый градиент вместо ванильного имени.
- * Тиры приходят только с лобби-сервера (PacketDonatorTiers), автоматически применяется только там.
+ * Донат-надмид: рисует «живой» градиент (тиры золото/серебро/платина и роли ADMIN/MODERATOR)
+ * вместо ванильного имени. Уровни приходят только с лобби-сервера (PacketDonatorTiers).
  */
 @Mod.EventBusSubscriber(modid = CoreClientMod.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class DonatorNameTagRenderer {
@@ -27,11 +27,11 @@ public final class DonatorNameTagRenderer {
     public static void onRenderNameTag(RenderNameTagEvent event) {
         Entity entity = event.getEntity();
         if (entity == null || entity.getType() != EntityType.PLAYER) return;
-        String tier = DonatorCache.get(entity.getUUID());
-        if (tier == null) return;
+        String level = DonatorCache.levelOf(entity.getUUID());
+        if (level == null) return;
         // Прячем ванильный надмид и рисуем свой
         event.setResult(Event.Result.DENY);
-        renderWorldGradient(entity, tier, event.getPoseStack(), event.getMultiBufferSource(), event.getPackedLight());
+        renderWorldGradient(entity, level, event.getPoseStack(), event.getMultiBufferSource(), event.getPackedLight());
     }
 
     @SubscribeEvent
@@ -39,7 +39,7 @@ public final class DonatorNameTagRenderer {
         DonatorCache.clear();
     }
 
-    private static void renderWorldGradient(Entity entity, String tier, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
+    private static void renderWorldGradient(Entity entity, String level, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         Minecraft mc = Minecraft.getInstance();
         Font font = mc.font;
         double distSq = mc.getEntityRenderDispatcher().distanceToSqr(entity);
@@ -58,13 +58,14 @@ public final class DonatorNameTagRenderer {
         int x = -totalWidth / 2;
         long now = System.currentTimeMillis();
         Matrix4f mat = new Matrix4f(poseStack.last().pose());
-        int n = text.length();
-        for (int i = 0; i < n; i++) {
+        int cursor = x;
+        for (int i = 0; i < text.length(); i++) {
             String ch = String.valueOf(text.charAt(i));
             int w = font.width(ch);
-            font.drawInBatch(ch, x, 0, NameGradient.color(tier, i, n, now), true, mat, buffer,
+            font.drawInBatch(ch, cursor, 0,
+                NameGradient.colorAt(level, cursor + w / 2.0 - x, totalWidth, now), false, mat, buffer,
                 Font.DisplayMode.NORMAL, 0, packedLight);
-            x += w;
+            cursor += w;
         }
         poseStack.popPose();
     }

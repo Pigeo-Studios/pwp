@@ -366,6 +366,8 @@ public class PlayerRepository {
     }
 
     public static void setDonateTier(String uuid, String tier) throws SQLException {
+        // Колонка NOT NULL DEFAULT 'NONE' — NULL превращаем в NONE, иначе будет SQLException (500)
+        if (tier == null || tier.isEmpty()) tier = "NONE";
         String sql = "UPDATE players SET donate_tier = ? WHERE uuid = ?";
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {

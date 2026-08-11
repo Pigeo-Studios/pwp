@@ -65,7 +65,6 @@ public final class DonatorParticleController {
                 List<ParticleEntry> fx = buildFx(donor, level);
                 if (fx.isEmpty()) continue;
                 for (ServerPlayer viewer : players) {
-                    if (viewer.getUUID().equals(donor.getUUID())) continue;
                     double dist = viewer.distanceTo(donor);
                     if (dist > lodFar) continue;
                     send(viewer, fx, lodFactor(dist, lodFar));
