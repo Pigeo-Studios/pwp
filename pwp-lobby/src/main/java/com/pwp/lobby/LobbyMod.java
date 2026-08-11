@@ -11,9 +11,6 @@ import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
 import com.pwp.lobby.match.MatchAllocator.MatchInfo;
 import com.pwp.lobby.donate.DonatorStatusManager;
-import com.pwp.lobby.donate.particles.DonatorParticleConfig;
-import com.pwp.lobby.donate.particles.DonatorParticleController;
-import com.pwp.lobby.donate.particles.RoleParticleConfig;
 import com.mojang.brigadier.Command;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
@@ -82,8 +79,6 @@ public class LobbyMod {
     }
 
     public LobbyMod() {
-        ModLoadingContext.get().registerConfig(Type.SERVER, DonatorParticleConfig.SPEC, "pwp_lobby/donator_particles.toml");
-        ModLoadingContext.get().registerConfig(Type.SERVER, RoleParticleConfig.SPEC, "pwp_lobby/role_particles.toml");
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -126,9 +121,8 @@ public class LobbyMod {
         tickModeVote();
         MatchAllocator.tick();
         DonatorStatusManager.serverTick();
-        DonatorParticleController.tick();
 
-        // Флай донатеров: каждый тик дёшево, держим/снимаем по фазе лобби
+        // Флай донатеров (частицы теперь на клиенте — DonorFxRenderer)
         if (++donatorFlightTicks >= 20) {
             donatorFlightTicks = 0;
             try {

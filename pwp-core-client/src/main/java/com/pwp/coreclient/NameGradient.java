@@ -61,9 +61,11 @@ public final class NameGradient {
     public static int colorAt(String level, double px, double totalWidth, long timeMs) {
         if (level == null) return 0xFFFFFFFF;
         double t = totalWidth > 1 ? px / totalWidth : 0.0;
-        // Фаза плавно (smoothstep) бежит по строке за цикл — перелив без резких скачков
+        // Косинус-перелив вперёд-назад (0->1->0 плавно, производная 0 на краях) — вместо
+        // пилообразного возврата, при котором в момент оборота цикла цвет резко прыгал
+        // с выцветшего конца палитры на стартовый (у ADMIN — красный «вспыхивал» рывком)
         double raw = (timeMs % CYCLE_MS) / (double) CYCLE_MS;
-        double phase = raw * raw * (3.0 - 2.0 * raw);
+        double phase = 0.5 - 0.5 * Math.cos(raw * 2.0 * Math.PI);
         t = t + phase;
         t -= Math.floor(t);
         return grade(level, t);
