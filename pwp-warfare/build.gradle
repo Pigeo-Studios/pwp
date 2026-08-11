@@ -112,6 +112,7 @@ dependencies {
     compileOnly files("${pwpfiles}/mods/superbwarfare-0.8.9-final-mc1.20.1-6effe4385-all.jar")
     compileOnly files("${pwpfiles}/mods/pointblank-forge-1.20.1-1.11.1.jar")
     compileOnly files("${pwpfiles}/mods/uncomplicated-fpv-1.0.0.jar")
+    compileOnly files("${pwpfiles}/mods/fcp-1.2.0.jar")
 
     implementation project(':pwp-core-client')
     implementation project(':pwp-core-server')

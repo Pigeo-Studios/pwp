@@ -108,9 +108,19 @@ public class AuthLibController {
                 ctx.status(400).json(err("Missing fields")); return;
             }
             String uuid = PlayerRepository.findUuidByAccessToken(body.accessToken);
-            if (uuid == null) { ctx.status(403).json(err("Invalid token")); return; }
+            if (uuid == null) {
+                // Тихий 403 здесь приводил к «lost connection: Disconnected» при возврате в лобби
+                // (access-токен игрока был ротирован refresh'ом в разгар сессии — инцидент 11.08.2026).
+                // Логируем serverId, чтобы обрыв было видно в core-service.log.
+                log.warn("JOIN FAIL: invalid/rotated access token, player={}, serverId={}",
+                        body.selectedProfile, body.serverId);
+                ctx.status(403).json(err("Invalid token")); return;
+            }
             String pu = body.selectedProfile.replaceAll("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})", "$1-$2-$3-$4-$5");
-            if (!pu.equalsIgnoreCase(uuid)) { ctx.status(403).json(err("UUID mismatch")); return; }
+            if (!pu.equalsIgnoreCase(uuid)) {
+                log.warn("JOIN FAIL: uuid mismatch, profile={}, tokenUuid={}", body.selectedProfile, uuid);
+                ctx.status(403).json(err("UUID mismatch")); return;
+            }
             var pl = PlayerRepository.findByUuid(uuid);
             checkBan(pl);
             joinCache.put(body.serverId, new JoinEntry(uuid, pl.nickname, System.currentTimeMillis()));

@@ -17,9 +17,10 @@
     "MouseSensitivityMixin",
     "PointblankFireMixin",
     "GuiOverlayMessageMixin",
-    "SbwVehicleHudMixin",
-    "SbwAmmoBarMixin"
-  ],
+     "SbwVehicleHudMixin",
+     "SbwAmmoBarMixin",
+     "RenderBuffersCaptureMixin"
+   ],
   "injectors": {
     "defaultRequire": 1
   }

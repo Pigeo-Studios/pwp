@@ -111,7 +111,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       int txtX = x + 155;
       gui.drawCenteredString(PWPTheme.Fonts.display(), "Respawn (s)", txtX, y + 8, PWPTheme.Colors.TEXT_SECONDARY);
       gui.drawCenteredString(PWPTheme.Fonts.display(), "Initial (s)", txtX, y + 38, PWPTheme.Colors.TEXT_SECONDARY);
-      gui.drawString(PWPTheme.Fonts.display(), "Items (32)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
+      gui.drawString(PWPTheme.Fonts.display(), "Items (36)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
    }
 
    protected void renderBg(GuiGraphics gui, float partialTick, int mouseX, int mouseY) {

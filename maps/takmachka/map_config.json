@@ -191,6 +191,8 @@
             { "role": "IFV", "x": -1183, "y": 65, "z": -824, "yaw": 270 },
             { "role": "TANK", "x": -1183, "y": 65, "z": -814, "yaw": 270 },
             { "role": "AA", "x": -1183, "y": 65, "z": -804, "yaw": 270 },
+            { "role": "ARTILLERY", "x": -1183, "y": 65, "z": -794, "yaw": 270 },
+            { "role": "MORTAR", "x": -1183, "y": 65, "z": -784, "yaw": 270 },
             { "role": "HELI_TRANSPORT", "x": -1086, "y": 67, "z": -846, "yaw": 0 },
             { "role": "HELI_ATTACK", "x": -1067, "y": 67, "z": -846, "yaw": 0 },
             { "role": "CAS_FIGHTER", "x": -1112, "y": 65, "z": -872, "yaw": 180 }
@@ -205,6 +207,8 @@
             { "role": "IFV", "x": 1160, "y": 65, "z": 842, "yaw": 90 },
             { "role": "TANK", "x": 1160, "y": 65, "z": 832, "yaw": 90 },
             { "role": "AA", "x": 1160, "y": 65, "z": 822, "yaw": 90 },
+            { "role": "ARTILLERY", "x": 1160, "y": 65, "z": 812, "yaw": 90 },
+            { "role": "MORTAR", "x": 1160, "y": 65, "z": 802, "yaw": 90 },
             { "role": "HELI_TRANSPORT", "x": 1063, "y": 67, "z": 864, "yaw": 180 },
             { "role": "HELI_ATTACK", "x": 1044, "y": 67, "z": 864, "yaw": 180 },
             { "role": "CAS_FIGHTER", "x": 1089, "y": 65, "z": 930, "yaw": 0 }

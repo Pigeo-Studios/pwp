@@ -650,7 +650,7 @@ public class DeployScreen extends Screen {
             // ── MIDDLE: РОЛИ + СПАВН + ЧАТ ──
             int spawnBlockH = spawns.blockHeight();
             int minChat = 40;
-            int maxRoleH = Math.max(100, ch - spawnBlockH - 6 - minChat);
+            int maxRoleH = Math.max(40, ch - spawnBlockH - 6 - minChat);
             int roleH = Math.min(maxRoleH, roles.contentHeight(midW2) + 6);
             int[] chatRect = chatRect(conY, ch, roleH, spawnBlockH);
             int chatTopY = chatRect[0], chatH = chatRect[1];
@@ -966,7 +966,7 @@ public class DeployScreen extends Screen {
             // ── ROLES ──
             int spawnBlockH = spawns.blockHeight();
             int minChat = 40;
-            int maxRoleH = Math.max(100, ch - spawnBlockH - 6 - minChat);
+            int maxRoleH = Math.max(40, ch - spawnBlockH - 6 - minChat);
             int roleH = Math.min(maxRoleH, roles.contentHeight(midW2) + 6);
             int roleH2 = Math.max(40, roleH - 2);
             String kit = roles.mouseClicked(mx, my, btn, lw + 4, conY + 2, midW2, roleH2);
@@ -1159,7 +1159,7 @@ public class DeployScreen extends Screen {
         if (activeTab == 1) {
             int lw = sqW(), mw = midW(), conY = conT(), ch = conH();
             int spawnBlockH = spawns.blockHeight();
-            int maxRoleH = Math.max(100, ch - spawnBlockH - 6 - 40);
+            int maxRoleH = Math.max(40, ch - spawnBlockH - 6 - 40);
             int roleH = Math.min(maxRoleH, roles.contentHeight(mw - 8) + 6);
             int midX = lw + 4, midW2 = mw - 8;
             // Список отрядов (левая колонка) — скролл

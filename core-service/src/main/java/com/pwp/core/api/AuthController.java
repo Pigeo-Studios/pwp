@@ -428,21 +428,27 @@ public class AuthController {
                 // Grace — необязательный слой; сбой кэша не роняет refresh.
             }
             try {
-                String newAccess = PlayerRepository.generateTokenPart();
+                String[] old = PlayerRepository.findSessionTokensByRefresh(req.refreshToken);
+                if (old == null) {
+                    ctx.json(ApiResponse.error("invalid or expired refresh token")); return;
+                }
+                // ВАЖНО: access-токен НЕ ротируем — его держит запущенный игровой клиент до конца
+                // сессии (передаётся в --accessToken и используется в /session/minecraft/join при
+                // входе на любой сервер). Ротация access-токена в разгар игры инвалидирует токен
+                // клиента в БД → его joinServer молча получает 403 → «lost connection: Disconnected»
+                // при возврате в лобби (инцидент 11.08.2026). Ротируем только refresh/session_key/hmac.
+                String currentAccess = old[0];
                 String newRefresh = PlayerRepository.generateTokenPart();
                 String newKey = PlayerRepository.generateSessionKey();
                 String newHmacSecret = generateHmacSecret();
-                String[] old = PlayerRepository.findSessionTokensByRefresh(req.refreshToken);
-                boolean ok = PlayerRepository.refreshSession(req.refreshToken, newAccess, newRefresh, newKey, newHmacSecret);
+                boolean ok = PlayerRepository.refreshSession(req.refreshToken, currentAccess, newRefresh, newKey, newHmacSecret);
                 if (!ok) {
                     ctx.json(ApiResponse.error("invalid or expired refresh token")); return;
                 }
-                if (old != null) {
-                    PlayerRepository.storeTokenGrace(old[0], old[1], newAccess, newRefresh, newKey, newHmacSecret, old[2]);
-                }
+                PlayerRepository.storeTokenGrace(old[0], old[1], currentAccess, newRefresh, newKey, newHmacSecret, old[2]);
                 ctx.json(ApiResponse.ok(Map.of(
                     "session_key", newKey,
-                    "access_token", newAccess,
+                    "access_token", currentAccess,
                     "refresh_token", newRefresh,
                     "hmac_secret", newHmacSecret
                 )));

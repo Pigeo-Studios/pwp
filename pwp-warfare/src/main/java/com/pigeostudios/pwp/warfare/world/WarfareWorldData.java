@@ -194,7 +194,7 @@ public class WarfareWorldData extends SavedData {
                     for (int j = 0; j < invArr.size(); j++) {
                         JsonObject itemJson = invArr.get(j).getAsJsonObject();
                         int slot = itemJson.get("slot").getAsInt();
-                        if (slot >= 0 && slot < 33 && itemJson.has("item")) {
+                        if (slot >= 0 && slot < 37 && itemJson.has("item")) {
                             JsonObject itemData = itemJson.getAsJsonObject("item");
                             String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
                             int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;

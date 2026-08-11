@@ -62,15 +62,19 @@ public class RoleGrid {
         return Math.max(MIN_CELL, Math.min(ICON_SIZE, (w - 8 - (perRow - 1) * GAP) / perRow));
     }
 
-    /** Полная высота контента без учёта обрезки (для расчёта бокса ролей в DeployScreen). */
+    /** Полная высота контента без учёта обрезки (для расчёта бокса ролей в DeployScreen).
+     *  Считает по РЕАЛЬНОМУ cellSize(w, pr), как render() — иначе высота недооценивается
+     *  (MIN_CELL=22 < фактических 24-28px), нижний ряд ролей режется скиссором, а
+     *  спавн-бокс «заезжает» на иконки. */
     public int contentHeight(int w) {
         int h = 0;
         for (var e : getCategories().entrySet()) {
             int n = e.getValue().size();
             int pr = countPerRow(n, w);
             int rows = (n + pr - 1) / pr;
+            int cell = cellSize(w, pr);
             h += HEADER_H + GAP;
-            h += rows * (MIN_CELL + GAP) - GAP;
+            h += rows * (cell + GAP) - GAP;
         }
         return h;
     }

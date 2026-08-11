@@ -128,7 +128,7 @@ public class MainSupplyBlockEntity extends BlockEntity {
                                  }
                               }
 
-                              int slotsToCopy = 32;
+                              int slotsToCopy = 36;
 
                               for (int i = 0; i < slotsToCopy && i < vehInv.getSlots(); i++) {
                                  ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);

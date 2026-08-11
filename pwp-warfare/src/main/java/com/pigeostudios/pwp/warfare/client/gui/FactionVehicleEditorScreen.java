@@ -41,12 +41,12 @@ public class FactionVehicleEditorScreen extends Screen {
     private int respawnTime = 60;
     private int initialTime = 60;
     private String category = "";
-    private ItemStack[] vehicleInv = new ItemStack[33];
+    private ItemStack[] vehicleInv = new ItemStack[37];
     private Inventory playerInv;
 
     private static final int SLOT = 18;
     private static final int MOD_W = 22;
-    private static final int VEH_COLS = 8;
+    private static final int VEH_COLS = 9;
     private static final int VEH_ROWS = 4;
     private static final int INV_COLS = 9;
     private static final int INV_ROWS = 3;
@@ -65,7 +65,7 @@ public class FactionVehicleEditorScreen extends Screen {
         this.faction = faction;
         this.editVehicleName = vehicleName;
         this.isNew = (vehicleName == null || vehicleName.isEmpty());
-        for (int i = 0; i < 33; i++) vehicleInv[i] = ItemStack.EMPTY;
+        for (int i = 0; i < 37; i++) vehicleInv[i] = ItemStack.EMPTY;
         this.playerInv = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.getInventory() : null;
     }
 
@@ -179,7 +179,7 @@ public class FactionVehicleEditorScreen extends Screen {
                     for (int i = 0; i < arr.size(); i++) {
                         JsonObject itemJson = arr.get(i).getAsJsonObject();
                         int slot = itemJson.get("slot").getAsInt();
-                        if (slot >= 0 && slot < 32 && itemJson.has("item")) {
+                        if (slot >= 0 && slot < 37 && itemJson.has("item")) {
                             JsonObject itemData = itemJson.getAsJsonObject("item");
                             String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
                             int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;
@@ -262,7 +262,7 @@ public class FactionVehicleEditorScreen extends Screen {
         gui.drawString(PWPTheme.Fonts.display(), "Category:", fl + 296, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         gui.drawString(PWPTheme.Fonts.display(), "Modifier", modX, modY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Items (32)", vInvX, vInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(PWPTheme.Fonts.display(), "Items (36)", vInvX, vInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
 
         // modifier slot (slot 0)
         gui.fill(modX - 2, modY - 2, modX + MOD_W + 2, modY + MOD_W + 2, PWPTheme.Colors.SURFACE_LIGHT);
@@ -334,7 +334,7 @@ public class FactionVehicleEditorScreen extends Screen {
             return true;
         }
 
-        // vehicle inventory slots (1-32)
+        // vehicle inventory slots (1-36)
         int col = (int) ((mx - vInvX) / SLOT);
         int row = (int) ((my - vInvY) / SLOT);
         if (col >= 0 && col < VEH_COLS && row >= 0 && row < VEH_ROWS) {

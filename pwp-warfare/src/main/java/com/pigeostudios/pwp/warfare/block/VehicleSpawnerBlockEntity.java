@@ -42,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 // РЎСѓС‰РЅРѕСЃС‚СЊ Р±Р»РѕРєР° СЃРїР°СѓРЅРµСЂР° С‚РµС…РЅРёРєРё
 // РЈРїСЂР°РІР»СЏРµС‚ С‚Р°Р№РјРµСЂР°РјРё РІРѕР·СЂРѕР¶РґРµРЅРёСЏ, РёРЅРІРµРЅС‚Р°СЂС‘Рј Рё СЃРїР°СѓРЅРѕРј С‚СЂР°РЅСЃРїРѕСЂС‚РЅС‹С… СЃСЂРµРґСЃС‚РІ
 public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvider {
-    public final ItemStackHandler inventory = new ItemStackHandler(33) {
+    public final ItemStackHandler inventory = new ItemStackHandler(37) {
        protected void onContentsChanged(int slot) {
           VehicleSpawnerBlockEntity.this.setChanged();
           if (slot == 0) syncToWorldData();
@@ -97,8 +97,8 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
        if (!veh.inventory.get(0).isEmpty()) {
           this.inventory.setStackInSlot(0, veh.inventory.get(0).copy());
        }
-       // slots 1-32 = vehicle contents
-       for (int i = 1; i < 33 && i < veh.inventory.size(); i++) {
+       // slots 1-36 = vehicle contents (контейнер машины до 36 слотов — миксин FCP)
+       for (int i = 1; i < 37 && i < veh.inventory.size(); i++) {
           if (!veh.inventory.get(i).isEmpty()) {
              this.inventory.setStackInSlot(i, veh.inventory.get(i).copy());
           }
@@ -236,9 +236,9 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
                          entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
                       }
 
-                      // Сохраняем начальный лоудаут техники для станции пополнения (Vehicle Station)
-                      ListTag loadoutTag = new ListTag();
-                      for (int i = 0; i < 32; i++) {
+                       // Сохраняем начальный лоудаут техники для станции пополнения (Vehicle Station)
+                       ListTag loadoutTag = new ListTag();
+                       for (int i = 0; i < 36; i++) {
                          ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
                          if (contentStack.isEmpty()) {
                             continue;
@@ -260,14 +260,16 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
                          );
                      worldData.setDirty();
                      PacketHandler.sendToAllClients((ServerLevel)this.level, worldData);
-                     entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
-                        for (int i = 0; i < 32; i++) {
-                           ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
-                           if (!contentStack.isEmpty() && handler instanceof IItemHandlerModifiable modifiable) {
-                              modifiable.setStackInSlot(i, contentStack.copy());
-                           }
-                        }
-                     });
+                       entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
+                          // ВАЖНО: пишем БК только в существующие слоты контейнера машины
+                          // (у части техники контейнер всего 9 слотов — иначе IndexOutOfBounds -> краш сервера)
+                          for (int i = 0; i < 36; i++) {
+                            ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
+                            if (!contentStack.isEmpty()) {
+                               insertItemIntoSlot(handler, i, contentStack.copy());
+                            }
+                         }
+                      });
                      if (entity instanceof LivingEntity living) {
                         living.setHealth(living.getMaxHealth());
                      }
@@ -332,8 +334,8 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
          this.inventory.deserializeNBT(tag.getCompound("Inventory"));
       }
 
-      if (this.inventory.getSlots() < 33) {
-         this.inventory.setSize(33);
+      if (this.inventory.getSlots() < 37) {
+         this.inventory.setSize(37);
       }
 
       this.respawnTimeSettings = tag.getInt("RespawnTime");

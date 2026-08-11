@@ -48,7 +48,7 @@ public class PacketSaveFactionVehicle {
         buf.writeInt(msg.respawnTime);
         buf.writeInt(msg.initialTime);
         buf.writeUtf(msg.category != null ? msg.category : "");
-            for (int i = 0; i < 33; i++) {
+            for (int i = 0; i < 37; i++) {
                 buf.writeItem(msg.inventory[i]);
             }
     }
@@ -62,8 +62,8 @@ public class PacketSaveFactionVehicle {
         int respawnTime = buf.readInt();
         int initialTime = buf.readInt();
         String category = buf.readUtf();
-        ItemStack[] inv = new ItemStack[33];
-        for (int i = 0; i < 33; i++) {
+        ItemStack[] inv = new ItemStack[37];
+        for (int i = 0; i < 37; i++) {
             inv[i] = buf.readItem();
         }
         return new PacketSaveFactionVehicle(faction, vehicleName, displayName, vehicleId, yaw, respawnTime, initialTime, category, inv);
@@ -74,7 +74,7 @@ public class PacketSaveFactionVehicle {
             ServerPlayer player = ctx.get().getSender();
             if (player != null && player.isCreative()) {
                 JsonArray itemsArray = new JsonArray();
-                for (int i = 0; i < 33; i++) {
+                for (int i = 0; i < 37; i++) {
                     ItemStack stack = msg.inventory[i];
                     if (!stack.isEmpty()) {
                         JsonObject itemJson = new JsonObject();

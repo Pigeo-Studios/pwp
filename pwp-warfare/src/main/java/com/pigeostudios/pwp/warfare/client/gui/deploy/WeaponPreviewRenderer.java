@@ -18,9 +18,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.item.SwordItem;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -34,9 +32,13 @@ import java.util.Map;
  * <p>«Всё наилучшее»:
  * <ul>
  *   <li>пресеты «витрины» по типу оружия (бокс + поворот + базовый масштаб);</li>
- *   <li>ТОЧНОЕ измерение габаритов TACZ-модели (bounding box кубов Bedrock-дерева
- *       × fixed-scale из трансформа кита) — масштаб подгоняется под реальную модель
- *       с кэшем по GunId;</li>
+ *   <li>ЧЕСТНЫЙ фит: реальный рендер перехватывается каптчером вершин
+ *       ({@link WeaponBoundingBox} + минимиксин {@code RenderBuffersCaptureMixin})
+ *       и масштаб подгоняется под ПИКСЕЛЬНЫЙ размер модели — прежний замер по дереву
+ *       кубов не учитывал ротации FIXED-узла и переполнял рамку (измерял 14 юнитов,
+ *       а на экране 25.92). Кэш по стеку + ориентация;</li>
+ *   <li>центровка отрендеренного бокса по центру витрины (BEWLR-цепочка сдвигала
+ *       модель на 10-25px в сторону при крупном масштабе);</li>
  *   <li>пресеты для не-оружия по классу предмета (мечи/топоры кладутся боком);</li>
  *   <li>Z сплющен отдельно (глубина не тянет модель под панели).</li>
  * </ul>
@@ -46,13 +48,12 @@ public class WeaponPreviewRenderer {
     /** Базовый z предпросмотра: поверх панелей (z=0), под тултипом (z=400). */
     private static final float PREVIEW_Z = 250f;
     private static final float PREVIEW_DEPTH_SCALE = 60f;
-    /** Калибровка «сырого» bbox → пиксели (подобрана на дефолтных TACZ-моделях). */
-    private static final float CALIBRATION = 14f;
+    /** Отступ от края витрины при фите (пиксели с каждой стороны). */
+    private static final float FIT_PAD = 14f;
 
     /**
-     * Ориентация ствола: yaw=0 — модель «в лоб» (дуло на зрителя, видно всю
-     * длину). НЕ хардкод per-gun и НЕ авто-поворот по bbox (авто-поворот давал
-     * yaw=180 и модель «в лоб» через бок): единый глобальный пресет yaw=0.
+     * Знак оси Y работает от FIXED-цепочки TACZ (нода fixed сама разворачивает ствол
+     * боком при yaw=0 — «в лоб» даёт yaw=90). BARREL_TO_RIGHT — только знак оси.
      */
     private static final boolean BARREL_TO_RIGHT = true;
 
@@ -76,8 +77,18 @@ public class WeaponPreviewRenderer {
             "lmg", 0.65f, "sniper", 0.65f, "mg", 0.55f, "rpg", 0.70f);
 
     private final Map<String, Float> scaleCache = new HashMap<>();
-    /** Кэш измеренных габаритов по GunId. */
-    private final Map<String, Vector3f> measureCache = new HashMap<>();
+    /** Кэш пиксельных фитов: ключ = стек+ориентация, значение = Fit (может быть null). */
+    private final Map<String, Fit> fitCache = new HashMap<>();
+
+    /**
+     * Результат капчи: реальные отрендеренные размеры/центр при внешнем масштабе 1.
+     *
+     * @param width    ширина бокса в пикселях
+     * @param height   высота бокса в пикселях
+     * @param centerX  центр бокса по X
+     * @param centerY  центр бокса по Y
+     */
+    public record Fit(float width, float height, float centerX, float centerY) {}
 
     /** Пресет для стека: оружие — по типу из индекса TACZ, иначе по классу предмета. */
     public Preset presetFor(ItemStack stack) {
@@ -113,12 +124,21 @@ public class WeaponPreviewRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return false;
 
-        // Ориентация — ТОЛЬКО вызов пресетов (yaw=90: дуло вправо, боковая витрина).
-        // Авто-поворот по bbox убран: для моделей с длинной осью X он выдавал yaw=180
-        // (модель оставалась «в лоб»). Знак оси по-прежнему управляется BARREL_TO_RIGHT.
+        // Знак оси — ТОЛЬКО BARREL_TO_RIGHT (сами углы из пресетов; FIXED-цепочка
+        // TACZ уже кладёт ствол боком при yaw=0 — см. javadoc поля).
         if (gunId(stack) != null && !BARREL_TO_RIGHT) yawDeg = -yawDeg;
 
-        float s = computeScale(stack, width, height, yawDeg, pitchDeg);
+        Fit fit = fitFor(stack, yawDeg, pitchDeg, zRotDeg);
+        float s;
+        if (fit != null) {
+            // Вписать отрендеренный пиксельный бокс целиком в рамку (с запасом FIT_PAD).
+            float s1 = (width - FIT_PAD) / Math.max(0.05f, fit.width());
+            float s2 = (height - FIT_PAD) / Math.max(0.05f, fit.height());
+            s = Mth.clamp(Math.min(s1, s2), 0.3f, 6.0f);
+        } else {
+            s = fallbackScale(stack, width, height);
+        }
+
         PoseStack pose = gui.pose();
         pose.pushPose();
         try {
@@ -126,6 +146,11 @@ public class WeaponPreviewRenderer {
             if (zRotDeg != 0) pose.mulPose(Axis.ZP.rotationDegrees(zRotDeg));
             pose.mulPose(Axis.XP.rotationDegrees(pitchDeg));
             pose.mulPose(Axis.YP.rotationDegrees(yawDeg));
+            if (fit != null) {
+                // Центр захвачен в координатах «после ротаций и scale(1,-1,1)» — при
+                // умножении на s он сдвигается на s*center, вычитаем до scale(s).
+                pose.translate(-fit.centerX() * s, -fit.centerY() * s, 0.0D);
+            }
             pose.scale(s, -s, Math.min(s, PREVIEW_DEPTH_SCALE));
             // Прямой рендер полной модели для TACZ (в обход их LOD-проверки —
             // охрана из markGuiRenderTimestamp хрупкая: при дефолтном
@@ -155,23 +180,67 @@ public class WeaponPreviewRenderer {
         }
     }
 
-    /**
-     * Масштаб: если измерен реальный bbox TACZ-модели — вписать её целиком в рамку
-     * (с учётом поворота yaw). Иначе — база от рамки × коэффициент типа.
-     */
-    private float computeScale(ItemStack stack, float w, float h, float yawDeg, float pitchDeg) {
-        String gunId = gunId(stack);
-        Vector3f bb = gunId != null ? measure(stack, gunId) : null;
-        if (bb != null && bb.x > 0.01f && bb.y > 0.01f) {
-            double rad = Math.toRadians(yawDeg);
-            float effW = bb.x * (float) Math.abs(Math.cos(rad)) + bb.z * (float) Math.abs(Math.sin(rad));
-            float effH = bb.y;
-            float s1 = (w - 14f) / Math.max(0.05f, effW);
-            float s2 = (h - 14f) / Math.max(0.05f, effH);
-            return Mth.clamp(Math.min(s1, s2) * CALIBRATION, 0.3f, 2.2f);
+    // ───────────────────── ПИКСЕЛЬНЫЙ ФИТ ─────────────────────
+
+    /** Возвращает измерения модели (или null, если капча недоступная/пустая). */
+    private Fit fitFor(ItemStack stack, float yawDeg, float pitchDeg, float zRotDeg) {
+        String key = fitCacheKey(stack, yawDeg, pitchDeg, zRotDeg);
+        Fit cached = fitCache.get(key);
+        if (cached != null) return cached;
+        Fit measured = doCapture(stack, yawDeg, pitchDeg, zRotDeg);
+        fitCache.put(key, measured);
+        return measured;
+    }
+
+    private Fit doCapture(ItemStack stack, float yawDeg, float pitchDeg, float zRotDeg) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return null;
+        WeaponBoundingBox.Capture cap = WeaponBoundingBox.begin();
+        PoseStack pose = new PoseStack();
+        pose.pushPose();
+        try {
+            // ТА ЖЕ трансформационная цепочка, что в render(), но с масштабом 1 —
+            // каптчер фиксирует модель в «экрано-координатах» при scale 1.
+            pose.translate(0.0D, 0.0D, PREVIEW_Z);
+            if (zRotDeg != 0) pose.mulPose(Axis.ZP.rotationDegrees(zRotDeg));
+            pose.mulPose(Axis.XP.rotationDegrees(pitchDeg));
+            pose.mulPose(Axis.YP.rotationDegrees(yawDeg));
+            pose.scale(1.0F, -1.0F, 1.0F);
+            String gun = gunId(stack);
+            boolean done = false;
+            if (gun != null) {
+                try {
+                    // renderFullModel зовёт 6-арг model.render — тот сам берёт
+                    // буфер из глобального bufferSource(), перехваченный миксином.
+                    done = TaczHolder.renderFullModel(stack, gun, pose, null);
+                } catch (RuntimeException | LinkageError ignored) { done = false; }
+            }
+            if (!done) {
+                markHighDetail();
+                mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED,
+                        LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
+                        pose, cap, mc.level, 0);
+            }
+            if (cap.isEmpty()) return null;
+            return new Fit(cap.width(), cap.height(), cap.centerX(), cap.centerY());
+        } catch (RuntimeException | LinkageError e) {
+            return null;
+        } finally {
+            WeaponBoundingBox.end();
+            pose.popPose();
         }
+    }
+
+    private String fitCacheKey(ItemStack stack, float yawDeg, float pitchDeg, float zRotDeg) {
+        String gun = gunId(stack);
+        String base = (gun != null) ? gun : stack.getItem().getDescriptionId();
+        return base + "#" + yawDeg + ";" + pitchDeg + ";" + zRotDeg;
+    }
+
+    /** Фолбэк без капчи (модель ещё не догружена): база от рамки × коэффициент типа. */
+    private float fallbackScale(ItemStack stack, float w, float h) {
         float base = Math.max(8f, Math.min(w, Math.max(h, w * 0.65f)) * 0.42f);
-        float type = typeScale(stack, gunId);
+        float type = typeScale(stack, gunId(stack));
         return Math.min(base * type, Math.min(w, h) * 0.95f);
     }
 
@@ -195,34 +264,6 @@ public class WeaponPreviewRenderer {
         } catch (RuntimeException | LinkageError ignored) {}
         return null;
     }
-
-    // ───────────────────── ТОЧНОЕ ИЗМЕРЕНИЕ TACZ ─────────────────────
-
-    /**
-     * Габариты TACZ-модели: bounding box всех кубов Bedrock-дерева (от корня,
-     * найденного через fixed-путь) × fixed-scale кита. Кэш по GunId.
-     * Возвращает null, если модель недоступна — тогда пресет.
-     */
-    private Vector3f measure(ItemStack stack, String gunId) {
-        Vector3f cached = measureCache.get(gunId);
-        if (cached != null) return cached;
-        try {
-            Vector3f size = TaczHolder.measureGun(stack, gunId);
-            if (size != null && size.x() > 0.01f && size.y() > 0.01f) {
-                measureCache.put(gunId, size);
-                return size;
-            }
-        } catch (RuntimeException | LinkageError ignored) {}
-        measureCache.put(gunId, null);
-        return null;
-    }
-
-    /**
-     * Авто-ориентация ствола по bbox (убрана из рендера 08.08.2026): вычисляла углы
-     * по длинной оси bbox, но для моделей с осью X выдавала yaw=180 — модель оставалась
-     * «в лоб». Ориентация теперь всегда из пресетов (yaw=90 — боковая витрина, дуло
-     * вправо); знак оси — переключателем {@link #BARREL_TO_RIGHT}.
-     */
 
     private String gunId(ItemStack stack) {
         if (!stack.hasTag()) return null;
@@ -263,6 +304,10 @@ public class WeaponPreviewRenderer {
          * (с конца) → фиксированный масштаб кита. Без неё модель рисуется в
          * координатах корня — «пропадает» за панелью или ложится неверно
          * (инцидент 09.08.2026).</p>
+         *
+         * <p>Ориентация: 6-арг {@code model.render} сам берёт буфер из глобального
+         * {@code RenderBuffers.bufferSource()} — при активном {@link WeaponBoundingBox}
+         * его перехватывает {@code RenderBuffersCaptureMixin} для измерения.</p>
          */
         static boolean renderFullModel(ItemStack stack, String gunId, PoseStack pose,
                                        net.minecraft.client.renderer.MultiBufferSource buffer) {
@@ -329,74 +374,6 @@ public class WeaponPreviewRenderer {
         static String gunType(ResourceLocation id) {
             return com.tacz.guns.api.TimelessAPI.getClientGunIndex(id)
                     .map(index -> index.getType()).orElse(null);
-        }
-
-        /** Bounding box модели в мировых единицах (кубы × fixed-scale кита). */
-        static Vector3f measureGun(ItemStack stack, String gunId) {
-            ResourceLocation id = ResourceLocation.tryParse(gunId);
-            if (id == null) return null;
-            var idxOpt = com.tacz.guns.api.TimelessAPI.getClientGunIndex(id);
-            if (idxOpt.isEmpty()) return null;
-            com.tacz.guns.client.resource.GunDisplayInstance display = idxOpt.get().getDefaultDisplay();
-            if (display == null) return null;
-            com.tacz.guns.client.model.BedrockGunModel model = display.getGunModel();
-            if (model == null) return null;
-
-            // Фиксированный масштаб кита (применяется в FIXED-контексте)
-            float fixedScale = 1f;
-            try {
-                Vector3f fs = display.getTransform().getScale().getFixed();
-                fixedScale = Math.max(Math.max(fs.x(), fs.y()), fs.z());
-            } catch (Exception ignored) {}
-
-            // Корень дерева — первый элемент fixed-пути (или рефлексия на поле root)
-            com.tacz.guns.client.model.bedrock.BedrockPart root = null;
-            try {
-                var path = model.getFixedOriginPath();
-                if (path != null && !path.isEmpty()) root = path.get(0);
-            } catch (Exception ignored) {}
-            if (root == null) {
-                try {
-                    var f = com.tacz.guns.client.model.BedrockGunModel.class.getDeclaredField("root");
-                    f.setAccessible(true);
-                    root = (com.tacz.guns.client.model.bedrock.BedrockPart) f.get(model);
-                } catch (Exception ignored) {}
-            }
-            if (root == null) return null;
-
-            float[] min = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
-            float[] max = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
-            collectCubes(root, new Matrix4f(), min, max);
-            if (min[0] == Float.MAX_VALUE) return null;
-            return new Vector3f(
-                (max[0] - min[0]) * fixedScale,
-                (max[1] - min[1]) * fixedScale,
-                (max[2] - min[2]) * fixedScale);
-        }
-
-        private static void collectCubes(com.tacz.guns.client.model.bedrock.BedrockPart part,
-                                         Matrix4f acc, float[] min, float[] max) {
-            Matrix4f m = new Matrix4f(acc);
-            m.translate(part.x, part.y, part.z);
-            m.rotateZ(part.zRot).rotateY(part.yRot).rotateX(part.xRot);
-            m.scale(part.xScale, part.yScale, part.zScale);
-            for (var cube : part.cubes) {
-                if (!(cube instanceof com.tacz.guns.client.model.bedrock.BedrockCubeBox b)) continue;
-                float[][] corners = {
-                    {b.minX, b.minY, b.minZ}, {b.maxX, b.minY, b.minZ},
-                    {b.minX, b.maxY, b.minZ}, {b.maxX, b.maxY, b.minZ},
-                    {b.minX, b.minY, b.maxZ}, {b.maxX, b.minY, b.maxZ},
-                    {b.minX, b.maxY, b.maxZ}, {b.maxX, b.maxY, b.maxZ}
-                };
-                for (float[] c : corners) {
-                    Vector4f v = m.transform(new Vector4f(c[0], c[1], c[2], 1f));
-                    min[0] = Math.min(min[0], v.x()); min[1] = Math.min(min[1], v.y()); min[2] = Math.min(min[2], v.z());
-                    max[0] = Math.max(max[0], v.x()); max[1] = Math.max(max[1], v.y()); max[2] = Math.max(max[2], v.z());
-                }
-            }
-            for (var child : part.children) {
-                collectCubes(child, m, min, max);
-            }
         }
     }
 }

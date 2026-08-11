@@ -31,8 +31,8 @@ public class VehicleSpawnerMenu extends AbstractContainerMenu {
       int gridStartY = 75;
 
       for (int row = 0; row < 4; row++) {
-         for (int col = 0; col < 8; col++) {
-            this.addSlot(new SlotItemHandler(this.blockEntity.inventory, 1 + col + row * 8, gridStartX + col * 18, gridStartY + row * 18));
+         for (int col = 0; col < 9; col++) {
+            this.addSlot(new SlotItemHandler(this.blockEntity.inventory, 1 + col + row * 9, gridStartX + col * 18, gridStartY + row * 18));
          }
       }
 
