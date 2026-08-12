@@ -56,20 +56,30 @@ public final class AdminStyle {
         float boost = (float) (1.0 + 0.4 * land); // краткий подъём яркости при посадке
         float fi = i * boost;
 
-        drawCrown(b, m, pos, st, time, fi, fly, right, up);
-
+        // Сглаженное направление движения из оси наклона FxState (axis ⊥ скорости):
+        // ось keep-last — при зависании не обнуляется, при развороте вращается
+        // непрерывно через ноль. Направление НЕ щёлкает на 180° и не пропадает.
         double spd = st.speed();
-        Vec3 fwd = spd > 1e-3 ? new Vec3(st.vx() / spd, 0.0, st.vz() / spd) : null;
+        double ax = st.tiltAxisX();
+        double az = st.tiltAxisZ();
+        double al = Math.sqrt(ax * ax + az * az);
+        Vec3 axis = al > 1e-4 ? new Vec3(ax / al, 0.0, az / al) : null;
+        Vec3 fwd = axis == null ? null : new Vec3(az, 0.0, -ax);
         Vec3 back = fwd == null ? null : new Vec3(-fwd.x, 0.0, -fwd.z);
+        double speedFade = Math.min(1.0, spd * 20.0); // trail плавно гаснет при остановке
+
+        drawCrown(b, m, pos, st, time, fi, fly, right, up, fwd);
 
         // --- 1. RED RING: радар из 8 сегментов, оборот ~2.8 с, радиус дышит.
-        // В полёте плоскость наклоняется к направлению движения и расширяется — орбита.
+        // В полёте плоскость наклоняется вокруг сглаженной оси (maxTilt ~0.9 рад)
+        // и расширяется — орбита. Наклон непрерывен: завис — кольцо остаётся
+        // наклонённым по последнему направлению, разворот — плавный доворот.
         double rr = (0.65 + 0.07 * Math.sin(sec * Math.PI * 2.0 / 8.0))
                 * (1.0 + 0.30 * fly) * (1.0 + 0.25 * land);
         double ringRot = time * AuraGeom.omega(2.8);
         Vec3 ringNormal = UP_AXIS;
-        if (fly > 0.01 && fwd != null) {
-            ringNormal = UP_AXIS.scale(1.0 - fly).add(fwd.scale(fly)).normalize();
+        if (fly > 0.01 && axis != null) {
+            ringNormal = AuraGeom.rotateAround(UP_AXIS, Vec3.ZERO, axis, fly * 0.9).normalize();
         }
         AuraGeom.radarRingEx(b, m, pos, ringNormal, rr, 0.1, ringRot, 8, 0.6, 0.075, 0.55,
                 AuraGeom.color(BRIGHT_RED, 0.85f * fi));
@@ -128,8 +138,10 @@ public final class AdminStyle {
             }
         }
 
-        // --- 6. MOVEMENT TRAIL: 3–4 искры позади по сглаженному направлению
+        // --- 6. MOVEMENT TRAIL: 3–4 искры позади по сглаженному направлению;
+        // в полёте уступает flight-trail (fade), при остановке гаснет по скорости
         if (move > 0.02 && back != null) {
+            double flyFade = 1.0 - 0.8 * fly;
             for (int k = 0; k < 4; k++) {
                 double ph = AuraGeom.wrapFrac(sec / 0.6 + k * 0.25 + st.hash(40 + k));
                 double dist = 0.2 + ph * 0.5;
@@ -137,12 +149,14 @@ public final class AdminStyle {
                 Vec3 perp = new Vec3(-back.z, 0.0, back.x).scale(off);
                 Vec3 p = pos.add(0.0, 0.1 + k * 0.12, 0.0)
                         .add(back.scale(dist * move)).add(perp);
-                float a = (float) ((1.0 - ph) * 0.7 * move * i);
+                float a = (float) ((1.0 - ph) * 0.7 * move * i * flyFade * speedFade);
                 AuraGeom.dash(b, m, p, back, up, 0.12, 0.05, AuraGeom.color(BRIGHT_RED, a));
             }
         }
 
-        // --- FLIGHT: энергетический круг под игроком + красный trail позади
+        // --- FLIGHT: энергетический круг под игроком + красный trail позади.
+        // Trail рисуется по последнему направлению (axis keep-last) и гаснет при
+        // остановке — без щелчков и исчезновений при пересечении нуля скорости.
         if (fly > 0.02) {
             double circleA = 0.35 * (fly * (1.0 - fly) * 4.0 + 0.15 * fly);
             AuraGeom.ringTile(b, m, pos, 0.85, 1.15, 0.05, 0.0, 48,
@@ -153,7 +167,7 @@ public final class AdminStyle {
                     double len = (0.2 + 0.6 * fly) * (1.0 - k * 0.15);
                     Vec3 p = pos.add(0.0, th, 0.0).add(back.scale(0.15 + k * 0.2));
                     AuraGeom.dash(b, m, p, back, up, len, 0.06,
-                            AuraGeom.color(RED, (float) (0.6 * fi * fly * (1.0 - k * 0.2))));
+                            AuraGeom.color(RED, (float) (0.6 * fi * fly * (1.0 - k * 0.2) * speedFade)));
                 }
             }
         }
@@ -173,17 +187,16 @@ public final class AdminStyle {
 
     /** Корона: тонкое кольцо + 8 наклонных лезвий с дыханием; в полёте лёгкий наклон вперёд. */
     private static void drawCrown(VertexConsumer b, Matrix4f m, Vec3 pos, FxState st, float time,
-                                  float i, double fly, Vec3 right, Vec3 up) {
+                                  float i, double fly, Vec3 right, Vec3 up, Vec3 fwd) {
         double sec = time / 20.0;
         double breath = 0.5 + 0.5 * Math.sin(sec * Math.PI * 2.0 / 5.0 + st.hash(60) * Math.PI * 2.0);
         double bladeBreath = 0.5 + 0.5 * Math.sin(sec * Math.PI * 2.0 / 4.0);
         double crownRot = time * AuraGeom.omega(30.0);
 
-        double spd = st.speed();
+        // Лёгкий наклон по СГЛАЖЕННОМУ направлению (без щелчка при развороте)
         Vec3 tilt = new Vec3(0.0, 0.0, 0.0);
-        if (fly > 0.01 && spd > 1e-3) {
-            double k = 0.12 * fly;
-            tilt = new Vec3(st.vx() / spd * k, 0.0, st.vz() / spd * k);
+        if (fly > 0.01 && fwd != null) {
+            tilt = fwd.scale(0.12 * fly);
         }
         Vec3 headTop = pos.add(0.0, 1.9, 0.0).add(tilt);
 

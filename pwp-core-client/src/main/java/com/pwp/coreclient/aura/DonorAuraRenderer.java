@@ -136,7 +136,7 @@ public final class DonorAuraRenderer {
             // Состояние обновляется для ВСЕХ игроков (и вне LOD) — blend-факторы
             // остаются свежими, когда игрок входит в дальность показа.
             FxState state = STATES.computeIfAbsent(id, FxState::new);
-            state.update(time, p.onGround(), ix, iz);
+            state.update(time, p.onGround(), p.getAbilities().flying, ix, iz);
             DonorLevel lvl = DonorLevel.byName(DonatorCache.levelOf(id));
             if (lvl == null || !DonorFxConfig.enabled(lvl)) continue;
             double dx = ix - myX;

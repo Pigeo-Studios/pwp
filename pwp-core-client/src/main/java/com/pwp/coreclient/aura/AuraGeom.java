@@ -295,14 +295,23 @@ public final class AuraGeom {
      * Спираль с двумя доработками (v4, полёт/вспышки):
      *  - tiltAxis/tilt — наклон оси спирали (Rodrigues вокруг горизонтальной
      *    оси, например перпендикулярной направлению полёта);
-     *  - proximityRot/flashAmp — яркость сегментов растёт, когда виток сходится
-     *    с ДРУГОЙ спиралью (у той противоположное направление витков, turns той
-     *    же величины — «вспышки пересечения» GOLD). flashAmp <= 0 — выключено.
+     *  - proximityRot/flashAmp — яркость ленты растёт, когда её виток сходится
+     *    с ДРУГОЙ спиралью. Спирали намотаны в одну сторону (turns одной
+     *    величины) — угловое расстояние между ними вдоль высоты ПОСТОЯННО,
+     *    поэтому сближение глобальное: dc = angleDiff(rot, proximityRot) без
+     *    зависимости от t (бегущая по ленте полоса давала «мерцание»).
+     *    Окно ~0.6 рад при относительной скорости ~2.15 рад/с даёт короткий
+     *    пик ~0.15 с — «вспышка пересечения» GOLD. flashAmp <= 0 — выключено.
      */
     public static void helixEx(VertexConsumer b, Matrix4f m, Vec3 center, double radius, double yBase,
                                double height, double turns, double rot, int segments, double width, int argb,
                                Vec3 tiltAxis, double tilt, double proximityRot, double flashAmp) {
         boolean tilted = tiltAxis != null && Math.abs(tilt) > 1e-4;
+        double boost = 1.0;
+        if (flashAmp > 0.0) {
+            double dc = angleDiff(rot, proximityRot);
+            boost = 1.0 + flashAmp * (1.0 - smoothstep(0.25, 0.9, dc));
+        }
         for (int i = 0; i < segments; i++) {
             double t0 = (double) i / segments;
             double t1 = (double) (i + 1) / segments;
@@ -319,12 +328,7 @@ public final class AuraGeom {
             if (tilted) outward = rotateAround(outward, Vec3.ZERO, tiltAxis, tilt);
             double mid = (t0 + t1) * 0.5;
             double fall = smoothstep(0.0, 0.2, Math.min(mid, 1.0 - mid));
-            if (flashAmp > 0.0) {
-                double otherAngle = proximityRot - mid * turns * TAU;
-                double dc = angleDiff(midA, otherAngle);
-                fall *= 1.0 + flashAmp * (1.0 - smoothstep(0.25, 0.9, dc));
-            }
-            ribbonWorld(b, m, a, b0, outward, width, color(argb, (float) fall));
+            ribbonWorld(b, m, a, b0, outward, width, color(argb, (float) (fall * boost)));
         }
     }
 

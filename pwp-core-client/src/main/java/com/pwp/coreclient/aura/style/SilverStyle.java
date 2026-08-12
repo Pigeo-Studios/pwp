@@ -39,8 +39,8 @@ public final class SilverStyle {
                 col(lvl, 0.18f * i), false);
 
         // Пыль: 9 шт, radius ~0.30, подъём 1.3, цикл ~2.4 с (2.0–2.8 с с джиттером);
-        // при беге тянется назад, в полёте гаснет — её место занимает trail
-        double drag = 2.5 * move;
+        // при беге слегка тянется назад, в полёте гаснет — её место занимает trail
+        double drag = 0.7 * move;
         double dragX = -st.vx() * drag;
         double dragZ = -st.vz() * drag;
         AuraGeom.dustMotes(b, m, pos, right, up, time, 9, 0.30, 1.3,

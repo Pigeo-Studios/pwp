@@ -36,7 +36,6 @@ public final class GoldStyle {
                             Vec3 right, Vec3 up, DonorLevel lvl) {
         double fly = st.flyBlend();
         double move = st.moveBlend();
-        double sec = time / 20.0;
 
         // Полёт: спираль наклоняется, растягивается и ускоряется (тайминг flyBlend ~0.8 с)
         double radius = RIBBON_RADIUS * (1.0 + 0.15 * fly);
@@ -58,24 +57,26 @@ public final class GoldStyle {
 
         // Две неполные спирали-ленты, встречные (5 с / 7 с на оборот), с proximity-вспышками
         AuraGeom.helixEx(b, m, pos, radius, RIBBON_BASE, height, RIBBON_TURNS, rot1, 40, 0.055,
-                col(lvl, 0.65f * i), tiltAxis, tilt, rot2, 1.2);
+                col(lvl, 0.65f * i), tiltAxis, tilt, rot2, 0.8);
         AuraGeom.helixEx(b, m, pos, radius, RIBBON_BASE, height, RIBBON_TURNS, rot2, 40, 0.055,
-                col(lvl, 0.55f * i), tiltAxis, tilt, rot1, 1.0);
+                col(lvl, 0.55f * i), tiltAxis, tilt, rot1, 0.6);
 
-        // Точки в местах сближения витков — маленькие вспышки (короткая пульсация)
-        double tc0 = AuraGeom.wrapFrac((rot2 - rot1) / (RIBBON_TURNS * 2.0 * AuraGeom.TAU));
-        for (int k = 0; k < 4; k++) {
-            double tc = AuraGeom.wrapFrac(tc0 + (double) k / (RIBBON_TURNS * 2.0));
-            Vec3 cp = AuraGeom.helixPoint(pos, radius, RIBBON_BASE, height, RIBBON_TURNS, rot1, tc);
-            if (tiltAxis != null) cp = AuraGeom.rotateAround(cp, pos, tiltAxis, tilt);
-            double pulse = Math.pow(0.5 + 0.5 * Math.sin(sec * Math.PI * 2.0 / 0.75 + st.hash(12 + k) * Math.PI * 2.0), 3.0);
-            AuraGeom.glowQuad(b, m, cp, right, up, 0.16, col(lvl, (float) (0.9 * i * pulse)));
+        // Вспышка сближения витков: ленты намотаны в одну сторону, сближение глобальное
+        // (угловое расстояние rot1-rot2 -> 0). Окно 0.6 рад при относительной скорости
+        // ~2.15 рад/с даёт короткий пик ~0.15 с (дизайн), затем плавный fade — без мерцания.
+        double delta = AuraGeom.angleDiff(rot1, rot2);
+        double env = 1.0 - AuraGeom.smoothstep(0.15, 0.6, delta);
+        if (env > 0.01) {
+            Vec3 fp = AuraGeom.helixPoint(pos, radius, RIBBON_BASE, height, RIBBON_TURNS, rot1, 0.5);
+            if (tiltAxis != null) fp = AuraGeom.rotateAround(fp, pos, tiltAxis, tilt);
+            AuraGeom.glowQuad(b, m, fp, right, up, 0.2, col(lvl, (float) (0.9 * i * env)));
         }
 
-        // «Монетки»: по 5 на каждую спираль, цикл ~2.2 с, при беге уходят назад
-        double cycle = 2.2 * 20.0;
-        double cdragX = -st.vx() * 2.0 * move;
-        double cdragZ = -st.vz() * 2.0 * move;
+        // «Монетки»: по 5 на каждую спираль, спокойный облёт тела ~4.4 с (позиционный
+        // цикл вдоль витка), при беге слегка уходят назад
+        double cycle = 4.4 * 20.0;
+        double cdragX = -st.vx() * 0.6 * move;
+        double cdragZ = -st.vz() * 0.6 * move;
         AuraGeom.helixDots(b, m, pos, radius, RIBBON_BASE, height, RIBBON_TURNS, rot1, 5, cycle,
                 time, st.hash(13), cdragX, cdragZ, right, up, 0.12, col(lvl, 0.8f * i));
         AuraGeom.helixDots(b, m, pos, radius, RIBBON_BASE, height, RIBBON_TURNS, rot2, 5, cycle,
@@ -85,9 +86,9 @@ public final class GoldStyle {
         AuraGeom.flatArc(b, m, pos, 0.44, 0.04, (float) (-time * AuraGeom.omega(40.0)), 1.0, 40, 0.03,
                 col(lvl, 0.35f * i), false);
 
-        // Пыль: чаще/ярче, чем у SILVER
+        // Пыль: цикл 2.4 с (спокойнее, чем было 1.8 с)
         AuraGeom.dustMotes(b, m, pos, right, up, time, 10, 0.42, 1.6,
-                AuraGeom.TAU / (1.8 * 20.0), 0.2, st.hash(15), cdragX * 0.6, cdragZ * 0.6, 0.08,
+                AuraGeom.TAU / (2.4 * 20.0), 0.2, st.hash(15), cdragX * 0.7, cdragZ * 0.7, 0.08,
                 col(lvl, 0.6f * i));
 
         AuraGeom.bodyGlow(b, m, pos, right, up, col(lvl, (float) (0.07 * i * (1.0 - 0.4 * fly))));

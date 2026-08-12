@@ -15,10 +15,20 @@ import java.util.UUID;
  * сглаживается экспоненциально — trail не дёргается и плавно изгибается при
  * смене направления.
  *
+ * ВАЖНО (v4.1, анти-щелчки): ось наклона в полёте (tiltAxis) сглаживается и
+ * СОХРАНЯЕТ последнее направление при остановке — кольцо не падает в
+ * горизонталь при зависании и не переворачивается на 180° при развороте
+ * (скорость сглаживается через ноль — ось вращается непрерывно). LANDING-импакт
+ * срабатывает только после РЕАЛЬНОГО воздушного эпизода (активный флай ИЛИ
+ * >15 тиков в воздухе) — обычные прыжки в лобби не триггерят посадку.
+ *
  * Все значения детерминированы: фазы/оффсеты эффектов берутся из hash(UUID) —
  * без случайности на кадр (см. запреты дизайна).
  */
 public final class FxState {
+
+    /** Минимальная длительность воздушного эпизода (тики), после которой приземление даёт импакт. */
+    private static final int REAL_FLIGHT_MIN_TICKS = 15;
 
     private final long seedBits;
 
@@ -28,11 +38,14 @@ public final class FxState {
     private double landingLeft;    // оставшиеся секунды фазы посадки (0 — не в фазе)
 
     private double vx, vz;         // сглаженная горизонтальная скорость (блоки/тик)
+    private double tiltX, tiltZ;   // сглаженная горизонтальная ось наклона (⊥ движения), keep-last
     private double lastIx, lastIz;
     private float lastTime = -1f;
 
     private int offGroundTicks;
+    private int airborneTicks;
     private boolean wasFlying;
+    private boolean episodeReal;
 
     public FxState(UUID uuid) {
         long hi = uuid.getMostSignificantBits();
@@ -41,7 +54,7 @@ public final class FxState {
     }
 
     /** Обновление по кадру: time — тики (gameTime + partialTick), ix/iz — интерполированная позиция. */
-    public void update(float time, boolean onGround, double ix, double iz) {
+    public void update(float time, boolean onGround, boolean flyAbility, double ix, double iz) {
         double dtTicks = lastTime < 0 ? 1.0 : Math.max(time - lastTime, 1.0 / 20.0);
 
         // Интерполированная скорость по дельте позиций между кадрами + экспоненциальное сглаживание
@@ -57,15 +70,32 @@ public final class FxState {
         moveBlend = smoothToward(moveBlend, moving ? 1.0 : 0.0, dtTicks,
                 moving ? DonorFxConfig.tIdleToMoving() : DonorFxConfig.tMovingToIdle());
 
-        // FLYING: грейс в несколько тиков — прыжок не вспыхивает как полёт
-        offGroundTicks = onGround ? 0 : offGroundTicks + 1;
-        boolean flying = offGroundTicks > 3;
+        // Ось наклона (⊥ направления движения): сглаживание + keep-last при остановке.
+        // Разворот обрабатывается непрерывно: скорость сглаживается через ноль, ось
+        // вращается, а не щёлкает на 180°.
+        if (speed > 0.03) {
+            double px = -vz / speed;
+            double pz = vx / speed;
+            double kt = 1.0 - Math.exp(-dtTicks / 8.0); // тау ~8 тиков
+            tiltX += (px - tiltX) * kt;
+            tiltZ += (pz - tiltZ) * kt;
+        }
 
-        // Посадка: при касании земли после полёта запускается фаза LANDING,
-        // в ней кольцо возвращается горизонтально быстрее (tFlyingToLanding)
+        // FLYING: активный флай (донорские абьюзы в лобби) ИЛИ падение с грейсом
+        offGroundTicks = onGround ? 0 : offGroundTicks + 1;
+        airborneTicks = onGround ? 0 : airborneTicks + 1;
+        boolean flying = flyAbility || offGroundTicks > 3;
+        if (flying && !wasFlying) episodeReal = flyAbility;
+        if (flying) episodeReal |= flyAbility;
+
+        // Посадка: импакт только после РЕАЛЬНОГО воздушного эпизода — обычные прыжки
+        // (короткий off-ground без флая) не триггерят искры/расширение кольца
         if (!flying && wasFlying) {
-            landing = 1.0;
-            landingLeft = DonorFxConfig.tLandingToIdle();
+            boolean real = episodeReal || airborneTicks > REAL_FLIGHT_MIN_TICKS;
+            if (real) {
+                landing = 1.0;
+                landingLeft = DonorFxConfig.tLandingToIdle();
+            }
         }
         wasFlying = flying;
         double flyRate = landing > 0.0 ? DonorFxConfig.tFlyingToLanding() : DonorFxConfig.tFlyingToMoving();
@@ -112,6 +142,19 @@ public final class FxState {
 
     public double speed() {
         return Math.sqrt(vx * vx + vz * vz);
+    }
+
+    /**
+     * Сглаженная горизонтальная ось наклона (перпендикулярна направлению движения,
+     * единичной длины если длина > 1e-4). Сохраняет последнее направление при
+     * остановке — без скачков плоскости орбиты в полёте.
+     */
+    public double tiltAxisX() {
+        return tiltX;
+    }
+
+    public double tiltAxisZ() {
+        return tiltZ;
     }
 
     /** Детерминированный 0..1-хэш по целому (фаза/оффсет эффекта) — «псевдослучайный offset» дизайна. */
