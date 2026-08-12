@@ -12,8 +12,12 @@ import com.pwp.lobby.match.MatchAllocator;
 import com.pwp.lobby.match.MatchAllocator.MatchInfo;
 import com.pwp.lobby.donate.DonatorStatusManager;
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.MinecraftForge;
@@ -592,6 +596,17 @@ public class LobbyMod {
                         ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
                         return Command.SINGLE_SUCCESS;
                     })))
+            // /pwp donate <player> <tier> [role] — донат-статус (тир/роль) из core-service
+            .then(Commands.literal("donate")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.argument("player", StringArgumentType.string())
+                    .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getOnlinePlayerNames(), builder))
+                    .then(Commands.argument("tier", StringArgumentType.word())
+                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(DONATE_TIERS, builder))
+                        .executes(ctx -> donate(ctx, arg(ctx, "player"), arg(ctx, "tier"), null))
+                        .then(Commands.argument("role", StringArgumentType.word())
+                            .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(DONATE_ROLES, builder))
+                            .executes(ctx -> donate(ctx, arg(ctx, "player"), arg(ctx, "tier"), arg(ctx, "role")))))))
             .executes(ctx -> {
                 ServerPlayer player = ctx.getSource().getPlayerOrException();
                 // Без побочных эффектов: просто шлём актуальное состояние (сервер и так пушит его каждую секунду)
@@ -661,6 +676,70 @@ public class LobbyMod {
                     ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + blue + " / " + red), false);
                     return Command.SINGLE_SUCCESS;
                 }))));
+    }
+
+    // ====== /pwp donate — донат-статус (тир/роль) из core-service ======
+
+    private static final List<String> DONATE_TIERS = List.of("NONE", "SILVER", "GOLD", "PLATINUM");
+    private static final List<String> DONATE_ROLES = List.of("user", "support", "admin", "owner", "none");
+
+    private static String arg(CommandContext<CommandSourceStack> ctx, String name) {
+        return StringArgumentType.getString(ctx, name);
+    }
+
+    /** /pwp donate: обновляет тир/роль в core-service (асинхронно) и применяет статус в лобби сразу. */
+    private static int donate(CommandContext<CommandSourceStack> ctx, String targetName, String tier, String role) {
+        CommandSourceStack src = ctx.getSource();
+        ServerPlayer target = null;
+        for (ServerPlayer sp : src.getServer().getPlayerList().getPlayers()) {
+            if (sp.getScoreboardName().equalsIgnoreCase(targetName)) {
+                target = sp;
+                break;
+            }
+        }
+        if (target == null) {
+            src.sendFailure(Component.literal("§cИгрок " + targetName + " не в сети"));
+            return 0;
+        }
+        String t = tier.toUpperCase();
+        if (!DONATE_TIERS.contains(t)) {
+            src.sendFailure(Component.literal("§cТир: " + String.join(", ", DONATE_TIERS)));
+            return 0;
+        }
+        String r = null;
+        if (role != null) {
+            String rl = role.toLowerCase();
+            if (!DONATE_ROLES.contains(rl)) {
+                src.sendFailure(Component.literal("§cРоль: " + String.join(", ", DONATE_ROLES)));
+                return 0;
+            }
+            r = "none".equals(rl) ? "user" : rl;
+        }
+        String uuid = target.getStringUUID();
+        String finalRole = r;
+        ServerPlayer finalTarget = target;
+        new Thread(() -> {
+            try {
+                JsonObject tierResp = CoreServerApi.setDonateTier(uuid, t);
+                JsonObject roleResp = finalRole != null ? CoreServerApi.setRole(uuid, finalRole) : null;
+                src.getServer().execute(() -> {
+                    boolean ok = tierResp != null && tierResp.has("success") && tierResp.get("success").getAsBoolean()
+                            && (roleResp == null || (roleResp.has("success") && roleResp.get("success").getAsBoolean()));
+                    if (ok) {
+                        DonatorStatusManager.applyDonateStatus(finalTarget, t, finalRole);
+                        src.sendSuccess(() -> Component.literal("§a" + targetName + ": тир §e" + t
+                                + (finalRole != null ? "§7, роль §e" + finalRole : "")), true);
+                    } else {
+                        String err = tierResp != null && tierResp.has("error") ? tierResp.get("error").getAsString()
+                                : (roleResp != null && roleResp.has("error") ? roleResp.get("error").getAsString() : "нет ответа core-service");
+                        src.sendFailure(Component.literal("§cНе выполнено: " + err));
+                    }
+                });
+            } catch (Exception e) {
+                src.getServer().execute(() -> src.sendFailure(Component.literal("§cОшибка API: " + e.getMessage())));
+            }
+        }, "pwp-donate-set").start();
+        return Command.SINGLE_SUCCESS;
     }
 
     public static void serverBroadcast(String msg) {

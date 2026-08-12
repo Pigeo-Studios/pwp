@@ -52,7 +52,7 @@ public class ClientHooks {
    }
 
    public static Object playRallySound(RallyPointBlockEntity entity, Object currentSound) {
-      if (currentSound == null) {
+      if (currentSound == null || (currentSound instanceof RallyLoopingSound s && s.isStopped())) {
          RallyLoopingSound sound = new RallyLoopingSound(entity);
          Minecraft.getInstance().getSoundManager().play(sound);
          return sound;
@@ -143,6 +143,8 @@ public class ClientHooks {
         var p = Minecraft.getInstance().player;
         if (p == null || !p.isDeadOrDying()) return;
         ClientData.deployRequested = true;
+        // Экран деплоя: войс снова доступен (локал мёртвому режет сервер)
+        com.pigeostudios.pwp.warfare.network.PacketHandler.INSTANCE.sendToServer(new com.pigeostudios.pwp.warfare.network.PacketVoiceDeathState(false));
         Minecraft.getInstance().setScreen(new com.pigeostudios.pwp.warfare.client.gui.DeployScreen());
     }
 

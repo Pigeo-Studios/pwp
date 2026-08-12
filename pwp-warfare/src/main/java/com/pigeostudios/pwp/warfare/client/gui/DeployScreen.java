@@ -213,6 +213,8 @@ public class DeployScreen extends Screen {
     private int activeSquadId = -1;
     private int activeSquadKey = -1;
     private int pathCounter;
+    // Плавное появление экрана из черноты «ВЫ МЕРТВЫ» (анти-мерцание при переходе)
+    private long fadeInStart = System.currentTimeMillis();
 
     public DeployScreen() {
         super(Component.literal("ДЕПЛОЙ"));
@@ -729,6 +731,19 @@ public class DeployScreen extends Screen {
         // Тултип роли — последний слой экрана, только на вкладке ДЕПЛОЙ
         // (иначе «выпадал» с прошлого ховера на вкладках КОМАНДЫ/ПРАВИЛА)
         if (activeTab == 1) roles.renderTooltip(gui);
+
+        // Плавное появление деплоя из черноты «ВЫ МЕРТВЫ» (~350мс, ease-out):
+        // без этого смена экрана даёт резкий скачок яркости («мерцание»)
+        long fadeElapsed = nowMs - fadeInStart;
+        if (fadeElapsed < 350L) {
+            float ft = Math.max(0.0F, 1.0F - (float)fadeElapsed / 350.0F);
+            int fa = (int)(255.0F * ft * ft);
+            if (fa > 0) {
+                RenderSystem.enableBlend();
+                gui.fill(0, 0, width, height, fa << 24);
+                RenderSystem.disableBlend();
+            }
+        }
     }
 
     // ══════════════════ TEAM TAB ══════════════════

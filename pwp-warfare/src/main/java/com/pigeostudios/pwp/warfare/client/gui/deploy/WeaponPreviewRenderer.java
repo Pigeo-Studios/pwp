@@ -159,22 +159,25 @@ public class WeaponPreviewRenderer {
         Fit fit = fitFor(stack, yawDeg, pitchDeg, zRotDeg);
         float s;
         if (fit != null) {
-            // Каптчер мерит модель на чистом identity-стеке, а реальный рендер идёт через
-            // gui.pose() c базой scale(1/guiScale) — иначе скармливаем в формулу размеры
-            // в guiScale раз больше рамки и пушка рисуется в 1/guiScale (мелкая при
-            // guiScale > 1). Нормируем фит на точное отношение осей экрана (не округлённый
-            // getGuiScale() — работает и на дробном Auto-масштабе).
-            float guiScaleX = (float) mc.getWindow().getScreenWidth() / mc.getWindow().getGuiScaledWidth();
-            float guiScaleY = (float) mc.getWindow().getScreenHeight() / mc.getWindow().getGuiScaledHeight();
-            float s1 = (width - FIT_PAD) * guiScaleX / Math.max(0.05f, fit.width());
-            float s2 = (height - FIT_PAD) * guiScaleY / Math.max(0.05f, fit.height());
+            // БАЗА ГЛАВНОЙ ФОРМУЛЫ (инцидент 13.08.2026 «длинные стволы вылезают из
+            // карточки PRIMARY»): GuiGraphics в 1.20.1 стартует с ЧИСТОГО identity-pose
+            // (проверено javap по client-1.20.1-20230612.114412-srg.jar — конструктор
+            // просто кладёт new PoseStack()), а gui-координаты в физику переводит
+            // ПРОЕКЦИЯ (ortho в gui-scaled-пикселях). Значит модель после pose-цепочки
+            // живёт в ГУИ-пикселях, и честный масштаб = рамка/замер БЕЗ всяких guiScale.
+            // Раньше фит умножался на точное отношение осей экрана (guiScaleX/Y) под
+            // ошибочную теорию «pose база scale(1/guiScale)» — на guiScale=1 это невидимо,
+            // а на 2 и выше ствол рисовался в guiScale раз больше рамки и вылезал
+            // (карточка PRIMARY 80×40 → ствол 132×52 вместо 66×26).
+            float s1 = (width - FIT_PAD) / Math.max(0.05f, fit.width());
+            float s2 = (height - FIT_PAD) / Math.max(0.05f, fit.height());
             // Верхний лимит БОЛЬШОЙ: каптчер мерит модель в post-BEWLR-единицах (~2-3 у
             // винтовки), а не пикселях — честный s для заполнения рамки ~18-100. Старый
             // cap 6.0 (от эры, когда s был 0.3-2.2) обрезал фит и рисовал пушку в ~8px
             // (инцидент 12.08.2026 «пушка мелкая в лоадауте и тултипе»).
             s = Mth.clamp(Math.min(s1, s2), 0.3f, 200.0f);
             debugLogOnce(gunId(stack), "box=" + width + "x" + height,
-                "guiScaleX=" + guiScaleX, "fit=" + fit.width() + "x" + fit.height()
+                "fit=" + fit.width() + "x" + fit.height()
                     + " cx=" + fit.centerX() + " cy=" + fit.centerY(),
                 "raw=" + ((width - FIT_PAD) / Math.max(0.05f, fit.width())), "s=" + s);
         } else {
@@ -266,6 +269,17 @@ public class WeaponPreviewRenderer {
                     // и вылезает за рамку (инцидент 12.08.2026 «вылезает»).
                     return null;
                 }
+                if (!TaczHolder.allAttachmentsReady(stack)) {
+                    // Аттачи грузятся асинхронно после входа в мир (lazy-диспатчер TACZ,
+                    // китовые стволы не warm-up'ятся). Пока хоть один индекс не готов,
+                    // TACZ рисует слот-куб 16×16 вместо аттача, а через кадр — уже
+                    // полный силуэт: замер БЕЗ аттача (или с кубом) кэшируется на 10с
+                    // и пулемёт/снайперка с биподом и длинным прицелом вылезает за рамку
+                    // (инцидент 12.08.2026 «MG/снайперки вылезают» — доказано декомпиляцией
+                    // tacz-1.1.8-hotfix: ClientAssetLoadDispatcher + lazy ClientAttachmentIndex).
+                    // Не кэшируем: кадр рисует по фолбэку, следующий — полный точный фит.
+                    return null;
+                }
             } else {
                 markHighDetail();
                 mc.getItemRenderer().renderStatic(stack, ItemDisplayContext.FIXED,
@@ -302,18 +316,23 @@ public class WeaponPreviewRenderer {
      * Косметика (display.Name) и состояние (патроны) на силуэт не влияют.
      */
     private String attachmentSignature(ItemStack stack) {
+        return String.join(",", attachmentIds(stack));
+    }
+
+    /** Id аттачей из NBT стека (в том же порядке, что и сигнатура). */
+    private static List<String> attachmentIds(ItemStack stack) {
         CompoundTag tag = stack.getTag();
-        if (tag == null) return "";
+        if (tag == null) return List.of();
         List<String> parts = new ArrayList<>();
         for (String key : tag.getAllKeys()) {
             if (!key.startsWith("Attachment")) continue;
             CompoundTag slot = tag.getCompound(key);
             String id = slot.getCompound("tag").getString("AttachmentId");
             if (id.isEmpty()) id = slot.getString("AttachmentId");
-            parts.add(key + "=" + id);
+            if (!id.isEmpty()) parts.add(id);
         }
         Collections.sort(parts);
-        return String.join(",", parts);
+        return parts;
     }
 
     /** Фолбэк без капчи (модель ещё не догружена): база от рамки × коэффициент типа. */
@@ -453,6 +472,23 @@ public class WeaponPreviewRenderer {
         static String gunType(ResourceLocation id) {
             return com.tacz.guns.api.TimelessAPI.getClientGunIndex(id)
                     .map(index -> index.getType()).orElse(null);
+        }
+
+        /**
+         * Готовы ли ВСЕ аттачи стека к рендеру. Зеркалит условие
+         * {@code BedrockGunModel.render}: аттач рисуется только если в этом кадре
+         * {@code TimelessAPI.getClientAttachmentIndex(id)} непуст — иначе слот-куб.
+         * Индексы аттачей наполняются асинхронно (lazy-диспатчер после входа в мир).
+         */
+        static boolean allAttachmentsReady(ItemStack stack) {
+            for (String id : attachmentIds(stack)) {
+                ResourceLocation rl = ResourceLocation.tryParse(id);
+                if (rl == null) continue;
+                if (com.tacz.guns.api.TimelessAPI.getClientAttachmentIndex(rl).isEmpty()) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }

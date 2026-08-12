@@ -33,6 +33,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public class WarfareVoicechatPlugin implements VoicechatPlugin {
    private static VoicechatServerApi serverApi;
    private static final Map<UUID, Channel> playerChannels = new ConcurrentHashMap<>();
+   private static final Map<UUID, Boolean> deathVoiceMuted = new ConcurrentHashMap<>();
    private static final Map<UUID, Long> lastVoiceActivity = new ConcurrentHashMap<>();
    private static final Map<UUID, Boolean> mutedCache = new ConcurrentHashMap<>();
    private static final Map<UUID, Long> mutedCacheTimestamp = new ConcurrentHashMap<>();
@@ -70,6 +71,16 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
       }
    }
 
+   // Состояние войса у мёртвого игрока (клиент шлёт при открытии экрана смерти/деплоя):
+   // true — экран «ВЫ МЕРТВЫ» (войс полностью выключен), false — деплой (работает кроме локала)
+   public static void setDeathVoiceMuted(UUID uuid, boolean muted) {
+      if (muted) {
+         deathVoiceMuted.put(uuid, Boolean.TRUE);
+      } else {
+         deathVoiceMuted.remove(uuid);
+      }
+   }
+
    private void onMicPacket(MicrophonePacketEvent event) {
       try {
          if (serverApi == null || ServerLifecycleHooks.getCurrentServer() == null) {
@@ -87,6 +98,12 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             return;
          }
 
+         // Экран «ВЫ МЕРТВЫ»: войс полностью выключен (ни локал, ни рация)
+         if (Boolean.TRUE.equals(deathVoiceMuted.get(playerUuid))) {
+            event.cancel();
+            return;
+         }
+
          ServerPlayer sender = ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayer(playerUuid);
          if (sender == null) {
             return;
@@ -99,6 +116,14 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
          }
 
          Channel channel = playerChannels.getOrDefault(playerUuid, Channel.LOCAL);
+
+         // Мёртвый «лежит» на месте смерти: локально его голос не слышен (как в Squad),
+         // даже на экране деплоя. Рация/отрядный канал у мёртвого при этом работают.
+         if (channel == Channel.LOCAL && sender.isDeadOrDying()) {
+            event.cancel();
+            return;
+         }
+
          WarfareWorldData data = WarfareWorldData.get(sender.serverLevel());
 
          // Эксклюзивная рация (как в Squad): при активном радио-канале голос идёт только по рации,
@@ -270,25 +295,38 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
       }
    }
 
-   private static void ensureCleanupRegistered() {
-      if (CLEANUP_REGISTERED.compareAndSet(false, true)) {
-         MinecraftForge.EVENT_BUS.addListener(WarfareVoicechatPlugin::onPlayerDisconnected);
-      }
-   }
+    private static void ensureCleanupRegistered() {
+       if (CLEANUP_REGISTERED.compareAndSet(false, true)) {
+          MinecraftForge.EVENT_BUS.addListener(WarfareVoicechatPlugin::onPlayerDisconnected);
+          MinecraftForge.EVENT_BUS.addListener(WarfareVoicechatPlugin::onPlayerRespawn);
+       }
+    }
 
-   // Очистка состояния канала и кэшей при выходе игрока, чтобы игрок,
-   // вышедший с зажатым PTT, после реконнекта не остался в радио-канале
-   private static void onPlayerDisconnected(PlayerEvent.PlayerLoggedOutEvent event) {
-      try {
-         if (event.getEntity() instanceof ServerPlayer sp) {
-            playerChannels.remove(sp.getUUID());
-            lastVoiceActivity.remove(sp.getUUID());
-            invalidateMuteCache(sp.getUUID());
-         }
-      } catch (Exception e) {
-         System.err.println("[PWP Warfare] onPlayerDisconnected failed: " + e);
-      }
-   }
+    // После респавна игрок жив — флаг «мёртвого войса» больше не нужен
+    private static void onPlayerRespawn(net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent event) {
+       try {
+          if (event.getEntity() instanceof ServerPlayer sp) {
+             deathVoiceMuted.remove(sp.getUUID());
+          }
+       } catch (Exception e) {
+          System.err.println("[PWP Warfare] onPlayerRespawn voice cleanup failed: " + e);
+       }
+    }
+
+    // Очистка состояния канала и кэшей при выходе игрока, чтобы игрок,
+    // вышедший с зажатым PTT, после реконнекта не остался в радио-канале
+    private static void onPlayerDisconnected(PlayerEvent.PlayerLoggedOutEvent event) {
+       try {
+          if (event.getEntity() instanceof ServerPlayer sp) {
+             playerChannels.remove(sp.getUUID());
+             deathVoiceMuted.remove(sp.getUUID());
+             lastVoiceActivity.remove(sp.getUUID());
+             invalidateMuteCache(sp.getUUID());
+          }
+       } catch (Exception e) {
+          System.err.println("[PWP Warfare] onPlayerDisconnected failed: " + e);
+       }
+    }
 
    private static boolean isPlayerVoiceMuted(UUID playerUuid) {
       long now = System.currentTimeMillis();

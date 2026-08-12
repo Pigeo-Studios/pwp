@@ -460,6 +460,16 @@ public class CoreServerApi {
         return get("/api/v1/punishments/" + uuid);
     }
 
+    // ====== Донат-статус (админ-команда /pwp donate) ======
+
+    public static JsonObject setDonateTier(String uuid, String tier) {
+        return post("/api/v1/admin/set-donate-tier", map("uuid", uuid, "tier", tier));
+    }
+
+    public static JsonObject setRole(String uuid, String role) {
+        return post("/api/v1/admin/set-role", map("uuid", uuid, "role", role));
+    }
+
     private static void addAuthHeaders(HttpURLConnection conn, String path) {
         conn.setRequestProperty("Authorization", "Bearer " + apiKey);
     }

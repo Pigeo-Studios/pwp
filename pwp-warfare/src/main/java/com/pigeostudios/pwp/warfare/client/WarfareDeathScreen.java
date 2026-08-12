@@ -35,8 +35,9 @@ public class WarfareDeathScreen extends Screen {
         if (ClientData.deathFadeStartTime != 0L) {
             long elapsed = System.currentTimeMillis() - ClientData.deathFadeStartTime;
             float alpha = 0f;
-            if (elapsed < 1000) alpha = 1f;
-            else if (elapsed < 2000) alpha = 1f - (float)(elapsed - 1000) / 1000f;
+            // Экран «ВЫ МЕРТВЫ» держится 4 секунды, затем фейд-аут 1 секунда (всего 5с)
+            if (elapsed < 4000) alpha = 1f;
+            else if (elapsed < 5000) alpha = 1f - (float)(elapsed - 4000) / 1000f;
             else ClientData.deathFadeStartTime = 0L;
 
             if (alpha > 0) {
@@ -56,6 +57,10 @@ public class WarfareDeathScreen extends Screen {
             deployOpened = true;
             ClientData.deathFadePlayed = true;
             ClientData.deployRequested = true;
+            // Экран деплоя: войс снова доступен (локал мёртвому режет сервер)
+            com.pigeostudios.pwp.warfare.network.PacketHandler.INSTANCE.sendToServer(
+                new com.pigeostudios.pwp.warfare.network.PacketVoiceDeathState(false)
+            );
             Minecraft.getInstance().setScreen(new DeployScreen());
         }
     }

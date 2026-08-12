@@ -27,10 +27,10 @@ import java.util.List;
 public class WeaponTooltipRenderer {
 
     private static final int PAD = 4;
-    private static final int CARD_H = 58;
+    private static final int CARD_H = 76;
     private static final int NAME_H = 11;
     private static final int MODEL_H = CARD_H - NAME_H - 2;
-    private static final int WIDTH = 168;
+    private static final int WIDTH = 140;
     private static final int OFFSET_X = 12, OFFSET_Y = 14;
     private static final long FADE_IN_MS = 100, FADE_OUT_MS = 80;
 

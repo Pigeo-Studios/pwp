@@ -173,6 +173,9 @@ public class PacketRespawnRequest {
                                      }
                                   }
                                }
+                               // Кит уже выдан этим пакетом: onPlayerRespawn (PlayerRespawnEvent)
+                               // не должен пересобирать инвентарь второй раз («сразу всё одевает»)
+                               player.getPersistentData().putBoolean("WARFARE_KitApplied", true);
                             }
                          }
                     } else {

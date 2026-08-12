@@ -1449,7 +1449,11 @@ public class GameLogicEvents {
 
            ServerLevel level = newPlayer.serverLevel();
            WarfareWorldData data = WarfareWorldData.get(level);
-                if (data.isGameStarted) {
+                // Кит уже был выдан при обработке PacketRespawnRequest — не пересобираем
+                // инвентарь второй раз (двойное «переодевание» и звуковой лаг при респавне)
+                if (newPlayer.getPersistentData().getBoolean("WARFARE_KitApplied")) {
+                   newPlayer.getPersistentData().remove("WARFARE_KitApplied");
+                } else if (data.isGameStarted) {
                 String pTeam = newPlayer.getTeam() != null ? newPlayer.getTeam().getName().toUpperCase() : "";
                 boolean isSetupAttacker = data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
                if (!isSetupAttacker) {
@@ -1620,6 +1624,12 @@ public class GameLogicEvents {
 
       if (oldData.contains("WARFARE_LastRespawnCommand")) {
          newData.putLong("WARFARE_LastRespawnCommand", oldData.getLong("WARFARE_LastRespawnCommand"));
+      }
+
+      // Кит мог быть выдан PacketRespawnRequest ещё мёртвому игроку:
+      // переносим флаг новому, чтобы onPlayerRespawn не пересобирал инвентарь повторно
+      if (oldData.contains("WARFARE_KitApplied")) {
+         newData.putBoolean("WARFARE_KitApplied", oldData.getBoolean("WARFARE_KitApplied"));
       }
 
       if (event.isWasDeath()) {

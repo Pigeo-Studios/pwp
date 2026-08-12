@@ -127,7 +127,10 @@ public class ClientData {
       public static boolean deployRequested = false;
       public static boolean awaitingRespawn = false;
       public static long deployBlockedUntil = 0L;
-   public static int downedBleedoutDuration = 0;
+    public static int downedBleedoutDuration = 0;
+    public static boolean deathSoundMuted = false;
+    public static long deathMutedAt = 0L;
+    public static Object deathRinging = null;
     public static List<Component> menuChatHistory = new ArrayList<>();
     public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();
     public static Map<Integer, VehicleStatus> vehicleStatuses = new ConcurrentHashMap<>();

@@ -21,7 +21,7 @@ import java.util.List;
 public class LoadoutPanel {
 
     private static final int GAP = 3;
-    private static final int PRIMARY_H = 52, PAIR_H = 30, BACKPACK_CELL_H = 30, BACKPACK_COLS = 4;
+    private static final int PRIMARY_H = 76, PAIR_H = 30, BACKPACK_CELL_H = 30, BACKPACK_COLS = 4;
     private static final float PREVIEW_YAW = 0f, PREVIEW_PITCH = 0f;
 
     private final WeaponPreviewRenderer preview = new WeaponPreviewRenderer();
@@ -165,8 +165,10 @@ public class LoadoutPanel {
         RoundedRect.border(gui, x, y, w, h, 6, 1, hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
         gui.drawString(f, slotLabel(slot.label()), x + 6, y + 3, PWPTheme.Colors.TEXT_DIM, false);
 
-        int pvW = Math.min(80, w / 3);
-        preview.render(gui, opt.stack(), x + 10 + pvW / 2, y + h / 2 + 2, pvW, h - 12,
+        // Витрина PRIMARY ~2:1 (135×66 при PRIMARY_H=76): компактные стволы не упираются
+        // в высоту бокса, как в старом 80×40 (инцидент 13.08.2026 «мелкие стволы мелкие»).
+        int pvW = Math.min(135, w / 2);
+        preview.render(gui, opt.stack(), x + 10 + pvW / 2, y + h / 2 + 2, pvW, h - 10,
             PREVIEW_YAW, PREVIEW_PITCH);
         int tx = x + pvW + 16;
         drawOptionName(gui, f, opt, tx, y + 14, w - (tx - x) - 16);

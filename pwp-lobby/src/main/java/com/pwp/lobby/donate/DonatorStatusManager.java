@@ -120,6 +120,12 @@ public final class DonatorStatusManager {
         broadcastDonators();
     }
 
+    /** Применение статуса из админ-команды /pwp donate: тир + роль ("user"/null — снять роль). */
+    public static void applyDonateStatus(ServerPlayer p, String tier, String role) {
+        String r = (role == null || "user".equalsIgnoreCase(role)) ? "" : role;
+        applyStatus(p, tier, r);
+    }
+
     // ====== Периодический рефреш ======
 
     public static void serverTick() {

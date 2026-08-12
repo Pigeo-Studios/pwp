@@ -169,7 +169,7 @@ public class PlayerRepository {
 
     public static List<PlayerProfile> getLeaderboard(String orderBy, int limit, int offset) throws SQLException {
         String column = ORDER_BY_COLUMNS.getOrDefault(orderBy, "ps.kills");
-        String sql = "SELECT p.uuid, p.nickname, ps.kills, ps.deaths, ps.wins, ps.losses, " +
+        String sql = "SELECT p.uuid, p.nickname, p.role, p.donate_tier, ps.kills, ps.deaths, ps.wins, ps.losses, " +
                 "ps.playtime_seconds, ps.vehicle_kills, ps.captures, ps.damage_dealt, ps.healing_done, " +
                 "ps.vehicles_destroyed, ps.air_vehicles_destroyed, " +
                 "ps.team_kills, ps.headshots, ps.supplies_delivered, ps.longest_kill, ps.best_kill_streak, " +
@@ -192,6 +192,8 @@ public class PlayerRepository {
                     pp.player = new Player();
                     pp.player.uuid = rs.getString("uuid");
                     pp.player.nickname = rs.getString("nickname");
+                    pp.player.role = rs.getString("role");
+                    pp.player.donateTier = rs.getString("donate_tier");
                     pp.stats = mapStats(rs);
                     pp.coins = rs.getLong("coins");
                     pp.level = rs.getInt("level");

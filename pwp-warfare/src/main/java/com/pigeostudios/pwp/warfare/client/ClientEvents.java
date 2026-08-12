@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
+import com.pigeostudios.pwp.warfare.client.sound.DeathRingingSound;
+import com.pigeostudios.pwp.warfare.client.sound.DeathSoundMuted;
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.client.ClientSkinManager;
 import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
@@ -23,6 +25,7 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlacePing;
 import com.pigeostudios.pwp.warfare.network.PacketToggleAim;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleShoot;
+import com.pigeostudios.pwp.warfare.network.PacketVoiceDeathState;
 import com.pigeostudios.pwp.warfare.network.PacketVoteAction;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -39,11 +42,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -55,6 +60,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.ComputeFovModifierEvent;
+import net.minecraftforge.client.event.sound.PlaySoundEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.InputEvent.Key;
 import net.minecraftforge.client.event.InputEvent.MouseScrollingEvent;
@@ -92,14 +98,18 @@ public class ClientEvents {
       ClientData.addChatMessage(event.getMessage());
    }
 
-   // При отключении от сервера сбрасываем метки и возвращаем Discord RPC в базовый статус.
-   // Иначе тактические метки остаются в клиентском кэше и «переезжают» на следующий сервер.
-   @SubscribeEvent
-   public static void onClientLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
-      MarkerClientCache.clear();
-      ClientData.activeMarkers.clear();
-      Minecraft mc = Minecraft.getInstance();
-      String nick = mc.player != null ? mc.player.getScoreboardName() : "";
+    // При отключении от сервера сбрасываем метки и возвращаем Discord RPC в базовый статус.
+    // Иначе тактические метки остаются в клиентском кэше и «переезжают» на следующий сервер.
+    @SubscribeEvent
+    public static void onClientLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+       if (ClientData.deathRinging instanceof DeathRingingSound sound) {
+          sound.stopSound();
+       }
+       ClientData.deathRinging = null;
+       ClientData.deathSoundMuted = false;
+       MarkerClientCache.clear();
+       ClientData.activeMarkers.clear();
+       String nick = Minecraft.getInstance().player != null ? Minecraft.getInstance().player.getScoreboardName() : "";
       LauncherStatusReporter.onDisconnect(nick);
    }
 
@@ -154,10 +164,28 @@ public class ClientEvents {
                    ClientData.awaitingRespawn = false;
                    ClientData.deployRequested = false;
                    ClientData.deployBlockedUntil = 0L;
+                   if (ClientData.deathSoundMuted) {
+                      stopDeathSoundMute();
+                   }
                    if (mc.screen instanceof DeployScreen || mc.screen instanceof WarfareDeathScreen) {
                       mc.setScreen(null);
                    }
                 }
+             }
+
+             // Оглушение при смерти: звон играет 6 секунд, дальше — просто тишина до респавна
+             if (ClientData.deathSoundMuted && ClientData.deathRinging != null
+                && System.currentTimeMillis() - ClientData.deathMutedAt >= 6000L) {
+                if (ClientData.deathRinging instanceof DeathRingingSound sound) {
+                   sound.stopSound();
+                }
+                ClientData.deathRinging = null;
+             }
+
+             // Страховка: игрок ожил любым способом (не только через деплой) — звук восстанавливаем
+             if (ClientData.deathSoundMuted && !mc.player.isDeadOrDying()
+                && !ClientData.awaitingRespawn && !ClientData.deployRequested) {
+                stopDeathSoundMute();
              }
 
              if (ClientData.currentVoiceChannel != PacketVoiceChannelState.Channel.LOCAL) {
@@ -379,14 +407,62 @@ public class ClientEvents {
              return;
           }
          if (event.getScreen() instanceof DeathScreen && !(event.getScreen() instanceof WarfareDeathScreen)) {
-          Component cause = null;
-          if (Minecraft.getInstance().player != null) {
-             cause = Minecraft.getInstance().player.getCombatTracker().getDeathMessage();
-          }
+            // Страховка: наш экран смерти уже открыт — не пересоздаём (иначе сбрасываются
+            // фейд-тайминги и мерцает при переходе в деплой)
+            if (Minecraft.getInstance().screen instanceof WarfareDeathScreen) {
+               event.setNewScreen(null);
+               return;
+            }
+            Component cause = null;
+            if (Minecraft.getInstance().player != null) {
+               cause = Minecraft.getInstance().player.getCombatTracker().getDeathMessage();
+            }
 
-          event.setNewScreen(new WarfareDeathScreen(cause, false));
-       }
-    }
+            event.setNewScreen(new WarfareDeathScreen(cause, false));
+            startDeathSoundMute();
+         }
+      }
+
+   // Момент смерти: резко обрываем все звуки, запускаем звон («оглушение» как после флешки)
+   // и глушим новые звуки мира, пока игрок мёртв. Войс при этом отключается серверно.
+   private static void startDeathSoundMute() {
+      Minecraft mc = Minecraft.getInstance();
+      ClientData.deathSoundMuted = true;
+      ClientData.deathMutedAt = System.currentTimeMillis();
+      mc.getSoundManager().stop();
+      if (ClientData.deathRinging == null) {
+         DeathRingingSound sound = new DeathRingingSound();
+         ClientData.deathRinging = sound;
+         mc.getSoundManager().play(sound);
+      }
+      PacketHandler.INSTANCE.sendToServer(new PacketVoiceDeathState(true));
+   }
+
+   // Новые звуки, пока игрок мёртв, глушим на входе (volume 0), кроме MASTER —
+   // в нём играет звон оглушения. Это работает и в проде (без рефлексии в SoundEngine).
+   @SubscribeEvent
+   public static void onPlaySound(PlaySoundEvent event) {
+      if (ClientData.deathSoundMuted) {
+         SoundInstance sound = event.getSound();
+         if (sound != null && sound.getSource() != SoundSource.MASTER) {
+            event.setSound(new DeathSoundMuted(sound));
+         }
+      }
+   }
+
+   // Завершение эффекта смерти: через 6 секунд звон замолкает, остаётся тишина;
+   // при оживлении восстанавливаем нормальные звуки.
+   public static void stopDeathSoundMute() {
+      Minecraft mc = Minecraft.getInstance();
+      ClientData.deathSoundMuted = false;
+      if (ClientData.deathRinging != null) {
+         if (ClientData.deathRinging instanceof DeathRingingSound sound) {
+            sound.stopSound();
+         }
+         ClientData.deathRinging = null;
+      }
+      PacketHandler.INSTANCE.sendToServer(new PacketVoiceDeathState(false));
+   }
 
    @SubscribeEvent
    public static void onKeyInput(Key event) {

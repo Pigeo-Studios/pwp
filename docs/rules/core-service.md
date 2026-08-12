@@ -13,4 +13,5 @@
 - `PlayerRepository.setDonateTier(uuid, tier)` — запись `donate_tier` (после `setRole`).
 - `POST /api/v1/admin/set-donate-tier` (`AdminController`): тело `SetDonateTierReq` (`uuid`, `tier` из `NONE/SILVER/GOLD/PLATINUM`, валидация через `List.of(...)`); `NONE` → `setDonateTier(uuid, null)`. Требует админ-токен (`verifyAdmin`).
 - Профиль игрока содержит `donateTier` (в `data.player`): отдаётся на `/api/v1/player/{uuid}`, `/player/load`, `/admin/find-user` (поле `donate_tier`) и `/admin/players` (SELECT + мапа). `null` — тира нет.
+- Лидерборд `/api/v1/leaderboard` (с 12.08.2026): `PlayerRepository.getLeaderboard` выбирает и маппит `p.role` + `p.donate_tier` в каждый `player` — клиент рендерит градиентные ники/свечение донатеров в лидербордах (`LeaderTabRenderer`/`StatsScreen`). До фикса поля не выбирались — в лидербордах у донатеров был дефолтный белый ник.
 - Лобби подтягивает тир+role из `data.player` профиля (см. `pwp-lobby`), боевых бонусов не даёт.

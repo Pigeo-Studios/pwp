@@ -120,9 +120,11 @@ public class PacketHandler {
           // Регистрируется ПОСЛЕДНИМ, чтобы не сдвигать индексы существующих пакетов
           // (клиенты со старым jar остаются совместимы до обновления).
           INSTANCE.registerMessage(id++, PacketVehicleStatus.class, PacketVehicleStatus::encode, PacketVehicleStatus::decode, PacketVehicleStatus::handle);
-          // Тоже в конец: деплой дронов (сервер -> клиент).
-          INSTANCE.registerMessage(id++, PacketDroneDeployState.class, PacketDroneDeployState::encode, PacketDroneDeployState::decode, PacketDroneDeployState::handle);
-       }
+           // Тоже в конец: деплой дронов (сервер -> клиент).
+           INSTANCE.registerMessage(id++, PacketDroneDeployState.class, PacketDroneDeployState::encode, PacketDroneDeployState::decode, PacketDroneDeployState::handle);
+           // В конец: состояние войса мёртвого игрока (клиент -> сервер).
+           INSTANCE.registerMessage(id++, PacketVoiceDeathState.class, PacketVoiceDeathState::encode, PacketVoiceDeathState::decode, PacketVoiceDeathState::handle);
+        }
 
    private static String getFactionName(String currentFaction, boolean isBlue) {
       if (currentFaction != null && !currentFaction.equals("none") && !currentFaction.equals("bluefor") && !currentFaction.equals("redfor")) {
