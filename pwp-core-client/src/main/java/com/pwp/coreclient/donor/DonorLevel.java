@@ -1,7 +1,7 @@
 package com.pwp.coreclient.donor;
 
 import com.pwp.coreclient.CoreClientMod;
-import com.pwp.coreclient.particles.DonorFxConfig;
+import com.pwp.coreclient.aura.DonorFxConfig;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 
@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Единая модель донат-уровня (тиры + роли): один источник цвета для частиц (glow),
+ * Единая модель донат-уровня (тиры + роли): один источник цвета для аур (glow),
  * градиентов ников (stops) и ореолов. Роль приоритетнее тира (ADMIN > MODERATOR > тир).
  * Цвета по умолчанию — здесь; переопределяются строками RRGGBB в клиентском
  * donor_fx.toml (секция colors), кэш сбрасывается на событии перезагрузки конфига.

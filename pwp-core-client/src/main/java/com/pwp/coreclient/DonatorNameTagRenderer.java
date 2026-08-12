@@ -26,7 +26,6 @@ public final class DonatorNameTagRenderer {
 
     private static final double FADE_START = 48.0;
     private static final double FADE_END = 64.0;
-    private static final int GLOW_ALPHA = 0x2A;
 
     private DonatorNameTagRenderer() {}
 
@@ -71,14 +70,20 @@ public final class DonatorNameTagRenderer {
         long now = System.currentTimeMillis();
         Matrix4f mat = new Matrix4f(poseStack.last().pose());
 
-        // Ореол: 8 копий по ±1px цветом уровня с низкой альфой (дилатация)
-        int glowA = (int) (GLOW_ALPHA * fade);
-        int glowCol = (lvl.glowColor() & 0xFFFFFF) | (glowA << 24);
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                if (dx == 0 && dy == 0) continue;
-                font.drawInBatch(text, x + dx, dy, glowCol, false, mat, buffer,
-                        Font.DisplayMode.NORMAL, 0, packedLight);
+        // Ореол: двухкольцевая дилатация (r=1, r=2 с затуханием альфы) цветом уровня —
+        // мягкий переход без «пиксель-гепа» однопиксельных копий. Низкие альфы (0x10/0x08)
+        // не дают «ступенек» в 1 px и эффекта двойного ника при наложении 24 копий.
+        int rgb = lvl.glowColor() & 0xFFFFFF;
+        for (int ring = 1; ring <= 2; ring++) {
+            int alpha = (int) ((ring == 1 ? 0x10 : 0x08) * fade);
+            int glowCol = rgb | (alpha << 24);
+            for (int dx = -ring; dx <= ring; dx++) {
+                for (int dy = -ring; dy <= ring; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    if (Math.abs(dx) != ring && Math.abs(dy) != ring) continue;
+                    font.drawInBatch(text, x + dx, dy, glowCol, false, mat, buffer,
+                            Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
+                }
             }
         }
 
@@ -91,7 +96,7 @@ public final class DonatorNameTagRenderer {
             int a = (int) ((c >> 24 & 0xFF) * fade);
             c = (c & 0xFFFFFF) | (a << 24);
             font.drawInBatch(ch, cursor, 0, c, false, mat, buffer,
-                    Font.DisplayMode.NORMAL, 0, packedLight);
+                    Font.DisplayMode.POLYGON_OFFSET, 0, packedLight);
             cursor += w;
         }
         poseStack.popPose();

@@ -12,9 +12,6 @@ public final class NameGradient {
     // Цикл «живого» перелива цвета по строке
     private static final long CYCLE_MS = 2800L;
 
-    // Альфа дилатационного ореола (8 копий по ±1px)
-    private static final int GLOW_ALPHA = 0x2A;
-
     /** Цвет по пиксельной позиции px внутри строки шириной totalWidth. Плавно, без ступеней по символам. */
     public static int colorAt(String level, double px, double totalWidth, long timeMs) {
         DonorLevel lvl = DonorLevel.byName(level);
@@ -49,17 +46,25 @@ public final class NameGradient {
         return cursor - x;
     }
 
-    /** Отрисовка с мягким ореолом вокруг текста (для лидербордов). Ореол — дилатация на 8 направлений
-     *  цветом уровня (низкая альфа, по ±1px), сверху градиент — без ванильной тени. */
+    /** Отрисовка с мягким ореолом вокруг текста (для лидербордов). Ореол — двухкольцевая
+     *  дилатация (r=1 и r=2 с затуханием альфы) цветом уровня: без «пиксель-гепа» однопиксельных
+     *  копий, сверху градиент без ванильной тени. Низкие альфы (0x10/0x08) — мягкое свечение
+     *  без «ступенек» в 1 px и двойного ника. */
     public static int drawGlow(GuiGraphics g, Font font, String text, int x, int y, String level) {
         if (text.isEmpty()) return 0;
         DonorLevel lvl = DonorLevel.byName(level);
         if (lvl == null) return draw(g, font, text, x, y, level, true);
-        int glow = (lvl.glowColor() & 0xFFFFFF) | (GLOW_ALPHA << 24);
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                if (dx == 0 && dy == 0) continue;
-                g.drawString(font, text, x + dx, y + dy, glow, false);
+        int rgb = lvl.glowColor() & 0xFFFFFF;
+        for (int ring = 1; ring <= 2; ring++) {
+            int alpha = ring == 1 ? 0x10 : 0x08;
+            int glow = rgb | (alpha << 24);
+            for (int dx = -ring; dx <= ring; dx++) {
+                for (int dy = -ring; dy <= ring; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    // Только позиции внешнего кольца — внутренние точки закрашивает следующий проход
+                    if (Math.abs(dx) != ring && Math.abs(dy) != ring) continue;
+                    g.drawString(font, text, x + dx, y + dy, glow, false);
+                }
             }
         }
         return draw(g, font, text, x, y, level, false);
