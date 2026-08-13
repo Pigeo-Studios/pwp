@@ -41,7 +41,24 @@ public class PacketRequestKitMenu {
        List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
 
        Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
-       // Порядок: базовые роли из KIT_NAMES, варианты (X (…)) — сразу после своей роли, остальное — в конец
+        // Счётчик моделей оружия (основных стволов) по команде и отряду — лимит повтора одной модели
+        Map<String, Integer> teamModels = new HashMap<>();
+        Map<String, Integer> squadModels = new HashMap<>();
+        for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+           if (p != player && p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
+              String cKit = p.getPersistentData().getString("WARFARE_CurrentKit");
+              String pKit = p.getPersistentData().getString("WARFARE_PendingKit");
+              WarfareWorldData.KitInfo k = kits.get(!pKit.isEmpty() ? pKit : cKit);
+              if (k == null) continue;
+              String gid = k.primaryGunId();
+              if (gid == null) continue;
+              teamModels.merge(gid, 1, Integer::sum);
+              if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) {
+                 squadModels.merge(gid, 1, Integer::sum);
+              }
+           }
+        }
+        // Порядок: базовые роли из KIT_NAMES, варианты (X (…)) — сразу после своей роли, остальное — в конец
        List<String> order = new ArrayList<>();
        Set<String> added = new HashSet<>();
        for (String base : WarfareWorldData.KIT_NAMES) {
@@ -83,6 +100,18 @@ public class PacketRequestKitMenu {
                 available = false;
                 reason = "Max 3 Fire Support per Squad";
              }
+
+              // Лимит повтора одной модели оружия на отряд/команду
+              String gid = kit.primaryGunId();
+              if (gid != null && available) {
+                 if (squadModels.getOrDefault(gid, 0) >= WarfareWorldData.KitInfo.MAX_SAME_MODEL_PER_SQUAD) {
+                    available = false;
+                    reason = "Max 2 same weapon per Squad";
+                 } else if (teamModels.getOrDefault(gid, 0) >= WarfareWorldData.KitInfo.MAX_SAME_MODEL_PER_TEAM) {
+                    available = false;
+                    reason = "Max 4 same weapon per Team";
+                 }
+              }
 
              String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
              if (myCurrentKit.isEmpty()) myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");

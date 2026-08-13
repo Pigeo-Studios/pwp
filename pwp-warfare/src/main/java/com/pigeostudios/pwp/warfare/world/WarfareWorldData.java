@@ -1026,8 +1026,24 @@ public class WarfareWorldData extends SavedData {
        public int minSquadPlayers = 0;
        public Map<Integer, List<String>> slotSkins = new HashMap<>();
 
+       // Лимит повтора одной модели оружия (основного ствола) в отряде/команде
+       public static final int MAX_SAME_MODEL_PER_SQUAD = 2;
+       public static final int MAX_SAME_MODEL_PER_TEAM = 4;
+
       public KitInfo(String name) {
          this.name = name;
+      }
+
+      /** Основное оружие кита: GunId ствола со слота 0 (или первого альт-слота 41-43). null — ствола нет. */
+      public String primaryGunId() {
+         int[] slots = {0, 41, 42, 43};
+         for (int s : slots) {
+            ItemStack st = (ItemStack)this.inventory.get(s);
+            if (st.isEmpty() || st.getTag() == null) continue;
+            CompoundTag tag = st.getTag();
+            if (tag.contains("GunId")) return tag.getString("GunId");
+         }
+         return null;
       }
 
       public CompoundTag save() {

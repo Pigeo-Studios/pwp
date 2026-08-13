@@ -61,10 +61,18 @@ ARMOR_NAME = {
 
 ATT_NAME = {
     "tacz:muzzle_compensator_trident": "Компенсатор Trident",
-    "tacz:muzzle_silencer_ptilopsis": "Глушитель Ptilopsis",
+    "tacz:muzzle_silencer_phantom_s1": "Глушитель Phantom S1",
+    "tacz:muzzle_brake_cyclone_d2": "Пламегаситель Cyclone D2",
     "gucci_attachments:grip_vert6": "Вертикальная рукоять",
     "gucci_attachments:grip_bipod1": "Сошки",
+    "maxstuff:a3_grip": "Рукоять A3",
     "tacz:stock_carbon_bone_c5": "Сток Carbon Bone C5",
+    "tacz:oem_stock_light": "Лёгкий приклад",
+    "tacz:oem_stock_tactical": "Тактический приклад",
+    "tacz:oem_stock_heavy": "Тяжёлый приклад",
+    "gucci_attachments:stock_precise": "Приклад Precision-5",
+    "tacz:laser_compact": "Компактный ЛЦУ",
+    "maxstuff:supressed_brake": "Глушитель-компенсатор",
 }
 
 def item_label(item):
@@ -128,13 +136,14 @@ def slot_label(slot):
 FACTION_RU = {"usa": "США", "russia": "Россия", "ukraine": "Украина",
               "nato": "НАТО", "insurgency": "Инсургенты", "pmc": "ЧВК"}
 
-HEADER = """# Киты PWP — дизайн по Squad (v2.1, полная раскладка по слотам)
+HEADER = """# Киты PWP — дизайн по Squad (v3, ростер 13.08.2026, полная раскладка по слотам)
 
 Документ сгенерирован из `maps/kits/*.json` (см. `tools/generate_kits.py`).
-Для каждой из 6 фракций перечислены ВСЕ роли (19 базовых, без вариантов-суффиксов) с раскладкой каждого слота:
+Для каждой из 6 фракций перечислены ВСЕ роли (19 базовых) с раскладкой каждого слота:
 слот 0 — праймари (ган + обвесы), слот 1 — пистолет, слот 2 — гранаты, слот 3 — СПЕЦ (фирменное оружие роли: труба LAT/HAT, M320 гренадёра, мины сапёра, клеймор снайпера, Игла ПВО), 4–8 — хотбар, 9+ — инвентарь,
 33 — доп. заряд, 36/37 — сапоги/штаны, 38 — жилет, 39 — шлем, 42/44/46 — гилли.
-Альтернативы оружия (прицелы/трубы) лежат внутри кита на слотах 41-42 с маркерами `__ALT__PRIMARY`/`__ALT__SPECIAL` — выбор в меню деплоя.
+Альтернативы оружия лежат внутри кита на слотах 41-43: `__ALT__PRIMARY` (другой ствол),
+`__ALT__SPECIAL` (другая труба) или `__ALT__SECONDARY` (другой пистолет) — выбор в меню деплоя.
 
 Метки: `R` — ресапплай из мейн-блока (resupply), `NBT` — сохранение NBT при смерти (saveNbt).
 `bluefor`/`redfor` — заглушки, не трогаем.
@@ -163,31 +172,31 @@ HEADER = """# Киты PWP — дизайн по Squad (v2.1, полная ра�
 | Pilot | 3 | 1 | 0 | |
 | Pilot Officer | 3 | 1 | 0 | ✔ |
 
-У всех фракций одинаковый набор из 19 ролей — вариантов (Iron/Red Dot/Optic/Javelin) нет, альтернативы оружия выбираются в меню деплоя внутри роли.
+У всех фракций одинаковый набор из 19 ролей — вариантов (Iron/Red Dot/Optic/Javelin) нет, альтернативы оружия (ствол/труба/пистолет) выбираются в меню деплоя внутри роли.
 
 ## Категории ролей (лимит «≤3 огневой поддержки на отряд»)
 
 | Категория | Роли | Ограничение |
 |---|---|---|
 | `DIRECT_COMBAT` | Rifleman, Assault, LMG | нет |
-| `FIRE_SUPPORT` | Grenadier, LAT, **LMG (при выборе оптики в деплое)**, Marksman | **не больше 3 на отряд** |
+| `FIRE_SUPPORT` | Grenadier, LAT, Marksman | **не больше 3 на отряд** |
 | `SPECIALIST` | HAT, HMG, Sniper, Sapper | нет |
 | `SUPPORT` | Officer, Medic, Scout, Anti_air, Drone Operator, Mechanic, Mechanic Officer, Pilot, Pilot Officer | нет |
 
 Сервер блокирует 4-й FS-кит в отряде: серым в меню деплоя (`Max 3 Fire Support per Squad`) и при спавне (фолбэк Unassigned).
 
-## Трубы по фракциям
+## Трубы по фракциям (LAT/HAT; альт-трубы в скобках)
 
 | Фракция | LAT | HAT |
 |---|---|---|
-| usa | `fcl_at4` + 1×ракета | `fcl_carlgustafm4` + 1×HEAT + 1×HEDP + прицел |
-| russia | `fcl_rpg26` + 1×ракета | `fcl_rpg7v2` + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
-| ukraine | `fcl_rpg26` + 1×ракета | `fcl_rpg7v2` + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
-| nato | `fcl_m72` + 1×ракета | `fcl_smaw` + 1×HEAA + 1×HEDM + прицел |
-| insurgency | `fcl_rpg26` + 1×ракета | `fcl_rpg7v2` + 2×ОГ-7В + 1×ПГ-7ВМ + 1×ПГ-7ВР + `fcl_pgo7` |
-| pmc | `fcl_m72` + 1×ракета | `fcl_carlgustafm4` + 1×HEAT + 1×HEDP + прицел |
+| usa | `fcl_at4` (альт `fcl_m72`) | `superbwarfare:javelin` |
+| russia | `fcl_rpg26` (альт `fcl_rpg7v2`) | `fcl_rpg28` (альт `fcl_pf98`) |
+| ukraine | `fcl_at4` (альт `fcl_rpg26`) | `superbwarfare:javelin` |
+| nato | `fcl_at4` | `fcl_carlgustafm4` |
+| insurgency | `fcl_rpg7v2` (альт `fcl_rpg26`) | `fcl_rpg28` (альт `fcl_pf98`) |
+| pmc | `fcl_panzerfaust3` (альт `fcl_at4`) | `fcl_carlgustafm4` |
 
-У каждой роли труба одна (у всех труб разный боеприпас, поэтому альт-труб нет — альты только у стволов с тем же БП).
+ПВО у всех фракций: ствол + `superbwarfare:igla_9k38` + 1×ПЗРК-ракета. Гренадёр: ствол + `maxstuff:m320t` + 8×`tacz:40mm` (4 HE + 4 smoke — в TaCZ 40-мм один тип).
 
 ---
 

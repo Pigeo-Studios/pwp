@@ -337,6 +337,25 @@ public class ResupplyHandler {
                      }
                   }
 
+                  // Лимит повтора одной модели оружия на отряд/команду (основные стволы)
+                  Map<String, WarfareWorldData.KitInfo> otherKits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
+                  Map<String, Integer> teamModels = new HashMap<>();
+                  Map<String, Integer> squadModels = new HashMap<>();
+                  for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+                     if (p != player && p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
+                        String otherCur = p.getPersistentData().getString("WARFARE_CurrentKit");
+                        String otherPen = p.getPersistentData().getString("WARFARE_PendingKit");
+                        WarfareWorldData.KitInfo ok = otherKits.get(!otherPen.isEmpty() ? otherPen : otherCur);
+                        if (ok == null) continue;
+                        String ogid = ok.primaryGunId();
+                        if (ogid == null) continue;
+                        teamModels.merge(ogid, 1, Integer::sum);
+                        if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) {
+                           squadModels.merge(ogid, 1, Integer::sum);
+                        }
+                     }
+                  }
+
                   boolean allowed = true;
                   if (kit.maxPerTeam > 0 && teamCount >= kit.maxPerTeam) {
                      allowed = false;
@@ -356,6 +375,14 @@ public class ResupplyHandler {
 
                   if (allowed && "FIRE_SUPPORT".equals(kit.category) && countFireSupportOthersInSquad(player, data) >= 3) {
                      allowed = false;
+                  }
+
+                  if (allowed && kit.primaryGunId() != null) {
+                     String gid = kit.primaryGunId();
+                     if (squadModels.getOrDefault(gid, 0) >= WarfareWorldData.KitInfo.MAX_SAME_MODEL_PER_SQUAD
+                         || teamModels.getOrDefault(gid, 0) >= WarfareWorldData.KitInfo.MAX_SAME_MODEL_PER_TEAM) {
+                        allowed = false;
+                     }
                   }
 
                   if (allowed) {
