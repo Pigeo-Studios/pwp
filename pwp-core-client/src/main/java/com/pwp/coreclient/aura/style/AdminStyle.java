@@ -71,17 +71,20 @@ public final class AdminStyle {
         drawCrown(b, m, pos, st, time, fi, fly, right, up, fwd);
 
         // --- 1. RED RING: радар из 8 сегментов, оборот ~2.8 с, радиус дышит.
-        // В полёте плоскость наклоняется вокруг сглаженной оси (maxTilt ~0.9 рад)
-        // и расширяется — орбита. Наклон непрерывен: завис — кольцо остаётся
-        // наклонённым по последнему направлению, разворот — плавный доворот.
+        // В полёте плоскость наклоняется вокруг сглаженной оси (maxTilt ~0.55 рад —
+        // умеренная «орбита», не вертикальное кольцо) и расширяется, а ЦЕНТР плавно
+        // поднимается к груди (0.85*fly): кольцо не уходит под ноги и не протыкает
+        // модель. Наклон непрерывен: завис — кольцо остаётся наклонённым по
+        // последнему направлению, разворот — плавный доворот.
         double rr = (0.65 + 0.07 * Math.sin(sec * Math.PI * 2.0 / 8.0))
                 * (1.0 + 0.30 * fly) * (1.0 + 0.25 * land);
         double ringRot = time * AuraGeom.omega(2.8);
         Vec3 ringNormal = UP_AXIS;
+        Vec3 ringCenter = pos.add(0.0, 0.85 * fly, 0.0);
         if (fly > 0.01 && axis != null) {
-            ringNormal = AuraGeom.rotateAround(UP_AXIS, Vec3.ZERO, axis, fly * 0.9).normalize();
+            ringNormal = AuraGeom.rotateAround(UP_AXIS, Vec3.ZERO, axis, fly * 0.55).normalize();
         }
-        AuraGeom.radarRingEx(b, m, pos, ringNormal, rr, 0.1, ringRot, 8, 0.6, 0.075, 0.55,
+        AuraGeom.radarRingEx(b, m, ringCenter, ringNormal, rr, 0.1, ringRot, 8, 0.6, 0.075, 0.55,
                 AuraGeom.color(BRIGHT_RED, 0.85f * fi));
 
         // --- 2. SCANNER ARCS: две дуги вокруг корпуса (периоды 3.6 / 5.2 с, встречные);
@@ -95,12 +98,14 @@ public final class AdminStyle {
                 0.35, 16, arcWidth, AuraGeom.color(RED, 0.65f * fi), true);
 
         // --- 3. VERTICAL SCAN: полоса снизу вверх за 2.3 с (0->1.5), fade 2.0->2.3,
-        // два затухающих хвоста ниже, вспышка при достижении головы
+        // два затухающих хвоста ниже, вспышка при достижении головы.
+        // В полёте плавно гаснет — полётный набор это орбита + arcs + круг + trail.
+        double flyFade = 1.0 - fly;
         double vt = (sec % 2.3) / 2.3;
         double climbEnd = 2.0 / 2.3;
         double h = 1.5 * Mth.clamp(vt / climbEnd, 0.0, 1.0);
         double env = vt <= climbEnd ? 1.0 : 1.0 - AuraGeom.smoothstep(climbEnd, 1.0, vt);
-        float envF = (float) env;
+        float envF = (float) (env * flyFade);
         double bandRot = time * 0.1;
         AuraGeom.flatArc(b, m, pos, 0.6, h, bandRot, 1.0, 48, 0.10,
                 AuraGeom.color(BRIGHT_RED, 0.85f * fi * envF), false);
@@ -112,19 +117,20 @@ public final class AdminStyle {
                 1.0 - Math.min(Math.abs(sec % 2.3 - 2.0) / 0.4, 1.0));
         if (headFlash > 0.01) {
             AuraGeom.glowQuad(b, m, pos.add(0.0, 1.5, 0.0), right, up, 0.3 + 0.1 * headFlash,
-                    AuraGeom.color(HOT_WHITE, (float) (0.8 * fi * headFlash)));
+                    AuraGeom.color(HOT_WHITE, (float) (0.8 * fi * headFlash * flyFade)));
         }
 
-        // --- 4. EXPANDING PULSE: раз в ~6 с, R 0.3 -> 1.4 за 1.2 с, easeOutCubic
+        // --- 4. EXPANDING PULSE: раз в ~6 с, R 0.3 -> 1.4 за 1.2 с, easeOutCubic;
+        // в полёте гаснет
         double pp = sec % 6.0;
         if (pp < 1.2) {
             double prog = pp / 1.2;
             double pr = Mth.lerp(AuraGeom.easeOutCubic(prog), 0.3, 1.4);
             AuraGeom.flatArc(b, m, pos, pr, 0.6, 0.0, 1.0, 48, 0.05,
-                    AuraGeom.color(BRIGHT_RED, (float) (0.8 * fi * (1.0 - prog))), false);
+                    AuraGeom.color(BRIGHT_RED, (float) (0.8 * fi * (1.0 - prog) * flyFade)), false);
         }
 
-        // --- 5. VERTICAL SPARKS: редкие быстрые искры вверх из кольца
+        // --- 5. VERTICAL SPARKS: редкие быстрые искры вверх из кольца; в полёте гаснут
         for (int k = 0; k < 3; k++) {
             double s = (sec + st.hash(30 + k) * 4.0) % 4.0;
             if (s < 0.5) {
@@ -132,7 +138,7 @@ public final class AdminStyle {
                 double a = st.hash(33 + k) * Math.PI * 2.0;
                 double sr = 0.72 + st.hash(36 + k) * 0.1;
                 Vec3 p = pos.add(Math.cos(a) * sr, 0.1 + prog * 1.1, Math.sin(a) * sr);
-                float sa = (float) (1.0 - prog); // яркое начало, быстрое затухание
+                float sa = (float) ((1.0 - prog) * flyFade); // яркое начало, быстрое затухание
                 AuraGeom.dash(b, m, p, UP_AXIS, right, 0.16, 0.05,
                         AuraGeom.color(BRIGHT_RED, 0.75f * fi * sa));
             }
@@ -141,7 +147,7 @@ public final class AdminStyle {
         // --- 6. MOVEMENT TRAIL: 3–4 искры позади по сглаженному направлению;
         // в полёте уступает flight-trail (fade), при остановке гаснет по скорости
         if (move > 0.02 && back != null) {
-            double flyFade = 1.0 - 0.8 * fly;
+            double fTrailFade = 1.0 - 0.8 * fly;
             for (int k = 0; k < 4; k++) {
                 double ph = AuraGeom.wrapFrac(sec / 0.6 + k * 0.25 + st.hash(40 + k));
                 double dist = 0.2 + ph * 0.5;
@@ -149,7 +155,7 @@ public final class AdminStyle {
                 Vec3 perp = new Vec3(-back.z, 0.0, back.x).scale(off);
                 Vec3 p = pos.add(0.0, 0.1 + k * 0.12, 0.0)
                         .add(back.scale(dist * move)).add(perp);
-                float a = (float) ((1.0 - ph) * 0.7 * move * i * flyFade * speedFade);
+                float a = (float) ((1.0 - ph) * 0.7 * move * i * fTrailFade * speedFade);
                 AuraGeom.dash(b, m, p, back, up, 0.12, 0.05, AuraGeom.color(BRIGHT_RED, a));
             }
         }

@@ -151,8 +151,11 @@ public class ClientEvents {
                mc.player.setDeltaMovement(0.0, mc.player.getDeltaMovement().y, 0.0);
                if (mc.screen == null) {
                   mc.setScreen(new DownedScreen());
+               } else if (mc.screen instanceof DeployScreen) {
+                  // Раненый при открытом деплое (по K) должен видеть «Сдаться/Медик», а не деплой
+                  mc.setScreen(new DownedScreen());
                }
-         } else if (mc.player.getPersistentData().contains("WARFARE_DownedYaw")) {
+          } else if (mc.player.getPersistentData().contains("WARFARE_DownedYaw")) {
                 mc.player.getPersistentData().remove("WARFARE_DownedYaw");
                 mc.player.getPersistentData().remove("WARFARE_DownedPitch");
              }
@@ -167,11 +170,24 @@ public class ClientEvents {
                    if (ClientData.deathSoundMuted) {
                       stopDeathSoundMute();
                    }
-                   if (mc.screen instanceof DeployScreen || mc.screen instanceof WarfareDeathScreen) {
-                      mc.setScreen(null);
-                   }
-                }
-             }
+                    if (mc.screen instanceof DeployScreen || mc.screen instanceof WarfareDeathScreen) {
+                       mc.setScreen(null);
+                    }
+                 }
+              }
+
+              // Страховка «мёртвый без экрана»: деплой закрыт сторонним путём или респавн
+              // отклонён сервером (таймаут истёк) — возвращаем игрока в деплой.
+              // deployRequested глушит ванильный DeathScreen, поэтому без этого игрок
+              // завис бы мёртвым с пустым экраном (раньше спасала только клавиша K).
+              if (mc.player.isDeadOrDying() && ClientData.deployRequested
+                 && System.currentTimeMillis() >= ClientData.deployBlockedUntil) {
+                 ClientData.awaitingRespawn = false;
+                 if (mc.screen == null) {
+                    mc.setScreen(new DeployScreen());
+                 }
+              }
+
 
              // Оглушение при смерти: звон играет 6 секунд, дальше — просто тишина до респавна
              if (ClientData.deathSoundMuted && ClientData.deathRinging != null

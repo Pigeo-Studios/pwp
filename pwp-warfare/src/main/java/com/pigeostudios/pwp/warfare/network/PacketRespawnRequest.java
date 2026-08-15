@@ -52,6 +52,12 @@ public class PacketRespawnRequest {
                       DownedHandler.forceGiveUp(player);
                       return;
                    }
+                   // Защита от гонки/эксплойта: деплой-респавн доступен только мёртвому.
+                   // Живой не должен телепортироваться со спавном и получать кит повторно.
+                   if (!player.isDeadOrDying()) {
+                      player.sendSystemMessage(Component.literal("Респавн доступен только после смерти!").withStyle(ChatFormatting.YELLOW));
+                      return;
+                   }
                    ServerLevel level = player.serverLevel();
                   WarfareWorldData data = WarfareWorldData.get(level);
                   BlockPos targetPos = null;

@@ -31,5 +31,20 @@
     "pwp_core.main_menu.quit": "QUIT",
 
     "pwp_core.loading.title": "Loading World",
-    "pwp_core.loading.subtitle": "Traveling between worlds"
+    "pwp_core.loading.subtitle": "Traveling between worlds",
+
+    "key.categories.pwp": "PWP",
+    "key.pwp_lobby.open_menu": "Open Lobby Menu",
+    "pwp.vote.key.tab": "TAB",
+    "pwp.vote.hint.dot_tooltip": "Vote in progress",
+    "pwp.vote.hint.title.map": "MAP VOTE",
+    "pwp.vote.hint.title.mode": "MODE VOTE",
+    "pwp.vote.hint.title.faction": "FACTION VOTE",
+    "pwp.vote.hint.leader": "%s — votes: %d",
+    "pwp.vote.hint.faction_leader": "Blue: %s · Red: %s",
+    "pwp.vote.hint.you_voted": "You voted",
+    "pwp.vote.hint.you_voted_leader": "%s · %s",
+    "pwp.vote.hint.waiting": "Waiting for votes...",
+    "pwp.vote.hint.press_tab": "vote",
+    "pwp.vote.hint.change_vote": "change vote"
 }

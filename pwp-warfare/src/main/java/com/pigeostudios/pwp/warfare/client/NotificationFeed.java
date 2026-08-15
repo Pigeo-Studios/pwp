@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
@@ -33,6 +34,7 @@ public class NotificationFeed {
    private static final int ENTRY_HEIGHT = 16;
    private static final int ENTRY_GAP = 2;
    private static final long LIFE_TICKS = 70L; // 3.5 секунды
+   private static final long FADE_MS = 400L; // таймерный фейд-аут: не зависит от FPS и не мерцает на хвосте
    private static final int ANCHOR_Y = 76; // нижний слот: height - ANCHOR_Y (выше фидбек-блока на h-58)
 
    private static final List<Entry> ENTRIES = new ArrayList<>();
@@ -46,6 +48,8 @@ public class NotificationFeed {
       boolean fading;
       float y;
       float alpha;
+      long fadeStartMs;
+      float fadeFromAlpha;
    }
 
    private NotificationFeed() {}
@@ -56,10 +60,13 @@ public class NotificationFeed {
       long now = mc.level != null ? mc.level.getGameTime() : 0L;
 
       // Дедик: то же сообщение уже висит или ещё гаснет — оживляем его и
-      // продлеваем таймер, чтобы один и тот же текст никогда не дублировался
+      // продлеваем таймер, чтобы один и тот же текст никогда не дублировался.
+      // Оживление БЕЗ прыжка альфы: fading снимается, альфа плавно дорастёт
+      // с текущего значения (раньше гаснущая запись «вспыхивала» заново — мерцание)
       for (Entry entry : ENTRIES) {
          if (entry.key.equals(textKey)) {
             entry.fading = false;
+            entry.fadeStartMs = 0L;
             entry.expireTick = now + LIFE_TICKS;
             entry.severity = severity;
             return;
@@ -121,7 +128,11 @@ public class NotificationFeed {
       long now = mc.level.getGameTime();
 
       for (Entry entry : ENTRIES) {
-         if (!entry.fading && now >= entry.expireTick) entry.fading = true;
+         if (!entry.fading && now >= entry.expireTick) {
+            entry.fading = true;
+            entry.fadeStartMs = System.currentTimeMillis();
+            entry.fadeFromAlpha = entry.alpha;
+         }
       }
 
       GuiGraphics gui = event.getGuiGraphics();
@@ -130,22 +141,35 @@ public class NotificationFeed {
       ListIterator<Entry> it = ENTRIES.listIterator();
       while (it.hasNext()) {
          Entry entry = it.next();
-         float targetAlpha = entry.fading ? 0.0F : 1.0F;
-         entry.alpha += (targetAlpha - entry.alpha) * 0.2F;
-         float targetY = slotY(entry.slot);
+         if (entry.fading) {
+            // Таймерный фейд-аут (ease-out кубический) от зафиксированной альфы:
+            // плавный хвост до нуля, без экспоненциального «дрожания» на пороге
+            float t = Mth.clamp((System.currentTimeMillis() - entry.fadeStartMs) / (float) FADE_MS, 0.0F, 1.0F);
+            float k = 1.0F - (float) Math.pow(1.0F - t, 3.0);
+            entry.alpha = entry.fadeFromAlpha * (1.0F - k);
+         } else {
+            entry.alpha += (1.0F - entry.alpha) * 0.2F;
+         }
+         // Гаснущая запись НЕ слайдится вниз (раньше уходила в slotY(-1) = h-58 —
+         // ярус фидбек-блока: два текста в одной точке с разной альфой, один гаснет,
+         // другой светится — «текст моргнул»). Гаснет на своём слоте.
+         float targetY = entry.fading ? entry.y : slotY(entry.slot);
          entry.y += (targetY - entry.y) * 0.18F;
-         if (entry.fading && entry.alpha < 0.01F) {
+         // Порог 0.03 (13.08.2026): тёмная плашка на тёмном фоне невидима уже при
+         // a≈10, а светлый текст ещё «висит» — обрубаем до этого хвоста, иначе
+         // в конце «фон пропал, текст моргнул»
+         if (entry.fading && entry.alpha <= 0.03F) {
             it.remove();
             continue;
          }
-         if (entry.alpha <= 0.01F) continue;
+         if (entry.alpha <= 0.03F) continue;
          drawEntry(gui, font, entry, width);
       }
    }
 
    private static void drawEntry(GuiGraphics gui, Font font, Entry entry, int width) {
-      int alpha = (int)(Math.min(1.0F, entry.alpha) * 220.0F);
-      if (alpha <= 2) return;
+      int alpha = (int) Math.round(Math.min(1.0F, entry.alpha) * 220.0F);
+      if (alpha <= 0) return;
       int textWidth = font.width(entry.text);
       int padding = PWPTheme.Spacing.SM;
       int boxWidth = textWidth + padding * 2 + PWPTheme.Spacing.XS;

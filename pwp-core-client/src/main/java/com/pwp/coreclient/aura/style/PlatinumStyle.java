@@ -51,15 +51,18 @@ public final class PlatinumStyle {
         float flashF = (float) flash;
         float fb = 1.0f + 2.0f * flashF; // множитель яркости орбит
 
-        // Полёт: орбиты расширяются, наклоняются (нормали доворачиваются) и ускоряются
+        // Полёт: орбиты расширяются, наклоняются (нормали доворачиваются) и ускоряются.
+        // Ось наклона — из сглаженной оси FxState (keep-last): плавный доворот при
+        // развороте, без щелчка на 180° (v4.2).
         double rMul = 1.0 + 0.4 * fly;
         double spdMul = 1.0 + 0.3 * fly;
-        double spd = st.speed();
+        double ax = st.tiltAxisX();
+        double az = st.tiltAxisZ();
+        double al = Math.sqrt(ax * ax + az * az);
         Vec3 tiltAxis = null;
         double tilt = 0.0;
-        if (fly > 0.01 && spd > 1e-3) {
-            Vec3 fwd = new Vec3(st.vx() / spd, 0.0, st.vz() / spd);
-            tiltAxis = new Vec3(-fwd.z, 0.0, fwd.x);
+        if (fly > 0.01 && al > 1e-4) {
+            tiltAxis = new Vec3(ax / al, 0.0, az / al);
             tilt = 0.3 * fly;
         }
         Vec3 n1 = AXIS_FLAT;
@@ -98,16 +101,18 @@ public final class PlatinumStyle {
                 (float) (time * AuraGeom.omega(8.0) * spdMul), 3, time, st.hash(22), right, up, 0.11,
                 AuraGeom.argb(0.85f * i * fb, c3[0], c3[1], c3[2]));
 
-        // Ледяное кольцо у ног: пульс радиуса 0.5 -> 0.7 -> 0.5 (цикл ~6 с)
+        // Ледяное кольцо у ног: пульс радиуса 0.5 -> 0.7 -> 0.5 (цикл ~6 с);
+        // в полёте приглушается — не спорит с орбитами
         double pulse = 0.5 + 0.5 * Math.sin(sec * Math.PI * 2.0 / 6.0);
         double r = 0.6 + 0.1 * pulse;
         AuraGeom.ringTile(b, m, pos, r - 0.05, r + 0.05, 0.05, time * AuraGeom.omega(30.0), 48,
-                AuraGeom.argb((float) (0.28 * i * (0.6 + 0.4 * pulse)), rgb[0], rgb[1], rgb[2]));
+                AuraGeom.argb((float) (0.28 * i * (0.6 + 0.4 * pulse) * (1.0 - 0.4 * fly)), rgb[0], rgb[1], rgb[2]));
 
-        // Иней: 9 частиц оседают вниз (rise = -0.9), цикл ~1.6 с, оффсеты 0.18–0.25 с
+        // Иней: 9 частиц оседают вниз (rise = -0.9), цикл ~1.6 с, оффсеты 0.18–0.25 с;
+        // в полёте приглушается
         AuraGeom.dustMotes(b, m, pos, right, up, time, 9, 0.5, -0.9,
                 AuraGeom.TAU / (1.6 * 20.0), 0.07, st.hash(23), 0.0, 0.0, 0.07,
-                AuraGeom.argb(0.5f * i, rgb[0], rgb[1], rgb[2]));
+                AuraGeom.argb((float) (0.5 * i * (1.0 - 0.6 * fly)), rgb[0], rgb[1], rgb[2]));
 
         AuraGeom.bodyGlow(b, m, pos, right, up,
                 AuraGeom.argb((float) (0.08 * i * (1.0 - 0.4 * fly)), rgb[0], rgb[1], rgb[2]));

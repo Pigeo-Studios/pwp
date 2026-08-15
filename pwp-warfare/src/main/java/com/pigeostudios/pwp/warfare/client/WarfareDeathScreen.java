@@ -66,4 +66,7 @@ public class WarfareDeathScreen extends Screen {
     }
 
     @Override public boolean isPauseScreen() { return false; }
+
+    // Экран смерти закрывается только при оживлении или переходом в деплой — не по ESC
+    @Override public boolean shouldCloseOnEsc() { return false; }
 }

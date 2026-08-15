@@ -873,6 +873,7 @@ public class WarfareOverlay {
    }
 
    private static float vehicleHintAlpha = 0.0F;
+   private static long vehicleHintLookMs = 0L;
 
    // Единый HUD-блок техники: подсказка при наведении прицела (спецкит/шифт+ПКМ)
    // и статус-бар при нахождении в технике. Позиция — ярус look-at подсказок
@@ -916,10 +917,20 @@ public class WarfareOverlay {
          }
       }
 
-      vehicleHintAlpha += (target - vehicleHintAlpha) * 0.2F;
-      if (vehicleHintAlpha <= 0.02F || text == null) return;
+      // Гистерезис: короткий джиттер прицела между техникой и фоном (1-2 кадра)
+      // не отменяет показ — иначе подсказка мерцает на хвосте затухания (target 0↔1)
+      long nowMs = System.currentTimeMillis();
+      if (target > 0.0F) {
+         if (vehicleHintLookMs == 0L) vehicleHintLookMs = nowMs;
+         if (nowMs - vehicleHintLookMs < 150L) target = 0.0F;
+      } else {
+         vehicleHintLookMs = 0L;
+      }
 
-      int alpha = Math.min(255, (int)(vehicleHintAlpha * 255.0F));
+      vehicleHintAlpha += (target - vehicleHintAlpha) * 0.2F;
+      if (vehicleHintAlpha <= 0.03F || text == null) return;
+
+      int alpha = Math.min(255, (int) Math.round(vehicleHintAlpha * 255.0F));
       int textWidth = PWPTheme.Fonts.display().width(text);
       int textX = (width - textWidth) / 2;
       int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)

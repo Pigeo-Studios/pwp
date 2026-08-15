@@ -89,13 +89,16 @@ public final class FxState {
         if (flying) episodeReal |= flyAbility;
 
         // Посадка: импакт только после РЕАЛЬНОГО воздушного эпизода — обычные прыжки
-        // (короткий off-ground без флая) не триггерят искры/расширение кольца
+        // (короткий off-ground без флая) не триггерят искры/расширение кольца.
+        // v4.2: episodeReal сбрасывается в конце эпизода — иначе после первого полёта
+        // любой прыжок давал импакт (флаг оставался true навсегда).
         if (!flying && wasFlying) {
             boolean real = episodeReal || airborneTicks > REAL_FLIGHT_MIN_TICKS;
             if (real) {
                 landing = 1.0;
                 landingLeft = DonorFxConfig.tLandingToIdle();
             }
+            episodeReal = false;
         }
         wasFlying = flying;
         double flyRate = landing > 0.0 ? DonorFxConfig.tFlyingToLanding() : DonorFxConfig.tFlyingToMoving();

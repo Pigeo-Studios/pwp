@@ -31,5 +31,20 @@
     "pwp_core.main_menu.quit": "ВЫХОД",
 
     "pwp_core.loading.title": "Загрузка мира",
-    "pwp_core.loading.subtitle": "Переход между мирами"
+    "pwp_core.loading.subtitle": "Переход между мирами",
+
+    "key.categories.pwp": "PWP",
+    "key.pwp_lobby.open_menu": "Открыть лобби-меню",
+    "pwp.vote.key.tab": "TAB",
+    "pwp.vote.hint.dot_tooltip": "Голосование идёт",
+    "pwp.vote.hint.title.map": "ГОЛОСОВАНИЕ ЗА КАРТУ",
+    "pwp.vote.hint.title.mode": "ГОЛОСОВАНИЕ ЗА РЕЖИМ",
+    "pwp.vote.hint.title.faction": "ГОЛОСОВАНИЕ ЗА ФРАКЦИИ",
+    "pwp.vote.hint.leader": "%s — голосов: %d",
+    "pwp.vote.hint.faction_leader": "Синие: %s · Красные: %s",
+    "pwp.vote.hint.you_voted": "Вы проголосовали",
+    "pwp.vote.hint.you_voted_leader": "%s · %s",
+    "pwp.vote.hint.waiting": "Ожидание голосов...",
+    "pwp.vote.hint.press_tab": "проголосовать",
+    "pwp.vote.hint.change_vote": "изменить голос"
 }

@@ -1341,6 +1341,10 @@ public class DeployScreen extends Screen {
 
     private void doDeploy() {
         if (selectedSpawn.isEmpty()) return;
+        // Гвард: деплой возможен только мёртвому/в дауне (защита от гонки и эксплойта —
+        // кнопка неактивна живому, но метод мог быть вызван мимо UI)
+        var p = Minecraft.getInstance().player;
+        if (p == null || (!p.isDeadOrDying() && !ClientData.DOWNED_PLAYERS.contains(p.getId()))) return;
         PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
         PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
         Minecraft.getInstance().player.respawn();
@@ -1351,4 +1355,13 @@ public class DeployScreen extends Screen {
     }
 
     @Override public boolean isPauseScreen() { return false; }
+
+    // Мёртвому/в дауне ESC не закрывает экран (иначе «зависание» без экрана);
+    // живому (меню по K) — закрывается как обычно
+    @Override
+    public boolean shouldCloseOnEsc() {
+        var p = Minecraft.getInstance().player;
+        if (p == null) return true;
+        return !(p.isDeadOrDying() || ClientData.DOWNED_PLAYERS.contains(p.getId()));
+    }
 }

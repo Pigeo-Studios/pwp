@@ -47,11 +47,15 @@ public final class SilverStyle {
                 AuraGeom.TAU / (2.4 * 20.0), 0.18, st.hash(2), dragX, dragZ, 0.09,
                 col(lvl, (float) (0.55 * i * (1.0 - 0.55 * fly))));
 
-        // Полёт: короткий серебряный trail позади (вытянутые штрихи)
+        // Полёт: короткий серебряный trail позади (вытянутые штрихи). Направление —
+        // из сглаженной оси FxState (keep-last): при зависании след остаётся на
+        // последнем направлении, при развороте плавно изгибается (v4.2).
         if (fly > 0.01) {
-            double spd = st.speed();
-            Vec3 back = spd > 1e-3
-                    ? new Vec3(-st.vx() / spd, 0.0, -st.vz() / spd)
+            double ax = st.tiltAxisX();
+            double az = st.tiltAxisZ();
+            double al = Math.sqrt(ax * ax + az * az);
+            Vec3 back = al > 1e-4
+                    ? new Vec3(-az / al, 0.0, ax / al)
                     : new Vec3(0.0, 0.0, -1.0);
             for (int k = 0; k < 3; k++) {
                 double h = 0.35 + k * 0.3;

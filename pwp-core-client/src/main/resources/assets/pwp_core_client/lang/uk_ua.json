@@ -1,0 +1,16 @@
+{
+    "key.categories.pwp": "PWP",
+    "key.pwp_lobby.open_menu": "Відкрити лобі-меню",
+    "pwp.vote.key.tab": "TAB",
+    "pwp.vote.hint.dot_tooltip": "Голосування триває",
+    "pwp.vote.hint.title.map": "ГОЛОСУВАННЯ ЗА КАРТУ",
+    "pwp.vote.hint.title.mode": "ГОЛОСУВАННЯ ЗА РЕЖИМ",
+    "pwp.vote.hint.title.faction": "ГОЛОСУВАННЯ ЗА ФРАКЦІЇ",
+    "pwp.vote.hint.leader": "%s — голосів: %d",
+    "pwp.vote.hint.faction_leader": "Сині: %s · Червоні: %s",
+    "pwp.vote.hint.you_voted": "Ви проголосували",
+    "pwp.vote.hint.you_voted_leader": "%s · %s",
+    "pwp.vote.hint.waiting": "Очікування голосів...",
+    "pwp.vote.hint.press_tab": "проголосувати",
+    "pwp.vote.hint.change_vote": "змінити голос"
+}

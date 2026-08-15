@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.*;
 import com.pwp.coreclient.gui.components.PWPToastManager;
+import com.pwp.coreclient.gui.hud.VoteHintToast;
 import com.pwp.coreclient.gui.theme.PWPIcons;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.*;
@@ -46,6 +47,11 @@ public class PWPLobbyScreen extends Screen {
     private static int closedPhase = -1;
     private static int lastSeenPhase = -1;
 
+    // Кэш последнего состояния лобби для HUD: обновляется при КАЖДОМ пакете,
+    // независимо от открытости экрана (HUD-подсказки живут вне GUI)
+    private static LobbyStatePacket cachedState;
+    private static long cachedStateReceivedAtNs;
+
     private final long openTime;
     private long tabSwitchTime = -1;
     private LobbyTab tabSwitchFrom;
@@ -69,6 +75,12 @@ public class PWPLobbyScreen extends Screen {
 
     /** Единственный источник данных GUI — серверный state-пакет (каждую секунду + при изменениях). */
     public static void updateLobbyState(LobbyStatePacket pkt) {
+        if (pkt == null) return;
+        // Кэш для HUD обновляется всегда — экран может быть закрыт
+        cachedState = pkt;
+        cachedStateReceivedAtNs = System.nanoTime();
+        VoteHintToast.onLobbyState(pkt);
+
         boolean screenOpen = instance != null && !instance.isMinecraftScreenInvalid();
         // Закрытие привязано к фазе: как только фаза сменилась — забываем, что игрок закрывал GUI
         if (pkt.phase != closedPhase) closedPhase = -1;
@@ -94,6 +106,42 @@ public class PWPLobbyScreen extends Screen {
             lastSeenPhase = pkt.phase;
             instance.applyState(pkt, true);
         }
+        // Открытый экран = просмотр текущей фазы (для точки-индикатора и повторов подсказки)
+        if (instance != null && !instance.isMinecraftScreenInvalid()) {
+            VoteHintToast.markViewed();
+        }
+    }
+
+    /** Последний валидный state-пакет лобби (для HUD вне экрана). */
+    public static LobbyStatePacket getLastState() {
+        return cachedState;
+    }
+
+    /** Актуальны ли данные лобби: пакеты приходят раз в секунду, 3 с — запас на потерю пакетов. */
+    public static boolean isLobbyStateFresh() {
+        return cachedState != null && (System.nanoTime() - cachedStateReceivedAtNs) < 3_000_000_000L;
+    }
+
+    /**
+     * Открытие лобби-меню по клавише [TAB].
+     * Гварды: не открываем без игрока, поверх другого экрана или повторно.
+     */
+    public static void openScreen() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.screen != null) return;
+        if (isOpen()) return;
+        PWPLobbyScreen s = new PWPLobbyScreen();
+        if (cachedState != null && isVotePhase(cachedState.phase)) {
+            s.currentTab = LobbyTab.GOLOSOVANIE;
+        }
+        VoteHintToast.markViewed();
+        mc.setScreen(s);
+    }
+
+    /** Очистка кэша состояния при выходе с сервера — HUD не должен жить после лобби. */
+    public static void clearCachedState() {
+        cachedState = null;
+        cachedStateReceivedAtNs = 0;
     }
 
     private static boolean isVotePhase(int phase) {

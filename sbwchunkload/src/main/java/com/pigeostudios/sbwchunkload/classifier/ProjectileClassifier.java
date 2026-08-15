@@ -3,7 +3,6 @@ package com.pigeostudios.sbwchunkload.classifier;
 import com.atsuishio.superbwarfare.entity.projectile.FastThrowableProjectile;
 import com.atsuishio.superbwarfare.entity.projectile.ProjectileEntity;
 import com.atsuishio.superbwarfare.entity.projectile.TaserBulletEntity;
-import com.vicmatskiv.pointblank.entity.ProjectileLike;
 import net.minecraft.world.entity.Entity;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,7 +28,25 @@ public final class ProjectileClassifier {
     /** Кэш: класс снаряда -> профиль. Вычисляется один раз на класс. */
     private static final ConcurrentHashMap<Class<?>, ProjectileProfile> CACHE = new ConcurrentHashMap<>();
 
+    /** pointblank (FCL-трубы) — опциональный мод: класс ищем рефлексией, чтобы
+     *  мод работал с одним лишь Superb Warfare без pointblank. */
+    private static final String POINTBLANK_PROJECTILE_LIKE = "com.vicmatskiv.pointblank.entity.ProjectileLike";
+    private static Class<?> pointblankProjectileLike;
+
     private ProjectileClassifier() {
+    }
+
+    /** true, если сущность реализует pointblank ProjectileLike (интерфейс
+     *  загружается лениво — при отсутствии pointblank просто false). */
+    private static boolean isProjectileLike(Entity entity) {
+        if (pointblankProjectileLike == null) {
+            try {
+                pointblankProjectileLike = Class.forName(POINTBLANK_PROJECTILE_LIKE);
+            } catch (ClassNotFoundException e) {
+                return false;
+            }
+        }
+        return pointblankProjectileLike.isInstance(entity);
     }
 
     /**
@@ -48,7 +65,7 @@ public final class ProjectileClassifier {
             return ProjectileProfile.FAST_LINEAR;
         }
         // pointblank/FCL-трубы: РПГ-7В2, AT4, M72, SMAW, Карл Густав и др.
-        if (entity instanceof ProjectileLike) {
+        if (isProjectileLike(entity)) {
             return bySpeed(entity, 1.5, 4.0, ProjectileProfile.BALLISTIC,
                 ProjectileProfile.SLOW_LINEAR, ProjectileProfile.SLOW_LINEAR);
         }

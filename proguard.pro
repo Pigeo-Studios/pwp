@@ -7,7 +7,9 @@
 
 -dontshrink
 -dontoptimize
--dontpreverify
+# НЕ ставить -dontpreverify: ProGuard без preverify не пишет StackMapTable-
+# фреймы, а JVM 17 (class file 61) требует их — обфусцированный jar падает
+# с VerifyError "Expecting a stackmap frame" при загрузке (инцидент 13.08.2026).
 -dontwarn
 -dontnote
 

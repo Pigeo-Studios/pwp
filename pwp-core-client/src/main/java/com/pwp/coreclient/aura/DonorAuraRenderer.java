@@ -110,9 +110,17 @@ public final class DonorAuraRenderer {
     /** Плавные состояния движения игроков (IDLE/MOVING/FLYING/LANDING) — см. FxState. */
     private static final Map<UUID, FxState> STATES = new HashMap<>();
 
+    /**
+     * ВРЕМЕННО (12.08.2026): ауры выключены до доделки полётных переходов.
+     * Градиентные ники/ореолы (DonatorNameTagRenderer) — отдельный рендер, работают.
+     * Убрать true для возврата FX.
+     */
+    private static boolean FX_TEMP_DISABLED = true;
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        if (FX_TEMP_DISABLED) return;
         if (!DonorFxConfig.ENABLED.get()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;

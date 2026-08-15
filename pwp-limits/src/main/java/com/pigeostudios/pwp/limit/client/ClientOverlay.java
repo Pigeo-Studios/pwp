@@ -26,11 +26,6 @@ public class ClientOverlay {
     private static float staminaBarAlpha = 0.0f;
     private static float prevStaminaBarAlpha = 0.0f;
 
-    // Палитра CD-градиента (белый -> оранжевый -> красный по мере убывания остатка)
-    private static final int CD_WHITE = 0xFFFFFF;
-    private static final int CD_ORANGE = 0xC8812A;
-    private static final int CD_RED = 0xA53D3D;
-
     @SubscribeEvent
     public static void onRenderBars(RenderGuiOverlayEvent.Post event) {
         if (!event.getOverlay().id().equals(VanillaGuiOverlay.CHAT_PANEL.id())) {
@@ -59,16 +54,13 @@ public class ClientOverlay {
             healthDisplayTimer = DISPLAY_DURATION;
         }
 
-        // Check CD activity
+        // Check CD activity (нужен только для удержания HP-бара во время КД прыжка)
         boolean cdActive = false;
-        int elapsedTicks = 0;
-        int cooldownTicks = 0;
         if (LimitsConfigCache.isJumpCooldownEnabled()) {
             Integer lastJumpTick = ClientEvents.sprintJumpCooldown.get(player.getUUID());
             if (lastJumpTick != null) {
-                cooldownTicks = (int) (LimitsConfigCache.getJumpCooldownSeconds() * 20.0);
-                elapsedTicks = player.tickCount - lastJumpTick;
-                if (elapsedTicks < cooldownTicks) {
+                int cooldownTicks = (int) (LimitsConfigCache.getJumpCooldownSeconds() * 20.0);
+                if (player.tickCount - lastJumpTick < cooldownTicks) {
                     cdActive = true;
                 } else {
                     ClientEvents.sprintJumpCooldown.remove(player.getUUID());
@@ -113,10 +105,6 @@ public class ClientOverlay {
         // STAMINA BAR (ParCool) — над HP-баром: y = hpY - barHeight, белая заливка
         int staminaY = y - barHeight;
         renderStaminaBar(guiGraphics, player, x, staminaY, barWidth, partialTick);
-
-        // JUMP COOLDOWN BAR — над полоской стамины, градиент по остатку КД
-        int cdY = staminaY - 4;
-        renderJumpCooldownBar(guiGraphics, x, cdY, barWidth, cdActive, elapsedTicks, cooldownTicks);
     }
 
     // Стамина ParCool: видна только пока стамина неполная (трата на ClimbUp/Vault),
@@ -150,23 +138,6 @@ public class ClientOverlay {
         }
     }
 
-    // Полоска КД спринт-прыжка над стаминой: показывает ОСТАТОК (убывает).
-    // Цвет — плавный градиент по остатку: >66% белый, 33-66% оранжевый, <33% красный.
-    private static void renderJumpCooldownBar(GuiGraphics guiGraphics, int x, int y, int barWidth, boolean cdActive, int elapsedTicks, int cooldownTicks) {
-        if (!cdActive || cooldownTicks <= 0) {
-            return;
-        }
-        float remaining = 1.0f - (float) elapsedTicks / (float) cooldownTicks;
-        int filled = (int) (barWidth * Mth.clamp(remaining, 0.0f, 1.0f));
-
-        // Background
-        guiGraphics.fill(x, y, x + barWidth, y + 2, 0xFF181C24);
-        // Fill
-        if (filled > 0) {
-            guiGraphics.fill(x, y, x + filled, y + 2, cdGradientColor(remaining));
-        }
-    }
-
     private static int[] readParCoolStamina(LocalPlayer player) {
         try {
             Stamina stamina = Stamina.get(player);
@@ -178,29 +149,5 @@ public class ClientOverlay {
             // ParCool отсутствует (например, dev-сборка без мода) — полоска просто не рисуется
             return null;
         }
-    }
-
-    private static int cdGradientColor(float ratio) {
-        if (ratio > 0.66f) {
-            return lerpColor(CD_ORANGE, CD_WHITE, (ratio - 0.66f) / 0.34f);
-        }
-        if (ratio > 0.33f) {
-            return lerpColor(CD_RED, CD_ORANGE, (ratio - 0.33f) / 0.33f);
-        }
-        return CD_RED;
-    }
-
-    private static int lerpColor(int from, int to, float t) {
-        t = Mth.clamp(t, 0.0f, 1.0f);
-        int r1 = (from >> 16) & 0xFF;
-        int g1 = (from >> 8) & 0xFF;
-        int b1 = from & 0xFF;
-        int r2 = (to >> 16) & 0xFF;
-        int g2 = (to >> 8) & 0xFF;
-        int b2 = to & 0xFF;
-        int r = (int) Mth.lerp(t, r1, r2);
-        int g = (int) Mth.lerp(t, g1, g2);
-        int b = (int) Mth.lerp(t, b1, b2);
-        return 0xFF000000 | (r << 16) | (g << 8) | b;
     }
 }

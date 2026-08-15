@@ -288,13 +288,16 @@ public final class AuraGeom {
      */
     public static void helix(VertexConsumer b, Matrix4f m, Vec3 center, double radius, double yBase,
                               double height, double turns, double rot, int segments, double width, int argb) {
-        helixEx(b, m, center, radius, yBase, height, turns, rot, segments, width, argb, null, 0.0, 0.0, 0.0);
+        helixEx(b, m, center, radius, yBase, height, turns, rot, segments, width, argb, null, null, 0.0, 0.0, 0.0);
     }
 
     /**
      * Спираль с двумя доработками (v4, полёт/вспышки):
      *  - tiltAxis/tilt — наклон оси спирали (Rodrigues вокруг горизонтальной
      *    оси, например перпендикулярной направлению полёта);
+     *  - tiltPivot (v4.2) — точка в МИРЕ, вокруг которой ось наклоняется.
+     *    По умолчанию (null) — center (ноги); для полёта передавать точку на
+     *    высоте груди, иначе наклонённая ось проходит через модель игрока;
      *  - proximityRot/flashAmp — яркость ленты растёт, когда её виток сходится
      *    с ДРУГОЙ спиралью. Спирали намотаны в одну сторону (turns одной
      *    величины) — угловое расстояние между ними вдоль высоты ПОСТОЯННО,
@@ -305,8 +308,9 @@ public final class AuraGeom {
      */
     public static void helixEx(VertexConsumer b, Matrix4f m, Vec3 center, double radius, double yBase,
                                double height, double turns, double rot, int segments, double width, int argb,
-                               Vec3 tiltAxis, double tilt, double proximityRot, double flashAmp) {
+                               Vec3 tiltAxis, Vec3 tiltPivot, double tilt, double proximityRot, double flashAmp) {
         boolean tilted = tiltAxis != null && Math.abs(tilt) > 1e-4;
+        Vec3 pivot = tiltPivot != null ? tiltPivot : center;
         double boost = 1.0;
         if (flashAmp > 0.0) {
             double dc = angleDiff(rot, proximityRot);
@@ -320,8 +324,8 @@ public final class AuraGeom {
             Vec3 a = polar(center, radius, yBase + t0 * height, a0);
             Vec3 b0 = polar(center, radius, yBase + t1 * height, a1);
             if (tilted) {
-                a = rotateAround(a, center, tiltAxis, tilt);
-                b0 = rotateAround(b0, center, tiltAxis, tilt);
+                a = rotateAround(a, pivot, tiltAxis, tilt);
+                b0 = rotateAround(b0, pivot, tiltAxis, tilt);
             }
             double midA = (a0 + a1) * 0.5;
             Vec3 outward = new Vec3(Math.cos(midA), 0.0, Math.sin(midA));
@@ -343,15 +347,22 @@ public final class AuraGeom {
      * «Монетки» GOLD: точки-билборды, бегущие вдоль спирали (цикл cycleTicks
      * в тиках), каждая со своим оффсетом; dragX/dragZ — небольшой уход назад
      * при беге (тянутся за игроком).
+     * v4.2: tiltAxis/tiltPivot/tilt — те же параметры наклона, что в helixEx,
+     * точки вращаются ТЕМ ЖЕ поворотом, что и лента (в полёте монетки лежат
+     * на наклонённой спирали, а не «выходят» из неё).
      */
     public static void helixDots(VertexConsumer b, Matrix4f m, Vec3 center, double radius, double yBase,
-                                 double height, double turns, double rot, int count, double cycleTicks,
+                                 double height, double turns, double rot, Vec3 tiltAxis, Vec3 tiltPivot,
+                                 double tilt, int count, double cycleTicks,
                                  float time, double offset, double dragX, double dragZ,
                                  Vec3 right, Vec3 up, double size, int argb) {
+        boolean tilted = tiltAxis != null && Math.abs(tilt) > 1e-4;
+        Vec3 pivot = tiltPivot != null ? tiltPivot : center;
         for (int k = 0; k < count; k++) {
             double ph = (time / cycleTicks + (double) k / count + offset) % 1.0;
             double env = Math.sin(ph * Math.PI);
             Vec3 p = helixPoint(center, radius, yBase, height, turns, rot, ph);
+            if (tilted) p = rotateAround(p, pivot, tiltAxis, tilt);
             p = p.add(dragX * ph, 0.0, dragZ * ph);
             glowQuad(b, m, p, right, up, size, color(argb, (float) env));
         }
