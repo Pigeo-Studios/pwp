@@ -9,3 +9,12 @@ authors="Pigeo Studios"
 description='''
 Мод добавляет бинты и аптечки с уникальными механиками лечения и дебаффов.
 '''
+
+# pwp-medicine использует классы pwp-warfare (состояние нока) — зависимость обязательна
+
+[[dependencies.pwp_medicine]]
+    modId="pwpwarfare"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

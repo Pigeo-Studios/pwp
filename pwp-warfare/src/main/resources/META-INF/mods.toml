@@ -48,3 +48,19 @@ side="SERVER"
     versionRange="[1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+# Классы core-client (сеть лобби, единая система данных GUI, UI) и косметики используются
+# напрямую — без этих модов Forge падал с NoClassDefFoundError вместо понятной ошибки
+[[dependencies.pwpwarfare]]
+    modId="pwp_core_client"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="pwp_cosmetics"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

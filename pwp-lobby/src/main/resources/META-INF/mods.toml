@@ -23,3 +23,19 @@ Lobby server mod for PWP. Player hub, map voting, server management.
     versionRange="[1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+# pwp-lobby использует классы core-client (пакеты лобби) и косметики
+
+[[dependencies.pwp_lobby]]
+    modId="pwp_core_client"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwp_lobby]]
+    modId="pwp_cosmetics"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
