@@ -43,4 +43,25 @@ class PlayerCloneRulesTest {
         assertEquals(50_000L, WarfareKeys.BASE_RESTRICTED_UNTIL.read(to));
         assertEquals(4, WarfareKeys.SQUAD_ID.read(to));
     }
+
+    @Test
+    void endReturnDropsDroneChannelsAndMainZone() {
+        CompoundTag from = oldPlayer();
+        WarfareKeys.DRONE_DEPLOY_TYPE.write(from, "fpv");
+        WarfareKeys.DRONE_DEPLOY_START.write(from, 500L);
+        WarfareKeys.DRONE_DEPLOY_X.write(from, 1.5);
+        WarfareKeys.DRONE_DEPLOY_ENTITY.write(from, 77);
+        WarfareKeys.DRONE_RELOAD_TYPE.write(from, "mavic");
+        WarfareKeys.DRONE_RELOAD_START.write(from, 600L);
+        WarfareKeys.DRONE_RELOAD_Z.write(from, -3.0);
+        WarfareKeys.DRONE_RELOAD_ENTITY.write(from, 78);
+        WarfareKeys.IN_MAIN_ZONE.write(from, true);
+        CompoundTag to = new CompoundTag();
+        PlayerCloneRules.copy(from, to, false);
+        for (WarfareKey<?> k : PlayerCloneRules.RESET_ON_END_RETURN) {
+            assertFalse(to.contains(k.name()), k.name() + " не переносится из Энда");
+        }
+        assertEquals(99_000L, WarfareKeys.DRONE_DEPLOY_CD.read(to), "кулдаун деплоя дрона остаётся");
+        assertEquals(4, WarfareKeys.SQUAD_ID.read(to));
+    }
 }
