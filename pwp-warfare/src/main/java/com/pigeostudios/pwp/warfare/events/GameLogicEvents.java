@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.block.RallyPointBlock;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.PlayerWarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
@@ -1762,42 +1763,21 @@ public class GameLogicEvents {
     public static void onPlayerClone(Clone event) {
         ServerPlayer oldPlayer = (ServerPlayer) event.getOriginal();
         ServerPlayer newPlayer = (ServerPlayer) event.getEntity();
+        // capability старого игрока после клона инвалидирована — оживляем на время копирования.
+        // Смерть: переживает только PlayerCloneRules.SURVIVE_DEATH; возврат из Энда — всё.
+        oldPlayer.reviveCaps();
+        try {
+            PlayerWarfareData.copyOnClone(oldPlayer, newPlayer, event.isWasDeath());
+        } finally {
+            oldPlayer.invalidateCaps();
+        }
+        // Нок не переживает пересоздание игрока ни в каком случае (как и раньше)
         WarfareData.of(newPlayer).putBoolean(WarfareKeys.IS_DOWNED, false);
         WarfareData.of(newPlayer).remove(WarfareKeys.GIVING_UP);
         WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_YAW);
         WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_PITCH);
         WarfareData.of(newPlayer).putLong(WarfareKeys.LAST_REVIVE_TIME, 0L);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(newPlayer.getId(), false));
-        // capability старого игрока после клона инвалидирована — оживляем на время копирования.
-        // Переживают смерть: отряд, роль лидера, киты, кулдауны ресапплая/респавна (как и раньше).
-        oldPlayer.reviveCaps();
-        try {
-            WarfareData oldData = WarfareData.of(oldPlayer);
-            WarfareData newData = WarfareData.of(newPlayer);
-            if (oldData.contains(WarfareKeys.SQUAD_ID)) {
-                newData.putInt(WarfareKeys.SQUAD_ID, oldData.getInt(WarfareKeys.SQUAD_ID));
-            }
-            if (oldData.contains(WarfareKeys.IS_SQUAD_LEADER)) {
-                newData.putBoolean(WarfareKeys.IS_SQUAD_LEADER, oldData.getBoolean(WarfareKeys.IS_SQUAD_LEADER));
-            }
-            if (oldData.contains(WarfareKeys.CURRENT_KIT)) {
-                newData.putString(WarfareKeys.CURRENT_KIT, oldData.getString(WarfareKeys.CURRENT_KIT));
-            }
-            if (oldData.contains(WarfareKeys.PENDING_KIT)) {
-                newData.putString(WarfareKeys.PENDING_KIT, oldData.getString(WarfareKeys.PENDING_KIT));
-            }
-            if (oldData.contains(WarfareKeys.LAST_FOB_RESUPPLY)) {
-                newData.putLong(WarfareKeys.LAST_FOB_RESUPPLY, oldData.getLong(WarfareKeys.LAST_FOB_RESUPPLY));
-            }
-            if (oldData.contains(WarfareKeys.LAST_MAIN_RESUPPLY)) {
-                newData.putLong(WarfareKeys.LAST_MAIN_RESUPPLY, oldData.getLong(WarfareKeys.LAST_MAIN_RESUPPLY));
-            }
-            if (oldData.contains(WarfareKeys.LAST_RESPAWN_COMMAND)) {
-                newData.putLong(WarfareKeys.LAST_RESPAWN_COMMAND, oldData.getLong(WarfareKeys.LAST_RESPAWN_COMMAND));
-            }
-        } finally {
-            oldPlayer.invalidateCaps();
-        }
 
         if (event.isWasDeath()) {
             String teamName = oldPlayer.getTeam() != null ? oldPlayer.getTeam().getName() : null;

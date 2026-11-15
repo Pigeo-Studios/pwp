@@ -25,8 +25,11 @@ class WarfareMigrationTest {
         assertEquals("Medic", WarfareKeys.CURRENT_KIT.read(cap));
         assertEquals(3, WarfareKeys.SQUAD_ID.read(cap));
         assertEquals(12_000L, WarfareKeys.driveRequestCooldown(42).read(cap));
-        assertFalse(persistent.contains("WARFARE_CurrentKit"));
-        assertFalse(persistent.contains("WARFARE_DriveRequestCooldown_42"));
+        // старые ключи остаются ещё на одну версию — для отката на старый мод
+        assertTrue(persistent.contains("WARFARE_CurrentKit"));
+        assertTrue(persistent.contains("WARFARE_DriveRequestCooldown_42"));
+        assertTrue(cap.contains(WarfareMigration.MIGRATED_MARKER));
+        assertFalse(cap.contains("otherMod_flag"));
         assertTrue(persistent.contains("otherMod_flag"));
         assertTrue(persistent.contains("PlayerPersisted"));
     }
@@ -40,7 +43,28 @@ class WarfareMigrationTest {
 
         assertEquals(0, WarfareMigration.migratePlayer(persistent, cap));
         assertEquals("New", WarfareKeys.CURRENT_KIT.read(cap));
-        assertFalse(persistent.contains("WARFARE_CurrentKit"), "старый ключ всё равно удаляется");
+        assertTrue(persistent.contains("WARFARE_CurrentKit"), "старый ключ не удаляется");
+    }
+
+    @Test
+    void staleLegacyValueDoesNotComeBackAfterRemoval() {
+        CompoundTag persistent = new CompoundTag();
+        persistent.putString("WARFARE_PendingKit", "Medic");
+        CompoundTag cap = new CompoundTag();
+        WarfareMigration.migratePlayer(persistent, cap);
+        cap.remove("WARFARE_PendingKit"); // игрок применил кит — PendingKit снят
+        assertEquals(0, WarfareMigration.migratePlayer(persistent, cap), "повторный вход");
+        assertFalse(cap.contains("WARFARE_PendingKit"), "снимок из persistentData не возвращается");
+    }
+
+    @Test
+    void removeLegacyForNextVersion() {
+        CompoundTag persistent = new CompoundTag();
+        persistent.putString("WARFARE_CurrentKit", "Medic");
+        persistent.putBoolean("otherMod_flag", true);
+        assertEquals(1, WarfareMigration.removeLegacy(persistent));
+        assertFalse(persistent.contains("WARFARE_CurrentKit"));
+        assertTrue(persistent.contains("otherMod_flag"));
     }
 
     @Test

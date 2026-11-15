@@ -27,11 +27,11 @@ import org.slf4j.LoggerFactory;
  * Сохраняется в player.dat (ForgeCaps → {@code pwpwarfare:player_data}).
  *
  * <p>Миграция: при первом обращении к данным игрока и при входе (HIGHEST) все ключи с префиксом
- * {@code WARFARE_} переезжают из persistentData в capability и удаляются оттуда. Значение уже
- * лежащее в capability не перетирается.
+ * {@code WARFARE_} копируются из persistentData в capability ОДИН раз (маркер в capability).
+ * Старые ключи остаются в persistentData ещё одну версию — для отката на старый мод.
  *
- * <p>Смерть/клон: capability не копируется сама — что переживает смерть, решает
- * {@code GameLogicEvents.onPlayerClone} (тот же набор ключей, что и раньше).
+ * <p>Клон игрока: capability не копируется сама — правила в {@link PlayerCloneRules}
+ * (смерть — отряд/киты/ресапплай, возврат из Энда — всё), вызов — {@link #copyOnClone}.
  */
 public final class PlayerWarfareData extends WarfareData {
     private static final Logger LOG = LoggerFactory.getLogger(PlayerWarfareData.class);
@@ -55,7 +55,11 @@ public final class PlayerWarfareData extends WarfareData {
         if (!data.migrated) {
             data.migrated = true;
             int moved = WarfareMigration.migratePlayer(player.getPersistentData(), data.tag);
-            if (moved > 0) LOG.info("Миграция {}: {} ключей WARFARE_* → capability", player.getScoreboardName(), moved);
+            if (moved > 0)
+                LOG.info(
+                        "Миграция {}: {} ключей WARFARE_* скопировано в capability (старые оставлены для отката)",
+                        player.getScoreboardName(),
+                        moved);
         }
         return data;
     }
@@ -63,6 +67,15 @@ public final class PlayerWarfareData extends WarfareData {
     @Override
     protected CompoundTag tag() {
         return tag;
+    }
+
+    /**
+     * Копирование данных при {@code PlayerEvent.Clone} по {@link PlayerCloneRules}. Capability
+     * старого игрока к этому моменту инвалидирована — вызывающий оборачивает в
+     * {@code reviveCaps()/invalidateCaps()}.
+     */
+    public static void copyOnClone(Player oldPlayer, Player newPlayer, boolean wasDeath) {
+        PlayerCloneRules.copy(of(oldPlayer).tag, of(newPlayer).tag, wasDeath);
     }
 
     /** Полная копия данных (для клона игрока при смене измерения и тестов). */
