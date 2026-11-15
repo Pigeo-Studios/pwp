@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.server;
 
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -17,6 +19,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -65,8 +68,8 @@ public final class FactionDataLoader {
     }
 
     private static final Map<Team, Map<Kind, Slot>> SLOTS = new EnumMap<>(Team.class);
-    /** Отложенные деплои: игрок → тип спавна (MAIN/RALLY/HUB...). */
-    private static final Map<UUID, String> PENDING_DEPLOYS = new LinkedHashMap<>();
+    /** Отложенные деплои: игрок → снимок состояния в момент отложения. */
+    private static final Map<UUID, DeferredDeploy> PENDING_DEPLOYS = new LinkedHashMap<>();
 
     private static ServerLevel level;
 
@@ -101,11 +104,26 @@ public final class FactionDataLoader {
     }
 
     /**
-     * Ставит деплой в очередь до загрузки китов. Повторный запрос перезаписывает тип спавна.
+     * Ставит деплой в очередь до загрузки китов (повторный запрос перезаписывает). Снимок
+     * команды/режима/кита сверяется при выполнении — см. {@link DeferredDeploy#cancelReason}.
      */
     public static void deferDeploy(ServerPlayer player, String spawnType) {
-        PENDING_DEPLOYS.put(player.getUUID(), spawnType);
+        PENDING_DEPLOYS.put(player.getUUID(), snapshot(player, spawnType));
         player.displayClientMessage(Component.literal("Загрузка китов…").withStyle(ChatFormatting.YELLOW), true);
+    }
+
+    /** Отменить ожидание (смена кита/команды). Нет ожидания — ничего не делает. */
+    public static void cancelDeploy(ServerPlayer player, String reason) {
+        if (PENDING_DEPLOYS.remove(player.getUUID()) != null) {
+            player.displayClientMessage(Component.literal(reason).withStyle(ChatFormatting.YELLOW), true);
+        }
+    }
+
+    private static DeferredDeploy snapshot(ServerPlayer player, String spawnType) {
+        String kit = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
+        if (kit.isEmpty()) kit = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
+        return new DeferredDeploy(
+                spawnType, teamOf(player), player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR, kit);
     }
 
     @SubscribeEvent
@@ -174,19 +192,30 @@ public final class FactionDataLoader {
         });
     }
 
-    /** Выполняет отложенные деплои игроков команды, чьи киты только что загрузились. */
+    /**
+     * Выполняет отложенные деплои игроков команды, чьи киты только что загрузились. Игрок
+     * ищется заново по UUID (офлайн — пропуск), состояние сверяется со снимком; сам спавн идёт
+     * обычным путём {@link PacketRespawnRequest#process} — лимиты ролей/FIRE_SUPPORT и нок
+     * проверяются там заново, кит берётся текущий.
+     */
     private static void flushDeploys(MinecraftServer server, Team team) {
         var it = PENDING_DEPLOYS.entrySet().iterator();
         while (it.hasNext()) {
             var e = it.next();
             ServerPlayer p = server.getPlayerList().getPlayer(e.getKey());
-            if (p == null) {
+            if (p == null || p.hasDisconnected()) {
                 it.remove();
                 continue;
             }
-            if (parse(teamOf(p)) != team) continue;
+            DeferredDeploy waiting = e.getValue();
+            if (parse(waiting.team()) != team) continue;
             it.remove();
-            PacketRespawnRequest.process(p, e.getValue());
+            String reason = waiting.cancelReason(snapshot(p, waiting.spawnType()));
+            if (reason != null) {
+                p.displayClientMessage(Component.literal(reason).withStyle(ChatFormatting.YELLOW), true);
+                continue;
+            }
+            PacketRespawnRequest.process(p, waiting.spawnType());
         }
     }
 

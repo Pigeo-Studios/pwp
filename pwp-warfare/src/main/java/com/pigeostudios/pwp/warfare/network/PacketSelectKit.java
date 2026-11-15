@@ -50,7 +50,13 @@ public class PacketSelectKit {
             ServerPlayer player = ctx.get().getSender();
             if (player != null) {
                 WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                String previous = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
                 WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, msg.kitName);
+                if (!previous.equals(msg.kitName)) {
+                    // Ожидание деплоя (киты грузились) отменяется — игрок подтвердит заново
+                    com.pigeostudios.pwp.warfare.server.FactionDataLoader.cancelDeploy(
+                            player, "Выбор кита изменён — нажмите «Деплой» снова");
+                }
                 CompoundTag selTag = new CompoundTag();
                 for (var e : msg.slotSelections.entrySet()) {
                     selTag.putInt(e.getKey(), e.getValue());

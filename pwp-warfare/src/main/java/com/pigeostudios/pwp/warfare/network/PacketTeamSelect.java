@@ -56,6 +56,8 @@ public class PacketTeamSelect {
                 return;
             }
 
+            com.pigeostudios.pwp.warfare.server.FactionDataLoader.cancelDeploy(
+                    player, "Команда изменена — деплой отменён");
             SquadActions.leaveCurrentSquad(player, data);
             WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
             WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
