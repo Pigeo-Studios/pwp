@@ -136,6 +136,7 @@ public final class FactionDataLoader {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         PENDING_DEPLOYS.remove(event.getEntity().getUUID());
+        PacketRespawnRequest.forget(event.getEntity().getUUID());
     }
 
     private static void tryLoads(MinecraftServer server) {

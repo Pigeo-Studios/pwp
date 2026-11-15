@@ -7,11 +7,13 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
+import com.pigeostudios.pwp.warfare.match.SpawnRules;
 import com.pigeostudios.pwp.warfare.server.FactionDataLoader;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.net.Net;
+import com.pwp.api.util.RequestGuard;
 import java.util.Map;
 import java.util.Random;
-import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -25,36 +27,57 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap.Types;
-import net.minecraftforge.network.NetworkEvent.Context;
 
-// Пакет запроса на возрождение: главная база, точка сбора или FOB
-// Обрабатывает выбор точки появления и применение кита
-public class PacketRespawnRequest {
-    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketRespawnRequest.class);
-    private final String type;
+/**
+ * Запрос деплоя (сеть v2): главная база, точка сбора или ФОБ. Тип проверяется в {@link
+ * #validate()} ({@link SpawnRules#validateType}), состояние игрока — {@link SpawnRules#denyReason}:
+ * живой игрок на поле не может телепортироваться и получить кит повторно. Антиспам — {@link
+ * #GUARD} (один запрос в секунду на игрока).
+ */
+public record PacketRespawnRequest(String type) implements Net.C2S {
+    /** Антиспам: не чаще одного запроса деплоя в секунду на игрока. */
+    private static final RequestGuard GUARD = new RequestGuard(1000);
 
-    public PacketRespawnRequest(String type) {
-        this.type = type;
-    }
+    private static final String GUARD_TYPE = "respawn";
 
     public static void encode(PacketRespawnRequest msg, FriendlyByteBuf buf) {
-        buf.writeUtf(msg.type);
+        buf.writeUtf(msg.type, SpawnRules.MAX_TYPE_LENGTH);
     }
 
     public static PacketRespawnRequest decode(FriendlyByteBuf buf) {
-        return new PacketRespawnRequest(buf.readUtf());
+        return new PacketRespawnRequest(buf.readUtf(SpawnRules.MAX_TYPE_LENGTH));
     }
 
-    // Определяет точку возрождения по типу (MAIN, RALLY, HUB) и телепортирует игрока
-    public static void handle(PacketRespawnRequest msg, Supplier<Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player != null) process(player, msg.type);
-        });
-        ctx.get().setPacketHandled(true);
+    @Override
+    public String validate() {
+        return SpawnRules.validateType(type);
     }
 
-    /** Возрождение игрока по типу спавна; вызывается из пакета и из отложенного деплоя. */
+    @Override
+    public void handle(ServerPlayer player) {
+        if (!GUARD.tryAcquire(player.getUUID(), GUARD_TYPE)) return;
+        GUARD.release(player.getUUID(), GUARD_TYPE);
+        String denied = SpawnRules.denyReason(new SpawnRules.PlayerState(
+                player.isDeadOrDying(),
+                player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR,
+                WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED),
+                WarfareData.of(player).getBoolean(WarfareKeys.TEAM_KILL_SPECTATOR)));
+        if (denied != null) {
+            player.sendSystemMessage(Component.literal(denied).withStyle(ChatFormatting.RED));
+            return;
+        }
+        process(player, type);
+    }
+
+    /** Забыть игрока в антиспаме (выход с сервера). */
+    public static void forget(java.util.UUID player) {
+        GUARD.forget(player);
+    }
+
+    /**
+     * Возрождение игрока по типу спавна; вызывается из пакета (после проверки состояния) и из
+     * отложенного деплоя (состояние проверено при откладывании и сверено со снимком).
+     */
     public static void process(ServerPlayer player, String type) {
         {
             if (WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED)) {
@@ -81,12 +104,14 @@ public class PacketRespawnRequest {
             Map<String, BlockPos> mainSpawns = isBlue
                     ? data.match.blueSpawns
                     : (team.equals("RED") ? data.match.redSpawns : data.match.neutralSpawns);
-            if (type.equals("MAIN")) {
+            SpawnRules.SpawnType spawn = SpawnRules.parse(type);
+            if (spawn == null) return;
+            if (spawn.kind() == SpawnRules.SpawnType.Kind.MAIN) {
                 if (mainSpawns.containsKey(currentDim)) {
                     targetPos = mainSpawns.get(currentDim);
                     useCustomSpawn = true;
                 }
-            } else if (type.equals("RALLY")) {
+            } else if (spawn.kind() == SpawnRules.SpawnType.Kind.RALLY) {
                 String pName = player.getScoreboardName();
                 WarfareWorldData.Squad mySquad = getPlayerSquad(pName, data);
                 if (mySquad != null && mySquad.rallyPos != null) {
@@ -119,63 +144,52 @@ public class PacketRespawnRequest {
                                         .withStyle(ChatFormatting.YELLOW));
                     }
                 }
-            } else if (type.startsWith("HUB")) {
-                String[] parts = type.split(":");
-                if (parts.length == 4) {
-                    try {
-                        BlockPos reqPos = new BlockPos(
-                                Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
+            } else if (spawn.kind() == SpawnRules.SpawnType.Kind.HUB) {
+                BlockPos reqPos = new BlockPos(spawn.x(), spawn.y(), spawn.z());
 
-                        for (WarfareWorldData.HubInfo h : data.structures.hubs) {
-                            if (h.pos.equals(reqPos) && h.team.equalsIgnoreCase(team) && h.constructed) {
-                                int hubRadius = (Integer) WarfareConfig.HUB_BLOCK_RADIUS.get();
-                                int hubEnemiesReq = (Integer) WarfareConfig.HUB_BLOCK_ENEMY_COUNT.get();
-                                int enemyCount = GameLogicEvents.getEnemyCount(level, reqPos, team);
-                                if ((h.isBlocked || enemyCount >= hubEnemiesReq) && !player.isCreative()) {
-                                    player.sendSystemMessage(Component.literal("Спавн невозможен: ФОБ ПОД УГРОЗОЙ!")
-                                            .withStyle(ChatFormatting.RED));
-                                    return;
-                                }
-
-                                boolean spawnCosts = (Boolean) WarfareConfig.HUB_SPAWN_COSTS_MATERIALS.get();
-                                int spawnCost = (Integer) WarfareConfig.HUB_SPAWN_MATERIAL_COST.get();
-                                if (spawnCosts) {
-                                    level.getChunkSource().getChunk(reqPos.getX() >> 4, reqPos.getZ() >> 4, true);
-                                    if (!(level.getBlockEntity(reqPos) instanceof HubBlockEntity hubBe)) {
-                                        player.sendSystemMessage(
-                                                Component.literal("Спавн невозможен: блок ФОБ отсутствует!")
-                                                        .withStyle(ChatFormatting.RED));
-                                        return;
-                                    }
-
-                                    if (hubBe.getMaterials() < spawnCost) {
-                                        player.sendSystemMessage(
-                                                Component.literal("Спавн невозможен: не хватает материалов! ("
-                                                                + hubBe.getMaterials() + "/" + spawnCost + ")")
-                                                        .withStyle(ChatFormatting.RED));
-                                        return;
-                                    }
-
-                                    hubBe.consumeMaterials(spawnCost);
-                                    h.materials = hubBe.getMaterials();
-                                    data.setDirty();
-                                    PacketHandler.sendToAllClients(level, data);
-                                }
-
-                                targetPos = findRandomSafeSpawn(level, reqPos, 10);
-                                useCustomSpawn = true;
-                                if (targetPos == null) {
-                                    targetPos = mainSpawns.get(currentDim);
-                                    player.sendSystemMessage(Component.literal(
-                                                    "Спавн у ФОБ заблокирован! Перенаправление на основную базу.")
-                                            .withStyle(ChatFormatting.YELLOW));
-                                }
-                                break;
-                            }
+                for (WarfareWorldData.HubInfo h : data.structures.hubs) {
+                    if (h.pos.equals(reqPos) && h.team.equalsIgnoreCase(team) && h.constructed) {
+                        int hubRadius = (Integer) WarfareConfig.HUB_BLOCK_RADIUS.get();
+                        int hubEnemiesReq = (Integer) WarfareConfig.HUB_BLOCK_ENEMY_COUNT.get();
+                        int enemyCount = GameLogicEvents.getEnemyCount(level, reqPos, team);
+                        if ((h.isBlocked || enemyCount >= hubEnemiesReq) && !player.isCreative()) {
+                            player.sendSystemMessage(Component.literal("Спавн невозможен: ФОБ ПОД УГРОЗОЙ!")
+                                    .withStyle(ChatFormatting.RED));
+                            return;
                         }
-                    } catch (Exception ex) {
-                        com.pwp.api.util.LogOnce.warn(
-                                PWP_LOG, "PacketRespawnRequest:148", "PacketRespawnRequest.handle: исключение", ex);
+
+                        boolean spawnCosts = (Boolean) WarfareConfig.HUB_SPAWN_COSTS_MATERIALS.get();
+                        int spawnCost = (Integer) WarfareConfig.HUB_SPAWN_MATERIAL_COST.get();
+                        if (spawnCosts) {
+                            level.getChunkSource().getChunk(reqPos.getX() >> 4, reqPos.getZ() >> 4, true);
+                            if (!(level.getBlockEntity(reqPos) instanceof HubBlockEntity hubBe)) {
+                                player.sendSystemMessage(Component.literal("Спавн невозможен: блок ФОБ отсутствует!")
+                                        .withStyle(ChatFormatting.RED));
+                                return;
+                            }
+
+                            if (hubBe.getMaterials() < spawnCost) {
+                                player.sendSystemMessage(Component.literal("Спавн невозможен: не хватает материалов! ("
+                                                + hubBe.getMaterials() + "/" + spawnCost + ")")
+                                        .withStyle(ChatFormatting.RED));
+                                return;
+                            }
+
+                            hubBe.consumeMaterials(spawnCost);
+                            h.materials = hubBe.getMaterials();
+                            data.setDirty();
+                            PacketHandler.sendToAllClients(level, data);
+                        }
+
+                        targetPos = findRandomSafeSpawn(level, reqPos, 10);
+                        useCustomSpawn = true;
+                        if (targetPos == null) {
+                            targetPos = mainSpawns.get(currentDim);
+                            player.sendSystemMessage(
+                                    Component.literal("Спавн у ФОБ заблокирован! Перенаправление на основную базу.")
+                                            .withStyle(ChatFormatting.YELLOW));
+                        }
+                        break;
                     }
                 }
             }

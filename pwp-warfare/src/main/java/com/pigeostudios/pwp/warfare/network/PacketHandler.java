@@ -28,8 +28,10 @@ public class PacketHandler {
      * 2 — удалён PacketApiAction (выдача любого скина по запросу клиента).
      * 3 — этап 2: запросы данных — единая система core-client (удалены PacketRequestData/
      * PacketSendData), действия отряда — по пакету на действие (network/squad).
+     * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
+     * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "3";
+    private static final String PROTOCOL_VERSION = "4";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -56,12 +58,6 @@ public class PacketHandler {
                 PacketApplyMarker::encode,
                 PacketApplyMarker::decode,
                 PacketApplyMarker::handle);
-        INSTANCE.registerMessage(
-                id++,
-                PacketRespawnRequest.class,
-                PacketRespawnRequest::encode,
-                PacketRespawnRequest::decode,
-                PacketRespawnRequest::handle);
         INSTANCE.registerMessage(
                 id++,
                 PacketDebugSpawnRally.class,
@@ -364,7 +360,9 @@ public class PacketHandler {
                 PacketDroneDeployState::decode,
                 PacketDroneDeployState::handle);
         // Сеть v2 (record-DTO, проверка на сервере). Новые пакеты — только в конец.
-        com.pigeostudios.pwp.warfare.squad.SquadPackets.register(new com.pwp.api.net.Net.Registrar(INSTANCE, id));
+        com.pwp.api.net.Net.Registrar v2 = new com.pwp.api.net.Net.Registrar(INSTANCE, id);
+        com.pigeostudios.pwp.warfare.squad.SquadPackets.register(v2);
+        v2.c2s(PacketRespawnRequest.class, PacketRespawnRequest::encode, PacketRespawnRequest::decode);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
