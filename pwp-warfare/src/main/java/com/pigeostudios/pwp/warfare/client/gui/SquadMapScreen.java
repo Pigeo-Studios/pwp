@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pwp.api.util.Parse;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
@@ -271,10 +272,8 @@ public class SquadMapScreen extends Screen {
             BiConsumer<String, String> pathCb = (cat, icon) -> {
                 int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
                 if ("cmd_squads".equals(cat)) {
-                    try {
-                        int squadId = Integer.parseInt(icon);
-                        startSquadPath(wx2, wz2, squadId);
-                    } catch (NumberFormatException e) { /* ignore */ }
+                    int squadId = Parse.intOr(icon, Integer.MIN_VALUE);
+                    if (squadId != Integer.MIN_VALUE) startSquadPath(wx2, wz2, squadId);
                     ctx.close();
                 } else if ("arrow".equals(icon) || "player_self".equals(icon)) {
                     if ("team".equals(cat)) startPath(wx2, wz2, map.pathGroups());

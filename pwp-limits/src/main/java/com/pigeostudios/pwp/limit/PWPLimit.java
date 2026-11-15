@@ -11,6 +11,7 @@ import net.minecraftforge.fml.config.IConfigSpec;
 // Регистрирует серверную конфигурацию и экран настроек на клиенте
 @Mod(value="pwplimit")
 public class PWPLimit {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PWPLimit.class);
     public static final String MODID = "pwplimit";
 
     public PWPLimit() {
@@ -18,6 +19,6 @@ public class PWPLimit {
         ModLoadingContext.get().registerConfig(net.minecraftforge.fml.config.ModConfig.Type.SERVER, (IConfigSpec)ModConfig.SPEC);
         // Загрузка экрана настроек только на клиенте
         DistExecutor.unsafeRunWhenOn((Dist)Dist.CLIENT, () -> ClientRegistration::registerConfigScreen);
-        System.out.println("PWP: Limits loaded with SERVER config!");
+        LOG.info("PWP Limits загружен с серверным конфигом");
     }
 }

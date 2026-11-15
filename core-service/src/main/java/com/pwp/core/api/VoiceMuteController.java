@@ -9,6 +9,7 @@ import io.javalin.Javalin;
 import java.util.List;
 
 public class VoiceMuteController {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoiceMuteController.class);
 
     public VoiceMuteController(Javalin app) {
         app.post("/api/v1/voicemute", ctx -> {
@@ -28,7 +29,7 @@ public class VoiceMuteController {
                         ? new java.sql.Timestamp(expiresAt) : null;
                 PunishmentRepository.addRecord(req.uuid, "VOICE_MUTE", req.reason,
                         req.mutedByUuid, durationMin, expiresTs);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { PWP_LOG.warn("VoiceMuteController.VoiceMuteController: исключение", ignored); }
             ctx.json(ApiResponse.ok("muted"));
         });
 
@@ -42,7 +43,7 @@ public class VoiceMuteController {
             try {
                 PunishmentRepository.addRecord(req.uuid, "VOICE_UNMUTE", null,
                         req.unmutedByUuid, null, null);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { PWP_LOG.warn("VoiceMuteController.VoiceMuteController: исключение", ignored); }
             ctx.json(ApiResponse.ok("unmuted"));
         });
 

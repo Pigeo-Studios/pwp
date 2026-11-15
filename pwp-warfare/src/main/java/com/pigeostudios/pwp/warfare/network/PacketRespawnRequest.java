@@ -27,6 +27,7 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° РЅР° РІРѕР·СЂРѕР¶РґРµРЅРёРµ: РіР»Р°РІРЅР°СЏ Р±Р°Р·Р°, С‚РѕС‡РєР° СЃР±РѕСЂР° РёР»Рё FOB
 // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РІС‹Р±РѕСЂ С‚РѕС‡РєРё РїРѕСЏРІР»РµРЅРёСЏ Рё РїСЂРёРјРµРЅРµРЅРёРµ РєРёС‚Р°
 public class PacketRespawnRequest {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketRespawnRequest.class);
    private final String type;
 
    public PacketRespawnRequest(String type) {
@@ -145,8 +146,7 @@ public class PacketRespawnRequest {
                                  break;
                               }
                            }
-                        } catch (Exception var23) {
-                        }
+                        } catch (Exception var23) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "PacketRespawnRequest:148", "PacketRespawnRequest.handle: исключение", var23); }
                      }
                   }
 

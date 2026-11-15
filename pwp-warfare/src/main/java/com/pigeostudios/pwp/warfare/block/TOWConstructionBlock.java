@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 // Блок строительства TOW
 // При завершении строительства спаунит сущность TOW из мода Superb Warfare
 public class TOWConstructionBlock extends BaseEntityBlock {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(TOWConstructionBlock.class);
    // Направление строительства
    public static final DirectionProperty FACING = DirectionProperty.create("facing", Plane.HORIZONTAL);
    public static final BooleanProperty VALID = BooleanProperty.create("valid");
@@ -94,10 +95,10 @@ public class TOWConstructionBlock extends BaseEntityBlock {
             entity.setYRot(yaw);
             level.addFreshEntity(entity);
          } else {
-            System.err.println("PWP Warfare: Failed to create entity 'superbwarfare:tow'");
+            LOG.error("Не удалось создать сущность superbwarfare:tow");
          }
       } else {
-         System.err.println("PWP Warfare: EntityType 'superbwarfare:tow' not found!");
+         LOG.error("Тип сущности superbwarfare:tow не найден");
       }
 
       level.removeBlock(pos, false);

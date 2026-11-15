@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class ConfigScreen extends Screen {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ConfigScreen.class);
     private final Screen lastScreen;
     private EditBox cooldownInput;
 
@@ -36,7 +37,10 @@ public class ConfigScreen extends Screen {
         try {
             double value = Double.parseDouble(this.cooldownInput.getValue());
             ModConfig.JUMP_COOLDOWN_SECONDS.set(value);
-        } catch (Exception ignored) {}
+        } catch (NumberFormatException e) {
+            // Некорректный ввод — значение не меняем, причину видно в логе
+            LOG.warn("Кулдаун прыжка: не число «{}»", this.cooldownInput.getValue(), e);
+        }
         ModConfig.SPEC.save();
         if (this.minecraft != null) {
             this.minecraft.setScreen(this.lastScreen);

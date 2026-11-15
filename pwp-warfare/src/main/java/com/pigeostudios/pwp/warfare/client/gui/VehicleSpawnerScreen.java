@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pwp.api.util.Parse;
 import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketUpdateSpawner;
@@ -35,8 +36,12 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
       this.yawField.setValue(String.valueOf((int)((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw));
       this.yawField.setFilter(s -> s.matches("-?\\d*"));
       this.yawField.setResponder(val -> {
-         try { ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw = Float.parseFloat(val); this.sendUpdatePacket(); }
-         catch (Exception var3x) {}
+         // Промежуточный ввод («», «-») пропускаем — обновляем только корректное число
+         float yaw = Parse.floatOr(val, Float.NaN);
+         if (!Float.isNaN(yaw)) {
+            ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw = yaw;
+            this.sendUpdatePacket();
+         }
       });
       this.addRenderableWidget(this.yawField);
       this.vehicleIdField = new EditBox(PWPTheme.Fonts.display(), x + 35, y + 20, 80, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"));
@@ -66,13 +71,12 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
 
    private void onTimeFieldChanged(String value, boolean isInitial) {
       if (!value.isEmpty()) {
-         try {
-            int time = Integer.parseInt(value);
-            if (time < 0) time = 0;
-            if (isInitial) { ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings = time; }
-            else { ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = time; }
-            this.sendUpdatePacket();
-         } catch (NumberFormatException var4) {}
+         int time = Parse.intOr(value, Integer.MIN_VALUE);
+         if (time == Integer.MIN_VALUE) return; // не число — ждём корректный ввод
+         if (time < 0) time = 0;
+         if (isInitial) { ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings = time; }
+         else { ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = time; }
+         this.sendUpdatePacket();
       }
    }
 
@@ -127,8 +131,7 @@ public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawner
    }
 
    private void adjustYaw(float amount) {
-      float current = 0.0F;
-      try { current = Float.parseFloat(this.yawField.getValue()); } catch (Exception var4) {}
+      float current = Parse.floatOr(this.yawField.getValue(), 0.0F);
       float next = (current + amount) % 360.0F;
       if (next < 0.0F) next += 360.0F;
       this.yawField.setValue(String.valueOf((int)next));

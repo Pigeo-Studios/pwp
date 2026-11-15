@@ -17,6 +17,7 @@ import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class PacketSaveFactionVehicle {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketSaveFactionVehicle.class);
     private final String faction;
     private final String vehicleName;
     private final String displayName;
@@ -88,7 +89,7 @@ public class PacketSaveFactionVehicle {
                         if (stack.hasTag()) {
                             try {
                                 itemData.add("tag", PacketSaveFactionKit.nbtToJson(stack.getTag()));
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) { PWP_LOG.warn("PacketSaveFactionVehicle.handle: исключение", ignored); }
                         }
                         itemJson.add("item", itemData);
                         itemsArray.add(itemJson);

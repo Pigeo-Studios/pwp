@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VoteTabRenderer {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteTabRenderer.class);
 
     private enum Phase { IDLE, MAP, MODE, FACTION, FINISHED, MATCH }
 
@@ -698,7 +699,7 @@ public class VoteTabRenderer {
                     try {
                         var conn = Minecraft.getInstance().player.connection;
                         if (conn != null) conn.sendCommand("votefaction " + blueId + " " + redId);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) { PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored); }
                     votFact1 = selFact1; votFact2 = selFact2;
                     factionPerTeamBars();
                     return true;
@@ -713,7 +714,7 @@ public class VoteTabRenderer {
                         try {
                             var conn = Minecraft.getInstance().player.connection;
                             if (conn != null) conn.sendCommand(cmd + cmdId);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) { PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored); }
                         if (currentPhase == Phase.MAP) { votMap = sel; recalc(mapOpts); }
                         else { votMode = sel; recalc(modeOpts); }
                         return true;
@@ -731,7 +732,7 @@ public class VoteTabRenderer {
                 try {
                     var conn = Minecraft.getInstance().player.connection;
                     if (conn != null) conn.sendCommand("pwp");
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored); }
                 return true;
             }
         }

@@ -19,6 +19,7 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = "sbwchunkload", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SimulationDistanceWatcher {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(SimulationDistanceWatcher.class);
 
     private static int ticketLevel = -1;
     private static int lastSimulationDistance = -1;
@@ -41,8 +42,7 @@ public final class SimulationDistanceWatcher {
         if (level != ticketLevel || simDistance != lastSimulationDistance) {
             lastSimulationDistance = simDistance;
             ticketLevel = level;
-            System.out.println("[sbwchunkload] ticketLevel=" + ticketLevel
-                + " (simulationDistance=" + simDistance + ")");
+            LOG.info("ticketLevel={} (simulationDistance={})", ticketLevel, simDistance);
         }
         for (var entry : server.getAllLevels()) {
             ChunkTicketManager.of(entry).setTicketLevel(ticketLevel);

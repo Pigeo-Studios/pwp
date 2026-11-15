@@ -12,6 +12,7 @@ import net.minecraftforge.client.gui.widget.ForgeSlider;
 import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
 
 public class WarfareConfigScreen extends Screen {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(WarfareConfigScreen.class);
    private final Screen parentScreen;
    private EditBox hubSpawnCostBox;
    private EditBox hubResupplyBox;
@@ -158,8 +159,7 @@ public class WarfareConfigScreen extends Screen {
          WarfareConfig.RED_TEAM_CUSTOM_NAME.set(this.redNameBox.getValue());
          WarfareConfig.REVIVE_ITEM.set(this.reviveItemBox.getValue());
          WarfareConfig.SPEC.save();
-      } catch (Exception var2) {
-      }
+      } catch (Exception var2) { PWP_LOG.warn("WarfareConfigScreen.saveValues: исключение", var2); }
    }
 
    public void render(GuiGraphics gui, int mx, int my, float pt) {

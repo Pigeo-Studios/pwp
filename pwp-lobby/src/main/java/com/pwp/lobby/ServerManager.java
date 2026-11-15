@@ -198,7 +198,7 @@ public class ServerManager {
                 instance.failed = true;
                 instance.error = e.getMessage();
                 instance.phase = null;
-                try { if (Files.exists(serverDir)) deleteDirectory(serverDir); } catch (IOException ignored) {}
+                try { if (Files.exists(serverDir)) deleteDirectory(serverDir); } catch (IOException ignored) { log.warn("ServerManager.startMatchServer: исключение", ignored); }
             }
         });
 
@@ -221,7 +221,7 @@ public class ServerManager {
             if (si.process == null) continue; // still starting (copying template/map)
             if (!si.process.isAlive() && !si.failed) {
                 int exitCode = -1;
-                try { exitCode = si.process.exitValue(); } catch (Exception ignored) {}
+                try { exitCode = si.process.exitValue(); } catch (Exception ignored) { log.warn("ServerManager.tick: исключение", ignored); }
                 log.warn("Server {} process died prematurely (exitCode={})", si.serverId, exitCode);
                 // Read last lines of match server log for diagnostics
                 Path logFile = si.directory.resolve("logs/latest.log");
@@ -232,7 +232,7 @@ public class ServerManager {
                         for (int i = start; i < lines.size(); i++) {
                             log.warn("MATCH_LOG[{}]: {}", si.serverId, lines.get(i));
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) { log.warn("ServerManager.tick: исключение", ignored); }
                 } else {
                     log.warn("MATCH_LOG[{}]: logs/latest.log not found", si.serverId);
                 }
@@ -256,7 +256,7 @@ public class ServerManager {
                                 break;
                             }
                         }
-                    } catch (IOException ignored) {}
+                    } catch (IOException ignored) { log.warn("ServerManager.tick: исключение", ignored); }
                 }
                 // Method 2: fallback — port open + 55s (covers ~44s from port to "Done")
                 if (si.logDoneAt == 0 && si.portOpenAt == 0) {
@@ -264,7 +264,7 @@ public class ServerManager {
                         s.connect(new InetSocketAddress("127.0.0.1", si.port), 200);
                         si.portOpenAt = System.currentTimeMillis();
                         log.info("Server {} port open, fallback boot in 55s", si.serverId);
-                    } catch (IOException ignored) {}
+                    } catch (IOException ignored) { log.warn("ServerManager.tick: исключение", ignored); }
                 }
                 boolean logReady  = si.logDoneAt  != 0 && now - si.logDoneAt  >= 2000;
                 boolean portReady = si.portOpenAt != 0 && now - si.portOpenAt >= 55000;
@@ -311,7 +311,7 @@ public class ServerManager {
             try { si.process.waitFor(10, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
             if (si.process.isAlive()) si.process.destroyForcibly();
         }
-        try { deleteDirectory(si.directory); log.info("Cleaned up {}", si.directory.getFileName()); } catch (IOException ignored) {}
+        try { deleteDirectory(si.directory); log.info("Cleaned up {}", si.directory.getFileName()); } catch (IOException ignored) { log.warn("ServerManager.stopServer: исключение", ignored); }
     }
 
     public static ServerInstance getServer(int serverId) {

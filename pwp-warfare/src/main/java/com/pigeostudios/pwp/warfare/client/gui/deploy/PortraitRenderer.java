@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 public class PortraitRenderer {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PortraitRenderer.class);
 
     private final ItemStack[] saved = new ItemStack[6];
     private boolean inSwap;
@@ -45,7 +46,7 @@ public class PortraitRenderer {
             gui.pose().pushPose();
             try {
                 InventoryScreen.renderEntityInInventoryFollowsMouse(gui, entityX, entityY, sc, lx, ly, p);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "PortraitRenderer:48", "PortraitRenderer.render: исключение", ignored); }
             gui.pose().popPose();
             gui.disableScissor();
 

@@ -31,6 +31,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 
 @ForgeVoicechatPlugin
 public class WarfareVoicechatPlugin implements VoicechatPlugin {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(WarfareVoicechatPlugin.class);
    private static VoicechatServerApi serverApi;
    private static final Map<UUID, Channel> playerChannels = new ConcurrentHashMap<>();
    private static final Map<UUID, Long> lastVoiceActivity = new ConcurrentHashMap<>();
@@ -237,7 +238,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             }
          }
       } catch (Exception e) {
-         System.err.println("[PWP Warfare] onMicPacket failed: " + e);
+         LOG.warn("onMicPacket: ошибка обработки голосового пакета", e);
       }
    }
 
@@ -266,7 +267,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             return;
          }
       } catch (Exception e) {
-         System.err.println("[PWP Warfare] onPlayerConnectedVoice failed: " + e);
+         LOG.warn("onPlayerConnectedVoice: ошибка", e);
       }
    }
 
@@ -286,7 +287,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
             invalidateMuteCache(sp.getUUID());
          }
       } catch (Exception e) {
-         System.err.println("[PWP Warfare] onPlayerDisconnected failed: " + e);
+         LOG.warn("onPlayerDisconnected: ошибка", e);
       }
    }
 

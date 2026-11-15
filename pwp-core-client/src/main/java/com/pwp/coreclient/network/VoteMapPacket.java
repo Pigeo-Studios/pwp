@@ -6,6 +6,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class VoteMapPacket {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteMapPacket.class);
 
     public final String mapName;
 
@@ -29,7 +30,7 @@ public class VoteMapPacket {
                     Class<?> vmClass = Class.forName("com.pwp.lobby.VotingManager");
                     java.util.UUID uuid = player.getUUID();
                     vmClass.getMethod("vote", java.util.UUID.class, String.class).invoke(null, uuid, msg.mapName);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { PWP_LOG.warn("VoteMapPacket.handle: исключение", ignored); }
             }
         });
         ctx.get().setPacketHandled(true);

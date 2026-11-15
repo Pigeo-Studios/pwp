@@ -205,7 +205,7 @@ public class AuthLibController {
                         PlayerRepository.setBan(pl.uuid, false, null);
                         return;
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { log.warn("AuthLibController.checkBan: исключение", ignored); }
             }
             throw new BanException("Banned");
         }

@@ -24,6 +24,7 @@ import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 // РћР±СЂР°Р±РѕС‚С‡РёРє РїРѕРїРѕР»РЅРµРЅРёСЏ Р·Р°РїР°СЃРѕРІ: РІС‹РґР°С‡Р° РєРёС‚РѕРІ, СЂРµСЃР°РїРїР»Р°Р№ РїСЂРµРґРјРµС‚РѕРІ,
 // СЂР°Р±РѕС‚Р° СЃ Curios API Рё РїСЂРёРјРµРЅРµРЅРёРµ РѕС‚Р»РѕР¶РµРЅРЅС‹С… РєРёС‚РѕРІ РїСЂРё СЂРµСЃРїР°РІРЅРµ
 public class ResupplyHandler {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(ResupplyHandler.class);
     // Р’С‹РґР°С‘С‚ РёРіСЂРѕРєСѓ РїРѕР»РЅС‹Р№ РЅР°Р±РѕСЂ РїСЂРµРґРјРµС‚РѕРІ РёР· СѓРєР°Р·Р°РЅРЅРѕРіРѕ РєРёС‚Р°
    public static void applyKitToPlayer(ServerPlayer player, WarfareWorldData.KitInfo kit) {
       Inventory pInv = player.getInventory();
@@ -114,8 +115,7 @@ public class ResupplyHandler {
                   }
                }
             });
-         } catch (Exception var2) {
-         }
+         } catch (Exception var2) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "ResupplyHandler:117", "ResupplyHandler.clearCurios: исключение", var2); }
       }
    }
 

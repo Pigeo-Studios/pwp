@@ -1,6 +1,7 @@
 package com.pwp.coreclient.gui.theme;
 
 public class PWPTheme {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PWPTheme.class);
 
     // ============================================================
     //  ЦВЕТА
@@ -145,9 +146,7 @@ public class PWPTheme {
                             (loc) -> (net.minecraft.client.gui.font.FontSet) fontSet, false);
                     }
                 }
-            } catch (Exception e) {
-                // fallback
-            }
+            } catch (Exception e) { PWP_LOG.warn("PWPTheme.display: исключение (fallback)", e); }
             return mc.font;
         }
 

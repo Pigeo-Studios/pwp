@@ -49,6 +49,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 // Обработчик режима размещения построек на клиенте
 // Отвечает за предпросмотр, вращение и подтверждение установки
 public class ClientPlacementHandler {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(ClientPlacementHandler.class);
    private static boolean isPlacing = false;
    private static int structureId = -1;
    private static float rotationY = 0.0F;
@@ -238,8 +239,7 @@ public class ClientPlacementHandler {
                            renderGhostBlock(mc, wallState, pose, 0, 0, 0);
                         }
                      }
-                  } catch (Exception var12) {
-                  }
+                  } catch (Exception var12) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "ClientPlacementHandler:241", "ClientPlacementHandler.onRenderLevel: исключение", var12); }
 
                   RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                   pose.popPose();

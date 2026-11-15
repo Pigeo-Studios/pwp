@@ -13,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NetworkController {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(NetworkController.class);
 
     private static final ConcurrentHashMap<String, ServerHeartbeat> heartbeats = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<String, Long> botHeartbeats = new ConcurrentHashMap<>();
@@ -109,7 +110,7 @@ public class NetworkController {
                     lastMatch.put("duration", last.durationSeconds);
                     lastMatch.put("endedAt", last.endedAt);
                 }
-            } catch (SQLException ignored) {}
+            } catch (SQLException ignored) { PWP_LOG.warn("NetworkController.NetworkController: исключение", ignored); }
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("servers", serverList);

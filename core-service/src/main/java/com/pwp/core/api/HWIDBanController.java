@@ -12,6 +12,7 @@ import java.sql.ResultSet;
 import java.util.*;
 
 public class HWIDBanController {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(HWIDBanController.class);
 
     public HWIDBanController(Javalin app) {
 
@@ -45,7 +46,7 @@ public class HWIDBanController {
                 ps.setString(1, "HWID BAN: " + (req.reason != null ? req.reason : ""));
                 ps.setString(2, req.hwid);
                 ps.executeUpdate();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { PWP_LOG.warn("HWIDBanController.HWIDBanController: исключение", ignored); }
 
             // Record history for affected accounts
             try (Connection c = DatabaseManager.getConnection();
@@ -58,10 +59,10 @@ public class HWIDBanController {
                             PunishmentRepository.addRecord(rs.getString("account_uuid"),
                                     "BAN", "HWID BAN: " + (req.reason != null ? req.reason : ""),
                                     adminUuid, null, null);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) { PWP_LOG.warn("HWIDBanController.HWIDBanController: исключение", ignored); }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { PWP_LOG.warn("HWIDBanController.HWIDBanController: исключение", ignored); }
 
             ctx.json(ApiResponse.ok("hwid banned"));
         });

@@ -20,6 +20,7 @@ import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class PacketSaveFactionKit {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketSaveFactionKit.class);
    private final String faction;
    private final String kitName;
    private final String team;
@@ -138,7 +139,7 @@ public class PacketSaveFactionKit {
                         CompoundTag tag = stack.getTag();
                         JsonObject tagJson = nbtToJson(tag);
                         if (tagJson != null) itemData.add("tag", tagJson);
-                     } catch (Exception ignored) {}
+                     } catch (Exception ignored) { PWP_LOG.warn("PacketSaveFactionKit.handle: исключение", ignored); }
                   }
 
                   itemJson.add("item", itemData);

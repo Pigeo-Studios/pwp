@@ -342,7 +342,7 @@ public class MatchStatsTracker {
             } catch (InterruptedException e) {
                 log.warn("Shutdown delay interrupted, halting immediately");
                 Thread.currentThread().interrupt();
-                try { server.halt(false); } catch (Exception ignored) {}
+                try { server.halt(false); } catch (Exception ignored) { log.warn("MatchStatsTracker.scheduleServerShutdown: исключение", ignored); }
             }
         }, "PWPMatchShutdown").start();
     }

@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 public class PWPConfigScreen extends Screen {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PWPConfigScreen.class);
     private final Screen parent;
     private EditBox medkitTimeBox;
     private EditBox thresholdBox;
@@ -48,7 +49,10 @@ public class PWPConfigScreen extends Screen {
             PWPConfig.MEDKIT_APPLY_TIME.set(Math.max(1, time));
             PWPConfig.BLEEDING_DAMAGE_THRESHOLD.set(Math.max(0.0, threshold));
             PWPConfig.BLEEDING_CHANCE.set(Math.max(0.0, Math.min(1.0, chance)));
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException e) {
+            // Некорректный ввод — настройки не меняем, причину видно в логе
+            LOG.warn("Настройки медицины не сохранены: некорректное число", e);
+        }
         this.minecraft.setScreen(this.parent);
     }
 

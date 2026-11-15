@@ -8,6 +8,7 @@ import com.pwp.coreclient.PlayerData;
 import java.util.UUID;
 
 public class ClientDataHandler {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(ClientDataHandler.class);
     private static final Gson GSON = new Gson();
 
     public static void handleData(String dataType, String jsonData) {
@@ -34,48 +35,48 @@ public class ClientDataHandler {
                     PlayerData.put(UUID.fromString(uuid), profile);
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleProfile: исключение", ignored); }
     }
 
     private static void handleLeaderboard(String json) {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.leaderboardData = data.has("data") ? data.getAsJsonObject("data") : null;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleLeaderboard: исключение", ignored); }
     }
 
     private static void handleSkins(String json) {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.skinsData = data.has("data") ? data.getAsJsonArray("data") : null;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleSkins: исключение", ignored); }
     }
 
     private static void handleFactions(String json) {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.factionsData = data.has("data") ? data.getAsJsonArray("data") : null;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleFactions: исключение", ignored); }
     }
 
     private static void handleFactionVehicles(String json) {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.factionVehiclesData = data.has("data") ? data.getAsJsonArray("data") : null;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleFactionVehicles: исключение", ignored); }
     }
 
     private static void handleFactionVehicle(String json) {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.factionVehicleDetail = data.has("data") ? data.getAsJsonObject("data") : null;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleFactionVehicle: исключение", ignored); }
     }
 
     private static void handleFactionKits(String json) {
         try {
             JsonObject data = GSON.fromJson(json, JsonObject.class);
             ClientData.factionKitsData = data.has("data") ? data.getAsJsonArray("data") : null;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("ClientDataHandler.handleFactionKits: исключение", ignored); }
     }
 }

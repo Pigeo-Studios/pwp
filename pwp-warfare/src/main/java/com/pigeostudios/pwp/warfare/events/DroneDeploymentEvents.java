@@ -53,6 +53,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 //   принудительный обрыв связи (handleSignalLoss) + дисконнект монитора.
 @EventBusSubscriber(modid = "pwpwarfare", bus = Bus.FORGE)
 public class DroneDeploymentEvents {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(DroneDeploymentEvents.class);
    private static final String[] DRONE_ENTITY_IDS = {
       "uncomplicatedfpv:fpv_drone",
       "uncomplicatedfpv:mavic_drone_no_drop",
@@ -395,9 +396,7 @@ public class DroneDeploymentEvents {
             }
          }
          com.pigeostudios.pwp.warfare.util.DroneCompat.setEnergyFull(drone);
-      } catch (Throwable ignored) {
-         // UFPV/SBW не загружены — без лоаута, но дрон жив.
-      }
+      } catch (Throwable ignored) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "DroneDeploymentEvents:398", "DroneDeploymentEvents.applySpawnLoadout: исключение (UFPV/SBW не загружены — без лоаута, но дрон жив.)", ignored); }
    }
 
    private static void quickLoad(Entity drone, String itemId, int count) {
@@ -596,8 +595,7 @@ public class DroneDeploymentEvents {
             com.pigeostudios.pwp.warfare.util.DroneCompat.quickLoadAttachment(drone, new ItemStack(item, 1));
             com.pigeostudios.pwp.warfare.util.DroneCompat.quickLoadAttachment(drone, new ItemStack(item, 1));
          }
-      } catch (Throwable ignored) {
-      }
+      } catch (Throwable ignored) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "DroneDeploymentEvents:599", "DroneDeploymentEvents.completeReload: исключение", ignored); }
 
       ServerLevel level = (ServerLevel) player.level();
       level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, drone.getX(), drone.getY() + 0.5, drone.getZ(), 6, 0.4, 0.3, 0.4, 0.02);

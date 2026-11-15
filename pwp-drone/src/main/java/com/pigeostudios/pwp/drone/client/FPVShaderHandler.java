@@ -11,6 +11,10 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 public class FPVShaderHandler {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(FPVShaderHandler.class);
+    /** Ошибка рефлексии повторяется каждый кадр — логируем только первую. */
+    private static boolean uniformErrorLogged = false;
+    private static boolean passesErrorLogged = false;
     private static PostChain shader;
     private static boolean loaded;
     private static boolean loadFailed;
@@ -36,10 +40,10 @@ public class FPVShaderHandler {
             }
             loaded = true;
             resolved = false;
-            System.out.println("[PWPDrone] FPV Shader loaded");
+            LOG.info("FPV-шейдер загружен");
         } catch (Exception e) {
             loadFailed = true;
-            System.err.println("[PWPDrone] FPV Shader load failed: " + e.getMessage());
+            LOG.warn("FPV-шейдер не загружен", e);
         }
     }
 
@@ -64,7 +68,7 @@ public class FPVShaderHandler {
             shader.process(partialTick);
             mc.getMainRenderTarget().bindWrite(false);
         } catch (Exception e) {
-            System.err.println("[PWPDrone] Shader render error: " + e.getMessage());
+            LOG.warn("FPV-шейдер: ошибка рендера, шейдер отключён", e);
             loaded = false;
             loadFailed = true;
             mc.getMainRenderTarget().bindWrite(false);
@@ -110,7 +114,12 @@ public class FPVShaderHandler {
                 if (uniform == null) continue;
                 cachedSetFloat.invoke(uniform, value);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            if (!uniformErrorLogged) {
+                uniformErrorLogged = true;
+                LOG.warn("FPV-шейдер: не удалось выставить uniform {} (повторы не логируются)", name, e);
+            }
+        }
     }
 
     private static void resolve() {
@@ -179,7 +188,7 @@ public class FPVShaderHandler {
                 }
             }
         } catch (Exception e) {
-            System.err.println("[PWPDrone] resolve error: " + e.getMessage());
+            LOG.warn("FPV-шейдер: ошибка разрешения методов через рефлексию", e);
         }
     }
 
@@ -193,7 +202,12 @@ public class FPVShaderHandler {
                     if (val instanceof List) return (List<?>) val;
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            if (!passesErrorLogged) {
+                passesErrorLogged = true;
+                LOG.warn("FPV-шейдер: не удалось прочитать проходы шейдера (повторы не логируются)", e);
+            }
+        }
         return null;
     }
 }

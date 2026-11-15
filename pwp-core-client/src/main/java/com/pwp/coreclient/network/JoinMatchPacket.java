@@ -6,6 +6,7 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public class JoinMatchPacket {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(JoinMatchPacket.class);
 
     public JoinMatchPacket() {}
 
@@ -22,7 +23,7 @@ public class JoinMatchPacket {
                 try {
                     Class<?> maClass = Class.forName("com.pwp.lobby.match.MatchAllocator");
                     maClass.getMethod("joinActiveMatch", net.minecraft.server.level.ServerPlayer.class).invoke(null, player);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { PWP_LOG.warn("JoinMatchPacket.handle: исключение", ignored); }
             }
         });
         ctx.get().setPacketHandled(true);

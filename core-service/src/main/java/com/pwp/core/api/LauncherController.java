@@ -125,7 +125,7 @@ public class LauncherController {
                 ps.setString(1, req.hwid);
                 ps.setString(2, playerUuid);
                 ps.executeUpdate();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { log.warn("LauncherController.LauncherController: исключение", ignored); }
             ctx.json(ApiResponse.ok("hwid saved"));
         });
 
@@ -342,7 +342,7 @@ public class LauncherController {
                         durationMinutes = parseDuration(durationStr);
                         expiresClause = "DATE_ADD(NOW(), INTERVAL " + durationMinutes + " MINUTE)";
                         displayDuration = formatDuration(durationMinutes);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) { log.warn("LauncherController.LauncherController: исключение", ignored); }
                 }
 
                 // Lookup target by UUID or nickname
@@ -413,7 +413,7 @@ public class LauncherController {
                         expiresTs = new java.sql.Timestamp(System.currentTimeMillis() + durationMinutes * 60000L);
                     }
                     PunishmentRepository.addRecord(uuid, "BAN", req.reason, req.adminUuid, durationMinutes, expiresTs);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { log.warn("LauncherController.LauncherController: исключение", ignored); }
 
                 ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "nickname", nickname, "duration", displayDuration)));
             } catch (Exception e) {
@@ -467,11 +467,11 @@ public class LauncherController {
                 // Полный разбан: снимаем HWID- и IP-баны устройства
                 try {
                     PlayerRepository.clearBans(uuid);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { log.warn("LauncherController.LauncherController: исключение", ignored); }
 
                 try {
                     PunishmentRepository.addRecord(uuid, "UNBAN", null, req.adminUuid, null, null);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { log.warn("LauncherController.LauncherController: исключение", ignored); }
 
                 if (tgId != null && tgId > 0) {
                     sendUnbanTelegram(tgId, nickname);
@@ -665,7 +665,7 @@ public class LauncherController {
             ps.setString(5, ip);
             ps.setInt(6, flags);
             ps.executeUpdate();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { log.warn("LauncherController.updateHwidHistory: исключение", ignored); }
     }
 
     private static String guessMime(String path) {

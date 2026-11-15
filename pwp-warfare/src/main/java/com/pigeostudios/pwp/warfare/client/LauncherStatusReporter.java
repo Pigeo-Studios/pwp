@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 // Лаунчер слушает этот порт и переводит RPC в состояния lobby/match/playing/idle.
 // Все ошибки молча игнорируются: без лаунчера мод работает как раньше.
 public class LauncherStatusReporter {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(LauncherStatusReporter.class);
     private static final String ENDPOINT = "http://127.0.0.1:42157/status";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "pwp-launcher-status");
@@ -95,9 +96,7 @@ public class LauncherStatusReporter {
             }
             conn.getResponseCode(); // дождаться ответа, чтобы соединение завершилось
             conn.disconnect();
-        } catch (Exception ignored) {
-            // Лаунчер не запущен или порт занят — не критично
-        }
+        } catch (Exception ignored) { PWP_LOG.warn("LauncherStatusReporter.post: исключение (Лаунчер не запущен или порт занят — не критично)", ignored); }
     }
 
     private static String jsonEscape(String s) {

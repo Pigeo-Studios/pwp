@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 
 public class PWPMainMenuScreen extends Screen {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PWPMainMenuScreen.class);
 
     private final long openTime;
     private boolean connecting;
@@ -105,7 +106,7 @@ public class PWPMainMenuScreen extends Screen {
             Class<?> vc = Class.forName("com.replaymod.replay.gui.screen.GuiReplayViewer");
             Object viewer = vc.getConstructor(rc).newInstance(mod);
             vc.getMethod("display").invoke(viewer);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("PWPMainMenuScreen.openReplayViewer: исключение", ignored); }
     }
 
     private void detectReplayMod() {
@@ -122,7 +123,7 @@ public class PWPMainMenuScreen extends Screen {
                 .getMethod("get", sk)
                 .invoke(reg, key);
             replayModAvailable = true;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("PWPMainMenuScreen.detectReplayMod: исключение", ignored); }
     }
 
     @Override
@@ -235,7 +236,7 @@ public class PWPMainMenuScreen extends Screen {
                 .getMethod("set", sk, Object.class)
                 .invoke(reg, key, replayRecording);
             reg.getClass().getMethod("save").invoke(reg);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { PWP_LOG.warn("PWPMainMenuScreen.toggleReplayRecording: исключение", ignored); }
     }
 
     private static float animFade(float elapsed, long delay, long duration) {

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.security.SecureRandom;
 
 public class PlayerRepository {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PlayerRepository.class);
 
     public static Player findByUuid(String uuid) throws SQLException {
         String sql = "SELECT * FROM players WHERE uuid = ?";
@@ -798,7 +799,7 @@ public class PlayerRepository {
         if (p != null) return p;
         p = findByEmail(query);
         if (p != null) return p;
-        try { return findByTelegramId(Long.parseLong(query)); } catch (Exception ignored) {}
+        try { return findByTelegramId(Long.parseLong(query)); } catch (Exception ignored) { PWP_LOG.warn("PlayerRepository.findAny: исключение", ignored); }
         return null;
     }
 

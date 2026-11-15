@@ -153,8 +153,7 @@ public class GameLogicEvents {
 
                try {
                   preventAll = (Boolean)WarfareConfig.PREVENT_ALL_ITEM_DROPS.get();
-               } catch (Exception var5) {
-               }
+               } catch (Exception var5) { com.pwp.api.util.LogOnce.warn(LOGGER, "GameLogicEvents:156", "GameLogicEvents.onItemToss: исключение", var5); }
 
                if (preventAll) {
                   event.setCanceled(true);
@@ -484,7 +483,7 @@ public class GameLogicEvents {
                                        else if (srcEnt instanceof net.minecraft.world.entity.projectile.Projectile proj
                                                 && proj.getOwner() instanceof ServerPlayer sp) destroyer = sp;
                                     }
-                                 } catch (Exception ignored) {}
+                                 } catch (Exception ignored) { com.pwp.api.util.LogOnce.warn(LOGGER, "GameLogicEvents:487", "GameLogicEvents.onServerTick: исключение", ignored); }
                               }
                               if (destroyer != null) {
                                  MatchStatsTracker.get().recordVehicleDestroyed(destroyer, wreck);
@@ -1694,8 +1693,7 @@ public class GameLogicEvents {
          if (result instanceof Float health) {
             return health;
          }
-      } catch (Exception ignored) {
-      }
+      } catch (Exception ignored) { com.pwp.api.util.LogOnce.warn(LOGGER, "GameLogicEvents:1697", "GameLogicEvents.getVehicleHealth: исключение", ignored); }
       return Float.MAX_VALUE;
    }
 

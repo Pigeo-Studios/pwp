@@ -37,6 +37,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 // РЎРѕС…СЂР°РЅСЏРµРјС‹Рµ РґР°РЅРЅС‹Рµ РјРёСЂР° РґР»СЏ РёРіСЂРѕРІРѕРіРѕ СЂРµР¶РёРјР° В«Advance And SecureВ»
 // РҐСЂР°РЅРёС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ Р·Р°С…РІР°С‚Р° С‚РѕС‡РµРє, РѕС‚СЂСЏРґРѕРІ, FOB, С‚РµС…РЅРёРєРё Рё РЅР°СЃС‚СЂРѕРµРє РёРіСЂС‹
 public class WarfareWorldData extends SavedData {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(WarfareWorldData.class);
    public List<WarfareWorldData.CapturePoint> capturePoints = new ArrayList<>();
    public List<BlockPos> blueRallies = new ArrayList<>();
    public List<BlockPos> redRallies = new ArrayList<>();
@@ -124,11 +125,11 @@ public class WarfareWorldData extends SavedData {
                             images.add(content.substring(start, end));
                          }
                       }
-                   } catch (Exception ignored) {}
+                   } catch (Exception ignored) { PWP_LOG.warn("WarfareWorldData.getAvailableMapImages: исключение", ignored); }
                 }
              });
           }
-       } catch (Exception ignored) {}
+       } catch (Exception ignored) { PWP_LOG.warn("WarfareWorldData.getAvailableMapImages: исключение", ignored); }
        return images;
     }
 
@@ -169,7 +170,7 @@ public class WarfareWorldData extends SavedData {
       try {
          Gson gson = new Gson();
          loadKitsFromApi(team, gson.fromJson(jsonString, JsonObject.class));
-      } catch (Exception ignored) {}
+      } catch (Exception ignored) { PWP_LOG.warn("WarfareWorldData.loadKitsFromApi: исключение", ignored); }
    }
 
     public void loadFactionVehiclesFromApi(String team, JsonObject apiResponse) {
@@ -212,7 +213,7 @@ public class WarfareWorldData extends SavedData {
                             }
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { PWP_LOG.warn("WarfareWorldData.loadFactionVehiclesFromApi: исключение", ignored); }
             }
             target.put(veh.vehicleName, veh);
         }

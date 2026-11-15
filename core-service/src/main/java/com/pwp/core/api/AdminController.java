@@ -40,7 +40,7 @@ public class AdminController {
                     pl.isBanned = false;
                     pl.banReason = null;
                     pl.bannedUntil = null;
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
             }
             Map<String, Object> m = new HashMap<>();
             m.put("uuid", pl.uuid); m.put("login", pl.login); m.put("nickname", pl.nickname);
@@ -66,7 +66,7 @@ public class AdminController {
                 try {
                     durationMinutes = LauncherController.parseDuration(req.duration);
                     expiresClause = "DATE_ADD(NOW(), INTERVAL " + durationMinutes + " MINUTE)";
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
             }
             java.sql.Timestamp expiresTs = durationMinutes != null
                     ? new java.sql.Timestamp(System.currentTimeMillis() + durationMinutes * 60000L) : null;
@@ -76,7 +76,7 @@ public class AdminController {
             try {
                 PunishmentRepository.addRecord(req.uuid, "BAN", req.reason,
                         ctx.attribute("adminUuid"), durationMinutes, expiresTs);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
             ctx.json(ApiResponse.ok("user banned"));
         });
 
@@ -90,11 +90,11 @@ public class AdminController {
             PlayerRepository.log(req.uuid, "unban", ctx.ip(), null);
             try {
                 PlayerRepository.clearBans(req.uuid);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
             try {
                 PunishmentRepository.addRecord(req.uuid, "UNBAN", null,
                         ctx.attribute("adminUuid"), null, null);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
             ctx.json(ApiResponse.ok("user unbanned"));
         });
 
@@ -529,7 +529,7 @@ public class AdminController {
                             try {
                                 PlayerRepository.setBan(rs.getString("uuid"), false, null);
                                 isBanned = false;
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
                         }
                         m.put("is_banned", isBanned);
                         m.put("ban_reason", isBanned ? rs.getString("ban_reason") : null);

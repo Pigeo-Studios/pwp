@@ -1,5 +1,6 @@
 package com.pwp.coreserver;
 
+import com.pwp.api.util.Parse;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.net.Inet4Address;
@@ -46,7 +47,9 @@ public final class TransferHosts {
         String ip = null;
         try {
             ip = player.getIpAddress();
-        } catch (Exception ignored) {
+        } catch (RuntimeException e) {
+            // Соединение уже закрыто — считаем игрока внешним (домен работает всегда)
+            CoreServerMod.log.warn("Не удалось получить IP игрока {}", player.getGameProfile().getName(), e);
         }
         if (isPrivateIp(ip)) {
             return getLanHost();
@@ -86,11 +89,8 @@ public final class TransferHosts {
         if (ip.startsWith("172.")) {
             int dot2 = ip.indexOf('.', 4);
             if (dot2 > 4) {
-                try {
-                    int second = Integer.parseInt(ip.substring(4, dot2));
-                    return second >= 16 && second <= 31;
-                } catch (NumberFormatException ignored) {
-                }
+                int second = Parse.intOr(ip.substring(4, dot2), -1);
+                return second >= 16 && second <= 31;
             }
         }
         return false;

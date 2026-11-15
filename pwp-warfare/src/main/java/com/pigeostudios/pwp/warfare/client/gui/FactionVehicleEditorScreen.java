@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pwp.api.util.Parse;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.client.ClientData;
@@ -19,6 +20,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
 public class FactionVehicleEditorScreen extends Screen {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(FactionVehicleEditorScreen.class);
     private final String faction;
     private final String editVehicleName;
     private boolean loading = true;
@@ -107,7 +109,7 @@ public class FactionVehicleEditorScreen extends Screen {
         yawField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 290, 50, 42, 16, Component.literal(""));
         yawField.setValue(String.valueOf((int) yaw));
         yawField.setFilter(s -> s.matches("-?\\d*"));
-        yawField.setResponder(val -> { try { yaw = Float.parseFloat(val); } catch (Exception ignored) {} });
+        yawField.setResponder(val -> yaw = Parse.floatOr(val, yaw));
         addRenderableWidget(yawField);
 
         addRenderableWidget(new PWPButton(fieldLeft + 334, 50, 16, 16, Component.literal("\u21BA"), b -> adjustYaw(-45.0F), PWPButton.Style.PRIMARY));
@@ -116,14 +118,14 @@ public class FactionVehicleEditorScreen extends Screen {
         addRenderableWidget(new PWPButton(fieldLeft + 62, 74, 16, 16, Component.literal("-"), b -> adjustTimer(false, -5), PWPButton.Style.PRIMARY));
         respawnTimeField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 80, 74, 50, 16, Component.literal(""));
         respawnTimeField.setValue(String.valueOf(respawnTime));
-        respawnTimeField.setResponder(val -> { try { respawnTime = Math.max(0, Integer.parseInt(val)); } catch (Exception ignored) {} });
+        respawnTimeField.setResponder(val -> respawnTime = Math.max(0, Parse.intOr(val, respawnTime)));
         addRenderableWidget(respawnTimeField);
         addRenderableWidget(new PWPButton(fieldLeft + 132, 74, 16, 16, Component.literal("+"), b -> adjustTimer(false, 5), PWPButton.Style.PRIMARY));
 
         addRenderableWidget(new PWPButton(fieldLeft + 202, 74, 16, 16, Component.literal("-"), b -> adjustTimer(true, -5), PWPButton.Style.PRIMARY));
         initialTimeField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 220, 74, 50, 16, Component.literal(""));
         initialTimeField.setValue(String.valueOf(initialTime));
-        initialTimeField.setResponder(val -> { try { initialTime = Math.max(0, Integer.parseInt(val)); } catch (Exception ignored) {} });
+        initialTimeField.setResponder(val -> initialTime = Math.max(0, Parse.intOr(val, initialTime)));
         addRenderableWidget(initialTimeField);
         addRenderableWidget(new PWPButton(fieldLeft + 272, 74, 16, 16, Component.literal("+"), b -> adjustTimer(true, 5), PWPButton.Style.PRIMARY));
 
@@ -195,7 +197,7 @@ public class FactionVehicleEditorScreen extends Screen {
                             }
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { PWP_LOG.warn("FactionVehicleEditorScreen.tick: исключение", ignored); }
             }
 
             vehicleNameField.setValue(vehicleName);

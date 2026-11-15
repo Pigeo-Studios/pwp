@@ -98,7 +98,7 @@ public class WarfareMod {
                }
             }
          }
-      } catch (IOException ignored) {}
+      } catch (IOException ignored) { LOGGER.warn("WarfareMod.applyMapConfig: исключение", ignored); }
 
       Path configPath = Path.of(levelName, "map_config.json");
       if (!Files.exists(configPath)) {

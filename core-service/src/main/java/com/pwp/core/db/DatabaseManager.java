@@ -224,7 +224,7 @@ public class DatabaseManager {
                 // d.execute("DROP TABLE IF EXISTS sessions"); // НЕ ДРОПАТЬ — теряются сессии
                 d.execute("DROP TABLE IF EXISTS trusted_ips");
                 d.execute("DROP TABLE IF EXISTS accounts");
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
 
             // Migration: sessions v2 columns
             String[] sessionMigrations = {
@@ -238,13 +238,13 @@ public class DatabaseManager {
                 "ALTER TABLE sessions ADD INDEX idx_refresh_token (refresh_token)"
             };
             for (String sql : sessionMigrations) {
-                try { s.execute(sql); } catch (Exception ignored) {}
+                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
             }
 
             // Migration: drop server_tokens table (replaced by auth_tokens)
-            try { s.execute("DROP TABLE IF EXISTS server_tokens"); } catch (Exception ignored) {}
+            try { s.execute("DROP TABLE IF EXISTS server_tokens"); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
             // Migration: add accountId as permanent player identity
-            try { s.execute("ALTER TABLE players ADD COLUMN id BIGINT AUTO_INCREMENT UNIQUE FIRST"); } catch (Exception ignored) {}
+            try { s.execute("ALTER TABLE players ADD COLUMN id BIGINT AUTO_INCREMENT UNIQUE FIRST"); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
 
             // Migration: add missing columns to player_stats (safe, ignores duplicates)
             String[] migrations = {
@@ -296,7 +296,7 @@ public class DatabaseManager {
                 "ALTER TABLE skin_definitions ADD COLUMN price INT NOT NULL DEFAULT 0"
             };
             for (String sql : migrations) {
-                try { s.execute(sql); } catch (Exception ignored) {}
+                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
             }
 
             // Recreate account FK tables after drop
@@ -348,7 +348,7 @@ public class DatabaseManager {
                 + "FOREIGN KEY (admin_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
             };
             for (String sql : accountTables) {
-                try { s.execute(sql); } catch (Exception ignored) {}
+                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
             }
 
             // Launcher tables
@@ -462,7 +462,7 @@ public class DatabaseManager {
                 + "INDEX idx_ac_shot (created_at))"
             };
             for (String sql : launcherTables) {
-                try { s.execute(sql); } catch (Exception ignored) {}
+                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
             }
 
             // ── Миграции античита для существующих БД ──

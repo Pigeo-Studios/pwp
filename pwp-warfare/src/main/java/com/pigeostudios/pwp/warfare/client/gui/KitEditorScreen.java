@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pwp.api.util.Parse;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionKit;
@@ -179,9 +180,9 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     protected void renderLabels(GuiGraphics gui, int mx, int my) {}
 
     private void saveKit() {
-        try { menu.maxPerTeam = Integer.parseInt(maxTeamBox.getValue()); } catch (Exception ignored) {}
-        try { menu.maxPerSquad = Integer.parseInt(maxSquadBox.getValue()); } catch (Exception ignored) {}
-        try { menu.minSquadPlayers = Integer.parseInt(minPlayersBox.getValue()); } catch (Exception ignored) {}
+        menu.maxPerTeam = Parse.intOr(maxTeamBox.getValue(), menu.maxPerTeam);
+        menu.maxPerSquad = Parse.intOr(maxSquadBox.getValue(), menu.maxPerSquad);
+        menu.minSquadPlayers = Parse.intOr(minPlayersBox.getValue(), menu.minSquadPlayers);
         menu.category = menu.category != null ? menu.category : "INFANTRY";
         menu.description = descBox.getValue();
 

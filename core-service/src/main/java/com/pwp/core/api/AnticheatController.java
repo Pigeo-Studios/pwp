@@ -468,7 +468,7 @@ public class AnticheatController {
                  + "expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 MINUTE) WHERE launch_token = ?")) {
             ps.setString(1, launchToken);
             ps.executeUpdate();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { log.warn("AnticheatController.touchHeartbeat: исключение", ignored); }
     }
 
     private static String findUuidByLaunchToken(String launchToken) {
@@ -608,7 +608,7 @@ public class AnticheatController {
         try {
             Player pl = playerUuid == null ? null : PlayerRepository.findByUuid(playerUuid);
             if (pl != null) nickname = pl.nickname;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { log.warn("AnticheatController.notifyTelegramAdmins: исключение", ignored); }
         String text = "\u26A0\uFE0F <b>ДЕТЕКТ АНТИЧИТА</b>\n\n"
             + "\uD83D\uDC64 Игрок: <b>" + escapeHtml(nickname) + "</b>\n"
             + "\uD83D\uDD17 Тип: <b>" + escapeHtml(type) + "</b>\n"

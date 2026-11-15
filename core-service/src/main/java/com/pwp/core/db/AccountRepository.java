@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class AccountRepository {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(AccountRepository.class);
 
     // ── Accounts ──────────────────────────────────────────
 
@@ -470,7 +471,7 @@ public class AccountRepository {
         try {
             long tid = Long.parseLong(query);
             return findByTelegramId(tid);
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) { PWP_LOG.warn("AccountRepository.findAny: исключение", ignored); }
         return null;
     }
 

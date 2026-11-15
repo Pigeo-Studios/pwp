@@ -17,6 +17,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
 public class SkinEditorScreen extends Screen {
+   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(SkinEditorScreen.class);
 
     private final SkinListScreen parent;
     private EditBox nameBox;
@@ -72,7 +73,7 @@ public class SkinEditorScreen extends Screen {
                     previewItem = ItemStack.of(loaded);
                     ResourceLocation rl = ForgeRegistries.ITEMS.getKey(previewItem.getItem());
                     previewItemName = rl != null ? rl.toString() : "unknown";
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { PWP_LOG.warn("SkinEditorScreen.init: исключение", ignored); }
             }
         }
         addRenderableWidget(nameBox);

@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 // Блок строительства миномёта
 // При завершении строительства спаунит сущность миномёта из мода Superb Warfare
 public class MortarConstructionBlock extends BaseEntityBlock {
+   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(MortarConstructionBlock.class);
    // Направление строительства
    public static final DirectionProperty FACING = DirectionProperty.create("facing", Plane.HORIZONTAL);
    public static final BooleanProperty VALID = BooleanProperty.create("valid");
@@ -94,10 +95,10 @@ public class MortarConstructionBlock extends BaseEntityBlock {
             entity.setYRot(yaw);
             level.addFreshEntity(entity);
          } else {
-            System.err.println("PWP Warfare: Failed to create entity 'superbwarfare:mortar'");
+            LOG.error("Не удалось создать сущность superbwarfare:mortar");
          }
       } else {
-         System.err.println("PWP Warfare: EntityType 'superbwarfare:mortar' not found!");
+         LOG.error("Тип сущности superbwarfare:mortar не найден");
       }
 
       level.removeBlock(pos, false);
