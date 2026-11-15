@@ -17,12 +17,12 @@ import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenSkinInventory;
-import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveAnswer;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveRequest;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
+import com.pigeostudios.pwp.warfare.squad.SquadActions;
 import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
@@ -1160,7 +1160,7 @@ public class ModCommands {
     private static int joinTeam(CommandSourceStack source, String teamName, ServerPlayer player) {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
-        PacketSquadAction.leaveCurrentSquad(player, data);
+        SquadActions.leaveCurrentSquad(player, data);
         data.setDirty();
         Scoreboard scoreboard = source.getServer().getScoreboard();
         String internalTeamName = teamName.equalsIgnoreCase("blue") ? "Blue" : "Red";

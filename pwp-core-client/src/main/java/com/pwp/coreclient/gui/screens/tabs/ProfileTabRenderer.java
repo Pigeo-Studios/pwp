@@ -5,8 +5,8 @@ import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.PlayerData.CachedProfile;
 import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.network.PacketDataRequest;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.coreclient.network.data.DataRequest;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
@@ -24,7 +24,7 @@ public class ProfileTabRenderer {
     public void requestProfile(String uuid) {
         currentUuid = uuid;
         state = State.LOADING;
-        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("profile", ""));
+        PacketHandler.INSTANCE.sendToServer(new DataRequest("profile", ""));
     }
 
     public void tick() {

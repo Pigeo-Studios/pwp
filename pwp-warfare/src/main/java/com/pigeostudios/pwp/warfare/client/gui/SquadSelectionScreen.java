@@ -5,8 +5,8 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
-import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
+import com.pigeostudios.pwp.warfare.squad.SquadPackets;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
@@ -87,7 +87,7 @@ public class SquadSelectionScreen extends Screen {
                 150,
                 20,
                 Component.literal("Создать отряд"),
-                b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
+                b -> PacketHandler.INSTANCE.sendToServer(new SquadPackets.Create(nameInput.getValue())),
                 PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
 
@@ -142,7 +142,7 @@ public class SquadSelectionScreen extends Screen {
             return true;
         }
         if ((keyCode == 257 || keyCode == 335) && nameInput.isFocused() && nameInput.isVisible()) {
-            PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue()));
+            PacketHandler.INSTANCE.sendToServer(new SquadPackets.Create(nameInput.getValue()));
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);

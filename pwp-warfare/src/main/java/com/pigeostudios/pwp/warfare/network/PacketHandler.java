@@ -26,8 +26,10 @@ public class PacketHandler {
     /**
      * Версия протокола канала. Поднимать при любом изменении состава/порядка регистраций.
      * 2 — удалён PacketApiAction (выдача любого скина по запросу клиента).
+     * 3 — этап 2: запросы данных — единая система core-client (удалены PacketRequestData/
+     * PacketSendData), действия отряда — по пакету на действие (network/squad).
      */
-    private static final String PROTOCOL_VERSION = "2";
+    private static final String PROTOCOL_VERSION = "3";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -108,12 +110,6 @@ public class PacketHandler {
                 PacketSyncSquads::encode,
                 PacketSyncSquads::new,
                 PacketSyncSquads::handle);
-        INSTANCE.registerMessage(
-                id++,
-                PacketSquadAction.class,
-                PacketSquadAction::encode,
-                PacketSquadAction::decode,
-                PacketSquadAction::handle);
         INSTANCE.registerMessage(
                 id++,
                 PacketTeamSelect.class,
@@ -294,14 +290,6 @@ public class PacketHandler {
                 PacketSyncPlayerSkin::handle);
         INSTANCE.registerMessage(
                 id++,
-                PacketRequestData.class,
-                PacketRequestData::encode,
-                PacketRequestData::decode,
-                PacketRequestData::handle);
-        INSTANCE.registerMessage(
-                id++, PacketSendData.class, PacketSendData::encode, PacketSendData::decode, PacketSendData::handle);
-        INSTANCE.registerMessage(
-                id++,
                 PacketVehicleDriveRequest.class,
                 PacketVehicleDriveRequest::encode,
                 PacketVehicleDriveRequest::decode,
@@ -375,6 +363,8 @@ public class PacketHandler {
                 PacketDroneDeployState::encode,
                 PacketDroneDeployState::decode,
                 PacketDroneDeployState::handle);
+        // Сеть v2 (record-DTO, проверка на сервере). Новые пакеты — только в конец.
+        com.pigeostudios.pwp.warfare.squad.SquadPackets.register(new com.pwp.api.net.Net.Registrar(INSTANCE, id));
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

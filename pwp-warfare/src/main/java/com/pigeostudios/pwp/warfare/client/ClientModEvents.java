@@ -43,6 +43,9 @@ public class ClientModEvents {
 
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
+        // Ответы единой системы данных core-client → кэши warfare (ClientData)
+        com.pwp.coreclient.network.data.ClientDataResponses.listen(
+                com.pigeostudios.pwp.warfare.network.ClientDataHandler::handleData);
         event.enqueueWork(() -> {
             MenuScreens.register((MenuType) ModMenuTypes.VEHICLE_SPAWNER_MENU.get(), VehicleSpawnerScreen::new);
             MenuScreens.register((MenuType) ModMenuTypes.KIT_EDITOR_MENU.get(), KitEditorScreen::new);

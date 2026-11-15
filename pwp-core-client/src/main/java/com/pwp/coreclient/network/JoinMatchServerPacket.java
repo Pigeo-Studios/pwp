@@ -1,17 +1,13 @@
 package com.pwp.coreclient.network;
 
-import java.util.function.Supplier;
+import com.pwp.api.lobby.LobbyActions;
+import com.pwp.api.net.Net;
+import com.pwp.api.net.Validate;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.server.level.ServerPlayer;
 
-public class JoinMatchServerPacket {
-    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(JoinMatchServerPacket.class);
-
-    public final int serverId;
-
-    public JoinMatchServerPacket(int serverId) {
-        this.serverId = serverId;
-    }
+/** C→S: перейти в матч с данным id сервера (кнопка в лобби). На матч-сервере игнорируется. */
+public record JoinMatchServerPacket(int serverId) implements Net.C2S {
 
     public static void encode(JoinMatchServerPacket msg, FriendlyByteBuf buf) {
         buf.writeInt(msg.serverId);
@@ -21,19 +17,14 @@ public class JoinMatchServerPacket {
         return new JoinMatchServerPacket(buf.readInt());
     }
 
-    public static void handle(JoinMatchServerPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            var player = ctx.get().getSender();
-            if (player != null) {
-                try {
-                    Class<?> maClass = Class.forName("com.pwp.lobby.match.MatchAllocator");
-                    maClass.getMethod("joinMatchById", int.class, net.minecraft.server.level.ServerPlayer.class)
-                            .invoke(null, msg.serverId, player);
-                } catch (Exception ignored) {
-                    PWP_LOG.warn("JoinMatchServerPacket.handle: исключение", ignored);
-                }
-            }
-        });
-        ctx.get().setPacketHandled(true);
+    @Override
+    public String validate() {
+        return Validate.range("serverId", serverId, 0, 10_000);
+    }
+
+    @Override
+    public void handle(ServerPlayer sender) {
+        LobbyActions lobby = LobbyActions.get();
+        if (lobby != null) lobby.joinMatchById(serverId, sender);
     }
 }

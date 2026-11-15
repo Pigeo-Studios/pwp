@@ -9,8 +9,8 @@ import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.PlayerData.CosmeticEntry;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientResponseCache;
-import com.pwp.coreclient.network.PacketDataRequest;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.coreclient.network.data.DataRequest;
 import com.pwp.cosmetics.CosmeticsMod;
 import com.pwp.cosmetics.SkinCatalog;
 import com.pwp.cosmetics.client.CosmeticClientState;
@@ -128,7 +128,7 @@ public class SkinInventoryScreen extends Screen {
         // Определения скинов запрашиваем через сервер (core-service доступен только ему)
         pendingEquipped = equippedSkinIds;
         ClientResponseCache.skinsData = null;
-        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("skins", ""));
+        PacketHandler.INSTANCE.sendToServer(new DataRequest("skins", ""));
     }
 
     @Override

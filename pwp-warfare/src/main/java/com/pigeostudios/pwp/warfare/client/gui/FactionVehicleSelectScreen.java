@@ -3,11 +3,10 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -38,7 +37,7 @@ public class FactionVehicleSelectScreen extends Screen {
 
         ClientData.factionsData = null;
         requested = true;
-        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factions", ""));
+        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("factions", ""));
     }
 
     @Override

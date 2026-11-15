@@ -5,12 +5,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.AdminActions;
-import com.pwp.coreclient.network.PacketAction;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -56,7 +54,7 @@ public class SkinListScreen extends Screen {
         loading = true;
         requested = true;
         ClientData.skinsData = null;
-        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("skins", ""));
+        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("skins", ""));
     }
 
     @Override
@@ -162,9 +160,7 @@ public class SkinListScreen extends Screen {
     }
 
     private void deleteSkin(String skinId) {
-        JsonObject params = new JsonObject();
-        params.addProperty("skinId", skinId);
-        AdminActions.send(PacketAction.DELETE_SKIN, params, r -> loadSkins());
+        AdminActions.deleteSkin(skinId, r -> loadSkins());
     }
 
     @Override

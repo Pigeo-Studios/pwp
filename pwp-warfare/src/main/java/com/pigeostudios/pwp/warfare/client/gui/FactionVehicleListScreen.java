@@ -4,13 +4,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.AdminActions;
-import com.pwp.coreclient.network.PacketAction;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -81,8 +79,8 @@ public class FactionVehicleListScreen extends Screen {
         loading = true;
         requested = true;
         ClientData.factionVehiclesData = null;
-        PacketHandler.INSTANCE.sendToServer(
-                new PacketRequestData("factionVehicles", "{\"faction\":\"" + faction + "\"}"));
+        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(
+                new DataRequest("factionVehicles", "{\"faction\":\"" + faction + "\"}"));
     }
 
     @Override
@@ -188,10 +186,7 @@ public class FactionVehicleListScreen extends Screen {
     }
 
     private void deleteVehicle(String vehicleName) {
-        JsonObject params = new JsonObject();
-        params.addProperty("faction", faction);
-        params.addProperty("vehicleName", vehicleName);
-        AdminActions.send(PacketAction.DELETE_FACTION_VEHICLE, params, r -> {
+        AdminActions.deleteFactionVehicle(faction, vehicleName, r -> {
             if (!r.success()) return;
             vehicles.removeIf(v -> v.vehicleName.equals(vehicleName));
             updateFiltered();

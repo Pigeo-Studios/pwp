@@ -8,10 +8,10 @@ import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenFactionKitEditor;
-import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -53,7 +53,8 @@ public class FactionKitListScreen extends Screen {
 
         ClientData.factionKitsData = null;
         requested = true;
-        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factionKits", "{\"faction\":\"" + faction + "\"}"));
+        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(
+                new DataRequest("factionKits", "{\"faction\":\"" + faction + "\"}"));
     }
 
     @Override

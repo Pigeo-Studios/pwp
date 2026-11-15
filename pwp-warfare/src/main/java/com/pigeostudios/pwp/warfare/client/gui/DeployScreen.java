@@ -15,8 +15,8 @@ import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
-import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
+import com.pigeostudios.pwp.warfare.squad.SquadPackets;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -365,7 +365,7 @@ public class DeployScreen extends Screen {
 
     private void createSquad() {
         String n = squadInput.getValue().trim();
-        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
+        PacketHandler.INSTANCE.sendToServer(new SquadPackets.Create(n));
         squadInput.setValue("");
     }
 

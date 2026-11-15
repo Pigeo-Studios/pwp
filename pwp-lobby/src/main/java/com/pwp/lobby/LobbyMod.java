@@ -88,6 +88,8 @@ public class LobbyMod {
     }
 
     public LobbyMod() {
+        // Пакеты core-client (переход в матч) вызывают лобби через интерфейс, без рефлексии
+        com.pwp.api.lobby.LobbyActions.install(new LobbyActionsImpl());
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         MinecraftForge.EVENT_BUS.register(this);
     }

@@ -62,7 +62,11 @@ public class WarfareMod {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> PacketHandler.register());
+        event.enqueueWork(() -> {
+            PacketHandler.register();
+            // Типы запросов данных warfare — в единой системе core-client
+            com.pigeostudios.pwp.warfare.network.WarfareDataRequests.register();
+        });
     }
 
     private void clientSetup(FMLClientSetupEvent event) {}

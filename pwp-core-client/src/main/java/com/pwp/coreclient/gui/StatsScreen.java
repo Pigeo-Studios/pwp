@@ -5,8 +5,8 @@ import com.google.gson.JsonObject;
 import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientResponseCache;
-import com.pwp.coreclient.network.PacketDataRequest;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -95,14 +95,14 @@ public class StatsScreen extends Screen {
         errorMsg = null;
         scrollOffset = 0;
         profileRequested = true;
-        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("profile", ""));
+        PacketHandler.INSTANCE.sendToServer(new DataRequest("profile", ""));
     }
 
     public void requestLeaderboard() {
         leaderboardRequested = false;
         ClientResponseCache.leaderboardData = null;
         String params = "{\"orderBy\":\"" + lbOrderBy + "\",\"page\":" + (lbPage + 1) + "}";
-        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("leaderboard", params));
+        PacketHandler.INSTANCE.sendToServer(new DataRequest("leaderboard", params));
     }
 
     @Override

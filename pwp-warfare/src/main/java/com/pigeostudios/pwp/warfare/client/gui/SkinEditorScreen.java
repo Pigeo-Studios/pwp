@@ -1,10 +1,9 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.google.gson.JsonObject;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.AdminActions;
-import com.pwp.coreclient.network.PacketAction;
+import com.pwp.coreclient.network.data.AdminAction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -279,20 +278,14 @@ public class SkinEditorScreen extends Screen {
         final String saveRegistry = previewRegistryName;
 
         showMsg("§eSaving...");
-        JsonObject params = new JsonObject();
-        params.addProperty("skinId", saveSkinId);
-        params.addProperty("name", saveName);
-        params.addProperty("description", "");
-        params.addProperty("slotType", saveSlot);
-        params.addProperty("weaponTag", saveWeapon);
-        params.addProperty("rarity", saveRarity);
-        params.addProperty("modelPath", saveRegistry);
-        AdminActions.send(PacketAction.SAVE_SKIN, params, r -> {
-            if (r.success()) {
-                showMsg("§aSaved!");
-                close();
-            } else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
-        });
+        AdminActions.saveSkin(
+                new AdminAction.SaveSkin(saveSkinId, saveName, "", saveSlot, saveWeapon, saveRarity, saveRegistry),
+                r -> {
+                    if (r.success()) {
+                        showMsg("§aSaved!");
+                        close();
+                    } else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+                });
     }
 
     private void delete() {
@@ -301,9 +294,7 @@ public class SkinEditorScreen extends Screen {
             return;
         }
         showMsg("§eDeleting...");
-        JsonObject params = new JsonObject();
-        params.addProperty("skinId", editSkinId);
-        AdminActions.send(PacketAction.DELETE_SKIN, params, r -> {
+        AdminActions.deleteSkin(editSkinId, r -> {
             if (r.success()) {
                 showMsg("§aDeleted!");
                 close();

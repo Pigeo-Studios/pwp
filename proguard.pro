@@ -35,24 +35,9 @@
 -keep @net.minecraftforge.fml.common.Mod class * { *; }
 
 # ------------------------------------------------------------
-# 3. Рефлексия из pwp-core-client в pwp-lobby:
-#    Class.forName("com.pwp.lobby.*") + getMethod(...).invoke(null, ...)
-#    Имена классов и этих методов обязаны сохраниться.
-#    (сигнатуры сверены с исходниками 04.08.2026)
+# 3. (было) Рефлексия core-client → pwp-lobby — удалена на этапе 2:
+#    вызовы идут через интерфейс com.pwp.api.lobby.LobbyActions, keep не нужен.
 # ------------------------------------------------------------
--keep class com.pwp.lobby.LobbyMod {
-    static void voteMode(java.util.UUID, java.lang.String);
-}
--keep class com.pwp.lobby.VotingManager {
-    static boolean vote(java.util.UUID, java.lang.String);
-}
--keep class com.pwp.lobby.FactionVotingManager {
-    static void vote(java.util.UUID, java.lang.String, java.lang.String);
-}
--keep class com.pwp.lobby.match.MatchAllocator {
-    static void joinActiveMatch(net.minecraft.server.level.ServerPlayer);
-    static void joinMatchById(int, net.minecraft.server.level.ServerPlayer);
-}
 
 # ------------------------------------------------------------
 # 4. Gson-маппинг match_config.json по именам полей

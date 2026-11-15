@@ -8,7 +8,7 @@ import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketPlacePath;
 import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
-import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
+import com.pigeostudios.pwp.warfare.squad.SquadPackets;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pwp.api.util.Parse;
@@ -88,7 +88,7 @@ public class SquadMapScreen extends Screen {
                 b -> {
                     String n = squadInput.getValue().trim();
                     if (!n.isEmpty()) {
-                        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
+                        PacketHandler.INSTANCE.sendToServer(new SquadPackets.Create(n));
                         squadInput.setValue("");
                     }
                 },

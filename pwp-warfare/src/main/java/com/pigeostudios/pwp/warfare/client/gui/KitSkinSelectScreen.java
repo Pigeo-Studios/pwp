@@ -5,10 +5,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
-import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.*;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -63,7 +62,7 @@ public class KitSkinSelectScreen extends Screen {
     private void loadSkins() {
         requested = true;
         ClientData.skinsData = null;
-        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("skins", ""));
+        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("skins", ""));
     }
 
     @Override

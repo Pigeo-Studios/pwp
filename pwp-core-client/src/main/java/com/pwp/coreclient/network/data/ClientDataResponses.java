@@ -1,50 +1,45 @@
-package com.pwp.coreclient.network;
+package com.pwp.coreclient.network.data;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.pwp.coreclient.PlayerData;
+import com.pwp.coreclient.network.ClientResponseCache;
+import java.util.List;
 import java.util.UUID;
-import java.util.function.Supplier;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent.Context;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class PacketDataResponse {
-    private static final Logger LOG = LoggerFactory.getLogger(PacketDataResponse.class);
+/**
+ * Клиентская сторона единой системы данных: ответ {@link DataResponse} раскладывается во
+ * встроенные кэши core-client ({@link ClientResponseCache}, {@link PlayerData}) и передаётся
+ * подписчикам других модов (warfare кладёт в свой ClientData). Только клиентский поток.
+ */
+public final class ClientDataResponses {
+    private static final Logger LOG = LoggerFactory.getLogger(ClientDataResponses.class);
     private static final Gson GSON = new Gson();
-    /** Тип ответа на админ-действие {@link PacketAction}: {@code {action, success, error}}. */
-    public static final String ACTION_RESULT = "actionResult";
+    private static final List<BiConsumer<String, String>> LISTENERS = new CopyOnWriteArrayList<>();
 
-    private final String type;
-    private final String jsonData;
+    private ClientDataResponses() {}
 
-    public PacketDataResponse(String type, String jsonData) {
-        this.type = type;
-        this.jsonData = jsonData;
+    /** Подписка на все ответы (type, json). */
+    public static void listen(BiConsumer<String, String> listener) {
+        LISTENERS.add(listener);
     }
 
-    public static void encode(PacketDataResponse msg, FriendlyByteBuf buf) {
-        buf.writeUtf(msg.type);
-        buf.writeUtf(msg.jsonData);
+    static void dispatch(String type, String json) {
+        builtIn(type, json);
+        for (BiConsumer<String, String> l : LISTENERS) {
+            try {
+                l.accept(type, json);
+            } catch (RuntimeException e) {
+                LOG.warn("Подписчик ответа {} упал", type, e);
+            }
+        }
     }
 
-    public static PacketDataResponse decode(FriendlyByteBuf buf) {
-        return new PacketDataResponse(buf.readUtf(), buf.readUtf(32767));
-    }
-
-    public static void handle(PacketDataResponse msg, Supplier<Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                handleOnClient(msg.type, msg.jsonData);
-            });
-        });
-        ctx.get().setPacketHandled(true);
-    }
-
-    private static void handleOnClient(String type, String data) {
+    static void builtIn(String type, String data) {
         try {
             switch (type) {
                 case "profile": {
@@ -93,7 +88,7 @@ public class PacketDataResponse {
                     }
                     break;
                 }
-                case ACTION_RESULT: {
+                case DataRequests.ACTION_RESULT: {
                     JsonObject json = GSON.fromJson(data, JsonObject.class);
                     if (ClientResponseCache.actionResultListener != null) {
                         ClientResponseCache.actionResultListener.accept(json);

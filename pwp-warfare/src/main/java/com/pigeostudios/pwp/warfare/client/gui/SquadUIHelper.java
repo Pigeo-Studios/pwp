@@ -3,7 +3,7 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
+import com.pigeostudios.pwp.warfare.squad.SquadPackets;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.components.RoundedRect;
@@ -238,14 +238,14 @@ public class SquadUIHelper {
 
             if (my >= currentY && my <= currentY + 11) {
                 if (aw > 0 && mx >= actionX && mx <= actionX + aw) {
-                    if (isMySquad) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(2, squad.id, ""));
+                    if (isMySquad) PacketHandler.INSTANCE.sendToServer(new SquadPackets.Leave());
                     else if (!squad.isLocked && squad.members.size() < 9)
-                        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(1, squad.id, ""));
+                        PacketHandler.INSTANCE.sendToServer(new SquadPackets.Join(squad.id));
                 } else if (mx >= arrowX && mx <= arrowX + 10) {
                     if (isExpanded) expandedSquads.remove(squad.id);
                     else expandedSquads.add(squad.id);
                 } else if (amILeader && mx >= lockX && mx <= lockX + 10) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(5, squad.id, ""));
+                    PacketHandler.INSTANCE.sendToServer(new SquadPackets.ToggleLock());
                 }
                 return;
             }
@@ -305,16 +305,18 @@ public class SquadUIHelper {
         if (idx < 0 || idx >= options.size()) return;
         String opt = options.get(idx);
         switch (opt) {
-            case "Promote to SL" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(4, squadId, target));
+            case "Promote to SL" -> PacketHandler.INSTANCE.sendToServer(new SquadPackets.Promote(target));
             case "Set FTL Bravo", "Pass FTL Bravo" -> PacketHandler.INSTANCE.sendToServer(
-                    new PacketSquadAction(6, squadId, target));
+                    new SquadPackets.SetFireteamLeader(SquadPackets.Fireteam.BRAVO, target));
             case "Set FTL Charlie", "Pass FTL Charlie" -> PacketHandler.INSTANCE.sendToServer(
-                    new PacketSquadAction(7, squadId, target));
-            case "Add to Bravo" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(8, squadId, target));
-            case "Add to Charlie" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(9, squadId, target));
-            case "Remove from FT" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(10, squadId, target));
-            case "Kick from Squad" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(3, squadId, target));
-            case "Disband Squad" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(11, squadId, ""));
+                    new SquadPackets.SetFireteamLeader(SquadPackets.Fireteam.CHARLIE, target));
+            case "Add to Bravo" -> PacketHandler.INSTANCE.sendToServer(
+                    new SquadPackets.AddToFireteam(SquadPackets.Fireteam.BRAVO, target));
+            case "Add to Charlie" -> PacketHandler.INSTANCE.sendToServer(
+                    new SquadPackets.AddToFireteam(SquadPackets.Fireteam.CHARLIE, target));
+            case "Remove from FT" -> PacketHandler.INSTANCE.sendToServer(new SquadPackets.RemoveFromFireteam(target));
+            case "Kick from Squad" -> PacketHandler.INSTANCE.sendToServer(new SquadPackets.Kick(squadId, target));
+            case "Disband Squad" -> PacketHandler.INSTANCE.sendToServer(new SquadPackets.Disband(squadId));
         }
     }
 

@@ -7,8 +7,8 @@ import com.pwp.coreclient.gui.components.PWPScrollPanel;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientResponseCache;
-import com.pwp.coreclient.network.PacketDataRequest;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.coreclient.network.data.DataRequest;
 import java.util.*;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -72,7 +72,7 @@ public class LeaderTabRenderer {
     public void requestData(String orderBy, int page) {
         state = State.LOADING;
         entries.clear();
-        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest(
+        PacketHandler.INSTANCE.sendToServer(new DataRequest(
                 "leaderboard", "{\"orderBy\":\"" + orderBy + "\",\"page\":" + page + ",\"limit\":100}"));
     }
 

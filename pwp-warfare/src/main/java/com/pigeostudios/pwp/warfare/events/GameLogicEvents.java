@@ -15,7 +15,6 @@ import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketNotification;
 import com.pigeostudios.pwp.warfare.network.PacketOpenVictoryScreen;
-import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
 import com.pigeostudios.pwp.warfare.network.PacketSyncGameData;
 import com.pigeostudios.pwp.warfare.network.PacketSyncMapPlayers;
@@ -26,6 +25,7 @@ import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
+import com.pigeostudios.pwp.warfare.squad.SquadActions;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
@@ -39,8 +39,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
@@ -61,8 +61,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -96,8 +96,8 @@ import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.ServerLifecycleHooks;
@@ -661,7 +661,7 @@ public class GameLogicEvents {
                                                     WarfareData.of(m).remove(WarfareKeys.PENDING_KIT);
                                                     WarfareData.of(m).remove(WarfareKeys.SQUAD_ID);
                                                     WarfareData.of(m).remove(WarfareKeys.IS_SQUAD_LEADER);
-                                                    PacketSquadAction.removeRadio(m);
+                                                    SquadActions.removeRadio(m);
                                                     m.getInventory().clearContent();
                                                     ResupplyHandler.clearCurios(m);
                                                     m.inventoryMenu.broadcastChanges();
@@ -1531,7 +1531,7 @@ public class GameLogicEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
-            PacketSquadAction.leaveCurrentSquad(player, data);
+            SquadActions.leaveCurrentSquad(player, data);
             PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
             player.sendSystemMessage(Component.literal("Вы покинули отряд, потому что сменили мир.")
                     .withStyle(ChatFormatting.YELLOW));
@@ -2544,14 +2544,14 @@ public class GameLogicEvents {
             if (s.members.contains(pName)) {
                 s.members.remove(pName);
                 if (s.leader.equals(pName)) {
-                    PacketSquadAction.removeRadio(player);
+                    SquadActions.removeRadio(player);
                     if (!s.members.isEmpty()) {
                         s.leader = s.members.get(0);
                         ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(s.leader);
                         if (newLeader != null) {
-                            PacketSquadAction.updatePlayerTags(newLeader, s.id, true);
+                            SquadActions.updatePlayerTags(newLeader, s.id, true);
                             if ((Boolean) WarfareConfig.AUTO_GIVE_SL_RADIO.get()) {
-                                PacketSquadAction.giveRadio(newLeader);
+                                SquadActions.giveRadio(newLeader);
                             }
                         }
                     }
@@ -2568,7 +2568,7 @@ public class GameLogicEvents {
         ResupplyHandler.clearCurios(player);
         player.inventoryMenu.broadcastChanges();
         player.containerMenu.broadcastChanges();
-        PacketSquadAction.removePlayerTags(player);
+        SquadActions.removePlayerTags(player);
         player.displayClientMessage(Component.literal("§eВы вышли из отряда. Кит и брони очищены."), true);
         data.setDirty();
         PacketHandler.sendToAllClients(player.serverLevel(), data);
@@ -2590,7 +2590,7 @@ public class GameLogicEvents {
                 }
             }
 
-            PacketSquadAction.leaveCurrentSquad(player, data);
+            SquadActions.leaveCurrentSquad(player, data);
             WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
             WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
             player.getInventory().clearContent();

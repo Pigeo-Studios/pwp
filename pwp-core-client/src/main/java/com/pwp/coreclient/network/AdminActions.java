@@ -1,12 +1,13 @@
 package com.pwp.coreclient.network;
 
-import com.google.gson.JsonObject;
+import com.pwp.api.net.Net;
+import com.pwp.coreclient.network.data.AdminAction;
 import java.util.function.Consumer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
- * Клиентская обёртка над {@link PacketAction}: отправляет админ-действие на сервер и вызывает
+ * Клиентская обёртка над {@link AdminAction}: отправляет админ-действие на сервер и вызывает
  * колбэк с результатом ({@code success}, {@code error}) на клиентском потоке.
  * Одновременно ожидается один ответ на действие с данным именем (редактор один).
  */
@@ -16,7 +17,19 @@ public final class AdminActions {
 
     public record Result(boolean success, String error) {}
 
-    public static void send(String action, JsonObject params, Consumer<Result> onResult) {
+    public static void saveSkin(AdminAction.SaveSkin action, Consumer<Result> onResult) {
+        send(AdminAction.SAVE_SKIN, action, onResult);
+    }
+
+    public static void deleteSkin(String skinId, Consumer<Result> onResult) {
+        send(AdminAction.DELETE_SKIN, new AdminAction.DeleteSkin(skinId), onResult);
+    }
+
+    public static void deleteFactionVehicle(String faction, String vehicleName, Consumer<Result> onResult) {
+        send(AdminAction.DELETE_FACTION_VEHICLE, new AdminAction.DeleteFactionVehicle(faction, vehicleName), onResult);
+    }
+
+    private static void send(String action, Net.C2S packet, Consumer<Result> onResult) {
         ClientResponseCache.actionResultListener = json -> {
             if (json == null
                     || !json.has("action")
@@ -26,6 +39,6 @@ public final class AdminActions {
             String error = json.has("error") ? json.get("error").getAsString() : "";
             onResult.accept(new Result(ok, error));
         };
-        PacketHandler.INSTANCE.sendToServer(new PacketAction(action, params));
+        PacketHandler.INSTANCE.sendToServer(packet);
     }
 }
