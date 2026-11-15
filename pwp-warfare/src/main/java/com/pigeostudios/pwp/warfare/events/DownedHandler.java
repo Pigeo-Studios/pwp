@@ -36,8 +36,8 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
 @EventBusSubscriber(modid = "pwpwarfare")
-// РћР±СЂР°Р±РѕС‚С‡РёРє СЃРѕСЃС‚РѕСЏРЅРёСЏ В«СЂР°РЅРµРЅВ» (knockout)
-// РЈРїСЂР°РІР»СЏРµС‚ РЅРѕРєР°СѓС‚РѕРј РёРіСЂРѕРєРѕРІ, РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊСЋ РѕР¶РёРІР»РµРЅРёСЏ Рё РёСЃС‚РµС‡РµРЅРёРµРј РєСЂРѕРІРё
+// Обработчик состояния «ранен» (knockout)
+// Управляет нокаутом игроков, возможностью оживления и истечением крови
 public class DownedHandler {
    @SubscribeEvent
     public static void onPlayerHurt(LivingHurtEvent event) {
@@ -105,7 +105,7 @@ public class DownedHandler {
       }
    }
 
-   // РџРµСЂРµРІРѕРґ РёРіСЂРѕРєР° РІ СЃРѕСЃС‚РѕСЏРЅРёРµ В«СЂР°РЅРµРЅВ»
+   // Перевод игрока в состояние «ранен»
    public static void enterDownedState(ServerPlayer player) {
       if (player.isPassenger()) {
          player.stopRiding();
@@ -140,7 +140,7 @@ public class DownedHandler {
       }
    }
 
-   // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅР°СЏ СЃРјРµСЂС‚СЊ РёРіСЂРѕРєР° (РёСЃС‚РµС‡РµРЅРёРµ РєСЂРѕРІРё РёР»Рё СЃРґР°С‡Р°)
+   // Принудительная смерть игрока (истечение крови или сдача)
    public static void forceGiveUp(ServerPlayer player) {
       player.level().playSound(null, player.getX(), player.getY(), player.getZ(), ModSounds.PLAYER_DOWNED.get(), SoundSource.PLAYERS, 1.5F, 1.0F);
       String victimName = player.getScoreboardName();
@@ -216,7 +216,7 @@ public class DownedHandler {
       }
    }
 
-   // РћР¶РёРІР»РµРЅРёРµ РёРіСЂРѕРєР° РёР· СЃРѕСЃС‚РѕСЏРЅРёСЏ В«СЂР°РЅРµРЅВ»
+   // Оживление игрока из состояния «ранен»
    public static void handleTeamkill(ServerPlayer attacker) {
       int teamKills = attacker.getPersistentData().getInt("WARFARE_TeamKills") + 1;
       attacker.getPersistentData().putInt("WARFARE_TeamKills", teamKills);

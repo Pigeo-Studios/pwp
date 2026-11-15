@@ -9,8 +9,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ СЃР±СЂРѕСЃР° СЏС‰РёРєР° СЃРЅР°Р±Р¶РµРЅРёСЏ РёР· РіСЂСѓР·РѕРІРёРєР° СЃРЅР°Р±Р¶РµРЅРёСЏ
-// РћС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РІРѕРґРёС‚РµР»РµРј РіСЂСѓР·РѕРІРёРєР° РїСЂРё РЅР°Р¶Р°С‚РёРё РєРЅРѕРїРєРё СЃР±СЂРѕСЃР°
+// Пакет сброса ящика снабжения из грузовика снабжения
+// Отправляется водителем грузовика при нажатии кнопки сброса
 public class PacketDropCrate {
    public static void encode(PacketDropCrate msg, FriendlyByteBuf buf) {
    }
@@ -19,7 +19,7 @@ public class PacketDropCrate {
       return new PacketDropCrate();
    }
 
-   // РџСЂРѕРІРµСЂСЏРµС‚, РЅР°С…РѕРґРёС‚СЃСЏ Р»Рё РёРіСЂРѕРє РІ РіСЂСѓР·РѕРІРёРєРµ СЃРЅР°Р±Р¶РµРЅРёСЏ, Рё СЃРѕР·РґР°С‘С‚ СЏС‰РёРє
+   // Проверяет, находится ли игрок в грузовике снабжения, и создаёт ящик
    public static void handle(PacketDropCrate msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

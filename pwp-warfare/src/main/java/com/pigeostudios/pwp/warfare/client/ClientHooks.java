@@ -40,8 +40,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import org.slf4j.Logger;
 
-// РҐСѓРєРё, РІС‹Р·С‹РІР°РµРјС‹Рµ РёР· СЃРµСЂРІРµСЂРЅРѕРіРѕ РєРѕРґР° РґР»СЏ РІС‹РїРѕР»РЅРµРЅРёСЏ РєР»РёРµРЅС‚СЃРєРёС… РѕРїРµСЂР°С†РёР№
-// РћС‚РєСЂС‹С‚РёРµ GUI, СѓРїСЂР°РІР»РµРЅРёРµ Р·РІСѓРєР°РјРё, РѕР±СЂР°Р±РѕС‚РєР° СЃРµС‚РµРІС‹С… РїР°РєРµС‚РѕРІ
+// Хуки, вызываемые из серверного кода для выполнения клиентских операций
+// Открытие GUI, управление звуками, обработка сетевых пакетов
 public class ClientHooks {
    private static final Logger LOGGER = LogUtils.getLogger();
    public static void handleRecoil(float pitch, float yaw) {

@@ -19,8 +19,8 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.registries.ForgeRegistries;
 
-// РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° Р±РѕРµРїСЂРёРїР°СЃРѕРІ РёР· СЏС‰РёРєР° СЃРЅР°Р±Р¶РµРЅРёСЏ (SupplyCrate)
-// РџРѕР·РІРѕР»СЏРµС‚ РїРѕРїРѕР»РЅРёС‚СЊ РєРёС‚ РёР»Рё РІР·СЏС‚СЊ С‚СЏР¶С‘Р»С‹Рµ Р±РѕРµРїСЂРёРїР°СЃС‹
+// Пакет запроса боеприпасов из ящика снабжения (SupplyCrate)
+// Позволяет пополнить кит или взять тяжёлые боеприпасы
 public class PacketRequestCrateAmmo {
    private final int entityId;
    private final int type;
@@ -39,7 +39,7 @@ public class PacketRequestCrateAmmo {
       return new PacketRequestCrateAmmo(buf.readInt(), buf.readInt());
    }
 
-   // РџСЂРѕРІРµСЂСЏРµС‚ РЅР°Р»РёС‡РёРµ СЏС‰РёРєР°, РґРёСЃС‚Р°РЅС†РёСЋ, СЃС‚РѕРёРјРѕСЃС‚СЊ Рё РІС‹РґР°С‘С‚ РїСЂРµРґРјРµС‚С‹
+   // Проверяет наличие ящика, дистанцию, стоимость и выдаёт предметы
    public static void handle(PacketRequestCrateAmmo msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

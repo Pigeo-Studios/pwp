@@ -9,8 +9,8 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 
-// Р РµРµСЃС‚СЂ РєСЂРµР°С‚РёРІРЅС‹С… РІРєР»Р°РґРѕРє РјРѕРґР°
-// РЎРѕРґРµСЂР¶РёС‚ РІСЃРµ РїСЂРµРґРјРµС‚С‹ РјРѕРґР° РІ РѕРґРЅРѕР№ РІРєР»Р°РґРєРµ В«Advance And SecureВ»
+// Реестр креативных вкладок мода
+// Содержит все предметы мода в одной вкладке «Advance And Secure»
 public class ModCreativeModeTabs {
    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, "pwpwarfare");
    public static final RegistryObject<CreativeModeTab> WARFARE_TAB = CREATIVE_MODE_TABS.register(

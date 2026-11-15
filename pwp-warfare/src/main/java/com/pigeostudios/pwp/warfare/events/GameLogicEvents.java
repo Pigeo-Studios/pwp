@@ -110,8 +110,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @EventBusSubscriber(modid = "pwpwarfare", bus = Bus.FORGE)
-// РћСЃРЅРѕРІРЅРѕР№ РѕР±СЂР°Р±РѕС‚С‡РёРє РёРіСЂРѕРІРѕР№ Р»РѕРіРёРєРё
-// РЈРїСЂР°РІР»СЏРµС‚ Р·Р°С…РІР°С‚РѕРј С‚РѕС‡РµРє, С‚РёРєРµС‚Р°РјРё, РІРѕР·СЂРѕР¶РґРµРЅРёРµРј, Р·Р°С‰РёС‚РЅС‹РјРё Р·РѕРЅР°РјРё Рё Р°СЂС‚РёР»Р»РµСЂРёРµР№
+// Основной обработчик игровой логики
+// Управляет захватом точек, тикетами, возрождением, защитными зонами и артиллерией
 public class GameLogicEvents {
    public static final Map<UUID, String> pendingRespawnLocations = new HashMap<>();
    public static final Map<UUID, String> pendingTeams = new HashMap<>();
@@ -123,7 +123,7 @@ public class GameLogicEvents {
     private static int returnToLobbyTimer = -1;
     private static MinecraftServer returnToLobbyServer = null;
 
-   // Р—Р°РїСѓСЃРє РѕР±СЂР°С‚РЅРѕРіРѕ РѕС‚СЃС‡С‘С‚Р° РїРµСЂРµРґ РЅР°С‡Р°Р»РѕРј РёРіСЂС‹
+   // Запуск обратного отсчёта перед началом игры
    public static void startGameCountdown(ServerLevel level) {
        WarfareWorldData data = WarfareWorldData.get(level);
        data.waitingActive = false;
@@ -1020,7 +1020,7 @@ public class GameLogicEvents {
                      if (isTimeLocked) {
                         lockedUI = true;
                         long totalSeconds = (point.lockedUntilTick - level.getGameTime()) / 20L;
-                        nextObjectiveForPlayer = String.format("LOCKED: %dРј %dСЃ", totalSeconds / 60L, totalSeconds % 60L);
+                        nextObjectiveForPlayer = String.format("LOCKED: %dм %dс", totalSeconds / 60L, totalSeconds % 60L);
                      } else if (!canCapture(point, teamKey, data)) {
                         lockedUI = true;
                         nextObjectiveForPlayer = findRequiredPointName(point, teamKey, data);

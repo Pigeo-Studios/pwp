@@ -31,8 +31,8 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ РґРµР№СЃС‚РІРёР№ СЃ СЂР°РґРёРѕСЃС‚Р°РЅС†РёРµР№: СѓСЃС‚Р°РЅРѕРІРєР° С‚РѕС‡РєРё СЃР±РѕСЂР°, СЃС‚СЂРѕРёС‚РµР»СЊСЃС‚РІРѕ С…Р°Р±РѕРІ Рё С‚РµС…РЅРёРєРё
-// РћС‚РїСЂР°РІР»СЏРµС‚СЃСЏ Р»РёРґРµСЂР°РјРё РѕС‚СЂСЏРґРѕРІ РїСЂРё РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРё СЂР°РґРёРѕ
+// Пакет действий с радиостанцией: установка точки сбора, строительство хабов и техники
+// Отправляется лидерами отрядов при использовании радио
 public class PacketRadioAction {
    private final int actionId;
 
@@ -48,7 +48,7 @@ public class PacketRadioAction {
       return new PacketRadioAction(buf.readInt());
    }
 
-   // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РґРµР№СЃС‚РІРёРµ СЂР°РґРёРѕ: actionId 0 - С‚РѕС‡РєР° СЃР±РѕСЂР°, РѕСЃС‚Р°Р»СЊРЅС‹Рµ - СЃС‚СЂРѕРёС‚РµР»СЊСЃС‚РІРѕ
+   // Обрабатывает действие радио: actionId 0 - точка сбора, остальные - строительство
    public static void handle(PacketRadioAction msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
@@ -127,7 +127,7 @@ public class PacketRadioAction {
       ctx.get().setPacketHandled(true);
    }
 
-   // РћР±СЂР°Р±РѕС‚РєР° СЃС‚СЂРѕРёС‚РµР»СЊСЃС‚РІР°: С…Р°Р± (actionId=14) Рё С‡РµСЂС‚РµР¶Рё С‚РµС…РЅРёРєРё (20-23)
+   // Обработка строительства: хаб (actionId=14) и чертежи техники (20-23)
    private static void handleConstructionLogic(int actionId, ServerPlayer player, ServerLevel level, WarfareWorldData data) {
       BlockPos targetPos = player.blockPosition();
       if (!level.getBlockState(targetPos).canBeReplaced() && actionId != 14) {
@@ -215,8 +215,8 @@ public class PacketRadioAction {
       }
    }
 
-   // РџС‹С‚Р°РµС‚СЃСЏ СЂР°Р·РјРµСЃС‚РёС‚СЊ С‚РѕС‡РєСѓ СЃР±РѕСЂР° РѕС‚СЂСЏРґР°: РїСЂРѕРІРµСЂСЏРµС‚ РґРёСЃС‚Р°РЅС†РёСЋ РґРѕ С‚РѕС‡РµРє,
-   // РЅР°Р»РёС‡РёРµ РІСЂР°РіРѕРІ Рё СЃРѕСЋР·РЅРёРєРѕРІ РїРѕР±Р»РёР·РѕСЃС‚Рё
+   // Пытается разместить точку сбора отряда: проверяет дистанцию до точек,
+   // наличие врагов и союзников поблизости
    private static boolean trySpawnRally(ServerPlayer player, ServerLevel level, String team, WarfareWorldData.Squad squad, WarfareWorldData data) {
       BlockPos pos = player.blockPosition();
 

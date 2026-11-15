@@ -204,7 +204,7 @@ public class PlayerRepository {
         return list;
     }
 
-    // в”Ђв”Ђ Account methods в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Account methods ──────────────────────────────
 
     public static Player findByTelegramId(long telegramId) throws SQLException {
         String sql = "SELECT * FROM players WHERE telegram_id = ?";
@@ -255,7 +255,7 @@ public class PlayerRepository {
     }
 
     public static Player register(String uuid, String nickname, String login, String email, String passwordHash, long telegramId) throws SQLException {
-        // Check if this nickname already exists вЂ” link account to existing player
+        // Check if this nickname already exists — link account to existing player
         Player existing = findByNickname(nickname);
         if (existing != null) {
             String sql = "UPDATE players SET login = ?, email = ?, password_hash = ?, telegram_id = ? WHERE uuid = ?";
@@ -365,7 +365,7 @@ public class PlayerRepository {
         }
     }
 
-    // в”Ђв”Ђ Trusted IPs в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Trusted IPs ──────────────────────────────────
 
     public static boolean isIpTrusted(String playerUuid, String ip) throws SQLException {
         String sql = "SELECT 1 FROM trusted_ips WHERE player_uuid = ? AND ip = ?";
@@ -389,7 +389,7 @@ public class PlayerRepository {
         }
     }
 
-    // в”Ђв”Ђ Sessions (v1) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Sessions (v1) ────────────────────────────────
 
     public static void createSession(String playerUuid, String token, String ip) throws SQLException {
         String sql = "INSERT INTO sessions (player_uuid, token, ip, expires_at) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY))";
@@ -426,7 +426,7 @@ public class PlayerRepository {
         }
     }
 
-    // в”Ђв”Ђ Sessions (v2: access/refresh tokens) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Sessions (v2: access/refresh tokens) ─────────
     private static final SecureRandom SESSION_RNG = new SecureRandom();
 
     public static String generateSessionKey() {
@@ -550,7 +550,7 @@ public class PlayerRepository {
         }
     }
 
-    // в”Ђв”Ђ 2FA Codes в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── 2FA Codes ────────────────────────────────────
 
     private static final SecureRandom RNG = new SecureRandom();
 
@@ -588,7 +588,7 @@ public class PlayerRepository {
         return false;
     }
 
-    // в”Ђв”Ђ Password Resets в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Password Resets ──────────────────────────────
 
     public static int createResetRequest(String uuid) throws SQLException {
         String sql = "INSERT INTO password_resets (player_uuid) VALUES (?)";
@@ -665,9 +665,9 @@ public class PlayerRepository {
         }
     }
 
-    // в”Ђв”Ђ Logs в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Logs ─────────────────────────────────────────
 
-    // в”Ђв”Ђ Auth Tokens (v2) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Auth Tokens (v2) ────────────────────────────
     private static final SecureRandom TOKEN_RNG = new SecureRandom();
 
     public static String createAuthToken(long accountId) throws SQLException {
@@ -766,7 +766,7 @@ public class PlayerRepository {
         return list;
     }
 
-    // в”Ђв”Ђ Broadcast в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Broadcast ────────────────────────────────────
 
     public static List<Long> getTelegramIdsForBroadcast() throws SQLException {
         List<Long> ids = new ArrayList<>();
@@ -789,7 +789,7 @@ public class PlayerRepository {
         return 0;
     }
 
-    // в”Ђв”Ђ Find any player by query в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+    // ── Find any player by query ─────────────────────
     public static Player findAny(String query) throws SQLException {
         Player p = findByLogin(query);
         if (p != null) return p;

@@ -15,8 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° РјРµРЅСЋ РІС‹Р±РѕСЂР° РєРёС‚Р°
-// РћС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РєР»РёРµРЅС‚РѕРј РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ СЃРїРёСЃРєР° РґРѕСЃС‚СѓРїРЅС‹С… РєРёС‚РѕРІ
+// Пакет запроса меню выбора кита
+// Отправляется клиентом для получения списка доступных китов
 public class PacketRequestKitMenu {
    public static void encode(PacketRequestKitMenu msg, FriendlyByteBuf buf) {
    }
@@ -25,7 +25,7 @@ public class PacketRequestKitMenu {
       return new PacketRequestKitMenu();
    }
 
-   // РЎРѕР±РёСЂР°РµС‚ СЃРїРёСЃРѕРє РґРѕСЃС‚СѓРїРЅС‹С… РєРёС‚РѕРІ СЃ СѓС‡С‘С‚РѕРј Р»РёРјРёС‚РѕРІ Рё РѕС‚РїСЂР°РІР»СЏРµС‚ РєР»РёРµРЅС‚Сѓ
+   // Собирает список доступных китов с учётом лимитов и отправляет клиенту
     public static void sendKitMenu(ServerPlayer player, WarfareWorldData data) {
        if (player.getTeam() == null) return;
        String teamName = player.getTeam().getName().toUpperCase();

@@ -20,8 +20,8 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.registries.ForgeRegistries;
 
-// РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° Р±РѕРµРїСЂРёРїР°СЃРѕРІ РёР· С…Р°Р±Р° (FOB)
-// РџРѕРґРґРµСЂР¶РёРІР°РµС‚ РїРѕРїРѕР»РЅРµРЅРёРµ РєРёС‚Р°, Р±РѕРµРїСЂРёРїР°СЃС‹ РґР»СЏ M2, РђР“РЎ, РјРёРЅРѕРјС‘С‚Р° Рё TOW
+// Пакет запроса боеприпасов из хаба (FOB)
+// Поддерживает пополнение кита, боеприпасы для M2, АГС, миномёта и TOW
 public class PacketRequestAmmo {
    private final BlockPos pos;
    private final int type;
@@ -40,7 +40,7 @@ public class PacketRequestAmmo {
       return new PacketRequestAmmo(buf.readBlockPos(), buf.readInt());
    }
 
-   // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ Р·Р°РїСЂРѕСЃ: РїСЂРѕРІРµСЂСЏРµС‚ РґРёСЃС‚Р°РЅС†РёСЋ, СЃС‚РѕРёРјРѕСЃС‚СЊ, РєСѓР»РґР°СѓРЅ Рё РІС‹РґР°С‘С‚ РїСЂРµРґРјРµС‚С‹
+   // Обрабатывает запрос: проверяет дистанцию, стоимость, кулдаун и выдаёт предметы
    public static void handle(PacketRequestAmmo msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

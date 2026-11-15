@@ -6,8 +6,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° РЅР° РїСЂРѕРІРµРґРµРЅРёРµ РіРѕР»РѕСЃРѕРІР°РЅРёСЏ Р·Р° РєРѕРјР°РЅРґРёСЂР°
-// РћС‚РїСЂР°РІР»СЏРµС‚СЃСЏ Р»РёРґРµСЂРѕРј РѕС‚СЂСЏРґР° РґР»СЏ РІС‹РґРІРёР¶РµРЅРёСЏ СЃРІРѕРµР№ РєР°РЅРґРёРґР°С‚СѓСЂС‹
+// Пакет запроса на проведение голосования за командира
+// Отправляется лидером отряда для выдвижения своей кандидатуры
 public class PacketRequestCMD {
    public static void encode(PacketRequestCMD msg, FriendlyByteBuf buf) {
    }
@@ -16,7 +16,7 @@ public class PacketRequestCMD {
       return new PacketRequestCMD();
    }
 
-   // Р—Р°РїСѓСЃРєР°РµС‚ РіРѕР»РѕСЃРѕРІР°РЅРёРµ Р·Р° РєРѕРјР°РЅРґРёСЂР°, РµСЃР»Рё РѕРЅРѕ РµС‰С‘ РЅРµ Р°РєС‚РёРІРЅРѕ
+   // Запускает голосование за командира, если оно ещё не активно
    public static void handle(PacketRequestCMD msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

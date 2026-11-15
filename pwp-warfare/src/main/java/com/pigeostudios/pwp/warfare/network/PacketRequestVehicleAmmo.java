@@ -12,8 +12,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° РїРѕРїРѕР»РЅРµРЅРёСЏ РєРёС‚Р° РёР· С‚СЂР°РЅСЃРїРѕСЂС‚РЅРѕРіРѕ СЃСЂРµРґСЃС‚РІР°
-// РСЃРїРѕР»СЊР·СѓРµС‚ РјР°С‚РµСЂРёР°Р»С‹ С‚СЂР°РЅСЃРїРѕСЂС‚РЅРѕРіРѕ СЃСЂРµРґСЃС‚РІР° РґР»СЏ РѕРїР»Р°С‚С‹
+// Пакет запроса пополнения кита из транспортного средства
+// Использует материалы транспортного средства для оплаты
 public class PacketRequestVehicleAmmo {
    private final int entityId;
    private final int type;
@@ -32,7 +32,7 @@ public class PacketRequestVehicleAmmo {
       return new PacketRequestVehicleAmmo(buf.readInt(), buf.readInt());
    }
 
-   // РџСЂРѕРІРµСЂСЏРµС‚ РјР°С‚РµСЂРёР°Р»С‹ С‚СЂР°РЅСЃРїРѕСЂС‚Р° Рё РїРѕРїРѕР»РЅСЏРµС‚ РєРёС‚ РёРіСЂРѕРєР°
+   // Проверяет материалы транспорта и пополняет кит игрока
    public static void handle(PacketRequestVehicleAmmo msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

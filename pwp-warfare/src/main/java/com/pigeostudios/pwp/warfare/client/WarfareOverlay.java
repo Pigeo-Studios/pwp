@@ -54,8 +54,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
 @EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT, bus = Bus.FORGE)
-// Р С›РЎРѓР Р…Р С•Р Р†Р Р…Р С•Р в„– Р С•Р Р†Р ВµРЎР‚Р В»Р ВµР в„– Р СР С•Р Т‘Р В°, Р С•РЎвЂљР С•Р В±РЎР‚Р В°Р В¶Р В°РЎР‹РЎвЂ°Р С‘Р в„– HUD: Р С”Р С•Р СР С—Р В°РЎРѓ, Р В·Р В°РЎвЂ¦Р Р†Р В°РЎвЂљ РЎвЂљР С•РЎвЂЎР ВµР С”,
-// РЎРѓРЎвЂљРЎР‚Р С•Р в„–Р С”РЎС“, РЎвЂљР С‘Р С”Р ВµРЎвЂљРЎвЂ№, РЎС“Р Р†Р ВµР Т‘Р С•Р СР В»Р ВµР Р…Р С‘РЎРЏ, РЎР‚Р В°РЎвЂ Р С‘РЎР‹ Р С‘ Р Т‘РЎР‚РЎС“Р С–Р С‘Р Вµ РЎРЊР В»Р ВµР СР ВµР Р…РЎвЂљРЎвЂ№ Р С‘Р Р…РЎвЂљР ВµРЎР‚РЎвЂћР ВµР в„–РЎРѓР В°
+// Основной оверлей мода: HUD — компас, захват точек, постройки,
+// тикеты, уведомления, рация и другие элементы (комментарий восстановлен: исходник был повреждён)
 public class WarfareOverlay {
    private static final ResourceLocation FLAG_UKRAINE = new ResourceLocation("pwpwarfare", "textures/gui/flags/ukraine.png");
    private static final ResourceLocation FLAG_RUSSIA = new ResourceLocation("pwpwarfare", "textures/gui/flags/russia.png");

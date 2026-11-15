@@ -17,8 +17,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ СЂР°РґРёРѕСЃС‚Р°РЅС†РёРё РєРѕРјР°РЅРґРёСЂР° РѕС‚СЂСЏРґР°
-// РџРѕР·РІРѕР»СЏРµС‚ СѓСЃС‚Р°РЅРѕРІРёС‚СЊ С‚РѕС‡РєСѓ СЃР±РѕСЂР°, РѕР±РѕСЂРѕРЅРёС‚РµР»СЊРЅС‹Рµ СЃРѕРѕСЂСѓР¶РµРЅРёСЏ Рё СЃС‚Р°С†РёРѕРЅР°СЂРЅРѕРµ РѕСЂСѓР¶РёРµ
+// Радиальное меню радиостанции командира отряда
+// Позволяет установить точку сбора, оборонительные сооружения и стационарное оружие
 public class RadioRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector.png");
    private boolean isSwitching = false;

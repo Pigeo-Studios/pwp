@@ -13,8 +13,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ С‚Р°РєС‚РёС‡РµСЃРєРѕР№ РєР°СЂС‚С‹
-// Р’С‹Р±РѕСЂ С‚РёРїР° РјР°СЂРєРµСЂР°: РєРѕРјР°РЅРґРЅС‹Р№, РІСЂР°Р¶РµСЃРєРёР№ РёР»Рё РѕС‚СЂСЏРґРЅС‹Р№
+// Радиальное меню тактической карты
+// Выбор типа маркера: командный, вражеский или отрядный
 public class TacticalMapRadialScreen extends Screen {
    private final int wx;
    private final int wz;

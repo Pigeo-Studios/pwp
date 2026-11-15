@@ -53,8 +53,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.registries.ForgeRegistries;
 
 @EventBusSubscriber(modid = "pwpwarfare", bus = Bus.FORGE)
-// РћР±СЂР°Р±РѕС‚С‡РёРє РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёР№ РёРіСЂРѕРєР° СЃ РјРёСЂРѕРј
-// РЈРїСЂР°РІР»СЏРµС‚ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј Р±Р»РѕРєРѕРІ, СѓСЃС‚Р°РЅРѕРІРєРѕР№ РєРѕРЅСЃС‚СЂСѓРєС†РёР№ Рё РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёРµРј СЃ С‚РµС…РЅРёРєРѕР№
+// Обработчик взаимодействий игрока с миром
+// Управляет использованием блоков, установкой конструкций и взаимодействием с техникой
 public class InteractionEvents {
    private static final Set<String> ALLOWED_INVENTORY_ENTITIES = Set.of(
       "superbwarfare:mortar",

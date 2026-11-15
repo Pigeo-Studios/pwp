@@ -72,8 +72,8 @@ import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT)
-// РћР±СЂР°Р±РѕС‚С‡РёРє РєР»РёРµРЅС‚СЃРєРёС… СЃРѕР±С‹С‚РёР№ Forge: РІРІРѕРґ СЃ РєР»Р°РІРёР°С‚СѓСЂС‹/РјС‹С€Рё,
-// СЂРµРЅРґРµСЂ РјР°СЂРєРµСЂРѕРІ РІ 3D-РјРёСЂРµ, FOV Рё РѕР±СЂР°Р±РѕС‚РєР° РєР°РјРµСЂС‹ РїСЂРё РЅРѕРєР°СѓС‚Рµ
+// Обработчик клиентских событий Forge: ввод с клавиатуры/мыши,
+// рендер маркеров в 3D-мире, FOV и обработка камеры при нокауте
 public class ClientEvents {
    private static final ResourceLocation PING_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye.png");
    private static final ResourceLocation MOVE_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move.png");

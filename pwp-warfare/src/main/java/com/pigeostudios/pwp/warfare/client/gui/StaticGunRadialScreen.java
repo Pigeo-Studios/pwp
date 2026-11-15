@@ -13,8 +13,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ СЃС‚Р°С†РёРѕРЅР°СЂРЅРѕРіРѕ РѕСЂСѓР¶РёСЏ
-// РџРѕР·РІРѕР»СЏРµС‚ СЂР°Р·РјРµСЃС‚РёС‚СЊ M2 Browning, РјРёРЅРѕРјС‘С‚, РђР“РЎ-30 РёР»Рё РџРўР Рљ TOW
+// Радиальное меню стационарного оружия
+// Позволяет разместить M2 Browning, миномёт, АГС-30 или ПТРК TOW
 public class StaticGunRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_4.png");
    private final Screen parentScreen;

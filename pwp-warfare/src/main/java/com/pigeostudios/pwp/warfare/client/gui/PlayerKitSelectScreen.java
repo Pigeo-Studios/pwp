@@ -159,7 +159,7 @@ public class PlayerKitSelectScreen extends Screen {
             if (w instanceof Button btn && btn.isHovered() && !btn.active) {
                 for (PacketOpenPlayerKitMenu.KitDTO kit : kits) {
                     String msg = btn.getMessage().getString();
-                    if (msg.equals(kit.name) || msg.equals("вњ” " + kit.name)) {
+                    if (msg.equals(kit.name) || msg.equals("✔ " + kit.name)) {
                         gui.renderTooltip(PWPTheme.Fonts.display(), Component.literal(kit.reason), mx, my);
                         break;
                     }

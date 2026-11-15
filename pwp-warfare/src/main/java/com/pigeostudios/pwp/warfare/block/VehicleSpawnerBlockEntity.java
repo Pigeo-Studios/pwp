@@ -39,8 +39,8 @@ import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
-// РЎСѓС‰РЅРѕСЃС‚СЊ Р±Р»РѕРєР° СЃРїР°СѓРЅРµСЂР° С‚РµС…РЅРёРєРё
-// РЈРїСЂР°РІР»СЏРµС‚ С‚Р°Р№РјРµСЂР°РјРё РІРѕР·СЂРѕР¶РґРµРЅРёСЏ, РёРЅРІРµРЅС‚Р°СЂС‘Рј Рё СЃРїР°СѓРЅРѕРј С‚СЂР°РЅСЃРїРѕСЂС‚РЅС‹С… СЃСЂРµРґСЃС‚РІ
+// Сущность блока спаунера техники
+// Управляет таймерами возрождения, инвентарём и спауном транспортных средств
 public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvider {
     public final ItemStackHandler inventory = new ItemStackHandler(33) {
        protected void onContentsChanged(int slot) {
@@ -120,7 +120,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
       return "NEUTRAL";
    }
 
-   // РўРёРє СЃРїР°СѓРЅРµСЂР°: СѓРїСЂР°РІР»СЏРµС‚ С‚Р°Р№РјРµСЂР°РјРё РІРѕР·СЂРѕР¶РґРµРЅРёСЏ Рё СЃРїР°СѓРЅРёС‚ С‚РµС…РЅРёРєСѓ
+   // Тик спаунера: управляет таймерами возрождения и спаунит технику
    public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
       if (!level.isClientSide) {
          if (be.loadTimer > 0) {
@@ -192,7 +192,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
       }
    }
 
-   // РЎРѕР·РґР°С‘С‚ С‚СЂР°РЅСЃРїРѕСЂС‚РЅРѕРµ СЃСЂРµРґСЃС‚РІРѕ СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё РёР· РёРЅРІРµРЅС‚Р°СЂСЏ СЃРїР°СѓРЅРµСЂР°
+   // Создаёт транспортное средство с настройками из инвентаря спаунера
    private void spawnVehicle() {
       if (this.level != null && !this.level.isClientSide) {
          if (this.vehicleIdString != null && !this.vehicleIdString.trim().isEmpty()) {
@@ -294,7 +294,7 @@ entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
       }
    }
 
-    // РЎРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ СЃРїР°СѓРЅРµСЂР° СЃ РєР»РёРµРЅС‚РѕРј
+    // Синхронизирует данные спаунера с клиентом
     public void syncToClient() {
        if (this.level != null && !this.level.isClientSide) {
           this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);

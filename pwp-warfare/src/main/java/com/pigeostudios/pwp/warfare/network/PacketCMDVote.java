@@ -6,8 +6,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ РіРѕР»РѕСЃРѕРІР°РЅРёСЏ Р·Р° РєР°РЅРґРёРґР°С‚Р° РІ РєРѕРјР°РЅРґРёСЂС‹
-// РћС‚РїСЂР°РІР»СЏРµС‚СЃСЏ Р»РёРґРµСЂР°РјРё РѕС‚СЂСЏРґРѕРІ РґР»СЏ РіРѕР»РѕСЃРѕРІР°РЅРёСЏ "Р·Р°" РёР»Рё "РїСЂРѕС‚РёРІ"
+// Пакет голосования за кандидата в командиры
+// Отправляется лидерами отрядов для голосования "за" или "против"
 public class PacketCMDVote {
    private final boolean agree;
 
@@ -23,8 +23,8 @@ public class PacketCMDVote {
       return new PacketCMDVote(buf.readBoolean());
    }
 
-   // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РіРѕР»РѕСЃ: РїСЂРѕРІРµСЂСЏРµС‚, СЏРІР»СЏРµС‚СЃСЏ Р»Рё РёРіСЂРѕРє Р»РёРґРµСЂРѕРј РѕС‚СЂСЏРґР°,
-   // Рё Р·Р°РїРёСЃС‹РІР°РµС‚ РіРѕР»РѕСЃ Р·Р° РёР»Рё РїСЂРѕС‚РёРІ РєР°РЅРґРёРґР°С‚Р° РІ РєРѕРјР°РЅРґРёСЂС‹
+   // Обрабатывает голос: проверяет, является ли игрок лидером отряда,
+   // и записывает голос за или против кандидата в командиры
    public static void handle(PacketCMDVote msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

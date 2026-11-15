@@ -9,8 +9,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РёР»Рё РѕС‚РєР»РѕРЅРµРЅРёСЏ Р°СЂС‚РёР»Р»РµСЂРёР№СЃРєРѕРіРѕ СѓРґР°СЂР° РєРѕРјР°РЅРґРёСЂРѕРј
-// РћС‚РїСЂР°РІР»СЏРµС‚СЃСЏ РєРѕРјР°РЅРґРёСЂРѕРј РІ РѕС‚РІРµС‚ РЅР° Р·Р°РїСЂРѕСЃ Р°СЂС‚РёР»Р»РµСЂРёРё
+// Пакет подтверждения или отклонения артиллерийского удара командиром
+// Отправляется командиром в ответ на запрос артиллерии
 public class PacketConfirmArtStrike {
    private final boolean accept;
 
@@ -26,8 +26,8 @@ public class PacketConfirmArtStrike {
       return new PacketConfirmArtStrike(buf.readBoolean());
    }
 
-   // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ СЂРµС€РµРЅРёРµ РєРѕРјР°РЅРґРёСЂР°: РїСЂРё РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРё СЃРѕР·РґР°С‘С‚ Р°РєС‚РёРІРЅС‹Р№
-   // Р°СЂС‚РёР»Р»РµСЂРёР№СЃРєРёР№ СѓРґР°СЂ РІ СѓРєР°Р·Р°РЅРЅРѕР№ РїРѕР·РёС†РёРё Рё РѕРїРѕРІРµС‰Р°РµС‚ РІСЃРµС… РёРіСЂРѕРєРѕРІ
+   // Обрабатывает решение командира: при подтверждении создаёт активный
+   // артиллерийский удар в указанной позиции и оповещает всех игроков
    public static void handle(PacketConfirmArtStrike msg, Supplier<Context> ctx) {
       ctx.get()
          .enqueueWork(

@@ -34,8 +34,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.registries.ForgeRegistries;
 
-// РЎРѕС…СЂР°РЅСЏРµРјС‹Рµ РґР°РЅРЅС‹Рµ РјРёСЂР° РґР»СЏ РёРіСЂРѕРІРѕРіРѕ СЂРµР¶РёРјР° В«Advance And SecureВ»
-// РҐСЂР°РЅРёС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ Р·Р°С…РІР°С‚Р° С‚РѕС‡РµРє, РѕС‚СЂСЏРґРѕРІ, FOB, С‚РµС…РЅРёРєРё Рё РЅР°СЃС‚СЂРѕРµРє РёРіСЂС‹
+// Сохраняемые данные мира для игрового режима «Advance And Secure»
+// Хранит состояние захвата точек, отрядов, FOB, техники и настроек игры
 public class WarfareWorldData extends SavedData {
    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(WarfareWorldData.class);
    public List<WarfareWorldData.CapturePoint> capturePoints = new ArrayList<>();

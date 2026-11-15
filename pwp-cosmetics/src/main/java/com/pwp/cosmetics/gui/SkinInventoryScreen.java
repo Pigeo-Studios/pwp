@@ -280,7 +280,7 @@ public class SkinInventoryScreen extends Screen {
         }
 
         if (currentFilter.equals("PRIMARY")) {
-            String hint = "\u00a77\u2714 РњРѕР¶РЅРѕ РІС‹Р±СЂР°С‚СЊ РЅРµСЃРєРѕР»СЊРєРѕ РѕСЃРЅРѕРІРЅС‹С… СЃРєРёРЅРѕРІ";
+            String hint = "\u00a77\u2714 Можно выбрать несколько основных скинов";
             gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(hint), cx, this.height - 30, PWPTheme.Colors.TEXT_SECONDARY);
         }
 

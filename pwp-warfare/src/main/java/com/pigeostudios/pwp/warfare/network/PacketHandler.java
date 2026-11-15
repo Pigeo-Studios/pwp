@@ -18,8 +18,8 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import net.minecraft.world.scores.Team;
 
-// Р¦РµРЅС‚СЂР°Р»СЊРЅС‹Р№ СЂРµРіРёСЃС‚СЂР°С‚РѕСЂ СЃРµС‚РµРІС‹С… РїР°РєРµС‚РѕРІ РјРѕРґР°
-// РЎРѕРґРµСЂР¶РёС‚ РєР°РЅР°Р» СЃРІСЏР·Рё Рё РјРµС‚РѕРґС‹ РѕС‚РїСЂР°РІРєРё РґР°РЅРЅС‹С… РІСЃРµРј РєР»РёРµРЅС‚Р°Рј
+// Центральный регистратор сетевых пакетов мода
+// Содержит канал связи и методы отправки данных всем клиентам
 public class PacketHandler {
    /**
     * Версия протокола канала. Поднимать при любом изменении состава/порядка регистраций.
@@ -28,7 +28,7 @@ public class PacketHandler {
    private static final String PROTOCOL_VERSION = "2";
    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(new ResourceLocation("pwpwarfare:main"), () -> "1", "1"::equals, "1"::equals);
 
-   // Р РµРіРёСЃС‚СЂРёСЂСѓРµС‚ РІСЃРµ РїР°РєРµС‚С‹ РјРѕРґР° СЃ РёС… РєРѕРґРµРєР°РјРё Рё РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё
+   // Регистрирует все пакеты мода с их кодеками и обработчиками
    public static void register() {
       int id = 0;
       INSTANCE.registerMessage(id++, PacketSyncGameData.class, PacketSyncGameData::encode, PacketSyncGameData::decode, PacketSyncGameData::handle);
@@ -150,7 +150,7 @@ public class PacketHandler {
       return pKits;
    }
 
-   // РћС‚РїСЂР°РІР»СЏРµС‚ РїРѕР»РЅС‹Р№ РїР°РєРµС‚ SyncGameData РІСЃРµРј РєР»РёРµРЅС‚Р°Рј (РїРµСЂРµРіСЂСѓР·РєР° СЃ РїСЂСЏРјС‹РјРё РїР°СЂР°РјРµС‚СЂР°РјРё)
+   // Отправляет полный пакет SyncGameData всем клиентам (перегрузка с прямыми параметрами)
    public static void sendToAllClients(
       int blue,
       int red,
@@ -242,12 +242,12 @@ public class PacketHandler {
       );
    }
 
-   // РћС‚РїСЂР°РІР»СЏРµС‚ РїР°РєРµС‚ SyncGameData РІСЃРµРј РєР»РёРµРЅС‚Р°Рј (РїРµСЂРµРіСЂСѓР·РєР° СЃ WarfareWorldData)
+   // Отправляет пакет SyncGameData всем клиентам (перегрузка с WarfareWorldData)
    public static void sendToAllClients(WarfareWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
       INSTANCE.send(PacketDistributor.ALL.noArg(), createSyncPacket(data, blueBleed, redBleed, bBlocked, rBlocked));
    }
 
-   // РћС‚РїСЂР°РІР»СЏРµС‚ РїР°РєРµС‚ SyncGameData РІСЃРµРј РёРіСЂРѕРєР°Рј РІ СѓРєР°Р·Р°РЅРЅРѕРј РёР·РјРµСЂРµРЅРёРё
+   // Отправляет пакет SyncGameData всем игрокам в указанном измерении
    public static void sendToAllClients(ServerLevel level, WarfareWorldData data) {
       INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), createSyncPacket(data, false, false, false, false));
    }

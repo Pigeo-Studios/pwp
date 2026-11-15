@@ -10,8 +10,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ РІС‹Р±РѕСЂР° С‚РёРїР° РјР°СЂРєРµСЂР° РѕС‚СЂСЏРґР°
-// РђС‚Р°РєР°, Р·Р°С‰РёС‚Р°, СЃС‚СЂРѕР№РєР°, РїРµСЂРµРјРµС‰РµРЅРёРµ вЂ” РґР»СЏ РєРѕРјР°РЅРґРёСЂРѕРІ РѕС‚РґРµР»РµРЅРёР№
+// Радиальное меню выбора типа маркера отряда
+// Атака, защита, стройка, перемещение — для командиров отделений
 public class SquadMarkerRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_3 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector.png");
    private static final ResourceLocation SECTOR_4 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_4.png");

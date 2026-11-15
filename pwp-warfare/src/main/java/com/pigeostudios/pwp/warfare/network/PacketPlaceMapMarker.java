@@ -11,8 +11,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ СЂР°Р·РјРµС‰РµРЅРёСЏ РјР°СЂРєРµСЂР° РЅР° РєР°СЂС‚Рµ
-// РџРѕРґРґРµСЂР¶РёРІР°РµС‚ С‚РёРїС‹: Р°СЂС‚РёР»Р»РµСЂРёР№СЃРєРёР№ Р·Р°РїСЂРѕСЃ, РѕР±С‰РёР№ РјР°СЂРєРµСЂ Рё РґСЂСѓРіРёРµ
+// Пакет размещения маркера на карте
+// Поддерживает типы: артиллерийский запрос, общий маркер и другие
 public class PacketPlaceMapMarker {
    private final int x;
    private final int z;
@@ -34,8 +34,8 @@ public class PacketPlaceMapMarker {
       return new PacketPlaceMapMarker(buf.readInt(), buf.readInt(), buf.readUtf());
    }
 
-   // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ СЂР°Р·РјРµС‰РµРЅРёРµ РјР°СЂРєРµСЂР°: РїСЂРѕРІРµСЂСЏРµС‚ РїСЂР°РІР° (РґР»СЏ Р°СЂС‚РёР»Р»РµСЂРёРё),
-   // РґРѕР±Р°РІР»СЏРµС‚ РјР°СЂРєРµСЂ РІ РјРёСЂ Рё РѕРїРѕРІРµС‰Р°РµС‚ РєРѕРјР°РЅРґСѓ
+   // Обрабатывает размещение маркера: проверяет права (для артиллерии),
+   // добавляет маркер в мир и оповещает команду
    public static void handle(PacketPlaceMapMarker msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();

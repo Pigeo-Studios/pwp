@@ -44,8 +44,8 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
-// РЎСѓС‰РЅРѕСЃС‚СЊ СЏС‰РёРєР° СЃРЅР°Р±Р¶РµРЅРёСЏ
-// РЎР±СЂР°СЃС‹РІР°РµС‚СЃСЏ СЃ С‚РµС…РЅРёРєРё СЃРЅР°Р±Р¶РµРЅРёСЏ, РїРѕРїРѕР»РЅСЏРµС‚ Р·Р°РїР°СЃС‹ FOB Рё СЂРµРјРѕРЅС‚РёСЂСѓРµС‚ С‚РµС…РЅРёРєСѓ
+// Сущность ящика снабжения
+// Сбрасывается с техники снабжения, пополняет запасы FOB и ремонтирует технику
 public class SupplyCrateEntity extends Entity {
    private static final EntityDataAccessor<Integer> MATERIALS = SynchedEntityData.defineId(SupplyCrateEntity.class, EntityDataSerializers.INT);
    private static final EntityDataAccessor<String> TEAM_OWNER = SynchedEntityData.defineId(SupplyCrateEntity.class, EntityDataSerializers.STRING);
@@ -155,7 +155,7 @@ public class SupplyCrateEntity extends Entity {
       }
    }
 
-   // РџРѕРёСЃРє Р±Р»РёР¶Р°Р№С€РµР№ С‚РµС…РЅРёРєРё РґР»СЏ РїРѕРїРѕР»РЅРµРЅРёСЏ Р·Р°РїР°СЃРѕРІ
+   // Поиск ближайшей техники для пополнения запасов
    private void supplyNearbyVehicle() {
       ServerLevel level = (ServerLevel)this.level();
       if (this.currentTargetUUID != null) {
@@ -207,7 +207,7 @@ public class SupplyCrateEntity extends Entity {
       }
    }
 
-   // РћР±СЂР°Р±РѕС‚РєР° РїРѕРїРѕР»РЅРµРЅРёСЏ РґР»СЏ РєРѕРЅРєСЂРµС‚РЅРѕР№ С‚РµС…РЅРёРєРё
+   // Обработка пополнения для конкретной техники
    private void processVehicleLogic(Entity vehicle) {
       int timer = vehicle.getPersistentData().getInt("WARFARE_CrateTimer");
       timer++;
@@ -302,7 +302,7 @@ public class SupplyCrateEntity extends Entity {
       }
    }
 
-   // РџРѕРїРѕР»РЅРµРЅРёРµ РјР°С‚РµСЂРёР°Р»РѕРІ Р±Р»РёР¶Р°Р№С€РµРіРѕ FOB
+   // Пополнение материалов ближайшего FOB
    private void supplyNearbyHub() {
       if (!this.getTeamOwner().equals("NEUTRAL")) {
          ServerLevel currentLevel = (ServerLevel)this.level();

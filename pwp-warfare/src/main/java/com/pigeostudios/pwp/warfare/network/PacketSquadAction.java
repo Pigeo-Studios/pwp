@@ -14,8 +14,8 @@ import net.minecraft.world.level.ItemLike;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ СѓРїСЂР°РІР»РµРЅРёСЏ РѕС‚СЂСЏРґРѕРј: СЃРѕР·РґР°РЅРёРµ, РІСЃС‚СѓРїР»РµРЅРёРµ, РІС‹С…РѕРґ, РєРёРє, РїРѕРІС‹С€РµРЅРёРµ, Р±Р»РѕРєРёСЂРѕРІРєР°
-// РЎРѕРґРµСЂР¶РёС‚ РІСЃСЋ Р»РѕРіРёРєСѓ СЂР°Р±РѕС‚С‹ СЃ РѕС‚РґРµР»РµРЅРёСЏРјРё РёРіСЂРѕРєРѕРІ
+// Пакет управления отрядом: создание, вступление, выход, кик, повышение, блокировка
+// Содержит всю логику работы с отделениями игроков
 public class PacketSquadAction {
    private final int action;
    private final int squadId;
@@ -65,7 +65,7 @@ public class PacketSquadAction {
       return new PacketSquadAction(buf.readInt(), buf.readInt(), buf.readUtf());
    }
 
-   // РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РґРµР№СЃС‚РІРёСЏ СЃ РѕС‚СЂСЏРґРѕРј РїРѕ actionId: 0-СЃРѕР·РґР°С‚СЊ, 1-РїСЂРёСЃРѕРµРґ., 2-РІС‹Р№С‚Рё, Рё С‚.Рґ.
+   // Обрабатывает действия с отрядом по actionId: 0-создать, 1-присоед., 2-выйти, и т.д.
    public static void handle(PacketSquadAction msg, Supplier<Context> ctx) {
       ctx.get()
          .enqueueWork(
@@ -342,7 +342,7 @@ public class PacketSquadAction {
       return null;
    }
 
-   // Р’С‹С…РѕРґ РёРіСЂРѕРєР° РёР· С‚РµРєСѓС‰РµРіРѕ РѕС‚СЂСЏРґР°: РѕС‡РёСЃС‚РєР° РґР°РЅРЅС‹С…, РЅР°Р·РЅР°С‡РµРЅРёРµ РЅРѕРІРѕРіРѕ Р»РёРґРµСЂР°
+   // Выход игрока из текущего отряда: очистка данных, назначение нового лидера
    public static void leaveCurrentSquad(ServerPlayer player, WarfareWorldData data) {
        String pName = player.getScoreboardName();
 
@@ -410,7 +410,7 @@ public class PacketSquadAction {
       PacketHandler.sendToAllClients(player.serverLevel(), data);
    }
 
-   // Р’С‹РґР°С‘С‚ РёРіСЂРѕРєСѓ СЂР°РґРёРѕСЃС‚Р°РЅС†РёСЋ, РµСЃР»Рё РµС‘ РµС‰С‘ РЅРµС‚ РІ РёРЅРІРµРЅС‚Р°СЂРµ
+   // Выдаёт игроку радиостанцию, если её ещё нет в инвентаре
    public static void giveRadio(ServerPlayer player) {
       if (player != null) {
          boolean hasRadio = false;

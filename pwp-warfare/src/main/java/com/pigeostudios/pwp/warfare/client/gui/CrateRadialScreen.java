@@ -15,8 +15,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ РґР»СЏ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёСЏ СЃ СЏС‰РёРєРѕРј СЃРЅР°Р±Р¶РµРЅРёСЏ
-// РџРѕР·РІРѕР»СЏРµС‚ РїРѕРїРѕР»РЅРёС‚СЊ Р±РѕРµРїСЂРёРїР°СЃС‹ РёР»Рё Р·Р°Р±СЂР°С‚СЊ РјР°С‚РµСЂРёР°Р»С‹
+// Радиальное меню для взаимодействия с ящиком снабжения
+// Позволяет пополнить боеприпасы или забрать материалы
 public class CrateRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_5.png");
    private final int entityId;

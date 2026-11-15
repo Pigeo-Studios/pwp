@@ -24,8 +24,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap.Types;
 import net.minecraftforge.network.NetworkEvent.Context;
 
-// РџР°РєРµС‚ Р·Р°РїСЂРѕСЃР° РЅР° РІРѕР·СЂРѕР¶РґРµРЅРёРµ: РіР»Р°РІРЅР°СЏ Р±Р°Р·Р°, С‚РѕС‡РєР° СЃР±РѕСЂР° РёР»Рё FOB
-// РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РІС‹Р±РѕСЂ С‚РѕС‡РєРё РїРѕСЏРІР»РµРЅРёСЏ Рё РїСЂРёРјРµРЅРµРЅРёРµ РєРёС‚Р°
+// Пакет запроса на возрождение: главная база, точка сбора или FOB
+// Обрабатывает выбор точки появления и применение кита
 public class PacketRespawnRequest {
    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketRespawnRequest.class);
    private final String type;
@@ -42,7 +42,7 @@ public class PacketRespawnRequest {
       return new PacketRespawnRequest(buf.readUtf());
    }
 
-   // РћРїСЂРµРґРµР»СЏРµС‚ С‚РѕС‡РєСѓ РІРѕР·СЂРѕР¶РґРµРЅРёСЏ РїРѕ С‚РёРїСѓ (MAIN, RALLY, HUB) Рё С‚РµР»РµРїРѕСЂС‚РёСЂСѓРµС‚ РёРіСЂРѕРєР°
+   // Определяет точку возрождения по типу (MAIN, RALLY, HUB) и телепортирует игрока
    public static void handle(PacketRespawnRequest msg, Supplier<Context> ctx) {
       ctx.get()
          .enqueueWork(
@@ -194,7 +194,7 @@ public class PacketRespawnRequest {
       return null;
    }
 
-   // РС‰РµС‚ СЃР»СѓС‡Р°Р№РЅСѓСЋ Р±РµР·РѕРїР°СЃРЅСѓСЋ С‚РѕС‡РєСѓ РґР»СЏ РІРѕР·СЂРѕР¶РґРµРЅРёСЏ РІ СЂР°РґРёСѓСЃРµ РѕС‚ С†РµРЅС‚СЂР°
+   // Ищет случайную безопасную точку для возрождения в радиусе от центра
    private static BlockPos findRandomSafeSpawn(ServerLevel level, BlockPos center, int radius) {
       Random rand = new Random();
 
@@ -214,7 +214,7 @@ public class PacketRespawnRequest {
       return null;
    }
 
-   // РџСЂРѕРІРµСЂСЏРµС‚, Р±РµР·РѕРїР°СЃРЅРѕ Р»Рё РјРµСЃС‚Рѕ: СЃРІРѕР±РѕРґРЅРѕРµ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРѕ, С‚РІС‘СЂРґР°СЏ Р·РµРјР»СЏ, РЅРµС‚ Р»Р°РІС‹/РєР°РєС‚СѓСЃРѕРІ
+   // Проверяет, безопасно ли место: свободное пространство, твёрдая земля, нет лавы/кактусов
    private static boolean isValidSpawnSpot(ServerLevel level, BlockPos pos) {
       BlockState feet = level.getBlockState(pos);
       BlockState head = level.getBlockState(pos.above());

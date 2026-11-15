@@ -21,11 +21,11 @@ import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
-// РћР±СЂР°Р±РѕС‚С‡РёРє РїРѕРїРѕР»РЅРµРЅРёСЏ Р·Р°РїР°СЃРѕРІ: РІС‹РґР°С‡Р° РєРёС‚РѕРІ, СЂРµСЃР°РїРїР»Р°Р№ РїСЂРµРґРјРµС‚РѕРІ,
-// СЂР°Р±РѕС‚Р° СЃ Curios API Рё РїСЂРёРјРµРЅРµРЅРёРµ РѕС‚Р»РѕР¶РµРЅРЅС‹С… РєРёС‚РѕРІ РїСЂРё СЂРµСЃРїР°РІРЅРµ
+// Обработчик пополнения запасов: выдача китов, ресапплай предметов,
+// работа с Curios API и применение отложенных китов при респавне
 public class ResupplyHandler {
    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(ResupplyHandler.class);
-    // Р’С‹РґР°С‘С‚ РёРіСЂРѕРєСѓ РїРѕР»РЅС‹Р№ РЅР°Р±РѕСЂ РїСЂРµРґРјРµС‚РѕРІ РёР· СѓРєР°Р·Р°РЅРЅРѕРіРѕ РєРёС‚Р°
+    // Выдаёт игроку полный набор предметов из указанного кита
    public static void applyKitToPlayer(ServerPlayer player, WarfareWorldData.KitInfo kit) {
       Inventory pInv = player.getInventory();
       pInv.clearContent();
@@ -141,7 +141,7 @@ public class ResupplyHandler {
       }
    }
 
-   // РџРѕРїРѕР»РЅСЏРµС‚ РЅРµРґРѕСЃС‚Р°СЋС‰РёРµ РїСЂРµРґРјРµС‚С‹ СЌРєРёРїРёСЂРѕРІРєРё РїРѕ С„Р»Р°РіР°Рј resupplyFlags
+   // Пополняет недостающие предметы экипировки по флагам resupplyFlags
    public static boolean resupplyPlayer(ServerPlayer player, WarfareWorldData.KitInfo kit, boolean isAmmoBagSource) {
       boolean gaveSomething = false;
       Inventory pInv = player.getInventory();
@@ -228,7 +228,7 @@ public class ResupplyHandler {
       }).orElse(0);
    }
 
-   // РџСЂРёРјРµРЅСЏРµС‚ РѕС‚Р»РѕР¶РµРЅРЅС‹Р№ РєРёС‚ (WARFARE_PendingKit) РїСЂРё РІРѕР·СЂРѕР¶РґРµРЅРёРё РёРіСЂРѕРєР°
+   // Применяет отложенный кит (WARFARE_PendingKit) при возрождении игрока
    private static void applySlotSelections(ServerPlayer player, WarfareWorldData.KitInfo kit) {
       CompoundTag selTag = player.getPersistentData().getCompound("WARFARE_SlotSelections");
       if (selTag.isEmpty() || kit.slotSkins == null || kit.slotSkins.isEmpty()) return;

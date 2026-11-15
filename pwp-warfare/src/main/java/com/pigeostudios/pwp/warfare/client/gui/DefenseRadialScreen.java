@@ -15,8 +15,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 
-// Р Р°РґРёР°Р»СЊРЅРѕРµ РјРµРЅСЋ РѕР±РѕСЂРѕРЅРёС‚РµР»СЊРЅС‹С… СЃРѕРѕСЂСѓР¶РµРЅРёР№
-// РџРѕР·РІРѕР»СЏРµС‚ СЂР°Р·РјРµС‰Р°С‚СЊ СЃС‚РµРЅС‹, РєРѕР»СЋС‡СѓСЋ РїСЂРѕРІРѕР»РѕРєСѓ Рё С…Р°Р±
+// Радиальное меню оборонительных сооружений
+// Позволяет размещать стены, колючую проволоку и хаб
 public class DefenseRadialScreen extends Screen {
    private static final ResourceLocation SECTOR_TEXTURE_5 = new ResourceLocation("pwpwarfare", "textures/gui/radial_sector_5.png");
    private final Screen parentScreen;
