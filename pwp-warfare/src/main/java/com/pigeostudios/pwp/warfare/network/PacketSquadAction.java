@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
@@ -423,8 +425,8 @@ public class PacketSquadAction {
         }
 
         data.squads.removeIf(sx -> sx.members.isEmpty());
-        player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-        player.getPersistentData().putString("WARFARE_PendingKit", "");
+        WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
+        WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, "");
         player.getInventory().clearContent();
         ResupplyHandler.clearCurios(player);
         player.inventoryMenu.broadcastChanges();
@@ -479,12 +481,12 @@ public class PacketSquadAction {
     }
 
     public static void updatePlayerTags(ServerPlayer p, int squadId, boolean isLeader) {
-        p.getPersistentData().putInt("WARFARE_SquadID", squadId);
-        p.getPersistentData().putBoolean("WARFARE_IsSquadLeader", isLeader);
+        WarfareData.of(p).putInt(WarfareKeys.SQUAD_ID, squadId);
+        WarfareData.of(p).putBoolean(WarfareKeys.IS_SQUAD_LEADER, isLeader);
     }
 
     public static void removePlayerTags(ServerPlayer p) {
-        p.getPersistentData().remove("WARFARE_SquadID");
-        p.getPersistentData().remove("WARFARE_IsSquadLeader");
+        WarfareData.of(p).remove(WarfareKeys.SQUAD_ID);
+        WarfareData.of(p).remove(WarfareKeys.IS_SQUAD_LEADER);
     }
 }

@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -43,7 +45,7 @@ public class ResupplyHandler {
                 }
 
                 if (ModList.get().isLoaded("pwp_cosmetics")) {
-                    String currentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+                    String currentKit = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                     List<String> allowed = kit.slotSkins != null ? kit.slotSkins.get(i) : null;
                     if (allowed != null && !allowed.isEmpty()) {
                         com.pwp.cosmetics.CosmeticManager.SkinData skinData = null;
@@ -96,7 +98,7 @@ public class ResupplyHandler {
             }
         }
 
-        player.getPersistentData().putString("WARFARE_CurrentKit", kit.name);
+        WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, kit.name);
         // Синхронизируем применённый кит клиенту (ClientData.myCurrentKit)
         com.pigeostudios.pwp.warfare.events.KitUtil.syncMyKit(player);
         // Apply slot selections (alternatives chosen in deploy screen)
@@ -241,7 +243,7 @@ public class ResupplyHandler {
 
     // Применяет отложенный кит (WARFARE_PendingKit) при возрождении игрока
     private static void applySlotSelections(ServerPlayer player, WarfareWorldData.KitInfo kit) {
-        CompoundTag selTag = player.getPersistentData().getCompound("WARFARE_SlotSelections");
+        CompoundTag selTag = WarfareData.of(player).getCompound(WarfareKeys.SLOT_SELECTIONS);
         if (selTag.isEmpty() || kit.slotSkins == null || kit.slotSkins.isEmpty()) return;
 
         // Slot index for each target label
@@ -304,8 +306,8 @@ public class ResupplyHandler {
                     if (member.equals(pName)) continue;
                     ServerPlayer p = player.server.getPlayerList().getPlayerByName(member);
                     if (p == null) continue;
-                    String pen = p.getPersistentData().getString("WARFARE_PendingKit");
-                    String cur = p.getPersistentData().getString("WARFARE_CurrentKit");
+                    String pen = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
+                    String cur = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
                     WarfareWorldData.KitInfo k = kits.get(!pen.isEmpty() ? pen : cur);
                     if (k != null && "FIRE_SUPPORT".equals(k.category)) count++;
                 }
@@ -316,7 +318,7 @@ public class ResupplyHandler {
     }
 
     public static void tryApplyPendingKit(ServerPlayer player, WarfareWorldData data) {
-        String pending = player.getPersistentData().getString("WARFARE_PendingKit");
+        String pending = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
         if (!pending.isEmpty()) {
             String teamName =
                     player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
@@ -326,7 +328,7 @@ public class ResupplyHandler {
                 if (kit != null) {
                     if (pending.equals("Unassigned")) {
                         applyKitToPlayer(player, kit);
-                        player.getPersistentData().remove("WARFARE_PendingKit");
+                        WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
                         PacketHandler.sendToAllClients(player.serverLevel(), data);
                     } else {
                         int teamCount = 0;
@@ -345,7 +347,7 @@ public class ResupplyHandler {
                             if (p != player
                                     && p.getTeam() != null
                                     && p.getTeam().getName().toUpperCase().equals(teamName)) {
-                                String otherKit = p.getPersistentData().getString("WARFARE_CurrentKit");
+                                String otherKit = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
                                 if (otherKit.equals(pending)) {
                                     teamCount++;
                                     if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) {
@@ -393,7 +395,7 @@ public class ResupplyHandler {
                             }
                         }
 
-                        player.getPersistentData().remove("WARFARE_PendingKit");
+                        WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
                         PacketHandler.sendToAllClients(player.serverLevel(), data);
                     }
                 }

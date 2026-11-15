@@ -3,6 +3,9 @@ package com.pigeostudios.pwp.warfare.events;
 import com.atsuishio.superbwarfare.entity.projectile.FastThrowableProjectile;
 import com.atsuishio.superbwarfare.entity.projectile.ProjectileEntity;
 import com.atsuishio.superbwarfare.entity.projectile.TaserBulletEntity;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKey;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketMainZoneState;
 import com.pigeostudios.pwp.warfare.network.PacketNotification;
@@ -38,8 +41,8 @@ import net.minecraftforge.network.PacketDistributor;
 // клиент показывает плашку в ленте уведомлений «В мейн-зоне стрельба запрещена».
 @EventBusSubscriber(modid = "pwpwarfare", bus = Bus.FORGE)
 public class MainZoneFireGuard {
-    private static final String ZONE_STATE_TAG = "WARFARE_InMainZone";
-    private static final String BLOCK_MSG_TAG = "WARFARE_BlockMsgTick";
+    private static final WarfareKey<Boolean> ZONE_STATE_TAG = WarfareKeys.IN_MAIN_ZONE;
+    private static final WarfareKey<Long> BLOCK_MSG_TAG = WarfareKeys.BLOCK_MSG_TICK;
     private static final long BLOCK_MSG_INTERVAL = 60L; // раз в 3 секунды
 
     private MainZoneFireGuard() {}
@@ -65,16 +68,16 @@ public class MainZoneFireGuard {
     // На клиенте всегда true (ServerPlayer там не бывает), поэтому миксины,
     // зарегистрированные на обеих сторонах, на клиенте безопасно no-op.
     public static boolean isFireBlocked(Entity shooter) {
-        return shooter instanceof ServerPlayer sp && sp.getPersistentData().getBoolean(ZONE_STATE_TAG);
+        return shooter instanceof ServerPlayer sp && WarfareData.of(sp).getBoolean(ZONE_STATE_TAG);
     }
 
     // Отправляет клиенту сигнал «выстрел заблокирован» не чаще раза в 3 секунды
     public static void notifyBlocked(ServerPlayer player) {
         if (player == null || player.level() == null) return;
         long now = GameClock.worldTicks(player.level());
-        long last = player.getPersistentData().getLong(BLOCK_MSG_TAG);
+        long last = WarfareData.of(player).getLong(BLOCK_MSG_TAG);
         if (now - last >= BLOCK_MSG_INTERVAL) {
-            player.getPersistentData().putLong(BLOCK_MSG_TAG, now);
+            WarfareData.of(player).putLong(BLOCK_MSG_TAG, now);
             PacketHandler.INSTANCE.send(
                     PacketDistributor.PLAYER.with(() -> player),
                     new PacketNotification("safety.mainzone.blocked", (byte) 1));
@@ -122,9 +125,9 @@ public class MainZoneFireGuard {
         if (server == null || GameClock.serverTicks(server) % 10 != 0) return;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             boolean in = isInMainZone(player);
-            boolean prev = player.getPersistentData().getBoolean(ZONE_STATE_TAG);
+            boolean prev = WarfareData.of(player).getBoolean(ZONE_STATE_TAG);
             if (in != prev) {
-                player.getPersistentData().putBoolean(ZONE_STATE_TAG, in);
+                WarfareData.of(player).putBoolean(ZONE_STATE_TAG, in);
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketMainZoneState(in));
                 // Разовое уведомление при входе в зону (лента уведомлений)
                 if (in) {
@@ -141,7 +144,7 @@ public class MainZoneFireGuard {
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             boolean in = isInMainZone(player);
-            player.getPersistentData().putBoolean(ZONE_STATE_TAG, in);
+            WarfareData.of(player).putBoolean(ZONE_STATE_TAG, in);
             PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketMainZoneState(in));
         }
     }

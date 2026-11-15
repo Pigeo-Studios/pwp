@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -54,8 +56,8 @@ public class PacketTeamSelect {
             }
 
             PacketSquadAction.leaveCurrentSquad(player, data);
-            player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-            player.getPersistentData().remove("WARFARE_PendingKit");
+            WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
+            WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
             player.getInventory().clearContent();
             ResupplyHandler.clearCurios(player);
             player.inventoryMenu.broadcastChanges();

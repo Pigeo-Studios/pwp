@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -393,8 +395,8 @@ public class PacketHandler {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                String current = p.getPersistentData().getString("WARFARE_CurrentKit");
-                String pending = p.getPersistentData().getString("WARFARE_PendingKit");
+                String current = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
+                String pending = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
                 String displayKit = !pending.isEmpty() ? pending : current;
                 pKits.put(
                         p.getScoreboardName(),
@@ -529,7 +531,7 @@ public class PacketHandler {
                 }
             }
         }
-        String kit = targetPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+        String kit = WarfareData.of(targetPlayer).getString(WarfareKeys.CURRENT_KIT);
         if (kit.isEmpty()) kit = "Unassigned";
         PacketSyncPlayerSkin packet = new PacketSyncPlayerSkin(uuid, faction, kit);
         INSTANCE.send(PacketDistributor.ALL.noArg(), packet);

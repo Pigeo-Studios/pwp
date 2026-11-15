@@ -1,6 +1,9 @@
 package com.pigeostudios.pwp.warfare.events;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKey;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.PacketDroneDeployState;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -64,28 +67,28 @@ public class DroneDeploymentEvents {
             "uncomplicatedfpv:mavic_drone_with_drop");
 
     // persistentData игрока
-    private static final String P_DEPLOY_TYPE = "WARFARE_DroneDeployType";
-    private static final String P_DEPLOY_START = "WARFARE_DroneDeployStart";
-    private static final String P_DEPLOY_X = "WARFARE_DroneDeployX";
-    private static final String P_DEPLOY_Y = "WARFARE_DroneDeployY";
-    private static final String P_DEPLOY_Z = "WARFARE_DroneDeployZ";
-    private static final String P_DEPLOY_ENTITY = "WARFARE_DroneDeployEntity";
-    private static final String P_CD_UNTIL = "WARFARE_DroneDeployCd";
+    private static final WarfareKey<String> P_DEPLOY_TYPE = WarfareKeys.DRONE_DEPLOY_TYPE;
+    private static final WarfareKey<Long> P_DEPLOY_START = WarfareKeys.DRONE_DEPLOY_START;
+    private static final WarfareKey<Double> P_DEPLOY_X = WarfareKeys.DRONE_DEPLOY_X;
+    private static final WarfareKey<Double> P_DEPLOY_Y = WarfareKeys.DRONE_DEPLOY_Y;
+    private static final WarfareKey<Double> P_DEPLOY_Z = WarfareKeys.DRONE_DEPLOY_Z;
+    private static final WarfareKey<Integer> P_DEPLOY_ENTITY = WarfareKeys.DRONE_DEPLOY_ENTITY;
+    private static final WarfareKey<Long> P_CD_UNTIL = WarfareKeys.DRONE_DEPLOY_CD;
     // Канал перезарядки мавика дрон-подсумком
-    private static final String P_RELOAD_TYPE = "WARFARE_DroneReloadType";
-    private static final String P_RELOAD_START = "WARFARE_DroneReloadStart";
-    private static final String P_RELOAD_X = "WARFARE_DroneReloadX";
-    private static final String P_RELOAD_Y = "WARFARE_DroneReloadY";
-    private static final String P_RELOAD_Z = "WARFARE_DroneReloadZ";
-    private static final String P_RELOAD_ENTITY = "WARFARE_DroneReloadEntity";
+    private static final WarfareKey<String> P_RELOAD_TYPE = WarfareKeys.DRONE_RELOAD_TYPE;
+    private static final WarfareKey<Long> P_RELOAD_START = WarfareKeys.DRONE_RELOAD_START;
+    private static final WarfareKey<Double> P_RELOAD_X = WarfareKeys.DRONE_RELOAD_X;
+    private static final WarfareKey<Double> P_RELOAD_Y = WarfareKeys.DRONE_RELOAD_Y;
+    private static final WarfareKey<Double> P_RELOAD_Z = WarfareKeys.DRONE_RELOAD_Z;
+    private static final WarfareKey<Integer> P_RELOAD_ENTITY = WarfareKeys.DRONE_RELOAD_ENTITY;
 
     // persistentData дрона
-    private static final String E_DEPLOYING = "WARFARE_DroneDeploying";
-    private static final String E_OWNER = "WARFARE_DroneOwner";
-    private static final String E_IDLE_TICKS = "WARFARE_DroneIdleTicks";
-    private static final String E_TEAM = "WARFARE_VehicleTeam";
-    private static final String E_TYPE = "WARFARE_VehicleType";
-    private static final String E_FALLBACK_TICKS = "WARFARE_DroneFallbackTicks";
+    private static final WarfareKey<Boolean> E_DEPLOYING = WarfareKeys.DRONE_DEPLOYING;
+    private static final WarfareKey<String> E_OWNER = WarfareKeys.DRONE_OWNER;
+    private static final WarfareKey<Integer> E_IDLE_TICKS = WarfareKeys.DRONE_IDLE_TICKS;
+    private static final WarfareKey<String> E_TEAM = WarfareKeys.VEHICLE_TEAM;
+    private static final WarfareKey<String> E_TYPE = WarfareKeys.VEHICLE_TYPE;
+    private static final WarfareKey<Integer> E_FALLBACK_TICKS = WarfareKeys.DRONE_FALLBACK_TICKS;
 
     private static final Set<String> DRONE_KITS = Set.of("Drone Operator", "Scout");
 
@@ -149,7 +152,7 @@ public class DroneDeploymentEvents {
 
         // Уже деплоим — проверка РАНЬШЕ кулдауна (спам ПКМ во время установки
         // не должен показывать «Кулдаун» вместо «Установка уже идёт»).
-        if (!player.getPersistentData().getString(P_DEPLOY_TYPE).isEmpty()) {
+        if (!WarfareData.of(player).getString(P_DEPLOY_TYPE).isEmpty()) {
             player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("Установка уже идёт!")
                             .withStyle(net.minecraft.ChatFormatting.RED),
@@ -166,7 +169,7 @@ public class DroneDeploymentEvents {
         // ВАЖНО: это НЕ тот же gameTime, что в P_DEPLOY_START — прогресс деплоя
         // считает elapsed от серверного tickCount (сессионно, чистится при логине).
         long now = GameClock.worldTicks(level);
-        long cdUntil = player.getPersistentData().getLong(P_CD_UNTIL);
+        long cdUntil = WarfareData.of(player).getLong(P_CD_UNTIL);
         if (!player.isCreative() && now < cdUntil) {
             long sec = (cdUntil - now) / 20L;
             player.displayClientMessage(
@@ -186,8 +189,8 @@ public class DroneDeploymentEvents {
         String ownerUuid = player.getStringUUID();
         String deployType = droneId;
         for (Entity e : level.getEntities().getAll()) {
-            if (!e.getPersistentData().contains(E_OWNER)) continue;
-            if (!ownerUuid.equals(e.getPersistentData().getString(E_OWNER))) continue;
+            if (!WarfareData.of(e).contains(E_OWNER)) continue;
+            if (!ownerUuid.equals(WarfareData.of(e).getString(E_OWNER))) continue;
             activeTotal++;
             ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(e.getType());
             if (eid != null && eid.toString().equals(deployType)) activeType++;
@@ -223,9 +226,9 @@ public class DroneDeploymentEvents {
         drone.setPos(x, y, z);
         drone.setYRot(player.getYRot() + 180.0F);
 
-        drone.getPersistentData().putBoolean(E_DEPLOYING, true);
-        drone.getPersistentData().putString(E_OWNER, ownerUuid);
-        drone.getPersistentData().putInt(E_IDLE_TICKS, 0);
+        WarfareData.of(drone).putBoolean(E_DEPLOYING, true);
+        WarfareData.of(drone).putString(E_OWNER, ownerUuid);
+        WarfareData.of(drone).putInt(E_IDLE_TICKS, 0);
         drone.setInvulnerable(true);
         level.addFreshEntity(drone);
 
@@ -236,16 +239,16 @@ public class DroneDeploymentEvents {
         }
 
         // Состояние деплоя.
-        player.getPersistentData().putString(P_DEPLOY_TYPE, droneId);
-        player.getPersistentData().putLong(P_DEPLOY_START, deployStartTick);
-        player.getPersistentData().putDouble(P_DEPLOY_X, x);
-        player.getPersistentData().putDouble(P_DEPLOY_Y, y);
-        player.getPersistentData().putDouble(P_DEPLOY_Z, z);
-        player.getPersistentData().putInt(P_DEPLOY_ENTITY, drone.getId());
+        WarfareData.of(player).putString(P_DEPLOY_TYPE, droneId);
+        WarfareData.of(player).putLong(P_DEPLOY_START, deployStartTick);
+        WarfareData.of(player).putDouble(P_DEPLOY_X, x);
+        WarfareData.of(player).putDouble(P_DEPLOY_Y, y);
+        WarfareData.of(player).putDouble(P_DEPLOY_Z, z);
+        WarfareData.of(player).putInt(P_DEPLOY_ENTITY, drone.getId());
 
         // Кулдаун СЧИТАЕТСЯ ОТ СТАРТА установки (потеря дрона его не продлевает).
         if (!player.isCreative()) {
-            player.getPersistentData().putLong(P_CD_UNTIL, now + WarfareConfig.DRONE_DEPLOY_CD_TICKS.get());
+            WarfareData.of(player).putLong(P_CD_UNTIL, now + WarfareConfig.DRONE_DEPLOY_CD_TICKS.get());
         }
 
         level.playSound(null, x, y, z, sound("pwpwarfare:drone_deploy_start"), SoundSource.PLAYERS, 1.0F, 1.0F);
@@ -282,7 +285,7 @@ public class DroneDeploymentEvents {
     }
 
     private static void tickPlayerDeploy(ServerPlayer player, int tick, boolean syncNow) {
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         String deployType = data.getString(P_DEPLOY_TYPE);
         if (deployType.isEmpty()) return;
 
@@ -335,7 +338,7 @@ public class DroneDeploymentEvents {
 
     private static void cancelDeploy(
             ServerPlayer player, Entity drone, int tick, boolean movedAway, boolean inMainZone) {
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         String droneId = data.getString(P_DEPLOY_TYPE);
         data.remove(P_DEPLOY_TYPE);
         data.remove(P_DEPLOY_START);
@@ -377,7 +380,7 @@ public class DroneDeploymentEvents {
     }
 
     private static void completeDeploy(ServerPlayer player, Entity drone, String deployType, int tick) {
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         data.remove(P_DEPLOY_TYPE);
         data.remove(P_DEPLOY_START);
         data.remove(P_DEPLOY_X);
@@ -390,12 +393,12 @@ public class DroneDeploymentEvents {
             return;
         }
 
-        drone.getPersistentData().remove("WARFARE_DroneDeploying");
+        WarfareData.of(drone).remove(WarfareKeys.DRONE_DEPLOYING);
         drone.setInvulnerable(false);
         // Тег команды обязателен (AGENTS.md): без него дрон «без команды» и
         // будущие проверки фракций не сработают.
         String team = player.getTeam() != null ? player.getTeam().getName() : "NONE";
-        drone.getPersistentData().putString(E_TEAM, team);
+        WarfareData.of(drone).putString(E_TEAM, team);
         applySpawnLoadout(drone, deployType);
         drone.setYRot(player.getYRot() + 180.0F);
 
@@ -489,7 +492,7 @@ public class DroneDeploymentEvents {
         // Дрон ещё устанавливается: блокируем ВСЕ взаимодействия (монитор не
         // подключится, инвентарь не откроется, разбор не пройдёт) — юзер:
         // «монитор не подключать, пока дрон не забилдится».
-        if (target.getPersistentData().getBoolean(E_DEPLOYING)) {
+        if (WarfareData.of(target).getBoolean(E_DEPLOYING)) {
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.SUCCESS);
             if (!event.getLevel().isClientSide && player instanceof ServerPlayer sp) {
@@ -525,7 +528,7 @@ public class DroneDeploymentEvents {
                     true);
             return;
         }
-        String owner = drone.getPersistentData().getString(E_OWNER);
+        String owner = WarfareData.of(drone).getString(E_OWNER);
         if (owner == null || owner.isEmpty() || !player.getStringUUID().equals(owner)) {
             player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("Это не ваш дрон!")
@@ -554,14 +557,14 @@ public class DroneDeploymentEvents {
                     true);
             return;
         }
-        if (drone.getPersistentData().getBoolean(E_DEPLOYING)) {
+        if (WarfareData.of(drone).getBoolean(E_DEPLOYING)) {
             player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("Мавик ещё устанавливается!")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         if (!data.getString(P_DEPLOY_TYPE).isEmpty()) {
             player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("Сначала завершите установку дрона!")
@@ -621,7 +624,7 @@ public class DroneDeploymentEvents {
     }
 
     private static void tickPlayerReload(ServerPlayer player, int tick, boolean syncNow) {
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         String reloadType = data.getString(P_RELOAD_TYPE);
         if (reloadType.isEmpty()) return;
 
@@ -638,7 +641,7 @@ public class DroneDeploymentEvents {
                 || drone.isRemoved()
                 || isDroneControlled(drone)
                 || !drone.onGround()
-                || drone.getPersistentData().getBoolean(E_DEPLOYING)
+                || WarfareData.of(drone).getBoolean(E_DEPLOYING)
                 || MainZoneFireGuard.isFireBlocked(player);
         if (cancelled) {
             cancelReload(player);
@@ -666,7 +669,7 @@ public class DroneDeploymentEvents {
     }
 
     private static void cancelReload(ServerPlayer player) {
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         data.remove(P_RELOAD_TYPE);
         data.remove(P_RELOAD_START);
         data.remove(P_RELOAD_X);
@@ -681,7 +684,7 @@ public class DroneDeploymentEvents {
     }
 
     private static void completeReload(ServerPlayer player, Entity drone) {
-        var data = player.getPersistentData();
+        var data = WarfareData.of(player);
         data.remove(P_RELOAD_TYPE);
         data.remove(P_RELOAD_START);
         data.remove(P_RELOAD_X);
@@ -747,10 +750,9 @@ public class DroneDeploymentEvents {
             // Дрон-зомби: установка не завершилась (игрок вышел/умер при деплое),
             // а флаг E_DEPLOYING вечно защищал дрон от деспауна и делал его
             // неуязвимым. Если владелец не деплоит ИМЕННО этого дрона — сносим.
-            if (e.getPersistentData().getBoolean(E_DEPLOYING)) {
+            if (WarfareData.of(e).getBoolean(E_DEPLOYING)) {
                 ServerPlayer owner = findOwner(level, e);
-                boolean activeDeploy =
-                        owner != null && owner.getPersistentData().getInt(P_DEPLOY_ENTITY) == e.getId();
+                boolean activeDeploy = owner != null && WarfareData.of(owner).getInt(P_DEPLOY_ENTITY) == e.getId();
                 if (activeDeploy) continue;
                 e.remove(Entity.RemovalReason.DISCARDED);
                 if (owner != null) {
@@ -765,12 +767,12 @@ public class DroneDeploymentEvents {
 
             boolean controlled = isDroneControlled(e);
             if (!e.onGround() || controlled) {
-                e.getPersistentData().putInt(E_IDLE_TICKS, 0);
+                WarfareData.of(e).putInt(E_IDLE_TICKS, 0);
                 continue;
             }
 
-            int idle = e.getPersistentData().getInt(E_IDLE_TICKS) + 20;
-            e.getPersistentData().putInt(E_IDLE_TICKS, idle);
+            int idle = WarfareData.of(e).getInt(E_IDLE_TICKS) + 20;
+            WarfareData.of(e).putInt(E_IDLE_TICKS, idle);
             if (idle >= threshold) {
                 e.remove(Entity.RemovalReason.DISCARDED);
                 ServerPlayer owner = findOwner(level, e);
@@ -789,7 +791,7 @@ public class DroneDeploymentEvents {
         for (Entity e : level.getEntities().getAll()) {
             ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(e.getType());
             if (eid == null || !DRONE_ITEMS.contains(eid.toString())) continue;
-            if (e.getPersistentData().getBoolean(E_DEPLOYING)) continue;
+            if (WarfareData.of(e).getBoolean(E_DEPLOYING)) continue;
             if (!isDroneControlled(e)) continue;
 
             // Чанк дрона не тикается (между view и sim, или трекинг чанков выключен).
@@ -799,15 +801,15 @@ public class DroneDeploymentEvents {
             // непрерывного не-тикания (трекер гарантированно подхватил бы за 2с;
             // не подхватил — честный обрыв связи).
             boolean ticking = level.isPositionEntityTicking(e.blockPosition());
-            int fb = e.getPersistentData().getInt(E_FALLBACK_TICKS);
+            int fb = WarfareData.of(e).getInt(E_FALLBACK_TICKS);
             if (ticking) {
                 if (fb != 0) {
-                    e.getPersistentData().putInt(E_FALLBACK_TICKS, 0);
+                    WarfareData.of(e).putInt(E_FALLBACK_TICKS, 0);
                 }
                 continue;
             }
             fb += 20;
-            e.getPersistentData().putInt(E_FALLBACK_TICKS, fb);
+            WarfareData.of(e).putInt(E_FALLBACK_TICKS, fb);
             if (fb < 40) continue;
 
             com.pigeostudios.pwp.warfare.util.DroneCompat.forceSignalLoss(e);
@@ -841,7 +843,7 @@ public class DroneDeploymentEvents {
     }
 
     private static ServerPlayer findOwner(ServerLevel level, Entity drone) {
-        String owner = drone.getPersistentData().getString(E_OWNER);
+        String owner = WarfareData.of(drone).getString(E_OWNER);
         if (owner == null || owner.isEmpty()) return null;
         try {
             return level.getServer().getPlayerList().getPlayer(UUID.fromString(owner));
@@ -877,7 +879,7 @@ public class DroneDeploymentEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer sp)) return;
-        var data = sp.getPersistentData();
+        var data = WarfareData.of(sp);
         boolean deployActive = !data.getString(P_DEPLOY_TYPE).isEmpty();
         boolean reloadActive = !data.getString(P_RELOAD_TYPE).isEmpty();
         if (!deployActive && !reloadActive) return;

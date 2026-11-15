@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.security.PwpPermissions;
 import com.pwp.api.time.GameClock;
@@ -46,7 +48,7 @@ public class PacketPlaceMapMarker {
                 String team = player.getTeam().getName().toUpperCase();
                 String pName = player.getScoreboardName();
                 if (msg.type.equals("Artillery Request")) {
-                    if (!player.getPersistentData().getBoolean("WARFARE_IsSquadLeader")
+                    if (!WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER)
                             && !PwpPermissions.isAdmin(player)) {
                         return;
                     }
@@ -71,8 +73,8 @@ public class PacketPlaceMapMarker {
                     for (ServerPlayer p : level.players()) {
                         if (p.getTeam() != null
                                 && p.getTeam().getName().toUpperCase().equals(team)) {
-                            int pSqId = p.getPersistentData().getInt("WARFARE_SquadID");
-                            if (p.getPersistentData().getBoolean("WARFARE_IsSquadLeader")
+                            int pSqId = WarfareData.of(p).getInt(WarfareKeys.SQUAD_ID);
+                            if (WarfareData.of(p).getBoolean(WarfareKeys.IS_SQUAD_LEADER)
                                     || pSqId == cmdId && cmdId != -1) {
                                 p.sendSystemMessage(Component.literal(
                                                 "[СТРАТЕГИЧЕСКИ] Артиллерия запрошена в " + msg.x + ", " + msg.z)

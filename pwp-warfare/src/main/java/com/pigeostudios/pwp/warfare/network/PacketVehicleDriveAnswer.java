@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
 import java.util.UUID;
@@ -44,7 +46,7 @@ public class PacketVehicleDriveAnswer {
     }
 
     public static void handleAnswer(ServerPlayer slPlayer, boolean accept, int vehicleId, UUID requesterUUID) {
-        if (!slPlayer.getPersistentData().getBoolean("WARFARE_IsSquadLeader")) return;
+        if (!WarfareData.of(slPlayer).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) return;
 
         ServerLevel level = slPlayer.serverLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
@@ -59,15 +61,14 @@ public class PacketVehicleDriveAnswer {
 
         if (accept) {
             data.addApprovedDriver(vehicleUUID, requesterUUID);
-            vehicle.getPersistentData().remove("WARFARE_FreshVehicle");
+            WarfareData.of(vehicle).remove(WarfareKeys.FRESH_VEHICLE);
             requester.displayClientMessage(
                     Component.literal("\u2705 Ваша заявка на управление техникой принята!")
                             .withStyle(ChatFormatting.GREEN),
                     true);
         } else {
-            requester
-                    .getPersistentData()
-                    .putLong("WARFARE_DriveRequestCooldown_" + vehicleId, GameClock.worldTicks(level) + 6000);
+            WarfareData.of(requester)
+                    .putLong(WarfareKeys.driveRequestCooldown(vehicleId), GameClock.worldTicks(level) + 6000);
             requester.displayClientMessage(
                     Component.literal("\u274C Заявка отклонена. Повтор через 5 минут.")
                             .withStyle(ChatFormatting.RED),

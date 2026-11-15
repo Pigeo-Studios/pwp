@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import com.pwp.api.time.GameClock;
@@ -79,57 +81,56 @@ public class MainSupplyBlockEntity extends BlockEntity {
                 for (Entity vehicle : nearbyEntities) {
                     int statusKind = 0;
                     int statusSeconds = 0;
-                    long lastSeenTime = vehicle.getPersistentData().getLong("WARFARE_LastSupplyTime");
-                    if (vehicle.getPersistentData().contains("WARFARE_VehicleMaxMats")) {
-                        int maxMats = vehicle.getPersistentData().getInt("WARFARE_VehicleMaxMats");
-                        vehicle.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                    long lastSeenTime = WarfareData.of(vehicle).getLong(WarfareKeys.LAST_SUPPLY_TIME);
+                    if (WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_MAX_MATS)) {
+                        int maxMats = WarfareData.of(vehicle).getInt(WarfareKeys.VEHICLE_MAX_MATS);
+                        WarfareData.of(vehicle).putInt(WarfareKeys.VEHICLE_MATS, maxMats);
                     }
 
                     if (currentTime - lastSeenTime > 200L) {
-                        vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
-                        vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
+                        WarfareData.of(vehicle).putInt(WarfareKeys.REPAIR_TIMER, 0);
+                        WarfareData.of(vehicle).putInt(WarfareKeys.TRUCK_RELOAD_TIMER, 0);
                     }
 
-                    vehicle.getPersistentData().putLong("WARFARE_LastSupplyTime", currentTime);
-                    if (vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
-                        int currentAmmo = vehicle.getPersistentData().getInt("WARFARE_SupplyAmmo");
+                    WarfareData.of(vehicle).putLong(WarfareKeys.LAST_SUPPLY_TIME, currentTime);
+                    if (WarfareData.of(vehicle).getBoolean(WarfareKeys.IS_SUPPLY_TRUCK)) {
+                        int currentAmmo = WarfareData.of(vehicle).getInt(WarfareKeys.SUPPLY_AMMO);
                         int maxCrates = (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get();
                         if (currentAmmo < maxCrates) {
-                            int supplyTimer = vehicle.getPersistentData().getInt("WARFARE_TruckReloadTimer");
+                            int supplyTimer = WarfareData.of(vehicle).getInt(WarfareKeys.TRUCK_RELOAD_TIMER);
                             if (++supplyTimer >= 15) {
-                                vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", currentAmmo + 1);
-                                vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
+                                WarfareData.of(vehicle).putInt(WarfareKeys.SUPPLY_AMMO, currentAmmo + 1);
+                                WarfareData.of(vehicle).putInt(WarfareKeys.TRUCK_RELOAD_TIMER, 0);
                                 sendChatMessageToPassengers(
                                         vehicle,
                                         "[Снабжение] +1 ящик загружен (" + (currentAmmo + 1) + "/" + maxCrates + ")",
                                         ChatFormatting.GOLD);
                                 spawnEffects(level, vehicle);
                             } else {
-                                vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", supplyTimer);
+                                WarfareData.of(vehicle).putInt(WarfareKeys.TRUCK_RELOAD_TIMER, supplyTimer);
                                 statusKind = PacketVehicleStatus.KIND_LOADING_CRATE;
                                 statusSeconds = 15 - supplyTimer;
                             }
                         } else {
-                            vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
+                            WarfareData.of(vehicle).putInt(WarfareKeys.TRUCK_RELOAD_TIMER, 0);
                         }
                     }
 
-                    if (vehicle.getPersistentData().contains("WARFARE_SpawnerPos")) {
-                        long nextSupplyTime = vehicle.getPersistentData().getLong("WARFARE_NextSupplyTime");
+                    if (WarfareData.of(vehicle).contains(WarfareKeys.SPAWNER_POS)) {
+                        long nextSupplyTime = WarfareData.of(vehicle).getLong(WarfareKeys.NEXT_SUPPLY_TIME);
                         if (currentTime < nextSupplyTime) {
                             long secondsLeft = (nextSupplyTime - currentTime) / 20L;
-                            vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
+                            WarfareData.of(vehicle).putInt(WarfareKeys.REPAIR_TIMER, 0);
                             statusKind = PacketVehicleStatus.KIND_REARM_COOLDOWN;
                             statusSeconds = (int) secondsLeft;
                         } else {
-                            int repairTimer = vehicle.getPersistentData().getInt("WARFARE_RepairTimer");
+                            int repairTimer = WarfareData.of(vehicle).getInt(WarfareKeys.REPAIR_TIMER);
                             if (++repairTimer >= 30) {
                                 if (vehicle instanceof LivingEntity living) {
                                     living.setHealth(living.getMaxHealth());
                                 }
 
-                                long spawnerPosLong =
-                                        vehicle.getPersistentData().getLong("WARFARE_SpawnerPos");
+                                long spawnerPosLong = WarfareData.of(vehicle).getLong(WarfareKeys.SPAWNER_POS);
                                 BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
                                 if (level.isLoaded(spawnerPos)
                                         && level.getBlockEntity(spawnerPos)
@@ -170,15 +171,15 @@ public class MainSupplyBlockEntity extends BlockEntity {
                                             });
                                 }
 
-                                vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
-                                vehicle.getPersistentData().putLong("WARFARE_NextSupplyTime", currentTime + 600L);
+                                WarfareData.of(vehicle).putInt(WarfareKeys.REPAIR_TIMER, 0);
+                                WarfareData.of(vehicle).putLong(WarfareKeys.NEXT_SUPPLY_TIME, currentTime + 600L);
                                 sendChatMessageToPassengers(
                                         vehicle,
                                         "[База] Техника полностью пополнена и отремонтирована!",
                                         ChatFormatting.GREEN);
                                 spawnEffects(level, vehicle);
                             } else {
-                                vehicle.getPersistentData().putInt("WARFARE_RepairTimer", repairTimer);
+                                WarfareData.of(vehicle).putInt(WarfareKeys.REPAIR_TIMER, repairTimer);
                                 statusKind = PacketVehicleStatus.KIND_REARMING;
                                 statusSeconds = 30 - repairTimer;
                             }

@@ -2,6 +2,8 @@ package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
@@ -215,12 +217,12 @@ public class VehicleStationBlockEntity extends BlockEntity {
             }
 
             String vTeam;
-            if (vehicle.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                vTeam = vehicle.getPersistentData().getString("WARFARE_VehicleTeam");
+            if (WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) {
+                vTeam = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TEAM);
             } else {
                 vTeam = p.getTeam() != null ? p.getTeam().getName().toUpperCase() : "";
                 if (!vTeam.isBlank()) {
-                    vehicle.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
+                    WarfareData.of(vehicle).putString(WarfareKeys.VEHICLE_TEAM, vTeam);
                 }
             }
 
@@ -315,11 +317,11 @@ public class VehicleStationBlockEntity extends BlockEntity {
 
     // Восстановление лоудаута техники из сохранённого при спавне списка
     private static LoadoutResult resupplyFromLoadout(Entity vehicle) {
-        if (!vehicle.getPersistentData().contains("WARFARE_InitialLoadout")) {
+        if (!WarfareData.of(vehicle).contains(WarfareKeys.INITIAL_LOADOUT)) {
             return null;
         }
 
-        ListTag loadoutTag = vehicle.getPersistentData().getList("WARFARE_InitialLoadout", 10);
+        ListTag loadoutTag = WarfareData.of(vehicle).getList(WarfareKeys.INITIAL_LOADOUT);
         if (loadoutTag.isEmpty()) {
             return null;
         }

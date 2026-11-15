@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +41,7 @@ public class PacketRequestKitMenu {
         }
 
         boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
-        if (!amILeader) amILeader = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+        if (!amILeader) amILeader = WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
         List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
 
         Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
@@ -71,8 +73,8 @@ public class PacketRequestKitMenu {
                     if (p != player
                             && p.getTeam() != null
                             && p.getTeam().getName().toUpperCase().equals(teamName)) {
-                        String cKit = p.getPersistentData().getString("WARFARE_CurrentKit");
-                        String pKit = p.getPersistentData().getString("WARFARE_PendingKit");
+                        String cKit = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
+                        String pKit = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
                         if (cKit.equals(kitName) || pKit.equals(kitName)) {
                             tCount++;
                             if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) sCount++;
@@ -98,9 +100,9 @@ public class PacketRequestKitMenu {
                     reason = "Max 3 Fire Support per Squad";
                 }
 
-                String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
+                String myCurrentKit = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
                 if (myCurrentKit.isEmpty())
-                    myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+                    myCurrentKit = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                 boolean isSelected = myCurrentKit.equals(kitName);
                 List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
                 PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(
@@ -114,7 +116,7 @@ public class PacketRequestKitMenu {
 
         // Attach player's saved slot selections for persistent UI state
         Map<String, Integer> restoredSelections = new HashMap<>();
-        CompoundTag selTag = player.getPersistentData().getCompound("WARFARE_SlotSelections");
+        CompoundTag selTag = WarfareData.of(player).getCompound(WarfareKeys.SLOT_SELECTIONS);
         for (String key : selTag.getAllKeys()) {
             restoredSelections.put(key, selTag.getInt(key));
         }

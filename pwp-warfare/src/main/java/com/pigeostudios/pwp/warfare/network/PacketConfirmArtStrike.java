@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -36,8 +38,8 @@ public class PacketConfirmArtStrike {
                 WarfareWorldData data = WarfareWorldData.get(level);
                 String team =
                         player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-                int mySquadId = player.getPersistentData().getInt("WARFARE_SquadID");
-                boolean isSL = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+                int mySquadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
+                boolean isSL = WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
                 int teamCmdId = team.equals("BLUE") ? data.blueCMDId : data.redCMDId;
                 if (mySquadId == teamCmdId && teamCmdId != -1 && isSL) {
                     WarfareWorldData.ArtStrikeRequest request =

@@ -2,6 +2,8 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
@@ -49,13 +51,12 @@ public class PacketRequestAmmo {
                         boolean isOnCooldown = false;
                         switch (msg.type) {
                             case 0:
-                                String pendingKit = player.getPersistentData().getString("WARFARE_PendingKit");
-                                String currentKitName =
-                                        player.getPersistentData().getString("WARFARE_CurrentKit");
+                                String pendingKit = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
+                                String currentKitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                                 boolean hasPending = !pendingKit.isEmpty();
                                 String targetKit = hasPending ? pendingKit : currentKitName;
                                 if (!targetKit.isEmpty() && !targetKit.equals("Unassigned")) {
-                                    long lastFobUse = player.getPersistentData().getLong("WARFARE_LastFobResupply");
+                                    long lastFobUse = WarfareData.of(player).getLong(WarfareKeys.LAST_FOB_RESUPPLY);
                                     long currentTime = GameClock.worldTicks(player.level());
                                     if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
                                         long secondsLeft = (lastFobUse + 1200L - currentTime) / 20L;
@@ -78,7 +79,7 @@ public class PacketRequestAmmo {
                                         ResupplyHandler.tryApplyPendingKit(player, data);
                                         if (!player.isCreative()) {
                                             hub.consumeMaterials(cost);
-                                            player.getPersistentData().putLong("WARFARE_LastFobResupply", currentTime);
+                                            WarfareData.of(player).putLong(WarfareKeys.LAST_FOB_RESUPPLY, currentTime);
                                         }
 
                                         player.level()
@@ -97,8 +98,8 @@ public class PacketRequestAmmo {
                                             if (ResupplyHandler.resupplyPlayer(player, kit, false)) {
                                                 if (!player.isCreative()) {
                                                     hub.consumeMaterials(cost);
-                                                    player.getPersistentData()
-                                                            .putLong("WARFARE_LastFobResupply", currentTime);
+                                                    WarfareData.of(player)
+                                                            .putLong(WarfareKeys.LAST_FOB_RESUPPLY, currentTime);
                                                 }
 
                                                 player.level()

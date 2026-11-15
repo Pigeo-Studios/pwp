@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
@@ -56,12 +58,12 @@ public class PacketRequestCrateAmmo {
                         }
 
                         if (msg.type == 0) {
-                            String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+                            String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                             if (kitName.isEmpty()) {
                                 player.sendSystemMessage(
                                         Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
                             } else {
-                                long lastFobUse = player.getPersistentData().getLong("WARFARE_LastFobResupply");
+                                long lastFobUse = WarfareData.of(player).getLong(WarfareKeys.LAST_FOB_RESUPPLY);
                                 long currentTime = GameClock.worldTicks(player.level());
                                 if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
                                     player.sendSystemMessage(Component.literal("Пополнение кита на кулдауне!")
@@ -81,8 +83,8 @@ public class PacketRequestCrateAmmo {
                                         if (ResupplyHandler.resupplyPlayer(player, kit, false)) {
                                             if (!player.isCreative()) {
                                                 crate.setMaterials(crate.getMaterials() - cost);
-                                                player.getPersistentData()
-                                                        .putLong("WARFARE_LastFobResupply", currentTime);
+                                                WarfareData.of(player)
+                                                        .putLong(WarfareKeys.LAST_FOB_RESUPPLY, currentTime);
                                             }
 
                                             player.sendSystemMessage(

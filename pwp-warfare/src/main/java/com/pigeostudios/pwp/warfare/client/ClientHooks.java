@@ -17,6 +17,8 @@ import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.client.sound.HubLoopingSound;
 import com.pigeostudios.pwp.warfare.client.sound.RallyLoopingSound;
 import com.pigeostudios.pwp.warfare.client.sound.StationLoopingSound;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSpawnGhost;
 import com.pigeostudios.pwp.warfare.network.PacketSyncGameData;
@@ -241,7 +243,7 @@ public class ClientHooks {
                 ClientData.DOWNED_PLAYERS.add(entityId);
                 if (mc.player != null && mc.player.getId() == entityId) {
                     ClientData.downedTimestamp = System.currentTimeMillis();
-                    mc.player.getPersistentData().putBoolean("WARFARE_IsDowned", true);
+                    WarfareData.of(mc.player).putBoolean(WarfareKeys.IS_DOWNED, true);
                     mc.setScreen(new DownedScreen());
                 }
             } else {
@@ -252,7 +254,7 @@ public class ClientHooks {
                                 (int) ((System.currentTimeMillis() - ClientData.downedTimestamp) / 1000L);
                     }
                     ClientData.downedTimestamp = 0L;
-                    mc.player.getPersistentData().putBoolean("WARFARE_IsDowned", false);
+                    WarfareData.of(mc.player).putBoolean(WarfareKeys.IS_DOWNED, false);
                     if (mc.screen instanceof DownedScreen) {
                         mc.setScreen(null);
                     }

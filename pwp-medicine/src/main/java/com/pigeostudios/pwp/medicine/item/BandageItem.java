@@ -5,6 +5,8 @@ import com.pigeostudios.pwp.medicine.event.EventHandler;
 import com.pigeostudios.pwp.medicine.item.client.BandageRenderer;
 import com.pigeostudios.pwp.medicine.sound.ModSounds;
 import com.pigeostudios.pwp.medicine.util.ClientUtils;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import java.util.function.Consumer;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.network.chat.Component;
@@ -55,7 +57,7 @@ public class BandageItem extends Item implements GeoItem {
     public InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, InteractionHand pUsedHand) {
         Player target = this.getTargetPlayer(pPlayer);
         Player toHeal = target != null ? target : pPlayer;
-        if (target != null && target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+        if (target != null && WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
             if (!pLevel.isClientSide
                     && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
                 pPlayer.sendSystemMessage(Component.literal("§cНельзя поднять врага!"));
@@ -102,7 +104,7 @@ public class BandageItem extends Item implements GeoItem {
             Player player = (Player) pEntityLiving;
             Player target = this.getTargetPlayer(player);
             Player toHeal = target != null ? target : player;
-            if (target != null && target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+            if (target != null && WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
                 com.pigeostudios.pwp.warfare.events.DownedHandler.revivePlayer(
                         (net.minecraft.server.level.ServerPlayer) target);
                 com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get()
@@ -173,7 +175,7 @@ public class BandageItem extends Item implements GeoItem {
     public InteractionResult interactLivingEntity(
             ItemStack pStack, Player pPlayer, LivingEntity pInteractionTarget, InteractionHand pUsedHand) {
         if (pInteractionTarget instanceof Player target) {
-            if (target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+            if (WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
                 if (!pPlayer.level().isClientSide
                         && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
                     pPlayer.sendSystemMessage(Component.literal("§cНельзя поднять врага!"));

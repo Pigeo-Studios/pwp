@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.block;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Plane;
@@ -124,8 +126,8 @@ public class RebConstructionBlock extends BaseEntityBlock {
             default -> {}
         }
         reb.setYRot(yaw);
-        reb.getPersistentData().putString("WARFARE_VehicleTeam", team);
-        reb.getPersistentData().putString("WARFARE_VehicleType", mini ? "REB_MINI" : "REB");
+        WarfareData.of(reb).putString(WarfareKeys.VEHICLE_TEAM, team);
+        WarfareData.of(reb).putString(WarfareKeys.VEHICLE_TYPE, mini ? "REB_MINI" : "REB");
         level.addFreshEntity(reb);
         level.removeBlock(pos, false);
     }

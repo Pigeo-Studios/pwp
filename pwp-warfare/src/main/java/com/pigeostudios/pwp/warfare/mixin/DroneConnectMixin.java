@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.mixin;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,7 +20,7 @@ public class DroneConnectMixin {
     @Inject(method = "beginRemoteControl", at = @At("HEAD"), cancellable = true, remap = false)
     private void pwpwarfare$blockConnectWhileDeploying(ServerPlayer player, CallbackInfoReturnable<Boolean> cir) {
         Entity self = (Entity) (Object) this;
-        if (self.getPersistentData().getBoolean("WARFARE_DroneDeploying")) {
+        if (WarfareData.of(self).getBoolean(WarfareKeys.DRONE_DEPLOYING)) {
             cir.setReturnValue(false);
         }
     }

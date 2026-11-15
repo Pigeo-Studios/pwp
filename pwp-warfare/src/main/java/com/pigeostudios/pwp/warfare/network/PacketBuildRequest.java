@@ -15,6 +15,8 @@ import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -589,7 +591,7 @@ public class PacketBuildRequest {
     private static int countTeamRebs(ServerLevel level, String team) {
         int count = 0;
         for (net.minecraft.world.entity.Entity e : level.getEntities().getAll()) {
-            String t = e.getPersistentData().getString("WARFARE_VehicleTeam");
+            String t = WarfareData.of(e).getString(WarfareKeys.VEHICLE_TEAM);
             if (t == null || t.isEmpty() || !t.equalsIgnoreCase(team)) continue;
             ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(e.getType());
             if (eid != null

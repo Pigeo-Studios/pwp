@@ -11,6 +11,8 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -927,7 +929,7 @@ public class ModCommands {
                         return 0;
                     }
 
-                    long lastRespawn = player.getPersistentData().getLong("WARFARE_LastRespawnCommand");
+                    long lastRespawn = WarfareData.of(player).getLong(WarfareKeys.LAST_RESPAWN_COMMAND);
                     int cooldownTicks = (Integer) WarfareConfig.RESPAWN_COMMAND_COOLDOWN_SECONDS.get() * 20;
                     long currentTick = GameClock.worldTicks(level);
                     long elapsed = currentTick - lastRespawn;
@@ -940,9 +942,9 @@ public class ModCommands {
                         return 0;
                     }
 
-                    player.getPersistentData().putLong("WARFARE_LastRespawnCommand", currentTick);
+                    WarfareData.of(player).putLong(WarfareKeys.LAST_RESPAWN_COMMAND, currentTick);
 
-                    if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                    if (WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED)) {
                         DownedHandler.forceGiveUp(player);
                     } else {
                         player.kill();
@@ -971,7 +973,7 @@ public class ModCommands {
                 .executes(ctx -> {
                     ServerPlayer player = ((CommandSourceStack) ctx.getSource()).getPlayerOrException();
                     Entity vehicle = player.getVehicle();
-                    if (vehicle != null && vehicle.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                    if (vehicle != null && WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) {
                         PacketVehicleDriveRequest.handleRequest(player, vehicle.getId());
                     } else {
                         player.sendSystemMessage(Component.literal("Вы не в технике или это не наша техника")
@@ -1543,13 +1545,13 @@ public class ModCommands {
         String targetTeam = teamName.toUpperCase();
 
         for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
-            if (player.getPersistentData().contains("WARFARE_SquadID")) {
+            if (WarfareData.of(player).contains(WarfareKeys.SQUAD_ID)) {
                 boolean belongsToTeam = data.squads.stream()
-                        .anyMatch(s -> s.id == player.getPersistentData().getInt("WARFARE_SquadID")
+                        .anyMatch(s -> s.id == WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID)
                                 && s.team.equalsIgnoreCase(targetTeam));
                 if (belongsToTeam) {
-                    player.getPersistentData().remove("WARFARE_SquadID");
-                    player.getPersistentData().remove("WARFARE_IsSquadLeader");
+                    WarfareData.of(player).remove(WarfareKeys.SQUAD_ID);
+                    WarfareData.of(player).remove(WarfareKeys.IS_SQUAD_LEADER);
                 }
             }
         }

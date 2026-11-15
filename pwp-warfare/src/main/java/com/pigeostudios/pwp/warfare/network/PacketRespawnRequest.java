@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlock;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.server.FactionDataLoader;
@@ -55,7 +57,7 @@ public class PacketRespawnRequest {
     /** Возрождение игрока по типу спавна; вызывается из пакета и из отложенного деплоя. */
     public static void process(ServerPlayer player, String type) {
         {
-            if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+            if (WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED)) {
                 DownedHandler.forceGiveUp(player);
                 return;
             }
@@ -197,10 +199,10 @@ public class PacketRespawnRequest {
                     boolean isSetupAttacker =
                             data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
                     if (!isSetupAttacker) {
-                        if (player.getPersistentData().contains("WARFARE_PendingKit")) {
+                        if (WarfareData.of(player).contains(WarfareKeys.PENDING_KIT)) {
                             ResupplyHandler.tryApplyPendingKit(player, data);
                         } else {
-                            String currentKitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+                            String currentKitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                             if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
                                 String tName = player.getTeam() != null
                                         ? player.getTeam().getName().toUpperCase()

@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -39,7 +41,7 @@ public class PacketRequestVehicleAmmo {
             if (player != null) {
                 Entity vehicle = player.level().getEntity(msg.entityId);
                 if (vehicle != null && !(player.distanceToSqr(vehicle) > 64.0)) {
-                    int currentMats = vehicle.getPersistentData().getInt("WARFARE_VehicleMats");
+                    int currentMats = WarfareData.of(vehicle).getInt(WarfareKeys.VEHICLE_MATS);
                     int cost = (Integer) WarfareConfig.HUB_RESUPPLY_COST.get();
                     if (!player.isCreative() && currentMats < cost) {
                         player.displayClientMessage(
@@ -47,7 +49,7 @@ public class PacketRequestVehicleAmmo {
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     } else {
-                        String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+                        String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                         if (!kitName.isEmpty() && !kitName.equals("Unassigned")) {
                             WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
                             String t = player.getTeam() != null
@@ -60,7 +62,7 @@ public class PacketRequestVehicleAmmo {
                                     int newMats = currentMats;
                                     if (!player.isCreative()) {
                                         newMats = currentMats - cost;
-                                        vehicle.getPersistentData().putInt("WARFARE_VehicleMats", newMats);
+                                        WarfareData.of(vehicle).putInt(WarfareKeys.VEHICLE_MATS, newMats);
                                     }
 
                                     player.displayClientMessage(

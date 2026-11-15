@@ -19,6 +19,8 @@ import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
@@ -145,7 +147,7 @@ public class WarfareOverlay {
                 renderInvasionSetupTimer(gui, mc, width);
                 renderCMDVotePanel(gui, mc, width);
                 renderArtStrikeRequest(gui, mc, width);
-                if (mc.player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                if (WarfareData.of(mc.player).getBoolean(WarfareKeys.IS_DOWNED)) {
                     RenderSystem.disableDepthTest();
                     RenderSystem.depthMask(false);
                     RenderSystem.enableBlend();
@@ -686,8 +688,8 @@ public class WarfareOverlay {
                 String requester = myTeam.equals("BLUE") ? ClientData.blueArtReqName : ClientData.redArtReqName;
                 BlockPos pos = myTeam.equals("BLUE") ? ClientData.blueArtPos : ClientData.redArtPos;
                 if (timer > 0 && !requester.isEmpty() && pos != null) {
-                    int mySquadId = mc.player.getPersistentData().getInt("WARFARE_SquadID");
-                    boolean isSL = mc.player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+                    int mySquadId = WarfareData.of(mc.player).getInt(WarfareKeys.SQUAD_ID);
+                    boolean isSL = WarfareData.of(mc.player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
                     int teamCmdId = myTeam.equals("BLUE") ? ClientData.blueCMDId : ClientData.redCMDId;
                     if (mc.player.isCreative() || isSL && mySquadId != -1 && mySquadId == teamCmdId) {
                         int x = width - 160;
@@ -880,7 +882,7 @@ public class WarfareOverlay {
                     && mc.player.getTeam() != null
                     && downed.getTeam() != null
                     && mc.player.getTeam().isAlliedTo(downed.getTeam())) {
-                long lastShout = downed.getPersistentData().getLong("WARFARE_LastMedicShoutTimeMS");
+                long lastShout = WarfareData.of(downed).getLong(WarfareKeys.LAST_MEDIC_SHOUT_TIME_MS);
                 boolean isShouting = now - lastShout < 3000L;
                 if (amIMedic || isShouting) {
                     int distance = (int) mc.player.distanceTo(downed);
@@ -1605,7 +1607,7 @@ public class WarfareOverlay {
         if (ridingEntity != null) {
             Entity supplyTruck = getSupplyTruckEntity(ridingEntity);
             if (supplyTruck != null) {
-                int crates = supplyTruck.getPersistentData().getInt("WARFARE_SupplyAmmo");
+                int crates = WarfareData.of(supplyTruck).getInt(WarfareKeys.SUPPLY_AMMO);
                 int maxCrates = (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get();
                 boolean isCharging = false;
                 if (crates < maxCrates) {
@@ -1650,12 +1652,12 @@ public class WarfareOverlay {
     }
 
     private static Entity getSupplyTruckEntity(Entity entity) {
-        if (entity.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
+        if (WarfareData.of(entity).getBoolean(WarfareKeys.IS_SUPPLY_TRUCK)) {
             return entity;
         }
 
         Entity parent = entity.getVehicle();
-        return parent != null && parent.getPersistentData().getBoolean("WARFARE_IsSupplyTruck") ? parent : null;
+        return parent != null && WarfareData.of(parent).getBoolean(WarfareKeys.IS_SUPPLY_TRUCK) ? parent : null;
     }
 
     private static void renderVehicleAmmo(GuiGraphics gui, Minecraft mc, int width, int height) {

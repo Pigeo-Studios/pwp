@@ -4,6 +4,8 @@ import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -176,7 +178,7 @@ public class SupplyCrateEntity extends Entity {
                 this.processVehicleLogic(target);
             } else {
                 if (target != null) {
-                    target.getPersistentData().putInt("WARFARE_CrateTimer", 0);
+                    WarfareData.of(target).putInt(WarfareKeys.CRATE_TIMER, 0);
                 }
 
                 this.currentTargetUUID = null;
@@ -184,7 +186,7 @@ public class SupplyCrateEntity extends Entity {
         } else {
             AABB searchArea = this.getBoundingBox().inflate(10.0);
             List<Entity> vehicles = level.getEntities(
-                    this, searchArea, e -> e.isAlive() && e.getPersistentData().contains("WARFARE_VehicleTeam"));
+                    this, searchArea, e -> e.isAlive() && WarfareData.of(e).contains(WarfareKeys.VEHICLE_TEAM));
             vehicles.sort((e1, e2) -> {
                 boolean p1 = !e1.getPassengers().isEmpty();
                 boolean p2 = !e2.getPassengers().isEmpty();
@@ -196,24 +198,24 @@ public class SupplyCrateEntity extends Entity {
             });
 
             for (Entity vehicle : vehicles) {
-                String vTeam = vehicle.getPersistentData().getString("WARFARE_VehicleTeam");
+                String vTeam = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TEAM);
                 if (this.getTeamOwner().equals("NEUTRAL")
                         || vTeam.isEmpty()
                         || vTeam.equalsIgnoreCase(this.getTeamOwner())) {
                     boolean needsService = false;
-                    if (vehicle.getPersistentData().contains("WARFARE_SpawnerPos")) {
+                    if (WarfareData.of(vehicle).contains(WarfareKeys.SPAWNER_POS)) {
                         if (vehicle instanceof LivingEntity living && living.getHealth() < living.getMaxHealth()) {
                             needsService = true;
                         }
 
-                        if (!vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
+                        if (!WarfareData.of(vehicle).getBoolean(WarfareKeys.IS_SUPPLY_TRUCK)) {
                             needsService = true;
                         }
                     }
 
                     if (needsService) {
                         this.currentTargetUUID = vehicle.getUUID();
-                        vehicle.getPersistentData().putInt("WARFARE_CrateTimer", 0);
+                        WarfareData.of(vehicle).putInt(WarfareKeys.CRATE_TIMER, 0);
                         sendMessageToPassengers(vehicle, "Подключение к ящику снабжения...", ChatFormatting.YELLOW);
                         return;
                     }
@@ -224,17 +226,17 @@ public class SupplyCrateEntity extends Entity {
 
     // Обработка пополнения для конкретной техники
     private void processVehicleLogic(Entity vehicle) {
-        int timer = vehicle.getPersistentData().getInt("WARFARE_CrateTimer");
+        int timer = WarfareData.of(vehicle).getInt(WarfareKeys.CRATE_TIMER);
         timer++;
         int timeToWait = 30;
         if (timer >= timeToWait) {
             boolean actionDone = false;
-            if (vehicle.getPersistentData().contains("WARFARE_SpawnerPos")) {
+            if (WarfareData.of(vehicle).contains(WarfareKeys.SPAWNER_POS)) {
                 if (vehicle instanceof LivingEntity living) {
                     living.setHealth(living.getMaxHealth());
                 }
 
-                long spawnerPosLong = vehicle.getPersistentData().getLong("WARFARE_SpawnerPos");
+                long spawnerPosLong = WarfareData.of(vehicle).getLong(WarfareKeys.SPAWNER_POS);
                 BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
                 if (this.level().isLoaded(spawnerPos)
                         && this.level().getBlockEntity(spawnerPos) instanceof VehicleSpawnerBlockEntity spawner) {
@@ -270,8 +272,8 @@ public class SupplyCrateEntity extends Entity {
                     });
                 }
 
-                vehicle.getPersistentData()
-                        .putLong("WARFARE_NextSupplyTime", GameClock.worldTicks(this.level()) + 600L);
+                WarfareData.of(vehicle)
+                        .putLong(WarfareKeys.NEXT_SUPPLY_TIME, GameClock.worldTicks(this.level()) + 600L);
                 sendMessageToPassengers(vehicle, "Техника отремонтирована и пополнена ящиком!", ChatFormatting.GREEN);
                 actionDone = true;
             }
@@ -290,15 +292,15 @@ public class SupplyCrateEntity extends Entity {
                             0.1);
                 }
 
-                vehicle.getPersistentData().putInt("WARFARE_CrateTimer", 0);
+                WarfareData.of(vehicle).putInt(WarfareKeys.CRATE_TIMER, 0);
                 this.hasResupplied = true;
                 this.destroyCrate();
             } else {
-                vehicle.getPersistentData().putInt("WARFARE_CrateTimer", 0);
+                WarfareData.of(vehicle).putInt(WarfareKeys.CRATE_TIMER, 0);
                 this.currentTargetUUID = null;
             }
         } else {
-            vehicle.getPersistentData().putInt("WARFARE_CrateTimer", timer);
+            WarfareData.of(vehicle).putInt(WarfareKeys.CRATE_TIMER, timer);
             sendVehicleStatus(vehicle, PacketVehicleStatus.KIND_CRATE_RESUPPLY, timeToWait - timer);
         }
     }

@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare.stats;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pwp.api.core.CoreApi;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
@@ -72,9 +74,9 @@ public class MatchStatsTracker {
 
         return players.computeIfAbsent(uuid, k -> {
             PlayerMatchStats s = new PlayerMatchStats(uuid, nickname, team);
-            s.role = player.getPersistentData().getString("WARFARE_CurrentKit");
-            s.squadId = player.getPersistentData().getInt("WARFARE_SquadID");
-            s.wasSquadLeader = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+            s.role = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
+            s.squadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
+            s.wasSquadLeader = WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
             return s;
         });
     }
@@ -138,7 +140,7 @@ public class MatchStatsTracker {
 
     public void recordVehicleDestroyed(ServerPlayer destroyer, Entity vehicle) {
         if (!active) return;
-        String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+        String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
         boolean isAir = vType.equalsIgnoreCase("HELICOPTER")
                 || vType.toUpperCase().contains("CAS")
                 || vType.equalsIgnoreCase("Supply Helicopter");

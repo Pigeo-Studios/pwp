@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.block;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -103,7 +105,7 @@ public class AmmoBagBlock extends Block {
             return InteractionResult.SUCCESS;
         } else {
             if (!level.isClientSide) {
-                String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+                String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                 if (kitName.isEmpty() || kitName.equals("Unassigned")) {
                     player.sendSystemMessage(
                             Component.literal("Кит не назначен!").withStyle(ChatFormatting.RED));

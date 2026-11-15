@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.events;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSyncMyKit;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,9 +19,9 @@ public class KitUtil {
     private KitUtil() {}
 
     public static String getEffectiveKit(ServerPlayer player) {
-        String pending = player.getPersistentData().getString("WARFARE_PendingKit");
+        String pending = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
         if (pending != null && !pending.isEmpty()) return pending;
-        return player.getPersistentData().getString("WARFARE_CurrentKit");
+        return WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
     }
 
     public static void syncMyKit(ServerPlayer player) {

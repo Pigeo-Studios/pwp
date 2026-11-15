@@ -119,6 +119,14 @@ dependencies {
     implementation project(':pwp-cosmetics')
 
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Юнит-тесты чистой логики (без запуска Minecraft): миграция NBT, тикеты, захват, лимиты
+test {
+    useJUnitPlatform()
 }
 
 jar {

@@ -7,6 +7,8 @@ import com.pigeostudios.pwp.warfare.block.RallyPointBlock;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
@@ -211,22 +213,22 @@ public class GameLogicEvents {
                 ServerPlayer player = (ServerPlayer) event.player;
                 Entity vehicle = player.getVehicle();
                 if (vehicle == null) {
-                    player.getPersistentData().remove("WARFARE_DriveKickTimer");
-                    player.getPersistentData().remove("WARFARE_BoardingGrace");
-                    player.getPersistentData().remove("WARFARE_LastVehicleId");
+                    WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
+                    WarfareData.of(player).remove(WarfareKeys.BOARDING_GRACE);
+                    WarfareData.of(player).remove(WarfareKeys.LAST_VEHICLE_ID);
                 } else {
-                    int lastVehicleId = player.getPersistentData().getInt("WARFARE_LastVehicleId");
+                    int lastVehicleId = WarfareData.of(player).getInt(WarfareKeys.LAST_VEHICLE_ID);
                     if (lastVehicleId != vehicle.getId()) {
-                        player.getPersistentData().putInt("WARFARE_LastVehicleId", vehicle.getId());
-                        player.getPersistentData().putInt("WARFARE_BoardingGrace", 0);
-                        player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                        WarfareData.of(player).putInt(WarfareKeys.LAST_VEHICLE_ID, vehicle.getId());
+                        WarfareData.of(player).putInt(WarfareKeys.BOARDING_GRACE, 0);
+                        WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
                     } else {
                         if (vehicle.getFirstPassenger() != player) {
-                            player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                            WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
                         } else if (!player.isCreative() && !player.isSpectator()) {
-                            String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+                            String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
                             if (vType.isEmpty() || vType.equals("DEFAULT")) {
-                                player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                                WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
                                 return;
                             }
                             String pKit = KitUtil.getEffectiveKit(player);
@@ -237,7 +239,7 @@ public class GameLogicEvents {
                                                 .withStyle(ChatFormatting.RED),
                                         true);
                             } else {
-                                player.getPersistentData().remove("WARFARE_DriveKickTimer");
+                                WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
                             }
                         }
                     }
@@ -525,7 +527,7 @@ public class GameLogicEvents {
                                 if (vehicle != null
                                         && vehicle.isAlive()
                                         && !(vehicle instanceof LivingEntity)
-                                        && vehicle.getPersistentData().contains("WARFARE_TicketPenalty")) {
+                                        && WarfareData.of(vehicle).contains(WarfareKeys.TICKET_PENALTY)) {
                                     float health = getVehicleHealth(vehicle);
                                     if (health <= 0.0F) {
                                         wrecksToProcess.add(vehicle);
@@ -537,9 +539,8 @@ public class GameLogicEvents {
                                 if (!(wreck instanceof LivingEntity)) {
                                     // Priority 1: WARFARE_LastDamager NBT tag (from ProjectileImpactEvent or
                                     // LivingHurtEvent)
-                                    if (wreck.getPersistentData().contains("WARFARE_LastDamager")) {
-                                        String lastUuid =
-                                                wreck.getPersistentData().getString("WARFARE_LastDamager");
+                                    if (WarfareData.of(wreck).contains(WarfareKeys.LAST_DAMAGER)) {
+                                        String lastUuid = WarfareData.of(wreck).getString(WarfareKeys.LAST_DAMAGER);
                                         Entity lp = level.getEntity(java.util.UUID.fromString(lastUuid));
                                         if (lp instanceof ServerPlayer sp) destroyer = sp;
                                     }
@@ -611,8 +612,8 @@ public class GameLogicEvents {
                                 if (leader.isCreative()) {
                                     squad.slNoOfficerSince = -1L;
                                 } else {
-                                    String current = leader.getPersistentData().getString("WARFARE_CurrentKit");
-                                    String pending = leader.getPersistentData().getString("WARFARE_PendingKit");
+                                    String current = WarfareData.of(leader).getString(WarfareKeys.CURRENT_KIT);
+                                    String pending = WarfareData.of(leader).getString(WarfareKeys.PENDING_KIT);
                                     String kitName = !pending.isEmpty() ? pending : current;
                                     boolean hasCommandKit = false;
                                     if (!kitName.isEmpty() && !kitName.equals("Unassigned")) {
@@ -656,10 +657,10 @@ public class GameLogicEvents {
                                                     PacketHandler.INSTANCE.send(
                                                             PacketDistributor.PLAYER.with(() -> m),
                                                             new PacketNotification("squad.disbanded_leader", (byte) 1));
-                                                    m.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-                                                    m.getPersistentData().remove("WARFARE_PendingKit");
-                                                    m.getPersistentData().remove("WARFARE_SquadID");
-                                                    m.getPersistentData().remove("WARFARE_IsSquadLeader");
+                                                    WarfareData.of(m).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
+                                                    WarfareData.of(m).remove(WarfareKeys.PENDING_KIT);
+                                                    WarfareData.of(m).remove(WarfareKeys.SQUAD_ID);
+                                                    WarfareData.of(m).remove(WarfareKeys.IS_SQUAD_LEADER);
                                                     PacketSquadAction.removeRadio(m);
                                                     m.getInventory().clearContent();
                                                     ResupplyHandler.clearCurios(m);
@@ -808,8 +809,8 @@ public class GameLogicEvents {
                                 boolean isSetupAttacker =
                                         data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
                                 if (!isSetupAttacker) {
-                                    String pending = p.getPersistentData().getString("WARFARE_PendingKit");
-                                    String current = p.getPersistentData().getString("WARFARE_CurrentKit");
+                                    String pending = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
+                                    String current = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
                                     String kitToApply = !pending.isEmpty() ? pending : current;
                                     if (kitToApply != null
                                             && !kitToApply.isEmpty()
@@ -1029,12 +1030,12 @@ public class GameLogicEvents {
         for (ServerPlayer p : players) {
             String pName = p.getScoreboardName();
             String pTeam = p.getTeam() != null ? p.getTeam().getName().toUpperCase() : "NEUTRAL";
-            int squadId = p.getPersistentData().getInt("WARFARE_SquadID");
+            int squadId = WarfareData.of(p).getInt(WarfareKeys.SQUAD_ID);
             if (squadId == 0) {
                 squadId = -1;
             }
 
-            boolean isLeader = p.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
+            boolean isLeader = WarfareData.of(p).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
 
             for (WarfareWorldData.Squad s : data.squads) {
                 if (s.members.contains(pName)) {
@@ -1055,8 +1056,8 @@ public class GameLogicEvents {
                 seatIdx = vehicle.getPassengers().indexOf(p);
             }
 
-            boolean downed = p.getPersistentData().getBoolean("WARFARE_IsDowned");
-            long shout = p.getPersistentData().getLong("WARFARE_LastMedicShoutTimeMS");
+            boolean downed = WarfareData.of(p).getBoolean(WarfareKeys.IS_DOWNED);
+            long shout = WarfareData.of(p).getLong(WarfareKeys.LAST_MEDIC_SHOUT_TIME_MS);
             infoList.add(new MapPlayerInfo(
                     pName,
                     p.getUUID(),
@@ -1092,7 +1093,7 @@ public class GameLogicEvents {
                 for (ServerPlayer p : playersInBox) {
                     if (p.isAlive()
                             && !p.isSpectator()
-                            && !p.getPersistentData().getBoolean("WARFARE_IsDowned")
+                            && !WarfareData.of(p).getBoolean(WarfareKeys.IS_DOWNED)
                             && point.isInside(p.position())
                             && p.getTeam() != null) {
                         if (p.getTeam().getName().equalsIgnoreCase("Blue")) {
@@ -1338,11 +1339,11 @@ public class GameLogicEvents {
 
                             entity = (Entity) zoneEntities.next();
                             if (zone.isInside(entity.position())) {
-                                if (!entity.getPersistentData().contains("WARFARE_SpawnGraceTick")) {
+                                if (!WarfareData.of(entity).contains(WarfareKeys.SPAWN_GRACE_TICK)) {
                                     break;
                                 }
 
-                                long graceTick = entity.getPersistentData().getLong("WARFARE_SpawnGraceTick");
+                                long graceTick = WarfareData.of(entity).getLong(WarfareKeys.SPAWN_GRACE_TICK);
                                 if (GameClock.worldTicks(level) - graceTick >= 100L) {
                                     break;
                                 }
@@ -1355,12 +1356,12 @@ public class GameLogicEvents {
                                         ? player.getTeam().getName().toUpperCase()
                                         : "NEUTRAL";
                                 if (!pTeam.equalsIgnoreCase(zone.team)) {
-                                    int ticks = player.getPersistentData().getInt("WARFARE_MainZoneTimer");
+                                    int ticks = WarfareData.of(player).getInt(WarfareKeys.MAIN_ZONE_TIMER);
                                     if (++ticks >= 200) {
-                                        player.getPersistentData().remove("WARFARE_MainZoneTimer");
+                                        WarfareData.of(player).remove(WarfareKeys.MAIN_ZONE_TIMER);
                                         player.kill();
                                     } else {
-                                        player.getPersistentData().putInt("WARFARE_MainZoneTimer", ticks);
+                                        WarfareData.of(player).putInt(WarfareKeys.MAIN_ZONE_TIMER, ticks);
                                         if (ticks % 20 == 0) {
                                             int secLeft = 10 - ticks / 20;
                                             player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 30, 0));
@@ -1375,16 +1376,16 @@ public class GameLogicEvents {
                                         }
                                     }
                                 } else {
-                                    player.getPersistentData().remove("WARFARE_MainZoneTimer");
+                                    WarfareData.of(player).remove(WarfareKeys.MAIN_ZONE_TIMER);
                                 }
                             }
-                        } else if (entity.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                            String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+                        } else if (WarfareData.of(entity).contains(WarfareKeys.VEHICLE_TEAM)) {
+                            String vTeam = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
                             if (!vTeam.equalsIgnoreCase("NEUTRAL") && !vTeam.isEmpty()) {
                                 if (vTeam.equalsIgnoreCase(zone.team)) {
-                                    entity.getPersistentData().remove("WARFARE_MainZoneTimer");
+                                    WarfareData.of(entity).remove(WarfareKeys.MAIN_ZONE_TIMER);
                                 } else {
-                                    int ticks = entity.getPersistentData().getInt("WARFARE_MainZoneTimer");
+                                    int ticks = WarfareData.of(entity).getInt(WarfareKeys.MAIN_ZONE_TIMER);
                                     if (++ticks >= 200) {
                                         if (entity instanceof LivingEntity le) {
                                             le.kill();
@@ -1392,7 +1393,7 @@ public class GameLogicEvents {
                                             entity.discard();
                                         }
                                     } else {
-                                        entity.getPersistentData().putInt("WARFARE_MainZoneTimer", ticks);
+                                        WarfareData.of(entity).putInt(WarfareKeys.MAIN_ZONE_TIMER, ticks);
                                         if (ticks % 20 == 0) {
                                             int secLeft = 10 - ticks / 20;
 
@@ -1423,7 +1424,7 @@ public class GameLogicEvents {
                 }
 
                 for (ServerPlayer player : level.players()) {
-                    if (player.getPersistentData().contains("WARFARE_MainZoneTimer")) {
+                    if (WarfareData.of(player).contains(WarfareKeys.MAIN_ZONE_TIMER)) {
                         boolean inEnemyZone = false;
                         String pTeam = player.getTeam() != null
                                 ? player.getTeam().getName().toUpperCase()
@@ -1437,15 +1438,15 @@ public class GameLogicEvents {
                         }
 
                         if (inEnemyZone) {
-                            player.getPersistentData().remove("WARFARE_MainZoneExitTick");
+                            WarfareData.of(player).remove(WarfareKeys.MAIN_ZONE_EXIT_TICK);
                         } else {
-                            long exitTick = player.getPersistentData().getLong("WARFARE_MainZoneExitTick");
+                            long exitTick = WarfareData.of(player).getLong(WarfareKeys.MAIN_ZONE_EXIT_TICK);
                             if (exitTick == 0) {
-                                player.getPersistentData()
-                                        .putLong("WARFARE_MainZoneExitTick", GameClock.worldTicks(level));
+                                WarfareData.of(player)
+                                        .putLong(WarfareKeys.MAIN_ZONE_EXIT_TICK, GameClock.worldTicks(level));
                             } else if (GameClock.worldTicks(level) - exitTick >= 200) {
-                                player.getPersistentData().remove("WARFARE_MainZoneTimer");
-                                player.getPersistentData().remove("WARFARE_MainZoneExitTick");
+                                WarfareData.of(player).remove(WarfareKeys.MAIN_ZONE_TIMER);
+                                WarfareData.of(player).remove(WarfareKeys.MAIN_ZONE_EXIT_TICK);
                             }
                         }
                     }
@@ -1453,9 +1454,9 @@ public class GameLogicEvents {
 
                 for (WarfareWorldData.VehicleRecord record : data.markedVehicles) {
                     Entity vehicle = level.getEntity(record.uuid);
-                    if (vehicle != null && vehicle.getPersistentData().contains("WARFARE_MainZoneTimer")) {
+                    if (vehicle != null && WarfareData.of(vehicle).contains(WarfareKeys.MAIN_ZONE_TIMER)) {
                         boolean inEnemyZone = false;
-                        String vTeam = vehicle.getPersistentData().getString("WARFARE_VehicleTeam");
+                        String vTeam = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TEAM);
 
                         for (WarfareWorldData.MainProtectionZone zone : data.mainZones) {
                             if (!zone.team.equalsIgnoreCase(vTeam) && zone.isInside(vehicle.position())) {
@@ -1465,15 +1466,15 @@ public class GameLogicEvents {
                         }
 
                         if (inEnemyZone) {
-                            vehicle.getPersistentData().remove("WARFARE_MainZoneExitTick");
+                            WarfareData.of(vehicle).remove(WarfareKeys.MAIN_ZONE_EXIT_TICK);
                         } else {
-                            long exitTick = vehicle.getPersistentData().getLong("WARFARE_MainZoneExitTick");
+                            long exitTick = WarfareData.of(vehicle).getLong(WarfareKeys.MAIN_ZONE_EXIT_TICK);
                             if (exitTick == 0) {
-                                vehicle.getPersistentData()
-                                        .putLong("WARFARE_MainZoneExitTick", GameClock.worldTicks(level));
+                                WarfareData.of(vehicle)
+                                        .putLong(WarfareKeys.MAIN_ZONE_EXIT_TICK, GameClock.worldTicks(level));
                             } else if (GameClock.worldTicks(level) - exitTick >= 200) {
-                                vehicle.getPersistentData().remove("WARFARE_MainZoneTimer");
-                                vehicle.getPersistentData().remove("WARFARE_MainZoneExitTick");
+                                WarfareData.of(vehicle).remove(WarfareKeys.MAIN_ZONE_TIMER);
+                                WarfareData.of(vehicle).remove(WarfareKeys.MAIN_ZONE_EXIT_TICK);
                             }
                         }
                     }
@@ -1493,14 +1494,14 @@ public class GameLogicEvents {
             WarfareWorldData data = WarfareWorldData.get(serverLevel);
             if (data.markedVehicles.stream().anyMatch(v -> v.uuid.equals(entity.getUUID()))) return;
             String team = "NEUTRAL";
-            if (entity.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                team = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+            if (WarfareData.of(entity).contains(WarfareKeys.VEHICLE_TEAM)) {
+                team = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
             } else {
                 Player owner = serverLevel.getNearestPlayer(entity, 10.0);
                 if (owner != null && owner.getTeam() != null) {
                     team = owner.getTeam().getName().toUpperCase();
-                    entity.getPersistentData().putString("WARFARE_VehicleTeam", team);
-                    entity.getPersistentData().putString("WARFARE_VehicleType", "Mine");
+                    WarfareData.of(entity).putString(WarfareKeys.VEHICLE_TEAM, team);
+                    WarfareData.of(entity).putString(WarfareKeys.VEHICLE_TYPE, "Mine");
                 }
             }
             if (!team.equals("NEUTRAL")) {
@@ -1614,10 +1615,10 @@ public class GameLogicEvents {
                         : "";
                 boolean isSetupAttacker = data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
                 if (!isSetupAttacker) {
-                    if (newPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
+                    if (WarfareData.of(newPlayer).contains(WarfareKeys.PENDING_KIT)) {
                         ResupplyHandler.tryApplyPendingKit(newPlayer, data);
                     } else {
-                        String currentKitName = newPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+                        String currentKitName = WarfareData.of(newPlayer).getString(WarfareKeys.CURRENT_KIT);
                         if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
                             String tName = newPlayer.getTeam() != null
                                     ? newPlayer.getTeam().getName().toUpperCase()
@@ -1649,7 +1650,7 @@ public class GameLogicEvents {
                             && victim.getTeam() != null
                             && killer.getTeam().isAlliedTo(victim.getTeam());
 
-                    if (!victim.getPersistentData().getBoolean("WARFARE_IsDowned") && isTeamkill) {
+                    if (!WarfareData.of(victim).getBoolean(WarfareKeys.IS_DOWNED) && isTeamkill) {
                         DownedHandler.handleTeamkill(killer);
                     }
 
@@ -1661,8 +1662,7 @@ public class GameLogicEvents {
                     }
 
                     // Убийство техникой
-                } else if (sourceEntity != null
-                        && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                } else if (sourceEntity != null && WarfareData.of(sourceEntity).contains(WarfareKeys.VEHICLE_TEAM)) {
                     List<Entity> passengers = sourceEntity.getPassengers();
                     if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
                         MatchStatsTracker.get().recordVehicleKill(driver);
@@ -1682,18 +1682,17 @@ public class GameLogicEvents {
 
                 MatchStatsTracker.get().recordDeath(victim);
                 processEntityLoss(victim);
-                victim.getPersistentData().putBoolean("WARFARE_IsDowned", false);
-                if (victim.getPersistentData().getBoolean("WARFARE_GivingUp")) {
+                WarfareData.of(victim).putBoolean(WarfareKeys.IS_DOWNED, false);
+                if (WarfareData.of(victim).getBoolean(WarfareKeys.GIVING_UP)) {
                     return;
                 }
-            } else if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
+            } else if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)) {
                 Entity sourceEntity = event.getSource().getEntity();
                 Entity vehicleDestroyer = null;
 
                 if (sourceEntity instanceof ServerPlayer destroyer) {
                     vehicleDestroyer = destroyer;
-                } else if (sourceEntity != null
-                        && sourceEntity.getPersistentData().contains("WARFARE_VehicleTeam")) {
+                } else if (sourceEntity != null && WarfareData.of(sourceEntity).contains(WarfareKeys.VEHICLE_TEAM)) {
                     List<Entity> passengers = sourceEntity.getPassengers();
                     if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
                         vehicleDestroyer = driver;
@@ -1705,8 +1704,8 @@ public class GameLogicEvents {
                     }
                 }
 
-                if (vehicleDestroyer == null && entity.getPersistentData().contains("WARFARE_LastDamager")) {
-                    String lastUuid = entity.getPersistentData().getString("WARFARE_LastDamager");
+                if (vehicleDestroyer == null && WarfareData.of(entity).contains(WarfareKeys.LAST_DAMAGER)) {
+                    String lastUuid = WarfareData.of(entity).getString(WarfareKeys.LAST_DAMAGER);
                     if (event.getEntity().level() != null) {
                         net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel)
                                 event.getEntity().level();
@@ -1728,7 +1727,7 @@ public class GameLogicEvents {
 
     private static void saveKitNbtBeforeDeath(ServerPlayer player) {
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-        String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+        String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
         String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
         if (!team.isEmpty() && !kitName.isEmpty() && !kitName.equals("Unassigned")) {
             WarfareWorldData.KitInfo kit = team.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
@@ -1755,40 +1754,41 @@ public class GameLogicEvents {
     public static void onPlayerClone(Clone event) {
         ServerPlayer oldPlayer = (ServerPlayer) event.getOriginal();
         ServerPlayer newPlayer = (ServerPlayer) event.getEntity();
-        newPlayer.getPersistentData().putBoolean("WARFARE_IsDowned", false);
-        newPlayer.getPersistentData().remove("WARFARE_GivingUp");
-        newPlayer.getPersistentData().remove("WARFARE_DownedYaw");
-        newPlayer.getPersistentData().remove("WARFARE_DownedPitch");
-        newPlayer.getPersistentData().putLong("WARFARE_LastReviveTime", 0L);
+        WarfareData.of(newPlayer).putBoolean(WarfareKeys.IS_DOWNED, false);
+        WarfareData.of(newPlayer).remove(WarfareKeys.GIVING_UP);
+        WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_YAW);
+        WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_PITCH);
+        WarfareData.of(newPlayer).putLong(WarfareKeys.LAST_REVIVE_TIME, 0L);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(newPlayer.getId(), false));
-        CompoundTag oldData = oldPlayer.getPersistentData();
-        CompoundTag newData = newPlayer.getPersistentData();
-        if (oldData.contains("WARFARE_SquadID")) {
-            newData.putInt("WARFARE_SquadID", oldData.getInt("WARFARE_SquadID"));
-        }
-
-        if (oldData.contains("WARFARE_IsSquadLeader")) {
-            newData.putBoolean("WARFARE_IsSquadLeader", oldData.getBoolean("WARFARE_IsSquadLeader"));
-        }
-
-        if (oldData.contains("WARFARE_CurrentKit")) {
-            newData.putString("WARFARE_CurrentKit", oldData.getString("WARFARE_CurrentKit"));
-        }
-
-        if (oldData.contains("WARFARE_PendingKit")) {
-            newData.putString("WARFARE_PendingKit", oldData.getString("WARFARE_PendingKit"));
-        }
-
-        if (oldData.contains("WARFARE_LastFobResupply")) {
-            newData.putLong("WARFARE_LastFobResupply", oldData.getLong("WARFARE_LastFobResupply"));
-        }
-
-        if (oldData.contains("WARFARE_LastMainResupply")) {
-            newData.putLong("WARFARE_LastMainResupply", oldData.getLong("WARFARE_LastMainResupply"));
-        }
-
-        if (oldData.contains("WARFARE_LastRespawnCommand")) {
-            newData.putLong("WARFARE_LastRespawnCommand", oldData.getLong("WARFARE_LastRespawnCommand"));
+        // capability старого игрока после клона инвалидирована — оживляем на время копирования.
+        // Переживают смерть: отряд, роль лидера, киты, кулдауны ресапплая/респавна (как и раньше).
+        oldPlayer.reviveCaps();
+        try {
+            WarfareData oldData = WarfareData.of(oldPlayer);
+            WarfareData newData = WarfareData.of(newPlayer);
+            if (oldData.contains(WarfareKeys.SQUAD_ID)) {
+                newData.putInt(WarfareKeys.SQUAD_ID, oldData.getInt(WarfareKeys.SQUAD_ID));
+            }
+            if (oldData.contains(WarfareKeys.IS_SQUAD_LEADER)) {
+                newData.putBoolean(WarfareKeys.IS_SQUAD_LEADER, oldData.getBoolean(WarfareKeys.IS_SQUAD_LEADER));
+            }
+            if (oldData.contains(WarfareKeys.CURRENT_KIT)) {
+                newData.putString(WarfareKeys.CURRENT_KIT, oldData.getString(WarfareKeys.CURRENT_KIT));
+            }
+            if (oldData.contains(WarfareKeys.PENDING_KIT)) {
+                newData.putString(WarfareKeys.PENDING_KIT, oldData.getString(WarfareKeys.PENDING_KIT));
+            }
+            if (oldData.contains(WarfareKeys.LAST_FOB_RESUPPLY)) {
+                newData.putLong(WarfareKeys.LAST_FOB_RESUPPLY, oldData.getLong(WarfareKeys.LAST_FOB_RESUPPLY));
+            }
+            if (oldData.contains(WarfareKeys.LAST_MAIN_RESUPPLY)) {
+                newData.putLong(WarfareKeys.LAST_MAIN_RESUPPLY, oldData.getLong(WarfareKeys.LAST_MAIN_RESUPPLY));
+            }
+            if (oldData.contains(WarfareKeys.LAST_RESPAWN_COMMAND)) {
+                newData.putLong(WarfareKeys.LAST_RESPAWN_COMMAND, oldData.getLong(WarfareKeys.LAST_RESPAWN_COMMAND));
+            }
+        } finally {
+            oldPlayer.invalidateCaps();
         }
 
         if (event.isWasDeath()) {
@@ -1811,9 +1811,9 @@ public class GameLogicEvents {
                 RemovalReason reason = entity.getRemovalReason();
                 if (reason != null && (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED)) {
                     // Check if this was a tagged vehicle with a known last damager
-                    if (entity.getPersistentData().contains("WARFARE_TicketPenalty")
-                            && entity.getPersistentData().contains("WARFARE_LastDamager")) {
-                        String lastUuid = entity.getPersistentData().getString("WARFARE_LastDamager");
+                    if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)
+                            && WarfareData.of(entity).contains(WarfareKeys.LAST_DAMAGER)) {
+                        String lastUuid = WarfareData.of(entity).getString(WarfareKeys.LAST_DAMAGER);
                         net.minecraft.server.level.ServerLevel sl =
                                 (net.minecraft.server.level.ServerLevel) event.getLevel();
                         Entity lastPlayer = sl.getEntity(java.util.UUID.fromString(lastUuid));
@@ -1851,14 +1851,14 @@ public class GameLogicEvents {
                     }
                 }
 
-                if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-                    String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+                if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)) {
+                    String vTeam = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
                     boolean isInSetupAttackerVehicle =
                             data.invasionSetupActive && !vTeam.equalsIgnoreCase(data.invasionDefender);
                     if (!isInSetupAttackerVehicle) {
-                        int penalty = entity.getPersistentData().getInt("WARFARE_TicketPenalty");
-                        String vType = entity.getPersistentData().getString("WARFARE_VehicleType");
-                        entity.getPersistentData().remove("WARFARE_TicketPenalty");
+                        int penalty = WarfareData.of(entity).getInt(WarfareKeys.TICKET_PENALTY);
+                        String vType = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TYPE);
+                        WarfareData.of(entity).remove(WarfareKeys.TICKET_PENALTY);
                         if (penalty > 0) {
                             if (vTeam.equalsIgnoreCase("BLUE")) {
                                 data.blueTickets = Math.max(0, data.blueTickets - penalty);
@@ -1918,13 +1918,13 @@ public class GameLogicEvents {
     }
 
     private static void processWreckLoss(Entity entity, WarfareWorldData data, ServerLevel level) {
-        if (entity.getPersistentData().contains("WARFARE_TicketPenalty")) {
-            String vTeam = entity.getPersistentData().getString("WARFARE_VehicleTeam");
+        if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)) {
+            String vTeam = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
             // During invasion setup: skip ticket deduction for attackers' vehicles
             if (data.invasionSetupActive && !vTeam.equalsIgnoreCase(data.invasionDefender)) {
                 boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
                 data.removeApprovedDrivers(entity.getUUID());
-                entity.getPersistentData().remove("WARFARE_TicketPenalty");
+                WarfareData.of(entity).remove(WarfareKeys.TICKET_PENALTY);
                 if (markerRemoved) {
                     data.setDirty();
                     sendSyncPacket(level, data);
@@ -1932,9 +1932,9 @@ public class GameLogicEvents {
                 return;
             }
 
-            int penalty = entity.getPersistentData().getInt("WARFARE_TicketPenalty");
-            String vType = entity.getPersistentData().getString("WARFARE_VehicleType");
-            entity.getPersistentData().remove("WARFARE_TicketPenalty");
+            int penalty = WarfareData.of(entity).getInt(WarfareKeys.TICKET_PENALTY);
+            String vType = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TYPE);
+            WarfareData.of(entity).remove(WarfareKeys.TICKET_PENALTY);
             boolean markerRemoved = data.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
             data.removeApprovedDrivers(entity.getUUID());
             if (penalty > 0 && data.blueTickets > 0 && data.redTickets > 0) {
@@ -2310,21 +2310,21 @@ public class GameLogicEvents {
         String currentDim = level.dimension().location().toString();
 
         for (ServerPlayer player : level.players()) {
-            if (player.getPersistentData().getBoolean("WARFARE_TeamKillSpectator")) {
-                player.getPersistentData().remove("WARFARE_TeamKillSpectator");
-                player.getPersistentData().remove("WARFARE_TeamKills");
-                player.getPersistentData().remove("WARFARE_BaseRestrictedUntil");
+            if (WarfareData.of(player).getBoolean(WarfareKeys.TEAM_KILL_SPECTATOR)) {
+                WarfareData.of(player).remove(WarfareKeys.TEAM_KILL_SPECTATOR);
+                WarfareData.of(player).remove(WarfareKeys.TEAM_KILLS);
+                WarfareData.of(player).remove(WarfareKeys.BASE_RESTRICTED_UNTIL);
                 player.setGameMode(GameType.SURVIVAL);
             }
 
             if (!player.isCreative() && !player.isSpectator()) {
-                if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                if (WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED)) {
                     DownedHandler.revivePlayer(player);
                 }
 
                 player.setHealth(player.getMaxHealth());
-                player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-                player.getPersistentData().remove("WARFARE_PendingKit");
+                WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
+                WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
                 player.getInventory().clearContent();
                 ResupplyHandler.clearCurios(player);
                 player.inventoryMenu.broadcastChanges();
@@ -2422,8 +2422,8 @@ public class GameLogicEvents {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
             for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                String current = p.getPersistentData().getString("WARFARE_CurrentKit");
-                String pending = p.getPersistentData().getString("WARFARE_PendingKit");
+                String current = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
+                String pending = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
                 String displayKit = !pending.isEmpty() ? pending : current;
                 pKits.put(p.getScoreboardName(), displayKit.isEmpty() ? "Unassigned" : displayKit);
             }
@@ -2554,8 +2554,8 @@ public class GameLogicEvents {
         data.squads.removeIf(sx -> sx.members.isEmpty());
         data.setDirty();
         PacketHandler.sendToAllClients(player.serverLevel(), data);
-        player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-        player.getPersistentData().putString("WARFARE_PendingKit", "");
+        WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
+        WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, "");
         player.getInventory().clearContent();
         ResupplyHandler.clearCurios(player);
         player.inventoryMenu.broadcastChanges();
@@ -2582,8 +2582,8 @@ public class GameLogicEvents {
             }
 
             PacketSquadAction.leaveCurrentSquad(player, data);
-            player.getPersistentData().putString("WARFARE_CurrentKit", "Unassigned");
-            player.getPersistentData().remove("WARFARE_PendingKit");
+            WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
+            WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
             player.getInventory().clearContent();
             ResupplyHandler.clearCurios(player);
             player.inventoryMenu.broadcastChanges();
@@ -2622,12 +2622,12 @@ public class GameLogicEvents {
         if (event.getEntity().level().isClientSide) return;
         if (event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit) {
             Entity hitEntity = hit.getEntity();
-            if (hitEntity.getPersistentData().contains("WARFARE_TicketPenalty")) {
+            if (WarfareData.of(hitEntity).contains(WarfareKeys.TICKET_PENALTY)) {
                 Entity projectile = event.getEntity();
                 if (projectile instanceof net.minecraft.world.entity.projectile.Projectile proj) {
                     Entity owner = proj.getOwner();
                     if (owner instanceof ServerPlayer shooter) {
-                        hitEntity.getPersistentData().putString("WARFARE_LastDamager", shooter.getStringUUID());
+                        WarfareData.of(hitEntity).putString(WarfareKeys.LAST_DAMAGER, shooter.getStringUUID());
                     }
                 }
             }
@@ -2691,7 +2691,7 @@ public class GameLogicEvents {
         if (active) {
             List<ServerPlayer> otherSLs = level.players().stream()
                     .filter(p -> p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(team))
-                    .filter(p -> p.getPersistentData().getBoolean("WARFARE_IsSquadLeader"))
+                    .filter(p -> WarfareData.of(p).getBoolean(WarfareKeys.IS_SQUAD_LEADER))
                     .filter(p -> !p.getScoreboardName().equals(candidateName))
                     .toList();
             int totalVoters = otherSLs.size();

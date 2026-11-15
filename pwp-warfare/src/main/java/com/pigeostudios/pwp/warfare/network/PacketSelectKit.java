@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,12 +50,12 @@ public class PacketSelectKit {
             ServerPlayer player = ctx.get().getSender();
             if (player != null) {
                 WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                player.getPersistentData().putString("WARFARE_PendingKit", msg.kitName);
+                WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, msg.kitName);
                 CompoundTag selTag = new CompoundTag();
                 for (var e : msg.slotSelections.entrySet()) {
                     selTag.putInt(e.getKey(), e.getValue());
                 }
-                player.getPersistentData().put("WARFARE_SlotSelections", selTag);
+                WarfareData.of(player).put(WarfareKeys.SLOT_SELECTIONS, selTag);
                 // Синхронизируем выбранный кит клиенту (ClientData.myCurrentKit)
                 com.pigeostudios.pwp.warfare.events.KitUtil.syncMyKit(player);
                 PacketHandler.sendToAllClients(player.serverLevel(), data);

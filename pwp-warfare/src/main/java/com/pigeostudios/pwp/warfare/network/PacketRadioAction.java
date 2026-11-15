@@ -10,6 +10,8 @@ import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
@@ -273,13 +275,13 @@ public class PacketRadioAction {
             }
         }
 
-        int playerSquadId = player.getPersistentData().getInt("WARFARE_SquadID");
+        int playerSquadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
         AABB squadBox = new AABB(pos).inflate(5.0);
         int squadMatesNearby = 0;
 
         for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, squadBox)) {
             if (p != player && !p.isSpectator()) {
-                int otherSquadId = p.getPersistentData().getInt("WARFARE_SquadID");
+                int otherSquadId = WarfareData.of(p).getInt(WarfareKeys.SQUAD_ID);
                 if (playerSquadId != 0 && otherSquadId == playerSquadId) {
                     squadMatesNearby++;
                 }

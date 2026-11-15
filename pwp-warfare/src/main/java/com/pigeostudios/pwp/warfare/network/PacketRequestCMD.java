@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -28,19 +30,17 @@ public class PacketRequestCMD {
                 if (!alreadyVoting) {
                     int currentCMD = isBlue ? data.blueCMDId : data.redCMDId;
                     if (currentCMD == -1) {
-                        if (player.getPersistentData().getBoolean("WARFARE_IsSquadLeader")) {
+                        if (WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) {
                             if (isBlue) {
                                 data.blueCmdVoteActive = true;
                                 data.blueCmdCandidateName = pName;
-                                data.blueCmdCandidateId =
-                                        player.getPersistentData().getInt("WARFARE_SquadID");
+                                data.blueCmdCandidateId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
                                 data.blueCmdVoteTimer = 600;
                                 data.blueCmdVotes.clear();
                             } else {
                                 data.redCmdVoteActive = true;
                                 data.redCmdCandidateName = pName;
-                                data.redCmdCandidateId =
-                                        player.getPersistentData().getInt("WARFARE_SquadID");
+                                data.redCmdCandidateId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
                                 data.redCmdVoteTimer = 600;
                                 data.redCmdVotes.clear();
                             }

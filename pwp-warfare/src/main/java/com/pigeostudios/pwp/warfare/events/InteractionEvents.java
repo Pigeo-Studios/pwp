@@ -11,6 +11,8 @@ import com.pigeostudios.pwp.warfare.block.TOWMissileStackBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.AGSAmmoItem;
 import com.pigeostudios.pwp.warfare.item.M2AmmoItem;
 import com.pigeostudios.pwp.warfare.item.ModItems;
@@ -83,15 +85,14 @@ public class InteractionEvents {
                         return;
                     }
 
-                    if (!event.getLevel().isClientSide
-                            && target.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                        String vType = target.getPersistentData().getString("WARFARE_VehicleType");
-                        String vTeam = target.getPersistentData().getString("WARFARE_VehicleTeam");
+                    if (!event.getLevel().isClientSide && WarfareData.of(target).contains(WarfareKeys.VEHICLE_TEAM)) {
+                        String vType = WarfareData.of(target).getString(WarfareKeys.VEHICLE_TYPE);
+                        String vTeam = WarfareData.of(target).getString(WarfareKeys.VEHICLE_TEAM);
                         String pTeam =
                                 player.getTeam() != null ? player.getTeam().getName() : "";
                         if (!vType.equalsIgnoreCase("Static ZU") && vTeam.equalsIgnoreCase(pTeam)) {
                             ServerPlayer sPlayer = (ServerPlayer) player;
-                            int currentMats = target.getPersistentData().getInt("WARFARE_VehicleMats");
+                            int currentMats = WarfareData.of(target).getInt(WarfareKeys.VEHICLE_MATS);
                             int cost = (Integer) WarfareConfig.HUB_RESUPPLY_COST.get();
                             if (currentMats < cost) {
                                 sPlayer.displayClientMessage(
@@ -103,8 +104,8 @@ public class InteractionEvents {
                                 return;
                             }
 
-                            String pendingKit = sPlayer.getPersistentData().getString("WARFARE_PendingKit");
-                            String currentKit = sPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+                            String pendingKit = WarfareData.of(sPlayer).getString(WarfareKeys.PENDING_KIT);
+                            String currentKit = WarfareData.of(sPlayer).getString(WarfareKeys.CURRENT_KIT);
                             boolean hasPending = !pendingKit.isEmpty();
                             String targetKitName = hasPending ? pendingKit : currentKit;
                             if (targetKitName != null
@@ -114,7 +115,7 @@ public class InteractionEvents {
                                 if (hasPending) {
                                     ResupplyHandler.tryApplyPendingKit(sPlayer, data);
                                     if (!sPlayer.isCreative()) {
-                                        target.getPersistentData().putInt("WARFARE_VehicleMats", currentMats - cost);
+                                        WarfareData.of(target).putInt(WarfareKeys.VEHICLE_MATS, currentMats - cost);
                                     }
 
                                     sPlayer.displayClientMessage(
@@ -137,8 +138,8 @@ public class InteractionEvents {
                                     if (kit != null) {
                                         if (ResupplyHandler.resupplyPlayer(sPlayer, kit, false)) {
                                             if (!sPlayer.isCreative()) {
-                                                target.getPersistentData()
-                                                        .putInt("WARFARE_VehicleMats", currentMats - cost);
+                                                WarfareData.of(target)
+                                                        .putInt(WarfareKeys.VEHICLE_MATS, currentMats - cost);
                                             }
 
                                             sPlayer.displayClientMessage(
@@ -332,7 +333,7 @@ public class InteractionEvents {
                         }
                     }
 
-                    long lastMainUse = sPlayer.getPersistentData().getLong("WARFARE_LastMainResupply");
+                    long lastMainUse = WarfareData.of(sPlayer).getLong(WarfareKeys.LAST_MAIN_RESUPPLY);
                     long currentTime = GameClock.worldTicks(sPlayer.level());
                     if (!sPlayer.isCreative() && currentTime < lastMainUse + 1200L) {
                         long secondsLeft = (lastMainUse + 1200L - currentTime) / 20L;
@@ -344,11 +345,11 @@ public class InteractionEvents {
                         return;
                     }
 
-                    if (sPlayer.getPersistentData().contains("WARFARE_PendingKit")) {
+                    if (WarfareData.of(sPlayer).contains(WarfareKeys.PENDING_KIT)) {
                         ResupplyHandler.tryApplyPendingKit(sPlayer, data);
-                        sPlayer.getPersistentData().putLong("WARFARE_LastMainResupply", currentTime);
+                        WarfareData.of(sPlayer).putLong(WarfareKeys.LAST_MAIN_RESUPPLY, currentTime);
                     } else {
-                        String kitName = sPlayer.getPersistentData().getString("WARFARE_CurrentKit");
+                        String kitName = WarfareData.of(sPlayer).getString(WarfareKeys.CURRENT_KIT);
                         if (!kitName.isEmpty() && sPlayer.getTeam() != null) {
                             String t = sPlayer.getTeam().getName().toUpperCase();
                             WarfareWorldData.KitInfo kit =
@@ -365,7 +366,7 @@ public class InteractionEvents {
                                                     SoundSource.PLAYERS,
                                                     1.0F,
                                                     1.0F);
-                                    sPlayer.getPersistentData().putLong("WARFARE_LastMainResupply", currentTime);
+                                    WarfareData.of(sPlayer).putLong(WarfareKeys.LAST_MAIN_RESUPPLY, currentTime);
                                 } else {
                                     sPlayer.sendSystemMessage(
                                             Component.literal("Кит уже полон!").withStyle(ChatFormatting.YELLOW));
@@ -504,8 +505,8 @@ public class InteractionEvents {
         if ((Boolean) WarfareConfig.PREVENT_ENEMY_VEHICLE_ENTRY.get()) {
             if (!player.isCreative() && !player.isSpectator()) {
                 Entity target = event.getTarget();
-                if (target.getPersistentData().contains("WARFARE_VehicleTeam")) {
-                    String vTeam = target.getPersistentData().getString("WARFARE_VehicleTeam");
+                if (WarfareData.of(target).contains(WarfareKeys.VEHICLE_TEAM)) {
+                    String vTeam = WarfareData.of(target).getString(WarfareKeys.VEHICLE_TEAM);
                     if (!vTeam.isEmpty() && !vTeam.equalsIgnoreCase("NEUTRAL")) {
                         String pTeam = player.getTeam() != null
                                 ? player.getTeam().getName().toUpperCase()
@@ -534,9 +535,9 @@ public class InteractionEvents {
         if (player.isCreative() || player.isSpectator()) return;
 
         Entity vehicle = event.getEntityBeingMounted();
-        if (!vehicle.getPersistentData().contains("WARFARE_VehicleTeam")) return;
+        if (!WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) return;
 
-        String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+        String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
         if (!isSpecialistVehicle(vType)) return;
 
         if (!vehicle.getPassengers().isEmpty()) return;
@@ -551,26 +552,26 @@ public class InteractionEvents {
             return;
         }
 
-        int squadId = player.getPersistentData().getInt("WARFARE_SquadID");
+        int squadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
         if (squadId == 0) {
             event.setCanceled(true);
             player.displayClientMessage(Component.literal("Вы не в отряде").withStyle(ChatFormatting.RED), true);
             return;
         }
 
-        boolean isSL = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
-        boolean isFresh = vehicle.getPersistentData().getBoolean("WARFARE_FreshVehicle");
+        boolean isSL = WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
+        boolean isFresh = WarfareData.of(vehicle).getBoolean(WarfareKeys.FRESH_VEHICLE);
         if (!isFresh) return;
 
         UUID vehicleUUID = vehicle.getUUID();
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
 
         if (isSL || data.hasApprovedDriver(vehicleUUID, player.getUUID())) {
-            vehicle.getPersistentData().remove("WARFARE_FreshVehicle");
+            WarfareData.of(vehicle).remove(WarfareKeys.FRESH_VEHICLE);
             return;
         }
 
-        long cooldownUntil = player.getPersistentData().getLong("WARFARE_DriveRequestCooldown_" + vehicle.getId());
+        long cooldownUntil = WarfareData.of(player).getLong(WarfareKeys.driveRequestCooldown(vehicle.getId()));
         if (cooldownUntil > GameClock.worldTicks(player.level())) {
             long remaining = (cooldownUntil - GameClock.worldTicks(player.level())) / 20L;
             event.setCanceled(true);

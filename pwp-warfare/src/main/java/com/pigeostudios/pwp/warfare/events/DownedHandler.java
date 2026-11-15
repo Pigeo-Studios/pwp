@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.events;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
@@ -56,18 +58,18 @@ public class DownedHandler {
                 && event.getSource().getEntity() != event.getEntity()) {
             MatchStatsTracker.get().recordDamage(attacker, event.getAmount());
             // Tag vehicles with last damager for destruction tracking
-            if (event.getEntity().getPersistentData().contains("WARFARE_TicketPenalty")) {
-                event.getEntity().getPersistentData().putString("WARFARE_LastDamager", attacker.getStringUUID());
+            if (WarfareData.of(event.getEntity()).contains(WarfareKeys.TICKET_PENALTY)) {
+                WarfareData.of(event.getEntity()).putString(WarfareKeys.LAST_DAMAGER, attacker.getStringUUID());
             }
         }
 
         if (event.getEntity() instanceof ServerPlayer player) {
             if ((Boolean) WarfareConfig.ENABLE_KNOCKOUT.get()) {
                 if (!event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-                    if (!player.getPersistentData().getBoolean("WARFARE_GivingUp")) {
-                        if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+                    if (!WarfareData.of(player).getBoolean(WarfareKeys.GIVING_UP)) {
+                        if (WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED)) {
                             if (event.getSource().getEntity() instanceof ServerPlayer attacker) {
-                                player.getPersistentData().putString("WARFARE_KnockedBy", attacker.getScoreboardName());
+                                WarfareData.of(player).putString(WarfareKeys.KNOCKED_BY, attacker.getScoreboardName());
                                 if (attacker.getTeam() != null
                                         && player.getTeam() != null
                                         && attacker.getTeam().isAlliedTo(player.getTeam())) {
@@ -85,7 +87,7 @@ public class DownedHandler {
                                     return;
                                 }
 
-                                long lastRevive = player.getPersistentData().getLong("WARFARE_LastReviveTime");
+                                long lastRevive = WarfareData.of(player).getLong(WarfareKeys.LAST_REVIVE_TIME);
                                 if (lastRevive > 0L
                                         && GameClock.worldTicks(player.level()) - lastRevive
                                                 < (Integer) WarfareConfig.REVIVE_COOLDOWN_SECONDS.get() * 20) {
@@ -94,13 +96,13 @@ public class DownedHandler {
 
                                 event.setCanceled(true);
                                 if (event.getSource().getEntity() instanceof Player attackingPlayer) {
-                                    player.getPersistentData()
-                                            .putString("WARFARE_KnockedBy", attackingPlayer.getScoreboardName());
+                                    WarfareData.of(player)
+                                            .putString(WarfareKeys.KNOCKED_BY, attackingPlayer.getScoreboardName());
                                 } else if (player.getLastHurtByMob() instanceof Player lastAttacker) {
-                                    player.getPersistentData()
-                                            .putString("WARFARE_KnockedBy", lastAttacker.getScoreboardName());
+                                    WarfareData.of(player)
+                                            .putString(WarfareKeys.KNOCKED_BY, lastAttacker.getScoreboardName());
                                 } else {
-                                    player.getPersistentData().remove("WARFARE_KnockedBy");
+                                    WarfareData.of(player).remove(WarfareKeys.KNOCKED_BY);
                                 }
 
                                 enterDownedState(player);
@@ -118,8 +120,8 @@ public class DownedHandler {
             player.stopRiding();
         }
 
-        player.getPersistentData().putBoolean("WARFARE_IsDowned", true);
-        player.getPersistentData().putLong("WARFARE_DownedTick", GameClock.worldTicks(player.level()));
+        WarfareData.of(player).putBoolean(WarfareKeys.IS_DOWNED, true);
+        WarfareData.of(player).putLong(WarfareKeys.DOWNED_TICK, GameClock.worldTicks(player.level()));
         player.setHealth(6.0F);
         player.setPose(Pose.SWIMMING);
         player.level()
@@ -139,17 +141,17 @@ public class DownedHandler {
     public static void onPlayerTick(PlayerTickEvent event) {
         if (event.phase == Phase.END && !event.player.level().isClientSide) {
             ServerPlayer player = (ServerPlayer) event.player;
-            if (player.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+            if (WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED)) {
                 player.setPose(Pose.SWIMMING);
                 player.setDeltaMovement(0.0, player.getDeltaMovement().y, 0.0);
-                long downedTick = player.getPersistentData().getLong("WARFARE_DownedTick");
+                long downedTick = WarfareData.of(player).getLong(WarfareKeys.DOWNED_TICK);
                 long maxDownedTicks = ((Integer) WarfareConfig.MAX_DOWNED_TIME_SECONDS.get()).intValue() * 20L;
                 if (GameClock.worldTicks(player.level()) - downedTick >= maxDownedTicks) {
                     forceGiveUp(player);
                 }
             }
             enforceBaseRestriction(player);
-            if (player.getPersistentData().getBoolean("WARFARE_TeamKillSpectator")) {
+            if (WarfareData.of(player).getBoolean(WarfareKeys.TEAM_KILL_SPECTATOR)) {
                 enforceTeamkillSpectator(player);
             }
         }
@@ -168,7 +170,7 @@ public class DownedHandler {
                         1.5F,
                         1.0F);
         String victimName = player.getScoreboardName();
-        String killerName = player.getPersistentData().getString("WARFARE_KnockedBy");
+        String killerName = WarfareData.of(player).getString(WarfareKeys.KNOCKED_BY);
         ServerLevel level = player.serverLevel();
         boolean showMessages = level.getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES);
         if (showMessages) {
@@ -197,9 +199,9 @@ public class DownedHandler {
             }
         }
 
-        player.getPersistentData().remove("WARFARE_KnockedBy");
-        player.getPersistentData().putBoolean("WARFARE_GivingUp", true);
-        player.getPersistentData().putBoolean("WARFARE_IsDowned", false);
+        WarfareData.of(player).remove(WarfareKeys.KNOCKED_BY);
+        WarfareData.of(player).putBoolean(WarfareKeys.GIVING_UP, true);
+        WarfareData.of(player).putBoolean(WarfareKeys.IS_DOWNED, false);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
         player.kill();
     }
@@ -208,7 +210,7 @@ public class DownedHandler {
     public static void onReviveInteract(EntityInteract event) {
         if (event.getTarget() instanceof ServerPlayer target) {
             ServerPlayer medic = (ServerPlayer) event.getEntity();
-            if (target.getPersistentData().getBoolean("WARFARE_IsDowned")) {
+            if (WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
                 if (medic.getTeam() == null
                         || target.getTeam() == null
                         || !medic.getTeam().isAlliedTo(target.getTeam())) {
@@ -246,12 +248,12 @@ public class DownedHandler {
 
     // Оживление игрока из состояния «ранен»
     public static void handleTeamkill(ServerPlayer attacker) {
-        int teamKills = attacker.getPersistentData().getInt("WARFARE_TeamKills") + 1;
-        attacker.getPersistentData().putInt("WARFARE_TeamKills", teamKills);
+        int teamKills = WarfareData.of(attacker).getInt(WarfareKeys.TEAM_KILLS) + 1;
+        WarfareData.of(attacker).putInt(WarfareKeys.TEAM_KILLS, teamKills);
 
         if (teamKills >= 8) {
             attacker.setGameMode(GameType.SPECTATOR);
-            attacker.getPersistentData().putBoolean("WARFARE_TeamKillSpectator", true);
+            WarfareData.of(attacker).putBoolean(WarfareKeys.TEAM_KILL_SPECTATOR, true);
             MutableComponent broadcast = Component.translatable(
                             "pwpwarfare.message.teamkill_spectator_broadcast", attacker.getScoreboardName())
                     .withStyle(ChatFormatting.RED);
@@ -264,7 +266,7 @@ public class DownedHandler {
         if (teamKills >= 5) {
             sendTeamkillWarning(attacker);
             long restrictionUntil = GameClock.worldTicks(attacker.level()) + 20L * 60L * 5L;
-            attacker.getPersistentData().putLong("WARFARE_BaseRestrictedUntil", restrictionUntil);
+            WarfareData.of(attacker).putLong(WarfareKeys.BASE_RESTRICTED_UNTIL, restrictionUntil);
             attacker.sendSystemMessage(Component.translatable("pwpwarfare.message.teamkill_restrict")
                     .withStyle(ChatFormatting.RED));
             return;
@@ -286,11 +288,11 @@ public class DownedHandler {
     }
 
     private static void enforceBaseRestriction(ServerPlayer player) {
-        long restrictedUntil = player.getPersistentData().getLong("WARFARE_BaseRestrictedUntil");
+        long restrictedUntil = WarfareData.of(player).getLong(WarfareKeys.BASE_RESTRICTED_UNTIL);
         if (restrictedUntil <= 0) return;
 
         if (GameClock.worldTicks(player.level()) >= restrictedUntil) {
-            player.getPersistentData().remove("WARFARE_BaseRestrictedUntil");
+            WarfareData.of(player).remove(WarfareKeys.BASE_RESTRICTED_UNTIL);
             player.sendSystemMessage(Component.translatable("pwpwarfare.message.teamkill_restrict_expired")
                     .withStyle(ChatFormatting.GREEN));
             return;
@@ -323,7 +325,7 @@ public class DownedHandler {
     }
 
     public static void enforceTeamkillSpectator(ServerPlayer player) {
-        if (player.getPersistentData().getBoolean("WARFARE_TeamKillSpectator")) {
+        if (WarfareData.of(player).getBoolean(WarfareKeys.TEAM_KILL_SPECTATOR)) {
             if (player.gameMode.getGameModeForPlayer() != GameType.SPECTATOR) {
                 player.setGameMode(GameType.SPECTATOR);
             }
@@ -331,10 +333,10 @@ public class DownedHandler {
     }
 
     public static void clearTeamkillPunishment(ServerPlayer player) {
-        player.getPersistentData().remove("WARFARE_TeamKills");
-        player.getPersistentData().remove("WARFARE_BaseRestrictedUntil");
-        boolean wasSpectator = player.getPersistentData().getBoolean("WARFARE_TeamKillSpectator");
-        player.getPersistentData().remove("WARFARE_TeamKillSpectator");
+        WarfareData.of(player).remove(WarfareKeys.TEAM_KILLS);
+        WarfareData.of(player).remove(WarfareKeys.BASE_RESTRICTED_UNTIL);
+        boolean wasSpectator = WarfareData.of(player).getBoolean(WarfareKeys.TEAM_KILL_SPECTATOR);
+        WarfareData.of(player).remove(WarfareKeys.TEAM_KILL_SPECTATOR);
         if (wasSpectator && player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
             player.setGameMode(GameType.SURVIVAL);
         }
@@ -343,10 +345,10 @@ public class DownedHandler {
     }
 
     public static void revivePlayer(ServerPlayer player) {
-        player.getPersistentData().putBoolean("WARFARE_IsDowned", false);
-        player.getPersistentData().remove("WARFARE_DownedTick");
-        player.getPersistentData().remove("WARFARE_GivingUp");
-        player.getPersistentData().putLong("WARFARE_LastReviveTime", GameClock.worldTicks(player.level()));
+        WarfareData.of(player).putBoolean(WarfareKeys.IS_DOWNED, false);
+        WarfareData.of(player).remove(WarfareKeys.DOWNED_TICK);
+        WarfareData.of(player).remove(WarfareKeys.GIVING_UP);
+        WarfareData.of(player).putLong(WarfareKeys.LAST_REVIVE_TIME, GameClock.worldTicks(player.level()));
         player.setHealth(2.0F);
         player.setPose(Pose.STANDING);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));

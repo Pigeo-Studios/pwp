@@ -2,6 +2,8 @@ package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.FactionVehicleData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.SupplyTruckMarkerItem;
 import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
 import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
@@ -205,7 +207,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                                     this.worldPosition.getX() + 0.5,
                                     this.worldPosition.getY() + 1.5,
                                     this.worldPosition.getZ() + 0.5);
-                            entity.getPersistentData().putLong("WARFARE_SpawnerPos", this.worldPosition.asLong());
+                            WarfareData.of(entity).putLong(WarfareKeys.SPAWNER_POS, this.worldPosition.asLong());
                             entity.setYRot(this.vehicleYaw);
                             entity.setYHeadRot(this.vehicleYaw);
                             String vTeam = "NEUTRAL";
@@ -224,19 +226,19 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                                     vType = supply.getVehicleType();
                                     penalty = supply.getPenalty();
                                     maxMats = supply.getMaxMats();
-                                    entity.getPersistentData().putBoolean("WARFARE_IsSupplyTruck", true);
-                                    entity.getPersistentData().putInt("WARFARE_SupplyAmmo", (Integer)
+                                    WarfareData.of(entity).putBoolean(WarfareKeys.IS_SUPPLY_TRUCK, true);
+                                    WarfareData.of(entity).putInt(WarfareKeys.SUPPLY_AMMO, (Integer)
                                             WarfareConfig.SUPPLY_TRUCK_CRATES.get());
                                 }
                             }
 
-                            entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
-                            entity.getPersistentData().putString("WARFARE_VehicleType", vType);
-                            entity.getPersistentData().putBoolean("WARFARE_FreshVehicle", true);
-                            entity.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
+                            WarfareData.of(entity).putString(WarfareKeys.VEHICLE_TEAM, vTeam);
+                            WarfareData.of(entity).putString(WarfareKeys.VEHICLE_TYPE, vType);
+                            WarfareData.of(entity).putBoolean(WarfareKeys.FRESH_VEHICLE, true);
+                            WarfareData.of(entity).putInt(WarfareKeys.TICKET_PENALTY, penalty);
                             if (maxMats > 0) {
-                                entity.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
-                                entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                                WarfareData.of(entity).putInt(WarfareKeys.VEHICLE_MAX_MATS, maxMats);
+                                WarfareData.of(entity).putInt(WarfareKeys.VEHICLE_MATS, maxMats);
                             }
 
                             // Сохраняем начальный лоудаут техники для станции пополнения (Vehicle Station)
@@ -251,7 +253,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                                 contentStack.save(itemTag);
                                 loadoutTag.add(itemTag);
                             }
-                            entity.getPersistentData().put("WARFARE_InitialLoadout", loadoutTag);
+                            WarfareData.of(entity).put(WarfareKeys.INITIAL_LOADOUT, loadoutTag);
 
                             WarfareWorldData worldData = WarfareWorldData.get((ServerLevel) this.level);
                             worldData.markedVehicles.removeIf(
@@ -281,8 +283,8 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                                 living.setHealth(living.getMaxHealth());
                             }
 
-                            entity.getPersistentData()
-                                    .putLong("WARFARE_SpawnGraceTick", GameClock.worldTicks(this.level));
+                            WarfareData.of(entity)
+                                    .putLong(WarfareKeys.SPAWN_GRACE_TICK, GameClock.worldTicks(this.level));
                             this.level.addFreshEntity(entity);
                             this.lastVehicleUUID = entity.getUUID();
                             this.hasSpawnedOnce = true;

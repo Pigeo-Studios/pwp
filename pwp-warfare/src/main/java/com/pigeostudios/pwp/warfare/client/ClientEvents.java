@@ -11,6 +11,8 @@ import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMapScreen;
 import com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
@@ -139,14 +141,14 @@ public class ClientEvents {
                     ClientSkinManager.applyAllSkins();
                 }
 
-                if (mc.player.getPersistentData().getBoolean("WARFARE_IsDowned") && mc.player.isAlive()) {
+                if (WarfareData.of(mc.player).getBoolean(WarfareKeys.IS_DOWNED) && mc.player.isAlive()) {
                     mc.player.setDeltaMovement(0.0, mc.player.getDeltaMovement().y, 0.0);
                     if (mc.screen == null) {
                         mc.setScreen(new DownedScreen());
                     }
-                } else if (mc.player.getPersistentData().contains("WARFARE_DownedYaw")) {
-                    mc.player.getPersistentData().remove("WARFARE_DownedYaw");
-                    mc.player.getPersistentData().remove("WARFARE_DownedPitch");
+                } else if (WarfareData.of(mc.player).contains(WarfareKeys.DOWNED_YAW)) {
+                    WarfareData.of(mc.player).remove(WarfareKeys.DOWNED_YAW);
+                    WarfareData.of(mc.player).remove(WarfareKeys.DOWNED_PITCH);
                 }
 
                 // Респавн завершился — игрок ожил: сбрасываем защиту от экрана смерти
@@ -553,7 +555,7 @@ public class ClientEvents {
     public static void onComputeCameraAngles(ComputeCameraAngles event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            boolean isDowned = mc.player.getPersistentData().getBoolean("WARFARE_IsDowned") && mc.player.isAlive();
+            boolean isDowned = WarfareData.of(mc.player).getBoolean(WarfareKeys.IS_DOWNED) && mc.player.isAlive();
             if (isDowned) {
                 if (!wasDownedLastFrame) {
                     initialPitchOnFall = event.getPitch();

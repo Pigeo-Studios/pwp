@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
@@ -42,20 +44,20 @@ public class PacketVehicleDriveRequest {
         ServerLevel level = player.serverLevel();
         Entity vehicle = level.getEntity(vehicleId);
         if (vehicle == null) return;
-        if (!vehicle.getPersistentData().contains("WARFARE_VehicleTeam")) return;
+        if (!WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) return;
 
-        String vType = vehicle.getPersistentData().getString("WARFARE_VehicleType");
+        String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
         if (!isSpecialistVehicle(vType)) return;
 
         String pKit = com.pigeostudios.pwp.warfare.events.KitUtil.getEffectiveKit(player);
         if (!hasCorrectKit(vType, pKit)) return;
 
-        int squadId = player.getPersistentData().getInt("WARFARE_SquadID");
+        int squadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
         if (squadId == 0) return;
 
-        if (!vehicle.getPersistentData().getBoolean("WARFARE_FreshVehicle")) return;
+        if (!WarfareData.of(vehicle).getBoolean(WarfareKeys.FRESH_VEHICLE)) return;
 
-        long cooldownUntil = player.getPersistentData().getLong("WARFARE_DriveRequestCooldown_" + vehicleId);
+        long cooldownUntil = WarfareData.of(player).getLong(WarfareKeys.driveRequestCooldown(vehicleId));
         if (cooldownUntil > GameClock.worldTicks(level)) return;
 
         WarfareWorldData data = WarfareWorldData.get(level);

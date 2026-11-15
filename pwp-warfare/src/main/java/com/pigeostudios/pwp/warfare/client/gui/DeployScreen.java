@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.PathCache;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.*;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
@@ -293,8 +295,8 @@ public class DeployScreen extends Screen {
         }
         lastSquadCount = ClientData.clientSquads.size();
 
-        String pen = p.getPersistentData().getString("WARFARE_PendingKit");
-        String cur = p.getPersistentData().getString("WARFARE_CurrentKit");
+        String pen = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
+        String cur = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
         if (!pen.isEmpty()) selectedKit = pen;
         else if (!cur.isEmpty()) selectedKit = cur;
         // Fallback: use isSelected from server data

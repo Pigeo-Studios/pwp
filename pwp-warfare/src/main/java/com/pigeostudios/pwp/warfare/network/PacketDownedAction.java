@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -39,10 +41,11 @@ public class PacketDownedAction {
                     DownedHandler.forceGiveUp(player);
                 } else if (msg.action == 0) {
                     long currentTime = GameClock.worldTicks(level);
-                    long lastCall = player.getPersistentData().getLong("WARFARE_LastMedicShout");
+                    long lastCall = WarfareData.of(player).getLong(WarfareKeys.LAST_MEDIC_SHOUT);
                     if (currentTime - lastCall >= 300L) {
-                        player.getPersistentData().putLong("WARFARE_LastMedicShout", currentTime);
-                        player.getPersistentData().putLong("WARFARE_LastMedicShoutTimeMS", GameClock.worldTicks(level));
+                        WarfareData.of(player).putLong(WarfareKeys.LAST_MEDIC_SHOUT, currentTime);
+                        WarfareData.of(player)
+                                .putLong(WarfareKeys.LAST_MEDIC_SHOUT_TIME_MS, GameClock.worldTicks(level));
                         WarfareWorldData data = WarfareWorldData.get(level);
                         String faction = "none";
                         if (player.getTeam() != null) {

@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.events;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import java.util.Set;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceLocation;
@@ -58,7 +60,7 @@ public class RebDeploymentEvents {
         ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(target.getType());
         if (eid == null || !REB_ENTITIES.contains(eid.toString())) return;
 
-        String rebTeam = target.getPersistentData().getString("WARFARE_VehicleTeam");
+        String rebTeam = WarfareData.of(target).getString(WarfareKeys.VEHICLE_TEAM);
         String playerTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
         boolean ownTeam = player.isCreative()
                 || rebTeam.isEmpty()

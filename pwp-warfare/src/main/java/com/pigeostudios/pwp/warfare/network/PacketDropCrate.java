@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -24,7 +26,7 @@ public class PacketDropCrate {
             ServerPlayer player = ctx.get().getSender();
             if (player != null) {
                 Entity vehicle = player.getVehicle();
-                if (vehicle != null && vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
+                if (vehicle != null && WarfareData.of(vehicle).getBoolean(WarfareKeys.IS_SUPPLY_TRUCK)) {
                     if (vehicle.getFirstPassenger() != player) {
                         player.displayClientMessage(
                                 Component.literal("Сбрасывать припасы может только водитель!")
@@ -33,10 +35,10 @@ public class PacketDropCrate {
                         return;
                     }
 
-                    int ammo = vehicle.getPersistentData().getInt("WARFARE_SupplyAmmo");
+                    int ammo = WarfareData.of(vehicle).getInt(WarfareKeys.SUPPLY_AMMO);
                     if (ammo > 0) {
-                        vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", ammo - 1);
-                        String team = vehicle.getPersistentData().getString("WARFARE_VehicleTeam");
+                        WarfareData.of(vehicle).putInt(WarfareKeys.SUPPLY_AMMO, ammo - 1);
+                        String team = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TEAM);
                         if (team.isEmpty()) {
                             team = "NEUTRAL";
                         }

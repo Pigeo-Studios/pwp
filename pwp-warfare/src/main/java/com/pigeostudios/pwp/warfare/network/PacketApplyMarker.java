@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.SupplyTruckMarkerItem;
 import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -60,30 +62,30 @@ public class PacketApplyMarker {
                     }
 
                     if (!team.isEmpty()) {
-                        target.getPersistentData().putString("WARFARE_VehicleTeam", team);
-                        target.getPersistentData().putString("WARFARE_VehicleType", type);
-                        target.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
+                        WarfareData.of(target).putString(WarfareKeys.VEHICLE_TEAM, team);
+                        WarfareData.of(target).putString(WarfareKeys.VEHICLE_TYPE, type);
+                        WarfareData.of(target).putInt(WarfareKeys.TICKET_PENALTY, penalty);
                         if (isSupply) {
-                            target.getPersistentData().putBoolean("WARFARE_IsSupplyTruck", true);
-                            target.getPersistentData()
-                                    .putInt("WARFARE_SupplyAmmo", (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get());
+                            WarfareData.of(target).putBoolean(WarfareKeys.IS_SUPPLY_TRUCK, true);
+                            WarfareData.of(target)
+                                    .putInt(WarfareKeys.SUPPLY_AMMO, (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get());
                         } else {
-                            target.getPersistentData().remove("WARFARE_IsSupplyTruck");
-                            target.getPersistentData().remove("WARFARE_SupplyAmmo");
+                            WarfareData.of(target).remove(WarfareKeys.IS_SUPPLY_TRUCK);
+                            WarfareData.of(target).remove(WarfareKeys.SUPPLY_AMMO);
                         }
 
                         if (maxMats > 0) {
-                            target.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
-                            target.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                            WarfareData.of(target).putInt(WarfareKeys.VEHICLE_MAX_MATS, maxMats);
+                            WarfareData.of(target).putInt(WarfareKeys.VEHICLE_MATS, maxMats);
                         }
 
                         data.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
                         BlockPos spawnerPos = null;
-                        if (target.getPersistentData().contains("WARFARE_SpawnerPos")) {
-                            spawnerPos = BlockPos.of(target.getPersistentData().getLong("WARFARE_SpawnerPos"));
+                        if (WarfareData.of(target).contains(WarfareKeys.SPAWNER_POS)) {
+                            spawnerPos = BlockPos.of(WarfareData.of(target).getLong(WarfareKeys.SPAWNER_POS));
                         }
 
-                        int tPenalty = target.getPersistentData().getInt("WARFARE_TicketPenalty");
+                        int tPenalty = WarfareData.of(target).getInt(WarfareKeys.TICKET_PENALTY);
                         data.markedVehicles.add(new WarfareWorldData.VehicleRecord(
                                 target.getUUID(),
                                 team,

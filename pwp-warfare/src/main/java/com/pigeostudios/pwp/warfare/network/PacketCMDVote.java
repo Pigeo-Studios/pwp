@@ -1,5 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pigeostudios.pwp.warfare.data.state.WarfareData;
+import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -32,7 +34,7 @@ public class PacketCMDVote {
                 WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
                 String team = player.getTeam().getName().toUpperCase();
                 boolean isBlue = team.equals("BLUE");
-                if (player.getPersistentData().getBoolean("WARFARE_IsSquadLeader")) {
+                if (WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) {
                     if (isBlue) {
                         if (data.blueCmdVoteActive
                                 && !player.getScoreboardName().equals(data.blueCmdCandidateName)) {
