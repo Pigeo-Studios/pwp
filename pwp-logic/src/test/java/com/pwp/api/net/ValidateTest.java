@@ -33,4 +33,15 @@ class ValidateTest {
         assertNotNull(Validate.oneOf("t", "GREEN", "BLUE", "RED"));
         assertNotNull(Validate.oneOf("t", null, "BLUE"));
     }
+
+    @Test
+    void labels() {
+        assertNull(Validate.label("k", "Drone Operator", 64));
+        assertNull(Validate.label("k", "Rifleman (Optic)", 64));
+        assertNotNull(Validate.label("k", " Medic", 64));
+        assertNotNull(Validate.label("k", "Medic\t", 64));
+        assertNotNull(Validate.label("k", "Медик", 64));
+        assertNotNull(Validate.label("k", "", 64));
+        assertNotNull(Validate.label("k", "x".repeat(65), 64));
+    }
 }

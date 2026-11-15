@@ -53,6 +53,23 @@ public final class Validate {
         return null;
     }
 
+    /**
+     * Отображаемое имя-идентификатор (имена китов: «Drone Operator», «Rifleman (Optic)»): как
+     * {@link #id}, плюс пробел и круглые скобки; без пробелов по краям.
+     */
+    public static String label(String field, String value, int max) {
+        String t = text(field, value, max);
+        if (t != null) return t;
+        if (value.charAt(0) == ' ' || value.charAt(value.length() - 1) == ' ') return field + ": пробел по краям";
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (c == ' ' || c == '(' || c == ')') continue;
+            String one = id(field, String.valueOf(c), 1);
+            if (one != null) return one;
+        }
+        return null;
+    }
+
     public static String range(String field, long value, long min, long max) {
         if (value < min || value > max) return field + ": " + value + " вне [" + min + ", " + max + "]";
         return null;

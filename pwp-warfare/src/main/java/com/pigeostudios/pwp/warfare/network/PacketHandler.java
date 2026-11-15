@@ -141,8 +141,6 @@ public class PacketHandler {
                 PacketOpenPlayerKitMenu::decode,
                 PacketOpenPlayerKitMenu::handle);
         INSTANCE.registerMessage(
-                id++, PacketSelectKit.class, PacketSelectKit::encode, PacketSelectKit::decode, PacketSelectKit::handle);
-        INSTANCE.registerMessage(
                 id++,
                 PacketRequestCrateAmmo.class,
                 PacketRequestCrateAmmo::encode,
@@ -362,7 +360,8 @@ public class PacketHandler {
         // Сеть v2 (record-DTO, проверка на сервере). Новые пакеты — только в конец.
         com.pwp.api.net.Net.Registrar v2 = new com.pwp.api.net.Net.Registrar(INSTANCE, id);
         com.pigeostudios.pwp.warfare.squad.SquadPackets.register(v2);
-        v2.c2s(PacketRespawnRequest.class, PacketRespawnRequest::encode, PacketRespawnRequest::decode);
+        v2.c2s(PacketRespawnRequest.class, PacketRespawnRequest::encode, PacketRespawnRequest::decode)
+                .c2s(PacketSelectKit.class, PacketSelectKit::encode, PacketSelectKit::decode);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
