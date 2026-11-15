@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.item.VehicleMarkerItem;
 import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -140,7 +141,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                             return;
                         }
                     }
-                    long currentTick = level.getGameTime();
+                    long currentTick = GameClock.worldTicks(level);
                     boolean vehicleExistsGlobally = data.markedVehicles.stream()
                             .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
                     if (vehicleExistsGlobally) {
@@ -280,7 +281,8 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                                 living.setHealth(living.getMaxHealth());
                             }
 
-                            entity.getPersistentData().putLong("WARFARE_SpawnGraceTick", this.level.getGameTime());
+                            entity.getPersistentData()
+                                    .putLong("WARFARE_SpawnGraceTick", GameClock.worldTicks(this.level));
                             this.level.addFreshEntity(entity);
                             this.lastVehicleUUID = entity.getUUID();
                             this.hasSpawnedOnce = true;

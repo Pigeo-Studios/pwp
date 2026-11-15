@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketMainZoneState;
 import com.pigeostudios.pwp.warfare.network.PacketNotification;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import com.tacz.guns.api.event.common.GunShootEvent;
 import com.vicmatskiv.pointblank.entity.ProjectileLike;
 import java.util.List;
@@ -70,7 +71,7 @@ public class MainZoneFireGuard {
     // Отправляет клиенту сигнал «выстрел заблокирован» не чаще раза в 3 секунды
     public static void notifyBlocked(ServerPlayer player) {
         if (player == null || player.level() == null) return;
-        long now = player.level().getGameTime();
+        long now = GameClock.worldTicks(player.level());
         long last = player.getPersistentData().getLong(BLOCK_MSG_TAG);
         if (now - last >= BLOCK_MSG_INTERVAL) {
             player.getPersistentData().putLong(BLOCK_MSG_TAG, now);
@@ -118,7 +119,7 @@ public class MainZoneFireGuard {
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         MinecraftServer server = event.getServer();
-        if (server == null || server.getTickCount() % 10 != 0) return;
+        if (server == null || GameClock.serverTicks(server) % 10 != 0) return;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             boolean in = isInMainZone(player);
             boolean prev = player.getPersistentData().getBoolean(ZONE_STATE_TAG);

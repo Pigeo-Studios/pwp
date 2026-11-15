@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -268,7 +269,7 @@ public class WallBlockEntity extends BlockEntity {
                         }
                     }
 
-                    if (level.getGameTime() % 5L == 0L || entity.currentProgress >= max) {
+                    if (GameClock.worldTicks(level) % 5L == 0L || entity.currentProgress >= max) {
                         level.sendBlockUpdated(pos, state, state, 3);
                     }
                 }
@@ -314,7 +315,7 @@ public class WallBlockEntity extends BlockEntity {
                         }
                     }
 
-                    if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= max) {
+                    if (GameClock.worldTicks(level) % 5L == 0L || entity.dismantleProgress >= max) {
                         level.sendBlockUpdated(pos, state, state, 3);
                     }
                 }

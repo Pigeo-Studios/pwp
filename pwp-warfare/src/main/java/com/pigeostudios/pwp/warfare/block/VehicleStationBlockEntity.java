@@ -6,6 +6,7 @@ import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -141,7 +142,7 @@ public class VehicleStationBlockEntity extends BlockEntity {
                 }
             }
 
-            if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= MAX_PROGRESS) {
+            if (GameClock.worldTicks(level) % 5L == 0L || entity.dismantleProgress >= MAX_PROGRESS) {
                 level.sendBlockUpdated(pos, state, state, 3);
             }
         }
@@ -149,7 +150,7 @@ public class VehicleStationBlockEntity extends BlockEntity {
         entity.activeDiggers = 0;
         entity.dismantleMultiplier = 1.0F;
 
-        if (level.getGameTime() % 20L != 0L) {
+        if (GameClock.worldTicks(level) % 20L != 0L) {
             return;
         }
 

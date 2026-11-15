@@ -26,6 +26,7 @@ import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreserver.TransferHosts;
 import com.pwp.cosmetics.CosmeticService;
@@ -293,7 +294,7 @@ public class GameLogicEvents {
         if (event.phase == Phase.END) {
             MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
             if (server != null) {
-                int globalTick = server.getTickCount();
+                long globalTick = GameClock.serverTicks(server);
 
                 for (ServerLevel level : server.getAllLevels()) {
                     WarfareWorldData data = WarfareWorldData.get(level);
@@ -576,7 +577,7 @@ public class GameLogicEvents {
                     }
 
                     if (globalTick % 200 == 0) {
-                        long time = level.getGameTime();
+                        long time = GameClock.worldTicks(level);
                         boolean removed = data.activeMarkers.removeIf(mx -> time >= mx.expiryTick);
                         if (removed) {
                             data.setDirty();
@@ -628,14 +629,14 @@ public class GameLogicEvents {
                                         squad.slNoOfficerSince = -1L;
                                     } else {
                                         if (squad.slNoOfficerSince == -1L) {
-                                            squad.slNoOfficerSince = level.getGameTime();
+                                            squad.slNoOfficerSince = GameClock.worldTicks(level);
                                         }
 
-                                        long remaining = 2400L - (level.getGameTime() - squad.slNoOfficerSince);
+                                        long remaining = 2400L - (GameClock.worldTicks(level) - squad.slNoOfficerSince);
                                         if (remaining > 0L) {
                                             // Предупреждение лидеру — в ленту уведомлений (раз в секунду, дедик на
                                             // клиенте)
-                                            if (level.getGameTime() % 20L == 0L) {
+                                            if (GameClock.worldTicks(level) % 20L == 0L) {
                                                 PacketHandler.INSTANCE.send(
                                                         PacketDistributor.PLAYER.with(() -> leader),
                                                         new PacketNotification("squad.leader_kit_warning", (byte) 0));
@@ -683,7 +684,7 @@ public class GameLogicEvents {
                         }
                     }
 
-                    long now = level.getGameTime();
+                    long now = GameClock.worldTicks(level);
                     boolean squadsChanged = false;
 
                     for (WarfareWorldData.Squad squad : data.squads) {
@@ -714,7 +715,7 @@ public class GameLogicEvents {
                     }
 
                     if (globalTick % 200 == 0) {
-                        long currentTick = level.getGameTime();
+                        long currentTick = GameClock.worldTicks(level);
                         boolean anyMarkerRemoved = false;
 
                         for (WarfareWorldData.Squad squad : data.squads) {
@@ -911,8 +912,8 @@ public class GameLogicEvents {
                     if (data.countdownActive && data.countdownTicks == 1) {
                         long cdTicks =
                                 ((Integer) WarfareConfig.ART_STRIKE_COOLDOWN_MINUTES.get()).intValue() * 60L * 20L;
-                        data.blueArtStrikeCD = level.getGameTime() + cdTicks;
-                        data.redArtStrikeCD = level.getGameTime() + cdTicks;
+                        data.blueArtStrikeCD = GameClock.worldTicks(level) + cdTicks;
+                        data.redArtStrikeCD = GameClock.worldTicks(level) + cdTicks;
                     }
 
                     if (data.blueArtRequest != null) {
@@ -1105,7 +1106,7 @@ public class GameLogicEvents {
                 String dominantTeam = "NONE";
                 int alliesOnPoint = 0;
                 boolean isContested = false;
-                boolean isTimeLocked = level.getGameTime() < point.lockedUntilTick;
+                boolean isTimeLocked = GameClock.worldTicks(level) < point.lockedUntilTick;
                 if (blueOnPointLiving > 0 && redOnPointLiving > 0) {
                     if (blueOnPointLiving >= redOnPointLiving * 2) {
                         dominantTeam = "BLUE";
@@ -1160,7 +1161,7 @@ public class GameLogicEvents {
                             String teamKey = p.getTeam().getName().equalsIgnoreCase("Blue") ? "BLUE" : "RED";
                             if (isTimeLocked) {
                                 lockedUI = true;
-                                long totalSeconds = (point.lockedUntilTick - level.getGameTime()) / 20L;
+                                long totalSeconds = (point.lockedUntilTick - GameClock.worldTicks(level)) / 20L;
                                 nextObjectiveForPlayer =
                                         String.format("LOCKED: %dм %dс", totalSeconds / 60L, totalSeconds % 60L);
                             } else if (!canCapture(point, teamKey, data)) {
@@ -1206,7 +1207,7 @@ public class GameLogicEvents {
                     if (!point.owner.equals(oldOwner)
                             && !point.owner.equals("NEUTRAL")
                             && point.lockDurationMinutes > 0) {
-                        point.lockedUntilTick = level.getGameTime() + point.lockDurationMinutes * 60L * 20L;
+                        point.lockedUntilTick = GameClock.worldTicks(level) + point.lockDurationMinutes * 60L * 20L;
                         data.setDirty();
                     }
                 }
@@ -1228,7 +1229,7 @@ public class GameLogicEvents {
                     }
                 }
 
-                if (level.getGameTime() % 10L == 0L) {
+                if (GameClock.worldTicks(level) % 10L == 0L) {
                     boolean isPointActive =
                             point.progress > 0.0F && point.progress < 1.0F || !point.capturingTeam.equals("NONE");
                     if (isPointActive) {
@@ -1342,7 +1343,7 @@ public class GameLogicEvents {
                                 }
 
                                 long graceTick = entity.getPersistentData().getLong("WARFARE_SpawnGraceTick");
-                                if (level.getGameTime() - graceTick >= 100L) {
+                                if (GameClock.worldTicks(level) - graceTick >= 100L) {
                                     break;
                                 }
                             }
@@ -1440,8 +1441,9 @@ public class GameLogicEvents {
                         } else {
                             long exitTick = player.getPersistentData().getLong("WARFARE_MainZoneExitTick");
                             if (exitTick == 0) {
-                                player.getPersistentData().putLong("WARFARE_MainZoneExitTick", level.getGameTime());
-                            } else if (level.getGameTime() - exitTick >= 200) {
+                                player.getPersistentData()
+                                        .putLong("WARFARE_MainZoneExitTick", GameClock.worldTicks(level));
+                            } else if (GameClock.worldTicks(level) - exitTick >= 200) {
                                 player.getPersistentData().remove("WARFARE_MainZoneTimer");
                                 player.getPersistentData().remove("WARFARE_MainZoneExitTick");
                             }
@@ -1467,8 +1469,9 @@ public class GameLogicEvents {
                         } else {
                             long exitTick = vehicle.getPersistentData().getLong("WARFARE_MainZoneExitTick");
                             if (exitTick == 0) {
-                                vehicle.getPersistentData().putLong("WARFARE_MainZoneExitTick", level.getGameTime());
-                            } else if (level.getGameTime() - exitTick >= 200) {
+                                vehicle.getPersistentData()
+                                        .putLong("WARFARE_MainZoneExitTick", GameClock.worldTicks(level));
+                            } else if (GameClock.worldTicks(level) - exitTick >= 200) {
                                 vehicle.getPersistentData().remove("WARFARE_MainZoneTimer");
                                 vehicle.getPersistentData().remove("WARFARE_MainZoneExitTick");
                             }

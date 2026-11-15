@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -64,7 +65,7 @@ public class PacketPlaceMapMarker {
                     }
 
                     data.activeMarkers.add(new WarfareWorldData.MapMarker(
-                            strikePos, "Artillery Request", team, level.getGameTime() + 3600L));
+                            strikePos, "Artillery Request", team, GameClock.worldTicks(level) + 3600L));
                     int cmdId = team.equals("BLUE") ? data.blueCMDId : data.redCMDId;
 
                     for (ServerPlayer p : level.players()) {
@@ -84,7 +85,7 @@ public class PacketPlaceMapMarker {
                     PacketHandler.sendToAllClients(level, data);
                 } else {
                     data.activeMarkers.add(new WarfareWorldData.MapMarker(
-                            new BlockPos(msg.x, 64, msg.z), msg.type, team, level.getGameTime() + 3600L));
+                            new BlockPos(msg.x, 64, msg.z), msg.type, team, GameClock.worldTicks(level) + 3600L));
                     data.setDirty();
                     PacketHandler.sendToAllClients(level, data);
                 }

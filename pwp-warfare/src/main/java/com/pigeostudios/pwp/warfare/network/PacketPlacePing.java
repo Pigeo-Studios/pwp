@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -47,7 +48,7 @@ public class PacketPlacePing {
 
                     for (WarfareWorldData.Squad s : data.squads) {
                         if (s.members.contains(pName)) {
-                            long time = player.level().getGameTime();
+                            long time = GameClock.worldTicks(player.level());
                             if (s.leader.equals(pName)) {
                                 if (msg.isMoveMarker) {
                                     s.marker = new WarfareWorldData.SquadMarker(

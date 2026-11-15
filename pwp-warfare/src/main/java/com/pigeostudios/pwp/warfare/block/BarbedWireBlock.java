@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.block;
 
+import com.pwp.api.time.GameClock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
@@ -53,7 +54,7 @@ public class BarbedWireBlock extends BaseEntityBlock {
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
         if ((Boolean) state.getValue(CONSTRUCTED)) {
             entity.makeStuckInBlock(state, new Vec3(0.25, 0.05, 0.25));
-            if (!level.isClientSide && entity instanceof LivingEntity && level.getGameTime() % 20L == 0L) {
+            if (!level.isClientSide && entity instanceof LivingEntity && GameClock.worldTicks(level) % 20L == 0L) {
                 entity.hurt(level.damageSources().cactus(), 3.0F);
             }
         }

@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.block;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
+import com.pwp.api.time.GameClock;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -73,7 +74,7 @@ public class MainSupplyBlockEntity extends BlockEntity {
                         return !p1HasPlayer && p2HasPlayer ? 1 : 0;
                     }
                 });
-                long currentTime = level.getGameTime();
+                long currentTime = GameClock.worldTicks(level);
 
                 for (Entity vehicle : nearbyEntities) {
                     int statusKind = 0;

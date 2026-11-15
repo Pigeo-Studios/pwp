@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -240,7 +241,7 @@ public class HubBlockEntity extends BlockEntity {
                     }
                 }
 
-                if (level.getGameTime() % 5L == 0L || entity.currentProgress >= 2400) {
+                if (GameClock.worldTicks(level) % 5L == 0L || entity.currentProgress >= 2400) {
                     level.sendBlockUpdated(pos, state, state, 3);
                 }
             }
@@ -275,7 +276,7 @@ public class HubBlockEntity extends BlockEntity {
                     }
                 }
 
-                if (level.getGameTime() % 5L == 0L || entity.dismantleProgress >= 2400) {
+                if (GameClock.worldTicks(level) % 5L == 0L || entity.dismantleProgress >= 2400) {
                     level.sendBlockUpdated(pos, state, state, 3);
                 }
             }

@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
@@ -47,7 +48,7 @@ public class PacketPlaceMarker {
                 }
             }
             if (!authorized) return;
-            long tick = p.serverLevel().getGameTime();
+            long tick = GameClock.worldTicks(p.serverLevel());
             MapMarker m =
                     new MapMarker(UUID.randomUUID(), msg.team, msg.category, msg.iconType, msg.pos, p.getUUID(), tick);
             MarkerManager.add(m);

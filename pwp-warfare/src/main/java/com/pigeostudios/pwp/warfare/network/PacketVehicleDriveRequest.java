@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
@@ -55,7 +56,7 @@ public class PacketVehicleDriveRequest {
         if (!vehicle.getPersistentData().getBoolean("WARFARE_FreshVehicle")) return;
 
         long cooldownUntil = player.getPersistentData().getLong("WARFARE_DriveRequestCooldown_" + vehicleId);
-        if (cooldownUntil > level.getGameTime()) return;
+        if (cooldownUntil > GameClock.worldTicks(level)) return;
 
         WarfareWorldData data = WarfareWorldData.get(level);
         String pName = player.getScoreboardName();

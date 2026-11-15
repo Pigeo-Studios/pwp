@@ -6,6 +6,7 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -86,7 +87,7 @@ public class DownedHandler {
 
                                 long lastRevive = player.getPersistentData().getLong("WARFARE_LastReviveTime");
                                 if (lastRevive > 0L
-                                        && player.level().getGameTime() - lastRevive
+                                        && GameClock.worldTicks(player.level()) - lastRevive
                                                 < (Integer) WarfareConfig.REVIVE_COOLDOWN_SECONDS.get() * 20) {
                                     return;
                                 }
@@ -118,7 +119,7 @@ public class DownedHandler {
         }
 
         player.getPersistentData().putBoolean("WARFARE_IsDowned", true);
-        player.getPersistentData().putLong("WARFARE_DownedTick", player.level().getGameTime());
+        player.getPersistentData().putLong("WARFARE_DownedTick", GameClock.worldTicks(player.level()));
         player.setHealth(6.0F);
         player.setPose(Pose.SWIMMING);
         player.level()
@@ -143,7 +144,7 @@ public class DownedHandler {
                 player.setDeltaMovement(0.0, player.getDeltaMovement().y, 0.0);
                 long downedTick = player.getPersistentData().getLong("WARFARE_DownedTick");
                 long maxDownedTicks = ((Integer) WarfareConfig.MAX_DOWNED_TIME_SECONDS.get()).intValue() * 20L;
-                if (player.level().getGameTime() - downedTick >= maxDownedTicks) {
+                if (GameClock.worldTicks(player.level()) - downedTick >= maxDownedTicks) {
                     forceGiveUp(player);
                 }
             }
@@ -262,7 +263,7 @@ public class DownedHandler {
 
         if (teamKills >= 5) {
             sendTeamkillWarning(attacker);
-            long restrictionUntil = attacker.level().getGameTime() + 20L * 60L * 5L;
+            long restrictionUntil = GameClock.worldTicks(attacker.level()) + 20L * 60L * 5L;
             attacker.getPersistentData().putLong("WARFARE_BaseRestrictedUntil", restrictionUntil);
             attacker.sendSystemMessage(Component.translatable("pwpwarfare.message.teamkill_restrict")
                     .withStyle(ChatFormatting.RED));
@@ -288,7 +289,7 @@ public class DownedHandler {
         long restrictedUntil = player.getPersistentData().getLong("WARFARE_BaseRestrictedUntil");
         if (restrictedUntil <= 0) return;
 
-        if (player.level().getGameTime() >= restrictedUntil) {
+        if (GameClock.worldTicks(player.level()) >= restrictedUntil) {
             player.getPersistentData().remove("WARFARE_BaseRestrictedUntil");
             player.sendSystemMessage(Component.translatable("pwpwarfare.message.teamkill_restrict_expired")
                     .withStyle(ChatFormatting.GREEN));
@@ -315,7 +316,7 @@ public class DownedHandler {
         if (spawn == null) return;
 
         player.teleportTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);
-        long remaining = (restrictedUntil - player.level().getGameTime()) / 20L;
+        long remaining = (restrictedUntil - GameClock.worldTicks(player.level())) / 20L;
         player.sendSystemMessage(Component.translatable("pwpwarfare.message.teamkill_restrict_remaining", remaining)
                 .withStyle(ChatFormatting.RED));
         player.playNotifySound(net.minecraft.sounds.SoundEvents.ENDERMAN_TELEPORT, SoundSource.MASTER, 1.0F, 1.0F);
@@ -345,8 +346,7 @@ public class DownedHandler {
         player.getPersistentData().putBoolean("WARFARE_IsDowned", false);
         player.getPersistentData().remove("WARFARE_DownedTick");
         player.getPersistentData().remove("WARFARE_GivingUp");
-        player.getPersistentData()
-                .putLong("WARFARE_LastReviveTime", player.level().getGameTime());
+        player.getPersistentData().putLong("WARFARE_LastReviveTime", GameClock.worldTicks(player.level()));
         player.setHealth(2.0F);
         player.setPose(Pose.STANDING);
         PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));

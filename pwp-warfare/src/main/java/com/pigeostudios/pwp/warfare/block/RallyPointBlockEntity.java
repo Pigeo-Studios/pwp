@@ -4,6 +4,7 @@ import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -63,7 +64,7 @@ public class RallyPointBlockEntity extends BlockEntity {
 
     public void checkExpiry(Level level, BlockPos pos) {
         if (this.expiryTick != -1L) {
-            if (level.getGameTime() >= this.expiryTick) {
+            if (GameClock.worldTicks(level) >= this.expiryTick) {
                 this.isDecay = true;
                 level.removeBlock(pos, false);
             }

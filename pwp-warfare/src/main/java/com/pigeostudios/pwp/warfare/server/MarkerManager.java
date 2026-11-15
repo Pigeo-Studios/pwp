@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
 import com.pigeostudios.pwp.warfare.network.PacketSyncMarker;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -87,8 +88,8 @@ public class MarkerManager {
     public static void onTick(TickEvent.ServerTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         MinecraftServer s = ServerLifecycleHooks.getCurrentServer();
-        if (s == null || s.getTickCount() % 20 != 0) return;
-        long now = s.getTickCount();
+        if (s == null || GameClock.serverTicks(s) % 20 != 0) return;
+        long now = GameClock.serverTicks(s);
         boolean changed = false;
         var it = all.iterator();
         while (it.hasNext()) {

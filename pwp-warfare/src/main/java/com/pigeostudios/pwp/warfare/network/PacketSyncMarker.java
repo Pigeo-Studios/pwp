@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.client.MarkerClientCache;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pwp.api.time.GameClock;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
@@ -25,7 +26,7 @@ public class PacketSyncMarker {
         this.pos = m.pos;
         this.ownerUUID = m.ownerUUID;
         MinecraftServer s = ServerLifecycleHooks.getCurrentServer();
-        long now = s != null ? s.getTickCount() : 0;
+        long now = s != null ? GameClock.serverTicks(s) : 0;
         long elapsed = Math.min(6000, now - m.createdAt);
         this.remainingTicks = Math.max(0, 6000 - elapsed);
     }

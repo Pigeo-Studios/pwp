@@ -16,6 +16,7 @@ import com.pigeostudios.pwp.warfare.item.M2AmmoItem;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
@@ -332,7 +333,7 @@ public class InteractionEvents {
                     }
 
                     long lastMainUse = sPlayer.getPersistentData().getLong("WARFARE_LastMainResupply");
-                    long currentTime = sPlayer.level().getGameTime();
+                    long currentTime = GameClock.worldTicks(sPlayer.level());
                     if (!sPlayer.isCreative() && currentTime < lastMainUse + 1200L) {
                         long secondsLeft = (lastMainUse + 1200L - currentTime) / 20L;
                         sPlayer.displayClientMessage(
@@ -570,8 +571,8 @@ public class InteractionEvents {
         }
 
         long cooldownUntil = player.getPersistentData().getLong("WARFARE_DriveRequestCooldown_" + vehicle.getId());
-        if (cooldownUntil > player.level().getGameTime()) {
-            long remaining = (cooldownUntil - player.level().getGameTime()) / 20L;
+        if (cooldownUntil > GameClock.worldTicks(player.level())) {
+            long remaining = (cooldownUntil - GameClock.worldTicks(player.level())) / 20L;
             event.setCanceled(true);
             player.displayClientMessage(
                     Component.literal("Запрос отклонён. Повтор через " + remaining + "с")

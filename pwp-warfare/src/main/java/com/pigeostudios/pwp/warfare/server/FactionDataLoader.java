@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.time.GameClock;
 import com.pwp.api.util.ServerThread;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -78,7 +79,7 @@ public final class FactionDataLoader {
         PENDING_DEPLOYS.clear();
         put(Team.BLUE, data.blueFaction);
         put(Team.RED, data.redFaction);
-        long now = serverLevel.getServer().getTickCount();
+        long now = GameClock.serverTicks(serverLevel.getServer());
         SLOTS.values().forEach(m -> m.values().forEach(s -> s.nextAttemptTick = now));
         tryLoads(serverLevel.getServer());
     }
@@ -111,7 +112,7 @@ public final class FactionDataLoader {
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || SLOTS.isEmpty()) return;
         MinecraftServer server = event.getServer();
-        if (server.getTickCount() % 20 == 0) tryLoads(server);
+        if (GameClock.serverTicks(server) % 20 == 0) tryLoads(server);
     }
 
     @SubscribeEvent
@@ -121,7 +122,7 @@ public final class FactionDataLoader {
 
     private static void tryLoads(MinecraftServer server) {
         if (level == null) return;
-        long now = server.getTickCount();
+        long now = GameClock.serverTicks(server);
         for (Map.Entry<Team, Map<Kind, Slot>> e : SLOTS.entrySet()) {
             for (Map.Entry<Kind, Slot> ks : e.getValue().entrySet()) {
                 Slot slot = ks.getValue();
@@ -144,7 +145,7 @@ public final class FactionDataLoader {
             if (response == null
                     || !response.has("data")
                     || !response.get("data").isJsonArray()) {
-                slot.nextAttemptTick = server.getTickCount() + RETRY_TICKS;
+                slot.nextAttemptTick = GameClock.serverTicks(server) + RETRY_TICKS;
                 LOG.error(
                         "{} фракции {} ({}) не загружены из core-service (попытка {}), повтор через {} с",
                         kind,

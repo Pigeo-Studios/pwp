@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
@@ -38,7 +39,7 @@ public class PacketSquadMarker {
             if (player != null) {
                 ServerLevel level = player.serverLevel();
                 WarfareWorldData data = WarfareWorldData.get(level);
-                long expiry = level.getGameTime() + 6000L;
+                long expiry = GameClock.worldTicks(level) + 6000L;
                 String pName = player.getScoreboardName();
 
                 for (WarfareWorldData.Squad s : data.squads) {

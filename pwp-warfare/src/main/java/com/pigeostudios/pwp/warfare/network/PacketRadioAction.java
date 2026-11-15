@@ -12,6 +12,7 @@ import com.pigeostudios.pwp.warfare.block.TOWConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -88,7 +89,7 @@ public class PacketRadioAction {
                 }
 
                 ItemStack stack = player.getMainHandItem();
-                long currentGameTime = currentLevel.getGameTime();
+                long currentGameTime = GameClock.worldTicks(currentLevel);
                 if (msg.actionId == 0) {
                     long lastUse = playerSquad.nextRallyAvailableTick;
                     if (currentGameTime < lastUse && !player.isCreative()) {
@@ -310,7 +311,7 @@ public class PacketRadioAction {
 
         squad.rallyPos = pos;
         squad.rallyDimension = level.dimension().location().toString();
-        squad.rallyExpiryTick = level.getGameTime() + 12000L;
+        squad.rallyExpiryTick = GameClock.worldTicks(level) + 12000L;
         if (be instanceof RallyPointBlockEntity rbe) {
             rbe.setExpiryTick(squad.rallyExpiryTick);
         }

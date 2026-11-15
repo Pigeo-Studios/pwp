@@ -6,6 +6,7 @@ import com.pigeostudios.pwp.warfare.network.PacketRemovePath;
 import com.pigeostudios.pwp.warfare.network.PacketSyncPath;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,7 +22,7 @@ public class PathManager {
     public static void add(PacketPlacePath msg) {
         long now = 0;
         MinecraftServer s = ServerLifecycleHooks.getCurrentServer();
-        if (s != null) now = s.getTickCount();
+        if (s != null) now = GameClock.serverTicks(s);
         all.add(new StoredPath(msg.pathId, "", msg.team, msg.type, msg.squadNum, msg.points, now));
     }
 
@@ -50,7 +51,7 @@ public class PathManager {
         setOwner(msg.pathId, player.getScoreboardName());
         MinecraftServer s = ServerLifecycleHooks.getCurrentServer();
         if (s == null) return;
-        long now = s.getTickCount();
+        long now = GameClock.serverTicks(s);
         PacketSyncPath sync = new PacketSyncPath(msg.pathId, msg.team, msg.type, msg.squadNum, now, msg.points);
         for (ServerPlayer p : s.getPlayerList().getPlayers()) {
             String pt = p.getTeam() != null ? p.getTeam().getName() : "";

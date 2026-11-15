@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
@@ -270,7 +271,7 @@ public class SupplyCrateEntity extends Entity {
                 }
 
                 vehicle.getPersistentData()
-                        .putLong("WARFARE_NextSupplyTime", this.level().getGameTime() + 600L);
+                        .putLong("WARFARE_NextSupplyTime", GameClock.worldTicks(this.level()) + 600L);
                 sendMessageToPassengers(vehicle, "Техника отремонтирована и пополнена ящиком!", ChatFormatting.GREEN);
                 actionDone = true;
             }

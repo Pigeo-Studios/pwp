@@ -24,6 +24,7 @@ import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.voicechat.WarfareVoicechatPlugin;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.time.GameClock;
 import com.pwp.api.util.ServerThread;
 import java.util.ArrayList;
 import java.util.List;
@@ -928,7 +929,7 @@ public class ModCommands {
 
                     long lastRespawn = player.getPersistentData().getLong("WARFARE_LastRespawnCommand");
                     int cooldownTicks = (Integer) WarfareConfig.RESPAWN_COMMAND_COOLDOWN_SECONDS.get() * 20;
-                    long currentTick = level.getGameTime();
+                    long currentTick = GameClock.worldTicks(level);
                     long elapsed = currentTick - lastRespawn;
 
                     if (elapsed < cooldownTicks && !player.isCreative()) {

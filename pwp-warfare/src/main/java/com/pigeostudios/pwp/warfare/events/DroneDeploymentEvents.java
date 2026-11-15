@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.PacketDroneDeployState;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
@@ -156,7 +157,7 @@ public class DroneDeploymentEvents {
             return;
         }
 
-        // Кулдаун от старта установки. Время — МИРОВОЕ (level.getGameTime(), тики
+        // Кулдаун от старта установки. Время — МИРОВОЕ (GameClock.worldTicks(level), тики
         // сохраняются в level.dat): серверный tickCount сбрасывается при рестарте
         // сервера/матча, а cdUntil в persistentData игрока переживает рестарт —
         // после него tickCount мал, cdUntil велик, и кулдаун «висел» бесконечно.
@@ -164,7 +165,7 @@ public class DroneDeploymentEvents {
         // (gameTime + CD) — обновление, а не прибавление к старому значению.
         // ВАЖНО: это НЕ тот же gameTime, что в P_DEPLOY_START — прогресс деплоя
         // считает elapsed от серверного tickCount (сессионно, чистится при логине).
-        long now = level.getGameTime();
+        long now = GameClock.worldTicks(level);
         long cdUntil = player.getPersistentData().getLong(P_CD_UNTIL);
         if (!player.isCreative() && now < cdUntil) {
             long sec = (cdUntil - now) / 20L;
@@ -175,9 +176,9 @@ public class DroneDeploymentEvents {
             return;
         }
         // Прогресс установки — ОТДЕЛЬНЫЙ источник: серверный tickCount (сессия).
-        // НЕ level.getGameTime() — иначе elapsed = tick - start вечно отрицательный
+        // НЕ GameClock.worldTicks(level) — иначе elapsed = tick - start вечно отрицательный
         // и установка зависает на полном прогрессе (инцидент 06.08.2026).
-        long deployStartTick = level.getServer().getTickCount();
+        long deployStartTick = GameClock.serverTicks(level.getServer());
 
         // Лимиты активных дронов.
         int activeTotal = 0;
@@ -262,7 +263,7 @@ public class DroneDeploymentEvents {
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        int tick = event.getServer().getTickCount();
+        int tick = (int) GameClock.serverTicks(event.getServer());
 
         boolean syncNow = ++deploySyncCounter >= 5;
         if (syncNow) deploySyncCounter = 0;
@@ -591,7 +592,7 @@ public class DroneDeploymentEvents {
             }
         }
 
-        long now = level.getServer().getTickCount();
+        long now = GameClock.serverTicks(level.getServer());
         data.putString(P_RELOAD_TYPE, eid.toString());
         data.putLong(P_RELOAD_START, now);
         data.putDouble(P_RELOAD_X, drone.getX());

@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
@@ -61,7 +62,7 @@ public class PacketRequestCrateAmmo {
                                         Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
                             } else {
                                 long lastFobUse = player.getPersistentData().getLong("WARFARE_LastFobResupply");
-                                long currentTime = player.level().getGameTime();
+                                long currentTime = GameClock.worldTicks(player.level());
                                 if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
                                     player.sendSystemMessage(Component.literal("Пополнение кита на кулдауне!")
                                             .withStyle(ChatFormatting.RED));

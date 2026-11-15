@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
+import com.pwp.api.time.GameClock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -81,7 +82,7 @@ public class MortarConstructionBlockEntity extends BlockEntity {
                     block.finishConstruction((ServerLevel) level, pos, state);
                 }
 
-                if (level.getGameTime() % 10L == 0L) {
+                if (GameClock.worldTicks(level) % 10L == 0L) {
                     level.sendBlockUpdated(pos, state, state, 3);
                 }
             }

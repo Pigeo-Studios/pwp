@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
@@ -37,11 +38,11 @@ public class PacketDownedAction {
                 if (msg.action == 1) {
                     DownedHandler.forceGiveUp(player);
                 } else if (msg.action == 0) {
-                    long currentTime = level.getGameTime();
+                    long currentTime = GameClock.worldTicks(level);
                     long lastCall = player.getPersistentData().getLong("WARFARE_LastMedicShout");
                     if (currentTime - lastCall >= 300L) {
                         player.getPersistentData().putLong("WARFARE_LastMedicShout", currentTime);
-                        player.getPersistentData().putLong("WARFARE_LastMedicShoutTimeMS", level.getGameTime());
+                        player.getPersistentData().putLong("WARFARE_LastMedicShoutTimeMS", GameClock.worldTicks(level));
                         WarfareWorldData data = WarfareWorldData.get(level);
                         String faction = "none";
                         if (player.getTeam() != null) {

@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -66,7 +67,7 @@ public class PacketVehicleDriveAnswer {
         } else {
             requester
                     .getPersistentData()
-                    .putLong("WARFARE_DriveRequestCooldown_" + vehicleId, level.getGameTime() + 6000);
+                    .putLong("WARFARE_DriveRequestCooldown_" + vehicleId, GameClock.worldTicks(level) + 6000);
             requester.displayClientMessage(
                     Component.literal("\u274C Заявка отклонена. Повтор через 5 минут.")
                             .withStyle(ChatFormatting.RED),
