@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -40,15 +41,19 @@ public class PacketOpenFactionKitEditor {
         return new PacketOpenFactionKitEditor(buf.readUtf(), buf.readUtf());
     }
 
+    private static final RequestGuard GUARD = new RequestGuard(500);
+
     public static void handle(PacketOpenFactionKitEditor msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player != null && PwpPermissions.isAdmin(player)) {
                 // API — источник истины: в памяти (blueKits/redKits) могут лежать устаревшие NBT-киты
-                ServerThread.thenOnServer(
-                        loadFromApi(msg.faction, msg.kitName),
-                        player.server,
-                        apiKit -> openEditor(player, msg, apiKit));
+                ServerThread.guardedForPlayer(
+                        GUARD,
+                        "openKitEditor",
+                        player,
+                        () -> loadFromApi(msg.faction, msg.kitName),
+                        (online, apiKit) -> openEditor(online, msg, apiKit));
             }
         });
         ctx.get().setPacketHandled(true);

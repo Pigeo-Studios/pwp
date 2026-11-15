@@ -5,11 +5,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import com.pwp.cosmetics.network.PacketCosmeticEquipResult;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 import org.slf4j.Logger;
@@ -26,14 +26,37 @@ import org.slf4j.LoggerFactory;
 public final class CosmeticService {
     private static final Logger LOG = LoggerFactory.getLogger(CosmeticService.class);
 
+    /** Антиспам экипировки: один запрос экип/снятие на игрока за раз, не чаще раза в 0.5 с. */
+    private static final RequestGuard GUARD = new RequestGuard(500);
+
+    private static final String GUARD_KEY = "equip";
+
     private CosmeticService() {}
 
     /** Экипировать скин, которым игрок владеет. */
     public static void equip(ServerPlayer player, String skinId, String role) {
         String uuid = player.getStringUUID();
-        MinecraftServer server = player.server;
         boolean admin = PwpPermissions.isAdmin(player);
-        CompletableFuture<Result> flow = CoreApi.loadPlayer(uuid).thenCompose(profile -> {
+        if (!ServerThread.guardedForPlayer(
+                GUARD, GUARD_KEY, player, () -> equipFlow(uuid, skinId, role, admin), (online, result) -> {
+                    if (result.success) {
+                        CosmeticManager.setEquipmentSingle(
+                                online.getUUID(),
+                                result.slotType,
+                                role,
+                                skinId,
+                                SkinCatalog.buildItem(skinId, result.modelPath));
+                    }
+                    reply(online, result);
+                })) {
+            reply(player, Result.fail(BUSY));
+        }
+    }
+
+    private static final String BUSY = "Подождите, предыдущий запрос ещё выполняется";
+
+    private static CompletableFuture<Result> equipFlow(String uuid, String skinId, String role, boolean admin) {
+        return CoreApi.loadPlayer(uuid).thenCompose(profile -> {
             JsonObject owned = findOwned(profile, skinId);
             if (owned == null && admin) {
                 // Админ (op 2+) может надеть любой скин: выдаём ему предмет, право проверено сервером
@@ -42,17 +65,6 @@ public final class CosmeticService {
                         .thenCompose(fresh -> equipOwned(uuid, skinId, role, findOwned(fresh, skinId)));
             }
             return equipOwned(uuid, skinId, role, owned);
-        });
-        ServerThread.thenOnServer(flow, server, result -> {
-            if (result.success) {
-                CosmeticManager.setEquipmentSingle(
-                        player.getUUID(),
-                        result.slotType,
-                        role,
-                        skinId,
-                        SkinCatalog.buildItem(skinId, result.modelPath));
-            }
-            reply(player, result);
         });
     }
 
@@ -75,13 +87,18 @@ public final class CosmeticService {
     /** Снять скин со слота. */
     public static void unequip(ServerPlayer player, String slotType, String role) {
         String uuid = player.getStringUUID();
-        CompletableFuture<Result> flow = CoreApi.unequipItem(uuid, slotType, role)
-                .thenCompose(resp -> CoreApi.loadPlayer(uuid))
-                .thenApply(fresh -> Result.ok(slotType, null, fresh));
-        ServerThread.thenOnServer(flow, player.server, result -> {
-            CosmeticManager.removeEquipment(player.getUUID(), slotType, role);
-            reply(player, result);
-        });
+        boolean started = ServerThread.guardedForPlayer(
+                GUARD,
+                GUARD_KEY,
+                player,
+                () -> CoreApi.unequipItem(uuid, slotType, role)
+                        .thenCompose(resp -> CoreApi.loadPlayer(uuid))
+                        .thenApply(fresh -> Result.ok(slotType, null, fresh)),
+                (online, result) -> {
+                    CosmeticManager.removeEquipment(online.getUUID(), slotType, role);
+                    reply(online, result);
+                });
+        if (!started) reply(player, Result.fail(BUSY));
     }
 
     /** Загрузка экипированных скинов игрока при входе на сервер. */
@@ -89,7 +106,8 @@ public final class CosmeticService {
         UUID playerUuid = player.getUUID();
         CompletableFuture<Loaded> flow = CoreApi.loadPlayer(playerUuid.toString())
                 .thenCombine(SkinCatalog.modelPaths(), (profile, paths) -> new Loaded(cosmeticsOf(profile), paths));
-        ServerThread.thenOnServer(flow, player.server, loaded -> {
+        // Игрок мог выйти, пока шёл HTTP: тогда при следующем входе загрузка повторится
+        ServerThread.thenForPlayer(flow, player, (online, loaded) -> {
             if (loaded.cosmetics == null) return; // core-service недоступен — экипировку не трогаем
             CosmeticManager.clearPlayer(playerUuid);
             for (JsonElement e : loaded.cosmetics) {

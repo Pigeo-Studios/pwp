@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -74,21 +75,41 @@ public class PacketAction {
                 reply(player, msg.action, false, "Некорректные параметры");
                 return;
             }
-            CompletableFuture<JsonObject> call = start(msg.action, params == null ? new JsonObject() : params);
-            if (call == null) {
+            JsonObject p = params == null ? new JsonObject() : params;
+            if (!isKnown(msg.action, p)) {
                 reply(player, msg.action, false, "Неизвестное действие");
                 return;
             }
-            ServerThread.thenOnServer(call, player.server, resp -> {
-                String error =
-                        resp != null && resp.has("error") && !resp.get("error").isJsonNull()
+            boolean started = ServerThread.guardedForPlayer(
+                    GUARD, msg.action, player, () -> start(msg.action, p), (online, resp) -> {
+                        String error = resp != null
+                                        && resp.has("error")
+                                        && !resp.get("error").isJsonNull()
                                 ? resp.get("error").getAsString()
                                 : "core-service недоступен";
-                boolean ok = CoreApi.isSuccess(resp);
-                reply(player, msg.action, ok, ok ? "" : error);
-            });
+                        boolean ok = CoreApi.isSuccess(resp);
+                        reply(online, msg.action, ok, ok ? "" : error);
+                    });
+            if (!started) reply(player, msg.action, false, "Подождите, предыдущий запрос ещё выполняется");
         });
         ctx.get().setPacketHandled(true);
+    }
+
+    /** Антиспам: один запрос на действие за раз, не чаще раза в секунду. */
+    private static final RequestGuard GUARD = new RequestGuard(1000);
+
+    /** true — действие известно и все обязательные параметры на месте. */
+    private static boolean isKnown(String action, JsonObject p) {
+        switch (action) {
+            case SAVE_SKIN:
+                return has(p, "skinId", "name", "slotType", "rarity", "modelPath");
+            case DELETE_SKIN:
+                return has(p, "skinId");
+            case DELETE_FACTION_VEHICLE:
+                return has(p, "faction", "vehicleName");
+            default:
+                return false;
+        }
     }
 
     /** Запускает HTTP-вызов действия; null — неизвестное действие или нет обязательных параметров. */

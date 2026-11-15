@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
@@ -35,17 +36,23 @@ public class PacketDataRequest {
         return new PacketDataRequest(buf.readUtf(), buf.readUtf());
     }
 
+    private static final RequestGuard GUARD = new RequestGuard(300);
+
     public static void handle(PacketDataRequest msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
             // HTTP — в фоне, ответ игроку — с главного потока
-            ServerThread.thenOnServer(fetchData(msg.type, msg.paramsJson, player), player.server, result -> {
-                if (player.hasDisconnected()) return;
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.PLAYER.with(() -> player),
-                        new PacketDataResponse(msg.type, result != null ? result.toString() : "{}"));
-            });
+            // Антиспам: пока запрос этого типа в полёте или не прошёл кулдаун — повтор игнорируется
+            // (ответ на уже идущий запрос всё равно придёт)
+            ServerThread.guardedForPlayer(
+                    GUARD,
+                    msg.type,
+                    player,
+                    () -> fetchData(msg.type, msg.paramsJson, player),
+                    (online, result) -> PacketHandler.INSTANCE.send(
+                            PacketDistributor.PLAYER.with(() -> online),
+                            new PacketDataResponse(msg.type, result != null ? result.toString() : "{}")));
         });
         ctx.get().setPacketHandled(true);
     }

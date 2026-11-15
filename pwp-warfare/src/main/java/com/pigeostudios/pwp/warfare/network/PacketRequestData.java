@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -36,18 +37,21 @@ public class PacketRequestData {
         return new PacketRequestData(buf.readUtf(), buf.readUtf());
     }
 
+    private static final RequestGuard GUARD = new RequestGuard(300);
+
     public static void handle(PacketRequestData msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
             JsonObject params = parseJson(msg.params);
             // HTTP — в фоне; разбор с фолбэком на данные мира и отправка — на главном потоке
-            ServerThread.thenOnServer(fetch(msg.dataType, params, player), player.server, response -> {
-                if (player.hasDisconnected()) return;
-                String json = toResult(msg.dataType, params, response, player);
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.PLAYER.with(() -> player), new PacketSendData(msg.dataType, json));
-            });
+            // Антиспам: повтор того же типа, пока первый в полёте/кулдаун, — игнорируется
+            ServerThread.guardedForPlayer(
+                    GUARD, msg.dataType, player, () -> fetch(msg.dataType, params, player), (online, response) -> {
+                        String json = toResult(msg.dataType, params, response, online);
+                        PacketHandler.INSTANCE.send(
+                                PacketDistributor.PLAYER.with(() -> online), new PacketSendData(msg.dataType, json));
+                    });
         });
         ctx.get().setPacketHandled(true);
     }

@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -78,6 +79,8 @@ public class PacketSaveFactionVehicle {
                 faction, vehicleName, displayName, vehicleId, yaw, respawnTime, initialTime, category, inv);
     }
 
+    private static final RequestGuard GUARD = new RequestGuard(1000);
+
     public static void handle(PacketSaveFactionVehicle msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
@@ -114,16 +117,24 @@ public class PacketSaveFactionVehicle {
                 payload.addProperty("category", msg.category);
                 payload.addProperty("inventory", itemsArray.toString());
 
-                ServerThread.thenOnServer(
-                        CoreApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload), player.server, resp -> {
+                boolean started = ServerThread.guardedForPlayer(
+                        GUARD,
+                        "saveFactionVehicle",
+                        player,
+                        () -> CoreApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload),
+                        (online, resp) -> {
                             if (resp == null) {
-                                player.displayClientMessage(
+                                online.displayClientMessage(
                                         Component.literal("§cCore API: техника не сохранена"), true);
                             } else {
-                                player.displayClientMessage(
+                                online.displayClientMessage(
                                         Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
                             }
                         });
+                if (!started) {
+                    player.displayClientMessage(
+                            Component.literal("Подождите, предыдущее сохранение ещё выполняется"), true);
+                }
             }
         });
         ctx.get().setPacketHandled(true);

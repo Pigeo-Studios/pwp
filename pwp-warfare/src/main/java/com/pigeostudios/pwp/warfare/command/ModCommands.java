@@ -1371,21 +1371,35 @@ public class ModCommands {
                         reason,
                         minutes),
                 source.getServer(),
-                result -> onVoiceMuted(source, admin, target, minutes, result));
+                result -> onVoiceMuted(
+                        source,
+                        admin.getScoreboardName(),
+                        target.getUUID(),
+                        target.getScoreboardName(),
+                        minutes,
+                        result));
         return 1;
     }
 
+    /** Колбэк после HTTP: игроков не захватываем — цель ищется заново по UUID (могла выйти). */
     private static void onVoiceMuted(
-            CommandSourceStack source, ServerPlayer admin, ServerPlayer target, int minutes, JsonObject result) {
+            CommandSourceStack source,
+            String adminName,
+            java.util.UUID targetUuid,
+            String targetName,
+            int minutes,
+            JsonObject result) {
         if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
-            WarfareVoicechatPlugin.invalidateMuteCache(target.getUUID());
+            WarfareVoicechatPlugin.invalidateMuteCache(targetUuid);
             String duration = minutes > 0 ? " на " + minutes + " мин." : " навсегда";
-            target.sendSystemMessage(Component.literal(
-                            "Ваш голосовой чат отключён администратором " + admin.getScoreboardName() + duration)
-                    .withStyle(ChatFormatting.RED));
+            ServerPlayer target = source.getServer().getPlayerList().getPlayer(targetUuid);
+            if (target != null) {
+                target.sendSystemMessage(
+                        Component.literal("Ваш голосовой чат отключён администратором " + adminName + duration)
+                                .withStyle(ChatFormatting.RED));
+            }
             source.sendSuccess(
-                    () -> Component.literal(
-                                    "Голосовой чат игрока " + target.getScoreboardName() + " отключён" + duration)
+                    () -> Component.literal("Голосовой чат игрока " + targetName + " отключён" + duration)
                             .withStyle(ChatFormatting.GREEN),
                     true);
             return;
@@ -1397,17 +1411,21 @@ public class ModCommands {
         ServerThread.thenOnServer(
                 CoreApi.voiceUnmute(target.getUUID().toString()),
                 source.getServer(),
-                result -> onVoiceUnmuted(source, target, result));
+                result -> onVoiceUnmuted(source, target.getUUID(), target.getScoreboardName(), result));
         return 1;
     }
 
-    private static void onVoiceUnmuted(CommandSourceStack source, ServerPlayer target, JsonObject result) {
+    private static void onVoiceUnmuted(
+            CommandSourceStack source, java.util.UUID targetUuid, String targetName, JsonObject result) {
         if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
-            WarfareVoicechatPlugin.invalidateMuteCache(target.getUUID());
-            target.sendSystemMessage(
-                    Component.literal("Ваш голосовой чат снова включён").withStyle(ChatFormatting.GREEN));
+            WarfareVoicechatPlugin.invalidateMuteCache(targetUuid);
+            ServerPlayer target = source.getServer().getPlayerList().getPlayer(targetUuid);
+            if (target != null) {
+                target.sendSystemMessage(
+                        Component.literal("Ваш голосовой чат снова включён").withStyle(ChatFormatting.GREEN));
+            }
             source.sendSuccess(
-                    () -> Component.literal("Голосовой чат игрока " + target.getScoreboardName() + " включён")
+                    () -> Component.literal("Голосовой чат игрока " + targetName + " включён")
                             .withStyle(ChatFormatting.GREEN),
                     true);
             return;

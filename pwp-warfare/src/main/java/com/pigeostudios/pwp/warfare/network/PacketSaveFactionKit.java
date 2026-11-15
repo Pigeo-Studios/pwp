@@ -7,6 +7,8 @@ import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.RequestGuard;
+import com.pwp.api.util.ServerThread;
 import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
@@ -122,6 +124,8 @@ public class PacketSaveFactionKit {
         return new PacketSaveFactionKit(f, k, t, cat, desc, l, mt, ms, minP, f1, f2, skins);
     }
 
+    private static final RequestGuard GUARD = new RequestGuard(1000);
+
     public static void handle(PacketSaveFactionKit msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
@@ -178,12 +182,25 @@ public class PacketSaveFactionKit {
                 kitPayload.addProperty("slotSkins", slotSkinsJson.toString());
 
                 // Сохранение в API — в фоне; локальная копия кита ниже обновляется сразу
-                CoreApi.saveFactionKit(msg.faction, msg.kitName, kitPayload).thenAccept(saveResult -> {
-                    if (saveResult == null) {
-                        LogUtils.getLogger()
-                                .warn("Core API save failed for faction kit {}/{}", msg.faction, msg.kitName);
-                    }
-                });
+                // Антиспам: пока предыдущее сохранение в полёте — новое не принимается
+                boolean started = ServerThread.guardedForPlayer(
+                        GUARD,
+                        "saveFactionKit",
+                        player,
+                        () -> CoreApi.saveFactionKit(msg.faction, msg.kitName, kitPayload),
+                        (online, saveResult) -> {
+                            if (saveResult == null) {
+                                LogUtils.getLogger()
+                                        .warn("Core API save failed for faction kit {}/{}", msg.faction, msg.kitName);
+                                online.displayClientMessage(
+                                        Component.literal("Кит не сохранён в core-service — повторите позже"), false);
+                            }
+                        });
+                if (!started) {
+                    player.displayClientMessage(
+                            Component.literal("Подождите, предыдущее сохранение ещё выполняется"), true);
+                    return;
+                }
 
                 WarfareWorldData.KitInfo kit = null;
                 if (msg.team.equalsIgnoreCase("BLUE")) {
