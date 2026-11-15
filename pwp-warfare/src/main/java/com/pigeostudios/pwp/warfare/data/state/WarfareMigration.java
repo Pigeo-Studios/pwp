@@ -12,6 +12,14 @@ public final class WarfareMigration {
 
     public static final int VERSION = 1;
 
+    /**
+     * Старые ключи в persistentData ещё поддерживаются для отката на старый мод (пока не
+     * вызывается {@link #removeLegacy}). Пока true — при смерти ключи {@link
+     * PlayerCloneRules#SURVIVE_DEATH} дублируются в persistentData нового игрока
+     * ({@link PlayerCloneRules#mirrorToLegacy}). УДАЛИТЬ вместе с переходом на removeLegacy.
+     */
+    public static final boolean LEGACY_KEYS_KEPT = true;
+
     private WarfareMigration() {}
 
     /**

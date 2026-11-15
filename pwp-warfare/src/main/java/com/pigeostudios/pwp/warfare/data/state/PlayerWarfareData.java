@@ -78,6 +78,15 @@ public final class PlayerWarfareData extends WarfareData {
         PlayerCloneRules.copy(of(oldPlayer).tag, of(newPlayer).tag, wasDeath);
     }
 
+    /**
+     * После смерти: дублирует переживающие смерть ключи в persistentData нового игрока — для
+     * отката на старый мод ({@link PlayerCloneRules#mirrorToLegacy}). УДАЛИТЬ вместе с
+     * {@link WarfareMigration#removeLegacy}.
+     */
+    public static void mirrorLegacyAfterDeath(Player newPlayer) {
+        PlayerCloneRules.mirrorToLegacy(of(newPlayer).tag, newPlayer.getPersistentData());
+    }
+
     /** Полная копия данных (для клона игрока при смене измерения и тестов). */
     public CompoundTag copyTag() {
         return tag.copy();

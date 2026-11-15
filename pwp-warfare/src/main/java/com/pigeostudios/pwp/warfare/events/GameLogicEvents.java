@@ -1756,6 +1756,9 @@ public class GameLogicEvents {
         } finally {
             oldPlayer.invalidateCaps();
         }
+        // Откат на старый мод должен работать и после смерти — дубль ключей в persistentData.
+        // УДАЛИТЬ вместе с WarfareMigration.removeLegacy.
+        if (event.isWasDeath()) PlayerWarfareData.mirrorLegacyAfterDeath(newPlayer);
         // Нок не переживает пересоздание игрока ни в каком случае (как и раньше)
         WarfareData.of(newPlayer).putBoolean(WarfareKeys.IS_DOWNED, false);
         WarfareData.of(newPlayer).remove(WarfareKeys.GIVING_UP);
