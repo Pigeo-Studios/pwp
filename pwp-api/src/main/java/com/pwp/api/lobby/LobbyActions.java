@@ -13,9 +13,6 @@ import org.slf4j.LoggerFactory;
  * GUI отправляет командами ({@code /votefaction} и т.п.), отдельных пакетов для них нет.
  */
 public interface LobbyActions {
-    /** Перенести игрока в текущий активный матч. */
-    void joinActiveMatch(ServerPlayer player);
-
     /** Перенести игрока в матч с данным id сервера. */
     void joinMatchById(int matchId, ServerPlayer player);
 

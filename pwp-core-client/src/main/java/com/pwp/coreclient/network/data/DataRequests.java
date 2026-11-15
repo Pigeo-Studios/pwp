@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.net.Payloads;
+import com.pwp.api.util.Parse;
+import com.pwp.api.util.RateLimiter;
 import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import com.pwp.coreclient.network.PacketHandler;
@@ -34,6 +36,11 @@ public final class DataRequests {
 
     private static final Gson GSON = new Gson();
     private static final RequestGuard GUARD = new RequestGuard(300);
+    /** Некорректные параметры — клиентский ввод: в лог не чаще раза в 10 с на игрока, без стека. */
+    private static final RateLimiter BAD_PARAMS_LOG = new RateLimiter(10_000);
+    /** Страница лидерборда: [1, MAX_PAGE]. */
+    static final int MAX_PAGE = 1000;
+
     private static final Map<String, Handler> HANDLERS = new ConcurrentHashMap<>();
 
     /** Обработчик типа запроса. */
@@ -56,7 +63,7 @@ public final class DataRequests {
 
     static {
         register("profile", (p, q) -> CoreApi.loadPlayer(p.getStringUUID()));
-        register("leaderboard", (p, q) -> CoreApi.getLeaderboard(str(q, "orderBy", "kills"), intOr(q, "page", 1), 20));
+        register("leaderboard", (p, q) -> CoreApi.getLeaderboard(str(q, "orderBy", "kills"), page(q), 20));
         register("skins", withDefault((p, q) -> CoreApi.getSkins(), "{\"data\":[]}"));
         register("factions", withDefault((p, q) -> CoreApi.getFactions(), "{\"data\":[]}"));
         register("factionVehicles", new Handler() {
@@ -99,7 +106,7 @@ public final class DataRequests {
             send(player, type, "{}");
             return;
         }
-        JsonObject params = parse(paramsJson);
+        JsonObject params = parse(player, type, paramsJson);
         ServerThread.guardedForPlayer(GUARD, type, player, () -> handler.fetch(player, params), (online, response) -> {
             String json = handler.toJson(online, params, response);
             send(online, type, json);
@@ -141,22 +148,25 @@ public final class DataRequests {
         return o.has(key) && o.get(key).isJsonPrimitive() ? o.get(key).getAsString() : def;
     }
 
-    private static int intOr(JsonObject o, String key, int def) {
-        try {
-            return o.has(key) && o.get(key).isJsonPrimitive() ? o.get(key).getAsInt() : def;
-        } catch (NumberFormatException e) {
-            LOG.debug("Параметр {} не число", key, e);
-            return def;
-        }
+    /** Номер страницы из параметров (число или строка), вне диапазона — прижимается к [1, MAX_PAGE]. */
+    static int page(JsonObject q) {
+        int page = Parse.intOr(str(q, "page", "1"), 1);
+        return Math.max(1, Math.min(MAX_PAGE, page));
     }
 
-    private static JsonObject parse(String params) {
+    private static JsonObject parse(ServerPlayer player, String type, String params) {
         if (params == null || params.isEmpty()) return new JsonObject();
         try {
             JsonObject o = GSON.fromJson(params, JsonObject.class);
             return o != null ? o : new JsonObject();
         } catch (JsonParseException | IllegalStateException e) {
-            LOG.warn("Некорректные параметры запроса данных", e);
+            if (BAD_PARAMS_LOG.tryAcquire(player.getStringUUID())) {
+                LOG.warn(
+                        "Некорректные параметры запроса данных {} от {}: {} (повторы подавляются 10 с)",
+                        type,
+                        player.getGameProfile().getName(),
+                        e.getMessage());
+            }
             return new JsonObject();
         }
     }

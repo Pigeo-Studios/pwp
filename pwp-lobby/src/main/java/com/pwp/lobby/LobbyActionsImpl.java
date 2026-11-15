@@ -7,11 +7,6 @@ import net.minecraft.server.level.ServerPlayer;
 /** Реализация {@link LobbyActions} для пакетов core-client (переход в матч из GUI лобби). */
 final class LobbyActionsImpl implements LobbyActions {
     @Override
-    public void joinActiveMatch(ServerPlayer player) {
-        MatchAllocator.joinActiveMatch(player);
-    }
-
-    @Override
     public void joinMatchById(int matchId, ServerPlayer player) {
         MatchAllocator.joinMatchById(matchId, player);
     }

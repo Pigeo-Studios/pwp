@@ -196,13 +196,12 @@ public final class SquadActions {
                     PacketRequestKitMenu.sendKitMenu(targetEntity, data);
                 }
 
+                String text = isKickingOfflineLeader
+                        ? "Оффлайн-лидер " + targetName + " был удалён из отряда " + targetSquad.name
+                        : targetName + " исключён из отряда " + targetSquad.name;
                 player.server
                         .getPlayerList()
-                        .broadcastSystemMessage(
-                                Component.literal("Оффлайн-лидер " + targetName + " был удалён из отряда "
-                                                + targetSquad.name)
-                                        .withStyle(ChatFormatting.YELLOW),
-                                false);
+                        .broadcastSystemMessage(Component.literal(text).withStyle(ChatFormatting.YELLOW), false);
             }
         }
     }

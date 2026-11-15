@@ -1,5 +1,6 @@
 package com.pwp.api.net;
 
+import com.pwp.api.util.RateLimiter;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -29,6 +30,12 @@ import org.slf4j.LoggerFactory;
  */
 public final class Net {
     private static final Logger LOG = LoggerFactory.getLogger(Net.class);
+
+    /**
+     * Отказы и ошибки — не чаще раза в 10 с на (игрок, пакет): злой клиент не забивает лог.
+     * Отказ проверки — клиентский ввод, стектрейс не пишется.
+     */
+    private static final RateLimiter REJECT_LOG = new RateLimiter(10_000);
 
     private Net() {}
 
@@ -93,22 +100,29 @@ public final class Net {
         } catch (RuntimeException e) {
             error = "исключение при проверке: " + e;
         }
+        String name = msg.getClass().getSimpleName();
         if (error != null) {
-            LOG.warn(
-                    "Пакет {} от {} отклонён: {}",
-                    msg.getClass().getSimpleName(),
-                    sender.getGameProfile().getName(),
-                    error);
+            if (REJECT_LOG.tryAcquire(sender.getStringUUID() + ":reject:" + name)) {
+                LOG.warn(
+                        "Пакет {} от {} отклонён: {} (повторы от игрока подавляются {} с)",
+                        name,
+                        sender.getGameProfile().getName(),
+                        error,
+                        REJECT_LOG.intervalMs() / 1000);
+            }
             return;
         }
         try {
             msg.handle(sender);
         } catch (RuntimeException e) {
-            LOG.error(
-                    "Ошибка обработки пакета {} от {}",
-                    msg.getClass().getSimpleName(),
-                    sender.getGameProfile().getName(),
-                    e);
+            // Ошибка обработчика — баг сервера: стектрейс нужен, но не чаще раза в интервал
+            if (REJECT_LOG.tryAcquire(sender.getStringUUID() + ":error:" + name)) {
+                LOG.error(
+                        "Ошибка обработки пакета {} от {}",
+                        name,
+                        sender.getGameProfile().getName(),
+                        e);
+            }
         }
     }
 
