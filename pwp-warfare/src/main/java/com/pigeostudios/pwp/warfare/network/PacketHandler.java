@@ -26,7 +26,7 @@ public class PacketHandler {
     * 2 — удалён PacketApiAction (выдача любого скина по запросу клиента).
     */
    private static final String PROTOCOL_VERSION = "2";
-   public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(new ResourceLocation("pwpwarfare:main"), () -> "1", "1"::equals, "1"::equals);
+   public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(new ResourceLocation("pwpwarfare:main"), () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
 
    // Регистрирует все пакеты мода с их кодеками и обработчиками
    public static void register() {
