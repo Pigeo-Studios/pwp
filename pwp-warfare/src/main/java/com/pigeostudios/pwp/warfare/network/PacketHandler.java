@@ -21,7 +21,11 @@ import net.minecraft.world.scores.Team;
 // Р¦РµРЅС‚СЂР°Р»СЊРЅС‹Р№ СЂРµРіРёСЃС‚СЂР°С‚РѕСЂ СЃРµС‚РµРІС‹С… РїР°РєРµС‚РѕРІ РјРѕРґР°
 // РЎРѕРґРµСЂР¶РёС‚ РєР°РЅР°Р» СЃРІСЏР·Рё Рё РјРµС‚РѕРґС‹ РѕС‚РїСЂР°РІРєРё РґР°РЅРЅС‹С… РІСЃРµРј РєР»РёРµРЅС‚Р°Рј
 public class PacketHandler {
-   private static final String PROTOCOL_VERSION = "1";
+   /**
+    * Версия протокола канала. Поднимать при любом изменении состава/порядка регистраций.
+    * 2 — удалён PacketApiAction (выдача любого скина по запросу клиента).
+    */
+   private static final String PROTOCOL_VERSION = "2";
    public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(new ResourceLocation("pwpwarfare:main"), () -> "1", "1"::equals, "1"::equals);
 
    // Р РµРіРёСЃС‚СЂРёСЂСѓРµС‚ РІСЃРµ РїР°РєРµС‚С‹ РјРѕРґР° СЃ РёС… РєРѕРґРµРєР°РјРё Рё РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё
@@ -100,7 +104,6 @@ public class PacketHandler {
       );
       INSTANCE.registerMessage(id++, PacketRequestData.class, PacketRequestData::encode, PacketRequestData::decode, PacketRequestData::handle);
       INSTANCE.registerMessage(id++, PacketSendData.class, PacketSendData::encode, PacketSendData::decode, PacketSendData::handle);
-      INSTANCE.registerMessage(id++, PacketApiAction.class, PacketApiAction::encode, PacketApiAction::decode, PacketApiAction::handle);
       INSTANCE.registerMessage(
          id++, PacketVehicleDriveRequest.class, PacketVehicleDriveRequest::encode, PacketVehicleDriveRequest::decode, PacketVehicleDriveRequest::handle
       );

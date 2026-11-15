@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.item;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
@@ -16,7 +17,7 @@ public class SkinSetupItem extends Item {
     }
 
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        if (level.isClientSide && player.isCreative()) {
+        if (level.isClientSide && PwpPermissions.isAdmin(player)) {
             DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> ClientHooks::openSkinSetup);
         }
         return InteractionResultHolder.success(player.getItemInHand(hand));

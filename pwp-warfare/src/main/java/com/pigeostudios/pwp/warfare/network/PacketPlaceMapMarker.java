@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -44,7 +45,7 @@ public class PacketPlaceMapMarker {
             String team = player.getTeam().getName().toUpperCase();
             String pName = player.getScoreboardName();
             if (msg.type.equals("Artillery Request")) {
-               if (!player.getPersistentData().getBoolean("WARFARE_IsSquadLeader") && !player.isCreative()) {
+               if (!player.getPersistentData().getBoolean("WARFARE_IsSquadLeader") && !PwpPermissions.isAdmin(player)) {
                   return;
                }
 

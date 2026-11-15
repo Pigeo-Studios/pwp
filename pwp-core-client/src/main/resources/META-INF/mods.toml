@@ -29,8 +29,8 @@ config="pwp_core_client.mixins.json"
     side="CLIENT"
 
 [[dependencies.pwp_core_client]]
-    modId="pwpcore"
+    modId="pwpapi"
     mandatory=true
     versionRange="[1.0,)"
-    ordering="NONE"
-    side="SERVER"
+    ordering="AFTER"
+    side="BOTH"

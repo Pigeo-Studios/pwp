@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class PacketPasteTeam {
    public static void handle(PacketPasteTeam msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
-         if (player != null && player.isCreative()) {
+         if (player != null && PwpPermissions.isAdmin(player)) {
             WarfareWorldData worldData = WarfareWorldData.get(player.serverLevel());
             Map<String, WarfareWorldData.KitInfo> target = msg.team.equals("BLUE") ? worldData.blueKits : worldData.redKits;
             msg.kits.forEach((name, tag) -> {

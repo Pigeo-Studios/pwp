@@ -30,8 +30,8 @@ public class VotingManager {
             log.warn("Cannot start voting while a match or another vote is active");
             return;
         }
-        if (!com.pwp.coreserver.CoreServerApi.canStartNewMatch()) {
-            String reason = com.pwp.coreserver.CoreServerApi.getMatchPolicyReason();
+        if (!com.pwp.api.core.MatchPolicy.canStartNewMatch()) {
+            String reason = com.pwp.api.core.MatchPolicy.reason();
             LobbyMod.serverBroadcast("§e[PWP] §cНовые матчи приостановлены" + (reason != null && !reason.isEmpty() ? ": " + reason : ""));
             log.info("Voting start blocked by match policy");
             return;

@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,7 +23,7 @@ public class PacketDebugFill {
    public static void handle(PacketDebugFill msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
-         if (player != null && player.isCreative()) {
+         if (player != null && PwpPermissions.isAdmin(player)) {
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
             String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "BLUE";

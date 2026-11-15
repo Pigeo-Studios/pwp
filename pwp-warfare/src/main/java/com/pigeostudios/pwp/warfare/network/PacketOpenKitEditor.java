@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.*;
@@ -42,7 +43,7 @@ public class PacketOpenKitEditor {
          .enqueueWork(
             () -> {
                ServerPlayer player = ctx.get().getSender();
-               if (player != null && player.isCreative()) {
+               if (player != null && PwpPermissions.isAdmin(player)) {
                   WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
                   final WarfareWorldData.KitInfo kit = msg.team.equals("BLUE") ? data.blueKits.get(msg.kitName) : data.redKits.get(msg.kitName);
                   if (kit != null) {

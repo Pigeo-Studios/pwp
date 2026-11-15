@@ -6,7 +6,7 @@ import com.pigeostudios.pwp.warfare.network.PacketRadioVoiceActivity;
 import com.pigeostudios.pwp.warfare.network.PacketVoiceActivity;
 import com.pigeostudios.pwp.warfare.network.PacketVoiceChannelState.Channel;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
 import de.maxhenkel.voicechat.api.Position;
 import de.maxhenkel.voicechat.api.VoicechatApi;
@@ -290,28 +290,24 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
       }
    }
 
+   /**
+    * Мут из кэша; устаревшее значение обновляется в фоне (поток voicechat не ждёт HTTP).
+    * Пока ответа ещё не было — игрок не замучен (как и раньше при недоступном core-service).
+    */
    private static boolean isPlayerVoiceMuted(UUID playerUuid) {
       long now = System.currentTimeMillis();
       Long lastCheck = mutedCacheTimestamp.get(playerUuid);
-      if (lastCheck != null && now - lastCheck < MUTE_CACHE_TTL_MS) {
-         return mutedCache.getOrDefault(playerUuid, false);
+      if (lastCheck == null || now - lastCheck >= MUTE_CACHE_TTL_MS) {
+         // Метка ставится сразу — повторные пакеты голоса не плодят запросы, пока идёт этот
+         mutedCacheTimestamp.put(playerUuid, now);
+         CoreApi.getVoiceMute(playerUuid.toString()).thenAccept(result -> {
+            JsonObject data = CoreApi.isSuccess(result) ? CoreApi.dataObject(result) : null;
+            if (data != null) {
+               mutedCache.put(playerUuid, data.has("muted") && data.get("muted").getAsBoolean());
+            }
+         });
       }
-      try {
-         JsonObject result = CoreServerApi.getVoiceMute(playerUuid.toString());
-         if (result != null && result.has("success") && result.get("success").getAsBoolean()
-                 && result.has("data") && !result.get("data").isJsonNull()) {
-            JsonObject data = result.getAsJsonObject("data");
-            boolean muted = data.has("muted") && data.get("muted").getAsBoolean();
-            mutedCache.put(playerUuid, muted);
-            mutedCacheTimestamp.put(playerUuid, now);
-            return muted;
-         }
-      } catch (Exception e) {
-         System.err.println("[PWP Warfare] Voice mute check failed for " + playerUuid + ": " + e);
-      }
-      mutedCache.put(playerUuid, false);
-      mutedCacheTimestamp.put(playerUuid, now);
-      return false;
+      return mutedCache.getOrDefault(playerUuid, false);
    }
 
    public static void invalidateMuteCache(UUID playerUuid) {

@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
@@ -34,7 +35,7 @@ public class PacketDebugSpawnRally {
    public static void handle(PacketDebugSpawnRally msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
           ServerPlayer player = ctx.get().getSender();
-          if (player != null && player.isCreative() && player.hasPermissions(2)) {
+          if (player != null && PwpPermissions.isAdmin(player)) {
             BlockPos pos = player.blockPosition();
             WarfareWorldData data = WarfareWorldData.get(player.serverLevel().getServer().overworld());
             Scoreboard scoreboard = player.getServer().getScoreboard();

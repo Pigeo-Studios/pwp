@@ -24,7 +24,7 @@ dependencies {
 }
 
 def pwpModules = [
-    'pwp-core-server', 'pwp-core-client', 'pwp-cosmetics', 'pwp-limits',
+    'pwp-api', 'pwp-core-server', 'pwp-core-client', 'pwp-cosmetics', 'pwp-limits',
     'pwp-lobby', 'pwp-medicine', 'pwp-movement', 'pwp-warfare', 'pwp-blast-protection',
     'sbwchunkload'
 ]
@@ -92,8 +92,11 @@ tasks.register('obfuscatePwpMods', JavaExec) {
 
         // Библиотеки: SRG Minecraft+Forge, прод-моды, gson/slf4j, JRE
         def libs = [findSrgJar(forgeVersion)] + findProdModJars() + configurations.obfuscationLibs.files
-        def jmod = new File(System.getProperty('java.home'), 'jmods/java.base.jmod')
-        if (jmod.isFile()) libs += jmod
+        // java.net.http — модуль JDK, которым пользуется CoreApi (pwp-api)
+        ['java.base', 'java.net.http'].each { name ->
+            def jmod = new File(System.getProperty('java.home'), "jmods/${name}.jmod")
+            if (jmod.isFile()) libs += jmod
+        }
         libs.each { f ->
             sb.append("-libraryjars '${f.absolutePath.replace('\\', '/')}'\n")
         }

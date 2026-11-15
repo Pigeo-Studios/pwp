@@ -6,7 +6,10 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.ServerThread;
+import java.util.concurrent.CompletableFuture;
 import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -22,6 +25,7 @@ import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.NetworkEvent.Context;
 
 public class PacketOpenFactionKitEditor {
+   private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(PacketOpenFactionKitEditor.class);
    private final String faction;
    private final String kitName;
 
@@ -44,13 +48,23 @@ public class PacketOpenFactionKitEditor {
          .enqueueWork(
             () -> {
                 ServerPlayer player = ctx.get().getSender();
-                if (player != null && player.isCreative()) {
-                   WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                   WarfareWorldData.KitInfo kit = null;
-                   String kitTeam = "BLUE";
-
+                if (player != null && PwpPermissions.isAdmin(player)) {
                    // API — источник истины: в памяти (blueKits/redKits) могут лежать устаревшие NBT-киты
-                   kit = loadFromApi(msg.faction, msg.kitName);
+                   ServerThread.thenOnServer(loadFromApi(msg.faction, msg.kitName), player.server,
+                      apiKit -> openEditor(player, msg, apiKit));
+                }
+            }
+         );
+      ctx.get().setPacketHandled(true);
+   }
+
+   /** Открывает редактор кита на главном потоке; apiKit — кит из API или null (фолбэк на память). */
+   private static void openEditor(ServerPlayer player, PacketOpenFactionKitEditor msg, WarfareWorldData.KitInfo apiKit) {
+      if (player.hasDisconnected()) return;
+      {
+                   WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                   WarfareWorldData.KitInfo kit = apiKit;
+                   String kitTeam = "BLUE";
                    if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
                    else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
 
@@ -129,23 +143,19 @@ public class PacketOpenFactionKitEditor {
                          }
                       }
                   );
-               }
-            }
-         );
-      ctx.get().setPacketHandled(true);
+      }
    }
 
-   private static WarfareWorldData.KitInfo loadFromApi(String faction, String kitName) {
-      try {
-         JsonObject response = CoreServerApi.getFactionKit(faction, kitName);
-         if (response != null && response.has("data")) {
-            JsonObject data = response.getAsJsonObject("data");
-            if (data != null && data.has("kitName")) {
-               return WarfareWorldData.KitInfo.loadFromJson(data);
-            }
+   private static CompletableFuture<WarfareWorldData.KitInfo> loadFromApi(String faction, String kitName) {
+      return CoreApi.getFactionKit(faction, kitName).thenApply(response -> {
+         JsonObject data = CoreApi.dataObject(response);
+         if (data == null || !data.has("kitName")) return null;
+         try {
+            return WarfareWorldData.KitInfo.loadFromJson(data);
+         } catch (RuntimeException e) {
+            LOGGER.warn("Кит {}/{} из API не разобран", faction, kitName, e);
+            return null;
          }
-      } catch (Exception e) {
-      }
-      return null;
+      });
    }
 }

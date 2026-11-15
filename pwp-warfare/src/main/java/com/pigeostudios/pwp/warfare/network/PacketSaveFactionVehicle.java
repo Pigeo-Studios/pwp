@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.ServerThread;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -72,7 +74,7 @@ public class PacketSaveFactionVehicle {
     public static void handle(PacketSaveFactionVehicle msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
-            if (player != null && player.isCreative()) {
+            if (player != null && PwpPermissions.isAdmin(player)) {
                 JsonArray itemsArray = new JsonArray();
                 for (int i = 0; i < 33; i++) {
                     ItemStack stack = msg.inventory[i];
@@ -103,8 +105,13 @@ public class PacketSaveFactionVehicle {
                 payload.addProperty("category", msg.category);
                 payload.addProperty("inventory", itemsArray.toString());
 
-                CoreServerApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload);
-                player.displayClientMessage(Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
+                ServerThread.thenOnServer(CoreApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload), player.server, resp -> {
+                    if (resp == null) {
+                        player.displayClientMessage(Component.literal("§cCore API: техника не сохранена"), true);
+                    } else {
+                        player.displayClientMessage(Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
+                    }
+                });
             }
         });
         ctx.get().setPacketHandled(true);

@@ -7,7 +7,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestData;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.network.AdminActions;
+import com.pwp.coreclient.network.PacketAction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import com.pwp.coreclient.gui.components.PWPButton;
@@ -145,15 +146,9 @@ public class SkinListScreen extends Screen {
     }
 
     private void deleteSkin(String skinId) {
-        new Thread(() -> {
-            try {
-                CoreAPI.deleteSkin(skinId);
-                Thread.sleep(200);
-                Minecraft.getInstance().submit(this::loadSkins);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }, "PWP-Skin-Delete").start();
+        JsonObject params = new JsonObject();
+        params.addProperty("skinId", skinId);
+        AdminActions.send(PacketAction.DELETE_SKIN, params, r -> loadSkins());
     }
 
     @Override

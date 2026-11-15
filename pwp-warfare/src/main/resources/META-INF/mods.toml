@@ -41,3 +41,10 @@ mandatory=true
 versionRange="[1.0,)"
 ordering="BEFORE"
 side="SERVER"
+
+[[dependencies.pwpwarfare]]
+    modId="pwpapi"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

@@ -4,7 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
 import net.minecraftforge.fml.ModList;
 import com.pigeostudios.pwp.warfare.client.ClientConfigRegistry;
 import com.pigeostudios.pwp.warfare.command.ModCommands;
@@ -214,30 +215,12 @@ public class WarfareMod {
          }
 
            if (ModList.get().isLoaded("pwpcore")) {
-             try {
-                String[] factions = {data.blueFaction, data.redFaction};
-                String[] teams = {"BLUE", "RED"};
-                for (int i = 0; i < 2; i++) {
-                   String faction = factions[i];
-                   if (faction == null || faction.isEmpty() || faction.equals("none")) continue;
-                    JsonObject response = CoreServerApi.getFactionKits(faction);
-                   if (response != null && response.has("data")) {
-                      data.loadKitsFromApi(teams[i], response);
-                      LOGGER.info("Loaded {} kits from API for faction {} on team {}",
-                         response.getAsJsonArray("data").size(), faction, teams[i]);
-                   }
-                    JsonObject vehResponse = CoreServerApi.getFactionVehicles(faction);
-                   if (vehResponse != null && vehResponse.has("data")) {
-                      data.loadFactionVehiclesFromApi(teams[i], vehResponse);
-                      LOGGER.info("Loaded faction vehicles from API for faction {} on team {}", faction, teams[i]);
-                   }
-                }
-             } catch (Exception e) {
-                LOGGER.warn("Failed to load kits/vehicles from API: {}", e.getMessage());
-             }
-          } else {
-             LOGGER.info("Core API not available, using NBT-based kits/vehicles");
-          }
+              // Киты и пулы техники — из API асинхронно; применяются на главном потоке,
+              // задолго до конца фазы ожидания (300 с)
+              loadFactionDataAsync(level, data);
+           } else {
+              LOGGER.info("Core API not available, using NBT-based kits/vehicles");
+           }
 
           if (root.has("vehicleSpawners")) {
              JsonObject vsObj = root.getAsJsonObject("vehicleSpawners");
@@ -309,6 +292,40 @@ public class WarfareMod {
           PacketHandler.sendToAllClients(level, data);
        } catch (IOException e) {
           LOGGER.error("Failed to read map_config.json", e);
+       }
+    }
+
+    /** Загрузка китов и техники фракций обеих команд из core-service (без блокировки тика). */
+    private static void loadFactionDataAsync(ServerLevel level, WarfareWorldData data) {
+       String[] factions = {data.blueFaction, data.redFaction};
+       String[] teams = {"BLUE", "RED"};
+       for (int i = 0; i < 2; i++) {
+          String faction = factions[i];
+          String team = teams[i];
+          if (faction == null || faction.isEmpty() || faction.equals("none")) continue;
+          ServerThread.thenOnServer(CoreApi.getFactionKits(faction), level.getServer(), response -> {
+             if (response == null || !response.has("data")) {
+                LOGGER.warn("Kits for faction {} not loaded from API", faction);
+                return;
+             }
+             WarfareWorldData current = WarfareWorldData.get(level);
+             current.loadKitsFromApi(team, response);
+             current.setDirty();
+             PacketHandler.sendToAllClients(level, current);
+             LOGGER.info("Loaded {} kits from API for faction {} on team {}",
+                response.getAsJsonArray("data").size(), faction, team);
+          });
+          ServerThread.thenOnServer(CoreApi.getFactionVehicles(faction), level.getServer(), response -> {
+             if (response == null || !response.has("data")) {
+                LOGGER.warn("Faction vehicles for {} not loaded from API", faction);
+                return;
+             }
+             WarfareWorldData current = WarfareWorldData.get(level);
+             current.loadFactionVehiclesFromApi(team, response);
+             current.setDirty();
+             PacketHandler.sendToAllClients(level, current);
+             LOGGER.info("Loaded faction vehicles from API for faction {} on team {}", faction, team);
+          });
        }
     }
 

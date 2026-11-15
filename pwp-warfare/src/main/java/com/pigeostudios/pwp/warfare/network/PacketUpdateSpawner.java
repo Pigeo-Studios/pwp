@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
@@ -40,7 +41,7 @@ public class PacketUpdateSpawner {
    public static void handle(PacketUpdateSpawner msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
-          if (player != null && player.isCreative() && player.level().getBlockEntity(msg.pos) instanceof VehicleSpawnerBlockEntity spawner) {
+          if (player != null && PwpPermissions.isAdmin(player) && player.level().getBlockEntity(msg.pos) instanceof VehicleSpawnerBlockEntity spawner) {
              spawner.respawnTimeSettings = msg.respawnTime;
              spawner.initialTimeSettings = msg.initialTime;
              spawner.vehicleIdString = msg.vehicleId;

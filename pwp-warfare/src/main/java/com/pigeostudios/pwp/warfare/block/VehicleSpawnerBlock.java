@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.block;
 
+import com.pwp.api.security.PwpPermissions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,15 +36,15 @@ public class VehicleSpawnerBlock extends BaseEntityBlock {
       return new VehicleSpawnerBlockEntity(pos, state);
    }
 
-   // Открывает меню спаунера техники (только для креативного режима)
+   // Открывает меню спаунера техники (только админ, op 2+)
    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
       if (!level.isClientSide) {
-         if (player.isCreative()) {
+         if (PwpPermissions.isAdmin(player)) {
             if (level.getBlockEntity(pos) instanceof VehicleSpawnerBlockEntity spawner) {
                NetworkHooks.openScreen((ServerPlayer)player, spawner, pos);
             }
          } else {
-             player.displayClientMessage(Component.literal("Доступ запрещён: только креатив"), true);
+             player.displayClientMessage(Component.literal("Доступ запрещён: только администратор"), true);
          }
       }
 

@@ -1,20 +1,13 @@
 package com.pwp.coreserver;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.stream.Collectors;
 
 public class BanCommand {
 
@@ -41,41 +34,17 @@ public class BanCommand {
     }
 
     private static int ban(CommandContext<CommandSourceStack> ctx, String target, String duration, String reason) {
-        ctx.getSource().getServer().execute(() -> {
-            new Thread(() -> {
-                try {
-                    JsonObject body = new JsonObject();
-                    body.addProperty("target", target);
-                    body.addProperty("reason", reason);
-                    body.addProperty("duration", duration);
-                    String result = postJson("/api/v1/launcher/ban", body.toString());
-                    JsonObject json = JsonParser.parseString(result).getAsJsonObject();
-                    ctx.getSource().sendSuccess(() ->
-                        Component.literal(json.has("error") ? "\u00A7c" + json.get("error").getAsString()
-                            : "\u00A7a" + target + " banned (" + (json.has("duration") ? json.get("duration").getAsString() : duration) + ")"),
-                        true);
-                } catch (Exception e) {
-                    ctx.getSource().sendFailure(Component.literal("\u00A7cBan failed: " + e.getMessage()));
-                }
-            }, "PWP-Ban").start();
+        CommandSourceStack source = ctx.getSource();
+        ServerThread.thenOnServer(CoreApi.banPlayer(target, reason, duration), source.getServer(), json -> {
+            if (json == null) {
+                source.sendFailure(Component.literal("§cBan failed: core-service недоступен или отклонил запрос"));
+            } else if (json.has("error")) {
+                source.sendFailure(Component.literal("§c" + json.get("error").getAsString()));
+            } else {
+                String shown = json.has("duration") ? json.get("duration").getAsString() : duration;
+                source.sendSuccess(() -> Component.literal("§a" + target + " banned (" + shown + ")"), true);
+            }
         });
         return 1;
-    }
-
-    static String postJson(String path, String body) throws Exception {
-        URL url = new URL(CoreServerMod.API_BASE + path);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Authorization", "Bearer " + CoreServerMod.API_KEY);
-        conn.setDoOutput(true);
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(10000);
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(body.getBytes());
-        }
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-            return r.lines().collect(Collectors.joining("\n"));
-        }
     }
 }

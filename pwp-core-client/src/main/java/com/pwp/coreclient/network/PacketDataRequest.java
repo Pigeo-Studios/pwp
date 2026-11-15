@@ -2,14 +2,21 @@ package com.pwp.coreclient.network;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.pwp.coreserver.CoreServerApi;
+import com.google.gson.JsonParseException;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.network.PacketDistributor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/** Клиент → сервер: запрос данных core-service (профиль, скины, лидерборд, фракции, техника). */
 public class PacketDataRequest {
+    private static final Logger LOG = LoggerFactory.getLogger(PacketDataRequest.class);
     private static final Gson GSON = new Gson();
     private final String type;
     private final String paramsJson;
@@ -32,62 +39,56 @@ public class PacketDataRequest {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
-
-            String result = fetchData(msg.type, msg.paramsJson, player);
-
-            PacketHandler.INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new PacketDataResponse(msg.type, result));
+            // HTTP — в фоне, ответ игроку — с главного потока
+            ServerThread.thenOnServer(fetchData(msg.type, msg.paramsJson, player), player.server, result -> {
+                if (player.hasDisconnected()) return;
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                        new PacketDataResponse(msg.type, result != null ? result.toString() : "{}"));
+            });
         });
         ctx.get().setPacketHandled(true);
     }
 
-    private static String fetchData(String type, String params, ServerPlayer player) {
-        try {
-            switch (type) {
-                case "profile": {
-                    JsonObject data = CoreServerApi.loadPlayer(player.getStringUUID());
-                    return data != null ? data.toString() : "{}";
-                }
-                case "skins": {
-                    JsonObject data = CoreServerApi.getSkins();
-                    return data != null ? data.toString() : "{}";
-                }
-                case "leaderboard": {
-                    JsonObject p = GSON.fromJson(params, JsonObject.class);
-                    String orderBy = p.has("orderBy") ? p.get("orderBy").getAsString() : "kills";
-                    int page = p.has("page") ? p.get("page").getAsInt() : 1;
-                    JsonObject data = CoreServerApi.getLeaderboard(orderBy, page, 20);
-                    return data != null ? data.toString() : "{}";
-                }
-                case "factions": {
-                    JsonObject data = CoreServerApi.getFactions();
-                    return data != null ? data.toString() : "{}";
-                }
-                case "factionVehicles": {
-                    JsonObject p = GSON.fromJson(params, JsonObject.class);
-                    String faction = p.has("faction") ? p.get("faction").getAsString() : "";
-                    if (!faction.isEmpty()) {
-                        JsonObject data = CoreServerApi.getFactionVehicles(faction);
-                        return data != null ? data.toString() : "{}";
-                    }
-                    return "{}";
-                }
-                case "factionVehicle": {
-                    JsonObject p = GSON.fromJson(params, JsonObject.class);
-                    String faction = p.has("faction") ? p.get("faction").getAsString() : "";
-                    String vehicle = p.has("vehicle") ? p.get("vehicle").getAsString() : "";
-                    if (!faction.isEmpty() && !vehicle.isEmpty()) {
-                        JsonObject data = CoreServerApi.getFactionVehicle(faction, vehicle);
-                        return data != null ? data.toString() : "{}";
-                    }
-                    return "{}";
-                }
-                default:
-                    return "{}";
+    private static CompletableFuture<JsonObject> fetchData(String type, String params, ServerPlayer player) {
+        JsonObject p = parse(params);
+        switch (type) {
+            case "profile":
+                return CoreApi.loadPlayer(player.getStringUUID());
+            case "skins":
+                return CoreApi.getSkins();
+            case "leaderboard": {
+                String orderBy = p.has("orderBy") ? p.get("orderBy").getAsString() : "kills";
+                int page = p.has("page") ? p.get("page").getAsInt() : 1;
+                return CoreApi.getLeaderboard(orderBy, page, 20);
             }
-        } catch (Exception e) {
-            return "{}";
+            case "factions":
+                return CoreApi.getFactions();
+            case "factionVehicles": {
+                String faction = p.has("faction") ? p.get("faction").getAsString() : "";
+                return faction.isEmpty() ? empty() : CoreApi.getFactionVehicles(faction);
+            }
+            case "factionVehicle": {
+                String faction = p.has("faction") ? p.get("faction").getAsString() : "";
+                String vehicle = p.has("vehicle") ? p.get("vehicle").getAsString() : "";
+                return faction.isEmpty() || vehicle.isEmpty() ? empty() : CoreApi.getFactionVehicle(faction, vehicle);
+            }
+            default:
+                return empty();
+        }
+    }
+
+    private static CompletableFuture<JsonObject> empty() {
+        return CompletableFuture.completedFuture(new JsonObject());
+    }
+
+    private static JsonObject parse(String params) {
+        if (params == null || params.isEmpty()) return new JsonObject();
+        try {
+            JsonObject o = GSON.fromJson(params, JsonObject.class);
+            return o != null ? o : new JsonObject();
+        } catch (JsonParseException e) {
+            LOG.warn("Некорректные параметры запроса данных: {}", params, e);
+            return new JsonObject();
         }
     }
 }

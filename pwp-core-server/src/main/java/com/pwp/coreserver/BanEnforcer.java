@@ -3,6 +3,8 @@ package com.pwp.coreserver;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,12 +40,7 @@ public class BanEnforcer {
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             players.add(new PlayerRef(p.getStringUUID(), p.getGameProfile().getName(), safeIp(p)));
         }
-        new Thread(() -> {
-            List<Kick> kicks = fetchKicks(players);
-            if (!kicks.isEmpty()) {
-                server.execute(() -> kickAll(server, kicks));
-            }
-        }, "pwp-ban-check").start();
+        ServerThread.thenOnServer(fetchKicks(players), server, kicks -> kickAll(server, kicks));
     }
 
     @SubscribeEvent
@@ -53,26 +50,24 @@ public class BanEnforcer {
         MinecraftServer server = player.server;
         List<PlayerRef> one = new ArrayList<>();
         one.add(new PlayerRef(player.getStringUUID(), player.getGameProfile().getName(), safeIp(player)));
-        new Thread(() -> {
-            List<Kick> kicks = fetchKicks(one);
-            if (!kicks.isEmpty()) {
-                server.execute(() -> kickAll(server, kicks));
-            }
-        }, "pwp-ban-check-join").start();
+        ServerThread.thenOnServer(fetchKicks(one), server, kicks -> kickAll(server, kicks));
     }
 
-    private static List<Kick> fetchKicks(List<PlayerRef> players) {
+    private static java.util.concurrent.CompletableFuture<List<Kick>> fetchKicks(List<PlayerRef> players) {
+        JsonArray arr = new JsonArray();
+        for (PlayerRef ref : players) {
+            JsonObject o = new JsonObject();
+            o.addProperty("uuid", ref.uuid);
+            o.addProperty("nickname", ref.name);
+            o.addProperty("ip", ref.ip != null ? ref.ip : "");
+            arr.add(o);
+        }
+        return CoreApi.checkBans(arr).thenApply(BanEnforcer::parseKicks);
+    }
+
+    private static List<Kick> parseKicks(JsonObject resp) {
         List<Kick> kicks = new ArrayList<>();
         try {
-            JsonArray arr = new JsonArray();
-            for (PlayerRef ref : players) {
-                JsonObject o = new JsonObject();
-                o.addProperty("uuid", ref.uuid);
-                o.addProperty("nickname", ref.name);
-                o.addProperty("ip", ref.ip != null ? ref.ip : "");
-                arr.add(o);
-            }
-            JsonObject resp = CoreServerApi.checkBans(arr);
             if (resp == null || !resp.has("data")) return kicks;
             JsonObject data = resp.getAsJsonObject("data");
             if (!data.has("kicks")) return kicks;
@@ -84,7 +79,7 @@ public class BanEnforcer {
                 kicks.add(new Kick(k.get("uuid").getAsString(), reason));
             }
         } catch (Exception e) {
-            CoreServerMod.log.warn("ban-check failed: {}", e.getMessage());
+            CoreServerMod.log.warn("ban-check: не удалось разобрать ответ", e);
         }
         return kicks;
     }
@@ -105,7 +100,8 @@ public class BanEnforcer {
     private static String safeIp(ServerPlayer p) {
         try {
             return p.getIpAddress();
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            CoreServerMod.log.warn("Не удалось получить IP игрока {}", p.getGameProfile().getName(), e);
             return null;
         }
     }

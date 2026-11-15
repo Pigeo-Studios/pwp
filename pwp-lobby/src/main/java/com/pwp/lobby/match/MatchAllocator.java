@@ -2,7 +2,9 @@ package com.pwp.lobby.match;
 
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
-import com.pwp.coreserver.CoreServerApi;
+import net.minecraft.server.MinecraftServer;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
 import com.pwp.coreserver.TransferHosts;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerConfig;
@@ -230,8 +232,14 @@ public class MatchAllocator {
      * Матч-сервер шлёт heartbeat с портом — сверяем по порту.
      */
     private static void updateMatchOnlineFromCore() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        // Запрос — в фоне, применение к activeMatches — на главном потоке
+        ServerThread.thenOnServer(CoreApi.fetchServersStatus(), server, MatchAllocator::applyServersStatus);
+    }
+
+    private static void applyServersStatus(JsonObject resp) {
         try {
-            JsonObject resp = CoreServerApi.fetchServersStatus();
             if (resp == null || !resp.has("success") || !resp.get("success").getAsBoolean()) return;
             JsonObject data = resp.getAsJsonObject("data");
             if (data == null || !data.has("servers")) return;
@@ -250,8 +258,8 @@ public class MatchAllocator {
                     if (m.has("redScore")) mi.redTickets = m.get("redScore").getAsInt();
                 }
             }
-        } catch (Exception e) {
-            // тик не ломаем из-за опроса статуса
+        } catch (RuntimeException e) {
+            log.warn("Некорректный ответ /network/status", e);
         }
     }
 

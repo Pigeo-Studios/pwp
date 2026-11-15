@@ -1,7 +1,9 @@
 package com.pwp.lobby;
 
 import com.google.gson.JsonObject;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.core.Heartbeat;
+import com.pwp.api.core.MatchPolicy;
 
 import com.pwp.coreclient.network.LobbyStatePacket;
 import com.pwp.coreclient.network.PacketHandler;
@@ -119,8 +121,9 @@ public class LobbyMod {
             stateBroadcastTicks = 0;
             try {
                 broadcastLobbyState();
-            } catch (Exception e) {
-                // не ломаем тик из-за рассылки
+            } catch (RuntimeException e) {
+                // тик не ломаем, но причину видно в логе
+                log.warn("Не удалось разослать состояние лобби", e);
             }
         }
 
@@ -130,17 +133,17 @@ public class LobbyMod {
             try {
                 MatchInfo mi = MatchAllocator.getActiveMatch();
                 if (mi != null) {
-                    CoreServerApi.sendHeartbeat("lobby", online,
+                    CoreApi.sendHeartbeat(new Heartbeat("lobby", online).match(
                         mi.mapName, mi.mode,
                         mi.blueFaction, mi.redFaction,
                         mi.blueTickets, mi.redTickets,
                         mi.phase.name(), mi.maxPlayers,
-                        mi.startedAt, mi.playerCount);
+                        mi.startedAt, mi.playerCount));
                 } else {
-                    CoreServerApi.sendHeartbeat("lobby", online);
+                    CoreApi.sendHeartbeat(new Heartbeat("lobby", online));
                 }
-            } catch (Exception e) {
-                // silently ignore
+            } catch (RuntimeException e) {
+                log.warn("Не удалось отправить heartbeat лобби", e);
             }
         }
     }
@@ -290,7 +293,7 @@ public class LobbyMod {
 
         return new LobbyStatePacket(
                 phase, remaining, MatchAllocator.getLobbyPlayerCount(), totalVotes,
-                leading, CoreServerApi.canStartNewMatch(), CoreServerApi.getMatchPolicyReason(), mode,
+                leading, MatchPolicy.canStartNewMatch(), MatchPolicy.reason(), mode,
                 requestOpen,
                 mapNames, mapDisplayNames, mapDescriptions, maxPlayers, voteCounts, worldPaths,
                 blueFactions, redFactions,

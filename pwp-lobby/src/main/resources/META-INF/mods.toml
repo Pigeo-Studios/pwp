@@ -16,3 +16,10 @@ Lobby server mod for PWP. Player hub, map voting, server management.
     versionRange="[1.0,)"
     ordering="NONE"
     side="SERVER"
+
+[[dependencies.pwp_lobby]]
+    modId="pwpapi"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

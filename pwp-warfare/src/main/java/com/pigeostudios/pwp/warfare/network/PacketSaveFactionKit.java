@@ -6,7 +6,8 @@ import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.security.PwpPermissions;
 import java.util.*;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
@@ -115,7 +116,7 @@ public class PacketSaveFactionKit {
    public static void handle(PacketSaveFactionKit msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
-         if (player != null && player.isCreative() && player.containerMenu instanceof KitEditorMenu menu) {
+         if (player != null && PwpPermissions.isAdmin(player) && player.containerMenu instanceof KitEditorMenu menu) {
             WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
 
             JsonArray itemsArray = new JsonArray();
@@ -163,10 +164,12 @@ public class PacketSaveFactionKit {
             kitPayload.addProperty("items", itemsArray.toString());
             kitPayload.addProperty("slotSkins", slotSkinsJson.toString());
 
-            JsonObject saveResult = CoreServerApi.saveFactionKit(msg.faction, msg.kitName, kitPayload);
-            if (saveResult == null) {
-                LogUtils.getLogger().warn("Core API save failed for faction kit {}/{}", msg.faction, msg.kitName);
-            }
+            // Сохранение в API — в фоне; локальная копия кита ниже обновляется сразу
+            CoreApi.saveFactionKit(msg.faction, msg.kitName, kitPayload).thenAccept(saveResult -> {
+                if (saveResult == null) {
+                    LogUtils.getLogger().warn("Core API save failed for faction kit {}/{}", msg.faction, msg.kitName);
+                }
+            });
 
             WarfareWorldData.KitInfo kit = null;
             if (msg.team.equalsIgnoreCase("BLUE")) {

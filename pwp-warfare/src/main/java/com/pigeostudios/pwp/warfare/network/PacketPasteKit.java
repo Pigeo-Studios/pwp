@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
+import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.nbt.CompoundTag;
@@ -34,7 +35,7 @@ public class PacketPasteKit {
    public static void handle(PacketPasteKit msg, Supplier<Context> ctx) {
       ctx.get().enqueueWork(() -> {
          ServerPlayer player = ctx.get().getSender();
-         if (player != null && player.isCreative()) {
+         if (player != null && PwpPermissions.isAdmin(player)) {
             WarfareWorldData worldData = WarfareWorldData.get(player.serverLevel());
             WarfareWorldData.KitInfo newKit = WarfareWorldData.KitInfo.load(msg.tag);
             newKit.name = msg.kitName;

@@ -7,7 +7,8 @@ import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleEditorScreen;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestData;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.network.AdminActions;
+import com.pwp.coreclient.network.PacketAction;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
@@ -176,16 +177,15 @@ public class FactionVehicleListScreen extends Screen {
     }
 
     private void deleteVehicle(String vehicleName) {
-        new Thread(() -> {
-            try {
-                CoreAPI.deleteFactionVehicle(faction, vehicleName);
-            } catch (Exception ignored) {}
-            Minecraft.getInstance().submit(() -> {
-                vehicles.removeIf(v -> v.vehicleName.equals(vehicleName));
-                updateFiltered();
-                repositionButtons();
-            });
-        }, "PWP-FactionVehicle-Delete").start();
+        JsonObject params = new JsonObject();
+        params.addProperty("faction", faction);
+        params.addProperty("vehicleName", vehicleName);
+        AdminActions.send(PacketAction.DELETE_FACTION_VEHICLE, params, r -> {
+            if (!r.success()) return;
+            vehicles.removeIf(v -> v.vehicleName.equals(vehicleName));
+            updateFiltered();
+            repositionButtons();
+        });
     }
 
     @Override

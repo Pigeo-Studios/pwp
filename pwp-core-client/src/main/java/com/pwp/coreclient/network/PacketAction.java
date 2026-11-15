@@ -2,21 +2,47 @@ package com.pwp.coreclient.network;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.pwp.coreserver.CoreServerApi;
+import com.google.gson.JsonParseException;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.ServerThread;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.network.PacketDistributor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * Клиент → сервер: админ-действие над данными core-service (редакторы скинов и техники).
+ *
+ * <p>Все действия требуют прав {@link PwpPermissions#isAdmin} (op 2+) — проверка на сервере.
+ * HTTP выполняется асинхронно; результат возвращается клиенту ответом
+ * {@link PacketDataResponse} с типом {@code actionResult}: {@code {action, success, error}}.
+ *
+ * <p>Экипировка косметики сюда больше не входит: она в pwp-cosmetics (PacketCosmeticEquip)
+ * с проверкой владения. Прежний equipCosmetic выдавал игроку любой скин по skinId от клиента.
+ */
 public class PacketAction {
+    private static final Logger LOG = LoggerFactory.getLogger(PacketAction.class);
     private static final Gson GSON = new Gson();
+
+    public static final String SAVE_SKIN = "saveSkin";
+    public static final String DELETE_SKIN = "deleteSkin";
+    public static final String DELETE_FACTION_VEHICLE = "deleteFactionVehicle";
+
     private final String action;
     private final String paramsJson;
 
     public PacketAction(String action, String paramsJson) {
         this.action = action;
         this.paramsJson = paramsJson;
+    }
+
+    public PacketAction(String action, JsonObject params) {
+        this(action, params.toString());
     }
 
     public static void encode(PacketAction msg, FriendlyByteBuf buf) {
@@ -32,106 +58,70 @@ public class PacketAction {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
-
-            switch (msg.action) {
-                case "equipCosmetic" -> handleEquip(player, msg.paramsJson);
-                case "unequipCosmetic" -> handleUnequip(player, msg.paramsJson);
-                case "saveSkin" -> handleSaveSkin(player, msg.paramsJson);
-                case "deleteSkin" -> handleDeleteSkin(player, msg.paramsJson);
-                case "deleteFactionVehicle" -> handleDeleteFactionVehicle(player, msg.paramsJson);
+            if (!PwpPermissions.isAdmin(player)) {
+                LOG.warn("Игрок {} без прав прислал админ-действие {}", player.getGameProfile().getName(), msg.action);
+                reply(player, msg.action, false, "Недостаточно прав");
+                return;
             }
+            JsonObject params;
+            try {
+                params = GSON.fromJson(msg.paramsJson, JsonObject.class);
+            } catch (JsonParseException e) {
+                LOG.warn("Некорректные параметры действия {}", msg.action, e);
+                reply(player, msg.action, false, "Некорректные параметры");
+                return;
+            }
+            CompletableFuture<JsonObject> call = start(msg.action, params == null ? new JsonObject() : params);
+            if (call == null) {
+                reply(player, msg.action, false, "Неизвестное действие");
+                return;
+            }
+            ServerThread.thenOnServer(call, player.server, resp -> {
+                String error = resp != null && resp.has("error") && !resp.get("error").isJsonNull()
+                        ? resp.get("error").getAsString() : "core-service недоступен";
+                boolean ok = CoreApi.isSuccess(resp);
+                reply(player, msg.action, ok, ok ? "" : error);
+            });
         });
         ctx.get().setPacketHandled(true);
     }
 
-    private static void handleEquip(ServerPlayer player, String params) {
-        try {
-            JsonObject p = GSON.fromJson(params, JsonObject.class);
-            String uuid = player.getStringUUID();
-            String skinId = p.get("skinId").getAsString();
-            String slotType = p.get("slotType").getAsString();
-            String role = p.has("role") ? p.get("role").getAsString() : "ALL";
-
-            CoreServerApi.grantItem(uuid, skinId, "menu");
-            try { Thread.sleep(200); } catch (InterruptedException ignored) {}
-
-            JsonObject profile = CoreServerApi.loadPlayer(uuid);
-            if (profile != null && profile.has("data")) {
-                JsonObject data = profile.getAsJsonObject("data");
-                if (data.has("cosmetics")) {
-                    for (var e : data.getAsJsonArray("cosmetics")) {
-                        JsonObject c = e.getAsJsonObject();
-                        if (c.get("skinId").getAsString().equals(skinId)) {
-                            CoreServerApi.equipItem(uuid, c.get("itemUuid").getAsString(), slotType, role);
-                            break;
-                        }
-                    }
-                }
-            }
-
-            profile = CoreServerApi.loadPlayer(uuid);
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                new PacketDataResponse("profile", profile != null ? profile.toString() : "{}"));
-        } catch (Exception e) {
-            System.err.println("[PWP] equipCosmetic failed: " + e.getMessage());
+    /** Запускает HTTP-вызов действия; null — неизвестное действие или нет обязательных параметров. */
+    private static CompletableFuture<JsonObject> start(String action, JsonObject p) {
+        switch (action) {
+            case SAVE_SKIN:
+                if (!has(p, "skinId", "name", "slotType", "rarity", "modelPath")) return null;
+                return CoreApi.saveSkin(str(p, "skinId"), str(p, "name"), str(p, "description"),
+                        str(p, "slotType"), str(p, "weaponTag"), str(p, "rarity"), str(p, "modelPath"));
+            case DELETE_SKIN:
+                if (!has(p, "skinId")) return null;
+                return CoreApi.deleteSkin(str(p, "skinId"));
+            case DELETE_FACTION_VEHICLE:
+                if (!has(p, "faction", "vehicleName")) return null;
+                return CoreApi.deleteFactionVehicle(str(p, "faction"), str(p, "vehicleName"));
+            default:
+                return null;
         }
     }
 
-    private static void handleUnequip(ServerPlayer player, String params) {
-        try {
-            JsonObject p = GSON.fromJson(params, JsonObject.class);
-            String uuid = player.getStringUUID();
-            String slotType = p.get("slotType").getAsString();
-            String role = p.has("role") ? p.get("role").getAsString() : "ALL";
-
-            CoreServerApi.unequipItem(uuid, slotType, role);
-
-            JsonObject profile = CoreServerApi.loadPlayer(uuid);
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                new PacketDataResponse("profile", profile != null ? profile.toString() : "{}"));
-        } catch (Exception e) {
-            System.err.println("[PWP] unequipCosmetic failed: " + e.getMessage());
-        }
+    private static void reply(ServerPlayer player, String action, boolean success, String error) {
+        if (player.hasDisconnected()) return;
+        JsonObject result = new JsonObject();
+        result.addProperty("action", action);
+        result.addProperty("success", success);
+        result.addProperty("error", error);
+        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                new PacketDataResponse(PacketDataResponse.ACTION_RESULT, result.toString()));
     }
 
-    private static void handleSaveSkin(ServerPlayer player, String params) {
-        if (!player.isCreative()) return;
-        try {
-            JsonObject p = GSON.fromJson(params, JsonObject.class);
-            CoreServerApi.saveSkin(
-                p.get("skinId").getAsString(),
-                p.get("name").getAsString(),
-                p.has("description") ? p.get("description").getAsString() : "",
-                p.get("slotType").getAsString(),
-                p.has("weaponTag") ? p.get("weaponTag").getAsString() : "",
-                p.get("rarity").getAsString(),
-                p.get("modelPath").getAsString()
-            );
-        } catch (Exception e) {
-            System.err.println("[PWP] saveSkin failed: " + e.getMessage());
+    private static boolean has(JsonObject p, String... keys) {
+        for (String k : keys) {
+            if (!p.has(k) || p.get(k).isJsonNull()) return false;
         }
+        return true;
     }
 
-    private static void handleDeleteSkin(ServerPlayer player, String params) {
-        if (!player.isCreative()) return;
-        try {
-            JsonObject p = GSON.fromJson(params, JsonObject.class);
-            CoreServerApi.deleteSkin(p.get("skinId").getAsString());
-        } catch (Exception e) {
-            System.err.println("[PWP] deleteSkin failed: " + e.getMessage());
-        }
-    }
-
-    private static void handleDeleteFactionVehicle(ServerPlayer player, String params) {
-        if (!player.isCreative()) return;
-        try {
-            JsonObject p = GSON.fromJson(params, JsonObject.class);
-            CoreServerApi.deleteFactionVehicle(
-                p.get("faction").getAsString(),
-                p.get("vehicleName").getAsString()
-            );
-        } catch (Exception e) {
-            System.err.println("[PWP] deleteFactionVehicle failed: " + e.getMessage());
-        }
+    private static String str(JsonObject p, String key) {
+        return p.has(key) && !p.get(key).isJsonNull() ? p.get(key).getAsString() : "";
     }
 }

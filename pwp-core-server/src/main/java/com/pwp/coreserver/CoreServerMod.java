@@ -1,5 +1,6 @@
 package com.pwp.coreserver;
 
+import com.pwp.api.core.CoreApi;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -39,8 +40,8 @@ public class CoreServerMod {
             log.error("Set PWP_API_KEY environment variable or create config/pwpcore.txt");
             return;
         }
-        CoreServerApi.configure(API_BASE, API_KEY);
-        log.info("CoreServerApi configured with base: {}", API_BASE);
+        CoreApi.configure(API_BASE, API_KEY);
+        log.info("CoreApi configured with base: {}", API_BASE);
 
         String dirName = Path.of("").toAbsolutePath().getFileName().toString();
         isMatchServer = dirName.startsWith("match_");

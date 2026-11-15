@@ -3,7 +3,7 @@ package com.pigeostudios.pwp.warfare.stats;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
 import com.pwp.coreserver.TransferHosts;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
@@ -213,10 +213,23 @@ public class MatchStatsTracker {
         }
         match.add("players", playersArr);
 
+        // Сохранение результатов — в фоне: десятки HTTP-запросов не должны блокировать тик.
+        // Экземпляр трекера после reset() больше не меняется, поэтому читать players из потока безопасно.
+        final String winnerTeam = winner;
+        Thread saver = new Thread(() -> persistResults(match, winnerTeam, durationSec), "PWPMatchStatsSave");
+        saver.setDaemon(true);
+        saver.start();
+
+        scheduleServerShutdown(180);
+        reset();
+    }
+
+    /** Отправка матча, наград и статистики игроков в core-service. Только фоновый поток. */
+    private void persistResults(JsonObject match, String winner, int durationSec) {
         if (ModList.get().isLoaded("pwpcore")) {
             log.info("Saving match result to Core API...");
             try {
-                JsonObject response = CoreServerApi.saveMatch(match);
+                JsonObject response = CoreApi.await(CoreApi.saveMatch(match));
                 if (response != null) {
                     log.info("Match saved successfully");
                 } else {
@@ -230,12 +243,12 @@ public class MatchStatsTracker {
                     boolean isWin = ps.team.equals(winner);
 
                     try {
-                        JsonObject rewardResult = CoreServerApi.calculateRewards(
+                        JsonObject rewardResult = CoreApi.await(CoreApi.calculateRewards(
                             ps.uuid, ps.team, winner,
                             ps.kills, 0, ps.vehicleKills,
                             ps.captures, ps.revives, 0,
                             durationSec / 60
-                        );
+                        ));
 
                         if (rewardResult != null && rewardResult.has("data")) {
                             JsonObject data = rewardResult.getAsJsonObject("data");
@@ -245,6 +258,7 @@ public class MatchStatsTracker {
                             throw new Exception("API returned null, using fallback");
                         }
                     } catch (Exception e) {
+                        log.warn("Награды для {} рассчитаны локально (core-service не ответил): {}", ps.nickname, e.getMessage());
                         xp = ps.kills * 50L + ps.vehicleKills * 150L
                             + ps.captures * 100L + ps.revives * 75L
                             + durationSec / 60 * 10L;
@@ -254,9 +268,9 @@ public class MatchStatsTracker {
                         else { xp += 100; coins += 20; }
                     }
 
-                    CoreServerApi.addXp(ps.uuid, xp, "MATCH");
-                    CoreServerApi.addCurrency(ps.uuid, coins, "MATCH_REWARD");
-                    CoreServerApi.checkRank(ps.uuid);
+                    CoreApi.await(CoreApi.addXp(ps.uuid, xp, "MATCH"));
+                    CoreApi.await(CoreApi.addCurrency(ps.uuid, coins, "MATCH_REWARD"));
+                    CoreApi.await(CoreApi.checkRank(ps.uuid));
 
                     JsonObject statsDelta = new JsonObject();
                     statsDelta.addProperty("kills", ps.kills);
@@ -277,7 +291,7 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("vehiclesDestroyed", ps.vehiclesDestroyed);
                     statsDelta.addProperty("airVehiclesDestroyed", ps.airVehiclesDestroyed);
                     statsDelta.addProperty("teamKills", ps.teamKills);
-                    JsonObject saveResult = CoreServerApi.saveStats(ps.uuid, statsDelta);
+                    JsonObject saveResult = CoreApi.await(CoreApi.saveStats(ps.uuid, statsDelta));
                     if (saveResult != null) {
                         log.info("Stats saved for {}: {}k/{}d/{}v/{}vd/{}ad/{}pt",
                             ps.nickname, ps.kills, ps.deaths, ps.vehicleKills,
@@ -293,8 +307,6 @@ public class MatchStatsTracker {
             log.info("pwp_core_client not installed, skipping match save");
         }
 
-        scheduleServerShutdown(180);
-        reset();
     }
 
     public static void scheduleServerShutdown(int delaySeconds) {

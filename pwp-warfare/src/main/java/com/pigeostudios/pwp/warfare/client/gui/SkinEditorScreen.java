@@ -1,7 +1,8 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.google.gson.JsonObject;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.coreclient.network.AdminActions;
+import com.pwp.coreclient.network.PacketAction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import com.pwp.coreclient.gui.components.PWPButton;
@@ -224,8 +225,8 @@ public class SkinEditorScreen extends Screen {
 
     private void save() {
         String name = nameBox.getValue().trim();
-        if (name.isEmpty()) { showMsg("В§eEnter a name!"); return; }
-        if (previewItem.isEmpty()) { showMsg("В§eClick an item in the grid!"); return; }
+        if (name.isEmpty()) { showMsg("§eEnter a name!"); return; }
+        if (previewItem.isEmpty()) { showMsg("§eClick an item in the grid!"); return; }
 
         final String saveSkinId = editSkinId != null ? editSkinId :
             String.valueOf(Math.abs(previewRegistryName.hashCode())) + "_" +
@@ -236,32 +237,30 @@ public class SkinEditorScreen extends Screen {
         final String saveRarity = rarity;
         final String saveRegistry = previewRegistryName;
 
-        showMsg("В§eSaving...");
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.saveSkin(saveSkinId, saveName, "", saveSlot, saveWeapon, saveRarity, saveRegistry);
-                if (result != null && result.has("success") && result.get("success").getAsBoolean())
-                    mc.submit(() -> { showMsg("В§aSaved!"); close(); });
-                else
-                    mc.submit(() -> showMsg("В§c" + (result != null && result.has("error") ? result.get("error").getAsString() : "API error")));
-            } catch (Exception e) {
-                mc.submit(() -> showMsg("В§c" + e.getMessage()));
-            }
-        }).start();
+        showMsg("§eSaving...");
+        JsonObject params = new JsonObject();
+        params.addProperty("skinId", saveSkinId);
+        params.addProperty("name", saveName);
+        params.addProperty("description", "");
+        params.addProperty("slotType", saveSlot);
+        params.addProperty("weaponTag", saveWeapon);
+        params.addProperty("rarity", saveRarity);
+        params.addProperty("modelPath", saveRegistry);
+        AdminActions.send(PacketAction.SAVE_SKIN, params, r -> {
+            if (r.success()) { showMsg("§aSaved!"); close(); }
+            else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+        });
     }
 
     private void delete() {
-        if (editSkinId == null) { showMsg("В§eSave first!"); return; }
-        showMsg("В§eDeleting...");
-        new Thread(() -> {
-            try {
-                CoreAPI.deleteSkin(editSkinId);
-                Thread.sleep(200);
-                mc.submit(() -> { showMsg("В§aDeleted!"); close(); });
-            } catch (Exception e) {
-                mc.submit(() -> showMsg("В§c" + e.getMessage()));
-            }
-        }, "PWP-Skin-Delete").start();
+        if (editSkinId == null) { showMsg("§eSave first!"); return; }
+        showMsg("§eDeleting...");
+        JsonObject params = new JsonObject();
+        params.addProperty("skinId", editSkinId);
+        AdminActions.send(PacketAction.DELETE_SKIN, params, r -> {
+            if (r.success()) { showMsg("§aDeleted!"); close(); }
+            else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+        });
     }
 
     private void showMsg(String msg) { statusMsg = msg; statusTime = System.currentTimeMillis(); }

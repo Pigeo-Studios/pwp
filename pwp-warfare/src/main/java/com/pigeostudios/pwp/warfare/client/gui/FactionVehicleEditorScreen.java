@@ -7,7 +7,6 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestData;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionVehicle;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreclient.CoreAPI;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;

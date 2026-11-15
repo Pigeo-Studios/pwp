@@ -1,6 +1,7 @@
 package com.pwp.cosmetics;
 
-import com.pwp.cosmetics.network.PacketSyncCosmeticEquip;
+import com.pwp.cosmetics.network.PacketCosmeticEquip;
+import com.pwp.cosmetics.network.PacketCosmeticEquipResult;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.NetworkRegistry;
@@ -18,17 +19,18 @@ public class CosmeticsMod {
         initNetwork();
     }
 
+    /** Версия протокола канала. 2 — экипировка по skinId (PacketCosmeticEquip) вместо SNBT от клиента. */
+    private static final String PROTOCOL_VERSION = "2";
+
     private void initNetwork() {
         NETWORK = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(MODID, "main"),
-            () -> "1", "1"::equals, "1"::equals
+            () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals
         );
-        NETWORK.registerMessage(
-            packetId++, PacketSyncCosmeticEquip.class,
-            PacketSyncCosmeticEquip::encode,
-            PacketSyncCosmeticEquip::decode,
-            PacketSyncCosmeticEquip::handle
-        );
+        NETWORK.registerMessage(packetId++, PacketCosmeticEquip.class,
+            PacketCosmeticEquip::encode, PacketCosmeticEquip::decode, PacketCosmeticEquip::handle);
+        NETWORK.registerMessage(packetId++, PacketCosmeticEquipResult.class,
+            PacketCosmeticEquipResult::encode, PacketCosmeticEquipResult::decode, PacketCosmeticEquipResult::handle);
     }
 
 }

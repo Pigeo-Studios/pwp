@@ -4,22 +4,22 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.pwp.coreclient.CoreAPI;
+import com.pwp.api.security.PwpPermissions;
 import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.PlayerData.CosmeticEntry;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.cosmetics.CosmeticsMod;
-import com.pwp.cosmetics.network.PacketSyncCosmeticEquip;
+import com.pwp.coreclient.network.ClientResponseCache;
+import com.pwp.coreclient.network.PacketDataRequest;
+import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.cosmetics.SkinCatalog;
+import com.pwp.cosmetics.client.CosmeticClientState;
+import com.pwp.cosmetics.network.PacketCosmeticEquip;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.TagParser;
-import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
@@ -45,6 +45,8 @@ public class SkinInventoryScreen extends Screen {
     private int scrollOffset = 0;
     private int maxScroll = 0;
     private String statusMsg = "";
+    /** Экипированные скины, ожидающие ответа с определениями скинов; null — не ждём. */
+    private Set<String> pendingEquipped = null;
     private long statusTime = 0;
 
     private static final int[] RARITY_COLORS = {
@@ -73,6 +75,7 @@ public class SkinInventoryScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Униформа"), b -> setFilter("UNIFORM"))
                 .bounds(cx + 94, btnY, 52, 22).build());
 
+        CosmeticClientState.setListener(this::onEquipResult);
         loadCosmetics();
     }
 
@@ -104,7 +107,7 @@ public class SkinInventoryScreen extends Screen {
 
     private boolean isAdmin() {
         Minecraft mc = Minecraft.getInstance();
-        return mc.player != null && (mc.player.isCreative() || mc.player.hasPermissions(2));
+        return PwpPermissions.isAdmin(mc.player);
     }
 
     private void loadSkinDefinitions(Set<String> equippedSkinIds) {
@@ -118,54 +121,51 @@ public class SkinInventoryScreen extends Screen {
             filterCosmetics();
             return;
         }
-        new Thread(() -> {
-            try {
-                JsonObject result = CoreAPI.getSkins();
-                if (result != null && result.has("data")) {
-                    JsonArray arr = result.get("data").getAsJsonArray();
-                    Map<String, ItemStack> cache = new HashMap<>();
-                    Map<String, String> nameCache = new HashMap<>();
-                    List<CosmeticEntry> allSkinEntries = new ArrayList<>();
-                    for (JsonElement e : arr) {
-                        JsonObject obj = e.getAsJsonObject();
-                        String skinId = obj.get("skinId").getAsString();
-                        String skinName = obj.has("name") ? obj.get("name").getAsString() : skinId;
-                        nameCache.put(skinId, skinName);
-                        String slotType = obj.get("slotType").getAsString();
-                        String rarity = obj.get("rarity").getAsString();
-                        String modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull()
-                                ? obj.get("modelPath").getAsString() : "";
-                        if (!modelPath.isEmpty() && modelPath.startsWith("{")) {
-                            try {
-                                CompoundTag loaded = TagParser.parseTag(modelPath);
-                                ItemStack is = ItemStack.of(loaded);
-                                if (!is.isEmpty()) cache.put(skinId, is);
-                            } catch (Exception ignored) {}
-                        } else if (!modelPath.isEmpty() && modelPath.contains(":")) {
-                            Item item = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(modelPath));
-                            if (item != null) cache.put(skinId, new ItemStack(item));
-                        }
-                        CosmeticEntry ce = new CosmeticEntry();
-                        ce.itemUuid = skinId;
-                        ce.skinId = skinId;
-                        ce.slotType = slotType;
-                        ce.rarity = rarity;
-                        ce.source = "builtin";
-                        ce.equipped = equippedSkinIds.contains(skinId);
-                        allSkinEntries.add(ce);
-                    }
-                    globalSkinItemCache = cache;
-                    globalSkinEntries = allSkinEntries;
-                    globalSkinNameCache = nameCache;
-                    Minecraft.getInstance().submit(() -> {
-                        skinItemCache = cache;
-                        skinNameCache = nameCache;
-                        allCosmetics = new ArrayList<>(allSkinEntries);
-                        filterCosmetics();
-                    });
-                }
-            } catch (Exception ignored) {}
-        }, "PWP-SkinDef-Loader").start();
+        // Определения скинов запрашиваем через сервер (core-service доступен только ему)
+        pendingEquipped = equippedSkinIds;
+        ClientResponseCache.skinsData = null;
+        PacketHandler.INSTANCE.sendToServer(new PacketDataRequest("skins", ""));
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        JsonArray arr = ClientResponseCache.skinsData;
+        if (pendingEquipped != null && arr != null) {
+            applySkinDefinitions(arr, pendingEquipped);
+            pendingEquipped = null;
+        }
+    }
+
+    private void applySkinDefinitions(JsonArray arr, Set<String> equippedSkinIds) {
+        Map<String, ItemStack> cache = new HashMap<>();
+        Map<String, String> nameCache = new HashMap<>();
+        List<CosmeticEntry> allSkinEntries = new ArrayList<>();
+        for (JsonElement e : arr) {
+            JsonObject obj = e.getAsJsonObject();
+            String skinId = obj.get("skinId").getAsString();
+            nameCache.put(skinId, obj.has("name") ? obj.get("name").getAsString() : skinId);
+            String modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull()
+                    ? obj.get("modelPath").getAsString() : "";
+            // Предмет здесь — только для иконки; выдаваемый предмет собирает сервер
+            ItemStack icon = SkinCatalog.buildItem(skinId, modelPath);
+            if (!icon.isEmpty()) cache.put(skinId, icon);
+            CosmeticEntry ce = new CosmeticEntry();
+            ce.itemUuid = skinId;
+            ce.skinId = skinId;
+            ce.slotType = obj.get("slotType").getAsString();
+            ce.rarity = obj.get("rarity").getAsString();
+            ce.source = "builtin";
+            ce.equipped = equippedSkinIds.contains(skinId);
+            allSkinEntries.add(ce);
+        }
+        globalSkinItemCache = cache;
+        globalSkinEntries = allSkinEntries;
+        globalSkinNameCache = nameCache;
+        skinItemCache = cache;
+        skinNameCache = nameCache;
+        allCosmetics = new ArrayList<>(allSkinEntries);
+        filterCosmetics();
     }
 
     private void filterCosmetics() {
@@ -328,98 +328,34 @@ public class SkinInventoryScreen extends Screen {
     private void toggleEquip(CosmeticEntry entry) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
-
-        String uuid = mc.player.getStringUUID();
         String role = "ALL";
-        boolean isPrimary = entry.slotType.equals("PRIMARY");
 
         if (entry.equipped) {
-            statusMsg = "\u00a76РЎРЅСЏС‚РёРµ...";
-            statusTime = System.currentTimeMillis();
-            new Thread(() -> {
-                try {
-                    CoreAPI.unequipItem(uuid, entry.slotType, role);
-                    Thread.sleep(300);
-                    JsonObject fresh = CoreAPI.loadPlayer(uuid);
-                    if (fresh != null && fresh.has("data")) {
-                        PlayerData.put(mc.player.getUUID(), fresh.getAsJsonObject("data"));
-                    }
-                    CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, "", ""));
-                    Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 РЎРЅСЏС‚Рѕ (СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ СЃРєРёРЅ)";
-                        statusTime = System.currentTimeMillis();
-                        loadCosmetics();
-                    });
-                } catch (Exception e) {
-                    Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7cРћС€РёР±РєР° СЃРЅСЏС‚РёСЏ: " + e.getMessage();
-                        statusTime = System.currentTimeMillis();
-                    });
-                }
-            }, "PWP-Unequip-Thread").start();
+            showStatus("§6Снятие...");
+            CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(entry.slotType, role, ""));
+        } else if (!ownedSkinIds.contains(entry.skinId) && !isAdmin()) {
+            // Экипировать можно только купленное — сервер всё равно проверит владение
+            showStatus("§cСкин не куплен");
         } else {
-            statusMsg = "\u00a76Р­РєРёРїРёСЂРѕРІРєР°...";
-            statusTime = System.currentTimeMillis();
-            new Thread(() -> {
-                try {
-                    CoreAPI.grantItem(uuid, entry.skinId, "menu");
-                    Thread.sleep(300);
-                    JsonObject fresh = CoreAPI.loadPlayer(uuid);
-                    if (fresh == null || !fresh.has("data")) {
-                        Minecraft.getInstance().submit(() -> {
-                            statusMsg = "\u00a7cРћС€РёР±РєР° API";
-                            statusTime = System.currentTimeMillis();
-                        });
-                        return;
-                    }
-                    JsonObject data = fresh.getAsJsonObject("data");
-                    PlayerData.put(mc.player.getUUID(), data);
-                    boolean equipped = false;
-                    if (data.has("cosmetics")) {
-                        for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
-                            JsonObject obj = e.getAsJsonObject();
-                            if (obj.get("skinId").getAsString().equals(entry.skinId)) {
-                                String realItemUuid = obj.get("itemUuid").getAsString();
-                                String slotType = obj.get("slotType").getAsString();
-                                CoreAPI.equipItem(uuid, realItemUuid, slotType, role);
-                                equipped = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!equipped) {
-                        Minecraft.getInstance().submit(() -> {
-                            statusMsg = "\u00a7cРЎРєРёРЅ РЅРµ РЅР°Р№РґРµРЅ РІ РїСЂРѕС„РёР»Рµ!";
-                            statusTime = System.currentTimeMillis();
-                        });
-                        return;
-                    }
-                    Thread.sleep(300);
-                    JsonObject fresh2 = CoreAPI.loadPlayer(uuid);
-                    if (fresh2 != null && fresh2.has("data")) {
-                        PlayerData.put(mc.player.getUUID(), fresh2.getAsJsonObject("data"));
-                    }
-                    ItemStack eqItem = skinItemCache.get(entry.skinId);
-                    String itemSnbt = "";
-                    if (eqItem != null && !eqItem.isEmpty()) {
-                        CompoundTag tag = new CompoundTag();
-                        eqItem.save(tag);
-                        itemSnbt = tag.toString();
-                    }
-                    CosmeticsMod.NETWORK.sendToServer(new PacketSyncCosmeticEquip(entry.slotType, role, entry.skinId, itemSnbt));
-                    Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7a\u2714 Надето!";
-                        statusTime = System.currentTimeMillis();
-                        loadCosmetics();
-                    });
-                } catch (Exception e) {
-                    Minecraft.getInstance().submit(() -> {
-                        statusMsg = "\u00a7cРћС€РёР±РєР° РЅР°РґРµРІР°РЅРёСЏ: " + e.getMessage();
-                        statusTime = System.currentTimeMillis();
-                    });
-                }
-            }, "PWP-Equip-Thread").start();
+            showStatus("§6Экипировка...");
+            CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(entry.slotType, role, entry.skinId));
         }
+    }
+
+    private void onEquipResult(CosmeticClientState.Result result) {
+        showStatus(result.success() ? "§a✔ Готово" : "§c" + result.message());
+        if (result.success()) loadCosmetics();
+    }
+
+    private void showStatus(String msg) {
+        statusMsg = msg;
+        statusTime = System.currentTimeMillis();
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        CosmeticClientState.setListener(null);
     }
 
     @Override

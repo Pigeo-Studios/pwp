@@ -10,3 +10,10 @@ authors="Pigeo Studios"
 description='''
 Cosmetics system for PWP. Knife skins, weapon skins, uniforms, effects.
 '''
+
+[[dependencies.pwp_cosmetics]]
+    modId="pwpapi"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"

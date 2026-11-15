@@ -1,7 +1,7 @@
 package com.pwp.coreserver;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.CommandSourceStack;
@@ -16,21 +16,15 @@ public class UnbanCommand {
             .then(Commands.argument("player", StringArgumentType.string())
                 .executes(ctx -> {
                     String target = StringArgumentType.getString(ctx, "player");
-                    ctx.getSource().getServer().execute(() -> {
-                        new Thread(() -> {
-                            try {
-                                JsonObject body = new JsonObject();
-                                body.addProperty("target", target);
-                                String result = BanCommand.postJson("/api/v1/launcher/unban", body.toString());
-                                JsonObject json = JsonParser.parseString(result).getAsJsonObject();
-                                ctx.getSource().sendSuccess(() ->
-                                    Component.literal(json.has("error") ? "\u00A7c" + json.get("error").getAsString()
-                                        : "\u00A7a" + target + " unbanned"),
-                                    true);
-                            } catch (Exception e) {
-                                ctx.getSource().sendFailure(Component.literal("\u00A7cUnban failed: " + e.getMessage()));
-                            }
-                        }, "PWP-Unban").start();
+                    CommandSourceStack source = ctx.getSource();
+                    ServerThread.thenOnServer(CoreApi.unbanPlayer(target), source.getServer(), json -> {
+                        if (json == null) {
+                            source.sendFailure(Component.literal("§cUnban failed: core-service недоступен или отклонил запрос"));
+                        } else if (json.has("error")) {
+                            source.sendFailure(Component.literal("§c" + json.get("error").getAsString()));
+                        } else {
+                            source.sendSuccess(() -> Component.literal("§a" + target + " unbanned"), true);
+                        }
                     });
                     return 1;
                 })

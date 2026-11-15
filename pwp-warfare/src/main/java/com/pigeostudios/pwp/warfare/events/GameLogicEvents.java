@@ -28,7 +28,7 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.cosmetics.CosmeticService;
 import com.pwp.coreserver.TransferHosts;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.cosmetics.CosmeticManager;
@@ -1365,7 +1365,7 @@ public class GameLogicEvents {
       public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
            if (!event.getEntity().level().isClientSide) {
               ServerPlayer player = (ServerPlayer)event.getEntity();
-              loadCosmeticsForPlayer(player);
+              CosmeticService.loadForPlayer(player);
              PacketHandler.broadcastPlayerSkin(player);
              KitUtil.syncMyKit(player);
              ServerLevel level = player.serverLevel();
@@ -1385,46 +1385,6 @@ public class GameLogicEvents {
             }
         }
      }
-
-    private static void loadCosmeticsForPlayer(ServerPlayer player) {
-        try {
-            UUID uuid = player.getUUID();
-            JsonObject profile = CoreServerApi.loadPlayer(uuid.toString());
-            if (profile == null || !profile.has("data")) return;
-            JsonObject data = profile.getAsJsonObject("data");
-            if (!data.has("cosmetics")) return;
-
-            JsonObject skinsResult = CoreServerApi.getSkins();
-            Map<String, String> skinModels = new HashMap<>();
-            if (skinsResult != null && skinsResult.has("data")) {
-                for (JsonElement e : skinsResult.get("data").getAsJsonArray()) {
-                    JsonObject s = e.getAsJsonObject();
-                    String sid = s.get("skinId").getAsString();
-                    String mp = s.has("modelPath") && !s.get("modelPath").isJsonNull() ? s.get("modelPath").getAsString() : "";
-                    if (!mp.isEmpty()) skinModels.put(sid, mp);
-                }
-            }
-
-            for (JsonElement e : data.get("cosmetics").getAsJsonArray()) {
-                JsonObject c = e.getAsJsonObject();
-                if (c.has("equipped") && c.get("equipped").getAsBoolean()) {
-                    String skinId = c.get("skinId").getAsString();
-                    String slotType = c.get("slotType").getAsString();
-                    String modelPath = skinModels.getOrDefault(skinId, "");
-                    ItemStack item = ItemStack.EMPTY;
-                    if (modelPath.startsWith("{")) {
-                        try {
-                            item = ItemStack.of(TagParser.parseTag(modelPath));
-                        } catch (Exception ignored) {}
-                    } else if (modelPath.contains(":")) {
-                        Item i = ForgeRegistries.ITEMS.getValue(ResourceLocation.tryParse(modelPath));
-                        if (i != null) item = new ItemStack(i);
-                    }
-                    CosmeticManager.setEquipment(uuid, slotType, "ALL", skinId, item);
-                }
-            }
-        } catch (Exception ignored) {}
-    }
 
     @SubscribeEvent
      public static void onPlayerRespawn(PlayerRespawnEvent event) {

@@ -11,9 +11,14 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent.Context;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PacketDataResponse {
+    private static final Logger LOG = LoggerFactory.getLogger(PacketDataResponse.class);
     private static final Gson GSON = new Gson();
+    /** Тип ответа на админ-действие {@link PacketAction}: {@code {action, success, error}}. */
+    public static final String ACTION_RESULT = "actionResult";
     private final String type;
     private final String jsonData;
 
@@ -89,7 +94,16 @@ public class PacketDataResponse {
                     }
                     break;
                 }
+                case ACTION_RESULT: {
+                    JsonObject json = GSON.fromJson(data, JsonObject.class);
+                    if (ClientResponseCache.actionResultListener != null) {
+                        ClientResponseCache.actionResultListener.accept(json);
+                    }
+                    break;
+                }
             }
-        } catch (Exception ignored) {}
+        } catch (RuntimeException e) {
+            LOG.warn("Не удалось разобрать ответ сервера типа {}", type, e);
+        }
     }
 }

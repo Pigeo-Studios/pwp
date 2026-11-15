@@ -2,7 +2,8 @@ package com.pigeostudios.pwp.warfare.server;
 
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreserver.CoreServerApi;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.core.Heartbeat;
 import com.pwp.coreserver.CoreServerMod;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -19,6 +20,7 @@ import java.nio.file.Path;
  * тикеты и фазу матча. Лобби опрашивает эти данные и показывает их в GUI.
  */
 public class MatchHeartbeatSender {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(MatchHeartbeatSender.class);
 
     private int ticks = 0;
 
@@ -46,21 +48,20 @@ public class MatchHeartbeatSender {
             if (port <= 0) port = 25565;
 
             String dir = Path.of("").toAbsolutePath().getFileName().toString();
-            CoreServerApi.sendHeartbeat(
-                    "match_" + dir,
-                    online,
-                    port,
-                    data.currentMapImage != null ? data.currentMapImage : "",
-                    data.gameMode != null ? data.gameMode : "aas",
-                    data.blueFaction != null ? data.blueFaction : "",
-                    data.redFaction != null ? data.redFaction : "",
-                    data.blueTickets, data.redTickets,
-                    data.isGameStarted ? "PLAYING" : "STARTING",
-                    server.getPlayerList().getMaxPlayers(),
-                    MatchStatsTracker.get().getStartedAt(),
-                    online);
-        } catch (Exception e) {
-            // не ломаем тик из-за heartbeat
+            CoreApi.sendHeartbeat(new Heartbeat("match_" + dir, online)
+                    .port(port)
+                    .match(
+                            data.currentMapImage != null ? data.currentMapImage : "",
+                            data.gameMode != null ? data.gameMode : "aas",
+                            data.blueFaction, data.redFaction,
+                            data.blueTickets, data.redTickets,
+                            data.isGameStarted ? "PLAYING" : "STARTING",
+                            server.getPlayerList().getMaxPlayers(),
+                            MatchStatsTracker.get().getStartedAt(),
+                            online));
+        } catch (RuntimeException e) {
+            // heartbeat не должен ломать тик, но ошибку сборки данных видно в логе
+            LOG.warn("Не удалось отправить heartbeat матча", e);
         }
     }
 }
