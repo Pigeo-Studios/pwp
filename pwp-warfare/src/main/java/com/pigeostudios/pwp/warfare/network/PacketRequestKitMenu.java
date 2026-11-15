@@ -82,23 +82,20 @@ public class PacketRequestKitMenu {
                     }
                 }
 
-                boolean available = true;
-                String reason = "";
-                if (kit.maxPerTeam > 0 && tCount >= kit.maxPerTeam) {
-                    available = false;
-                    reason = "Team Full (" + tCount + "/" + kit.maxPerTeam + ")";
-                } else if (kit.maxPerSquad > 0 && sCount >= kit.maxPerSquad) {
-                    available = false;
-                    reason = "Squad Full (" + sCount + "/" + kit.maxPerSquad + ")";
-                } else if (kit.minSquadPlayers > 0
-                        && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) {
-                    available = false;
-                    reason = "Need " + kit.minSquadPlayers + " players in Squad";
-                } else if ("FIRE_SUPPORT".equals(kit.category)
-                        && ResupplyHandler.countFireSupportOthersInSquad(player, data) >= 3) {
-                    available = false;
-                    reason = "Max 3 Fire Support per Squad";
-                }
+                String unavailable = com.pigeostudios.pwp.warfare.match.KitLimits.unavailableReason(
+                        new com.pigeostudios.pwp.warfare.match.KitLimits.Input(
+                                kit.maxPerTeam,
+                                kit.maxPerSquad,
+                                kit.minSquadPlayers,
+                                kit.category,
+                                tCount,
+                                sCount,
+                                mySquad == null ? -1 : mySquad.members.size(),
+                                com.pigeostudios.pwp.warfare.match.KitLimits.FIRE_SUPPORT.equals(kit.category)
+                                        ? ResupplyHandler.countFireSupportOthersInSquad(player, data)
+                                        : 0));
+                boolean available = unavailable == null;
+                String reason = available ? "" : unavailable;
 
                 String myCurrentKit = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
                 if (myCurrentKit.isEmpty())

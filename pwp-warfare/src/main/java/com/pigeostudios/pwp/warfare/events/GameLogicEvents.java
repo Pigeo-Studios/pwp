@@ -10,6 +10,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
+import com.pigeostudios.pwp.warfare.match.CaptureLogic;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -39,8 +40,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
@@ -61,8 +62,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -96,8 +97,8 @@ import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
+import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.ServerLifecycleHooks;
@@ -1976,114 +1977,55 @@ public class GameLogicEvents {
             float baseSpeed,
             WarfareWorldData data,
             ServerLevel level) {
+        // Чистая логика захвата и тикетов — match.CaptureLogic; здесь только побочные эффекты
         float speedBoosted = baseSpeed * multiplier;
-        if (point.owner.equals("NEUTRAL")) {
-            if (!point.capturingTeam.equals("NONE") && !point.capturingTeam.equals(attackingTeam)) {
-                point.progress -= speedBoosted;
-                if (point.progress <= 0.0F) {
-                    point.progress = 0.0F;
-                    point.capturingTeam = "NONE";
-                }
-            } else {
-                point.capturingTeam = attackingTeam;
-                point.progress += speedBoosted;
-                if (point.progress >= 1.0F) {
-                    point.progress = 1.0F;
-                    point.owner = attackingTeam;
-                    PacketHandler.INSTANCE.send(
-                            PacketDistributor.ALL.noArg(),
-                            new PacketCaptureNotification(point.name, attackingTeam, false));
-
-                    boolean isInvasion = "invasion".equals(data.match.gameMode);
-                    if (isInvasion) {
-                        point.invLocked = true;
-                        // INVASION: attackers get captureBonus instead of captureDeduction
-                        int bonus = data.match.invasionCaptureBonus > 0 ? data.match.invasionCaptureBonus : 100;
-                        if (attackingTeam.equals("BLUE")) {
-                            data.match.blueTickets += bonus;
-                        } else {
-                            data.match.redTickets += bonus;
-                        }
-                        // Check if defender lost all points
-                        String defenderTeam = attackingTeam.equals("BLUE") ? "RED" : "BLUE";
-                        boolean defenderHasPoints = false;
-                        for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
-                            if (cp.owner.equals(defenderTeam)) {
-                                defenderHasPoints = true;
-                                break;
-                            }
-                        }
-                        if (!defenderHasPoints) {
-                            // Defenders lost last point → lose all tickets
-                            if (defenderTeam.equals("BLUE")) {
-                                data.match.blueTickets = 0;
-                            } else {
-                                data.match.redTickets = 0;
-                            }
-                        }
-                        checkGameOver(level, data);
-                    } else if (point.captureDeduction > 0) {
-                        if (attackingTeam.equals("BLUE")) {
-                            data.match.redTickets = data.match.redTickets - point.captureDeduction;
-                        } else {
-                            data.match.blueTickets = data.match.blueTickets - point.captureDeduction;
-                        }
-                        checkGameOver(level, data);
-                    }
-
-                    // Тикеты за захват точки (gainCap)
-                    if (point.ticketGainCapture > 0) {
-                        if (attackingTeam.equals("BLUE")) {
-                            data.match.blueTickets += point.ticketGainCapture;
-                        } else {
-                            data.match.redTickets += point.ticketGainCapture;
+        boolean isInvasion = "invasion".equals(data.match.gameMode);
+        switch (CaptureLogic.step(point, attackingTeam, speedBoosted)) {
+            case CAPTURED -> {
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.ALL.noArg(), new PacketCaptureNotification(point.name, attackingTeam, false));
+                if (isInvasion) point.invLocked = true;
+                applyTickets(
+                        data,
+                        CaptureLogic.onCapturedPrimary(
+                                point, attackingTeam, isInvasion, data.match.invasionCaptureBonus));
+                if (isInvasion) {
+                    // Защитник потерял последнюю точку — теряет все тикеты
+                    String defenderTeam = CaptureLogic.opposite(attackingTeam);
+                    boolean defenderHasPoints = false;
+                    for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
+                        if (cp.owner.equals(defenderTeam)) {
+                            defenderHasPoints = true;
+                            break;
                         }
                     }
-
-                    data.setDirty();
-                    sendSyncPacket(level, data);
+                    if (!defenderHasPoints) {
+                        if (defenderTeam.equals("BLUE")) data.match.blueTickets = 0;
+                        else data.match.redTickets = 0;
+                    }
                 }
+                if (CaptureLogic.checkGameOverAfterCapture(point, isInvasion)) checkGameOver(level, data);
+                applyTickets(data, CaptureLogic.onCapturedGain(point, attackingTeam));
+                data.setDirty();
+                sendSyncPacket(level, data);
             }
-        } else if (point.owner.equals(attackingTeam)) {
-            if (point.progress < 1.0F) {
-                point.progress += speedBoosted;
-                if (point.progress > 1.0F) {
-                    point.progress = 1.0F;
-                }
-            }
-        } else {
-            point.progress -= speedBoosted;
-            if (point.progress <= 0.0F) {
-                String oldOwnerName = point.owner;
-
-                // INVASION: no ticketPenalty on neutralization (only last-point check on capture)
-                if (!"invasion".equals(data.match.gameMode)) {
-                    if (point.owner.equals("BLUE")) {
-                        data.match.blueTickets = data.match.blueTickets - point.ticketPenalty;
-                    } else {
-                        data.match.redTickets = data.match.redTickets - point.ticketPenalty;
-                    }
-                    checkGameOver(level, data);
-                }
-
-                // Тикеты за нейтрализацию точки (gainNeut)
-                if (point.ticketGainNeutralize > 0) {
-                    if (attackingTeam.equals("BLUE")) {
-                        data.match.blueTickets += point.ticketGainNeutralize;
-                    } else {
-                        data.match.redTickets += point.ticketGainNeutralize;
-                    }
-                }
-
-                point.owner = "NEUTRAL";
-                point.progress = 0.0F;
-                point.capturingTeam = "NONE";
+            case NEUTRALIZED -> {
+                applyTickets(data, CaptureLogic.onNeutralizedPrimary(point, isInvasion));
+                if (!isInvasion) checkGameOver(level, data);
+                applyTickets(data, CaptureLogic.onNeutralizedGain(point, attackingTeam));
+                CaptureLogic.resetToNeutral(point);
                 PacketHandler.INSTANCE.send(
                         PacketDistributor.ALL.noArg(), new PacketCaptureNotification(point.name, attackingTeam, true));
                 data.setDirty();
                 sendSyncPacket(level, data);
             }
+            case NONE -> {}
         }
+    }
+
+    private static void applyTickets(WarfareWorldData data, CaptureLogic.Tickets delta) {
+        data.match.blueTickets += delta.blue();
+        data.match.redTickets += delta.red();
     }
 
     private static void validateAndSync(ServerLevel level, boolean forceSend, boolean blueBleed, boolean redBleed) {

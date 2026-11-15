@@ -376,8 +376,8 @@ public class ResupplyHandler {
                         }
 
                         if (allowed
-                                && "FIRE_SUPPORT".equals(kit.category)
-                                && countFireSupportOthersInSquad(player, data) >= 3) {
+                                && com.pigeostudios.pwp.warfare.match.KitLimits.fireSupportCapReached(
+                                        kit.category, countFireSupportOthersInSquad(player, data))) {
                             allowed = false;
                         }
 
