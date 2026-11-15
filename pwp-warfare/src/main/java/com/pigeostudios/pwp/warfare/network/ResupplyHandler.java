@@ -292,114 +292,61 @@ public class ResupplyHandler {
         return false;
     }
 
-    // Считает в отряде игрока других членов с китом категории FIRE_SUPPORT (текущим или отложенным).
-    // Squad-правило: не больше 3 огневой поддержки на отряд (сам игрок при выборе FS-кита занимает слот).
-    public static int countFireSupportOthersInSquad(ServerPlayer player, WarfareWorldData data) {
-        String pName = player.getScoreboardName();
-        String teamName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-        if (teamName.isEmpty()) return 0;
-        Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
-        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
-            if (s.members.contains(pName)) {
-                int count = 0;
-                for (String member : s.members) {
-                    if (member.equals(pName)) continue;
-                    ServerPlayer p = player.server.getPlayerList().getPlayerByName(member);
-                    if (p == null) continue;
-                    String pen = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
-                    String cur = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
-                    WarfareWorldData.KitInfo k = kits.get(!pen.isEmpty() ? pen : cur);
-                    if (k != null && "FIRE_SUPPORT".equals(k.category)) count++;
-                }
-                return count;
-            }
-        }
-        return 0;
-    }
-
+    /**
+     * Применяет отложенный кит (PendingKit) при спавне. Доступность — единый путь {@link
+     * KitAccess#unavailableReason}; занятая/запрещённая роль — спавн с Unassigned.
+     */
     public static void tryApplyPendingKit(ServerPlayer player, WarfareWorldData data) {
         String pending = WarfareData.of(player).getString(WarfareKeys.PENDING_KIT);
-        if (!pending.isEmpty()) {
-            String teamName =
-                    player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-            if (!teamName.isEmpty()) {
-                WarfareWorldData.KitInfo kit =
-                        teamName.equals("BLUE") ? data.blueKits.get(pending) : data.redKits.get(pending);
-                if (kit != null) {
-                    if (pending.equals("Unassigned")) {
-                        applyKitToPlayer(player, kit);
-                        WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
-                        PacketHandler.sendToAllClients(player.serverLevel(), data);
-                    } else {
-                        int teamCount = 0;
-                        int squadCount = 0;
-                        String pName = player.getScoreboardName();
-                        WarfareWorldData.Squad mySquad = null;
+        if (pending.isEmpty()) return;
+        Map<String, WarfareWorldData.KitInfo> kits = KitAccess.teamKits(player, data);
+        if (kits == null) return;
+        WarfareWorldData.KitInfo kit = kits.get(pending);
+        if (kit == null) return;
+        applyCheckedOrUnassigned(player, data, kits, pending, kit);
+        WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
+        PacketHandler.sendToAllClients(player.serverLevel(), data);
+    }
 
-                        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
-                            if (s.members.contains(pName)) {
-                                mySquad = s;
-                                break;
-                            }
-                        }
+    /**
+     * Выдаёт текущий кит (CurrentKit) при спавне без ожидающего выбора — с той же проверкой
+     * лимитов, что и {@link #tryApplyPendingKit}.
+     */
+    public static void applyCurrentKit(ServerPlayer player, WarfareWorldData data) {
+        String current = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
+        if (current.isEmpty() || current.equals(KitAccess.UNASSIGNED)) return;
+        Map<String, WarfareWorldData.KitInfo> kits = KitAccess.teamKits(player, data);
+        if (kits == null) return;
+        WarfareWorldData.KitInfo kit = kits.get(current);
+        if (kit == null) return;
+        applyCheckedOrUnassigned(player, data, kits, current, kit);
+    }
 
-                        for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-                            if (p != player
-                                    && p.getTeam() != null
-                                    && p.getTeam().getName().toUpperCase().equals(teamName)) {
-                                String otherKit = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
-                                if (otherKit.equals(pending)) {
-                                    teamCount++;
-                                    if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) {
-                                        squadCount++;
-                                    }
-                                }
-                            }
-                        }
+    /** Кит при спавне: PendingKit, если выбран, иначе CurrentKit. */
+    public static void applyKitOnSpawn(ServerPlayer player, WarfareWorldData data) {
+        if (WarfareData.of(player).contains(WarfareKeys.PENDING_KIT)) {
+            tryApplyPendingKit(player, data);
+        } else {
+            applyCurrentKit(player, data);
+        }
+    }
 
-                        boolean allowed = true;
-                        if (kit.maxPerTeam > 0 && teamCount >= kit.maxPerTeam) {
-                            allowed = false;
-                        }
-
-                        if (kit.maxPerSquad > 0 && squadCount >= kit.maxPerSquad) {
-                            allowed = false;
-                        }
-
-                        if (kit.minSquadPlayers > 0
-                                && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) {
-                            allowed = false;
-                        }
-
-                        if (kit.isLeaderOnly && (mySquad == null || !mySquad.leader.equals(pName))) {
-                            allowed = false;
-                        }
-
-                        if (allowed
-                                && com.pigeostudios.pwp.warfare.match.KitLimits.fireSupportCapReached(
-                                        kit.category, countFireSupportOthersInSquad(player, data))) {
-                            allowed = false;
-                        }
-
-                        if (allowed) {
-                            applyKitToPlayer(player, kit);
-                        } else {
-                            player.sendSystemMessage(
-                                    Component.literal("Кит " + pending + " полон или заблокирован! Спавн без кита.")
-                                            .withStyle(ChatFormatting.RED));
-                            WarfareWorldData.KitInfo unassigned = teamName.equals("BLUE")
-                                    ? data.blueKits.get("Unassigned")
-                                    : data.redKits.get("Unassigned");
-                            if (unassigned != null) {
-                                applyKitToPlayer(player, unassigned);
-                            }
-                        }
-
-                        WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
-                        PacketHandler.sendToAllClients(player.serverLevel(), data);
-                    }
-                }
-            }
+    private static void applyCheckedOrUnassigned(
+            ServerPlayer player,
+            WarfareWorldData data,
+            Map<String, WarfareWorldData.KitInfo> kits,
+            String kitName,
+            WarfareWorldData.KitInfo kit) {
+        String reason = KitAccess.unavailableReason(player, data, kitName, kit);
+        if (reason == null) {
+            applyKitToPlayer(player, kit);
+            return;
+        }
+        player.sendSystemMessage(Component.literal("Кит " + kitName + " недоступен (" + reason + ")! Спавн без кита.")
+                .withStyle(ChatFormatting.RED));
+        WarfareWorldData.KitInfo unassigned = kits.get(KitAccess.UNASSIGNED);
+        if (unassigned != null) {
+            applyKitToPlayer(player, unassigned);
         }
     }
 }

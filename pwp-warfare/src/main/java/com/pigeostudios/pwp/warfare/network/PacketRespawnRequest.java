@@ -214,22 +214,7 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                     boolean isSetupAttacker =
                             data.match.invasionSetupActive && !pTeam.equalsIgnoreCase(data.match.invasionDefender);
                     if (!isSetupAttacker) {
-                        if (WarfareData.of(player).contains(WarfareKeys.PENDING_KIT)) {
-                            ResupplyHandler.tryApplyPendingKit(player, data);
-                        } else {
-                            String currentKitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
-                            if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                                String tName = player.getTeam() != null
-                                        ? player.getTeam().getName().toUpperCase()
-                                        : "NEUTRAL";
-                                WarfareWorldData.KitInfo kit = tName.equals("BLUE")
-                                        ? data.blueKits.get(currentKitName)
-                                        : data.redKits.get(currentKitName);
-                                if (kit != null) {
-                                    ResupplyHandler.applyKitToPlayer(player, kit);
-                                }
-                            }
-                        }
+                        ResupplyHandler.applyKitOnSpawn(player, data);
                     }
                 }
             } else {

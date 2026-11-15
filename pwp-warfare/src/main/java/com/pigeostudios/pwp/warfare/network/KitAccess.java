@@ -4,16 +4,20 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.match.KitLimits;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Серверная проверка доступности кита игроку: собирает счётчики из онлайна и передаёт их в
- * чистое правило {@link KitLimits#unavailableReason}. Единая точка для выбора кита
- * ({@link PacketSelectKit}).
+ * Серверная проверка доступности кита игроку — ЕДИНСТВЕННАЯ точка для меню деплоя
+ * ({@link PacketRequestKitMenu}), выбора кита ({@link PacketSelectKit}) и применения кита при
+ * спавне ({@link ResupplyHandler#tryApplyPendingKit}, {@link ResupplyHandler#applyCurrentKit}).
+ * Собирает других игроков команды в {@link KitLimits.Holder} и передаёт счётчики в чистое
+ * правило {@link KitLimits#unavailableReason}; ручных копий проверок быть не должно.
  */
 public final class KitAccess {
-    public static final String UNASSIGNED = "Unassigned";
+    public static final String UNASSIGNED = KitLimits.UNASSIGNED;
 
     private KitAccess() {}
 
@@ -33,7 +37,7 @@ public final class KitAccess {
         return null;
     }
 
-    /** Лидер отряда (по реестру или флагу); креатив — тоже (как в меню деплоя). */
+    /** Лидер отряда (по реестру или флагу); креатив — тоже (как и раньше в меню деплоя). */
     public static boolean isLeader(ServerPlayer player, WarfareWorldData data) {
         if (player.isCreative()) return true;
         WarfareWorldData.Squad squad = squadOf(player.getScoreboardName(), data);
@@ -41,35 +45,56 @@ public final class KitAccess {
         return WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
     }
 
+    /** Другие онлайн-игроки команды игрока с их CurrentKit/PendingKit. */
+    public static List<KitLimits.Holder> others(ServerPlayer player, WarfareWorldData data) {
+        List<KitLimits.Holder> out = new ArrayList<>();
+        if (player.getTeam() == null) return out;
+        String team = player.getTeam().getName().toUpperCase();
+        WarfareWorldData.Squad mySquad = squadOf(player.getScoreboardName(), data);
+        for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+            if (p == player || p.getUUID().equals(player.getUUID()) || p.getTeam() == null) continue;
+            if (!p.getTeam().getName().toUpperCase().equals(team)) continue;
+            out.add(new KitLimits.Holder(
+                    WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT),
+                    WarfareData.of(p).getString(WarfareKeys.PENDING_KIT),
+                    mySquad != null && mySquad.members.contains(p.getScoreboardName())));
+        }
+        return out;
+    }
+
     /** null — кит доступен игроку, иначе причина. */
     public static String unavailableReason(
             ServerPlayer player, WarfareWorldData data, String kitName, WarfareWorldData.KitInfo kit) {
-        if (UNASSIGNED.equals(kitName)) return null;
-        if (kit.isLeaderOnly && !isLeader(player, data)) return "Squad Leader only";
-        if (kit.maxPerTeam == 0) return "Role Disabled";
-        String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
+        return unavailableReason(player, data, kitName, kit, others(player, data));
+    }
+
+    /** То же с уже собранным списком других игроков (меню проверяет все киты за один проход). */
+    public static String unavailableReason(
+            ServerPlayer player,
+            WarfareWorldData data,
+            String kitName,
+            WarfareWorldData.KitInfo kit,
+            List<KitLimits.Holder> others) {
+        Map<String, WarfareWorldData.KitInfo> kits = teamKits(player, data);
         WarfareWorldData.Squad mySquad = squadOf(player.getScoreboardName(), data);
-        int tCount = 0, sCount = 0;
-        for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-            if (p == player || p.getTeam() == null) continue;
-            if (!p.getTeam().getName().toUpperCase().equals(team)) continue;
-            String cKit = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
-            String pKit = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
-            if (cKit.equals(kitName) || pKit.equals(kitName)) {
-                tCount++;
-                if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) sCount++;
-            }
-        }
+        KitLimits.Occupancy occ = KitLimits.occupancy(others, kitName);
+        int fireSupport = KitLimits.FIRE_SUPPORT.equals(kit.category) && kits != null
+                ? KitLimits.fireSupportInSquad(others, k -> {
+                    WarfareWorldData.KitInfo info = kits.get(k);
+                    return info != null ? info.category : "";
+                })
+                : 0;
         return KitLimits.unavailableReason(new KitLimits.Input(
+                kitName,
                 kit.maxPerTeam,
                 kit.maxPerSquad,
                 kit.minSquadPlayers,
                 kit.category,
-                tCount,
-                sCount,
+                kit.isLeaderOnly,
+                isLeader(player, data),
+                occ.team(),
+                occ.squad(),
                 mySquad == null ? -1 : mySquad.members.size(),
-                KitLimits.FIRE_SUPPORT.equals(kit.category)
-                        ? ResupplyHandler.countFireSupportOthersInSquad(player, data)
-                        : 0));
+                fireSupport));
     }
 }

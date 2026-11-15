@@ -1624,22 +1624,7 @@ public class GameLogicEvents {
                 boolean isSetupAttacker =
                         data.match.invasionSetupActive && !pTeam.equalsIgnoreCase(data.match.invasionDefender);
                 if (!isSetupAttacker) {
-                    if (WarfareData.of(newPlayer).contains(WarfareKeys.PENDING_KIT)) {
-                        ResupplyHandler.tryApplyPendingKit(newPlayer, data);
-                    } else {
-                        String currentKitName = WarfareData.of(newPlayer).getString(WarfareKeys.CURRENT_KIT);
-                        if (!currentKitName.isEmpty() && !currentKitName.equals("Unassigned")) {
-                            String tName = newPlayer.getTeam() != null
-                                    ? newPlayer.getTeam().getName().toUpperCase()
-                                    : "NEUTRAL";
-                            WarfareWorldData.KitInfo kit = tName.equals("BLUE")
-                                    ? data.blueKits.get(currentKitName)
-                                    : data.redKits.get(currentKitName);
-                            if (kit != null) {
-                                ResupplyHandler.applyKitToPlayer(newPlayer, kit);
-                            }
-                        }
-                    }
+                    ResupplyHandler.applyKitOnSpawn(newPlayer, data);
                 }
             }
         }

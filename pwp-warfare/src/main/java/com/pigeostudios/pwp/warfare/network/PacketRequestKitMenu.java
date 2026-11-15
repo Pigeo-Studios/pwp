@@ -30,18 +30,8 @@ public class PacketRequestKitMenu {
     public static void sendKitMenu(ServerPlayer player, WarfareWorldData data) {
         if (player.getTeam() == null) return;
         String teamName = player.getTeam().getName().toUpperCase();
-        String pName = player.getScoreboardName();
-        WarfareWorldData.Squad mySquad = null;
-
-        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
-            if (s.members.contains(pName)) {
-                mySquad = s;
-                break;
-            }
-        }
-
-        boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
-        if (!amILeader) amILeader = WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
+        boolean amILeader = KitAccess.isLeader(player, data);
+        List<com.pigeostudios.pwp.warfare.match.KitLimits.Holder> others = KitAccess.others(player, data);
         List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
 
         Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
@@ -66,34 +56,10 @@ public class PacketRequestKitMenu {
         for (String kitName : order) {
             WarfareWorldData.KitInfo kit = kits.get(kitName);
             if (kit != null
-                    && (!kit.isLeaderOnly || amILeader || player.isCreative())
+                    && (!kit.isLeaderOnly || amILeader)
                     && (kit.maxPerTeam != 0 || kitName.equals("Unassigned"))) {
-                int tCount = 0, sCount = 0;
-                for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-                    if (p != player
-                            && p.getTeam() != null
-                            && p.getTeam().getName().toUpperCase().equals(teamName)) {
-                        String cKit = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
-                        String pKit = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
-                        if (cKit.equals(kitName) || pKit.equals(kitName)) {
-                            tCount++;
-                            if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) sCount++;
-                        }
-                    }
-                }
-
-                String unavailable = com.pigeostudios.pwp.warfare.match.KitLimits.unavailableReason(
-                        new com.pigeostudios.pwp.warfare.match.KitLimits.Input(
-                                kit.maxPerTeam,
-                                kit.maxPerSquad,
-                                kit.minSquadPlayers,
-                                kit.category,
-                                tCount,
-                                sCount,
-                                mySquad == null ? -1 : mySquad.members.size(),
-                                com.pigeostudios.pwp.warfare.match.KitLimits.FIRE_SUPPORT.equals(kit.category)
-                                        ? ResupplyHandler.countFireSupportOthersInSquad(player, data)
-                                        : 0));
+                // Единый путь проверки (KitAccess → KitLimits), что и при выборе/спавне
+                String unavailable = KitAccess.unavailableReason(player, data, kitName, kit, others);
                 boolean available = unavailable == null;
                 String reason = available ? "" : unavailable;
 
