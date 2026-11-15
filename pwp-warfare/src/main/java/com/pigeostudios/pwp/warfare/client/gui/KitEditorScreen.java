@@ -1,10 +1,10 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pwp.api.util.Parse;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionKit;
 import com.pigeostudios.pwp.warfare.network.PacketSaveKit;
+import com.pwp.api.util.Parse;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -61,9 +61,14 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         minPlayersBox.setValue(String.valueOf(menu.minSquadPlayers));
         addRenderableWidget(minPlayersBox);
 
-        addRenderableWidget(new PWPButton(x + imageWidth - 52, y + 2, 46, 16,
-            Component.literal("Сохр."),
-            b -> saveKit(), PWPButton.Style.ACCENT));
+        addRenderableWidget(new PWPButton(
+                x + imageWidth - 52,
+                y + 2,
+                46,
+                16,
+                Component.literal("Сохр."),
+                b -> saveKit(),
+                PWPButton.Style.ACCENT));
     }
 
     @Override
@@ -110,14 +115,19 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             int sx = leftPos + s.x, sy = topPos + s.y;
             String lbl;
             if (si < 4) {
-                lbl = new String[]{"PR", "SE", "TH", "SP"}[si];
+                lbl = new String[] {"PR", "SE", "TH", "SP"}[si];
             } else {
                 String altCat = getAltCategory(si);
                 lbl = altCat != null ? categoryLetter(altCat) : (isWeaponSlot(si) ? "P" : "B");
             }
             int lw2 = f.width(lbl) + 4;
-            int bc = lbl.equals("P") ? PWPTheme.Colors.ACCENT : (lbl.equals("S") ? PWPTheme.Colors.INFO
-                : (lbl.equals("T") ? PWPTheme.Colors.WARNING : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
+            int bc = lbl.equals("P")
+                    ? PWPTheme.Colors.ACCENT
+                    : (lbl.equals("S")
+                            ? PWPTheme.Colors.INFO
+                            : (lbl.equals("T")
+                                    ? PWPTheme.Colors.WARNING
+                                    : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
             if (si >= 4) {
                 gui.fill(sx - 2, sy - 8, sx + lw2 + 2, sy - 8 + 10, 0x2212151A);
                 gui.renderOutline(sx - 2, sy - 8, lw2 + 4, 10, bc);
@@ -137,8 +147,13 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             String altCat = getAltCategory(si);
             String lbl = altCat != null ? categoryLetter(altCat) : "B";
             int lw2 = f.width(lbl) + 4;
-            int bc = lbl.equals("P") ? PWPTheme.Colors.ACCENT : (lbl.equals("S") ? PWPTheme.Colors.INFO
-                : (lbl.equals("T") ? PWPTheme.Colors.WARNING : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
+            int bc = lbl.equals("P")
+                    ? PWPTheme.Colors.ACCENT
+                    : (lbl.equals("S")
+                            ? PWPTheme.Colors.INFO
+                            : (lbl.equals("T")
+                                    ? PWPTheme.Colors.WARNING
+                                    : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
             gui.fill(sx - 2, sy - 8, sx + lw2 + 2, sy - 8 + 10, 0x2212151A);
             gui.renderOutline(sx - 2, sy - 8, lw2 + 4, 10, bc);
             gui.drawString(f, lbl, sx, sy - 7, bc, false);
@@ -170,12 +185,13 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         gui.drawString(f, "Resupply", x + 16, ly2, PWPTheme.Colors.SUCCESS, false);
         gui.fill(x + 80, ly2, x + 86, ly2 + 6, 0x6000C8FF);
         gui.drawString(f, "SaveNBT", x + 88, ly2, PWPTheme.Colors.INFO, false);
-        gui.drawString(f, "СКМ = Resupply, Shift+СКМ = SaveNBT",
-            x + 8, y + imageHeight - 26, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(
+                f, "СКМ = Resupply, Shift+СКМ = SaveNBT", x + 8, y + imageHeight - 26, PWPTheme.Colors.TEXT_DIM, false);
     }
 
     @Override
     protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {}
+
     @Override
     protected void renderLabels(GuiGraphics gui, int mx, int my) {}
 
@@ -193,16 +209,31 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         String faction = menu.faction;
         if (faction.equals("BLUE") || faction.equals("RED")) {
             PacketHandler.INSTANCE.sendToServer(new PacketSaveKit(
-                faction, menu.kitName, menu.category, menu.description,
-                menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
-                menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
-            ));
+                    faction,
+                    menu.kitName,
+                    menu.category,
+                    menu.description,
+                    menu.isLeaderOnly,
+                    menu.maxPerTeam,
+                    menu.maxPerSquad,
+                    menu.minSquadPlayers,
+                    menu.resupplyFlags,
+                    menu.saveNbtFlags,
+                    menu.slotSkins));
         } else {
             PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionKit(
-                faction, menu.kitName, menu.team, menu.category, menu.description,
-                menu.isLeaderOnly, menu.maxPerTeam, menu.maxPerSquad, menu.minSquadPlayers,
-                menu.resupplyFlags, menu.saveNbtFlags, menu.slotSkins
-            ));
+                    faction,
+                    menu.kitName,
+                    menu.team,
+                    menu.category,
+                    menu.description,
+                    menu.isLeaderOnly,
+                    menu.maxPerTeam,
+                    menu.maxPerSquad,
+                    menu.minSquadPlayers,
+                    menu.resupplyFlags,
+                    menu.saveNbtFlags,
+                    menu.slotSkins));
         }
         if (minecraft.player != null) {
             minecraft.player.displayClientMessage(Component.literal("Кит сохранён!"), true);
@@ -272,7 +303,10 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         int idx = 0;
         if (cur != null) {
             for (int i = 0; i < ALT_CATS.length; i++) {
-                if (ALT_CATS[i].equals(cur)) { idx = i; break; }
+                if (ALT_CATS[i].equals(cur)) {
+                    idx = i;
+                    break;
+                }
             }
         }
         idx = (idx + 1) % ALT_CATS.length;
@@ -293,10 +327,18 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         if (stack.isEmpty()) return false;
         var item = stack.getItem();
         String id = item.getDescriptionId();
-        return id.contains("gun") || id.contains("rifle") || id.contains("pistol") || id.contains("smg")
-            || id.contains("shotgun") || id.contains("sniper") || id.contains("lmg") || id.contains("rocket")
-            || id.contains("launcher") || id.contains("sword") || id.contains("axe")
-            || item instanceof net.minecraft.world.item.SwordItem
-            || item instanceof net.minecraft.world.item.AxeItem;
+        return id.contains("gun")
+                || id.contains("rifle")
+                || id.contains("pistol")
+                || id.contains("smg")
+                || id.contains("shotgun")
+                || id.contains("sniper")
+                || id.contains("lmg")
+                || id.contains("rocket")
+                || id.contains("launcher")
+                || id.contains("sword")
+                || id.contains("axe")
+                || item instanceof net.minecraft.world.item.SwordItem
+                || item instanceof net.minecraft.world.item.AxeItem;
     }
 }

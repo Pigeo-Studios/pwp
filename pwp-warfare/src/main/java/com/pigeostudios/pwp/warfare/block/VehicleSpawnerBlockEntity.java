@@ -1,8 +1,5 @@
 package com.pigeostudios.pwp.warfare.block;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.FactionVehicleData;
 import com.pigeostudios.pwp.warfare.item.SupplyTruckMarkerItem;
@@ -43,10 +40,10 @@ import org.jetbrains.annotations.Nullable;
 // Управляет таймерами возрождения, инвентарём и спауном транспортных средств
 public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvider {
     public final ItemStackHandler inventory = new ItemStackHandler(33) {
-       protected void onContentsChanged(int slot) {
-          VehicleSpawnerBlockEntity.this.setChanged();
-          if (slot == 0) syncToWorldData();
-       }
+        protected void onContentsChanged(int slot) {
+            VehicleSpawnerBlockEntity.this.setChanged();
+            if (slot == 0) syncToWorldData();
+        }
     };
     public float vehicleYaw = 0.0F;
     public int respawnTimeSettings = 60;
@@ -56,329 +53,345 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public long targetSpawnTick = 0L;
     public boolean hasSpawnedOnce = false;
     private UUID lastVehicleUUID = null;
-   private int loadTimer = 60;
+    private int loadTimer = 60;
 
-   public VehicleSpawnerBlockEntity(BlockPos pos, BlockState state) {
-      super((BlockEntityType)ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
-   }
+    public VehicleSpawnerBlockEntity(BlockPos pos, BlockState state) {
+        super((BlockEntityType) ModBlocks.VEHICLE_SPAWNER_BE.get(), pos, state);
+    }
 
-      public void onLoad() {
-         super.onLoad();
-         this.loadTimer = 60;
-         syncToWorldData();
-      }
+    public void onLoad() {
+        super.onLoad();
+        this.loadTimer = 60;
+        syncToWorldData();
+    }
 
-     public void setRemoved() {
+    public void setRemoved() {
         if (this.level != null && !this.level.isClientSide) {
-           WarfareWorldData data = WarfareWorldData.get((ServerLevel)this.level);
-           data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+            WarfareWorldData data = WarfareWorldData.get((ServerLevel) this.level);
+            data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
         }
         super.setRemoved();
-     }
+    }
 
     public void syncToWorldData() {
-       if (this.level == null || this.level.isClientSide) return;
-       WarfareWorldData data = WarfareWorldData.get((ServerLevel)this.level);
-       data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+        if (this.level == null || this.level.isClientSide) return;
+        WarfareWorldData data = WarfareWorldData.get((ServerLevel) this.level);
+        data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
         WarfareWorldData.SpawnerInfo info = getSpawnerInfo();
-       if (info != null) {
-          data.spawnerInfos.add(info);
-          data.setDirty();
-       }
+        if (info != null) {
+            data.spawnerInfos.add(info);
+            data.setDirty();
+        }
     }
 
     public void loadDefaultsFromFactionVehicle(FactionVehicleData veh) {
-       if (veh == null) return;
-       if (!veh.vehicleId.isEmpty()) this.vehicleIdString = veh.vehicleId;
-       this.vehicleYaw = veh.yaw;
-       this.respawnTimeSettings = veh.respawnTime;
-       this.initialTimeSettings = veh.initialTime;
-       // slot 0 = modifier/marker
-       if (!veh.inventory.get(0).isEmpty()) {
-          this.inventory.setStackInSlot(0, veh.inventory.get(0).copy());
-       }
-       // slots 1-32 = vehicle contents
-       for (int i = 1; i < 33 && i < veh.inventory.size(); i++) {
-          if (!veh.inventory.get(i).isEmpty()) {
-             this.inventory.setStackInSlot(i, veh.inventory.get(i).copy());
-          }
-       }
+        if (veh == null) return;
+        if (!veh.vehicleId.isEmpty()) this.vehicleIdString = veh.vehicleId;
+        this.vehicleYaw = veh.yaw;
+        this.respawnTimeSettings = veh.respawnTime;
+        this.initialTimeSettings = veh.initialTime;
+        // slot 0 = modifier/marker
+        if (!veh.inventory.get(0).isEmpty()) {
+            this.inventory.setStackInSlot(0, veh.inventory.get(0).copy());
+        }
+        // slots 1-32 = vehicle contents
+        for (int i = 1; i < 33 && i < veh.inventory.size(); i++) {
+            if (!veh.inventory.get(i).isEmpty()) {
+                this.inventory.setStackInSlot(i, veh.inventory.get(i).copy());
+            }
+        }
         this.setChanged();
         syncToClient();
         syncToWorldData();
-     }
+    }
 
-   private static String getSpawnerTeam(VehicleSpawnerBlockEntity be) {
-      ItemStack modifierStack = be.inventory.getStackInSlot(0);
-      if (!modifierStack.isEmpty()) {
-         if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
-            return marker.getTeam();
-         } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
-            return supply.getTeam();
-         }
-      }
-      return "NEUTRAL";
-   }
+    private static String getSpawnerTeam(VehicleSpawnerBlockEntity be) {
+        ItemStack modifierStack = be.inventory.getStackInSlot(0);
+        if (!modifierStack.isEmpty()) {
+            if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
+                return marker.getTeam();
+            } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
+                return supply.getTeam();
+            }
+        }
+        return "NEUTRAL";
+    }
 
-   // Тик спаунера: управляет таймерами возрождения и спаунит технику
-   public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
-      if (!level.isClientSide) {
-         if (be.loadTimer > 0) {
-            be.loadTimer--;
-         } else {
-            WarfareWorldData data = WarfareWorldData.get((ServerLevel)level);
-            if (data.isGameStarted) {
-               // During invasion setup: skip vehicle spawn for attackers
-               if (data.invasionSetupActive) {
-                  String vTeam = getSpawnerTeam(be);
-                  if (!vTeam.equalsIgnoreCase(data.invasionDefender)) {
-                      if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
-                         be.hasSpawnedOnce = false;
-                         be.targetSpawnTick = 0L;
-                         be.lastVehicleUUID = null;
-                         be.setChanged();
-                         be.syncToClient();
-                         be.syncToWorldData();
-                      }
-                      return;
-                  }
-               }
-               long currentTick = level.getGameTime();
-               boolean vehicleExistsGlobally = data.markedVehicles.stream().anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
-               if (vehicleExistsGlobally) {
-                   if (be.targetSpawnTick != 0L) {
-                      be.targetSpawnTick = 0L;
-                      be.setChanged();
-                      be.syncToClient();
-                      be.syncToWorldData();
-                   }
-                } else {
-                   if (be.lastVehicleUUID != null) {
-                      be.lastVehicleUUID = null;
-                      int delay = be.respawnTimeSettings * 20;
-                      be.targetSpawnTick = currentTick + delay;
-                      be.setChanged();
-                      be.syncToClient();
-                      be.syncToWorldData();
-                   }
-
-                   if (be.targetSpawnTick == 0L && !be.hasSpawnedOnce) {
-                      int delay = be.initialTimeSettings * 20;
-                      be.targetSpawnTick = currentTick + delay;
-                      be.setChanged();
-                      be.syncToClient();
-                      be.syncToWorldData();
-                   }
-
-                   if (be.targetSpawnTick != 0L && currentTick >= be.targetSpawnTick) {
-                      be.spawnVehicle();
-                      be.targetSpawnTick = 0L;
-                      be.setChanged();
-                      be.syncToClient();
-                      be.syncToWorldData();
-                   }
-                }
+    // Тик спаунера: управляет таймерами возрождения и спаунит технику
+    public static void tick(Level level, BlockPos pos, BlockState state, VehicleSpawnerBlockEntity be) {
+        if (!level.isClientSide) {
+            if (be.loadTimer > 0) {
+                be.loadTimer--;
             } else {
-                if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
-                   be.hasSpawnedOnce = false;
-                   be.targetSpawnTick = 0L;
-                   be.lastVehicleUUID = null;
-                   be.setChanged();
-                   be.syncToClient();
-                   be.syncToWorldData();
+                WarfareWorldData data = WarfareWorldData.get((ServerLevel) level);
+                if (data.isGameStarted) {
+                    // During invasion setup: skip vehicle spawn for attackers
+                    if (data.invasionSetupActive) {
+                        String vTeam = getSpawnerTeam(be);
+                        if (!vTeam.equalsIgnoreCase(data.invasionDefender)) {
+                            if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
+                                be.hasSpawnedOnce = false;
+                                be.targetSpawnTick = 0L;
+                                be.lastVehicleUUID = null;
+                                be.setChanged();
+                                be.syncToClient();
+                                be.syncToWorldData();
+                            }
+                            return;
+                        }
+                    }
+                    long currentTick = level.getGameTime();
+                    boolean vehicleExistsGlobally = data.markedVehicles.stream()
+                            .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
+                    if (vehicleExistsGlobally) {
+                        if (be.targetSpawnTick != 0L) {
+                            be.targetSpawnTick = 0L;
+                            be.setChanged();
+                            be.syncToClient();
+                            be.syncToWorldData();
+                        }
+                    } else {
+                        if (be.lastVehicleUUID != null) {
+                            be.lastVehicleUUID = null;
+                            int delay = be.respawnTimeSettings * 20;
+                            be.targetSpawnTick = currentTick + delay;
+                            be.setChanged();
+                            be.syncToClient();
+                            be.syncToWorldData();
+                        }
+
+                        if (be.targetSpawnTick == 0L && !be.hasSpawnedOnce) {
+                            int delay = be.initialTimeSettings * 20;
+                            be.targetSpawnTick = currentTick + delay;
+                            be.setChanged();
+                            be.syncToClient();
+                            be.syncToWorldData();
+                        }
+
+                        if (be.targetSpawnTick != 0L && currentTick >= be.targetSpawnTick) {
+                            be.spawnVehicle();
+                            be.targetSpawnTick = 0L;
+                            be.setChanged();
+                            be.syncToClient();
+                            be.syncToWorldData();
+                        }
+                    }
+                } else {
+                    if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
+                        be.hasSpawnedOnce = false;
+                        be.targetSpawnTick = 0L;
+                        be.lastVehicleUUID = null;
+                        be.setChanged();
+                        be.syncToClient();
+                        be.syncToWorldData();
+                    }
                 }
             }
-         }
-      }
-   }
+        }
+    }
 
-   // Создаёт транспортное средство с настройками из инвентаря спаунера
-   private void spawnVehicle() {
-      if (this.level != null && !this.level.isClientSide) {
-         if (this.vehicleIdString != null && !this.vehicleIdString.trim().isEmpty()) {
-            ResourceLocation resLoc = ResourceLocation.tryParse(this.vehicleIdString);
-            if (resLoc != null) {
-               EntityType<?> type = (EntityType<?>)ForgeRegistries.ENTITY_TYPES.getValue(resLoc);
-               if (type != null) {
-                  Entity entity = type.create(this.level);
-                  if (entity != null) {
-                     entity.setPos(this.worldPosition.getX() + 0.5, this.worldPosition.getY() + 1.5, this.worldPosition.getZ() + 0.5);
-                     entity.getPersistentData().putLong("WARFARE_SpawnerPos", this.worldPosition.asLong());
-                     entity.setYRot(this.vehicleYaw);
-                     entity.setYHeadRot(this.vehicleYaw);
-                     String vTeam = "NEUTRAL";
-                     String vType = "DEFAULT";
-                     int penalty = 0;
-                     int maxMats = 0;
-                     ItemStack modifierStack = this.inventory.getStackInSlot(0);
-                     if (!modifierStack.isEmpty()) {
-                        if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
-                           vTeam = marker.getTeam();
-                           vType = marker.getType();
-                           penalty = marker.getPenalty();
-                           maxMats = marker.getMaxMats();
-                        } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
-                           vTeam = supply.getTeam();
-                           vType = supply.getVehicleType();
-                           penalty = supply.getPenalty();
-                           maxMats = supply.getMaxMats();
-                           entity.getPersistentData().putBoolean("WARFARE_IsSupplyTruck", true);
-                           entity.getPersistentData().putInt("WARFARE_SupplyAmmo", (Integer)WarfareConfig.SUPPLY_TRUCK_CRATES.get());
+    // Создаёт транспортное средство с настройками из инвентаря спаунера
+    private void spawnVehicle() {
+        if (this.level != null && !this.level.isClientSide) {
+            if (this.vehicleIdString != null && !this.vehicleIdString.trim().isEmpty()) {
+                ResourceLocation resLoc = ResourceLocation.tryParse(this.vehicleIdString);
+                if (resLoc != null) {
+                    EntityType<?> type = (EntityType<?>) ForgeRegistries.ENTITY_TYPES.getValue(resLoc);
+                    if (type != null) {
+                        Entity entity = type.create(this.level);
+                        if (entity != null) {
+                            entity.setPos(
+                                    this.worldPosition.getX() + 0.5,
+                                    this.worldPosition.getY() + 1.5,
+                                    this.worldPosition.getZ() + 0.5);
+                            entity.getPersistentData().putLong("WARFARE_SpawnerPos", this.worldPosition.asLong());
+                            entity.setYRot(this.vehicleYaw);
+                            entity.setYHeadRot(this.vehicleYaw);
+                            String vTeam = "NEUTRAL";
+                            String vType = "DEFAULT";
+                            int penalty = 0;
+                            int maxMats = 0;
+                            ItemStack modifierStack = this.inventory.getStackInSlot(0);
+                            if (!modifierStack.isEmpty()) {
+                                if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
+                                    vTeam = marker.getTeam();
+                                    vType = marker.getType();
+                                    penalty = marker.getPenalty();
+                                    maxMats = marker.getMaxMats();
+                                } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
+                                    vTeam = supply.getTeam();
+                                    vType = supply.getVehicleType();
+                                    penalty = supply.getPenalty();
+                                    maxMats = supply.getMaxMats();
+                                    entity.getPersistentData().putBoolean("WARFARE_IsSupplyTruck", true);
+                                    entity.getPersistentData().putInt("WARFARE_SupplyAmmo", (Integer)
+                                            WarfareConfig.SUPPLY_TRUCK_CRATES.get());
+                                }
+                            }
+
+                            entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
+                            entity.getPersistentData().putString("WARFARE_VehicleType", vType);
+                            entity.getPersistentData().putBoolean("WARFARE_FreshVehicle", true);
+                            entity.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
+                            if (maxMats > 0) {
+                                entity.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
+                                entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                            }
+
+                            // Сохраняем начальный лоудаут техники для станции пополнения (Vehicle Station)
+                            ListTag loadoutTag = new ListTag();
+                            for (int i = 0; i < 32; i++) {
+                                ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
+                                if (contentStack.isEmpty()) {
+                                    continue;
+                                }
+                                CompoundTag itemTag = new CompoundTag();
+                                itemTag.putByte("Slot", (byte) i);
+                                contentStack.save(itemTag);
+                                loadoutTag.add(itemTag);
+                            }
+                            entity.getPersistentData().put("WARFARE_InitialLoadout", loadoutTag);
+
+                            WarfareWorldData worldData = WarfareWorldData.get((ServerLevel) this.level);
+                            worldData.markedVehicles.removeIf(
+                                    v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
+                            worldData.markedVehicles.add(new WarfareWorldData.VehicleRecord(
+                                    entity.getUUID(),
+                                    vTeam,
+                                    vType,
+                                    entity.getX(),
+                                    entity.getY(),
+                                    entity.getZ(),
+                                    entity.getYRot(),
+                                    this.worldPosition,
+                                    penalty));
+                            worldData.setDirty();
+                            PacketHandler.sendToAllClients((ServerLevel) this.level, worldData);
+                            entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
+                                for (int i = 0; i < 32; i++) {
+                                    ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
+                                    if (!contentStack.isEmpty()
+                                            && handler instanceof IItemHandlerModifiable modifiable) {
+                                        modifiable.setStackInSlot(i, contentStack.copy());
+                                    }
+                                }
+                            });
+                            if (entity instanceof LivingEntity living) {
+                                living.setHealth(living.getMaxHealth());
+                            }
+
+                            entity.getPersistentData().putLong("WARFARE_SpawnGraceTick", this.level.getGameTime());
+                            this.level.addFreshEntity(entity);
+                            this.lastVehicleUUID = entity.getUUID();
+                            this.hasSpawnedOnce = true;
+                            this.setChanged();
                         }
-                     }
-
-entity.getPersistentData().putString("WARFARE_VehicleTeam", vTeam);
-                      entity.getPersistentData().putString("WARFARE_VehicleType", vType);
-                      entity.getPersistentData().putBoolean("WARFARE_FreshVehicle", true);
-                     entity.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
-                      if (maxMats > 0) {
-                         entity.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
-                         entity.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
-                      }
-
-                      // Сохраняем начальный лоудаут техники для станции пополнения (Vehicle Station)
-                      ListTag loadoutTag = new ListTag();
-                      for (int i = 0; i < 32; i++) {
-                         ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
-                         if (contentStack.isEmpty()) {
-                            continue;
-                         }
-                         CompoundTag itemTag = new CompoundTag();
-                         itemTag.putByte("Slot", (byte)i);
-                         contentStack.save(itemTag);
-                         loadoutTag.add(itemTag);
-                      }
-                      entity.getPersistentData().put("WARFARE_InitialLoadout", loadoutTag);
-
-                      WarfareWorldData worldData = WarfareWorldData.get((ServerLevel)this.level);
-                      worldData.markedVehicles.removeIf(v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
-                      worldData.markedVehicles
-                         .add(
-                            new WarfareWorldData.VehicleRecord(
-                               entity.getUUID(), vTeam, vType, entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), this.worldPosition, penalty
-                            )
-                         );
-                     worldData.setDirty();
-                     PacketHandler.sendToAllClients((ServerLevel)this.level, worldData);
-                     entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
-                        for (int i = 0; i < 32; i++) {
-                           ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
-                           if (!contentStack.isEmpty() && handler instanceof IItemHandlerModifiable modifiable) {
-                              modifiable.setStackInSlot(i, contentStack.copy());
-                           }
-                        }
-                     });
-                     if (entity instanceof LivingEntity living) {
-                        living.setHealth(living.getMaxHealth());
-                     }
-
-                     entity.getPersistentData().putLong("WARFARE_SpawnGraceTick", this.level.getGameTime());
-                     this.level.addFreshEntity(entity);
-                     this.lastVehicleUUID = entity.getUUID();
-                     this.hasSpawnedOnce = true;
-                     this.setChanged();
-                  }
-               }
+                    }
+                }
             }
-         }
-      }
-   }
+        }
+    }
 
-   private void insertItemIntoSlot(IItemHandler handler, int slot, ItemStack stack) {
-      if (slot < handler.getSlots()) {
-         if (handler instanceof IItemHandlerModifiable modifiable) {
-            modifiable.setStackInSlot(slot, stack);
-         } else {
-            handler.insertItem(slot, stack, false);
-         }
-      }
-   }
+    private void insertItemIntoSlot(IItemHandler handler, int slot, ItemStack stack) {
+        if (slot < handler.getSlots()) {
+            if (handler instanceof IItemHandlerModifiable modifiable) {
+                modifiable.setStackInSlot(slot, stack);
+            } else {
+                handler.insertItem(slot, stack, false);
+            }
+        }
+    }
 
     // Синхронизирует данные спаунера с клиентом
     public void syncToClient() {
-       if (this.level != null && !this.level.isClientSide) {
-          this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
-       }
+        if (this.level != null && !this.level.isClientSide) {
+            this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+        }
     }
 
     public WarfareWorldData.SpawnerInfo getSpawnerInfo() {
-       if (this.level == null) return null;
-       if (this.vehicleIdString == null || this.vehicleIdString.trim().isEmpty()) return null;
-       ItemStack modifierStack = this.inventory.getStackInSlot(0);
-       if (modifierStack.isEmpty()) return null;
-       String team = "NEUTRAL";
-       String type = "DEFAULT";
-       int penalty = 0;
-       if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
-          team = marker.getTeam();
-          type = marker.getType();
-          penalty = marker.getPenalty();
-       } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
-          team = supply.getTeam();
-          type = supply.getVehicleType();
-          penalty = supply.getPenalty();
-       } else {
-          return null;
-       }
+        if (this.level == null) return null;
+        if (this.vehicleIdString == null || this.vehicleIdString.trim().isEmpty()) return null;
+        ItemStack modifierStack = this.inventory.getStackInSlot(0);
+        if (modifierStack.isEmpty()) return null;
+        String team = "NEUTRAL";
+        String type = "DEFAULT";
+        int penalty = 0;
+        if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
+            team = marker.getTeam();
+            type = marker.getType();
+            penalty = marker.getPenalty();
+        } else if (modifierStack.getItem() instanceof SupplyTruckMarkerItem supply) {
+            team = supply.getTeam();
+            type = supply.getVehicleType();
+            penalty = supply.getPenalty();
+        } else {
+            return null;
+        }
         return new WarfareWorldData.SpawnerInfo(
-           this.worldPosition, team, type, penalty,
-           this.respawnTimeSettings, this.targetSpawnTick, false, this.hasSpawnedOnce
-        );
+                this.worldPosition,
+                team,
+                type,
+                penalty,
+                this.respawnTimeSettings,
+                this.targetSpawnTick,
+                false,
+                this.hasSpawnedOnce);
     }
 
     public void load(CompoundTag tag) {
-      super.load(tag);
-      if (tag.contains("Inventory")) {
-         this.inventory.deserializeNBT(tag.getCompound("Inventory"));
-      }
+        super.load(tag);
+        if (tag.contains("Inventory")) {
+            this.inventory.deserializeNBT(tag.getCompound("Inventory"));
+        }
 
-      if (this.inventory.getSlots() < 33) {
-         this.inventory.setSize(33);
-      }
+        if (this.inventory.getSlots() < 33) {
+            this.inventory.setSize(33);
+        }
 
-      this.respawnTimeSettings = tag.getInt("RespawnTime");
-      this.initialTimeSettings = tag.getInt("InitialTime");
-      this.targetSpawnTick = tag.getLong("TargetSpawnTick");
-      this.hasSpawnedOnce = tag.getBoolean("HasSpawnedOnce");
-      this.vehicleIdString = tag.getString("VehicleID");
-      this.vehicleName = tag.getString("VehicleName");
-      this.vehicleYaw = tag.getFloat("VehicleYaw");
-      if (tag.hasUUID("LastVehicle")) {
-         this.lastVehicleUUID = tag.getUUID("LastVehicle");
-      }
-   }
+        this.respawnTimeSettings = tag.getInt("RespawnTime");
+        this.initialTimeSettings = tag.getInt("InitialTime");
+        this.targetSpawnTick = tag.getLong("TargetSpawnTick");
+        this.hasSpawnedOnce = tag.getBoolean("HasSpawnedOnce");
+        this.vehicleIdString = tag.getString("VehicleID");
+        this.vehicleName = tag.getString("VehicleName");
+        this.vehicleYaw = tag.getFloat("VehicleYaw");
+        if (tag.hasUUID("LastVehicle")) {
+            this.lastVehicleUUID = tag.getUUID("LastVehicle");
+        }
+    }
 
-   protected void saveAdditional(CompoundTag tag) {
-      super.saveAdditional(tag);
-      tag.put("Inventory", this.inventory.serializeNBT());
-      tag.putInt("RespawnTime", this.respawnTimeSettings);
-      tag.putInt("InitialTime", this.initialTimeSettings);
-      tag.putLong("TargetSpawnTick", this.targetSpawnTick);
-      tag.putBoolean("HasSpawnedOnce", this.hasSpawnedOnce);
-      tag.putString("VehicleID", this.vehicleIdString);
-      tag.putString("VehicleName", this.vehicleName);
-      tag.putFloat("VehicleYaw", this.vehicleYaw);
-      if (this.lastVehicleUUID != null) {
-         tag.putUUID("LastVehicle", this.lastVehicleUUID);
-      }
-   }
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.put("Inventory", this.inventory.serializeNBT());
+        tag.putInt("RespawnTime", this.respawnTimeSettings);
+        tag.putInt("InitialTime", this.initialTimeSettings);
+        tag.putLong("TargetSpawnTick", this.targetSpawnTick);
+        tag.putBoolean("HasSpawnedOnce", this.hasSpawnedOnce);
+        tag.putString("VehicleID", this.vehicleIdString);
+        tag.putString("VehicleName", this.vehicleName);
+        tag.putFloat("VehicleYaw", this.vehicleYaw);
+        if (this.lastVehicleUUID != null) {
+            tag.putUUID("LastVehicle", this.lastVehicleUUID);
+        }
+    }
 
-   public CompoundTag getUpdateTag() {
-      CompoundTag tag = new CompoundTag();
-      this.saveAdditional(tag);
-      return tag;
-   }
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = new CompoundTag();
+        this.saveAdditional(tag);
+        return tag;
+    }
 
-   public Packet<ClientGamePacketListener> getUpdatePacket() {
-      return ClientboundBlockEntityDataPacket.create(this);
-   }
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
 
-   public Component getDisplayName() {
-      return Component.literal("Vehicle Spawner Config");
-   }
+    public Component getDisplayName() {
+        return Component.literal("Vehicle Spawner Config");
+    }
 
-   @Nullable
-   public AbstractContainerMenu createMenu(int id, Inventory playerInv, Player player) {
-      return new VehicleSpawnerMenu(id, playerInv, this);
-   }
+    @Nullable
+    public AbstractContainerMenu createMenu(int id, Inventory playerInv, Player player) {
+        return new VehicleSpawnerMenu(id, playerInv, this);
+    }
 }

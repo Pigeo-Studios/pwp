@@ -11,7 +11,9 @@ import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid="pwplimit", value={Dist.CLIENT})
+@Mod.EventBusSubscriber(
+        modid = "pwplimit",
+        value = {Dist.CLIENT})
 public class ClientOverlay {
     private static float displayHealth = 20.0f;
     private static float lastActualHealth = 20.0f;

@@ -10,24 +10,26 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // Пакет индикации голосовой активности в радио-канале
 // Отправляется сервером для отображения иконки говорящего по радио
 public class PacketRadioVoiceActivity {
-   private final String playerName;
+    private final String playerName;
 
-   public PacketRadioVoiceActivity(String playerName) {
-      this.playerName = playerName;
-   }
+    public PacketRadioVoiceActivity(String playerName) {
+        this.playerName = playerName;
+    }
 
-   public static void encode(PacketRadioVoiceActivity msg, FriendlyByteBuf buf) {
-      buf.writeUtf(msg.playerName);
-   }
+    public static void encode(PacketRadioVoiceActivity msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.playerName);
+    }
 
-   public static PacketRadioVoiceActivity decode(FriendlyByteBuf buf) {
-      return new PacketRadioVoiceActivity(buf.readUtf());
-   }
+    public static PacketRadioVoiceActivity decode(FriendlyByteBuf buf) {
+        return new PacketRadioVoiceActivity(buf.readUtf());
+    }
 
-   // Обновляет время последней радио-активности для указанного игрока
-   public static void handle(PacketRadioVoiceActivity msg, Supplier<Context> ctx) {
-      ctx.get()
-         .enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientData.RADIO_SPEAKERS.put(msg.playerName, System.currentTimeMillis())));
-      ctx.get().setPacketHandled(true);
-   }
+    // Обновляет время последней радио-активности для указанного игрока
+    public static void handle(PacketRadioVoiceActivity msg, Supplier<Context> ctx) {
+        ctx.get()
+                .enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
+                        Dist.CLIENT,
+                        () -> () -> ClientData.RADIO_SPEAKERS.put(msg.playerName, System.currentTimeMillis())));
+        ctx.get().setPacketHandled(true);
+    }
 }

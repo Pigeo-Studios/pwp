@@ -5,12 +5,11 @@ import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.LobbyStatePacket;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class PlayTabRenderer {
 
@@ -28,18 +27,45 @@ public class PlayTabRenderer {
         public int serverId;
         public String worldPath;
 
-        public MatchEntry(String title, String mode, String duration, int current, int max,
-                          String blue, String red, int bt, int rt, PWPMatchCard.Status status, int serverId) {
+        public MatchEntry(
+                String title,
+                String mode,
+                String duration,
+                int current,
+                int max,
+                String blue,
+                String red,
+                int bt,
+                int rt,
+                PWPMatchCard.Status status,
+                int serverId) {
             this(title, mode, duration, current, max, blue, red, bt, rt, status, serverId, null);
         }
 
-        public MatchEntry(String title, String mode, String duration, int current, int max,
-                          String blue, String red, int bt, int rt, PWPMatchCard.Status status, int serverId,
-                          String worldPath) {
-            this.title = title; this.mode = mode; this.duration = duration;
-            this.currentPlayers = current; this.maxPlayers = max;
-            this.blueFaction = blue; this.redFaction = red;
-            this.blueTickets = bt; this.redTickets = rt; this.status = status; this.serverId = serverId;
+        public MatchEntry(
+                String title,
+                String mode,
+                String duration,
+                int current,
+                int max,
+                String blue,
+                String red,
+                int bt,
+                int rt,
+                PWPMatchCard.Status status,
+                int serverId,
+                String worldPath) {
+            this.title = title;
+            this.mode = mode;
+            this.duration = duration;
+            this.currentPlayers = current;
+            this.maxPlayers = max;
+            this.blueFaction = blue;
+            this.redFaction = red;
+            this.blueTickets = bt;
+            this.redTickets = rt;
+            this.status = status;
+            this.serverId = serverId;
             this.worldPath = worldPath;
         }
     }
@@ -55,30 +81,39 @@ public class PlayTabRenderer {
         matches.clear();
         // Активный матч лобби (карточка сверху)
         if (pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING || pkt.phase == LobbyStatePacket.PHASE_MATCH_PLAYING) {
-            matches.add(new MatchEntry(pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "-",
-                pkt.matchModeDisplay != null ? pkt.matchModeDisplay : "",
-                pkt.matchElapsed + "s", pkt.matchPlayers, pkt.matchMaxPlayers,
-                pkt.matchBlueFaction != null ? pkt.matchBlueFaction : "",
-                pkt.matchRedFaction != null ? pkt.matchRedFaction : "",
-                pkt.matchBlueTickets, pkt.matchRedTickets,
-                pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING ? PWPMatchCard.Status.STARTING : PWPMatchCard.Status.PLAYING,
-                pkt.matchServerId, pkt.matchWorldPath));
+            matches.add(new MatchEntry(
+                    pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "-",
+                    pkt.matchModeDisplay != null ? pkt.matchModeDisplay : "",
+                    pkt.matchElapsed + "s",
+                    pkt.matchPlayers,
+                    pkt.matchMaxPlayers,
+                    pkt.matchBlueFaction != null ? pkt.matchBlueFaction : "",
+                    pkt.matchRedFaction != null ? pkt.matchRedFaction : "",
+                    pkt.matchBlueTickets,
+                    pkt.matchRedTickets,
+                    pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING
+                            ? PWPMatchCard.Status.STARTING
+                            : PWPMatchCard.Status.PLAYING,
+                    pkt.matchServerId,
+                    pkt.matchWorldPath));
         }
         // Остальные активные матчи
         int count = pkt.matchCount;
         for (int i = 0; i < count; i++) {
             PWPMatchCard.Status st = parseStatus(i < pkt.mStatuses.length ? pkt.mStatuses[i] : "");
-            matches.add(new MatchEntry(i < pkt.mDisplayNames.length ? pkt.mDisplayNames[i] : "-",
-                i < pkt.mStatuses.length ? pkt.mStatuses[i] : "",
-                (i < pkt.mElapsed.length ? pkt.mElapsed[i] : 0) + "s",
-                i < pkt.mPlayers.length ? pkt.mPlayers[i] : 0,
-                i < pkt.mMaxPlayers.length ? pkt.mMaxPlayers[i] : 0,
-                i < pkt.mBlueFactions.length ? pkt.mBlueFactions[i] : "",
-                i < pkt.mRedFactions.length ? pkt.mRedFactions[i] : "",
-                i < pkt.mBlueTickets.length ? pkt.mBlueTickets[i] : 0,
-                i < pkt.mRedTickets.length ? pkt.mRedTickets[i] : 0,
-                st, i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1,
-                i < pkt.mWorldPaths.length ? pkt.mWorldPaths[i] : null));
+            matches.add(new MatchEntry(
+                    i < pkt.mDisplayNames.length ? pkt.mDisplayNames[i] : "-",
+                    i < pkt.mStatuses.length ? pkt.mStatuses[i] : "",
+                    (i < pkt.mElapsed.length ? pkt.mElapsed[i] : 0) + "s",
+                    i < pkt.mPlayers.length ? pkt.mPlayers[i] : 0,
+                    i < pkt.mMaxPlayers.length ? pkt.mMaxPlayers[i] : 0,
+                    i < pkt.mBlueFactions.length ? pkt.mBlueFactions[i] : "",
+                    i < pkt.mRedFactions.length ? pkt.mRedFactions[i] : "",
+                    i < pkt.mBlueTickets.length ? pkt.mBlueTickets[i] : 0,
+                    i < pkt.mRedTickets.length ? pkt.mRedTickets[i] : 0,
+                    st,
+                    i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1,
+                    i < pkt.mWorldPaths.length ? pkt.mWorldPaths[i] : null));
         }
     }
 
@@ -100,7 +135,13 @@ public class PlayTabRenderer {
         int titleY = 80;
 
         String title = "АКТИВНЫЕ МАТЧИ";
-        gui.drawString(font, Component.literal(title), screenW / 2 - font.width(title) / 2, titleY, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(
+                font,
+                Component.literal(title),
+                screenW / 2 - font.width(title) / 2,
+                titleY,
+                PWPTheme.Colors.TEXT_ACCENT,
+                false);
         gui.fill(screenW / 2 - 60, titleY + 14, screenW / 2 + 60, titleY + 15, PWPTheme.Colors.ACCENT);
 
         int listX = 60;
@@ -121,28 +162,46 @@ public class PlayTabRenderer {
             if (m.worldPath != null && !m.worldPath.isEmpty()) {
                 preview = PWPLobbyScreen.getTexture("preview", m.worldPath, "match_");
             }
-            PWPMatchCard.render(gui, listX, cy, listW, cardH,
-                m.title, m.mode, m.duration,
-                m.currentPlayers, m.maxPlayers,
-                m.blueFaction, m.redFaction,
-                m.blueTickets, m.redTickets,
-                m.status, preview, false, hovered);
+            PWPMatchCard.render(
+                    gui,
+                    listX,
+                    cy,
+                    listW,
+                    cardH,
+                    m.title,
+                    m.mode,
+                    m.duration,
+                    m.currentPlayers,
+                    m.maxPlayers,
+                    m.blueFaction,
+                    m.redFaction,
+                    m.blueTickets,
+                    m.redTickets,
+                    m.status,
+                    preview,
+                    false,
+                    hovered);
         }
 
         // Tooltip
         if (hoveredIndex >= 0 && hoveredIndex < matches.size()) {
-            if (hoveredIndex != prevHovered) { tooltipHoverStart = now; prevHovered = hoveredIndex; }
+            if (hoveredIndex != prevHovered) {
+                tooltipHoverStart = now;
+                prevHovered = hoveredIndex;
+            }
             if (now - tooltipHoverStart > 1500) {
                 MatchEntry m = matches.get(hoveredIndex);
                 renderTooltip(gui, m, mouseX, mouseY, screenW, screenH, now);
             }
-        } else { prevHovered = -1; }
+        } else {
+            prevHovered = -1;
+        }
     }
 
     private void renderTooltip(GuiGraphics g, MatchEntry m, int mx, int my, int sw, int sh, long now) {
         long elapsed = now - tooltipHoverStart - 1500;
         float t = Math.min(elapsed / 400f, 1);
-        float alpha = Math.max(0, Math.min(1, t < 0.5f ? 2*t*t : -1 + (4-2*t)*t));
+        float alpha = Math.max(0, Math.min(1, t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t));
         if (alpha < 0.01f) return;
 
         var f = PWPTheme.Fonts.display();
@@ -152,13 +211,17 @@ public class PlayTabRenderer {
             m.blueFaction + " vs " + m.redFaction,
             "Игроки: " + m.currentPlayers + "/" + m.maxPlayers,
             m.status == PWPMatchCard.Status.PLAYING || m.status == PWPMatchCard.Status.FINISHED
-                ? "Билеты: " + m.blueTickets + " | " + m.redTickets : ""
+                    ? "Билеты: " + m.blueTickets + " | " + m.redTickets
+                    : ""
         };
 
         int lineH = 12;
         int pad = 8;
         int tw = 0;
-        for (String l : lines) { int lw = f.width(l); if (lw > tw) tw = lw; }
+        for (String l : lines) {
+            int lw = f.width(l);
+            if (lw > tw) tw = lw;
+        }
         tw = Math.min(tw + pad * 2, sw - 20);
         int th = lines.length * lineH + pad;
 
@@ -177,7 +240,15 @@ public class PlayTabRenderer {
         }
     }
 
-    public int getHoveredIndex() { return hoveredIndex; }
-    public int getServerId(int index) { return matches.get(index).serverId; }
-    public List<MatchEntry> getMatches() { return matches; }
+    public int getHoveredIndex() {
+        return hoveredIndex;
+    }
+
+    public int getServerId(int index) {
+        return matches.get(index).serverId;
+    }
+
+    public List<MatchEntry> getMatches() {
+        return matches;
+    }
 }

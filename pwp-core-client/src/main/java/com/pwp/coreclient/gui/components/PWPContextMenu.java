@@ -1,12 +1,10 @@
 package com.pwp.coreclient.gui.components;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
-
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 public class PWPContextMenu {
 

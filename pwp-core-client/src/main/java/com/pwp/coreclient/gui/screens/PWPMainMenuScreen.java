@@ -6,13 +6,13 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientConnectHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.OptionsScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen;
 import net.minecraft.network.chat.Component;
 
 public class PWPMainMenuScreen extends Screen {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PWPMainMenuScreen.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PWPMainMenuScreen.class);
 
     private final long openTime;
     private boolean connecting;
@@ -53,45 +53,55 @@ public class PWPMainMenuScreen extends Screen {
         }
 
         playBtn = addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY, btnW, playH,
-            Component.translatable("pwp_core.main_menu.play"),
-            btn -> {
-                if (connecting) return;
-                connecting = true;
-                Minecraft.getInstance().setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
-                ClientConnectHandler.connect(serverHost(), 25565);
-            },
-            PWPButton.Style.ACCENT
-        ));
+                cx - btnW / 2,
+                startY,
+                btnW,
+                playH,
+                Component.translatable("pwp_core.main_menu.play"),
+                btn -> {
+                    if (connecting) return;
+                    connecting = true;
+                    Minecraft.getInstance().setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
+                    ClientConnectHandler.connect(serverHost(), 25565);
+                },
+                PWPButton.Style.ACCENT));
 
         singleBtn = addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY + playH + gap, btnW, otherH,
-            Component.translatable("pwp_core.main_menu.singleplayer"),
-            btn -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)),
-            PWPButton.Style.DARK
-        ));
+                cx - btnW / 2,
+                startY + playH + gap,
+                btnW,
+                otherH,
+                Component.translatable("pwp_core.main_menu.singleplayer"),
+                btn -> Minecraft.getInstance().setScreen(new SelectWorldScreen(this)),
+                PWPButton.Style.DARK));
 
         settingsBtn = addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY + playH + (otherH + gap) * 1 + gap, btnW, otherH,
-            Component.translatable("pwp_core.main_menu.settings"),
-            btn -> Minecraft.getInstance().setScreen(new OptionsScreen(this, Minecraft.getInstance().options)),
-            PWPButton.Style.DARK
-        ));
+                cx - btnW / 2,
+                startY + playH + (otherH + gap) * 1 + gap,
+                btnW,
+                otherH,
+                Component.translatable("pwp_core.main_menu.settings"),
+                btn -> Minecraft.getInstance().setScreen(new OptionsScreen(this, Minecraft.getInstance().options)),
+                PWPButton.Style.DARK));
 
         quitBtn = addRenderableWidget(new PWPButton(
-            cx - btnW / 2, startY + playH + (otherH + gap) * 2 + gap, btnW, otherH,
-            Component.translatable("pwp_core.main_menu.quit"),
-            btn -> Minecraft.getInstance().stop(),
-            PWPButton.Style.GHOST
-        ));
+                cx - btnW / 2,
+                startY + playH + (otherH + gap) * 2 + gap,
+                btnW,
+                otherH,
+                Component.translatable("pwp_core.main_menu.quit"),
+                btn -> Minecraft.getInstance().stop(),
+                PWPButton.Style.GHOST));
 
         if (replayModAvailable) {
             replayBtn = addRenderableWidget(new PWPButton(
-                cx - btnW / 2, startY + playH + (otherH + gap) * 3 + gap, btnW, otherH,
-                Component.literal("REPLAY VIEWER"),
-                btn -> openReplayViewer(),
-                PWPButton.Style.GHOST
-            ));
+                    cx - btnW / 2,
+                    startY + playH + (otherH + gap) * 3 + gap,
+                    btnW,
+                    otherH,
+                    Component.literal("REPLAY VIEWER"),
+                    btn -> openReplayViewer(),
+                    PWPButton.Style.GHOST));
         }
     }
 
@@ -106,7 +116,9 @@ public class PWPMainMenuScreen extends Screen {
             Class<?> vc = Class.forName("com.replaymod.replay.gui.screen.GuiReplayViewer");
             Object viewer = vc.getConstructor(rc).newInstance(mod);
             vc.getMethod("display").invoke(viewer);
-        } catch (Exception ignored) { PWP_LOG.warn("PWPMainMenuScreen.openReplayViewer: исключение", ignored); }
+        } catch (Exception ignored) {
+            PWP_LOG.warn("PWPMainMenuScreen.openReplayViewer: исключение", ignored);
+        }
     }
 
     private void detectReplayMod() {
@@ -119,11 +131,11 @@ public class PWPMainMenuScreen extends Screen {
             Class<?> sc = Class.forName("com.replaymod.recording.Setting");
             Class<?> sk = Class.forName("com.replaymod.core.SettingsRegistry$SettingKey");
             Object key = sc.getField("RECORD_SERVER").get(null);
-            replayRecording = (boolean) reg.getClass()
-                .getMethod("get", sk)
-                .invoke(reg, key);
+            replayRecording = (boolean) reg.getClass().getMethod("get", sk).invoke(reg, key);
             replayModAvailable = true;
-        } catch (Exception ignored) { PWP_LOG.warn("PWPMainMenuScreen.detectReplayMod: исключение", ignored); }
+        } catch (Exception ignored) {
+            PWP_LOG.warn("PWPMainMenuScreen.detectReplayMod: исключение", ignored);
+        }
     }
 
     @Override
@@ -181,8 +193,8 @@ public class PWPMainMenuScreen extends Screen {
 
     private void renderButtons(GuiGraphics gui, int mouseX, int mouseY, float partialTick, float elapsed) {
         PWPButton[] btns = replayModAvailable
-            ? new PWPButton[]{ playBtn, singleBtn, settingsBtn, quitBtn, replayBtn }
-            : new PWPButton[]{ playBtn, singleBtn, settingsBtn, quitBtn };
+                ? new PWPButton[] {playBtn, singleBtn, settingsBtn, quitBtn, replayBtn}
+                : new PWPButton[] {playBtn, singleBtn, settingsBtn, quitBtn};
         int startDelay = 300;
 
         for (int i = 0; i < btns.length; i++) {
@@ -190,7 +202,10 @@ public class PWPMainMenuScreen extends Screen {
             if (btn == null) continue;
 
             float progress = animFade(elapsed, startDelay + i * 50, 250);
-            if (progress <= 0) { btn.visible = false; continue; }
+            if (progress <= 0) {
+                btn.visible = false;
+                continue;
+            }
 
             float eased = Math.min(progress, 1);
             int slideY = (int) ((1 - eased) * 12);
@@ -219,7 +234,10 @@ public class PWPMainMenuScreen extends Screen {
             color = hv ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_DIM;
         }
         gui.drawString(font, Component.literal(text), tx, ty, color, false);
-        replayTextX = tx; replayTextY = ty; replayTextW = tw; replayTextH = 10;
+        replayTextX = tx;
+        replayTextY = ty;
+        replayTextW = tw;
+        replayTextH = 10;
         replayHovered = hv;
     }
 
@@ -232,11 +250,11 @@ public class PWPMainMenuScreen extends Screen {
             Class<?> sk = Class.forName("com.replaymod.core.SettingsRegistry$SettingKey");
             Object key = sc.getField("RECORD_SERVER").get(null);
             replayRecording = !replayRecording;
-            reg.getClass()
-                .getMethod("set", sk, Object.class)
-                .invoke(reg, key, replayRecording);
+            reg.getClass().getMethod("set", sk, Object.class).invoke(reg, key, replayRecording);
             reg.getClass().getMethod("save").invoke(reg);
-        } catch (Exception ignored) { PWP_LOG.warn("PWPMainMenuScreen.toggleReplayRecording: исключение", ignored); }
+        } catch (Exception ignored) {
+            PWP_LOG.warn("PWPMainMenuScreen.toggleReplayRecording: исключение", ignored);
+        }
     }
 
     private static float animFade(float elapsed, long delay, long duration) {

@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.core.Heartbeat;
 import com.pwp.coreserver.CoreServerMod;
+import java.nio.file.Path;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraftforge.common.MinecraftForge;
@@ -12,8 +13,6 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.server.ServerLifecycleHooks;
-
-import java.nio.file.Path;
 
 /**
  * Heartbeat матч-сервера: раз в ~10 секунд сообщает core-service реальный онлайн,
@@ -53,8 +52,10 @@ public class MatchHeartbeatSender {
                     .match(
                             data.currentMapImage != null ? data.currentMapImage : "",
                             data.gameMode != null ? data.gameMode : "aas",
-                            data.blueFaction, data.redFaction,
-                            data.blueTickets, data.redTickets,
+                            data.blueFaction,
+                            data.redFaction,
+                            data.blueTickets,
+                            data.redTickets,
                             data.isGameStarted ? "PLAYING" : "STARTING",
                             server.getPlayerList().getMaxPlayers(),
                             MatchStatsTracker.get().getStartedAt(),

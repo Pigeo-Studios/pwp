@@ -10,6 +10,10 @@ import net.minecraftforge.fml.ModLoadingContext;
 public class ModClientSetup {
     public static void registerConfigScreen() {
         // Добавляет фабрику экрана настроек, чтобы он был доступен из главного меню Forge
-        ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class, () -> new ConfigScreenHandler.ConfigScreenFactory((minecraft, parentScreen) -> new PWPConfigScreen((Screen)parentScreen)));
+        ModLoadingContext.get()
+                .registerExtensionPoint(
+                        ConfigScreenHandler.ConfigScreenFactory.class,
+                        () -> new ConfigScreenHandler.ConfigScreenFactory(
+                                (minecraft, parentScreen) -> new PWPConfigScreen((Screen) parentScreen)));
     }
 }

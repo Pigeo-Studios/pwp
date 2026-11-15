@@ -1,8 +1,8 @@
 package com.pigeostudios.pwp.warfare.server;
 
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketSyncMarker;
 import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
+import com.pigeostudios.pwp.warfare.network.PacketSyncMarker;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.*;
@@ -18,11 +18,25 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public class MarkerManager {
     private static final List<MapMarker> all = new ArrayList<>();
 
-    public static void add(MapMarker m) { all.add(m); }
-    public static void remove(MapMarker m) { all.remove(m); }
-    public static void removeById(UUID id) { all.removeIf(m -> m.id.equals(id)); }
-    public static void clearAll() { all.clear(); }
-    public static MapMarker findById(UUID id) { return all.stream().filter(m -> m.id.equals(id)).findFirst().orElse(null); }
+    public static void add(MapMarker m) {
+        all.add(m);
+    }
+
+    public static void remove(MapMarker m) {
+        all.remove(m);
+    }
+
+    public static void removeById(UUID id) {
+        all.removeIf(m -> m.id.equals(id));
+    }
+
+    public static void clearAll() {
+        all.clear();
+    }
+
+    public static MapMarker findById(UUID id) {
+        return all.stream().filter(m -> m.id.equals(id)).findFirst().orElse(null);
+    }
 
     public static void broadcastToTeam(ServerPlayer player, MapMarker m) {
         String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
@@ -51,14 +65,21 @@ public class MarkerManager {
         data.savedMarkers.clear();
         for (MapMarker m : all) {
             data.savedMarkers.add(new WarfareWorldData.MarkerSnapshot(
-                m.id, m.team, m.category, m.iconType, m.pos, m.ownerUUID, m.createdAt));
+                    m.id, m.team, m.category, m.iconType, m.pos, m.ownerUUID, m.createdAt));
         }
     }
 
     public static void loadFrom(WarfareWorldData data) {
         all.clear();
         for (var snap : data.savedMarkers) {
-            all.add(new MapMarker(snap.id(), snap.team(), snap.category(), snap.iconType(), snap.pos(), snap.ownerUUID(), snap.createdAt()));
+            all.add(new MapMarker(
+                    snap.id(),
+                    snap.team(),
+                    snap.category(),
+                    snap.iconType(),
+                    snap.pos(),
+                    snap.ownerUUID(),
+                    snap.createdAt()));
         }
     }
 

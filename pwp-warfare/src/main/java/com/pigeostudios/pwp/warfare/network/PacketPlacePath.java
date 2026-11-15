@@ -18,14 +18,23 @@ public class PacketPlacePath {
     public final List<PathPoint> points;
 
     public PacketPlacePath(UUID pathId, String team, String type, int squadNum, List<PathPoint> points) {
-        this.pathId = pathId; this.team = team; this.type = type;
-        this.squadNum = squadNum; this.points = points;
+        this.pathId = pathId;
+        this.team = team;
+        this.type = type;
+        this.squadNum = squadNum;
+        this.points = points;
     }
 
     public static void encode(PacketPlacePath msg, FriendlyByteBuf buf) {
-        buf.writeUUID(msg.pathId); buf.writeUtf(msg.team); buf.writeUtf(msg.type);
-        buf.writeInt(msg.squadNum); buf.writeInt(msg.points.size());
-        for (var p : msg.points) { buf.writeDouble(p.x); buf.writeDouble(p.z); }
+        buf.writeUUID(msg.pathId);
+        buf.writeUtf(msg.team);
+        buf.writeUtf(msg.type);
+        buf.writeInt(msg.squadNum);
+        buf.writeInt(msg.points.size());
+        for (var p : msg.points) {
+            buf.writeDouble(p.x);
+            buf.writeDouble(p.z);
+        }
     }
 
     public static PacketPlacePath decode(FriendlyByteBuf buf) {
@@ -46,8 +55,10 @@ public class PacketPlacePath {
             WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
             boolean authorized = false;
             for (WarfareWorldData.Squad s : data.squads) {
-                if (s.members.contains(pName) && (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName))) {
-                    authorized = true; break;
+                if (s.members.contains(pName)
+                        && (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName))) {
+                    authorized = true;
+                    break;
                 }
             }
             if (!authorized) return;

@@ -1,11 +1,12 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.google.gson.JsonObject;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.AdminActions;
 import com.pwp.coreclient.network.PacketAction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import com.pwp.coreclient.gui.components.PWPButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
@@ -14,10 +15,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
-import com.pwp.coreclient.gui.theme.PWPTheme;
 
 public class SkinEditorScreen extends Screen {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(SkinEditorScreen.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(SkinEditorScreen.class);
 
     private final SkinListScreen parent;
     private EditBox nameBox;
@@ -73,7 +73,9 @@ public class SkinEditorScreen extends Screen {
                     previewItem = ItemStack.of(loaded);
                     ResourceLocation rl = ForgeRegistries.ITEMS.getKey(previewItem.getItem());
                     previewItemName = rl != null ? rl.toString() : "unknown";
-                } catch (Exception ignored) { PWP_LOG.warn("SkinEditorScreen.init: исключение", ignored); }
+                } catch (Exception ignored) {
+                    PWP_LOG.warn("SkinEditorScreen.init: исключение", ignored);
+                }
             }
         }
         addRenderableWidget(nameBox);
@@ -81,26 +83,43 @@ public class SkinEditorScreen extends Screen {
         for (int i = 0; i < SLOT_TYPES.length; i++) {
             int bx = cx - 160 + i * 64;
             final int fi = i;
-            addRenderableWidget(new PWPButton(bx, 56, 60, 18, Component.literal(SLOT_TYPES[i]), b -> {
-                slotType = SLOT_TYPES[fi];
-                rebuildButtons();
-            }, PWPButton.Style.PRIMARY));
+            addRenderableWidget(new PWPButton(
+                    bx,
+                    56,
+                    60,
+                    18,
+                    Component.literal(SLOT_TYPES[i]),
+                    b -> {
+                        slotType = SLOT_TYPES[fi];
+                        rebuildButtons();
+                    },
+                    PWPButton.Style.PRIMARY));
         }
 
         for (int i = 0; i < RARITIES.length; i++) {
             int bx = cx - 170 + i * 57;
             final int fi = i;
-            addRenderableWidget(new PWPButton(bx, 78, 53, 16, Component.literal(RARITIES[i].substring(0, 3)), b -> {
-                rarity = RARITIES[fi];
-                rebuildButtons();
-            }, PWPButton.Style.PRIMARY));
+            addRenderableWidget(new PWPButton(
+                    bx,
+                    78,
+                    53,
+                    16,
+                    Component.literal(RARITIES[i].substring(0, 3)),
+                    b -> {
+                        rarity = RARITIES[fi];
+                        rebuildButtons();
+                    },
+                    PWPButton.Style.PRIMARY));
         }
 
-        addRenderableWidget(new PWPButton(cx - 60, 230, 50, 20, Component.literal("Save"), b -> save(), PWPButton.Style.ACCENT));
-        PWPButton delBtn = new PWPButton(cx - 5, 230, 50, 20, Component.literal("Delete"), b -> delete(), PWPButton.Style.DANGER);
+        addRenderableWidget(
+                new PWPButton(cx - 60, 230, 50, 20, Component.literal("Save"), b -> save(), PWPButton.Style.ACCENT));
+        PWPButton delBtn =
+                new PWPButton(cx - 5, 230, 50, 20, Component.literal("Delete"), b -> delete(), PWPButton.Style.DANGER);
         delBtn.active = editSkinId != null;
         addRenderableWidget(delBtn);
-        addRenderableWidget(new PWPButton(cx + 50, 230, 50, 20, Component.literal("Back"), b -> close(), PWPButton.Style.PRIMARY));
+        addRenderableWidget(
+                new PWPButton(cx + 50, 230, 50, 20, Component.literal("Back"), b -> close(), PWPButton.Style.PRIMARY));
 
         rebuildButtons();
     }
@@ -115,7 +134,8 @@ public class SkinEditorScreen extends Screen {
                 } else if (idx - SLOT_TYPES.length < RARITIES.length) {
                     int ri = idx - SLOT_TYPES.length;
                     boolean sel = rarity.equals(RARITIES[ri]);
-                    btn.setMessage(Component.literal(sel ? "\u25b6" + RARITIES[ri].substring(0, 3) : " " + RARITIES[ri].substring(0, 3)));
+                    btn.setMessage(Component.literal(
+                            sel ? "\u25b6" + RARITIES[ri].substring(0, 3) : " " + RARITIES[ri].substring(0, 3)));
                 }
                 idx++;
             }
@@ -138,8 +158,13 @@ public class SkinEditorScreen extends Screen {
         if (!previewItem.isEmpty()) {
             gui.renderItem(previewItem, pX + 9, pY + 14);
             gui.renderItemDecorations(PWPTheme.Fonts.display(), previewItem, pX + 9, pY + 14);
-            gui.drawString(PWPTheme.Fonts.display(), previewItemName.length() > 28 ? previewItemName.substring(0, 25) + "..." : previewItemName,
-                pX + 56, pY + 14, 0xFF3D6FA5, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    previewItemName.length() > 28 ? previewItemName.substring(0, 25) + "..." : previewItemName,
+                    pX + 56,
+                    pY + 14,
+                    0xFF3D6FA5,
+                    false);
             gui.drawString(PWPTheme.Fonts.display(), "Slot: " + slotType, pX + 56, pY + 26, 0xFFC8812A, false);
             int rColor = RARITY_COLORS[java.util.Arrays.asList(RARITIES).indexOf(rarity)];
             gui.drawString(PWPTheme.Fonts.display(), rarity, pX + 56, pY + 38, rColor, false);
@@ -189,7 +214,10 @@ public class SkinEditorScreen extends Screen {
                 int iy = 166 + row * (SLOT_SIZE + 2);
                 if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
                     ItemStack stack = mc.player.getInventory().items.get(i);
-                    if (!stack.isEmpty()) { setPreviewItem(stack); previewSlotIndex = i; }
+                    if (!stack.isEmpty()) {
+                        setPreviewItem(stack);
+                        previewSlotIndex = i;
+                    }
                     return true;
                 }
             }
@@ -207,9 +235,11 @@ public class SkinEditorScreen extends Screen {
         previewItemName = key != null ? key.toString() : "unknown";
         String id = key != null ? key.toString() : "";
         if (id.contains("knife") || id.contains("bayonet") || id.contains("dagger") || id.contains("sword")) {
-            slotType = "KNIFE"; weaponTag = "knife";
+            slotType = "KNIFE";
+            weaponTag = "knife";
         } else if (id.contains("pistol") || id.contains("deagle") || id.contains("glock") || id.contains("revolver")) {
-            slotType = "SECONDARY"; weaponTag = id.contains("deagle") ? "deagle" : "pistol";
+            slotType = "SECONDARY";
+            weaponTag = id.contains("deagle") ? "deagle" : "pistol";
         } else {
             slotType = "PRIMARY";
             if (id.contains("ak")) weaponTag = "ak47";
@@ -226,12 +256,22 @@ public class SkinEditorScreen extends Screen {
 
     private void save() {
         String name = nameBox.getValue().trim();
-        if (name.isEmpty()) { showMsg("§eEnter a name!"); return; }
-        if (previewItem.isEmpty()) { showMsg("§eClick an item in the grid!"); return; }
+        if (name.isEmpty()) {
+            showMsg("§eEnter a name!");
+            return;
+        }
+        if (previewItem.isEmpty()) {
+            showMsg("§eClick an item in the grid!");
+            return;
+        }
 
-        final String saveSkinId = editSkinId != null ? editSkinId :
-            String.valueOf(Math.abs(previewRegistryName.hashCode())) + "_" +
-            name.toLowerCase().replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_").replaceAll("^_|_$", "");
+        final String saveSkinId = editSkinId != null
+                ? editSkinId
+                : String.valueOf(Math.abs(previewRegistryName.hashCode())) + "_"
+                        + name.toLowerCase()
+                                .replaceAll("[^a-z0-9_]", "_")
+                                .replaceAll("_+", "_")
+                                .replaceAll("^_|_$", "");
         final String saveName = name;
         final String saveSlot = slotType;
         final String saveWeapon = weaponTag;
@@ -248,23 +288,40 @@ public class SkinEditorScreen extends Screen {
         params.addProperty("rarity", saveRarity);
         params.addProperty("modelPath", saveRegistry);
         AdminActions.send(PacketAction.SAVE_SKIN, params, r -> {
-            if (r.success()) { showMsg("§aSaved!"); close(); }
-            else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+            if (r.success()) {
+                showMsg("§aSaved!");
+                close();
+            } else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
         });
     }
 
     private void delete() {
-        if (editSkinId == null) { showMsg("§eSave first!"); return; }
+        if (editSkinId == null) {
+            showMsg("§eSave first!");
+            return;
+        }
         showMsg("§eDeleting...");
         JsonObject params = new JsonObject();
         params.addProperty("skinId", editSkinId);
         AdminActions.send(PacketAction.DELETE_SKIN, params, r -> {
-            if (r.success()) { showMsg("§aDeleted!"); close(); }
-            else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+            if (r.success()) {
+                showMsg("§aDeleted!");
+                close();
+            } else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
         });
     }
 
-    private void showMsg(String msg) { statusMsg = msg; statusTime = System.currentTimeMillis(); }
-    private void close() { mc.setScreen(new SkinListScreen()); }
-    @Override public boolean isPauseScreen() { return false; }
+    private void showMsg(String msg) {
+        statusMsg = msg;
+        statusTime = System.currentTimeMillis();
+    }
+
+    private void close() {
+        mc.setScreen(new SkinListScreen());
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
 }

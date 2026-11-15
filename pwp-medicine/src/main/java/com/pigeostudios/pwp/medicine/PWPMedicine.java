@@ -24,22 +24,28 @@ import net.minecraftforge.registries.RegistryObject;
 
 // Главный класс мода PWP Medicine.
 // Инициализирует предметы, звуки, эффекты, креативную вкладку и конфиг.
-@Mod(value="pwp_medicine")
+@Mod(value = "pwp_medicine")
 public class PWPMedicine {
     public static final String MODID = "pwp_medicine";
     // Регистратор креативной вкладки с предметами мода
-    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(ResourceKey.createRegistryKey(new ResourceLocation("minecraft", "creative_mode_tab")), "pwp_medicine");
+    public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(
+            ResourceKey.createRegistryKey(new ResourceLocation("minecraft", "creative_mode_tab")), "pwp_medicine");
     // Вкладка "Медицина" с иконкой аптечки
-    public static final RegistryObject<CreativeModeTab> MEDICINE_TAB = CREATIVE_MODE_TABS.register("medicine_tab", () -> CreativeModeTab.builder().icon(() -> new ItemStack((ItemLike)ModItems.MEDKIT.get())).title(Component.translatable("creativetab.medicine_tab")).displayItems((parameters, output) -> {
-        output.accept((ItemLike)ModItems.BANDAGE.get());
-        output.accept((ItemLike)ModItems.MEDKIT.get());
-    }).build());
+    public static final RegistryObject<CreativeModeTab> MEDICINE_TAB =
+            CREATIVE_MODE_TABS.register("medicine_tab", () -> CreativeModeTab.builder()
+                    .icon(() -> new ItemStack((ItemLike) ModItems.MEDKIT.get()))
+                    .title(Component.translatable("creativetab.medicine_tab"))
+                    .displayItems((parameters, output) -> {
+                        output.accept((ItemLike) ModItems.BANDAGE.get());
+                        output.accept((ItemLike) ModItems.MEDKIT.get());
+                    })
+                    .build());
 
     // Конструктор — регистрирует всё на шине событий
     public PWPMedicine() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         // Регистрация конфига
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, (IConfigSpec)PWPConfig.SPEC);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, (IConfigSpec) PWPConfig.SPEC);
         // Экран настроек для клиента
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ModClientSetup.registerConfigScreen();

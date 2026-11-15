@@ -18,7 +18,9 @@ import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid="pwplimit", value={Dist.CLIENT})
+@Mod.EventBusSubscriber(
+        modid = "pwplimit",
+        value = {Dist.CLIENT})
 public class ClientEvents {
     // Хранилище времени последнего прыжка для каждого игрока (UUID -> время в мс)
     public static final HashMap<UUID, Long> sprintJumpCooldown = new HashMap();
@@ -33,7 +35,8 @@ public class ClientEvents {
         if (mc.player == null || mc.gameMode == null) {
             return;
         }
-        boolean isRestricted = mc.gameMode.getPlayerMode() == GameType.SURVIVAL || mc.gameMode.getPlayerMode() == GameType.ADVENTURE;
+        boolean isRestricted =
+                mc.gameMode.getPlayerMode() == GameType.SURVIVAL || mc.gameMode.getPlayerMode() == GameType.ADVENTURE;
         if (isRestricted) {
             mc.options.renderDebug = false;
             if (mc.getEntityRenderDispatcher().shouldRenderHitBoxes()) {
@@ -60,8 +63,7 @@ public class ClientEvents {
             event.setCanceled(true);
             return;
         }
-        if (id.equals(VanillaGuiOverlay.CROSSHAIR.id())
-                && !mc.player.isSpectator()) {
+        if (id.equals(VanillaGuiOverlay.CROSSHAIR.id()) && !mc.player.isSpectator()) {
             event.setCanceled(true);
             return;
         }
@@ -75,16 +77,16 @@ public class ClientEvents {
     @SubscribeEvent
     // onInputUpdate: блокировка прыжка при спринте если кулдаун активен
     public static void onInputUpdate(MovementInputUpdateEvent event) {
-        if (!((Boolean)ModConfig.ENABLE_JUMP_COOLDOWN.get()).booleanValue()) {
+        if (!((Boolean) ModConfig.ENABLE_JUMP_COOLDOWN.get()).booleanValue()) {
             return;
         }
-        LocalPlayer player = (LocalPlayer)event.getEntity();
+        LocalPlayer player = (LocalPlayer) event.getEntity();
         if (player.isCreative() || player.isSpectator()) {
             return;
         }
         if (event.getInput().jumping && player.isSprinting()) {
             Long lastJump = sprintJumpCooldown.get(player.getUUID());
-            long cooldownMs = (long)((Double)ModConfig.JUMP_COOLDOWN_SECONDS.get() * 1000.0);
+            long cooldownMs = (long) ((Double) ModConfig.JUMP_COOLDOWN_SECONDS.get() * 1000.0);
             if (lastJump != null && System.currentTimeMillis() - lastJump < cooldownMs) {
                 event.getInput().jumping = false;
             }
@@ -95,11 +97,14 @@ public class ClientEvents {
     // onLivingJump: запись времени прыжка для кулдауна
     public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
         LocalPlayer player;
-        if (!((Boolean)ModConfig.ENABLE_JUMP_COOLDOWN.get()).booleanValue()) {
+        if (!((Boolean) ModConfig.ENABLE_JUMP_COOLDOWN.get()).booleanValue()) {
             return;
         }
         LivingEntity livingEntity = event.getEntity();
-        if (livingEntity instanceof LocalPlayer && !(player = (LocalPlayer)livingEntity).isCreative() && !player.isSpectator() && player.isSprinting()) {
+        if (livingEntity instanceof LocalPlayer
+                && !(player = (LocalPlayer) livingEntity).isCreative()
+                && !player.isSpectator()
+                && player.isSprinting()) {
             sprintJumpCooldown.put(player.getUUID(), System.currentTimeMillis());
         }
     }

@@ -12,12 +12,20 @@ public class MapMarker {
 
     public long clientExpiryTick;
 
-    public MapMarker(UUID id, String team, String category, String iconType, BlockPos pos, UUID ownerUUID, long createdAt) {
-        this.id = id; this.team = team; this.category = category; this.iconType = iconType;
-        this.pos = pos; this.ownerUUID = ownerUUID; this.createdAt = createdAt;
+    public MapMarker(
+            UUID id, String team, String category, String iconType, BlockPos pos, UUID ownerUUID, long createdAt) {
+        this.id = id;
+        this.team = team;
+        this.category = category;
+        this.iconType = iconType;
+        this.pos = pos;
+        this.ownerUUID = ownerUUID;
+        this.createdAt = createdAt;
     }
 
-    public boolean isExpired(long now) { return (now - createdAt) > 6000; }
+    public boolean isExpired(long now) {
+        return (now - createdAt) > 6000;
+    }
 
     public float getAlpha(long now) {
         long elapsed = now - createdAt;

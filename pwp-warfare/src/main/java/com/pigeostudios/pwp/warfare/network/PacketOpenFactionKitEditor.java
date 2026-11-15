@@ -1,16 +1,13 @@
 package com.pigeostudios.pwp.warfare.network;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
 import com.pwp.api.util.ServerThread;
-import java.util.concurrent.CompletableFuture;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -21,141 +18,139 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.NetworkHooks;
 import net.minecraftforge.network.NetworkEvent.Context;
+import net.minecraftforge.network.NetworkHooks;
 
 public class PacketOpenFactionKitEditor {
-   private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(PacketOpenFactionKitEditor.class);
-   private final String faction;
-   private final String kitName;
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(PacketOpenFactionKitEditor.class);
+    private final String faction;
+    private final String kitName;
 
-   public PacketOpenFactionKitEditor(String faction, String kitName) {
-      this.faction = faction;
-      this.kitName = kitName;
-   }
+    public PacketOpenFactionKitEditor(String faction, String kitName) {
+        this.faction = faction;
+        this.kitName = kitName;
+    }
 
-   public static void encode(PacketOpenFactionKitEditor msg, FriendlyByteBuf buf) {
-      buf.writeUtf(msg.faction);
-      buf.writeUtf(msg.kitName);
-   }
+    public static void encode(PacketOpenFactionKitEditor msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.faction);
+        buf.writeUtf(msg.kitName);
+    }
 
-   public static PacketOpenFactionKitEditor decode(FriendlyByteBuf buf) {
-      return new PacketOpenFactionKitEditor(buf.readUtf(), buf.readUtf());
-   }
+    public static PacketOpenFactionKitEditor decode(FriendlyByteBuf buf) {
+        return new PacketOpenFactionKitEditor(buf.readUtf(), buf.readUtf());
+    }
 
-   public static void handle(PacketOpenFactionKitEditor msg, Supplier<Context> ctx) {
-      ctx.get()
-         .enqueueWork(
-            () -> {
-                ServerPlayer player = ctx.get().getSender();
-                if (player != null && PwpPermissions.isAdmin(player)) {
-                   // API — источник истины: в памяти (blueKits/redKits) могут лежать устаревшие NBT-киты
-                   ServerThread.thenOnServer(loadFromApi(msg.faction, msg.kitName), player.server,
-                      apiKit -> openEditor(player, msg, apiKit));
+    public static void handle(PacketOpenFactionKitEditor msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null && PwpPermissions.isAdmin(player)) {
+                // API — источник истины: в памяти (blueKits/redKits) могут лежать устаревшие NBT-киты
+                ServerThread.thenOnServer(
+                        loadFromApi(msg.faction, msg.kitName),
+                        player.server,
+                        apiKit -> openEditor(player, msg, apiKit));
+            }
+        });
+        ctx.get().setPacketHandled(true);
+    }
+
+    /** Открывает редактор кита на главном потоке; apiKit — кит из API или null (фолбэк на память). */
+    private static void openEditor(
+            ServerPlayer player, PacketOpenFactionKitEditor msg, WarfareWorldData.KitInfo apiKit) {
+        if (player.hasDisconnected()) return;
+        {
+            WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+            WarfareWorldData.KitInfo kit = apiKit;
+            String kitTeam = "BLUE";
+            if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
+            else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
+
+            if (kit == null) { // фолбэк на загруженные в память киты
+                if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
+                    kit = data.blueKits.get(msg.kitName);
+                } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
+                    kit = data.redKits.get(msg.kitName);
                 }
             }
-         );
-      ctx.get().setPacketHandled(true);
-   }
 
-   /** Открывает редактор кита на главном потоке; apiKit — кит из API или null (фолбэк на память). */
-   private static void openEditor(ServerPlayer player, PacketOpenFactionKitEditor msg, WarfareWorldData.KitInfo apiKit) {
-      if (player.hasDisconnected()) return;
-      {
-                   WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                   WarfareWorldData.KitInfo kit = apiKit;
-                   String kitTeam = "BLUE";
-                   if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
-                   else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
+            if (kit == null) {
+                kit = new WarfareWorldData.KitInfo(msg.kitName);
+            }
 
-                   if (kit == null) { // фолбэк на загруженные в память киты
-                      if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
-                         kit = data.blueKits.get(msg.kitName);
-                      } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
-                         kit = data.redKits.get(msg.kitName);
-                      }
-                   }
-
-                   if (kit == null) {
-                      kit = new WarfareWorldData.KitInfo(msg.kitName);
-                   }
-
-                   final WarfareWorldData.KitInfo finalKit = kit;
-                   final String finalTeam = kitTeam;
-                   NetworkHooks.openScreen(
-                      player,
-                      new MenuProvider() {
-                         public Component getDisplayName() {
+            final WarfareWorldData.KitInfo finalKit = kit;
+            final String finalTeam = kitTeam;
+            NetworkHooks.openScreen(
+                    player,
+                    new MenuProvider() {
+                        public Component getDisplayName() {
                             return Component.literal("Faction Kit: " + finalKit.name);
-                         }
+                        }
 
-                         public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {
+                        public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {
                             SimpleContainer container = new SimpleContainer(49);
 
                             for (int i = 0; i < 49; i++) {
-                               container.setItem(i, ((ItemStack)finalKit.inventory.get(i)).copy());
+                                container.setItem(i, ((ItemStack) finalKit.inventory.get(i)).copy());
                             }
 
-                              return new KitEditorMenu(
-                                 id,
-                                 inv,
-                                 container,
-                                 msg.faction,  // faction
-                                 finalTeam,    // team
-                                 finalKit.name,
-                               finalKit.category,
-                               finalKit.description != null ? finalKit.description : "",
-                               finalKit.isLeaderOnly,
-                               finalKit.maxPerTeam,
-                               finalKit.maxPerSquad,
-                               finalKit.minSquadPlayers,
-                               finalKit.resupplyFlags,
-                               finalKit.saveNbtFlags,
-                               finalKit.slotSkins
-                            );
+                            return new KitEditorMenu(
+                                    id,
+                                    inv,
+                                    container,
+                                    msg.faction, // faction
+                                    finalTeam, // team
+                                    finalKit.name,
+                                    finalKit.category,
+                                    finalKit.description != null ? finalKit.description : "",
+                                    finalKit.isLeaderOnly,
+                                    finalKit.maxPerTeam,
+                                    finalKit.maxPerSquad,
+                                    finalKit.minSquadPlayers,
+                                    finalKit.resupplyFlags,
+                                    finalKit.saveNbtFlags,
+                                    finalKit.slotSkins);
                         }
-                     },
-                       buf -> {
-                          buf.writeUtf(msg.faction);   // faction
-                          buf.writeUtf(finalTeam);     // team
-                          buf.writeUtf(msg.kitName);
-                         buf.writeUtf(finalKit.category != null ? finalKit.category : "INFANTRY");
-                         buf.writeUtf(finalKit.description != null ? finalKit.description : "");
-                         buf.writeBoolean(finalKit.isLeaderOnly);
+                    },
+                    buf -> {
+                        buf.writeUtf(msg.faction); // faction
+                        buf.writeUtf(finalTeam); // team
+                        buf.writeUtf(msg.kitName);
+                        buf.writeUtf(finalKit.category != null ? finalKit.category : "INFANTRY");
+                        buf.writeUtf(finalKit.description != null ? finalKit.description : "");
+                        buf.writeBoolean(finalKit.isLeaderOnly);
                         buf.writeInt(finalKit.maxPerTeam);
                         buf.writeInt(finalKit.maxPerSquad);
                         buf.writeInt(finalKit.minSquadPlayers);
 
                         for (boolean f : finalKit.resupplyFlags) {
-                           buf.writeBoolean(f);
+                            buf.writeBoolean(f);
                         }
 
-                         for (boolean f : finalKit.saveNbtFlags) {
+                        for (boolean f : finalKit.saveNbtFlags) {
                             buf.writeBoolean(f);
-                         }
+                        }
 
-                         Map<Integer, List<String>> skins = finalKit.slotSkins;
-                         buf.writeInt(skins.size());
-                         for (Map.Entry<Integer, List<String>> e : skins.entrySet()) {
+                        Map<Integer, List<String>> skins = finalKit.slotSkins;
+                        buf.writeInt(skins.size());
+                        for (Map.Entry<Integer, List<String>> e : skins.entrySet()) {
                             buf.writeInt(e.getKey());
                             buf.writeInt(e.getValue().size());
                             for (String s : e.getValue()) buf.writeUtf(s);
-                         }
-                      }
-                  );
-      }
-   }
+                        }
+                    });
+        }
+    }
 
-   private static CompletableFuture<WarfareWorldData.KitInfo> loadFromApi(String faction, String kitName) {
-      return CoreApi.getFactionKit(faction, kitName).thenApply(response -> {
-         JsonObject data = CoreApi.dataObject(response);
-         if (data == null || !data.has("kitName")) return null;
-         try {
-            return WarfareWorldData.KitInfo.loadFromJson(data);
-         } catch (RuntimeException e) {
-            LOGGER.warn("Кит {}/{} из API не разобран", faction, kitName, e);
-            return null;
-         }
-      });
-   }
+    private static CompletableFuture<WarfareWorldData.KitInfo> loadFromApi(String faction, String kitName) {
+        return CoreApi.getFactionKit(faction, kitName).thenApply(response -> {
+            JsonObject data = CoreApi.dataObject(response);
+            if (data == null || !data.has("kitName")) return null;
+            try {
+                return WarfareWorldData.KitInfo.loadFromJson(data);
+            } catch (RuntimeException e) {
+                LOGGER.warn("Кит {}/{} из API не разобран", faction, kitName, e);
+                return null;
+            }
+        });
+    }
 }

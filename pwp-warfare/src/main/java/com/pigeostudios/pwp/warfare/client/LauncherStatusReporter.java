@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
 // Лаунчер слушает этот порт и переводит RPC в состояния lobby/match/playing/idle.
 // Все ошибки молча игнорируются: без лаунчера мод работает как раньше.
 public class LauncherStatusReporter {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(LauncherStatusReporter.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(LauncherStatusReporter.class);
     private static final String ENDPOINT = "http://127.0.0.1:42157/status";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "pwp-launcher-status");
@@ -37,10 +37,9 @@ public class LauncherStatusReporter {
     }
 
     // Вызывается из handleSyncGameData каждую секунду на любом PWP-сервере
-    public static void onSyncGameData(boolean isGameStarted, String blueFaction, String redFaction,
-                                      String myTeam, String nickname) {
-        if (isGameStarted && myTeam != null
-                && (myTeam.equalsIgnoreCase("Blue") || myTeam.equalsIgnoreCase("Red"))) {
+    public static void onSyncGameData(
+            boolean isGameStarted, String blueFaction, String redFaction, String myTeam, String nickname) {
+        if (isGameStarted && myTeam != null && (myTeam.equalsIgnoreCase("Blue") || myTeam.equalsIgnoreCase("Red"))) {
             boolean blue = myTeam.equalsIgnoreCase("Blue");
             String my = blue ? blueFaction : redFaction;
             String enemy = blue ? redFaction : blueFaction;
@@ -96,10 +95,17 @@ public class LauncherStatusReporter {
             }
             conn.getResponseCode(); // дождаться ответа, чтобы соединение завершилось
             conn.disconnect();
-        } catch (Exception ignored) { PWP_LOG.warn("LauncherStatusReporter.post: исключение (Лаунчер не запущен или порт занят — не критично)", ignored); }
+        } catch (Exception ignored) {
+            PWP_LOG.warn(
+                    "LauncherStatusReporter.post: исключение (Лаунчер не запущен или порт занят — не критично)",
+                    ignored);
+        }
     }
 
     private static String jsonEscape(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 }

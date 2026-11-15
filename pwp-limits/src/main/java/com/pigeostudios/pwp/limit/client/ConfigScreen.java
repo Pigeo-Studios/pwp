@@ -21,8 +21,14 @@ public class ConfigScreen extends Screen {
     @Override
     protected void init() {
         int cx = this.width / 2;
-        this.addRenderableWidget(CycleButton.onOffBuilder((Boolean)ModConfig.ENABLE_JUMP_COOLDOWN.get())
-            .create(cx - 100, 50, 200, 20, Component.literal("КД прыжка"), (button, value) -> ModConfig.ENABLE_JUMP_COOLDOWN.set(value)));
+        this.addRenderableWidget(CycleButton.onOffBuilder((Boolean) ModConfig.ENABLE_JUMP_COOLDOWN.get())
+                .create(
+                        cx - 100,
+                        50,
+                        200,
+                        20,
+                        Component.literal("КД прыжка"),
+                        (button, value) -> ModConfig.ENABLE_JUMP_COOLDOWN.set(value)));
 
         this.cooldownInput = new EditBox(this.font, cx - 100, 90, 200, 20, Component.literal("Секунды"));
         this.cooldownInput.setValue(String.valueOf(ModConfig.JUMP_COOLDOWN_SECONDS.get()));
@@ -30,7 +36,8 @@ public class ConfigScreen extends Screen {
         this.addRenderableWidget(this.cooldownInput);
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> this.saveAndClose())
-            .bounds(cx - 100, 150, 200, 22).build());
+                .bounds(cx - 100, 150, 200, 22)
+                .build());
     }
 
     private void saveAndClose() {

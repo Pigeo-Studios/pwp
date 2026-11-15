@@ -6,7 +6,10 @@ import net.minecraft.client.gui.GuiGraphics;
 public class PWPCard {
 
     public enum State {
-        DEFAULT, HOVER, SELECTED, DISABLED
+        DEFAULT,
+        HOVER,
+        SELECTED,
+        DISABLED
     }
 
     private PWPCard() {}

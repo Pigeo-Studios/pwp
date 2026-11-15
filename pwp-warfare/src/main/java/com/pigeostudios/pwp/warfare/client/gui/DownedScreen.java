@@ -1,9 +1,9 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.network.PacketDownedAction;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -31,20 +31,32 @@ public class DownedScreen extends Screen {
         int cx = width / 2;
         int bottomY = height - 55;
 
-        addRenderableWidget(new PWPButton(cx - 130, bottomY, 120, 24,
-            Component.literal("Сдаться"),
-            b -> { PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(1)); onClose(); },
-            PWPButton.Style.DANGER));
+        addRenderableWidget(new PWPButton(
+                cx - 130,
+                bottomY,
+                120,
+                24,
+                Component.literal("Сдаться"),
+                b -> {
+                    PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(1));
+                    onClose();
+                },
+                PWPButton.Style.DANGER));
 
-        callMedicButton = addRenderableWidget(new PWPButton(cx + 10, bottomY, 120, 24,
-            Component.literal("Вызвать медика"),
-            b -> {
-                long now = System.currentTimeMillis();
-                if (now - lastMedicCallTime >= 15000) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(0));
-                    lastMedicCallTime = now;
-                }
-            }, PWPButton.Style.PRIMARY));
+        callMedicButton = addRenderableWidget(new PWPButton(
+                cx + 10,
+                bottomY,
+                120,
+                24,
+                Component.literal("Вызвать медика"),
+                b -> {
+                    long now = System.currentTimeMillis();
+                    if (now - lastMedicCallTime >= 15000) {
+                        PacketHandler.INSTANCE.sendToServer(new PacketDownedAction(0));
+                        lastMedicCallTime = now;
+                    }
+                },
+                PWPButton.Style.PRIMARY));
     }
 
     @Override
@@ -62,12 +74,24 @@ public class DownedScreen extends Screen {
         long now = System.currentTimeMillis();
         float pulse = 0.7f + 0.3f * (float) Math.sin((now - screenOpenTime) * 0.005);
         RenderSystem.setShaderColor(pulse, 0.2f, 0.2f, 1f);
-        gui.drawString(PWPTheme.Fonts.display(), Component.literal("\u2764"), cx - PWPTheme.Fonts.display().width("\u2764") / 2, boxY + 16, PWPTheme.Colors.DANGER, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                Component.literal("\u2764"),
+                cx - PWPTheme.Fonts.display().width("\u2764") / 2,
+                boxY + 16,
+                PWPTheme.Colors.DANGER,
+                false);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
 
         Component allyStatus = getAllyDistanceStatus();
         String allyStatusStr = allyStatus.getString();
-        gui.drawString(PWPTheme.Fonts.display(), allyStatus, cx - PWPTheme.Fonts.display().width(allyStatusStr) / 2, boxY + 50, PWPTheme.Colors.TEXT_PRIMARY, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                allyStatus,
+                cx - PWPTheme.Fonts.display().width(allyStatusStr) / 2,
+                boxY + 50,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
 
         int maxSeconds = WarfareConfig.MAX_DOWNED_TIME_SECONDS.get();
         long remaining = maxSeconds - (now - screenOpenTime) / 1000;
@@ -80,11 +104,18 @@ public class DownedScreen extends Screen {
         int barY = boxY + 68;
 
         gui.fill(barX, barY, barX + barW, barY + barH, PWPTheme.Styles.Progress.BG);
-        int fillColor = pct > 0.3f ? PWPTheme.Colors.SUCCESS : (pct > 0.15f ? PWPTheme.Colors.WARNING : PWPTheme.Colors.DANGER);
+        int fillColor =
+                pct > 0.3f ? PWPTheme.Colors.SUCCESS : (pct > 0.15f ? PWPTheme.Colors.WARNING : PWPTheme.Colors.DANGER);
         gui.fill(barX, barY, barX + (int) (barW * pct), barY + barH, fillColor);
 
         String bleedText = "Кровотечение: " + remaining + "с";
-        gui.drawString(PWPTheme.Fonts.display(), Component.literal(bleedText), cx - PWPTheme.Fonts.display().width(bleedText) / 2, boxY + 78, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                Component.literal(bleedText),
+                cx - PWPTheme.Fonts.display().width(bleedText) / 2,
+                boxY + 78,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
 
         long cd = 15000 - (now - lastMedicCallTime);
         if (cd > 0) {
@@ -108,7 +139,10 @@ public class DownedScreen extends Screen {
             if (other == mc.player || other.isSpectator() || !other.isAlive()) continue;
             if (mc.player.getTeam() == null || other.getTeam() != mc.player.getTeam()) continue;
             double d = mc.player.distanceTo(other);
-            if (d < minDist) { minDist = d; closest = other; }
+            if (d < minDist) {
+                minDist = d;
+                closest = other;
+            }
         }
         if (closest != null && minDist <= 250) {
             return Component.literal(closest.getScoreboardName() + " — " + (int) minDist + "м");
@@ -129,5 +163,7 @@ public class DownedScreen extends Screen {
     }
 
     @Override
-    public boolean shouldCloseOnEsc() { return false; }
+    public boolean shouldCloseOnEsc() {
+        return false;
+    }
 }

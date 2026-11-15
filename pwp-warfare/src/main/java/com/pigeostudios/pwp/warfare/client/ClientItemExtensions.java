@@ -9,37 +9,37 @@ import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 // Расширения клиентских предметов для кастомного рендера
 // Сапёрная лопатка, радиостанция и бинокль имеют собственные 3D-модели
 public class ClientItemExtensions {
-   public static final IClientItemExtensions ENTRENCHING_TOOL = new IClientItemExtensions() {
-      private EntrenchingToolRenderer renderer;
+    public static final IClientItemExtensions ENTRENCHING_TOOL = new IClientItemExtensions() {
+        private EntrenchingToolRenderer renderer;
 
-      public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-         if (this.renderer == null) {
-            this.renderer = new EntrenchingToolRenderer();
-         }
+        public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (this.renderer == null) {
+                this.renderer = new EntrenchingToolRenderer();
+            }
 
-         return this.renderer;
-      }
-   };
-   public static final IClientItemExtensions RALLY_RADIO = new IClientItemExtensions() {
-      private SquadRadioRenderer renderer;
+            return this.renderer;
+        }
+    };
+    public static final IClientItemExtensions RALLY_RADIO = new IClientItemExtensions() {
+        private SquadRadioRenderer renderer;
 
-      public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-         if (this.renderer == null) {
-            this.renderer = new SquadRadioRenderer();
-         }
+        public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (this.renderer == null) {
+                this.renderer = new SquadRadioRenderer();
+            }
 
-         return this.renderer;
-      }
-   };
-   public static final IClientItemExtensions BINOCULARS = new IClientItemExtensions() {
-      private BinocularsRenderer renderer;
+            return this.renderer;
+        }
+    };
+    public static final IClientItemExtensions BINOCULARS = new IClientItemExtensions() {
+        private BinocularsRenderer renderer;
 
-      public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-         if (this.renderer == null) {
-            this.renderer = new BinocularsRenderer();
-         }
+        public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+            if (this.renderer == null) {
+                this.renderer = new BinocularsRenderer();
+            }
 
-         return this.renderer;
-      }
-   };
+            return this.renderer;
+        }
+    };
 }

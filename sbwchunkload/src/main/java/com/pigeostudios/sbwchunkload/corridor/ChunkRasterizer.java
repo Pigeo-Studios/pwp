@@ -1,11 +1,10 @@
 package com.pigeostudios.sbwchunkload.corridor;
 
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Растеризация траектории снаряда в список чанков. Никакой логики тикетов
@@ -17,8 +16,7 @@ import java.util.Set;
  */
 public final class ChunkRasterizer {
 
-    private ChunkRasterizer() {
-    }
+    private ChunkRasterizer() {}
 
     /**
      * Коридор от from до to (включительно) с опциональной шириной.

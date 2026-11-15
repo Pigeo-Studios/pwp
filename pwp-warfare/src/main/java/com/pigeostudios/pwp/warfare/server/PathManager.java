@@ -13,7 +13,8 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class PathManager {
-    public record StoredPath(UUID id, String owner, String team, String type, int squadNum, List<PathPoint> points, long createdAt) {}
+    public record StoredPath(
+            UUID id, String owner, String team, String type, int squadNum, List<PathPoint> points, long createdAt) {}
 
     private static final List<StoredPath> all = new ArrayList<>();
 
@@ -27,12 +28,18 @@ public class PathManager {
     public static void setOwner(UUID pathId, String owner) {
         for (int i = 0; i < all.size(); i++) {
             var s = all.get(i);
-            if (s.id.equals(pathId)) all.set(i, new StoredPath(s.id, owner, s.team, s.type, s.squadNum, s.points, s.createdAt));
+            if (s.id.equals(pathId))
+                all.set(i, new StoredPath(s.id, owner, s.team, s.type, s.squadNum, s.points, s.createdAt));
         }
     }
 
-    public static void removeById(UUID id) { all.removeIf(s -> s.id.equals(id)); }
-    public static void clearAll() { all.clear(); }
+    public static void removeById(UUID id) {
+        all.removeIf(s -> s.id.equals(id));
+    }
+
+    public static void clearAll() {
+        all.clear();
+    }
 
     public static StoredPath findById(UUID id) {
         return all.stream().filter(s -> s.id.equals(id)).findFirst().orElse(null);
@@ -59,8 +66,7 @@ public class PathManager {
         PacketRemovePath pkt = new PacketRemovePath(pathId);
         for (ServerPlayer p : s.getPlayerList().getPlayers()) {
             String pt = p.getTeam() != null ? p.getTeam().getName() : "";
-            if (pt.equalsIgnoreCase(teamName))
-                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt);
+            if (pt.equalsIgnoreCase(teamName)) PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), pkt);
         }
     }
 
@@ -80,8 +86,9 @@ public class PathManager {
         String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
         for (StoredPath p : all) {
             if (p.team().equalsIgnoreCase(teamName)) {
-                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-                    new PacketSyncPath(p.id(), p.team(), p.type(), p.squadNum(), p.createdAt(), p.points()));
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.PLAYER.with(() -> player),
+                        new PacketSyncPath(p.id(), p.team(), p.type(), p.squadNum(), p.createdAt(), p.points()));
             }
         }
     }
@@ -90,14 +97,21 @@ public class PathManager {
         data.savedPaths.clear();
         for (StoredPath p : all) {
             data.savedPaths.add(new WarfareWorldData.PathSnapshot(
-                p.id(), p.owner(), p.team(), p.type(), p.squadNum(), p.createdAt(), new ArrayList<>(p.points())));
+                    p.id(), p.owner(), p.team(), p.type(), p.squadNum(), p.createdAt(), new ArrayList<>(p.points())));
         }
     }
 
     public static void loadFrom(WarfareWorldData data) {
         all.clear();
         for (var snap : data.savedPaths) {
-            all.add(new StoredPath(snap.id(), snap.owner(), snap.team(), snap.type(), snap.squadNum(), new ArrayList<>(snap.points()), snap.createdAt()));
+            all.add(new StoredPath(
+                    snap.id(),
+                    snap.owner(),
+                    snap.team(),
+                    snap.type(),
+                    snap.squadNum(),
+                    new ArrayList<>(snap.points()),
+                    snap.createdAt()));
         }
     }
 }

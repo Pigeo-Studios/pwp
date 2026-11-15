@@ -22,18 +22,22 @@ public class KitTeamSelectScreen extends Screen {
         int cy = (height - PANEL_H) / 2;
 
         addRenderableWidget(new PWPButton(
-            cx + 10, cy + 50, 100, 22,
-            Component.translatable("gui.pwpwarfare.kit_team_select.blue"),
-            b -> minecraft.setScreen(new KitListScreen("BLUE")),
-            PWPButton.Style.PRIMARY
-        ));
+                cx + 10,
+                cy + 50,
+                100,
+                22,
+                Component.translatable("gui.pwpwarfare.kit_team_select.blue"),
+                b -> minecraft.setScreen(new KitListScreen("BLUE")),
+                PWPButton.Style.PRIMARY));
 
         addRenderableWidget(new PWPButton(
-            cx + PANEL_W - 110, cy + 50, 100, 22,
-            Component.translatable("gui.pwpwarfare.kit_team_select.red"),
-            b -> minecraft.setScreen(new KitListScreen("RED")),
-            PWPButton.Style.DANGER
-        ));
+                cx + PANEL_W - 110,
+                cy + 50,
+                100,
+                22,
+                Component.translatable("gui.pwpwarfare.kit_team_select.red"),
+                b -> minecraft.setScreen(new KitListScreen("RED")),
+                PWPButton.Style.DANGER));
     }
 
     @Override

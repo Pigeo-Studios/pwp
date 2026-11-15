@@ -1,7 +1,7 @@
 package com.pigeostudios.pwp.warfare.item;
 
-import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
+import com.pwp.api.security.PwpPermissions;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;

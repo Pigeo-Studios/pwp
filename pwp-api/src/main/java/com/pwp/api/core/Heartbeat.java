@@ -23,8 +23,17 @@ public final class Heartbeat {
         return this;
     }
 
-    public Heartbeat match(String mapName, String mode, String blueFaction, String redFaction,
-            int blueScore, int redScore, String phase, int maxPlayers, long matchStartedAt, int matchPlayers) {
+    public Heartbeat match(
+            String mapName,
+            String mode,
+            String blueFaction,
+            String redFaction,
+            int blueScore,
+            int redScore,
+            String phase,
+            int maxPlayers,
+            long matchStartedAt,
+            int matchPlayers) {
         JsonObject m = new JsonObject();
         m.addProperty("mapName", mapName);
         m.addProperty("mode", nz(mode));

@@ -14,19 +14,17 @@ import net.minecraftforge.network.PacketDistributor;
 // раньше был зарегистрирован, но ни разу не отправлялся — ClientData.myCurrentKit
 // всегда висел на "Unassigned", ломая подсказки и медик-индикаторы).
 public class KitUtil {
-   private KitUtil() {}
+    private KitUtil() {}
 
-   public static String getEffectiveKit(ServerPlayer player) {
-      String pending = player.getPersistentData().getString("WARFARE_PendingKit");
-      if (pending != null && !pending.isEmpty()) return pending;
-      return player.getPersistentData().getString("WARFARE_CurrentKit");
-   }
+    public static String getEffectiveKit(ServerPlayer player) {
+        String pending = player.getPersistentData().getString("WARFARE_PendingKit");
+        if (pending != null && !pending.isEmpty()) return pending;
+        return player.getPersistentData().getString("WARFARE_CurrentKit");
+    }
 
-   public static void syncMyKit(ServerPlayer player) {
-      if (player == null) return;
-      PacketHandler.INSTANCE.send(
-         PacketDistributor.PLAYER.with(() -> player),
-         new PacketSyncMyKit(getEffectiveKit(player))
-      );
-   }
+    public static void syncMyKit(ServerPlayer player) {
+        if (player == null) return;
+        PacketHandler.INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player), new PacketSyncMyKit(getEffectiveKit(player)));
+    }
 }

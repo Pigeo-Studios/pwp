@@ -2,22 +2,30 @@ package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.List;
-
 public class PortraitRenderer {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PortraitRenderer.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PortraitRenderer.class);
 
     private final ItemStack[] saved = new ItemStack[6];
     private boolean inSwap;
 
-    public void render(GuiGraphics gui, int x, int y, int w, int h, int mx, int my,
-                       String desc, ItemStack weapon, List<ItemStack> armorPieces) {
+    public void render(
+            GuiGraphics gui,
+            int x,
+            int y,
+            int w,
+            int h,
+            int mx,
+            int my,
+            String desc,
+            ItemStack weapon,
+            List<ItemStack> armorPieces) {
         // Описание роли под портретом не рисуем (некуда — нет места), портрет занимает всю панель.
         // Текст описания живёт в БД (единый источник) и доступен через API китов.
         int panelH = h;
@@ -41,12 +49,15 @@ public class PortraitRenderer {
             int entityY = y + panelH / 2 + panelH / 6;
 
             gui.enableScissor(x, y, x + w, y + panelH);
-            float lx = (float)(entityX - mx) * 0.4f;
-            float ly = (float)(entityY - panelH / 4 - my) * 0.4f;
+            float lx = (float) (entityX - mx) * 0.4f;
+            float ly = (float) (entityY - panelH / 4 - my) * 0.4f;
             gui.pose().pushPose();
             try {
                 InventoryScreen.renderEntityInInventoryFollowsMouse(gui, entityX, entityY, sc, lx, ly, p);
-            } catch (Exception ignored) { com.pwp.api.util.LogOnce.warn(PWP_LOG, "PortraitRenderer:48", "PortraitRenderer.render: исключение", ignored); }
+            } catch (Exception ignored) {
+                com.pwp.api.util.LogOnce.warn(
+                        PWP_LOG, "PortraitRenderer:48", "PortraitRenderer.render: исключение", ignored);
+            }
             gui.pose().popPose();
             gui.disableScissor();
 
@@ -56,7 +67,10 @@ public class PortraitRenderer {
     }
 
     private void swap(net.minecraft.world.entity.player.Player p, ItemStack weapon, List<ItemStack> armor) {
-        if (inSwap) { restore(p); return; }
+        if (inSwap) {
+            restore(p);
+            return;
+        }
         inSwap = true;
         saved[0] = p.getItemBySlot(EquipmentSlot.MAINHAND);
         saved[1] = p.getItemBySlot(EquipmentSlot.OFFHAND);
@@ -80,7 +94,8 @@ public class PortraitRenderer {
     }
 
     private void restore(net.minecraft.world.entity.player.Player p) {
-        if (!inSwap) return; inSwap = false;
+        if (!inSwap) return;
+        inSwap = false;
         p.setItemSlot(EquipmentSlot.MAINHAND, saved[0]);
         p.setItemSlot(EquipmentSlot.OFFHAND, saved[1]);
         p.setItemSlot(EquipmentSlot.HEAD, saved[2]);

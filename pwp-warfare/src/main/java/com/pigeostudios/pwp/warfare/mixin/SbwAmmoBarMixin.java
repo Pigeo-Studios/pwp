@@ -18,16 +18,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @OnlyIn(Dist.CLIENT)
 @Mixin(AmmoBarOverlay.class)
 public abstract class SbwAmmoBarMixin {
-   @Inject(
-      method = "render(Lcom/atsuishio/superbwarfare/client/overlay/RenderContext;)V",
-      at = @At("HEAD"),
-      cancellable = true,
-      remap = false,
-      require = 0
-   )
-   private void pwp$blockAmmoBarInMainZone(RenderContext context, CallbackInfo ci) {
-      if (ClientSafetyState.inMainZone || NotificationFeed.hasVisibleEntries()) {
-         ci.cancel();
-      }
-   }
+    @Inject(
+            method = "render(Lcom/atsuishio/superbwarfare/client/overlay/RenderContext;)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = false,
+            require = 0)
+    private void pwp$blockAmmoBarInMainZone(RenderContext context, CallbackInfo ci) {
+        if (ClientSafetyState.inMainZone || NotificationFeed.hasVisibleEntries()) {
+            ci.cancel();
+        }
+    }
 }

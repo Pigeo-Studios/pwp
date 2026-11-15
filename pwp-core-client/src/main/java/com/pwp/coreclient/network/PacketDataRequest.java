@@ -42,7 +42,8 @@ public class PacketDataRequest {
             // HTTP — в фоне, ответ игроку — с главного потока
             ServerThread.thenOnServer(fetchData(msg.type, msg.paramsJson, player), player.server, result -> {
                 if (player.hasDisconnected()) return;
-                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.PLAYER.with(() -> player),
                         new PacketDataResponse(msg.type, result != null ? result.toString() : "{}"));
             });
         });

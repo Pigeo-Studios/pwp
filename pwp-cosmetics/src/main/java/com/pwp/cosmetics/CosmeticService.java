@@ -45,7 +45,11 @@ public final class CosmeticService {
         });
         ServerThread.thenOnServer(flow, server, result -> {
             if (result.success) {
-                CosmeticManager.setEquipmentSingle(player.getUUID(), result.slotType, role, skinId,
+                CosmeticManager.setEquipmentSingle(
+                        player.getUUID(),
+                        result.slotType,
+                        role,
+                        skinId,
                         SkinCatalog.buildItem(skinId, result.modelPath));
             }
             reply(player, result);
@@ -58,14 +62,14 @@ public final class CosmeticService {
         }
         String slotType = owned.get("slotType").getAsString();
         String itemUuid = owned.get("itemUuid").getAsString();
-        return CoreApi.equipItem(uuid, itemUuid, slotType, role)
-                .thenCompose(resp -> {
-                    if (!CoreApi.isSuccess(resp)) {
-                        return CompletableFuture.completedFuture(Result.fail("core-service отклонил экипировку"));
-                    }
-                    return SkinCatalog.modelPaths().thenCombine(CoreApi.loadPlayer(uuid),
-                            (paths, fresh) -> Result.ok(slotType, paths.get(skinId), fresh));
-                });
+        return CoreApi.equipItem(uuid, itemUuid, slotType, role).thenCompose(resp -> {
+            if (!CoreApi.isSuccess(resp)) {
+                return CompletableFuture.completedFuture(Result.fail("core-service отклонил экипировку"));
+            }
+            return SkinCatalog.modelPaths()
+                    .thenCombine(
+                            CoreApi.loadPlayer(uuid), (paths, fresh) -> Result.ok(slotType, paths.get(skinId), fresh));
+        });
     }
 
     /** Снять скин со слота. */
@@ -93,7 +97,11 @@ public final class CosmeticService {
                 if (!c.has("equipped") || !c.get("equipped").getAsBoolean()) continue;
                 String skinId = c.get("skinId").getAsString();
                 String slotType = c.get("slotType").getAsString();
-                CosmeticManager.setEquipment(playerUuid, slotType, "ALL", skinId,
+                CosmeticManager.setEquipment(
+                        playerUuid,
+                        slotType,
+                        "ALL",
+                        skinId,
                         SkinCatalog.buildItem(skinId, loaded.modelPaths.get(skinId)));
             }
         });
@@ -103,9 +111,10 @@ public final class CosmeticService {
 
     private static void reply(ServerPlayer player, Result result) {
         if (player.hasDisconnected()) return;
-        CosmeticsMod.NETWORK.send(PacketDistributor.PLAYER.with(() -> player),
-                new PacketCosmeticEquipResult(result.success, result.message,
-                        result.profile != null ? result.profile.toString() : ""));
+        CosmeticsMod.NETWORK.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new PacketCosmeticEquipResult(
+                        result.success, result.message, result.profile != null ? result.profile.toString() : ""));
     }
 
     private static JsonArray cosmeticsOf(JsonObject profile) {
@@ -120,8 +129,10 @@ public final class CosmeticService {
         if (cosmetics == null || skinId == null) return null;
         for (JsonElement e : cosmetics) {
             JsonObject c = e.getAsJsonObject();
-            if (c.has("skinId") && skinId.equals(c.get("skinId").getAsString())
-                    && c.has("itemUuid") && c.has("slotType")) {
+            if (c.has("skinId")
+                    && skinId.equals(c.get("skinId").getAsString())
+                    && c.has("itemUuid")
+                    && c.has("slotType")) {
                 return c;
             }
         }

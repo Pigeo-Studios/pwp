@@ -18,16 +18,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // SBW миксин тихо не применится — страховка (EntityJoinLevelEvent) останется.
 @Mixin(VehicleEntity.class)
 public abstract class SbwVehicleEffectsMixin {
-   @Inject(
-      method = "playShootSound3p(Lnet/minecraft/world/entity/LivingEntity;Lcom/atsuishio/superbwarfare/data/gun/GunData;Lnet/minecraft/world/phys/Vec3;)V",
-      at = @At("HEAD"),
-      cancellable = true,
-      remap = false,
-      require = 0
-   )
-   private void pwp$blockShootSoundInMainZone(LivingEntity living, GunData data, Vec3 pos, CallbackInfo ci) {
-      if (MainZoneFireGuard.isFireBlocked(living)) {
-         ci.cancel();
-      }
-   }
+    @Inject(
+            method =
+                    "playShootSound3p(Lnet/minecraft/world/entity/LivingEntity;Lcom/atsuishio/superbwarfare/data/gun/GunData;Lnet/minecraft/world/phys/Vec3;)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = false,
+            require = 0)
+    private void pwp$blockShootSoundInMainZone(LivingEntity living, GunData data, Vec3 pos, CallbackInfo ci) {
+        if (MainZoneFireGuard.isFireBlocked(living)) {
+            ci.cancel();
+        }
+    }
 }

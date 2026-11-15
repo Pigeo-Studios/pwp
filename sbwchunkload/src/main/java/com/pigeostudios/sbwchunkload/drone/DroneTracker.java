@@ -1,12 +1,14 @@
 package com.pigeostudios.sbwchunkload.drone;
 
 import com.atsuishio.superbwarfare.entity.vehicle.DroneEntity;
+import com.mojang.logging.LogUtils;
 import com.pigeostudios.sbwchunkload.config.ChunkLoadingConfig;
 import com.pigeostudios.sbwchunkload.corridor.ChunkCorridor;
 import com.pigeostudios.sbwchunkload.corridor.ChunkCorridorDiff;
 import com.pigeostudios.sbwchunkload.corridor.ChunkRasterizer;
 import com.pigeostudios.sbwchunkload.ticket.ChunkTicketManager;
-import com.mojang.logging.LogUtils;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -14,9 +16,6 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Трекер дронов (v2.1). Отдельный путь от снарядов: дроны — медленные
@@ -62,8 +61,7 @@ public final class DroneTracker {
 
     private static int scanCounter = 0;
 
-    private DroneTracker() {
-    }
+    private DroneTracker() {}
 
     /**
      * Мгновенная регистрация дрона (вызывается из миксина addFreshEntity).
@@ -80,8 +78,12 @@ public final class DroneTracker {
         if (TRACKED.size() >= ChunkLoadingConfig.MAX_TRACKED_DRONES.get()) return;
         TRACKED.put(entity.getId(), new DroneTrackState(entity, level));
         if (ChunkLoadingConfig.DEBUG.get()) {
-            LOGGER.info("[sbwchunkload] drone #{} tracked at {} {} {}", entity.getId(),
-                (int) entity.getX(), (int) entity.getY(), (int) entity.getZ());
+            LOGGER.info(
+                    "[sbwchunkload] drone #{} tracked at {} {} {}",
+                    entity.getId(),
+                    (int) entity.getX(),
+                    (int) entity.getY(),
+                    (int) entity.getZ());
         }
     }
 
@@ -146,16 +148,17 @@ public final class DroneTracker {
         if (TRACKED.size() >= limit) return;
         for (Entity entity : level.getEntities().getAll()) {
             if (TRACKED.size() >= limit) return;
-            if (entity instanceof DroneEntity && !entity.isRemoved() && !entity.onGround()
-                && !TRACKED.containsKey(entity.getId())) {
+            if (entity instanceof DroneEntity
+                    && !entity.isRemoved()
+                    && !entity.onGround()
+                    && !TRACKED.containsKey(entity.getId())) {
                 TRACKED.put(entity.getId(), new DroneTrackState(entity, level));
             }
         }
     }
 
     /** Smart-update: без смены чанка — простое продление, иначе — diff коридора. */
-    private static void update(DroneTrackState state, Entity entity,
-                               ChunkTicketManager tickets, int tick) {
+    private static void update(DroneTrackState state, Entity entity, ChunkTicketManager tickets, int tick) {
         ServerLevel level = state.level();
         Vec3 position = entity.position();
         Vec3 direction = entity.getDeltaMovement();
@@ -170,8 +173,7 @@ public final class DroneTracker {
         // фиксированный lookahead 16 не покрывает пролёт — дрон влетает в
         // непрогретый чанк и на ~10 тиков застывает (UFPV может рвать связь).
         int interval = ChunkLoadingConfig.DRONE_INTERVAL.get();
-        int lookahead = Math.max(ChunkLoadingConfig.DRONE_LOOKAHEAD.get(),
-            (int) Math.ceil(speed * interval * 1.5));
+        int lookahead = Math.max(ChunkLoadingConfig.DRONE_LOOKAHEAD.get(), (int) Math.ceil(speed * interval * 1.5));
         Vec3 target = position.add(direction.scale(lookahead));
 
         long[] newCorridor = ChunkRasterizer.buildCorridor(position, target, 1);

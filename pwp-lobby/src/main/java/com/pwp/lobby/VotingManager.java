@@ -3,11 +3,10 @@ package com.pwp.lobby;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class VotingManager {
 
@@ -32,7 +31,8 @@ public class VotingManager {
         }
         if (!com.pwp.api.core.MatchPolicy.canStartNewMatch()) {
             String reason = com.pwp.api.core.MatchPolicy.reason();
-            LobbyMod.serverBroadcast("§e[PWP] §cНовые матчи приостановлены" + (reason != null && !reason.isEmpty() ? ": " + reason : ""));
+            LobbyMod.serverBroadcast("§e[PWP] §cНовые матчи приостановлены"
+                    + (reason != null && !reason.isEmpty() ? ": " + reason : ""));
             log.info("Voting start blocked by match policy");
             return;
         }
@@ -79,7 +79,7 @@ public class VotingManager {
         if (!active || finished) return;
         long now = System.currentTimeMillis();
         long elapsed = now - voteStartTime;
-        int remaining = voteDurationSec - (int)(elapsed / 1000);
+        int remaining = voteDurationSec - (int) (elapsed / 1000);
 
         if (!accelerated && remaining > 60) {
             int online = MatchAllocator.getLobbyPlayerCount();
@@ -94,7 +94,12 @@ public class VotingManager {
         }
 
         if (remaining != lastBroadcastedRemaining && now - lastTimerBroadcast > 1000) {
-            if (remaining <= 5 || remaining == 10 || remaining == 15 || remaining == 30 || remaining == 60 || (remaining <= 120 && remaining % 60 == 0)) {
+            if (remaining <= 5
+                    || remaining == 10
+                    || remaining == 15
+                    || remaining == 30
+                    || remaining == 60
+                    || (remaining <= 120 && remaining % 60 == 0)) {
                 if (remaining > 0) {
                     LobbyMod.serverBroadcast("§e[PWP] §fГолосование закончится через §e" + remaining + "с");
                 }
@@ -118,7 +123,8 @@ public class VotingManager {
         Map<String, Integer> counts = getVoteCounts();
         String leader = counts.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse(null);
+                .map(Map.Entry::getKey)
+                .orElse(null);
         if (leader == null) return;
         int total = votes.size();
         int online = MatchAllocator.getLobbyPlayerCount();
@@ -142,7 +148,7 @@ public class VotingManager {
             String results = counts.entrySet().stream()
                     .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                     .map(e -> "§e" + e.getKey() + " §7(" + e.getValue() + "гол."
-                        + (total > 0 ? " " + (e.getValue() * 100 / total) + "%" : "") + ")")
+                            + (total > 0 ? " " + (e.getValue() * 100 / total) + "%" : "") + ")")
                     .collect(Collectors.joining(" §8| "));
             LobbyMod.serverBroadcast("§e[PWP] §fРезультаты голосования: " + results);
         }
@@ -193,20 +199,40 @@ public class VotingManager {
         LobbyMod.broadcastLobbyState();
     }
 
-    public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
+    public static boolean hasVoted(java.util.UUID uuid) {
+        return votes.containsKey(uuid);
+    }
     /** Голос игрока (имя карты) или null, если не голосовал. */
-    public static String getVote(java.util.UUID uuid) { return votes.get(uuid); }
-    public static boolean isActive() { return active; }
-    public static boolean isFinished() { return finished; }
+    public static String getVote(java.util.UUID uuid) {
+        return votes.get(uuid);
+    }
+
+    public static boolean isActive() {
+        return active;
+    }
+
+    public static boolean isFinished() {
+        return finished;
+    }
+
     public static int getRemainingSeconds() {
         if (!active) return 0;
         long elapsed = System.currentTimeMillis() - voteStartTime;
-        int remaining = voteDurationSec - (int)(elapsed / 1000);
+        int remaining = voteDurationSec - (int) (elapsed / 1000);
         return Math.max(0, remaining);
     }
-    public static int getVoteDuration() { return voteDurationSec; }
-    public static int getVoteCount() { return votes.size(); }
-    public static int getTotalOnline() { return MatchAllocator.getLobbyPlayerCount(); }
+
+    public static int getVoteDuration() {
+        return voteDurationSec;
+    }
+
+    public static int getVoteCount() {
+        return votes.size();
+    }
+
+    public static int getTotalOnline() {
+        return MatchAllocator.getLobbyPlayerCount();
+    }
 
     public static int getVoteCountForMap(String mapName) {
         return (int) votes.values().stream().filter(v -> v.equals(mapName)).count();
@@ -217,7 +243,8 @@ public class VotingManager {
         Map<String, Integer> counts = getVoteCounts();
         return counts.entrySet().stream()
                 .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse(null);
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 
     public static List<String> getVotableMapNames() {

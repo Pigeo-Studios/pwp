@@ -12,46 +12,53 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // Пакет сброса ящика снабжения из грузовика снабжения
 // Отправляется водителем грузовика при нажатии кнопки сброса
 public class PacketDropCrate {
-   public static void encode(PacketDropCrate msg, FriendlyByteBuf buf) {
-   }
+    public static void encode(PacketDropCrate msg, FriendlyByteBuf buf) {}
 
-   public static PacketDropCrate decode(FriendlyByteBuf buf) {
-      return new PacketDropCrate();
-   }
+    public static PacketDropCrate decode(FriendlyByteBuf buf) {
+        return new PacketDropCrate();
+    }
 
-   // Проверяет, находится ли игрок в грузовике снабжения, и создаёт ящик
-   public static void handle(PacketDropCrate msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         ServerPlayer player = ctx.get().getSender();
-         if (player != null) {
-            Entity vehicle = player.getVehicle();
-            if (vehicle != null && vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
-               if (vehicle.getFirstPassenger() != player) {
-                   player.displayClientMessage(Component.literal("Сбрасывать припасы может только водитель!").withStyle(ChatFormatting.RED), true);
-                  return;
-               }
+    // Проверяет, находится ли игрок в грузовике снабжения, и создаёт ящик
+    public static void handle(PacketDropCrate msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null) {
+                Entity vehicle = player.getVehicle();
+                if (vehicle != null && vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
+                    if (vehicle.getFirstPassenger() != player) {
+                        player.displayClientMessage(
+                                Component.literal("Сбрасывать припасы может только водитель!")
+                                        .withStyle(ChatFormatting.RED),
+                                true);
+                        return;
+                    }
 
-               int ammo = vehicle.getPersistentData().getInt("WARFARE_SupplyAmmo");
-               if (ammo > 0) {
-                  vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", ammo - 1);
-                  String team = vehicle.getPersistentData().getString("WARFARE_VehicleTeam");
-                  if (team.isEmpty()) {
-                     team = "NEUTRAL";
-                  }
+                    int ammo = vehicle.getPersistentData().getInt("WARFARE_SupplyAmmo");
+                    if (ammo > 0) {
+                        vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", ammo - 1);
+                        String team = vehicle.getPersistentData().getString("WARFARE_VehicleTeam");
+                        if (team.isEmpty()) {
+                            team = "NEUTRAL";
+                        }
 
-                  double yawRad = Math.toRadians(vehicle.getYRot());
-                  double x = vehicle.getX() + Math.sin(yawRad) * 2.5;
-                  double z = vehicle.getZ() - Math.cos(yawRad) * 2.5;
-                  double y = vehicle.getY() + 1.5;
-                  SupplyCrateEntity crate = new SupplyCrateEntity(player.level(), x, y, z, team, player.getUUID());
-                  player.level().addFreshEntity(crate);
-                   player.displayClientMessage(Component.literal("Ящик снабжения сброшен!").withStyle(ChatFormatting.YELLOW), true);
-               } else {
-                   player.displayClientMessage(Component.literal("Нет припасов! Вернитесь на основную базу.").withStyle(ChatFormatting.RED), true);
-               }
+                        double yawRad = Math.toRadians(vehicle.getYRot());
+                        double x = vehicle.getX() + Math.sin(yawRad) * 2.5;
+                        double z = vehicle.getZ() - Math.cos(yawRad) * 2.5;
+                        double y = vehicle.getY() + 1.5;
+                        SupplyCrateEntity crate =
+                                new SupplyCrateEntity(player.level(), x, y, z, team, player.getUUID());
+                        player.level().addFreshEntity(crate);
+                        player.displayClientMessage(
+                                Component.literal("Ящик снабжения сброшен!").withStyle(ChatFormatting.YELLOW), true);
+                    } else {
+                        player.displayClientMessage(
+                                Component.literal("Нет припасов! Вернитесь на основную базу.")
+                                        .withStyle(ChatFormatting.RED),
+                                true);
+                    }
+                }
             }
-         }
-      });
-      ctx.get().setPacketHandled(true);
-   }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 }

@@ -3,20 +3,18 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenFactionKitEditor;
 import com.pigeostudios.pwp.warfare.network.PacketRequestData;
-import com.google.gson.Gson;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -55,8 +53,7 @@ public class FactionKitListScreen extends Screen {
 
         ClientData.factionKitsData = null;
         requested = true;
-        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factionKits",
-            "{\"faction\":\"" + faction + "\"}"));
+        PacketHandler.INSTANCE.sendToServer(new PacketRequestData("factionKits", "{\"faction\":\"" + faction + "\"}"));
     }
 
     @Override
@@ -98,28 +95,37 @@ public class FactionKitListScreen extends Screen {
 
         for (int i = 0; i < kitNames.size(); i++) {
             String kitName = kitNames.get(i);
-            PWPButton editBtn = new PWPButton(0, 0, 0, 0,
-                Component.literal(DeployData.getDisplayName(kitName)),
-                b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName)),
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton editBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.literal(DeployData.getDisplayName(kitName)),
+                    b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenFactionKitEditor(faction, kitName)),
+                    PWPButton.Style.PRIMARY);
             addRenderableWidget(editBtn);
             kitButtons.add(editBtn);
 
-            PWPButton copyBtn = new PWPButton(0, 0, 0, 0,
-                Component.translatable("gui.pwpwarfare.kit_list.copy"),
-                b -> {},
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton copyBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.translatable("gui.pwpwarfare.kit_list.copy"),
+                    b -> {},
+                    PWPButton.Style.PRIMARY);
             copyBtn.active = false;
             addRenderableWidget(copyBtn);
             kitButtons.add(copyBtn);
 
-            PWPButton pBtn = new PWPButton(0, 0, 0, 0,
-                Component.translatable("gui.pwpwarfare.kit_list.paste"),
-                b -> {},
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton pBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.translatable("gui.pwpwarfare.kit_list.paste"),
+                    b -> {},
+                    PWPButton.Style.PRIMARY);
             pBtn.active = false;
             addRenderableWidget(pBtn);
             kitButtons.add(pBtn);
@@ -156,17 +162,32 @@ public class FactionKitListScreen extends Screen {
         int py = 10;
         PWPPanel.render(gui, cx, py, panelW, panelH);
 
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 4, PWPTheme.Colors.ACCENT);
+        gui.drawCenteredString(
+                PWPTheme.Fonts.display(),
+                Component.literal(title.getString()),
+                width / 2,
+                py + 4,
+                PWPTheme.Colors.ACCENT);
         gui.fill(cx + 6, py + 14, cx + panelW - 6, py + 15, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.translatable("gui.pwpwarfare.faction_select.loading"),
+                    width / 2,
+                    height / 2,
+                    PWPTheme.Colors.TEXT_DIM);
             super.render(gui, mx, my, pt);
             return;
         }
 
         if (kitNames.isEmpty()) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("No kits found for " + faction.toUpperCase()), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.literal("No kits found for " + faction.toUpperCase()),
+                    width / 2,
+                    height / 2,
+                    PWPTheme.Colors.TEXT_DIM);
             super.render(gui, mx, my, pt);
             return;
         }
@@ -198,9 +219,19 @@ public class FactionKitListScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25B2"),
+                        width / 2,
+                        py + 2,
+                        PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25BC"),
+                        width / 2,
+                        py + panelH - 4,
+                        PWPTheme.Colors.TEXT_DIM);
         }
     }
 

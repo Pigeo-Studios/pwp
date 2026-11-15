@@ -32,8 +32,10 @@ public class PacketCosmeticEquipResult {
     }
 
     public static void handle(PacketCosmeticEquipResult msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> CosmeticClientState.onEquipResult(msg.success, msg.message, msg.profileJson)));
+        ctx.get()
+                .enqueueWork(() -> DistExecutor.unsafeRunWhenOn(
+                        Dist.CLIENT,
+                        () -> () -> CosmeticClientState.onEquipResult(msg.success, msg.message, msg.profileJson)));
         ctx.get().setPacketHandled(true);
     }
 }

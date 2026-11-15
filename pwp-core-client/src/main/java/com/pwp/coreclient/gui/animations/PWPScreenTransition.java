@@ -6,7 +6,10 @@ import net.minecraft.client.gui.GuiGraphics;
 public class PWPScreenTransition {
 
     public enum Type {
-        FADE, FADE_ONLY, SLIDE_UP, SLIDE_DOWN
+        FADE,
+        FADE_ONLY,
+        SLIDE_UP,
+        SLIDE_DOWN
     }
 
     private final long startTime;

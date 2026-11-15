@@ -12,7 +12,8 @@ import net.minecraft.resources.ResourceLocation;
 
 public class SquadContextMenu {
 
-    public boolean visible; public int x, y;
+    public boolean visible;
+    public int x, y;
     private String activeGroup, expanded;
     private int hoverCol = -1, hoverRow = -1;
     private BiConsumer<String, String> cb;
@@ -34,51 +35,74 @@ public class SquadContextMenu {
     private static final int BG_ALPHA = 0xCC, ITEM_BG = 0x33, HOVER_BG = 0x88, BG_COLOR = 0x06080A;
 
     record Group(String id, String color, String icon, int dx, int dy) {}
+
     record Item(String id, String label) {}
+
     record ColGroup(String title, List<Item> items) {}
 
     private static final List<Group> GROUPS = List.of(
-        new Group("team", "_g", "player_self", -65, 0),
-        new Group("enemy", "_r", "infantry", 65, 0),
-        new Group("cmd_top", "_y", "player_self", 0, -48),
-        new Group("cmd_squads", "_y", "player_self", 0, 48));
+            new Group("team", "_g", "player_self", -65, 0),
+            new Group("enemy", "_r", "infantry", 65, 0),
+            new Group("cmd_top", "_y", "player_self", 0, -48),
+            new Group("cmd_squads", "_y", "player_self", 0, 48));
 
     private static final Map<String, List<Item>> ITEMS = new LinkedHashMap<>();
+
     static {
-        ITEMS.put("team", List.of(
-            new Item("player_self", "МЕТКА ДВИЖ"),
-            new Item("hat", "АТАКА"),
-            new Item("rally", "РАЛЛИ"),
-            new Item("fob", "СТРОЙКА"),
-            new Item("infantry", "НАБЛЮД"),
-            new Item("fob_m", "ФОБ"), new Item("hab_m", "ХАБ"),
-            new Item("mortar_m", "МИНОМЁТ"),
-            new Item("ammo_m", "Б/П"), new Item("repair_m", "РЕМОНТ"),
-            new Item("pickup_m", "ЗАХВАТ")));
-        ITEMS.put("cmd_top", List.of(
-            new Item("player_self", "МЕТКА ДВИЖ"),
-            new Item("fob_m", "ФОБ"), new Item("hab_m", "ХАБ"),
-            new Item("mortar_m", "МИНОМЁТ"), new Item("ammo_m", "Б/П"),
-            new Item("repair_m", "РЕМОНТ"),
-            new Item("pickup_m", "ЗАХВАТ"), new Item("logistic_m", "ЛОГИСТИКА"),
-            new Item("transport_m", "ТРАНСПОРТ")));
+        ITEMS.put(
+                "team",
+                List.of(
+                        new Item("player_self", "МЕТКА ДВИЖ"),
+                        new Item("hat", "АТАКА"),
+                        new Item("rally", "РАЛЛИ"),
+                        new Item("fob", "СТРОЙКА"),
+                        new Item("infantry", "НАБЛЮД"),
+                        new Item("fob_m", "ФОБ"),
+                        new Item("hab_m", "ХАБ"),
+                        new Item("mortar_m", "МИНОМЁТ"),
+                        new Item("ammo_m", "Б/П"),
+                        new Item("repair_m", "РЕМОНТ"),
+                        new Item("pickup_m", "ЗАХВАТ")));
+        ITEMS.put(
+                "cmd_top",
+                List.of(
+                        new Item("player_self", "МЕТКА ДВИЖ"),
+                        new Item("fob_m", "ФОБ"),
+                        new Item("hab_m", "ХАБ"),
+                        new Item("mortar_m", "МИНОМЁТ"),
+                        new Item("ammo_m", "Б/П"),
+                        new Item("repair_m", "РЕМОНТ"),
+                        new Item("pickup_m", "ЗАХВАТ"),
+                        new Item("logistic_m", "ЛОГИСТИКА"),
+                        new Item("transport_m", "ТРАНСПОРТ")));
     }
 
     private static final List<ColGroup> ENEMY_COLS = List.of(
-        new ColGroup("infantry_r", List.of(
-            new Item("infantry", "ПЕХОТА"), new Item("mg", "MG"),
-            new Item("marksman", "МАРКСМАН"), new Item("lat", "LAT"),
-            new Item("hat", "HAT"))),
-        new ColGroup("light_veh_r", List.of(
-            new Item("light_veh", "LTV"), new Item("apc", "APC"),
-            new Item("ifv", "IFV"), new Item("tank", "ТАНК"),
-            new Item("tracked_ifv", "ГУСЕНИЧНАЯ"), new Item("aaa", "ЗЕНИТКА"))),
-        new ColGroup("drone_r", List.of(
-            new Item("drone", "ДРОН"), new Item("transport_helo", "ТРАНСП"),
-            new Item("attack_helo", "ШТУРМ"))),
-        new ColGroup("hab_r", List.of(
-            new Item("hab", "ХАБ"), new Item("hmg", "HMG"),
-            new Item("mortar", "МИНОМЁТ"), new Item("mine", "МИНА"))));
+            new ColGroup(
+                    "infantry_r",
+                    List.of(
+                            new Item("infantry", "ПЕХОТА"),
+                            new Item("mg", "MG"),
+                            new Item("marksman", "МАРКСМАН"),
+                            new Item("lat", "LAT"),
+                            new Item("hat", "HAT"))),
+            new ColGroup(
+                    "light_veh_r",
+                    List.of(
+                            new Item("light_veh", "LTV"), new Item("apc", "APC"),
+                            new Item("ifv", "IFV"), new Item("tank", "ТАНК"),
+                            new Item("tracked_ifv", "ГУСЕНИЧНАЯ"), new Item("aaa", "ЗЕНИТКА"))),
+            new ColGroup(
+                    "drone_r",
+                    List.of(
+                            new Item("drone", "ДРОН"),
+                            new Item("transport_helo", "ТРАНСП"),
+                            new Item("attack_helo", "ШТУРМ"))),
+            new ColGroup(
+                    "hab_r",
+                    List.of(
+                            new Item("hab", "ХАБ"), new Item("hmg", "HMG"),
+                            new Item("mortar", "МИНОМЁТ"), new Item("mine", "МИНА"))));
 
     // ───── Open ─────
     public void open(int mx, int my, BiConsumer<String, String> callback) {
@@ -90,15 +114,31 @@ public class SquadContextMenu {
     }
 
     public void open(int mx, int my, boolean isCMD, BiConsumer<String, String> callback, Runnable deleteCb) {
-        x = mx; y = my;
-        visible = true; activeGroup = null; expanded = null;
-        hoverCol = -1; hoverRow = -1; cb = callback;
-        this.isCMD = isCMD; this.deleteCallback = deleteCb;
-        expandAnim = 0; closeTimer = -1;
-        expandedEnemyCol = -1; enemyExpandAnim = 0; enemyCloseTimer = -1;
+        x = mx;
+        y = my;
+        visible = true;
+        activeGroup = null;
+        expanded = null;
+        hoverCol = -1;
+        hoverRow = -1;
+        cb = callback;
+        this.isCMD = isCMD;
+        this.deleteCallback = deleteCb;
+        expandAnim = 0;
+        closeTimer = -1;
+        expandedEnemyCol = -1;
+        enemyExpandAnim = 0;
+        enemyCloseTimer = -1;
     }
 
-    public void close() { visible = false; expanded = null; expandAnim = 0; closeTimer = -1; deleteCallback = null; expandedEnemyCol = -1; }
+    public void close() {
+        visible = false;
+        expanded = null;
+        expandAnim = 0;
+        closeTimer = -1;
+        deleteCallback = null;
+        expandedEnemyCol = -1;
+    }
 
     // ───── Dynamic squad list ─────
     private List<Item> getSquadItems() {
@@ -108,7 +148,8 @@ public class SquadContextMenu {
         boolean isBlue = team.toUpperCase().contains("BLUE");
         int cmdId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
         List<WarfareWorldData.Squad> sqs = ClientData.clientSquads.stream()
-            .filter(s -> s.team.equalsIgnoreCase(team)).collect(Collectors.toList());
+                .filter(s -> s.team.equalsIgnoreCase(team))
+                .collect(Collectors.toList());
         sqs.sort(Comparator.comparingInt(s -> s.id));
         List<Item> result = new ArrayList<>();
         for (int i = 0; i < sqs.size(); i++) {
@@ -118,6 +159,7 @@ public class SquadContextMenu {
         this.cmdIdForRender = cmdId;
         return result;
     }
+
     private int cmdIdForRender = -1;
 
     // ───── Panel pos ─────
@@ -125,7 +167,7 @@ public class SquadContextMenu {
         if (expanded == null || !g.id.equals(expanded)) return null;
         int gx = x + g.dx, gy = y + g.dy;
         if ("enemy".equals(g.id)) {
-            return new int[]{gx + 19 - PAD, gy - ENEMY_HEADER_H / 2};
+            return new int[] {gx + 19 - PAD, gy - ENEMY_HEADER_H / 2};
         }
         if ("cmd_squads".equals(g.id)) {
             var items = getSquadItems();
@@ -133,14 +175,14 @@ public class SquadContextMenu {
             int rows = (items.size() + SQ_PER_ROW - 1) / SQ_PER_ROW;
             int pw = Math.min(items.size(), SQ_PER_ROW) * (CIR_SIZE + CIR_GAP) + PAD * 2;
             int ph = rows * (CIR_SIZE + 12) + PAD * 2;
-            return new int[]{gx - pw / 2, gy + 19};
+            return new int[] {gx - pw / 2, gy + 19};
         }
         var items = ITEMS.get(g.id);
         if (items == null) return null;
         return switch (g.id) {
-            case "team" -> new int[]{gx - SUB_W - MENU_GAP, gy - PAD};
-            case "cmd_top" -> new int[]{gx - SUB_W / 2, gy - 19 - items.size() * SUB_ROW - PAD * 2};
-            default -> new int[]{0, 0};
+            case "team" -> new int[] {gx - SUB_W - MENU_GAP, gy - PAD};
+            case "cmd_top" -> new int[] {gx - SUB_W / 2, gy - 19 - items.size() * SUB_ROW - PAD * 2};
+            default -> new int[] {0, 0};
         };
     }
 
@@ -194,7 +236,8 @@ public class SquadContextMenu {
 
     private boolean isOverPanel(int mx, int my) {
         if (expanded == null) return false;
-        Group eg = GROUPS.stream().filter(gr -> gr.id.equals(expanded)).findFirst().orElse(null);
+        Group eg =
+                GROUPS.stream().filter(gr -> gr.id.equals(expanded)).findFirst().orElse(null);
         if (eg == null) return false;
         int[] sp = sp(eg);
         return sp != null && mx >= sp[0] && mx <= sp[0] + panelW(eg.id) && my >= sp[1] && my <= sp[1] + panelH(eg.id);
@@ -202,18 +245,28 @@ public class SquadContextMenu {
 
     // ───── Hover ─────
     public void updateHover(int mx, int my, boolean skipState) {
-        if (!visible) { activeGroup = null; return; }
+        if (!visible) {
+            activeGroup = null;
+            return;
+        }
         String found = null;
-        hoverCol = -1; hoverRow = -1;
+        hoverCol = -1;
+        hoverRow = -1;
 
         for (var g : GROUPS) {
             if (("cmd_top".equals(g.id) || "cmd_squads".equals(g.id)) && !isCMD) continue;
             int gx = x + g.dx, gy = y + g.dy;
-            if (Math.abs(mx - gx) < 18 && Math.abs(my - gy) < 18) { found = g.id; break; }
+            if (Math.abs(mx - gx) < 18 && Math.abs(my - gy) < 18) {
+                found = g.id;
+                break;
+            }
         }
 
         if (expanded != null) {
-            Group g = GROUPS.stream().filter(gr -> gr.id.equals(expanded)).findFirst().orElse(null);
+            Group g = GROUPS.stream()
+                    .filter(gr -> gr.id.equals(expanded))
+                    .findFirst()
+                    .orElse(null);
             if (g != null) {
                 int[] sp = sp(g);
                 if (sp != null) {
@@ -222,11 +275,18 @@ public class SquadContextMenu {
                         if (my >= headerY && my < headerY + ENEMY_HEADER_H) {
                             int col = (mx - sp[0] - PAD) / ENEMY_HEADER_COL_W;
                             if (col >= 0 && col < ENEMY_COLS_TOTAL) {
-                                hoverCol = col; hoverRow = -1;
+                                hoverCol = col;
+                                hoverRow = -1;
                                 if (found == null) found = g.id;
                                 if (col >= 1 && col - 1 < ENEMY_COLS.size()) {
-                                    if (col != expandedEnemyCol) { expandedEnemyCol = col; enemyExpandAnim = 0; enemyCloseTimer = -1; }
-                                } else { expandedEnemyCol = -1; }
+                                    if (col != expandedEnemyCol) {
+                                        expandedEnemyCol = col;
+                                        enemyExpandAnim = 0;
+                                        enemyCloseTimer = -1;
+                                    }
+                                } else {
+                                    expandedEnemyCol = -1;
+                                }
                             }
                         } else {
                             if (expandedEnemyCol >= 0) {
@@ -239,7 +299,8 @@ public class SquadContextMenu {
                                     if (mx >= spX && mx <= spX + spW && my >= spY && my <= spY + spH) {
                                         int row = (my - spY) / ENEMY_ITEM_H;
                                         if (row < ENEMY_COLS.get(ec).items().size()) {
-                                            hoverCol = ec + 1; hoverRow = row;
+                                            hoverCol = ec + 1;
+                                            hoverRow = row;
                                             if (found == null) found = g.id;
                                         }
                                     }
@@ -256,7 +317,8 @@ public class SquadContextMenu {
                             int r = relY / (CIR_SIZE + 12);
                             int idx = r * SQ_PER_ROW + c;
                             if (c >= 0 && c < Math.min(items.size(), SQ_PER_ROW) && r >= 0 && idx < items.size()) {
-                                hoverCol = c; hoverRow = r;
+                                hoverCol = c;
+                                hoverRow = r;
                                 if (found == null) found = g.id;
                             }
                         }
@@ -283,32 +345,54 @@ public class SquadContextMenu {
             int cIdx = expandedEnemyCol - 1;
             boolean inZone = false;
             if (expanded != null && "enemy".equals(expanded) && cIdx >= 0 && cIdx < ENEMY_COLS.size()) {
-                int[] sp2 = sp(GROUPS.stream().filter(gr -> "enemy".equals(gr.id)).findFirst().orElse(null));
+                int[] sp2 = sp(GROUPS.stream()
+                        .filter(gr -> "enemy".equals(gr.id))
+                        .findFirst()
+                        .orElse(null));
                 if (sp2 != null) {
                     int zoneX = sp2[0] + PAD + expandedEnemyCol * ENEMY_HEADER_COL_W;
                     int zoneY = sp2[1] + PAD;
-                    int zoneH = ENEMY_HEADER_H + 1 + ENEMY_COLS.get(cIdx).items().size() * ENEMY_ITEM_H;
+                    int zoneH =
+                            ENEMY_HEADER_H + 1 + ENEMY_COLS.get(cIdx).items().size() * ENEMY_ITEM_H;
                     int zoneW = getSubPanelWidth(cIdx);
                     if (mx >= zoneX && mx <= zoneX + zoneW && my >= zoneY && my <= zoneY + zoneH) inZone = true;
                 }
             }
             if (!inZone) {
                 if (enemyCloseTimer < 0) enemyCloseTimer = System.currentTimeMillis();
-                else if (System.currentTimeMillis() - enemyCloseTimer > 100) { expandedEnemyCol = -1; enemyExpandAnim = 0; enemyCloseTimer = -1; }
-            } else { enemyCloseTimer = -1; }
-        } else { enemyCloseTimer = -1; }
+                else if (System.currentTimeMillis() - enemyCloseTimer > 100) {
+                    expandedEnemyCol = -1;
+                    enemyExpandAnim = 0;
+                    enemyCloseTimer = -1;
+                }
+            } else {
+                enemyCloseTimer = -1;
+            }
+        } else {
+            enemyCloseTimer = -1;
+        }
 
-        if (found != null) { closeTimer = -1; if (!found.equals(expanded)) { expanded = found; expandAnim = 0; } }
-        else {
+        if (found != null) {
+            closeTimer = -1;
+            if (!found.equals(expanded)) {
+                expanded = found;
+                expandAnim = 0;
+            }
+        } else {
             boolean overMenu = isOverGroup(mx, my) || isOverPanel(mx, my);
-            if (!overMenu) { if (closeTimer < 0) closeTimer = System.currentTimeMillis(); }
-            else { closeTimer = -1; }
+            if (!overMenu) {
+                if (closeTimer < 0) closeTimer = System.currentTimeMillis();
+            } else {
+                closeTimer = -1;
+            }
         }
         if (!skipState) activeGroup = found;
         if (found == null && expanded != null && closeTimer < 0) closeTimer = System.currentTimeMillis();
     }
 
-    private int hitIdx() { return hoverRow; }
+    private int hitIdx() {
+        return hoverRow;
+    }
 
     // ───── Click ─────
     public boolean mouseClicked(double mx, double my, int btn) {
@@ -320,23 +404,28 @@ public class SquadContextMenu {
             int cx = x, cy = y;
             if (mx >= cx - sz && mx <= cx + sz && my >= cy - sz && my <= cy + sz) {
                 deleteCallback.run();
-                close(); return true;
+                close();
+                return true;
             }
             // Full menu still works - proceed to normal click handling
         }
 
         if (expanded != null) {
-            Group g = GROUPS.stream().filter(gr -> gr.id.equals(expanded)).findFirst().orElse(null);
+            Group g = GROUPS.stream()
+                    .filter(gr -> gr.id.equals(expanded))
+                    .findFirst()
+                    .orElse(null);
             if (g != null) {
                 if ("enemy".equals(g.id)) {
                     int[] spEn = sp(g);
                     if (spEn != null) {
                         int headerY = spEn[1] + PAD;
                         if (my >= headerY && my < headerY + ENEMY_HEADER_H) {
-                            int col = (int)((mx - spEn[0] - PAD) / ENEMY_HEADER_COL_W);
+                            int col = (int) ((mx - spEn[0] - PAD) / ENEMY_HEADER_COL_W);
                             if (col == 0) {
                                 cb.accept("enemy", "arrow");
-                                close(); return true;
+                                close();
+                                return true;
                             }
                         } else if (expandedEnemyCol >= 0) {
                             int ci = expandedEnemyCol - 1;
@@ -346,11 +435,12 @@ public class SquadContextMenu {
                                 int spX = spEn[0] + PAD + (ci + 1) * ENEMY_HEADER_COL_W;
                                 int spH = ENEMY_COLS.get(ci).items().size() * ENEMY_ITEM_H;
                                 if (mx >= spX && mx <= spX + spW && my >= itemsY && my <= itemsY + spH) {
-                                    int row = (int)((my - itemsY) / ENEMY_ITEM_H);
+                                    int row = (int) ((my - itemsY) / ENEMY_ITEM_H);
                                     var colItems = ENEMY_COLS.get(ci).items();
                                     if (row < colItems.size()) {
                                         cb.accept("enemy", colItems.get(row).id());
-                                        close(); return true;
+                                        close();
+                                        return true;
                                     }
                                 }
                             }
@@ -361,26 +451,31 @@ public class SquadContextMenu {
                     int idx = hoverRow * SQ_PER_ROW + hoverCol;
                     if (idx >= 0 && idx < items.size()) {
                         cb.accept(g.id, items.get(idx).id());
-                        close(); return true;
+                        close();
+                        return true;
                     }
                 } else {
                     var items = ITEMS.get(g.id);
                     if (items != null) {
                         int[] sp2 = sp(g);
                         if (sp2 != null) {
-                            int relY = (int)my - sp2[1] - PAD;
+                            int relY = (int) my - sp2[1] - PAD;
                             int idx = relY / SUB_ROW;
                             if (idx >= 0 && idx < items.size()) {
                                 cb.accept(g.id, items.get(idx).id());
-                                close(); return true;
+                                close();
+                                return true;
                             }
                         }
                     }
                 }
             }
         }
-        boolean hit = isOverGroup((int)mx, (int)my) || isOverPanel((int)mx, (int)my);
-        if (!hit) { close(); return false; }
+        boolean hit = isOverGroup((int) mx, (int) my) || isOverPanel((int) mx, (int) my);
+        if (!hit) {
+            close();
+            return false;
+        }
         return true;
     }
 
@@ -398,7 +493,9 @@ public class SquadContextMenu {
         if (expanded != null) expandAnim = Math.min(1, expandAnim + ANIM_SPEED);
         else expandAnim = Math.max(0, expandAnim - ANIM_SPEED);
         if (expanded != null && closeTimer > 0 && now - closeTimer > CLOSE_DELAY) {
-            expanded = null; expandAnim = 0; closeTimer = -1;
+            expanded = null;
+            expandAnim = 0;
+            closeTimer = -1;
         }
         if (expandedEnemyCol >= 0) enemyExpandAnim = Math.min(1, enemyExpandAnim + ANIM_SPEED);
         else enemyExpandAnim = Math.max(0, enemyExpandAnim - ANIM_SPEED);
@@ -434,23 +531,33 @@ public class SquadContextMenu {
                 g.vLine(gx - 18, gy - 18, gy + 18, 0xFFFFFFFF);
                 g.vLine(gx + 18, gy - 18, gy + 18, 0xFFFFFFFF);
             }
-            ResourceLocation ico = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + gr.icon + gr.color + ".png");
+            ResourceLocation ico =
+                    new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + gr.icon + gr.color + ".png");
             g.blit(ico, gx - 14, gy - 14, 0, 0, 28, 28, 28, 28);
         }
 
         // ─── Main expanded panel ───
         if (expandAnim > 0.01F && expanded != null) {
-            Group eg = GROUPS.stream().filter(gr -> gr.id.equals(expanded)).findFirst().orElse(null);
-            if (eg == null) { pose.popPose(); return; }
+            Group eg = GROUPS.stream()
+                    .filter(gr -> gr.id.equals(expanded))
+                    .findFirst()
+                    .orElse(null);
+            if (eg == null) {
+                pose.popPose();
+                return;
+            }
             int[] sp = sp(eg);
-            if (sp == null) { pose.popPose(); return; }
+            if (sp == null) {
+                pose.popPose();
+                return;
+            }
             int pw = panelW(eg.id), ph = panelH(eg.id);
 
             float aMul = expandAnim;
             int bgColor = (BG_ALPHA << 24) | 0x06080A;
             int borderColor = (BG_ALPHA << 24) | 0x444444;
             int itemAlpha = BG_ALPHA;
-            int alpha = (int)(expandAnim * 204) + 51;
+            int alpha = (int) (expandAnim * 204) + 51;
 
             if ("enemy".equals(eg.id)) {
                 renderEnemyHeader(g, f, eg, sp, pw, ph, alpha, aMul, itemAlpha);
@@ -474,7 +581,8 @@ public class SquadContextMenu {
     }
 
     // ─── Enemy header row only (5 icons) ───
-    private void renderEnemyHeader(GuiGraphics g, Font f, Group eg, int[] sp, int pw, int ph, int alpha, float aMul, int itemAlpha) {
+    private void renderEnemyHeader(
+            GuiGraphics g, Font f, Group eg, int[] sp, int pw, int ph, int alpha, float aMul, int itemAlpha) {
         int sy = sp[1] + PAD;
         String[] headerIcons = {"player_self", "infantry", "light_veh", "drone", "hab"};
         for (int c = 0; c < ENEMY_COLS_TOTAL; c++) {
@@ -486,12 +594,32 @@ public class SquadContextMenu {
             String iconFile = headerIcons[c] + eg.color + ".png";
             ResourceLocation hi = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + iconFile);
             int iconSize = 14;
-            g.blit(hi, hx + (ENEMY_HEADER_COL_W - iconSize) / 2, sy + (ENEMY_HEADER_H - iconSize) / 2, 0, 0, iconSize, iconSize, iconSize, iconSize);
+            g.blit(
+                    hi,
+                    hx + (ENEMY_HEADER_COL_W - iconSize) / 2,
+                    sy + (ENEMY_HEADER_H - iconSize) / 2,
+                    0,
+                    0,
+                    iconSize,
+                    iconSize,
+                    iconSize,
+                    iconSize);
         }
     }
 
     // ─── Enemy dynamic sub-panels (appear on hover) ───
-    private void renderEnemySubPanels(GuiGraphics g, Font f, Group eg, int[] sp, int pw, int ph, int alpha, float aMul, int itemAlpha, int mx, int my) {
+    private void renderEnemySubPanels(
+            GuiGraphics g,
+            Font f,
+            Group eg,
+            int[] sp,
+            int pw,
+            int ph,
+            int alpha,
+            float aMul,
+            int itemAlpha,
+            int mx,
+            int my) {
         if (expandedEnemyCol < 0 || enemyExpandAnim <= 0.01F) return;
         int colIdx = expandedEnemyCol - 1;
         if (colIdx < 0 || colIdx >= ENEMY_COLS.size()) return;
@@ -521,7 +649,8 @@ public class SquadContextMenu {
             int iy = py + i * ENEMY_ITEM_H;
             boolean ho = hoverCol == expandedEnemyCol && hoverRow == i;
             g.fill(px + 1, iy, px + pwSub - 1, iy + ENEMY_ITEM_H, ho ? (HOVER_BG << 24) : (ITEM_BG << 24));
-            ResourceLocation ii = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + it.id() + eg.color + ".png");
+            ResourceLocation ii =
+                    new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + it.id() + eg.color + ".png");
             g.blit(ii, px + 2, iy + 1, 0, 0, ICON, ICON, ICON, ICON);
             int itxtCol = (BG_ALPHA << 24) | (ho ? 0xFFFFFF : 0xAAAAAA);
             g.drawString(f, it.label(), px + ICON + 5, iy + 3, itxtCol, false);
@@ -529,12 +658,13 @@ public class SquadContextMenu {
     }
 
     // ─── Squad circles ───
-    private void renderSquadCircles(GuiGraphics g, Font f, Group eg, int[] sp, int pw, int ph, int alpha, float aMul, int itemAlpha) {
+    private void renderSquadCircles(
+            GuiGraphics g, Font f, Group eg, int[] sp, int pw, int ph, int alpha, float aMul, int itemAlpha) {
         var items = getSquadItems();
         if (items.isEmpty()) return;
         int colsPerRow = Math.min(items.size(), SQ_PER_ROW);
         int cellW = CIR_SIZE + CIR_GAP;
-        int cirAlpha = (int)(aMul * 255);
+        int cirAlpha = (int) (aMul * 255);
 
         for (int i = 0; i < items.size(); i++) {
             int col = i % SQ_PER_ROW;
@@ -544,12 +674,22 @@ public class SquadContextMenu {
             boolean ho = eg.id.equals(activeGroup) && hoverCol == col && hoverRow == row;
 
             int squadId;
-            try { squadId = Integer.parseInt(items.get(i).id()); } catch (NumberFormatException e) { squadId = -1; }
+            try {
+                squadId = Integer.parseInt(items.get(i).id());
+            } catch (NumberFormatException e) {
+                squadId = -1;
+            }
             boolean isCmdSquad = squadId == cmdIdForRender;
             int borderCol = (cirAlpha << 24) | (isCmdSquad ? 0xFFCC00 : 0x44CC44);
             int fillCol = (cirAlpha << 24) | (isCmdSquad ? 0x332200 : 0x113311);
 
-            if (ho) g.fill(cx - CIR_SIZE / 2 - 1, cy - CIR_SIZE / 2 - 1, cx + CIR_SIZE / 2 + 1, cy + CIR_SIZE / 2 + 1, cirAlpha << 24 | 0x44FFFFFF);
+            if (ho)
+                g.fill(
+                        cx - CIR_SIZE / 2 - 1,
+                        cy - CIR_SIZE / 2 - 1,
+                        cx + CIR_SIZE / 2 + 1,
+                        cy + CIR_SIZE / 2 + 1,
+                        cirAlpha << 24 | 0x44FFFFFF);
             g.hLine(cx - CIR_SIZE / 2, cx + CIR_SIZE / 2, cy - CIR_SIZE / 2, borderCol);
             g.hLine(cx - CIR_SIZE / 2, cx + CIR_SIZE / 2, cy + CIR_SIZE / 2, borderCol);
             g.vLine(cx - CIR_SIZE / 2, cy - CIR_SIZE / 2, cy + CIR_SIZE / 2, borderCol);
@@ -574,7 +714,8 @@ public class SquadContextMenu {
     }
 
     // ─── Standard list (team, cmd_top) ───
-    private void renderStandardList(GuiGraphics g, Font f, Group eg, int[] sp, int pw, int alpha, float aMul, int itemAlpha) {
+    private void renderStandardList(
+            GuiGraphics g, Font f, Group eg, int[] sp, int pw, int alpha, float aMul, int itemAlpha) {
         var items = ITEMS.get(eg.id);
         if (items == null) return;
         int sy = sp[1] + PAD;
@@ -585,7 +726,8 @@ public class SquadContextMenu {
             String rawId = it.id();
             if (rawId.endsWith("_m")) rawId = rawId.substring(0, rawId.length() - 2);
             String iconFile = "player_self".equals(rawId) ? "player_self" : rawId;
-            ResourceLocation ii = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + iconFile + eg.color + ".png");
+            ResourceLocation ii =
+                    new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + iconFile + eg.color + ".png");
             g.blit(ii, sp[0] + PAD, sy + 2, 0, 0, ICON, ICON, ICON, ICON);
             int itxtCol = itemAlpha << 24 | (ho ? 0xFFFFFF : 0xAAAAAA);
             g.drawString(f, it.label(), sp[0] + PAD + ICON + 4, sy + 4, itxtCol, false);

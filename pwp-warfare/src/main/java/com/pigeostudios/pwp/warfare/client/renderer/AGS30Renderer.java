@@ -8,8 +8,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 // Рендер сущности АГС-30 с использованием GeckoLib
 // Отображает 3D-модель гранатомёта в мире
 public class AGS30Renderer extends GeoEntityRenderer<AGS30Entity> {
-   public AGS30Renderer(Context renderManager) {
-      super(renderManager, new AGS30Model());
-      this.shadowRadius = 0.7F;
-   }
+    public AGS30Renderer(Context renderManager) {
+        super(renderManager, new AGS30Model());
+        this.shadowRadius = 0.7F;
+    }
 }

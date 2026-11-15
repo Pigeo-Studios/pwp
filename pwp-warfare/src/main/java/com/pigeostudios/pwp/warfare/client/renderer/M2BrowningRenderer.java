@@ -8,8 +8,8 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 // Рендер сущности M2 Browning с использованием GeckoLib
 // Отображает 3D-модель пулемёта в мире
 public class M2BrowningRenderer extends GeoEntityRenderer<M2BrowningEntity> {
-   public M2BrowningRenderer(Context renderManager) {
-      super(renderManager, new M2BrowningModel());
-      this.shadowRadius = 0.7F;
-   }
+    public M2BrowningRenderer(Context renderManager) {
+        super(renderManager, new M2BrowningModel());
+        this.shadowRadius = 0.7F;
+    }
 }

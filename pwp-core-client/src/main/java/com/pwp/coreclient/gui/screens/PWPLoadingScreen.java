@@ -12,7 +12,13 @@ import net.minecraft.network.chat.Component;
 public class PWPLoadingScreen extends Screen {
 
     public enum Context {
-        CONNECTING, LOADING_WORLD, LOADING_MAP, WAITING_DATA, DISCONNECTING, CHANGING_DIMENSION, TRANSFERRING
+        CONNECTING,
+        LOADING_WORLD,
+        LOADING_MAP,
+        WAITING_DATA,
+        DISCONNECTING,
+        CHANGING_DIMENSION,
+        TRANSFERRING
     }
 
     private final Context context;
@@ -101,7 +107,13 @@ public class PWPLoadingScreen extends Screen {
         PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
 
         String statusText = getContextText(context);
-        gui.drawString(font, Component.literal(statusText), cx - font.width(statusText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
+        gui.drawString(
+                font,
+                Component.literal(statusText),
+                cx - font.width(statusText) / 2,
+                cy - 30,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
 
         if (hasKnownProgress) {
             int barW = (int) (boxW * 0.7f);
@@ -156,17 +168,31 @@ public class PWPLoadingScreen extends Screen {
         PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
 
         gui.setColor(1, 1, 1, fade);
-        gui.drawString(font, Component.literal("Не удалось подключиться"), cx - font.width("Не удалось подключиться") / 2, cy, PWPTheme.Colors.DANGER, false);
-        gui.drawString(font, Component.literal("Сервер недоступен"), cx - font.width("Сервер недоступен") / 2, cy + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(
+                font,
+                Component.literal("Не удалось подключиться"),
+                cx - font.width("Не удалось подключиться") / 2,
+                cy,
+                PWPTheme.Colors.DANGER,
+                false);
+        gui.drawString(
+                font,
+                Component.literal("Сервер недоступен"),
+                cx - font.width("Сервер недоступен") / 2,
+                cy + 14,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
         gui.setColor(1, 1, 1, 1);
 
         if (fade >= 1 && children().isEmpty()) {
             addRenderableWidget(new PWPButton(
-                cx - 100, cy + 40, 200, 28,
-                Component.translatable("pwp_core.ui.back"),
-                btn -> Minecraft.getInstance().setScreen(new PWPMainMenuScreen()),
-                PWPButton.Style.DARK
-            ));
+                    cx - 100,
+                    cy + 40,
+                    200,
+                    28,
+                    Component.translatable("pwp_core.ui.back"),
+                    btn -> Minecraft.getInstance().setScreen(new PWPMainMenuScreen()),
+                    PWPButton.Style.DARK));
         }
     }
 

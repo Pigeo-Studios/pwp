@@ -3,9 +3,8 @@ package com.pwp.lobby;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
-import net.minecraftforge.server.ServerLifecycleHooks;
-
 import java.util.*;
+import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class FactionVotingManager {
 
@@ -19,11 +18,21 @@ public class FactionVotingManager {
     private static List<String> availableFactions = new ArrayList<>();
     private static final Map<UUID, String[]> votes = new HashMap<>();
 
-    public static boolean hasVoted(java.util.UUID uuid) { return votes.containsKey(uuid); }
+    public static boolean hasVoted(java.util.UUID uuid) {
+        return votes.containsKey(uuid);
+    }
     /** Голос игрока ([blue, red]) или null, если не голосовал. */
-    public static String[] getVote(java.util.UUID uuid) { return votes.get(uuid); }
-    public static boolean isActive() { return active; }
-    public static int getVoteCount() { return votes.size(); }
+    public static String[] getVote(java.util.UUID uuid) {
+        return votes.get(uuid);
+    }
+
+    public static boolean isActive() {
+        return active;
+    }
+
+    public static int getVoteCount() {
+        return votes.size();
+    }
 
     public static void startFactionVoting(String map, List<String> available) {
         if (MatchAllocator.hasActiveMatch() || LobbyMod.isAnyVoteActive()) {
@@ -46,7 +55,7 @@ public class FactionVotingManager {
         if (availableFactions.size() < 6) return;
         if (!availableFactions.subList(0, 3).contains(blueFaction)) return;
         if (!availableFactions.subList(3, 6).contains(redFaction)) return;
-        votes.put(uuid, new String[]{blueFaction, redFaction});
+        votes.put(uuid, new String[] {blueFaction, redFaction});
         LobbyMod.broadcastLobbyState();
     }
 
@@ -58,7 +67,7 @@ public class FactionVotingManager {
 
     public static int getRemainingSeconds() {
         if (!active) return 0;
-        return Math.max(0, durationSec - (int)((System.currentTimeMillis() - startTime) / 1000));
+        return Math.max(0, durationSec - (int) ((System.currentTimeMillis() - startTime) / 1000));
     }
 
     public static void stop() {
@@ -102,8 +111,10 @@ public class FactionVotingManager {
     private static void startMatch(String blue, String red) {
         MapConfig map = MapRegistry.get(mapName);
         if (map == null) return;
-        LobbyMod.recordResult("F1", blue, (int) votes.values().stream().filter(p -> p[0].equals(blue)).count());
-        LobbyMod.recordResult("F2", red, (int) votes.values().stream().filter(p -> p[1].equals(red)).count());
+        LobbyMod.recordResult("F1", blue, (int)
+                votes.values().stream().filter(p -> p[0].equals(blue)).count());
+        LobbyMod.recordResult("F2", red, (int)
+                votes.values().stream().filter(p -> p[1].equals(red)).count());
         LobbyMod.startMatchAfterFactionVote(map, blue, red);
     }
 
@@ -144,7 +155,6 @@ public class FactionVotingManager {
     private static void serverBroadcast(String msg) {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return;
-        server.getPlayerList().broadcastSystemMessage(
-                net.minecraft.network.chat.Component.literal(msg), false);
+        server.getPlayerList().broadcastSystemMessage(net.minecraft.network.chat.Component.literal(msg), false);
     }
 }

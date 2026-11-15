@@ -1,17 +1,14 @@
 package com.pwp.lobby.maps;
 
 import com.google.gson.Gson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MapRegistry {
 
@@ -45,7 +42,8 @@ public class MapRegistry {
                 log.debug("Skipping {}: no map_config.json", subdir.getName());
                 continue;
             }
-            try (InputStreamReader reader = new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
+            try (InputStreamReader reader =
+                    new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
                 MapConfig cfg = GSON.fromJson(reader, MapConfig.class);
                 cfg.worldPath = subdir.getAbsolutePath();
                 if (cfg.name != null && !cfg.name.isEmpty()) {

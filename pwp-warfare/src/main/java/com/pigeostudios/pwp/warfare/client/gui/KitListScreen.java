@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.WarfareClipboard;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
@@ -8,13 +9,12 @@ import com.pigeostudios.pwp.warfare.network.PacketPasteKit;
 import com.pigeostudios.pwp.warfare.network.PacketPasteTeam;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitData;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -57,51 +57,65 @@ public class KitListScreen extends Screen {
         clearWidgets();
         kitButtons.clear();
 
-        addRenderableWidget(
-            new PWPButton(cx + 6, 28, 80, 20,
+        addRenderableWidget(new PWPButton(
+                cx + 6,
+                28,
+                80,
+                20,
                 Component.translatable("gui.pwpwarfare.kit_list.copy_all"),
                 b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitData(team, "ALL")),
-                PWPButton.Style.PRIMARY
-            )
-        );
-        PWPButton pasteAllBtn = new PWPButton(cx + 92, 28, 80, 20,
-            Component.translatable("gui.pwpwarfare.kit_list.paste_all"),
-            b -> {
-                if (WarfareClipboard.teamKitsData != null)
-                    PacketHandler.INSTANCE.sendToServer(new PacketPasteTeam(team, WarfareClipboard.teamKitsData));
-            },
-            PWPButton.Style.PRIMARY
-        );
+                PWPButton.Style.PRIMARY));
+        PWPButton pasteAllBtn = new PWPButton(
+                cx + 92,
+                28,
+                80,
+                20,
+                Component.translatable("gui.pwpwarfare.kit_list.paste_all"),
+                b -> {
+                    if (WarfareClipboard.teamKitsData != null)
+                        PacketHandler.INSTANCE.sendToServer(new PacketPasteTeam(team, WarfareClipboard.teamKitsData));
+                },
+                PWPButton.Style.PRIMARY);
         pasteAllBtn.active = WarfareClipboard.teamKitsData != null;
         addRenderableWidget(pasteAllBtn);
 
         for (int i = 0; i < WarfareWorldData.KIT_NAMES.length; i++) {
             String kitName = WarfareWorldData.KIT_NAMES[i];
 
-            PWPButton editBtn = new PWPButton(0, 0, 0, 0,
-                Component.literal(DeployData.getDisplayName(kitName)),
-                b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenKitEditor(team, kitName)),
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton editBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.literal(DeployData.getDisplayName(kitName)),
+                    b -> PacketHandler.INSTANCE.sendToServer(new PacketOpenKitEditor(team, kitName)),
+                    PWPButton.Style.PRIMARY);
             addRenderableWidget(editBtn);
             kitButtons.add(editBtn);
 
-            PWPButton copyBtn = new PWPButton(0, 0, 0, 0,
-                Component.translatable("gui.pwpwarfare.kit_list.copy"),
-                b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitData(team, kitName)),
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton copyBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.translatable("gui.pwpwarfare.kit_list.copy"),
+                    b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitData(team, kitName)),
+                    PWPButton.Style.PRIMARY);
             addRenderableWidget(copyBtn);
             kitButtons.add(copyBtn);
 
-            PWPButton pBtn = new PWPButton(0, 0, 0, 0,
-                Component.translatable("gui.pwpwarfare.kit_list.paste"),
-                b -> {
-                    if (WarfareClipboard.kitData != null)
-                        PacketHandler.INSTANCE.sendToServer(new PacketPasteKit(team, kitName, WarfareClipboard.kitData));
-                },
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton pBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.translatable("gui.pwpwarfare.kit_list.paste"),
+                    b -> {
+                        if (WarfareClipboard.kitData != null)
+                            PacketHandler.INSTANCE.sendToServer(
+                                    new PacketPasteKit(team, kitName, WarfareClipboard.kitData));
+                    },
+                    PWPButton.Style.PRIMARY);
             pBtn.active = WarfareClipboard.kitData != null;
             addRenderableWidget(pBtn);
             kitButtons.add(pBtn);
@@ -145,7 +159,8 @@ public class KitListScreen extends Screen {
         PWPPanel.render(gui, cx, py, panelW, panelH);
 
         int titleColor = team.equals("BLUE") ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
-        gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 4, titleColor);
+        gui.drawCenteredString(
+                PWPTheme.Fonts.display(), Component.literal(title.getString()), width / 2, py + 4, titleColor);
         gui.fill(cx + 6, py + 14, cx + panelW - 6, py + 15, PWPTheme.Colors.ACCENT);
 
         int clipY = py + 40;
@@ -175,9 +190,19 @@ public class KitListScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25B2"),
+                        width / 2,
+                        py + 2,
+                        PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25BC"),
+                        width / 2,
+                        py + panelH - 4,
+                        PWPTheme.Colors.TEXT_DIM);
         }
     }
 

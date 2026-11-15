@@ -5,6 +5,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.util.ServerThread;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,9 +14,6 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Проверяет баны через core-service и кикает забаненных:
@@ -75,7 +74,8 @@ public class BanEnforcer {
                 JsonObject k = e.getAsJsonObject();
                 if (!k.has("uuid") || k.get("uuid").isJsonNull()) continue;
                 String reason = k.has("reason") && !k.get("reason").isJsonNull()
-                        ? k.get("reason").getAsString() : "";
+                        ? k.get("reason").getAsString()
+                        : "";
                 kicks.add(new Kick(k.get("uuid").getAsString(), reason));
             }
         } catch (Exception e) {
@@ -88,12 +88,16 @@ public class BanEnforcer {
         for (Kick k : kicks) {
             ServerPlayer p = null;
             for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
-                if (sp.getStringUUID().equals(k.uuid)) { p = sp; break; }
+                if (sp.getStringUUID().equals(k.uuid)) {
+                    p = sp;
+                    break;
+                }
             }
             if (p == null) continue;
             String reason = k.reason.isEmpty() ? "Вы забанены" : k.reason;
             p.connection.disconnect(Component.literal("\u00A7cВы забанены: " + reason));
-            CoreServerMod.log.info("Kicked banned player {}: {}", p.getGameProfile().getName(), reason);
+            CoreServerMod.log.info(
+                    "Kicked banned player {}: {}", p.getGameProfile().getName(), reason);
         }
     }
 
@@ -101,7 +105,8 @@ public class BanEnforcer {
         try {
             return p.getIpAddress();
         } catch (RuntimeException e) {
-            CoreServerMod.log.warn("Не удалось получить IP игрока {}", p.getGameProfile().getName(), e);
+            CoreServerMod.log.warn(
+                    "Не удалось получить IP игрока {}", p.getGameProfile().getName(), e);
             return null;
         }
     }

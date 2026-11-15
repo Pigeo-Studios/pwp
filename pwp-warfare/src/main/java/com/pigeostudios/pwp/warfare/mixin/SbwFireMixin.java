@@ -18,20 +18,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // блокировать снаряды.
 @Mixin(GunItem.class)
 public abstract class SbwFireMixin {
-   @Inject(
-      method = "shoot(Lcom/atsuishio/superbwarfare/data/gun/ShootParameters;)V",
-      at = @At("HEAD"),
-      cancellable = true,
-      remap = false,
-      require = 0
-   )
-   private void pwp$blockFireInMainZone(ShootParameters parameters, CallbackInfo ci) {
-      if (MainZoneFireGuard.isFireBlocked(parameters.shooter)) {
-         ci.cancel();
-         // Показываем игроку плашку «В мейн-зоне стрельба запрещена» (анти-спам на сервере)
-         if (parameters.shooter instanceof ServerPlayer sp) {
-            MainZoneFireGuard.notifyBlocked(sp);
-         }
-      }
-   }
+    @Inject(
+            method = "shoot(Lcom/atsuishio/superbwarfare/data/gun/ShootParameters;)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = false,
+            require = 0)
+    private void pwp$blockFireInMainZone(ShootParameters parameters, CallbackInfo ci) {
+        if (MainZoneFireGuard.isFireBlocked(parameters.shooter)) {
+            ci.cancel();
+            // Показываем игроку плашку «В мейн-зоне стрельба запрещена» (анти-спам на сервере)
+            if (parameters.shooter instanceof ServerPlayer sp) {
+                MainZoneFireGuard.notifyBlocked(sp);
+            }
+        }
+    }
 }

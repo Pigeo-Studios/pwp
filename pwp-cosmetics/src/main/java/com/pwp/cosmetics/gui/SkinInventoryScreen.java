@@ -8,22 +8,21 @@ import com.pwp.api.security.PwpPermissions;
 import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.PlayerData.CosmeticEntry;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.cosmetics.CosmeticsMod;
 import com.pwp.coreclient.network.ClientResponseCache;
 import com.pwp.coreclient.network.PacketDataRequest;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.cosmetics.CosmeticsMod;
 import com.pwp.cosmetics.SkinCatalog;
 import com.pwp.cosmetics.client.CosmeticClientState;
 import com.pwp.cosmetics.network.PacketCosmeticEquip;
+import java.util.*;
+import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class SkinInventoryScreen extends Screen {
 
@@ -47,11 +46,10 @@ public class SkinInventoryScreen extends Screen {
     private String statusMsg = "";
     /** Экипированные скины, ожидающие ответа с определениями скинов; null — не ждём. */
     private Set<String> pendingEquipped = null;
+
     private long statusTime = 0;
 
-    private static final int[] RARITY_COLORS = {
-            0xFF6A6D73, 0xFF3D6FA5, 0xFF7A4A8A, 0xFFC8812A, 0xFFA53D3D, 0xFFFFD700
-    };
+    private static final int[] RARITY_COLORS = {0xFF6A6D73, 0xFF3D6FA5, 0xFF7A4A8A, 0xFFC8812A, 0xFFA53D3D, 0xFFFFD700};
 
     public SkinInventoryScreen() {
         super(Component.translatable("gui.pwp_cosmetics.skin_inventory.title"));
@@ -63,17 +61,23 @@ public class SkinInventoryScreen extends Screen {
         int btnY = 14;
 
         addRenderableWidget(Button.builder(Component.literal("Все"), b -> setFilter("ALL"))
-                .bounds(cx - 170, btnY, 42, 22).build());
+                .bounds(cx - 170, btnY, 42, 22)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("Основное"), b -> setFilter("PRIMARY"))
-                .bounds(cx - 124, btnY, 52, 22).build());
+                .bounds(cx - 124, btnY, 52, 22)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("Вторичное"), b -> setFilter("SECONDARY"))
-                .bounds(cx - 68, btnY, 60, 22).build());
+                .bounds(cx - 68, btnY, 60, 22)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("Нож"), b -> setFilter("KNIFE"))
-                .bounds(cx - 4, btnY, 45, 22).build());
+                .bounds(cx - 4, btnY, 45, 22)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("Холодное"), b -> setFilter("MELEE"))
-                .bounds(cx + 45, btnY, 45, 22).build());
+                .bounds(cx + 45, btnY, 45, 22)
+                .build());
         addRenderableWidget(Button.builder(Component.literal("Униформа"), b -> setFilter("UNIFORM"))
-                .bounds(cx + 94, btnY, 52, 22).build());
+                .bounds(cx + 94, btnY, 52, 22)
+                .build());
 
         CosmeticClientState.setListener(this::onEquipResult);
         loadCosmetics();
@@ -146,7 +150,8 @@ public class SkinInventoryScreen extends Screen {
             String skinId = obj.get("skinId").getAsString();
             nameCache.put(skinId, obj.has("name") ? obj.get("name").getAsString() : skinId);
             String modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull()
-                    ? obj.get("modelPath").getAsString() : "";
+                    ? obj.get("modelPath").getAsString()
+                    : "";
             // Предмет здесь — только для иконки; выдаваемый предмет собирает сервер
             ItemStack icon = SkinCatalog.buildItem(skinId, modelPath);
             if (!icon.isEmpty()) cache.put(skinId, icon);
@@ -204,8 +209,12 @@ public class SkinInventoryScreen extends Screen {
         gui.fill(cx - totalWidth / 2 - 8, 46, cx + totalWidth / 2 + 8, 47, PWPTheme.Colors.ACCENT);
 
         if (filtered.isEmpty()) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
-                    cx, this.height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
+                    cx,
+                    this.height / 2,
+                    PWPTheme.Colors.TEXT_DIM);
         } else {
             RenderSystem.enableBlend();
 
@@ -230,7 +239,13 @@ public class SkinInventoryScreen extends Screen {
                 if (entry.equipped) {
                     gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, PWPTheme.Colors.SUCCESS);
                     gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
-                    gui.drawString(PWPTheme.Fonts.display(), Component.literal("\u2714"), x + ITEM_SIZE - 10, y + 1, PWPTheme.Colors.SUCCESS, false);
+                    gui.drawString(
+                            PWPTheme.Fonts.display(),
+                            Component.literal("\u2714"),
+                            x + ITEM_SIZE - 10,
+                            y + 1,
+                            PWPTheme.Colors.SUCCESS,
+                            false);
                 } else if (canAccess) {
                     gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
                 } else {
@@ -246,7 +261,13 @@ public class SkinInventoryScreen extends Screen {
                 }
 
                 if (!canAccess) {
-                    gui.drawString(PWPTheme.Fonts.display(), Component.literal("\uD83D\uDD12"), x + 2, y + ITEM_SIZE - 10, 0xFF7A7D84, false);
+                    gui.drawString(
+                            PWPTheme.Fonts.display(),
+                            Component.literal("\uD83D\uDD12"),
+                            x + 2,
+                            y + ITEM_SIZE - 10,
+                            0xFF7A7D84,
+                            false);
                 }
 
                 if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
@@ -273,19 +294,39 @@ public class SkinInventoryScreen extends Screen {
             // Scroll indicators
             if (maxScroll > 0) {
                 if (scrollOffset > 0)
-                    gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), cx, START_Y - 2, PWPTheme.Colors.TEXT_DIM);
+                    gui.drawCenteredString(
+                            PWPTheme.Fonts.display(),
+                            Component.literal("\u25B2"),
+                            cx,
+                            START_Y - 2,
+                            PWPTheme.Colors.TEXT_DIM);
                 if (scrollOffset < maxScroll)
-                    gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), cx, this.height - 18, PWPTheme.Colors.TEXT_DIM);
+                    gui.drawCenteredString(
+                            PWPTheme.Fonts.display(),
+                            Component.literal("\u25BC"),
+                            cx,
+                            this.height - 18,
+                            PWPTheme.Colors.TEXT_DIM);
             }
         }
 
         if (currentFilter.equals("PRIMARY")) {
             String hint = "\u00a77\u2714 Можно выбрать несколько основных скинов";
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(hint), cx, this.height - 30, PWPTheme.Colors.TEXT_SECONDARY);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.literal(hint),
+                    cx,
+                    this.height - 30,
+                    PWPTheme.Colors.TEXT_SECONDARY);
         }
 
         if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(statusMsg), cx, this.height - 16, PWPTheme.Colors.TEXT_ACCENT);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.literal(statusMsg),
+                    cx,
+                    this.height - 16,
+                    PWPTheme.Colors.TEXT_ACCENT);
 
         super.render(gui, mx, my, pt);
     }
@@ -366,26 +407,40 @@ public class SkinInventoryScreen extends Screen {
     private int getRarityColor(String rarity) {
         if (rarity == null) return RARITY_COLORS[0];
         switch (rarity.toUpperCase()) {
-            case "COMMON": return RARITY_COLORS[0];
-            case "UNCOMMON": return RARITY_COLORS[1];
-            case "RARE": return RARITY_COLORS[2];
-            case "EPIC": return RARITY_COLORS[3];
-            case "LEGENDARY": return RARITY_COLORS[4];
-            case "MYTHIC": return RARITY_COLORS[5];
-            default: return RARITY_COLORS[0];
+            case "COMMON":
+                return RARITY_COLORS[0];
+            case "UNCOMMON":
+                return RARITY_COLORS[1];
+            case "RARE":
+                return RARITY_COLORS[2];
+            case "EPIC":
+                return RARITY_COLORS[3];
+            case "LEGENDARY":
+                return RARITY_COLORS[4];
+            case "MYTHIC":
+                return RARITY_COLORS[5];
+            default:
+                return RARITY_COLORS[0];
         }
     }
 
     private String getRarityCode(String rarity) {
         if (rarity == null) return "7";
         switch (rarity.toUpperCase()) {
-            case "COMMON": return "7";
-            case "UNCOMMON": return "b";
-            case "RARE": return "9";
-            case "EPIC": return "5";
-            case "LEGENDARY": return "6";
-            case "MYTHIC": return "c";
-            default: return "7";
+            case "COMMON":
+                return "7";
+            case "UNCOMMON":
+                return "b";
+            case "RARE":
+                return "9";
+            case "EPIC":
+                return "5";
+            case "LEGENDARY":
+                return "6";
+            case "MYTHIC":
+                return "c";
+            default:
+                return "7";
         }
     }
 }

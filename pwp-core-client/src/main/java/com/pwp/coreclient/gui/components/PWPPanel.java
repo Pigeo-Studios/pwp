@@ -1,14 +1,15 @@
 package com.pwp.coreclient.gui.components;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
 public class PWPPanel {
 
     public enum Variant {
-        SURFACE, SURFACE_DIM, ACCENT_BORDER
+        SURFACE,
+        SURFACE_DIM,
+        ACCENT_BORDER
     }
 
     private PWPPanel() {}
@@ -56,7 +57,12 @@ public class PWPPanel {
             int titleY = y + PWPTheme.Spacing.XS;
             gui.drawCenteredString(font, Component.literal(title), x + w / 2, titleY, titleColor);
             int dividerY = y + titleHeight() - PWPTheme.Spacing.XXS;
-            gui.fill(x + PWPTheme.Spacing.SM, dividerY, x + w - PWPTheme.Spacing.SM, dividerY + 1, PWPTheme.Colors.BORDER);
+            gui.fill(
+                    x + PWPTheme.Spacing.SM,
+                    dividerY,
+                    x + w - PWPTheme.Spacing.SM,
+                    dividerY + 1,
+                    PWPTheme.Colors.BORDER);
         }
     }
 

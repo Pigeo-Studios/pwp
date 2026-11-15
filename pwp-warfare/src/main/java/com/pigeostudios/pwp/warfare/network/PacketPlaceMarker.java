@@ -15,11 +15,17 @@ public class PacketPlaceMarker {
     public final BlockPos pos;
 
     public PacketPlaceMarker(String team, String category, String iconType, BlockPos pos) {
-        this.team = team; this.category = category; this.iconType = iconType; this.pos = pos;
+        this.team = team;
+        this.category = category;
+        this.iconType = iconType;
+        this.pos = pos;
     }
 
     public static void encode(PacketPlaceMarker msg, FriendlyByteBuf buf) {
-        buf.writeUtf(msg.team); buf.writeUtf(msg.category); buf.writeUtf(msg.iconType); buf.writeBlockPos(msg.pos);
+        buf.writeUtf(msg.team);
+        buf.writeUtf(msg.category);
+        buf.writeUtf(msg.iconType);
+        buf.writeBlockPos(msg.pos);
     }
 
     public static PacketPlaceMarker decode(FriendlyByteBuf buf) {
@@ -34,13 +40,16 @@ public class PacketPlaceMarker {
             WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
             boolean authorized = false;
             for (WarfareWorldData.Squad s : data.squads) {
-                if (s.members.contains(pName) && (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName))) {
-                    authorized = true; break;
+                if (s.members.contains(pName)
+                        && (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName))) {
+                    authorized = true;
+                    break;
                 }
             }
             if (!authorized) return;
             long tick = p.serverLevel().getGameTime();
-            MapMarker m = new MapMarker(UUID.randomUUID(), msg.team, msg.category, msg.iconType, msg.pos, p.getUUID(), tick);
+            MapMarker m =
+                    new MapMarker(UUID.randomUUID(), msg.team, msg.category, msg.iconType, msg.pos, p.getUUID(), tick);
             MarkerManager.add(m);
             MarkerManager.broadcastToTeam(p, m);
         });

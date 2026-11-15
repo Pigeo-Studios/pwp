@@ -36,9 +36,11 @@ public class PWPConfigScreen extends Screen {
         this.addRenderableWidget(this.chanceBox);
 
         this.addRenderableWidget(Button.builder(Component.literal("Сохранить"), b -> this.saveAndClose())
-            .bounds(cx - 105, 200, 100, 22).build());
+                .bounds(cx - 105, 200, 100, 22)
+                .build());
         this.addRenderableWidget(Button.builder(Component.literal("Отмена"), b -> this.minecraft.setScreen(this.parent))
-            .bounds(cx + 5, 200, 100, 22).build());
+                .bounds(cx + 5, 200, 100, 22)
+                .build());
     }
 
     private void saveAndClose() {

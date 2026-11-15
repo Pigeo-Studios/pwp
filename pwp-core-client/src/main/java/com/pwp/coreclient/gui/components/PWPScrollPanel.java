@@ -65,10 +65,21 @@ public class PWPScrollPanel {
         return scrollMax > 0;
     }
 
-    public int getX() { return x; }
-    public int getY() { return y; }
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
 
     public boolean isMouseOver(double mx, double my) {
         return mx >= x && mx <= x + width && my >= y && my <= y + height;
@@ -132,16 +143,21 @@ public class PWPScrollPanel {
         gui.fill(sbX, sbY, sbX + SCROLLBAR_WIDTH, sbY + sbH, PWPTheme.Colors.SURFACE_DIM);
 
         int thumbH = getThumbHeight(sbH);
-        int thumbY = sbY + (int)((scrollOffset / scrollMax) * (sbH - thumbH));
+        int thumbY = sbY + (int) ((scrollOffset / scrollMax) * (sbH - thumbH));
         gui.fill(sbX, thumbY, sbX + SCROLLBAR_WIDTH, thumbY + thumbH, PWPTheme.Colors.ACCENT);
         gui.fill(sbX, thumbY, sbX + SCROLLBAR_WIDTH - 1, thumbY + thumbH - 1, PWPTheme.Colors.ACCENT_SOFT);
     }
 
     private int getThumbHeight(int trackHeight) {
         float ratio = (float) viewportHeight / Math.max(contentHeight, viewportHeight);
-        return Math.max(10, (int)(trackHeight * ratio));
+        return Math.max(10, (int) (trackHeight * ratio));
     }
 
-    public boolean isVisible() { return visible; }
-    public void setVisible(boolean v) { this.visible = v; }
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean v) {
+        this.visible = v;
+    }
 }

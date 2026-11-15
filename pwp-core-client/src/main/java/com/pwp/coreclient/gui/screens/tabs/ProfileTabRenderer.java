@@ -12,7 +12,11 @@ import net.minecraft.network.chat.Component;
 
 public class ProfileTabRenderer {
 
-    public enum State { LOADING, LOADED }
+    public enum State {
+        LOADING,
+        LOADED
+    }
+
     private State state = State.LOADING;
     private JsonObject profileData;
     private String currentUuid;
@@ -35,10 +39,16 @@ public class ProfileTabRenderer {
         var f = PWPTheme.Fonts.display();
 
         if (state == State.LOADING) {
-            g.drawString(f, Component.literal("ПРОФИЛЬ"), sw/2-f.width("ПРОФИЛЬ")/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
-            g.fill(sw/2-40, 94, sw/2+40, 95, PWPTheme.Colors.ACCENT);
+            g.drawString(
+                    f,
+                    Component.literal("ПРОФИЛЬ"),
+                    sw / 2 - f.width("ПРОФИЛЬ") / 2,
+                    80,
+                    PWPTheme.Colors.TEXT_ACCENT,
+                    false);
+            g.fill(sw / 2 - 40, 94, sw / 2 + 40, 95, PWPTheme.Colors.ACCENT);
             String msg = "Загрузка...";
-            g.drawString(f, Component.literal(msg), sw/2-f.width(msg)/2, sh/2, PWPTheme.Colors.TEXT_DIM, false);
+            g.drawString(f, Component.literal(msg), sw / 2 - f.width(msg) / 2, sh / 2, PWPTheme.Colors.TEXT_DIM, false);
             return;
         }
 
@@ -67,62 +77,95 @@ public class ProfileTabRenderer {
         int bws = jsonInt(st, "bestWinStreak", 0);
         int cws = jsonInt(st, "currentWinStreak", 0);
 
-        g.drawString(f, Component.literal("ПРОФИЛЬ"), sw/2-f.width("ПРОФИЛЬ")/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw/2-40, 94, sw/2+40, 95, PWPTheme.Colors.ACCENT);
-        g.drawString(f, Component.literal(name + "  |  Ур. " + lvl), sw/2-f.width(name + "  |  Ур. " + lvl)/2, 108, PWPTheme.Colors.TEXT_PRIMARY, false);
+        g.drawString(
+                f,
+                Component.literal("ПРОФИЛЬ"),
+                sw / 2 - f.width("ПРОФИЛЬ") / 2,
+                80,
+                PWPTheme.Colors.TEXT_ACCENT,
+                false);
+        g.fill(sw / 2 - 40, 94, sw / 2 + 40, 95, PWPTheme.Colors.ACCENT);
+        g.drawString(
+                f,
+                Component.literal(name + "  |  Ур. " + lvl),
+                sw / 2 - f.width(name + "  |  Ур. " + lvl) / 2,
+                108,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
 
-        int x1 = 40, x2 = sw/2+6, cw = sw/2-46;
-        drawPanel(g, x1, 130, cw, "БОЙ", new String[][]{
-            {"Убийства",""+kills}, {"Смерти",""+deaths},
-            {"K/D",String.format("%.2f", deaths>0 ? kills/(double)deaths : (double)kills)}, {"Спасения",""+revives},
-            {"Убито техникой",""+vk}, {"Захваты",""+cap},
-            {"Лучшая серия",""+bst}, {"Тимкиллы",""+tk},
+        int x1 = 40, x2 = sw / 2 + 6, cw = sw / 2 - 46;
+        drawPanel(g, x1, 130, cw, "БОЙ", new String[][] {
+            {"Убийства", "" + kills},
+            {"Смерти", "" + deaths},
+            {"K/D", String.format("%.2f", deaths > 0 ? kills / (double) deaths : (double) kills)},
+            {"Спасения", "" + revives},
+            {"Убито техникой", "" + vk},
+            {"Захваты", "" + cap},
+            {"Лучшая серия", "" + bst},
+            {"Тимкиллы", "" + tk},
         });
-        drawPanel(g, x2, 130, cw, "МАТЧИ", new String[][]{
-            {"Сыграно",""+matches}, {"Побед",""+wins},
-            {"Поражений",""+losses}, {"WinRate",matches>0 ? String.format("%.0f%%", wins*100f/matches) : "0%"},
-            {"Наиграно",fmtTime(pt)}, {"Убийств/матч",matches>0 ? String.format("%.1f", kills/(double)matches) : "0"},
-            {"Макс. побед",""+bws}, {"Тек. побед",""+cws},
+        drawPanel(g, x2, 130, cw, "МАТЧИ", new String[][] {
+            {"Сыграно", "" + matches},
+            {"Побед", "" + wins},
+            {"Поражений", "" + losses},
+            {"WinRate", matches > 0 ? String.format("%.0f%%", wins * 100f / matches) : "0%"},
+            {"Наиграно", fmtTime(pt)},
+            {"Убийств/матч", matches > 0 ? String.format("%.1f", kills / (double) matches) : "0"},
+            {"Макс. побед", "" + bws},
+            {"Тек. побед", "" + cws},
         });
-        drawPanel(g, x1, 130+getPH(8), cw, "ТЕХНИКА", new String[][]{
-            {"Уничтожено",""+vd}, {"Сбито авиации",""+ad},
+        drawPanel(g, x1, 130 + getPH(8), cw, "ТЕХНИКА", new String[][] {
+            {"Уничтожено", "" + vd}, {"Сбито авиации", "" + ad},
         });
-        drawPanel(g, x1, 130+getPH(8)+getPH(2)+8, cw, "ПОДДЕРЖКА", new String[][]{
-            {"Урон",String.format("%,.0f", (double)dmg)}, {"Лечение",String.format("%,.0f", (double)heal)},
-            {"Припасы",""+sup}, {"Макс. дист.",String.format("%.0fм", longest)},
+        drawPanel(g, x1, 130 + getPH(8) + getPH(2) + 8, cw, "ПОДДЕРЖКА", new String[][] {
+            {"Урон", String.format("%,.0f", (double) dmg)}, {"Лечение", String.format("%,.0f", (double) heal)},
+            {"Припасы", "" + sup}, {"Макс. дист.", String.format("%.0fм", longest)},
         });
     }
 
-    private int getPH(int rows) { return 25 + rows*12 + 6; }
+    private int getPH(int rows) {
+        return 25 + rows * 12 + 6;
+    }
 
     private void drawPanel(GuiGraphics g, int x, int y, int w, String title, String[][] rows) {
-        int rh = 12, h = 25 + rows.length*rh + 6, halfW = w/2 - 8;
+        int rh = 12, h = 25 + rows.length * rh + 6, halfW = w / 2 - 8;
         PWPPanel.renderWithTitle(g, x, y, w, h, title, PWPTheme.Colors.TEXT_ACCENT);
         int ly = y + 25;
         for (int r = 0; r < rows.length; r += 2) {
-            if ((r/2) % 2 == 1) g.fill(x+8, ly, w-16, rh, 0x08000000);
-            row(g, rows[r][0], rows[r][1], x+10, ly, halfW);
-            if (r+1 < rows.length) row(g, rows[r+1][0], rows[r+1][1], x+10+halfW+8, ly, halfW);
+            if ((r / 2) % 2 == 1) g.fill(x + 8, ly, w - 16, rh, 0x08000000);
+            row(g, rows[r][0], rows[r][1], x + 10, ly, halfW);
+            if (r + 1 < rows.length) row(g, rows[r + 1][0], rows[r + 1][1], x + 10 + halfW + 8, ly, halfW);
             ly += rh;
         }
     }
 
     private void row(GuiGraphics g, String label, String val, int x, int y, int maxRw) {
         var f = PWPTheme.Fonts.display();
-        g.drawString(f, Component.literal(label+":"), x, y, PWPTheme.Colors.TEXT_DIM, false);
-        int valX = x+maxRw-4-f.width(val);
-        if (valX < x+f.width(label)+12) valX = x+f.width(label)+12;
+        g.drawString(f, Component.literal(label + ":"), x, y, PWPTheme.Colors.TEXT_DIM, false);
+        int valX = x + maxRw - 4 - f.width(val);
+        if (valX < x + f.width(label) + 12) valX = x + f.width(label) + 12;
         g.drawString(f, Component.literal(val), valX, y, PWPTheme.Colors.TEXT_PRIMARY, false);
     }
 
     private static String fmtTime(int s) {
-        int h = s/3600;
-        if (h >= 24) return (h/24)+"д "+(h%24)+"ч";
-        return h+"ч "+(s%3600/60)+"м";
+        int h = s / 3600;
+        if (h >= 24) return (h / 24) + "д " + (h % 24) + "ч";
+        return h + "ч " + (s % 3600 / 60) + "м";
     }
 
-    private static int jsonInt(JsonObject o, String k, int d) { return o.has(k) ? o.get(k).getAsInt() : d; }
-    private static double jsonDouble(JsonObject o, String k, double d) { return o.has(k) ? o.get(k).getAsDouble() : d; }
-    private static String jsonStr(JsonObject o, String k, String d) { return o.has(k) ? o.get(k).getAsString() : d; }
-    private static JsonObject jsonObj(JsonObject o, String k) { return o.has(k) ? o.getAsJsonObject(k) : new JsonObject(); }
+    private static int jsonInt(JsonObject o, String k, int d) {
+        return o.has(k) ? o.get(k).getAsInt() : d;
+    }
+
+    private static double jsonDouble(JsonObject o, String k, double d) {
+        return o.has(k) ? o.get(k).getAsDouble() : d;
+    }
+
+    private static String jsonStr(JsonObject o, String k, String d) {
+        return o.has(k) ? o.get(k).getAsString() : d;
+    }
+
+    private static JsonObject jsonObj(JsonObject o, String k) {
+        return o.has(k) ? o.getAsJsonObject(k) : new JsonObject();
+    }
 }

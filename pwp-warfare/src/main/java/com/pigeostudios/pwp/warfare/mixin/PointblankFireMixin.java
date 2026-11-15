@@ -21,17 +21,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @OnlyIn(Dist.CLIENT)
 @Mixin(GunItem.class)
 public abstract class PointblankFireMixin {
-   @Inject(
-      method = "tryFire(Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/Entity;)Z",
-      at = @At("HEAD"),
-      cancellable = true,
-      remap = false,
-      require = 0
-   )
-   private void pwp$blockFireInMainZone(LocalPlayer player, ItemStack stack, Entity target, CallbackInfoReturnable<Boolean> cir) {
-      if (ClientSafetyState.inMainZone) {
-         cir.setReturnValue(false);
-         NotificationFeed.push("safety.mainzone.blocked", NotificationFeed.SEVERITY_DANGER);
-      }
-   }
+    @Inject(
+            method =
+                    "tryFire(Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/Entity;)Z",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = false,
+            require = 0)
+    private void pwp$blockFireInMainZone(
+            LocalPlayer player, ItemStack stack, Entity target, CallbackInfoReturnable<Boolean> cir) {
+        if (ClientSafetyState.inMainZone) {
+            cir.setReturnValue(false);
+            NotificationFeed.push("safety.mainzone.blocked", NotificationFeed.SEVERITY_DANGER);
+        }
+    }
 }

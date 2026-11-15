@@ -20,10 +20,15 @@ public class PathCache {
 
     // Server-synced paths (type: "squad","enemy","team","cmd_squads")
     public static final Map<UUID, ServerPath> serverPaths = new LinkedHashMap<>();
+
     public record ServerPath(String type, int squadNum, List<PathPoint> points, long createdAt) {}
 
     public static void clear() {
-        groups.clear(); groupsRed.clear(); groupsYellow.clear(); groupsSquad.clear();
-        squadNumForPath.clear(); serverPaths.clear();
+        groups.clear();
+        groupsRed.clear();
+        groupsYellow.clear();
+        groupsSquad.clear();
+        squadNumForPath.clear();
+        serverPaths.clear();
     }
 }

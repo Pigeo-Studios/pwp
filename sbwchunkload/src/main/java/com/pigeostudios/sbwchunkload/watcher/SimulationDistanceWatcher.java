@@ -19,14 +19,13 @@ import net.minecraftforge.fml.common.Mod;
  */
 @Mod.EventBusSubscriber(modid = "sbwchunkload", bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class SimulationDistanceWatcher {
-   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(SimulationDistanceWatcher.class);
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(SimulationDistanceWatcher.class);
 
     private static int ticketLevel = -1;
     private static int lastSimulationDistance = -1;
     private static int counter = 0;
 
-    private SimulationDistanceWatcher() {
-    }
+    private SimulationDistanceWatcher() {}
 
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {

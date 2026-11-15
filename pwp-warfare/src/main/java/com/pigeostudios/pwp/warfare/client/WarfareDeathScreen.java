@@ -36,17 +36,21 @@ public class WarfareDeathScreen extends Screen {
             long elapsed = System.currentTimeMillis() - ClientData.deathFadeStartTime;
             float alpha = 0f;
             if (elapsed < 1000) alpha = 1f;
-            else if (elapsed < 2000) alpha = 1f - (float)(elapsed - 1000) / 1000f;
+            else if (elapsed < 2000) alpha = 1f - (float) (elapsed - 1000) / 1000f;
             else ClientData.deathFadeStartTime = 0L;
 
             if (alpha > 0) {
                 RenderSystem.enableBlend();
                 gui.pose().pushPose();
                 gui.pose().translate(0, 0, 1000);
-                int a = (int)(alpha * 200);
+                int a = (int) (alpha * 200);
                 gui.fill(0, 0, width, height, a << 24);
-                gui.drawCenteredString(PWPTheme.Fonts.display(), "ВЫ МЕРТВЫ",
-                    width / 2, height / 2 - 20, ((int)(alpha * 255) << 24) | 0xFF4444);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        "ВЫ МЕРТВЫ",
+                        width / 2,
+                        height / 2 - 20,
+                        ((int) (alpha * 255) << 24) | 0xFF4444);
                 gui.pose().popPose();
                 RenderSystem.disableBlend();
             }
@@ -60,5 +64,8 @@ public class WarfareDeathScreen extends Screen {
         }
     }
 
-    @Override public boolean isPauseScreen() { return false; }
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
 }

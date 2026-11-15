@@ -1,15 +1,15 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMapMarker;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.gui.GuiGraphics;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -33,7 +33,8 @@ public class MapMarkerGridScreen extends Screen {
     private int cx;
     private final List<PWPButton> markerButtons = new ArrayList<>();
 
-    public MapMarkerGridScreen(int x, int z, String titleKey, Map<String, ResourceLocation> markers, Screen previousScreen) {
+    public MapMarkerGridScreen(
+            int x, int z, String titleKey, Map<String, ResourceLocation> markers, Screen previousScreen) {
         super(Component.translatable(titleKey));
         this.worldX = x;
         this.worldZ = z;
@@ -60,14 +61,18 @@ public class MapMarkerGridScreen extends Screen {
         markerButtons.clear();
         for (int i = 0; i < markerTypes.size(); i++) {
             String type = markerTypes.get(i);
-            PWPButton btn = new PWPButton(0, 0, 0, 0,
-                Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")),
-                b -> {
-                    PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
-                    minecraft.setScreen(previousScreen);
-                },
-                PWPButton.Style.PRIMARY
-            );
+            PWPButton btn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    Component.translatable(
+                            "pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")),
+                    b -> {
+                        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
+                        minecraft.setScreen(previousScreen);
+                    },
+                    PWPButton.Style.PRIMARY);
             addRenderableWidget(btn);
             markerButtons.add(btn);
         }
@@ -121,8 +126,10 @@ public class MapMarkerGridScreen extends Screen {
             int iconY = by + 6;
             gui.blit(icon, iconX, iconY, 0.0F, 0.0F, 32, 32, 32, 32);
 
-            Component name = Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_"));
-            gui.drawCenteredString(PWPTheme.Fonts.display(), name, bx + CARD_W / 2, by + 42, PWPTheme.Colors.TEXT_SECONDARY);
+            Component name = Component.translatable(
+                    "pwpwarfare.marker." + type.toLowerCase().replace(" ", "_"));
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(), name, bx + CARD_W / 2, by + 42, PWPTheme.Colors.TEXT_SECONDARY);
         }
 
         super.render(gui, mx, my, pt);
@@ -130,9 +137,19 @@ public class MapMarkerGridScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25B2"),
+                        width / 2,
+                        py + 2,
+                        PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25BC"),
+                        width / 2,
+                        py + panelH - 4,
+                        PWPTheme.Colors.TEXT_DIM);
         }
     }
 

@@ -3,10 +3,9 @@ package com.pigeostudios.pwp.warfare.client.gui.deploy;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import java.util.*;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-
-import java.util.*;
 
 public class RoleGrid {
 
@@ -34,7 +33,9 @@ public class RoleGrid {
         int cell = Math.min(42, Math.max(32, (w - (cols - 1) * gap) / cols));
         int iconS = cell - 12;
 
-        popupGridX = x; popupGridY = y; popupGridW = w;
+        popupGridX = x;
+        popupGridY = y;
+        popupGridW = w;
 
         int totalH = 0;
         var cats = getCategories();
@@ -69,7 +70,9 @@ public class RoleGrid {
                         boolean hovered = mx >= cx2 && mx <= cx2 + cell && my >= cy2 && my <= cy2 + cell;
                         if (hovered) {
                             hoveredKit = list.get(idx).name();
-                            hoveredCellX = cx2; hoveredCellY = cy2; hoveredCellSize = cell;
+                            hoveredCellX = cx2;
+                            hoveredCellY = cy2;
+                            hoveredCellSize = cell;
                         }
                         renderCell(gui, cx2, cy2, cell, iconS, list.get(idx), selectedKit, hovered);
                     }
@@ -90,19 +93,21 @@ public class RoleGrid {
             gui.drawString(f, tooltipText, tx + 4, tooltipY + 3, PWPTheme.Colors.DANGER, false);
         }
 
-        if (hoveredKit != null) {
-        }
+        if (hoveredKit != null) {}
     }
 
-    private void renderCell(GuiGraphics gui, int x, int y, int size, int iconS,
-                            DeployData.KitRecord kit, String sel, boolean hovered) {
+    private void renderCell(
+            GuiGraphics gui, int x, int y, int size, int iconS, DeployData.KitRecord kit, String sel, boolean hovered) {
         boolean selected = sel.equals(kit.name());
         boolean avail = kit.available();
         var f = PWPTheme.Fonts.display();
 
-        int bg = selected ? 0x44C8812A : (hovered && avail ? PWPTheme.Colors.SURFACE_LIGHT :
-            (avail ? PWPTheme.Colors.SURFACE : 0xFF181818));
-        int bd = selected ? PWPTheme.Colors.ACCENT : (hovered && avail ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
+        int bg = selected
+                ? 0x44C8812A
+                : (hovered && avail ? PWPTheme.Colors.SURFACE_LIGHT : (avail ? PWPTheme.Colors.SURFACE : 0xFF181818));
+        int bd = selected
+                ? PWPTheme.Colors.ACCENT
+                : (hovered && avail ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
         RoundedRect.fill(gui, x, y, size, size, 4, bg);
         RoundedRect.border(gui, x, y, size, size, 4, 1, bd);
 
@@ -135,8 +140,7 @@ public class RoleGrid {
         }
     }
 
-    private void renderPopup(GuiGraphics gui, int mx, int my, String selectedKit) {
-    }
+    private void renderPopup(GuiGraphics gui, int mx, int my, String selectedKit) {}
 
     public String mouseClicked(double mx, double my, int btn, int x, int y, int w, int h) {
         if (btn != 0) return null;
@@ -157,7 +161,10 @@ public class RoleGrid {
                     if (cy2 < y || cy2 + cell > y + h) continue;
                     if (mx >= cx2 && mx <= cx2 + cell && my >= cy2 && my <= cy2 + cell) {
                         var kit = list.get(idx);
-                        if (kit.available()) { DeployData.expandedSlots.clear(); return kit.name(); }
+                        if (kit.available()) {
+                            DeployData.expandedSlots.clear();
+                            return kit.name();
+                        }
                         return "";
                     }
                 }

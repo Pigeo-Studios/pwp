@@ -37,14 +37,17 @@ public class SpawnPanel {
         return y + used;
     }
 
-    private void renderCard(GuiGraphics gui, int x, int y, int w, int h,
-                            DeployData.SpawnPoint sp, int mx, int my, String sel) {
+    private void renderCard(
+            GuiGraphics gui, int x, int y, int w, int h, DeployData.SpawnPoint sp, int mx, int my, String sel) {
         boolean hover = mx >= x && mx <= x + w && my >= y && my <= y + h;
         boolean selected = sel.equals(sp.id());
-        boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
+        boolean blocked =
+                sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
 
         int bg = selected ? 0x44C8812A : (hover && !blocked ? 0x22FFFFFF : 0);
-        int border = selected ? PWPTheme.Colors.ACCENT : (hover && !blocked ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
+        int border = selected
+                ? PWPTheme.Colors.ACCENT
+                : (hover && !blocked ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
         RoundedRect.fill(gui, x, y, w, h, 5, bg);
         RoundedRect.border(gui, x, y, w, h, 5, 1, border);
 
@@ -52,21 +55,43 @@ public class SpawnPanel {
         gui.fill(ix, iy, ix + iconS, iy + iconS, 0xFF1A1E26);
         gui.renderOutline(ix, iy, iconS, iconS, PWPTheme.Colors.BORDER);
         String letter = sp.id().startsWith("HUB") ? "F" : sp.id().startsWith("RALLY") ? "R" : "M";
-        gui.drawCenteredString(PWPTheme.Fonts.display(), letter, ix + iconS / 2, iy + iconS / 2 - 5,
-            blocked ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.ACCENT);
+        gui.drawCenteredString(
+                PWPTheme.Fonts.display(),
+                letter,
+                ix + iconS / 2,
+                iy + iconS / 2 - 5,
+                blocked ? PWPTheme.Colors.TEXT_DIM : PWPTheme.Colors.ACCENT);
 
         int tx = ix + iconS + 10;
-        int tc = blocked ? PWPTheme.Colors.TEXT_DIM : (selected ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
+        int tc = blocked
+                ? PWPTheme.Colors.TEXT_DIM
+                : (selected ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
         String gridCoord = SquadMapRenderer.getKP(sp.pos().getX(), sp.pos().getZ());
         gui.drawString(PWPTheme.Fonts.display(), sp.name() + " (" + gridCoord + ")", tx, y + 4, tc, false);
 
-        String status; int sc;
+        String status;
+        int sc;
         switch (sp.status()) {
-            case SAFE, HEALTHY -> { status = "БЕЗОПАСНО"; sc = PWPTheme.Colors.SUCCESS; }
-            case COOLDOWN -> { status = "КД"; sc = PWPTheme.Colors.WARNING; }
-            case BLOCKED -> { status = "ЗАБЛОКИРОВАНО"; sc = PWPTheme.Colors.DANGER; }
-            case DESTROYED -> { status = "УНИЧТОЖЕНО"; sc = PWPTheme.Colors.DANGER; }
-            default -> { status = ""; sc = PWPTheme.Colors.TEXT_DIM; }
+            case SAFE, HEALTHY -> {
+                status = "БЕЗОПАСНО";
+                sc = PWPTheme.Colors.SUCCESS;
+            }
+            case COOLDOWN -> {
+                status = "КД";
+                sc = PWPTheme.Colors.WARNING;
+            }
+            case BLOCKED -> {
+                status = "ЗАБЛОКИРОВАНО";
+                sc = PWPTheme.Colors.DANGER;
+            }
+            case DESTROYED -> {
+                status = "УНИЧТОЖЕНО";
+                sc = PWPTheme.Colors.DANGER;
+            }
+            default -> {
+                status = "";
+                sc = PWPTheme.Colors.TEXT_DIM;
+            }
         }
         if (sp.supplies() > 0) status += "  \u2022  Припасы: " + sp.supplies();
         if (sp.distance() > 0) status += "  \u2022  " + sp.distance() + "м";
@@ -78,7 +103,8 @@ public class SpawnPanel {
         for (DeployData.SpawnPoint sp : DeployData.spawns) {
             if (cy + CARD_H > y + maxH) break;
             if (cy + CARD_H >= y + 14 && mx >= x && mx <= x + w && my >= cy && my <= cy + CARD_H && btn == 0) {
-                boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
+                boolean blocked = sp.status() == DeployData.SpawnStatus.BLOCKED
+                        || sp.status() == DeployData.SpawnStatus.DESTROYED;
                 if (!blocked) return sp.id();
                 return "";
             }

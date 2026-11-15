@@ -4,6 +4,5 @@ import net.minecraftforge.fml.common.Mod;
 
 @Mod("pwpdrone")
 public class PWPDroneMod {
-    public PWPDroneMod() {
-    }
+    public PWPDroneMod() {}
 }

@@ -1,10 +1,10 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pwp.api.util.Parse;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.menu.VehicleSpawnerMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketUpdateSpawner;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.api.util.Parse;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,125 +15,196 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 public class VehicleSpawnerScreen extends AbstractContainerScreen<VehicleSpawnerMenu> {
-   private static final ResourceLocation TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/spawner_gui.png");
-   private EditBox vehicleIdField;
-   private EditBox respawnTimeField;
-   private EditBox initialTimeField;
-   private EditBox yawField;
+    private static final ResourceLocation TEXTURE = new ResourceLocation("pwpwarfare", "textures/gui/spawner_gui.png");
+    private EditBox vehicleIdField;
+    private EditBox respawnTimeField;
+    private EditBox initialTimeField;
+    private EditBox yawField;
 
-   public VehicleSpawnerScreen(VehicleSpawnerMenu menu, Inventory inventory, Component title) {
-      super(menu, inventory, title);
-      this.imageWidth = 196;
-      this.imageHeight = 245;
-      this.inventoryLabelY = this.imageHeight - 94;
-   }
+    public VehicleSpawnerScreen(VehicleSpawnerMenu menu, Inventory inventory, Component title) {
+        super(menu, inventory, title);
+        this.imageWidth = 196;
+        this.imageHeight = 245;
+        this.inventoryLabelY = this.imageHeight - 94;
+    }
 
-   protected void init() {
-      super.init();
-      int x = (this.width - this.imageWidth) / 2;
-      int y = (this.height - this.imageHeight) / 2;
-      this.yawField = new EditBox(PWPTheme.Fonts.display(), x + 35, y + 40, 40, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.yaw"));
-      this.yawField.setValue(String.valueOf((int)((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw));
-      this.yawField.setFilter(s -> s.matches("-?\\d*"));
-      this.yawField.setResponder(val -> {
-         // Промежуточный ввод («», «-») пропускаем — обновляем только корректное число
-         float yaw = Parse.floatOr(val, Float.NaN);
-         if (!Float.isNaN(yaw)) {
-            ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw = yaw;
+    protected void init() {
+        super.init();
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
+        this.yawField = new EditBox(
+                PWPTheme.Fonts.display(),
+                x + 35,
+                y + 40,
+                40,
+                14,
+                Component.translatable("gui.pwpwarfare.vehicle_spawner.yaw"));
+        this.yawField.setValue(String.valueOf((int) ((VehicleSpawnerMenu) this.menu).blockEntity.vehicleYaw));
+        this.yawField.setFilter(s -> s.matches("-?\\d*"));
+        this.yawField.setResponder(val -> {
+            // Промежуточный ввод («», «-») пропускаем — обновляем только корректное число
+            float yaw = Parse.floatOr(val, Float.NaN);
+            if (!Float.isNaN(yaw)) {
+                ((VehicleSpawnerMenu) this.menu).blockEntity.vehicleYaw = yaw;
+                this.sendUpdatePacket();
+            }
+        });
+        this.addRenderableWidget(this.yawField);
+        this.vehicleIdField = new EditBox(
+                PWPTheme.Fonts.display(),
+                x + 35,
+                y + 20,
+                80,
+                14,
+                Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"));
+        this.vehicleIdField.setMaxLength(64);
+        this.vehicleIdField.setValue(((VehicleSpawnerMenu) this.menu).blockEntity.vehicleIdString);
+        this.vehicleIdField.setBordered(true);
+        this.vehicleIdField.setResponder(val -> this.sendUpdatePacket());
+        this.addRenderableWidget(this.vehicleIdField);
+        int rightCenterX = x + 155;
+        int btnY_Respawn = y + 18;
+        int btnY_Initial = y + 48;
+        this.addRenderableWidget(new PWPButton(
+                rightCenterX - 42,
+                btnY_Respawn,
+                15,
+                16,
+                Component.literal("-"),
+                b -> this.adjustTimer(false, -5),
+                PWPButton.Style.PRIMARY));
+        this.respawnTimeField = new EditBox(
+                PWPTheme.Fonts.display(),
+                rightCenterX - 25,
+                btnY_Respawn + 1,
+                46,
+                14,
+                Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"));
+        this.respawnTimeField.setValue(
+                String.valueOf(((VehicleSpawnerMenu) this.menu).blockEntity.respawnTimeSettings));
+        this.respawnTimeField.setResponder(val -> this.onTimeFieldChanged(val, false));
+        this.addRenderableWidget(this.respawnTimeField);
+        this.addRenderableWidget(new PWPButton(
+                rightCenterX + 23,
+                btnY_Respawn,
+                15,
+                16,
+                Component.literal("+"),
+                b -> this.adjustTimer(false, 5),
+                PWPButton.Style.PRIMARY));
+        this.addRenderableWidget(new PWPButton(
+                rightCenterX - 42,
+                btnY_Initial,
+                15,
+                16,
+                Component.literal("-"),
+                b -> this.adjustTimer(true, -5),
+                PWPButton.Style.PRIMARY));
+        this.initialTimeField = new EditBox(
+                PWPTheme.Fonts.display(),
+                rightCenterX - 25,
+                btnY_Initial + 1,
+                46,
+                14,
+                Component.translatable("gui.pwpwarfare.vehicle_spawner.initial_time"));
+        this.initialTimeField.setValue(
+                String.valueOf(((VehicleSpawnerMenu) this.menu).blockEntity.initialTimeSettings));
+        this.initialTimeField.setResponder(val -> this.onTimeFieldChanged(val, true));
+        this.addRenderableWidget(this.initialTimeField);
+        this.addRenderableWidget(new PWPButton(
+                rightCenterX + 23,
+                btnY_Initial,
+                15,
+                16,
+                Component.literal("+"),
+                b -> this.adjustTimer(true, 5),
+                PWPButton.Style.PRIMARY));
+        this.addRenderableWidget(new PWPButton(
+                x + 77,
+                y + 40,
+                18,
+                14,
+                Component.literal("\u21BA"),
+                b -> this.adjustYaw(-45.0F),
+                PWPButton.Style.PRIMARY));
+        this.addRenderableWidget(new PWPButton(
+                x + 97,
+                y + 40,
+                18,
+                14,
+                Component.literal("\u21BB"),
+                b -> this.adjustYaw(45.0F),
+                PWPButton.Style.PRIMARY));
+    }
+
+    private void onTimeFieldChanged(String value, boolean isInitial) {
+        if (!value.isEmpty()) {
+            int time = Parse.intOr(value, Integer.MIN_VALUE);
+            if (time == Integer.MIN_VALUE) return; // не число — ждём корректный ввод
+            if (time < 0) time = 0;
+            if (isInitial) {
+                ((VehicleSpawnerMenu) this.menu).blockEntity.initialTimeSettings = time;
+            } else {
+                ((VehicleSpawnerMenu) this.menu).blockEntity.respawnTimeSettings = time;
+            }
             this.sendUpdatePacket();
-         }
-      });
-      this.addRenderableWidget(this.yawField);
-      this.vehicleIdField = new EditBox(PWPTheme.Fonts.display(), x + 35, y + 20, 80, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"));
-      this.vehicleIdField.setMaxLength(64);
-      this.vehicleIdField.setValue(((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString);
-      this.vehicleIdField.setBordered(true);
-      this.vehicleIdField.setResponder(val -> this.sendUpdatePacket());
-      this.addRenderableWidget(this.vehicleIdField);
-      int rightCenterX = x + 155;
-      int btnY_Respawn = y + 18;
-      int btnY_Initial = y + 48;
-      this.addRenderableWidget(new PWPButton(rightCenterX - 42, btnY_Respawn, 15, 16, Component.literal("-"), b -> this.adjustTimer(false, -5), PWPButton.Style.PRIMARY));
-      this.respawnTimeField = new EditBox(PWPTheme.Fonts.display(), rightCenterX - 25, btnY_Respawn + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"));
-      this.respawnTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings));
-      this.respawnTimeField.setResponder(val -> this.onTimeFieldChanged(val, false));
-      this.addRenderableWidget(this.respawnTimeField);
-      this.addRenderableWidget(new PWPButton(rightCenterX + 23, btnY_Respawn, 15, 16, Component.literal("+"), b -> this.adjustTimer(false, 5), PWPButton.Style.PRIMARY));
-      this.addRenderableWidget(new PWPButton(rightCenterX - 42, btnY_Initial, 15, 16, Component.literal("-"), b -> this.adjustTimer(true, -5), PWPButton.Style.PRIMARY));
-      this.initialTimeField = new EditBox(PWPTheme.Fonts.display(), rightCenterX - 25, btnY_Initial + 1, 46, 14, Component.translatable("gui.pwpwarfare.vehicle_spawner.initial_time"));
-      this.initialTimeField.setValue(String.valueOf(((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings));
-      this.initialTimeField.setResponder(val -> this.onTimeFieldChanged(val, true));
-      this.addRenderableWidget(this.initialTimeField);
-      this.addRenderableWidget(new PWPButton(rightCenterX + 23, btnY_Initial, 15, 16, Component.literal("+"), b -> this.adjustTimer(true, 5), PWPButton.Style.PRIMARY));
-      this.addRenderableWidget(new PWPButton(x + 77, y + 40, 18, 14, Component.literal("\u21BA"), b -> this.adjustYaw(-45.0F), PWPButton.Style.PRIMARY));
-      this.addRenderableWidget(new PWPButton(x + 97, y + 40, 18, 14, Component.literal("\u21BB"), b -> this.adjustYaw(45.0F), PWPButton.Style.PRIMARY));
-   }
+        }
+    }
 
-   private void onTimeFieldChanged(String value, boolean isInitial) {
-      if (!value.isEmpty()) {
-         int time = Parse.intOr(value, Integer.MIN_VALUE);
-         if (time == Integer.MIN_VALUE) return; // не число — ждём корректный ввод
-         if (time < 0) time = 0;
-         if (isInitial) { ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings = time; }
-         else { ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = time; }
-         this.sendUpdatePacket();
-      }
-   }
+    private void adjustTimer(boolean isInitial, int change) {
+        if (isInitial) {
+            int newVal = Math.max(0, ((VehicleSpawnerMenu) this.menu).blockEntity.initialTimeSettings + change);
+            ((VehicleSpawnerMenu) this.menu).blockEntity.initialTimeSettings = newVal;
+            this.initialTimeField.setValue(String.valueOf(newVal));
+        } else {
+            int newVal = Math.max(0, ((VehicleSpawnerMenu) this.menu).blockEntity.respawnTimeSettings + change);
+            ((VehicleSpawnerMenu) this.menu).blockEntity.respawnTimeSettings = newVal;
+            this.respawnTimeField.setValue(String.valueOf(newVal));
+        }
+        this.sendUpdatePacket();
+    }
 
-   private void adjustTimer(boolean isInitial, int change) {
-      if (isInitial) {
-         int newVal = Math.max(0, ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings + change);
-         ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings = newVal;
-         this.initialTimeField.setValue(String.valueOf(newVal));
-      } else {
-         int newVal = Math.max(0, ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings + change);
-         ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings = newVal;
-         this.respawnTimeField.setValue(String.valueOf(newVal));
-      }
-      this.sendUpdatePacket();
-   }
+    private void sendUpdatePacket() {
+        if (((VehicleSpawnerMenu) this.menu).blockEntity.vehicleIdString == null)
+            ((VehicleSpawnerMenu) this.menu).blockEntity.vehicleIdString = "";
+        PacketHandler.INSTANCE.sendToServer(new PacketUpdateSpawner(
+                ((VehicleSpawnerMenu) this.menu).blockEntity.getBlockPos(),
+                ((VehicleSpawnerMenu) this.menu).blockEntity.respawnTimeSettings,
+                ((VehicleSpawnerMenu) this.menu).blockEntity.initialTimeSettings,
+                this.vehicleIdField.getValue(),
+                ((VehicleSpawnerMenu) this.menu).blockEntity.vehicleYaw));
+    }
 
-   private void sendUpdatePacket() {
-      if (((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString == null)
-         ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleIdString = "";
-      PacketHandler.INSTANCE.sendToServer(new PacketUpdateSpawner(
-         ((VehicleSpawnerMenu)this.menu).blockEntity.getBlockPos(),
-         ((VehicleSpawnerMenu)this.menu).blockEntity.respawnTimeSettings,
-         ((VehicleSpawnerMenu)this.menu).blockEntity.initialTimeSettings,
-         this.vehicleIdField.getValue(),
-         ((VehicleSpawnerMenu)this.menu).blockEntity.vehicleYaw));
-   }
+    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(gui);
+        super.render(gui, mouseX, mouseY, partialTick);
+        this.renderTooltip(gui, mouseX, mouseY);
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
+        gui.drawString(PWPTheme.Fonts.display(), "ID:", x + 10, y + 23, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), "Mod", x + 23, y + 35, PWPTheme.Colors.INFO);
+        int txtX = x + 155;
+        gui.drawCenteredString(PWPTheme.Fonts.display(), "Respawn (s)", txtX, y + 8, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawCenteredString(PWPTheme.Fonts.display(), "Initial (s)", txtX, y + 38, PWPTheme.Colors.TEXT_SECONDARY);
+        gui.drawString(PWPTheme.Fonts.display(), "Items (32)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
+    }
 
-   public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-      this.renderBackground(gui);
-      super.render(gui, mouseX, mouseY, partialTick);
-      this.renderTooltip(gui, mouseX, mouseY);
-      int x = (this.width - this.imageWidth) / 2;
-      int y = (this.height - this.imageHeight) / 2;
-      gui.drawString(PWPTheme.Fonts.display(), "ID:", x + 10, y + 23, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.drawCenteredString(PWPTheme.Fonts.display(), "Mod", x + 23, y + 35, PWPTheme.Colors.INFO);
-      int txtX = x + 155;
-      gui.drawCenteredString(PWPTheme.Fonts.display(), "Respawn (s)", txtX, y + 8, PWPTheme.Colors.TEXT_SECONDARY);
-      gui.drawCenteredString(PWPTheme.Fonts.display(), "Initial (s)", txtX, y + 38, PWPTheme.Colors.TEXT_SECONDARY);
-      gui.drawString(PWPTheme.Fonts.display(), "Items (32)", x + 26, y + 64, PWPTheme.Colors.TEXT_SECONDARY, false);
-   }
+    protected void renderBg(GuiGraphics gui, float partialTick, int mouseX, int mouseY) {
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        gui.drawString(PWPTheme.Fonts.display(), "Yaw:", x + 10, y + 43, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        gui.blit(TEXTURE, x + 14, y + 44, 79, 19, 18, 18);
+        RenderSystem.disableBlend();
+    }
 
-   protected void renderBg(GuiGraphics gui, float partialTick, int mouseX, int mouseY) {
-      int x = (this.width - this.imageWidth) / 2;
-      int y = (this.height - this.imageHeight) / 2;
-      RenderSystem.enableBlend();
-      RenderSystem.defaultBlendFunc();
-      RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-      gui.drawString(PWPTheme.Fonts.display(), "Yaw:", x + 10, y + 43, PWPTheme.Colors.TEXT_SECONDARY, false);
-      gui.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
-      gui.blit(TEXTURE, x + 14, y + 44, 79, 19, 18, 18);
-      RenderSystem.disableBlend();
-   }
-
-   private void adjustYaw(float amount) {
-      float current = Parse.floatOr(this.yawField.getValue(), 0.0F);
-      float next = (current + amount) % 360.0F;
-      if (next < 0.0F) next += 360.0F;
-      this.yawField.setValue(String.valueOf((int)next));
-   }
+    private void adjustYaw(float amount) {
+        float current = Parse.floatOr(this.yawField.getValue(), 0.0F);
+        float next = (current + amount) % 360.0F;
+        if (next < 0.0F) next += 360.0F;
+        this.yawField.setValue(String.valueOf((int) next));
+    }
 }

@@ -1,7 +1,7 @@
 package com.pigeostudios.pwp.warfare.item;
 
-import com.pwp.api.security.PwpPermissions;
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
+import com.pwp.api.security.PwpPermissions;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
@@ -12,14 +12,14 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
 
 public class FactionKitSetupItem extends Item {
-   public FactionKitSetupItem() {
-      super(new Properties().stacksTo(1));
-   }
+    public FactionKitSetupItem() {
+        super(new Properties().stacksTo(1));
+    }
 
-   public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-      if (level.isClientSide && PwpPermissions.isAdmin(player)) {
-         DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> ClientHooks::openFactionKitSelect);
-      }
-      return InteractionResultHolder.success(player.getItemInHand(hand));
-   }
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if (level.isClientSide && PwpPermissions.isAdmin(player)) {
+            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> ClientHooks::openFactionKitSelect);
+        }
+        return InteractionResultHolder.success(player.getItemInHand(hand));
+    }
 }

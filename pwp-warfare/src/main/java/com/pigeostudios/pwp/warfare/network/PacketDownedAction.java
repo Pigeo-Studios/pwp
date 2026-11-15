@@ -14,58 +14,69 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // Пакет действия в состоянии "ранен": сдаться или позвать медика
 // Отправляется клиентом при нажатии соответствующих кнопок
 public class PacketDownedAction {
-   private final int action;
+    private final int action;
 
-   public PacketDownedAction(int action) {
-      this.action = action;
-   }
+    public PacketDownedAction(int action) {
+        this.action = action;
+    }
 
-   public static void encode(PacketDownedAction msg, FriendlyByteBuf buf) {
-      buf.writeInt(msg.action);
-   }
+    public static void encode(PacketDownedAction msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.action);
+    }
 
-   public static PacketDownedAction decode(FriendlyByteBuf buf) {
-      return new PacketDownedAction(buf.readInt());
-   }
+    public static PacketDownedAction decode(FriendlyByteBuf buf) {
+        return new PacketDownedAction(buf.readInt());
+    }
 
-   // Обрабатывает действие: 0 - крик о помощи, 1 - принудительная сдача
-   public static void handle(PacketDownedAction msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         ServerPlayer player = ctx.get().getSender();
-         if (player != null) {
-            ServerLevel level = (ServerLevel)player.level();
-            if (msg.action == 1) {
-               DownedHandler.forceGiveUp(player);
-            } else if (msg.action == 0) {
-               long currentTime = level.getGameTime();
-               long lastCall = player.getPersistentData().getLong("WARFARE_LastMedicShout");
-               if (currentTime - lastCall >= 300L) {
-                  player.getPersistentData().putLong("WARFARE_LastMedicShout", currentTime);
-                  player.getPersistentData().putLong("WARFARE_LastMedicShoutTimeMS", level.getGameTime());
-                  WarfareWorldData data = WarfareWorldData.get(level);
-                  String faction = "none";
-                  if (player.getTeam() != null) {
-                     String teamName = player.getTeam().getName();
-                     faction = teamName.equalsIgnoreCase("Blue") ? data.blueFaction : data.redFaction;
-                  }
+    // Обрабатывает действие: 0 - крик о помощи, 1 - принудительная сдача
+    public static void handle(PacketDownedAction msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null) {
+                ServerLevel level = (ServerLevel) player.level();
+                if (msg.action == 1) {
+                    DownedHandler.forceGiveUp(player);
+                } else if (msg.action == 0) {
+                    long currentTime = level.getGameTime();
+                    long lastCall = player.getPersistentData().getLong("WARFARE_LastMedicShout");
+                    if (currentTime - lastCall >= 300L) {
+                        player.getPersistentData().putLong("WARFARE_LastMedicShout", currentTime);
+                        player.getPersistentData().putLong("WARFARE_LastMedicShoutTimeMS", level.getGameTime());
+                        WarfareWorldData data = WarfareWorldData.get(level);
+                        String faction = "none";
+                        if (player.getTeam() != null) {
+                            String teamName = player.getTeam().getName();
+                            faction = teamName.equalsIgnoreCase("Blue") ? data.blueFaction : data.redFaction;
+                        }
 
-                  SoundEvent finalSound;
-                  if (faction != null && !faction.isEmpty() && !faction.equalsIgnoreCase("none")) {
-                     if (ModSounds.FACTION_SCREAMS.containsKey(faction.toLowerCase())) {
-                        int randomIndex = player.getRandom().nextInt(3);
-                        finalSound = (SoundEvent)ModSounds.FACTION_SCREAMS.get(faction.toLowerCase()).get(randomIndex).get();
-                     } else {
-                        finalSound = (SoundEvent)ModSounds.HELP_SCREAM.get();
-                     }
-                  } else {
-                     finalSound = (SoundEvent)ModSounds.HELP_SCREAM.get();
-                  }
+                        SoundEvent finalSound;
+                        if (faction != null && !faction.isEmpty() && !faction.equalsIgnoreCase("none")) {
+                            if (ModSounds.FACTION_SCREAMS.containsKey(faction.toLowerCase())) {
+                                int randomIndex = player.getRandom().nextInt(3);
+                                finalSound = (SoundEvent) ModSounds.FACTION_SCREAMS
+                                        .get(faction.toLowerCase())
+                                        .get(randomIndex)
+                                        .get();
+                            } else {
+                                finalSound = (SoundEvent) ModSounds.HELP_SCREAM.get();
+                            }
+                        } else {
+                            finalSound = (SoundEvent) ModSounds.HELP_SCREAM.get();
+                        }
 
-                  level.playSound(null, player.getX(), player.getY(), player.getZ(), finalSound, SoundSource.PLAYERS, 2.0F, 1.0F);
-               }
+                        level.playSound(
+                                null,
+                                player.getX(),
+                                player.getY(),
+                                player.getZ(),
+                                finalSound,
+                                SoundSource.PLAYERS,
+                                2.0F,
+                                1.0F);
+                    }
+                }
             }
-         }
-      });
-      ctx.get().setPacketHandled(true);
-   }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 }

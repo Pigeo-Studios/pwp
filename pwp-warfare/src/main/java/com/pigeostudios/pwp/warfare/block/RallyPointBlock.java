@@ -16,8 +16,8 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -25,103 +25,118 @@ import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class RallyPointBlock extends BaseEntityBlock {
-   public static final VoxelShape SHAPE = Shapes.block();
+    public static final VoxelShape SHAPE = Shapes.block();
 
-   @Nullable
-   public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-      return createTickerHelper(type, (BlockEntityType)ModBlocks.RALLY_BE.get(), (lvl, pos, st, be) -> {
-         RallyPointBlockEntity rbe = (RallyPointBlockEntity)be;
-         if (lvl.isClientSide) {
-            rbe.handleSoundClient();
-         } else {
-            rbe.checkExpiry(lvl, pos);
-         }
-      });
-   }
-
-   public RallyPointBlock() {
-      super(Properties.of().strength(1.0F).noOcclusion());
-   }
-
-   public RenderShape getRenderShape(BlockState state) {
-      return RenderShape.MODEL;
-   }
-
-   public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return SHAPE;
-   }
-
-   public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return SHAPE;
-   }
-
-   @Nullable
-   public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-      return new RallyPointBlockEntity(pos, state);
-   }
-
-   public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-      if (!level.isClientSide && level.getBlockEntity(pos) instanceof RallyPointBlockEntity rallyBe) {
-         String breakerTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-         String rallyTeam = "NEUTRAL";
-         if (state.getBlock() == ModBlocks.BLUE_RALLY_BLOCK.get()) {
-            rallyTeam = "BLUE";
-         } else if (state.getBlock() == ModBlocks.RED_RALLY_BLOCK.get()) {
-            rallyTeam = "RED";
-         }
-         if (rallyTeam.equals(breakerTeam)) {
-            rallyBe.wasDismantled = true;
-            rallyBe.setChanged();
-            ServerLevel serverLevel = (ServerLevel)level;
-            WarfareWorldData data = WarfareWorldData.get(serverLevel);
-            int penalty = 10;
-            if (rallyTeam.equals("BLUE")) {
-               data.blueTickets = Math.max(0, data.blueTickets - penalty);
-               this.broadcastMessage(serverLevel, "BLUE player dismantled Friendly Rally Point! (-10 Tickets)", ChatFormatting.BLUE);
-            } else if (rallyTeam.equals("RED")) {
-               data.redTickets = Math.max(0, data.redTickets - penalty);
-               this.broadcastMessage(serverLevel, "RED player dismantled Friendly Rally Point! (-10 Tickets)", ChatFormatting.RED);
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type) {
+        return createTickerHelper(type, (BlockEntityType) ModBlocks.RALLY_BE.get(), (lvl, pos, st, be) -> {
+            RallyPointBlockEntity rbe = (RallyPointBlockEntity) be;
+            if (lvl.isClientSide) {
+                rbe.handleSoundClient();
+            } else {
+                rbe.checkExpiry(lvl, pos);
             }
-            int squadId = rallyBe.getSquadId();
-            if (squadId != -1) {
-               for (WarfareWorldData.Squad s : data.squads) {
-                  if (s.id == squadId) {
-                     s.nextRallyAvailableTick = -1L;
-                     break;
-                  }
-               }
-            }
-            data.setDirty();
-            PacketHandler.sendToAllClients(serverLevel, data);
-            PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(() -> level.dimension()), new PacketSyncSquads(data.squads));
-         }
-      }
-      super.playerWillDestroy(level, pos, state, player);
-   }
+        });
+    }
 
-   public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-      if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof RallyPointBlockEntity rallyBe && !level.isClientSide()) {
-         ServerLevel serverLevel = (ServerLevel)level;
-         WarfareWorldData data = WarfareWorldData.get(serverLevel);
-         if (!rallyBe.isDecay && !rallyBe.wasDismantled) {
-            int penalty = 20;
+    public RallyPointBlock() {
+        super(Properties.of().strength(1.0F).noOcclusion());
+    }
+
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
+
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
+
+    @Nullable
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new RallyPointBlockEntity(pos, state);
+    }
+
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && level.getBlockEntity(pos) instanceof RallyPointBlockEntity rallyBe) {
+            String breakerTeam =
+                    player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
+            String rallyTeam = "NEUTRAL";
             if (state.getBlock() == ModBlocks.BLUE_RALLY_BLOCK.get()) {
-               data.blueTickets = Math.max(0, data.blueTickets - penalty);
-               this.broadcastMessage(serverLevel, "BLUE Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.BLUE);
+                rallyTeam = "BLUE";
             } else if (state.getBlock() == ModBlocks.RED_RALLY_BLOCK.get()) {
-               data.redTickets = Math.max(0, data.redTickets - penalty);
-               this.broadcastMessage(serverLevel, "RED Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.RED);
+                rallyTeam = "RED";
             }
-            GameLogicEvents.checkSirenManual(serverLevel, data);
-            GameLogicEvents.checkGameOver(serverLevel, data);
-         }
-         rallyBe.cleanupData(serverLevel);
-         data.setDirty();
-      }
-      super.onRemove(state, level, pos, newState, isMoving);
-   }
+            if (rallyTeam.equals(breakerTeam)) {
+                rallyBe.wasDismantled = true;
+                rallyBe.setChanged();
+                ServerLevel serverLevel = (ServerLevel) level;
+                WarfareWorldData data = WarfareWorldData.get(serverLevel);
+                int penalty = 10;
+                if (rallyTeam.equals("BLUE")) {
+                    data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                    this.broadcastMessage(
+                            serverLevel,
+                            "BLUE player dismantled Friendly Rally Point! (-10 Tickets)",
+                            ChatFormatting.BLUE);
+                } else if (rallyTeam.equals("RED")) {
+                    data.redTickets = Math.max(0, data.redTickets - penalty);
+                    this.broadcastMessage(
+                            serverLevel,
+                            "RED player dismantled Friendly Rally Point! (-10 Tickets)",
+                            ChatFormatting.RED);
+                }
+                int squadId = rallyBe.getSquadId();
+                if (squadId != -1) {
+                    for (WarfareWorldData.Squad s : data.squads) {
+                        if (s.id == squadId) {
+                            s.nextRallyAvailableTick = -1L;
+                            break;
+                        }
+                    }
+                }
+                data.setDirty();
+                PacketHandler.sendToAllClients(serverLevel, data);
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.DIMENSION.with(() -> level.dimension()), new PacketSyncSquads(data.squads));
+            }
+        }
+        super.playerWillDestroy(level, pos, state, player);
+    }
 
-   private void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
-      level.getServer().getPlayerList().broadcastSystemMessage(Component.literal(text).withStyle(color), false);
-   }
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())
+                && level.getBlockEntity(pos) instanceof RallyPointBlockEntity rallyBe
+                && !level.isClientSide()) {
+            ServerLevel serverLevel = (ServerLevel) level;
+            WarfareWorldData data = WarfareWorldData.get(serverLevel);
+            if (!rallyBe.isDecay && !rallyBe.wasDismantled) {
+                int penalty = 20;
+                if (state.getBlock() == ModBlocks.BLUE_RALLY_BLOCK.get()) {
+                    data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                    this.broadcastMessage(
+                            serverLevel, "BLUE Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.BLUE);
+                } else if (state.getBlock() == ModBlocks.RED_RALLY_BLOCK.get()) {
+                    data.redTickets = Math.max(0, data.redTickets - penalty);
+                    this.broadcastMessage(
+                            serverLevel, "RED Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.RED);
+                }
+                GameLogicEvents.checkSirenManual(serverLevel, data);
+                GameLogicEvents.checkGameOver(serverLevel, data);
+            }
+            rallyBe.cleanupData(serverLevel);
+            data.setDirty();
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
+    }
+
+    private void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
+        level.getServer()
+                .getPlayerList()
+                .broadcastSystemMessage(Component.literal(text).withStyle(color), false);
+    }
 }

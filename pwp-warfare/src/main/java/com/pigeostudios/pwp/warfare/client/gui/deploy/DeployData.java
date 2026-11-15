@@ -1,37 +1,58 @@
 package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
-import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
-import net.minecraft.core.BlockPos;
 import com.pigeostudios.pwp.warfare.item.ModItems;
+import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
+import java.util.*;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-
-import java.util.*;
 
 /** Data holder for DeployScreen panels. Populated from ClientData. */
 public class DeployData {
 
-    public enum SpawnStatus { SAFE, COOLDOWN, BLOCKED, DESTROYED, HEALTHY }
+    public enum SpawnStatus {
+        SAFE,
+        COOLDOWN,
+        BLOCKED,
+        DESTROYED,
+        HEALTHY
+    }
 
     public record SpawnPoint(String id, String name, BlockPos pos, SpawnStatus status, int supplies, int distance) {}
 
     public record LoadoutOption(String id, String name, ItemStack stack) {}
 
     public record LoadoutSlot(String label, List<LoadoutOption> options, int defaultIndex) {
-        public LoadoutOption getSelected() { return options.get(defaultIndex); }
-        public boolean hasAlternatives() { return options.size() > 1; }
+        public LoadoutOption getSelected() {
+            return options.get(defaultIndex);
+        }
+
+        public boolean hasAlternatives() {
+            return options.size() > 1;
+        }
     }
 
     public record KitRecord(
-        String name, String category, String description,
-        boolean available, String reason,
-        int inTeamCount, int maxInTeam,
-        List<LoadoutSlot> loadout,
-        List<ItemStack> armor
-    ) {}
+            String name,
+            String category,
+            String description,
+            boolean available,
+            String reason,
+            int inTeamCount,
+            int maxInTeam,
+            List<LoadoutSlot> loadout,
+            List<ItemStack> armor) {}
 
-    public record SquadRecord(int id, String name, String leader, List<String> members, boolean isLocked,
-        String bravoLeader, String charlieLeader, List<String> bravoMembers, List<String> charlieMembers) {}
+    public record SquadRecord(
+            int id,
+            String name,
+            String leader,
+            List<String> members,
+            boolean isLocked,
+            String bravoLeader,
+            String charlieLeader,
+            List<String> bravoMembers,
+            List<String> charlieMembers) {}
 
     /** Try to create a TACZ gun item; fall back to vanilla. */
     private static ItemStack gun(String taczId, ItemStack fallback) {
@@ -57,15 +78,31 @@ public class DeployData {
 
     // Имена китов для dev-фолбэка (populateHardcoded), когда сервер не прислал DTO
     private static final String[] HARDCODED_KIT_NAMES = {
-        "Officer", "Pilot Officer", "Mechanic Officer",
-        "Rifleman", "Medic", "LMG", "Assault", "Grenadier", "Marksman",
-        "Sniper", "HMG", "LAT", "HAT", "Sapper", "Scout",
-        "Pilot", "Mechanic", "Drone Operator", "Anti_air"
+        "Officer",
+        "Pilot Officer",
+        "Mechanic Officer",
+        "Rifleman",
+        "Medic",
+        "LMG",
+        "Assault",
+        "Grenadier",
+        "Marksman",
+        "Sniper",
+        "HMG",
+        "LAT",
+        "HAT",
+        "Sapper",
+        "Scout",
+        "Pilot",
+        "Mechanic",
+        "Drone Operator",
+        "Anti_air"
     };
 
     // Группировка сетки ролей (RoleGrid): роль -> группа. «Офицерские» первыми вверху.
     // Группы берутся на клиенте (как раньше в KIT_META), категории из БД на сетку не влияют.
     private static final Map<String, String> KIT_GROUP = new HashMap<>();
+
     static {
         KIT_GROUP.put("Officer", "COMMANDER");
         KIT_GROUP.put("Pilot Officer", "COMMANDER");
@@ -89,6 +126,7 @@ public class DeployData {
     }
 
     public static final Map<String, String> KIT_DISPLAY_NAMES = new LinkedHashMap<>();
+
     static {
         KIT_DISPLAY_NAMES.put("Officer", "Офицер");
         KIT_DISPLAY_NAMES.put("Pilot Officer", "Пилот-Офицер");
@@ -140,14 +178,22 @@ public class DeployData {
 
         if (serverKits != null && !serverKits.isEmpty()) {
             for (PacketOpenPlayerKitMenu.KitDTO dto : serverKits) {
-                String cat = KIT_GROUP.getOrDefault(dto.name,
-                    dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
+                String cat = KIT_GROUP.getOrDefault(
+                        dto.name, dto.category != null && !dto.category.isEmpty() ? dto.category : "INFANTRY");
                 String desc = dto.description != null ? dto.description : "";
                 List<LoadoutSlot> loadout = buildLoadoutFromItems(dto.items, dto.slotSkins);
                 List<ItemStack> armor = extractArmorFromItems(dto.items);
                 int inTeam = 0, maxTeam = -1;
-                kits.add(new KitRecord(dto.name, cat, desc, dto.available,
-                    dto.available ? "" : dto.reason, inTeam, maxTeam, loadout, armor));
+                kits.add(new KitRecord(
+                        dto.name,
+                        cat,
+                        desc,
+                        dto.available,
+                        dto.available ? "" : dto.reason,
+                        inTeam,
+                        maxTeam,
+                        loadout,
+                        armor));
             }
         } else {
             populateHardcoded();
@@ -155,34 +201,34 @@ public class DeployData {
     }
 
     private static void populateHardcoded() {
-        LoadoutOption rifleM4  = new LoadoutOption("m4a1",  "M4A1",  gun("m4a1",    new ItemStack(Items.IRON_SWORD)));
-        LoadoutOption rifleAk  = new LoadoutOption("ak74",  "AK-74",  gun("ak47",    new ItemStack(Items.DIAMOND_SWORD)));
-        LoadoutOption rifleM16 = new LoadoutOption("m16a4", "M16A4",  gun("m16a4",   new ItemStack(Items.GOLDEN_SWORD)));
-        LoadoutOption rifleAug = new LoadoutOption("aug",   "AUG A3", gun("aug",     new ItemStack(Items.GOLDEN_AXE)));
-        LoadoutOption pistolM9 = new LoadoutOption("m9",    "M9",     gun("glock_17",new ItemStack(Items.IRON_SHOVEL)));
-        LoadoutOption frag     = new LoadoutOption("frag",  "M67 Frag", new ItemStack(Items.GUNPOWDER));
-        LoadoutOption smoke    = new LoadoutOption("smoke", "M18 Smoke",new ItemStack(Items.GRAY_DYE));
-        LoadoutOption smokeRed = new LoadoutOption("smoke_red","Red Smoke",new ItemStack(Items.RED_DYE));
-        LoadoutOption bag      = new LoadoutOption("ammo_bag","Ammo Bag",new ItemStack(Items.BUNDLE));
-        LoadoutOption bandage  = new LoadoutOption("bandage","Bandage", new ItemStack(Items.PAPER));
-        LoadoutOption bino     = new LoadoutOption("bino",  "Binoculars",new ItemStack(ModItems.BINOCULARS.get()));
+        LoadoutOption rifleM4 = new LoadoutOption("m4a1", "M4A1", gun("m4a1", new ItemStack(Items.IRON_SWORD)));
+        LoadoutOption rifleAk = new LoadoutOption("ak74", "AK-74", gun("ak47", new ItemStack(Items.DIAMOND_SWORD)));
+        LoadoutOption rifleM16 = new LoadoutOption("m16a4", "M16A4", gun("m16a4", new ItemStack(Items.GOLDEN_SWORD)));
+        LoadoutOption rifleAug = new LoadoutOption("aug", "AUG A3", gun("aug", new ItemStack(Items.GOLDEN_AXE)));
+        LoadoutOption pistolM9 = new LoadoutOption("m9", "M9", gun("glock_17", new ItemStack(Items.IRON_SHOVEL)));
+        LoadoutOption frag = new LoadoutOption("frag", "M67 Frag", new ItemStack(Items.GUNPOWDER));
+        LoadoutOption smoke = new LoadoutOption("smoke", "M18 Smoke", new ItemStack(Items.GRAY_DYE));
+        LoadoutOption smokeRed = new LoadoutOption("smoke_red", "Red Smoke", new ItemStack(Items.RED_DYE));
+        LoadoutOption bag = new LoadoutOption("ammo_bag", "Ammo Bag", new ItemStack(Items.BUNDLE));
+        LoadoutOption bandage = new LoadoutOption("bandage", "Bandage", new ItemStack(Items.PAPER));
+        LoadoutOption bino = new LoadoutOption("bino", "Binoculars", new ItemStack(ModItems.BINOCULARS.get()));
 
         int i = 0;
         for (String name : HARDCODED_KIT_NAMES) {
             boolean avail = true;
             List<LoadoutSlot> loadout = List.of(
-                new LoadoutSlot("PRIMARY", List.of(rifleM4, rifleAk, rifleM16, i % 2 == 0 ? rifleAug : rifleM4), 0),
-                new LoadoutSlot("SECONDARY", List.of(pistolM9), 0),
-                new LoadoutSlot("THROWABLE", List.of(frag, smoke, i % 3 == 0 ? smokeRed : smoke), 0),
-                new LoadoutSlot("SPECIAL", List.of(bandage), 0),
-                new LoadoutSlot("BACKPACK", List.of(bag, bino), 0)
-            );
+                    new LoadoutSlot("PRIMARY", List.of(rifleM4, rifleAk, rifleM16, i % 2 == 0 ? rifleAug : rifleM4), 0),
+                    new LoadoutSlot("SECONDARY", List.of(pistolM9), 0),
+                    new LoadoutSlot("THROWABLE", List.of(frag, smoke, i % 3 == 0 ? smokeRed : smoke), 0),
+                    new LoadoutSlot("SPECIAL", List.of(bandage), 0),
+                    new LoadoutSlot("BACKPACK", List.of(bag, bino), 0));
             kits.add(new KitRecord(name, "INFANTRY", "", avail, "", 0, -1, loadout, List.of()));
             i++;
         }
     }
 
-    private static List<LoadoutSlot> buildLoadoutFromItems(List<ItemStack> items, Map<Integer, List<String>> slotSkins) {
+    private static List<LoadoutSlot> buildLoadoutFromItems(
+            List<ItemStack> items, Map<Integer, List<String>> slotSkins) {
         List<LoadoutSlot> slots = new ArrayList<>();
         var primary = new ArrayList<LoadoutOption>();
         var secondary = new ArrayList<LoadoutOption>();
@@ -195,7 +241,8 @@ public class DeployData {
             if (stack.isEmpty()) continue;
             String id = stack.getItem().getDescriptionId();
             String name = stack.getHoverName().getString();
-            LoadoutOption opt = new LoadoutOption(id, name.isEmpty() ? stack.getItem().toString() : name, stack);
+            LoadoutOption opt =
+                    new LoadoutOption(id, name.isEmpty() ? stack.getItem().toString() : name, stack);
             if (i == 0) primary.add(opt);
             else if (i == 1) secondary.add(opt);
             else if (i == 2) throwable.add(opt);
@@ -226,7 +273,8 @@ public class DeployData {
             if (stack.isEmpty()) continue;
             String id = stack.getItem().getDescriptionId();
             String name = stack.getHoverName().getString();
-            LoadoutOption opt = new LoadoutOption(id, name.isEmpty() ? stack.getItem().toString() : name, stack);
+            LoadoutOption opt =
+                    new LoadoutOption(id, name.isEmpty() ? stack.getItem().toString() : name, stack);
             String cat = getAltCategory(i, slotSkins);
             if (cat != null) {
                 switch (cat) {

@@ -3,7 +3,6 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -25,12 +24,21 @@ public class VictoryScreen extends Screen {
 
     private PWPButton continueButton;
 
-    public VictoryScreen(String winnerName, String winnerFaction, String subText, boolean isBlueWinner,
-                         int matchKills, int matchDeaths,
-                         int matchVehicleKills, int matchVehiclesDestroyed,
-                         int matchAirVehiclesDestroyed, int matchCaptures,
-                         int matchRevives, int matchHeadshots, int matchScore,
-                         int matchDurationSec) {
+    public VictoryScreen(
+            String winnerName,
+            String winnerFaction,
+            String subText,
+            boolean isBlueWinner,
+            int matchKills,
+            int matchDeaths,
+            int matchVehicleKills,
+            int matchVehiclesDestroyed,
+            int matchAirVehiclesDestroyed,
+            int matchCaptures,
+            int matchRevives,
+            int matchHeadshots,
+            int matchScore,
+            int matchDurationSec) {
         super(Component.translatable("gui.pwpwarfare.victory.title"));
         this.winnerName = winnerName;
         this.winnerFaction = winnerFaction;
@@ -52,9 +60,14 @@ public class VictoryScreen extends Screen {
     @Override
     protected void init() {
         int cx = width / 2;
-        continueButton = addRenderableWidget(new PWPButton(cx - 70, height / 2 + 90, 140, 24,
-            Component.literal("Продолжить"),
-            b -> onClose(), PWPButton.Style.ACCENT));
+        continueButton = addRenderableWidget(new PWPButton(
+                cx - 70,
+                height / 2 + 90,
+                140,
+                24,
+                Component.literal("Продолжить"),
+                b -> onClose(),
+                PWPButton.Style.ACCENT));
         continueButton.setAnimAlpha(0f);
         continueButton.active = false;
     }
@@ -95,10 +108,22 @@ public class VictoryScreen extends Screen {
             gui.pose().translate(cx, cy - 42, 0);
             gui.pose().scale(1.5f, 1.5f, 1f);
             String winText = winnerName + " — победа!";
-            gui.drawString(PWPTheme.Fonts.display(), Component.literal(winText), -PWPTheme.Fonts.display().width(winText) / 2, 0, a << 24 | 0xFFFFFF, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    Component.literal(winText),
+                    -PWPTheme.Fonts.display().width(winText) / 2,
+                    0,
+                    a << 24 | 0xFFFFFF,
+                    false);
             gui.pose().popPose();
 
-            gui.drawString(PWPTheme.Fonts.display(), Component.literal(subText), cx - PWPTheme.Fonts.display().width(subText) / 2, cy - 22, a << 24 | 0xAAAAAA, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    Component.literal(subText),
+                    cx - PWPTheme.Fonts.display().width(subText) / 2,
+                    cy - 22,
+                    a << 24 | 0xAAAAAA,
+                    false);
 
             int statsY = cy + 5;
             int statsX = cx - 160;
@@ -112,7 +137,13 @@ public class VictoryScreen extends Screen {
             gui.fill(statsX + statsW - 1, statsY, statsX + statsW, statsY + panelH, a << 24 | 0xFF1E222A);
 
             int accent = a << 24 | PWPTheme.Colors.ACCENT;
-            gui.drawString(PWPTheme.Fonts.display(), Component.literal("\u00a7lСтатистика"), cx - PWPTheme.Fonts.display().width("\u00a7lСтатистика") / 2, statsY + 4, accent, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    Component.literal("\u00a7lСтатистика"),
+                    cx - PWPTheme.Fonts.display().width("\u00a7lСтатистика") / 2,
+                    statsY + 4,
+                    accent,
+                    false);
 
             int rowY = statsY + 16;
             int rowH = 13;
@@ -125,15 +156,31 @@ public class VictoryScreen extends Screen {
             drawStat(gui, "Реанимаций", String.valueOf(matchRevives), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
-            String kd = matchDeaths == 0 ? String.valueOf(matchKills) : String.format("%.2f", (double) matchKills / matchDeaths);
+            String kd = matchDeaths == 0
+                    ? String.valueOf(matchKills)
+                    : String.format("%.2f", (double) matchKills / matchDeaths);
             drawStat(gui, "K/D", kd, statsX + 8, rowY, labelCol, accent);
             drawStat(gui, "Счёт", String.format("%,d", matchScore), statsX + 8 + cw, rowY, labelCol, textCol);
             drawStat(gui, "Время", formatDuration(matchDurationSec), statsX + 8 + cw * 2, rowY, labelCol, textCol);
             rowY += rowH;
 
             drawStat(gui, "Техника", String.valueOf(matchVehicleKills), statsX + 8, rowY, labelCol, textCol);
-            drawStat(gui, "Уничтожено", String.valueOf(matchVehiclesDestroyed), statsX + 8 + cw, rowY, labelCol, textCol);
-            drawStat(gui, "В воздухе", String.valueOf(matchAirVehiclesDestroyed), statsX + 8 + cw * 2, rowY, labelCol, textCol);
+            drawStat(
+                    gui,
+                    "Уничтожено",
+                    String.valueOf(matchVehiclesDestroyed),
+                    statsX + 8 + cw,
+                    rowY,
+                    labelCol,
+                    textCol);
+            drawStat(
+                    gui,
+                    "В воздухе",
+                    String.valueOf(matchAirVehiclesDestroyed),
+                    statsX + 8 + cw * 2,
+                    rowY,
+                    labelCol,
+                    textCol);
             rowY += rowH;
 
             drawStat(gui, "Захватов", String.valueOf(matchCaptures), statsX + 8, rowY, labelCol, textCol);
@@ -160,7 +207,9 @@ public class VictoryScreen extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
     private static ResourceLocation getFlagTexture(String faction) {
         if (faction == null || faction.equals("none")) return null;

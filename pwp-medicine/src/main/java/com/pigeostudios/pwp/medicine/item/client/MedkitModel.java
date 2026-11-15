@@ -5,8 +5,7 @@ import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
 
 // Geo-модель аптечки: указывает пути к модели, текстуре и анимации.
-public class MedkitModel
-extends GeoModel<MedkitItem> {
+public class MedkitModel extends GeoModel<MedkitItem> {
     public ResourceLocation getModelResource(MedkitItem animatable) {
         return new ResourceLocation("pwp_medicine", "geo/medkit.geo.json");
     }

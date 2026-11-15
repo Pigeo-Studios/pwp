@@ -4,9 +4,8 @@ import com.atsuishio.superbwarfare.entity.projectile.FastThrowableProjectile;
 import com.atsuishio.superbwarfare.entity.projectile.ProjectileEntity;
 import com.atsuishio.superbwarfare.entity.projectile.TaserBulletEntity;
 import com.vicmatskiv.pointblank.entity.ProjectileLike;
-import net.minecraft.world.entity.Entity;
-
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.world.entity.Entity;
 
 /**
  * Классификация снарядов по КЛАССУ, а не по каждой сущности.
@@ -29,8 +28,7 @@ public final class ProjectileClassifier {
     /** Кэш: класс снаряда -> профиль. Вычисляется один раз на класс. */
     private static final ConcurrentHashMap<Class<?>, ProjectileProfile> CACHE = new ConcurrentHashMap<>();
 
-    private ProjectileClassifier() {
-    }
+    private ProjectileClassifier() {}
 
     /**
      * Определяет профиль снаряда. Сначала кэш, при промахе — instanceof.
@@ -49,20 +47,34 @@ public final class ProjectileClassifier {
         }
         // pointblank/FCL-трубы: РПГ-7В2, AT4, M72, SMAW, Карл Густав и др.
         if (entity instanceof ProjectileLike) {
-            return bySpeed(entity, 1.5, 4.0, ProjectileProfile.BALLISTIC,
-                ProjectileProfile.SLOW_LINEAR, ProjectileProfile.SLOW_LINEAR);
+            return bySpeed(
+                    entity,
+                    1.5,
+                    4.0,
+                    ProjectileProfile.BALLISTIC,
+                    ProjectileProfile.SLOW_LINEAR,
+                    ProjectileProfile.SLOW_LINEAR);
         }
         // База SBW-снарядов (ПТУРы/НУРС/снаряды/бомбы + всё наследуемое аддонами)
         if (entity instanceof FastThrowableProjectile) {
-            return bySpeed(entity, 1.5, 4.0, ProjectileProfile.BALLISTIC,
-                ProjectileProfile.SLOW_LINEAR, ProjectileProfile.HEAVY);
+            return bySpeed(
+                    entity,
+                    1.5,
+                    4.0,
+                    ProjectileProfile.BALLISTIC,
+                    ProjectileProfile.SLOW_LINEAR,
+                    ProjectileProfile.HEAVY);
         }
         return ProjectileProfile.STATIC;
     }
 
-    private static ProjectileProfile bySpeed(Entity entity, double slowBound, double midBound,
-                                             ProjectileProfile slow, ProjectileProfile mid,
-                                             ProjectileProfile fast) {
+    private static ProjectileProfile bySpeed(
+            Entity entity,
+            double slowBound,
+            double midBound,
+            ProjectileProfile slow,
+            ProjectileProfile mid,
+            ProjectileProfile fast) {
         double speed = entity.getDeltaMovement().length();
         if (speed <= slowBound) return slow;
         if (speed < midBound) return mid;

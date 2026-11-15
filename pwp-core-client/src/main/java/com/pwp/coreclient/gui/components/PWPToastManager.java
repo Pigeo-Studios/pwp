@@ -1,13 +1,12 @@
 package com.pwp.coreclient.gui.components;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 
 public class PWPToastManager {
 
@@ -63,12 +62,13 @@ public class PWPToastManager {
             int x = screenW - toastW - 10;
             int y = yOffset;
 
-            int bgColor = switch (t.type) {
-                case SUCCESS -> PWPTheme.Styles.Toast.BG_SUCCESS;
-                case ERROR -> PWPTheme.Styles.Toast.BG_ERROR;
-                case XP -> PWPTheme.Styles.Toast.BG_XP;
-                default -> PWPTheme.Styles.Toast.BG_INFO;
-            };
+            int bgColor =
+                    switch (t.type) {
+                        case SUCCESS -> PWPTheme.Styles.Toast.BG_SUCCESS;
+                        case ERROR -> PWPTheme.Styles.Toast.BG_ERROR;
+                        case XP -> PWPTheme.Styles.Toast.BG_XP;
+                        default -> PWPTheme.Styles.Toast.BG_INFO;
+                    };
 
             int a = Math.max(0, Math.min(255, (int) (alpha * 255)));
             int bg = (a << 24) | (bgColor & 0x00FFFFFF);
@@ -98,6 +98,9 @@ public class PWPToastManager {
     }
 
     public enum ToastType {
-        INFO, SUCCESS, ERROR, XP
+        INFO,
+        SUCCESS,
+        ERROR,
+        XP
     }
 }

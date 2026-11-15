@@ -1,11 +1,11 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pwp.coreclient.gui.components.PWPButton;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSelectKit;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,21 +59,31 @@ public class PlayerKitSelectScreen extends Screen {
         for (int i = 0; i < kits.size(); i++) {
             PacketOpenPlayerKitMenu.KitDTO kit = kits.get(i);
             String dn = DeployData.getDisplayName(kit.name);
-            Component label = kit.isSelected
-                ? Component.literal("✓ " + dn)
-                : Component.literal(dn);
+            Component label = kit.isSelected ? Component.literal("✓ " + dn) : Component.literal(dn);
 
-            PWPButton btn = new PWPButton(0, 0, 0, 0, label, b -> {
-                PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit.name));
-                onClose();
-            }, PWPButton.Style.PRIMARY);
+            PWPButton btn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    label,
+                    b -> {
+                        PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit.name));
+                        onClose();
+                    },
+                    PWPButton.Style.PRIMARY);
             btn.active = kit.available;
             addRenderableWidget(btn);
             kitButtons.add(btn);
 
-            PWPButton eyeBtn = new PWPButton(0, 0, 0, 0, EYE, b ->
-                minecraft.setScreen(new KitPreviewScreen(this, kit.name, kit.items))
-            , PWPButton.Style.GHOST);
+            PWPButton eyeBtn = new PWPButton(
+                    0,
+                    0,
+                    0,
+                    0,
+                    EYE,
+                    b -> minecraft.setScreen(new KitPreviewScreen(this, kit.name, kit.items)),
+                    PWPButton.Style.GHOST);
             addRenderableWidget(eyeBtn);
             eyeButtons.add(eyeBtn);
         }
@@ -150,9 +160,19 @@ public class PlayerKitSelectScreen extends Screen {
 
         if (maxScroll > 0) {
             if (scrollOff > 0)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25B2"), width / 2, py + 2, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25B2"),
+                        width / 2,
+                        py + 2,
+                        PWPTheme.Colors.TEXT_DIM);
             if (scrollOff < maxScroll)
-                gui.drawCenteredString(PWPTheme.Fonts.display(), Component.literal("\u25BC"), width / 2, py + panelH - 4, PWPTheme.Colors.TEXT_DIM);
+                gui.drawCenteredString(
+                        PWPTheme.Fonts.display(),
+                        Component.literal("\u25BC"),
+                        width / 2,
+                        py + panelH - 4,
+                        PWPTheme.Colors.TEXT_DIM);
         }
 
         for (Renderable w : renderables) {

@@ -1,6 +1,5 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pwp.api.util.Parse;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
@@ -8,14 +7,13 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketPlacePath;
 import com.pigeostudios.pwp.warfare.network.PacketRemoveMarker;
-import java.util.UUID;
 import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
-import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
+import com.pigeostudios.pwp.warfare.world.PathPoint;
+import com.pwp.api.util.Parse;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.HashSet;
 import java.util.List;
@@ -54,9 +52,12 @@ public class SquadMapScreen extends Screen {
     private EditBox squadInput;
     private int mySquadId = -1;
 
-    private static final ResourceLocation TICKET_ICON = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
+    private static final ResourceLocation TICKET_ICON =
+            new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
 
-    public SquadMapScreen() { this(null); }
+    public SquadMapScreen() {
+        this(null);
+    }
 
     public SquadMapScreen(Screen parent) {
         super(Component.literal("Map"));
@@ -78,25 +79,39 @@ public class SquadMapScreen extends Screen {
         squadInput.setMaxLength(12);
         squadInput.setVisible(false);
 
-        createSquadBtn = addRenderableWidget(new PWPButton(0, 0, 50, 18,
-            Component.literal("Создать"), b -> {
-                String n = squadInput.getValue().trim();
-                if (!n.isEmpty()) {
-                    PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
-                    squadInput.setValue("");
-                }
-            }, PWPButton.Style.DARK));
+        createSquadBtn = addRenderableWidget(new PWPButton(
+                0,
+                0,
+                50,
+                18,
+                Component.literal("Создать"),
+                b -> {
+                    String n = squadInput.getValue().trim();
+                    if (!n.isEmpty()) {
+                        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, n));
+                        squadInput.setValue("");
+                    }
+                },
+                PWPButton.Style.DARK));
         createSquadBtn.visible = false;
 
-        applyCmdBtn = addRenderableWidget(new PWPButton(4, 2, LEFT_PANEL_W - 8, 16,
-            Component.literal("Стать командиром"),
-            b -> {
-                PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
-                b.visible = false;
-                Minecraft.getInstance().player.displayClientMessage(
-                    Component.literal("Запрос отправлен командирам взводов").withStyle(ChatFormatting.GREEN), true);
-            },
-            PWPButton.Style.DARK));
+        applyCmdBtn = addRenderableWidget(new PWPButton(
+                4,
+                2,
+                LEFT_PANEL_W - 8,
+                16,
+                Component.literal("Стать командиром"),
+                b -> {
+                    PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
+                    b.visible = false;
+                    Minecraft.getInstance()
+                            .player
+                            .displayClientMessage(
+                                    Component.literal("Запрос отправлен командирам взводов")
+                                            .withStyle(ChatFormatting.GREEN),
+                                    true);
+                },
+                PWPButton.Style.DARK));
         applyCmdBtn.visible = false;
     }
 
@@ -109,16 +124,23 @@ public class SquadMapScreen extends Screen {
         if (p != null) {
             String n = p.getScoreboardName();
             for (var sq : ClientData.clientSquads) {
-                if (sq.members.contains(n)) { mySquadId = sq.id; break; }
+                if (sq.members.contains(n)) {
+                    mySquadId = sq.id;
+                    break;
+                }
             }
         }
         // Position EditBox in the left panel
         if (squadInput != null && !SquadUIHelper.isPlayerInSquad()) {
             int listTop = applyCmdBtn != null && applyCmdBtn.visible ? 20 : 2;
             int by = height - 52;
-            squadInput.setX(4); squadInput.setWidth(110); squadInput.setY(by + 12);
+            squadInput.setX(4);
+            squadInput.setWidth(110);
+            squadInput.setY(by + 12);
             squadInput.setVisible(true);
-            createSquadBtn.setX(120); createSquadBtn.setY(by + 11); createSquadBtn.visible = true;
+            createSquadBtn.setX(120);
+            createSquadBtn.setY(by + 11);
+            createSquadBtn.visible = true;
         } else if (squadInput != null) {
             squadInput.setVisible(false);
             createSquadBtn.visible = false;
@@ -130,13 +152,13 @@ public class SquadMapScreen extends Screen {
         g.fill(0, 0, width, height, 0xCC06080A);
         renderLeftPanel(g, mx, my);
         renderTopBar(g, mx, my);
-        map.tickAnim(); map.render(g, mx, my, pt);
+        map.tickAnim();
+        map.render(g, mx, my, pt);
         renderRightPanel(g, mx, my);
         renderBottomBar(g);
         if (ctx.visible) ctx.render(g, mx, my);
         if (contextMenu.isVisible()) contextMenu.render(g, mx, my);
-        if (pathActive)
-            g.drawString(font, "LMB / Enter: place | ESC: cancel", 10, height - 14, 0x44FF44, true);
+        if (pathActive) g.drawString(font, "LMB / Enter: place | ESC: cancel", 10, height - 14, 0x44FF44, true);
         super.render(g, mx, my, pt);
     }
 
@@ -155,8 +177,13 @@ public class SquadMapScreen extends Screen {
         if (!SquadUIHelper.isPlayerInSquad()) {
             int by = height - 52;
             g.drawString(font, Component.literal("СОЗДАТЬ ОТРЯД"), 4, by, PWPTheme.Colors.ACCENT, false);
-            squadInput.setX(4); squadInput.setWidth(110); squadInput.setY(by + 12); squadInput.setVisible(true);
-            createSquadBtn.setX(120); createSquadBtn.setY(by + 11); createSquadBtn.visible = true;
+            squadInput.setX(4);
+            squadInput.setWidth(110);
+            squadInput.setY(by + 12);
+            squadInput.setVisible(true);
+            createSquadBtn.setX(120);
+            createSquadBtn.setY(by + 11);
+            createSquadBtn.visible = true;
         } else {
             squadInput.setVisible(false);
             createSquadBtn.visible = false;
@@ -179,7 +206,8 @@ public class SquadMapScreen extends Screen {
         int tickets = team.contains("BLUE") ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
         String faction = team.contains("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
         ResourceLocation flagTex = faction != null && !faction.equalsIgnoreCase("none")
-            ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png") : null;
+                ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png")
+                : null;
 
         int flagW = 22, flagH = 13;
         String ticketStr = String.valueOf(tickets);
@@ -191,9 +219,10 @@ public class SquadMapScreen extends Screen {
         g.blit(TICKET_ICON, ctrX + flagW + 6, TOP_BAR_H / 2 - 6, 12, 12, 0, 0, 16, 16, 16, 16);
         g.drawString(font, ticketStr, ctrX + flagW + 6 + 12 + 6, TOP_BAR_H / 2 - 4, 0xFFFFFF, true);
 
-        long elapsed = ClientData.matchStartTime > 0 ? (System.currentTimeMillis() - ClientData.matchStartTime) / 1000 : 0;
-        int mins = (int)(elapsed / 60);
-        int secs = (int)(elapsed % 60);
+        long elapsed =
+                ClientData.matchStartTime > 0 ? (System.currentTimeMillis() - ClientData.matchStartTime) / 1000 : 0;
+        int mins = (int) (elapsed / 60);
+        int secs = (int) (elapsed % 60);
         String timer = String.format("%d:%02d", mins, secs);
         g.drawString(font, timer, ctrX + flagW + 6 + 12 + 6 + ticketW + 20, TOP_BAR_H / 2 - 4, 0xFFCCCCCC, false);
     }
@@ -214,7 +243,7 @@ public class SquadMapScreen extends Screen {
 
         double bpp = ClientData.mapScale;
         int scaleDist = bpp < 1 ? 300 : bpp < 2.5 ? 200 : 100;
-        int scalePx = (int)(scaleDist / bpp);
+        int scalePx = (int) (scaleDist / bpp);
         int scY = barY + 4;
         int scX = barX + 10;
         g.fill(scX, scY, scX + scalePx, scY + 2, 0xFFFFFFFF);
@@ -237,7 +266,10 @@ public class SquadMapScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         if (ctx.visible) return ctx.mouseClicked(mx, my, btn);
-        if (contextMenu.isVisible()) { contextMenu.mouseClicked(mx, my, btn); return true; }
+        if (contextMenu.isVisible()) {
+            contextMenu.mouseClicked(mx, my, btn);
+            return true;
+        }
 
         if (btn == 0 && mx < LEFT_PANEL_W) {
             if (super.mouseClicked(mx, my, btn)) return true;
@@ -257,13 +289,20 @@ public class SquadMapScreen extends Screen {
                     activeGroups.get(activeGroups.size() - 1).add(new PathPoint(wx, wz));
                 }
             }
-            map.previewStart = null; map.previewEnd = null; pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+            map.previewStart = null;
+            map.previewEnd = null;
+            pathActive = false;
+            activeSquadId = -1;
+            activeSquadKey = -1;
             return true;
         }
 
         if (btn == 0) {
             String sid = getSpawnAt(mx, my);
-            if (sid != null) { onDeploy(sid); return true; }
+            if (sid != null) {
+                onDeploy(sid);
+                return true;
+            }
             return map.mouseClicked(mx, my, btn);
         }
 
@@ -283,17 +322,17 @@ public class SquadMapScreen extends Screen {
                 } else place(cat, icon, wx2, wz2);
             };
             if (p != null) {
-                MapMarker hit = map.hitMarker((int)mx, (int)my, map.getCenterX(p), map.getCenterZ(p));
+                MapMarker hit = map.hitMarker((int) mx, (int) my, map.getCenterX(p), map.getCenterZ(p));
                 if (hit != null) {
                     Runnable del = () -> PacketHandler.INSTANCE.sendToServer(new PacketRemoveMarker(hit.id));
                     boolean cmd2 = p != null && isPlayerCMD(p);
-                    ctx.open((int)mx, (int)my, cmd2, pathCb, del);
+                    ctx.open((int) mx, (int) my, cmd2, pathCb, del);
                     return true;
                 }
             }
             if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
             boolean cmd = p != null && isPlayerCMD(p);
-            ctx.open((int)mx, (int)my, cmd, pathCb);
+            ctx.open((int) mx, (int) my, cmd, pathCb);
             return true;
         }
         return super.mouseClicked(mx, my, btn);
@@ -318,15 +357,25 @@ public class SquadMapScreen extends Screen {
     @Override
     public boolean keyPressed(int k, int sc, int mod) {
         if (k == 256 || k == 50) {
-            if (ctx.visible) { ctx.close(); return true; }
-            if (contextMenu.isVisible()) { contextMenu.hide(); return true; }
+            if (ctx.visible) {
+                ctx.close();
+                return true;
+            }
+            if (contextMenu.isVisible()) {
+                contextMenu.hide();
+                return true;
+            }
             if (pathActive) {
                 if (activeSquadKey >= 0) {
                     map.pathGroupsSquad().remove(activeSquadKey);
                 } else if (activeGroups != null && !activeGroups.isEmpty()) {
                     activeGroups.get(activeGroups.size() - 1).clear();
                 }
-                map.previewStart = null; map.previewEnd = null; pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                map.previewStart = null;
+                map.previewEnd = null;
+                pathActive = false;
+                activeSquadId = -1;
+                activeSquadKey = -1;
                 return true;
             }
             if (parent != null) Minecraft.getInstance().setScreen(parent);
@@ -340,9 +389,18 @@ public class SquadMapScreen extends Screen {
                 double segLen = Math.sqrt(dx * dx + dz * dz);
                 if (segLen < SquadMapRenderer.PATH_MIN_LENGTH || segLen > SquadMapRenderer.PATH_MAX_LENGTH) {
                     if (Minecraft.getInstance().player != null)
-                        Minecraft.getInstance().player.displayClientMessage(
-                            Component.literal("Путь: " + (int)segLen + "м (мин " + (int)SquadMapRenderer.PATH_MIN_LENGTH + "м, макс " + (int)SquadMapRenderer.PATH_MAX_LENGTH + "м)"), true);
-            map.previewStart = null; map.previewEnd = null; pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                        Minecraft.getInstance()
+                                .player
+                                .displayClientMessage(
+                                        Component.literal("Путь: " + (int) segLen + "м (мин "
+                                                + (int) SquadMapRenderer.PATH_MIN_LENGTH + "м, макс "
+                                                + (int) SquadMapRenderer.PATH_MAX_LENGTH + "м)"),
+                                        true);
+                    map.previewStart = null;
+                    map.previewEnd = null;
+                    pathActive = false;
+                    activeSquadId = -1;
+                    activeSquadKey = -1;
                     return true;
                 }
                 List<PathPoint> finalPoints;
@@ -350,10 +408,18 @@ public class SquadMapScreen extends Screen {
                 int squadNum = -1;
                 if (activeSquadKey >= 0) {
                     var sq = map.pathGroupsSquad().get(activeSquadKey);
-                    if (sq == null) { map.previewStart = null; map.previewEnd = null; pathActive = false; activeSquadId = -1; activeSquadKey = -1; return true; }
+                    if (sq == null) {
+                        map.previewStart = null;
+                        map.previewEnd = null;
+                        pathActive = false;
+                        activeSquadId = -1;
+                        activeSquadKey = -1;
+                        return true;
+                    }
                     sq.add(new PathPoint(map.previewEnd.x, map.previewEnd.z));
                     finalPoints = new java.util.ArrayList<>(sq);
-                    pathType = "cmd_squads"; squadNum = activeSquadId;
+                    pathType = "cmd_squads";
+                    squadNum = activeSquadId;
                 } else if (activeGroups != null && !activeGroups.isEmpty()) {
                     var grp = activeGroups.get(activeGroups.size() - 1);
                     grp.add(new PathPoint(map.previewEnd.x, map.previewEnd.z));
@@ -362,17 +428,23 @@ public class SquadMapScreen extends Screen {
                     else if (activeGroups == map.pathGroupsRed()) pathType = "enemy";
                     else pathType = "team";
                 } else {
-                    map.previewStart = null; map.previewEnd = null; pathActive = false; activeSquadId = -1; activeSquadKey = -1;
+                    map.previewStart = null;
+                    map.previewEnd = null;
+                    pathActive = false;
+                    activeSquadId = -1;
+                    activeSquadKey = -1;
                     return true;
                 }
                 // Track creation time for path fade
-                long gameTime = Minecraft.getInstance().level != null ? Minecraft.getInstance().level.getGameTime() : 0;
+                long gameTime = Minecraft.getInstance().level != null
+                        ? Minecraft.getInstance().level.getGameTime()
+                        : 0;
                 if (activeSquadKey >= 0) {
                     com.pigeostudios.pwp.warfare.client.PathCache.pathCreatedAt.put(activeSquadKey, gameTime);
                 } else if (activeGroups != null && !activeGroups.isEmpty()) {
                     int idx = activeGroups.size() - 1;
                     com.pigeostudios.pwp.warfare.client.PathCache.pathCreatedAt.put(
-                        System.identityHashCode(activeGroups.get(idx)), gameTime);
+                            System.identityHashCode(activeGroups.get(idx)), gameTime);
                 }
                 map.startPathAnim();
                 // Sync to server
@@ -381,14 +453,19 @@ public class SquadMapScreen extends Screen {
                 java.util.UUID pathId = java.util.UUID.randomUUID();
                 PacketHandler.INSTANCE.sendToServer(new PacketPlacePath(pathId, team, pathType, squadNum, finalPoints));
             }
-            map.previewStart = null; map.previewEnd = null; pathActive = false; activeSquadId = -1;
+            map.previewStart = null;
+            map.previewEnd = null;
+            pathActive = false;
+            activeSquadId = -1;
             return true;
         }
         return super.keyPressed(k, sc, mod);
     }
 
     @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
     private void place(String cat, String icon, int wx, int wz) {
         LocalPlayer p = Minecraft.getInstance().player;
@@ -404,8 +481,11 @@ public class SquadMapScreen extends Screen {
     private void startPath(int wx, int wz, List<List<PathPoint>> groups) {
         List<PathPoint> sub = new java.util.ArrayList<>();
         sub.add(new PathPoint(wx, wz));
-        groups.add(sub); activeGroups = groups; activeSquadId = -1;
-        map.previewStart = new PathPoint(wx, wz); map.previewEnd = null;
+        groups.add(sub);
+        activeGroups = groups;
+        activeSquadId = -1;
+        map.previewStart = new PathPoint(wx, wz);
+        map.previewEnd = null;
         pathActive = true;
     }
 
@@ -415,8 +495,11 @@ public class SquadMapScreen extends Screen {
         int key = pathCounter++;
         map.pathGroupsSquad().put(key, sub);
         com.pigeostudios.pwp.warfare.client.PathCache.squadNumForPath.put(key, squadId);
-        activeGroups = null; activeSquadId = squadId; activeSquadKey = key;
-        map.previewStart = new PathPoint(wx, wz); map.previewEnd = null;
+        activeGroups = null;
+        activeSquadId = squadId;
+        activeSquadKey = key;
+        map.previewStart = new PathPoint(wx, wz);
+        map.previewEnd = null;
         pathActive = true;
     }
 
@@ -443,8 +526,11 @@ public class SquadMapScreen extends Screen {
             double sx = mX + mMapW / 2.0 + (sp.pos().getX() - cx) / bpp;
             double sy = mY + mMapH / 2.0 + (sp.pos().getZ() - cz) / bpp;
             double d = Math.sqrt((mx - sx) * (mx - sx) + (my - sy) * (my - sy));
-            if (d < bestD && sp.status() != DeployData.SpawnStatus.BLOCKED && sp.status() != DeployData.SpawnStatus.DESTROYED) {
-                bestD = d; best = sp.id();
+            if (d < bestD
+                    && sp.status() != DeployData.SpawnStatus.BLOCKED
+                    && sp.status() != DeployData.SpawnStatus.DESTROYED) {
+                bestD = d;
+                best = sp.id();
             }
         }
         return best;
@@ -453,19 +539,19 @@ public class SquadMapScreen extends Screen {
     private void onDeploy(String spawnId) {
         map.selectedSpawnId = spawnId;
         if (parent instanceof com.pigeostudios.pwp.warfare.client.gui.DeployScreen)
-            ((com.pigeostudios.pwp.warfare.client.gui.DeployScreen)parent).selectedSpawn = spawnId;
+            ((com.pigeostudios.pwp.warfare.client.gui.DeployScreen) parent).selectedSpawn = spawnId;
         Minecraft.getInstance().setScreen(parent);
     }
 
     private int toWorldX(double mx) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
-        return (int)(map.getCenterX(p) + (mx - (mX + mMapW / 2.0)) * map.getBlocksPerPixel());
+        return (int) (map.getCenterX(p) + (mx - (mX + mMapW / 2.0)) * map.getBlocksPerPixel());
     }
 
     private int toWorldZ(double my) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return 0;
-        return (int)(map.getCenterZ(p) + (my - (mY + mMapH / 2.0)) * map.getBlocksPerPixel());
+        return (int) (map.getCenterZ(p) + (my - (mY + mMapH / 2.0)) * map.getBlocksPerPixel());
     }
 }

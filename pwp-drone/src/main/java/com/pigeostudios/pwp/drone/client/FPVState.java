@@ -1,14 +1,13 @@
 package com.pigeostudios.pwp.drone.client;
 
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.ForgeRegistries;
-
 import net.minecraft.world.phys.AABB;
-import java.util.List;
+import net.minecraftforge.registries.ForgeRegistries;
 
 public class FPVState {
     public static boolean isInFPV() {
@@ -39,7 +38,16 @@ public class FPVState {
 
         // Search through ALL entities in the level
         // ClientLevel has an internal entities() Iterable, use getAllEntities() approach
-        List<Entity> allEntities = mc.level.getEntitiesOfClass(Entity.class, new AABB(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY), e -> true);
+        List<Entity> allEntities = mc.level.getEntitiesOfClass(
+                Entity.class,
+                new AABB(
+                        Double.NEGATIVE_INFINITY,
+                        Double.NEGATIVE_INFINITY,
+                        Double.NEGATIVE_INFINITY,
+                        Double.POSITIVE_INFINITY,
+                        Double.POSITIVE_INFINITY,
+                        Double.POSITIVE_INFINITY),
+                e -> true);
         for (Entity e : allEntities) {
             if (e != null && e.isAlive() && e.getStringUUID().equals(linkedUuid)) {
                 return e;

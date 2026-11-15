@@ -5,12 +5,12 @@ import com.google.gson.JsonElement;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestData;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -75,13 +75,14 @@ public class FactionVehicleSelectScreen extends Screen {
             int bx = cx + 10 + c * (CARD_W + GAP);
             int by = py + r * (CARD_H + GAP);
 
-            addRenderableWidget(
-                new PWPButton(bx, by, CARD_W, CARD_H,
+            addRenderableWidget(new PWPButton(
+                    bx,
+                    by,
+                    CARD_W,
+                    CARD_H,
                     Component.literal(faction.toUpperCase()),
                     b -> minecraft.setScreen(new FactionVehicleListScreen(faction)),
-                    PWPButton.Style.PRIMARY
-                )
-            );
+                    PWPButton.Style.PRIMARY));
         }
     }
 
@@ -93,11 +94,17 @@ public class FactionVehicleSelectScreen extends Screen {
         int py = 10;
 
         PWPPanel.render(gui, cx, py, panelW, panelH);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
+        gui.drawCenteredString(
+                PWPTheme.Fonts.display(), title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
         gui.fill(cx + 10, py + 22, cx + panelW - 10, py + 23, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), Component.translatable("gui.pwpwarfare.faction_select.loading"), width / 2, height / 2, PWPTheme.Colors.TEXT_DIM);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.translatable("gui.pwpwarfare.faction_select.loading"),
+                    width / 2,
+                    height / 2,
+                    PWPTheme.Colors.TEXT_DIM);
         }
 
         super.render(gui, mx, my, pt);

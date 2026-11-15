@@ -1,33 +1,30 @@
 package com.pwp.lobby.match;
 
-import com.pwp.coreclient.network.ConnectToServerPacket;
-import com.pwp.coreclient.network.PacketHandler;
-import net.minecraft.server.MinecraftServer;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.util.ServerThread;
+import com.pwp.coreclient.network.ConnectToServerPacket;
+import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.coreserver.TransferHosts;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerConfig;
 import com.pwp.lobby.ServerManager;
 import com.pwp.lobby.VotingManager;
 import com.pwp.lobby.maps.MapConfig;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class MatchAllocator {
 
@@ -41,35 +38,58 @@ public class MatchAllocator {
         minPlayersToStart = minPlayers;
     }
 
-    public static void playerJoined(String uuid) { lobbyPlayers.add(uuid); }
-    public static void playerLeft(String uuid) { lobbyPlayers.remove(uuid); }
+    public static void playerJoined(String uuid) {
+        lobbyPlayers.add(uuid);
+    }
+
+    public static void playerLeft(String uuid) {
+        lobbyPlayers.remove(uuid);
+    }
 
     public static boolean hasActiveMatch() {
         return activeMatches.values().stream()
-                .anyMatch(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING || m.phase == MatchPhase.ENDING);
+                .anyMatch(m -> m.phase == MatchPhase.STARTING
+                        || m.phase == MatchPhase.PLAYING
+                        || m.phase == MatchPhase.ENDING);
     }
 
     public static MatchInfo getActiveMatch() {
         return activeMatches.values().stream()
                 .filter(m -> m.phase == MatchPhase.STARTING || m.phase == MatchPhase.PLAYING)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
     }
 
     public static synchronized void startMatch(MapConfig map) {
-        startMatch(map, map.teams.BLUE.faction, map.teams.RED.faction, map.mode,
-                map.teams.BLUE.tickets, map.teams.RED.tickets, true, -1);
+        startMatch(
+                map,
+                map.teams.BLUE.faction,
+                map.teams.RED.faction,
+                map.mode,
+                map.teams.BLUE.tickets,
+                map.teams.RED.tickets,
+                true,
+                -1);
     }
 
-    public static synchronized void startMatch(MapConfig map, String blueFaction, String redFaction,
-                                                String mode, int blueTickets, int redTickets,
-                                                boolean invasionDefenderIsRed, int patternIndex) {
+    public static synchronized void startMatch(
+            MapConfig map,
+            String blueFaction,
+            String redFaction,
+            String mode,
+            int blueTickets,
+            int redTickets,
+            boolean invasionDefenderIsRed,
+            int patternIndex) {
         if (lobbyPlayers.size() < minPlayersToStart) {
-            LobbyMod.serverBroadcast("§e[PWP] §cНедостаточно игроков для запуска матча (" + lobbyPlayers.size() + "/" + minPlayersToStart + ")");
+            LobbyMod.serverBroadcast("§e[PWP] §cНедостаточно игроков для запуска матча (" + lobbyPlayers.size() + "/"
+                    + minPlayersToStart + ")");
             log.info("Not enough players: {}/{}", lobbyPlayers.size(), minPlayersToStart);
             return;
         }
         if (activeMatches.size() >= ServerConfig.getMaxMatches()) {
-            LobbyMod.serverBroadcast("§e[PWP] §cДостигнут лимит активных матчей (" + ServerConfig.getMaxMatches() + ")");
+            LobbyMod.serverBroadcast(
+                    "§e[PWP] §cДостигнут лимит активных матчей (" + ServerConfig.getMaxMatches() + ")");
             log.info("Max matches reached: {}/{}", activeMatches.size(), ServerConfig.getMaxMatches());
             return;
         }
@@ -77,42 +97,52 @@ public class MatchAllocator {
         LobbyMod.serverBroadcast("§e[PWP] §fЗапуск матча на карте §e" + map.displayName + "§f...");
         log.info("Starting match on {} with {} players", map.displayName, lobbyPlayers.size());
 
-        ServerManager.StartResult sr = ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath, (matchDir) -> {
-            try {
-                Path configPath = matchDir.resolve("map_config.json");
-                if (!Files.exists(configPath)) {
-                    configPath = Path.of(matchDir.toString(), map.name, "map_config.json");
-                }
-                if (Files.exists(configPath)) {
-                    Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                    String content = Files.readString(configPath);
-                    JsonObject root = gson.fromJson(content, JsonObject.class);
+        ServerManager.StartResult sr =
+                ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath, (matchDir) -> {
+                    try {
+                        Path configPath = matchDir.resolve("map_config.json");
+                        if (!Files.exists(configPath)) {
+                            configPath = Path.of(matchDir.toString(), map.name, "map_config.json");
+                        }
+                        if (Files.exists(configPath)) {
+                            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                            String content = Files.readString(configPath);
+                            JsonObject root = gson.fromJson(content, JsonObject.class);
 
-                    // Override factions
-                    root.getAsJsonObject("teams").getAsJsonObject("BLUE").addProperty("faction", blueFaction);
-                    root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("faction", redFaction);
-                    root.getAsJsonObject("teams").getAsJsonObject("BLUE").addProperty("tickets", blueTickets);
-                    root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("tickets", redTickets);
+                            // Override factions
+                            root.getAsJsonObject("teams")
+                                    .getAsJsonObject("BLUE")
+                                    .addProperty("faction", blueFaction);
+                            root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("faction", redFaction);
+                            root.getAsJsonObject("teams")
+                                    .getAsJsonObject("BLUE")
+                                    .addProperty("tickets", blueTickets);
+                            root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("tickets", redTickets);
 
-                    // Set mode
-                    root.addProperty("mode", mode);
-                    root.addProperty("modeDisplayName", mode.equals("invasion") ? "INVASION" : "Advance and Secure");
+                            // Set mode
+                            root.addProperty("mode", mode);
+                            root.addProperty(
+                                    "modeDisplayName", mode.equals("invasion") ? "INVASION" : "Advance and Secure");
 
-                    // Invasion defender
-                    root.addProperty("invasionDefender", invasionDefenderIsRed ? "RED" : "BLUE");
+                            // Invasion defender
+                            root.addProperty("invasionDefender", invasionDefenderIsRed ? "RED" : "BLUE");
 
-                    // Capture point pattern index (patterns array is already in the original config)
-                    if (patternIndex >= 0) {
-                        root.addProperty("capturePointPatternIndex", patternIndex);
+                            // Capture point pattern index (patterns array is already in the original config)
+                            if (patternIndex >= 0) {
+                                root.addProperty("capturePointPatternIndex", patternIndex);
+                            }
+
+                            Files.writeString(configPath, gson.toJson(root));
+                            log.info(
+                                    "Customized map_config.json for match (factions: {}/{}, mode: {})",
+                                    blueFaction,
+                                    redFaction,
+                                    mode);
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to customize map_config.json: {}", e.getMessage());
                     }
-
-                    Files.writeString(configPath, gson.toJson(root));
-                    log.info("Customized map_config.json for match (factions: {}/{}, mode: {})", blueFaction, redFaction, mode);
-                }
-            } catch (Exception e) {
-                log.error("Failed to customize map_config.json: {}", e.getMessage());
-            }
-        });
+                });
         if (sr.error != null) {
             LobbyMod.serverBroadcast("§e[PWP] §cОшибка запуска матча: " + sr.error);
             log.error("Failed to start match: {}", sr.error);
@@ -137,8 +167,15 @@ public class MatchAllocator {
         activeMatches.put(mi.serverId, mi);
 
         LobbyMod.broadcastLobbyState();
-        log.info("Match {}: {} ({}) on port {} ({} players, {} vs {})",
-                mi.serverId, map.displayName, mode, sr.port, lobbyPlayers.size(), blueFaction, redFaction);
+        log.info(
+                "Match {}: {} ({}) on port {} ({} players, {} vs {})",
+                mi.serverId,
+                map.displayName,
+                mode,
+                sr.port,
+                lobbyPlayers.size(),
+                blueFaction,
+                redFaction);
     }
 
     public static void joinActiveMatch(ServerPlayer player) {
@@ -161,11 +198,9 @@ public class MatchAllocator {
 
     private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
         player.sendSystemMessage(
-                Component.literal("§e[PWP] Подключение к матчу на " + host + ":" + mi.port + "..."),
-                false);
+                Component.literal("§e[PWP] Подключение к матчу на " + host + ":" + mi.port + "..."), false);
         PacketHandler.INSTANCE.send(
-                PacketDistributor.PLAYER.with(() -> player),
-                new ConnectToServerPacket(host, mi.port));
+                PacketDistributor.PLAYER.with(() -> player), new ConnectToServerPacket(host, mi.port));
     }
 
     public static void tick() {
@@ -196,7 +231,8 @@ public class MatchAllocator {
 
             if (mi.phase == MatchPhase.STARTING && ServerManager.isBooted(mi.serverId)) {
                 mi.phase = MatchPhase.PLAYING;
-                LobbyMod.serverBroadcast("§e[PWP] §aСервер матча готов! §7Перенос игроков на §e" + mi.mapName + "§7...");
+                LobbyMod.serverBroadcast(
+                        "§e[PWP] §aСервер матча готов! §7Перенос игроков на §e" + mi.mapName + "§7...");
                 log.info("Match {} ready on port {}, transferring players", mi.serverId, mi.port);
                 LobbyMod.broadcastLobbyState();
                 transferPlayers(mi);
@@ -214,11 +250,9 @@ public class MatchAllocator {
             if (!lobbyPlayers.contains(player.getStringUUID())) continue;
             String host = TransferHosts.resolveTransferHost(player);
             player.sendSystemMessage(
-                    Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."),
-                    false);
+                    Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."), false);
             PacketHandler.INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> player),
-                    new ConnectToServerPacket(host, mi.port));
+                    PacketDistributor.PLAYER.with(() -> player), new ConnectToServerPacket(host, mi.port));
         }
         log.info("Transferring {} players to match {} on port {}", lobbyPlayers.size(), mi.mapName, mi.port);
     }
@@ -289,16 +323,27 @@ public class MatchAllocator {
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
         LobbyMod.broadcastLobbyState();
-        if (!hasActiveMatch() && !lobbyPlayers.isEmpty() && !LobbyMod.isAnyVoteActive()
-            && ServerConfig.isAutoStartEnabled()) {
+        if (!hasActiveMatch()
+                && !lobbyPlayers.isEmpty()
+                && !LobbyMod.isAnyVoteActive()
+                && ServerConfig.isAutoStartEnabled()) {
             VotingManager.startVoting();
         }
     }
 
-    public static Map<Integer, MatchInfo> getActiveMatches() { return activeMatches; }
-    public static int getLobbyPlayerCount() { return lobbyPlayers.size(); }
+    public static Map<Integer, MatchInfo> getActiveMatches() {
+        return activeMatches;
+    }
 
-    public enum MatchPhase { STARTING, PLAYING, ENDING }
+    public static int getLobbyPlayerCount() {
+        return lobbyPlayers.size();
+    }
+
+    public enum MatchPhase {
+        STARTING,
+        PLAYING,
+        ENDING
+    }
 
     public static class MatchInfo {
         public int serverId;
@@ -320,7 +365,7 @@ public class MatchAllocator {
 
         public int getElapsedSeconds() {
             if (startedAt == 0) return 0;
-            return (int)((System.currentTimeMillis() - startedAt) / 1000);
+            return (int) ((System.currentTimeMillis() - startedAt) / 1000);
         }
     }
 }

@@ -42,10 +42,8 @@ public final class CoreApi {
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(4, new DaemonFactory());
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(TIMEOUT)
-            .executor(EXECUTOR)
-            .build();
+    private static final HttpClient HTTP =
+            HttpClient.newBuilder().connectTimeout(TIMEOUT).executor(EXECUTOR).build();
 
     private static volatile String baseUrl = "http://localhost:8080";
     private static volatile String apiKey = "";
@@ -63,7 +61,8 @@ public final class CoreApi {
      */
     public static <T> T await(CompletableFuture<T> future) {
         if (ServerThread.isServerThread()) {
-            throw new IllegalStateException("CoreApi.await на главном потоке сервера — используйте ServerThread.thenOnServer");
+            throw new IllegalStateException(
+                    "CoreApi.await на главном потоке сервера — используйте ServerThread.thenOnServer");
         }
         return future.join();
     }
@@ -135,14 +134,40 @@ public final class CoreApi {
         return post("/api/v1/match/save", matchData);
     }
 
-    public static CompletableFuture<JsonObject> calculateRewards(String uuid, String team, String winner,
-            int kills, int assists, int vehicleKills, int captures, int revives, int headshots,
+    public static CompletableFuture<JsonObject> calculateRewards(
+            String uuid,
+            String team,
+            String winner,
+            int kills,
+            int assists,
+            int vehicleKills,
+            int captures,
+            int revives,
+            int headshots,
             int durationMinutes) {
-        return post("/api/v1/rewards/calculate", map(
-                "uuid", uuid, "team", team, "winner", winner,
-                "kills", kills, "assists", assists, "vehicleKills", vehicleKills,
-                "captures", captures, "revives", revives, "headshots", headshots,
-                "durationMinutes", durationMinutes));
+        return post(
+                "/api/v1/rewards/calculate",
+                map(
+                        "uuid",
+                        uuid,
+                        "team",
+                        team,
+                        "winner",
+                        winner,
+                        "kills",
+                        kills,
+                        "assists",
+                        assists,
+                        "vehicleKills",
+                        vehicleKills,
+                        "captures",
+                        captures,
+                        "revives",
+                        revives,
+                        "headshots",
+                        headshots,
+                        "durationMinutes",
+                        durationMinutes));
     }
 
     // ====== COSMETICS / SKINS ======
@@ -154,8 +179,8 @@ public final class CoreApi {
 
     /** Экипировка предмета. core-service сам проверяет, что itemUuid принадлежит игроку. */
     public static CompletableFuture<JsonObject> equipItem(String uuid, String itemUuid, String slotType, String role) {
-        return post("/api/v1/cosmetics/equip", map("uuid", uuid, "itemUuid", itemUuid,
-                "slotType", slotType, "role", role));
+        return post(
+                "/api/v1/cosmetics/equip", map("uuid", uuid, "itemUuid", itemUuid, "slotType", slotType, "role", role));
     }
 
     public static CompletableFuture<JsonObject> unequipItem(String uuid, String slotType, String role) {
@@ -178,12 +203,33 @@ public final class CoreApi {
         return get("/api/v1/skins/weapon/" + enc(weaponTag));
     }
 
-    public static CompletableFuture<JsonObject> saveSkin(String skinId, String name, String description,
-            String slotType, String weaponTag, String rarity, String modelPath) {
-        return post("/api/v1/skins/save", map(
-                "skinId", skinId, "name", name, "description", description,
-                "slotType", slotType, "weaponTag", weaponTag, "rarity", rarity,
-                "modelPath", modelPath, "enabled", true));
+    public static CompletableFuture<JsonObject> saveSkin(
+            String skinId,
+            String name,
+            String description,
+            String slotType,
+            String weaponTag,
+            String rarity,
+            String modelPath) {
+        return post(
+                "/api/v1/skins/save",
+                map(
+                        "skinId",
+                        skinId,
+                        "name",
+                        name,
+                        "description",
+                        description,
+                        "slotType",
+                        slotType,
+                        "weaponTag",
+                        weaponTag,
+                        "rarity",
+                        rarity,
+                        "modelPath",
+                        modelPath,
+                        "enabled",
+                        true));
     }
 
     public static CompletableFuture<JsonObject> deleteSkin(String skinId) {
@@ -263,7 +309,8 @@ public final class CoreApi {
         return get("/api/v1/factions/" + enc(faction.toLowerCase()) + "/vehicles/" + enc(vehicleName));
     }
 
-    public static CompletableFuture<JsonObject> saveFactionVehicle(String faction, String vehicleName, JsonObject data) {
+    public static CompletableFuture<JsonObject> saveFactionVehicle(
+            String faction, String vehicleName, JsonObject data) {
         return put("/api/v1/factions/" + enc(faction.toLowerCase()) + "/vehicles/" + enc(vehicleName), data);
     }
 
@@ -273,11 +320,21 @@ public final class CoreApi {
 
     // ====== VOICE MUTE ======
 
-    public static CompletableFuture<JsonObject> voiceMute(String uuid, String mutedByUuid, String mutedByNickname,
-            String reason, int durationMinutes) {
-        return post("/api/v1/voicemute", map(
-                "uuid", uuid, "mutedByUuid", mutedByUuid, "mutedByNickname", mutedByNickname,
-                "reason", reason != null ? reason : "", "durationMinutes", durationMinutes));
+    public static CompletableFuture<JsonObject> voiceMute(
+            String uuid, String mutedByUuid, String mutedByNickname, String reason, int durationMinutes) {
+        return post(
+                "/api/v1/voicemute",
+                map(
+                        "uuid",
+                        uuid,
+                        "mutedByUuid",
+                        mutedByUuid,
+                        "mutedByNickname",
+                        mutedByNickname,
+                        "reason",
+                        reason != null ? reason : "",
+                        "durationMinutes",
+                        durationMinutes));
     }
 
     public static CompletableFuture<JsonObject> voiceUnmute(String uuid) {
@@ -296,7 +353,9 @@ public final class CoreApi {
 
     /** true, если ответ core-service успешный ({@code success: true}). */
     public static boolean isSuccess(JsonObject response) {
-        return response != null && response.has("success") && response.get("success").getAsBoolean();
+        return response != null
+                && response.has("success")
+                && response.get("success").getAsBoolean();
     }
 
     /** Объект {@code data} ответа или null. */
@@ -344,7 +403,8 @@ public final class CoreApi {
         return HTTP.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .thenApply(response -> parse(method, path, response))
                 .exceptionally(error -> {
-                    Throwable cause = error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
+                    Throwable cause =
+                            error instanceof CompletionException && error.getCause() != null ? error.getCause() : error;
                     LOG.warn("Core API {} {} не выполнен: {}", method, path, cause.toString());
                     return null;
                 });

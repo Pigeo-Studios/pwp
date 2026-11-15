@@ -7,7 +7,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class TaczHelper {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(TaczHelper.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(TaczHelper.class);
 
     private static Boolean taczLoaded;
 
@@ -17,7 +17,9 @@ public class TaczHelper {
             try {
                 Class.forName("com.tacz.guns.GunMod");
                 taczLoaded = true;
-            } catch (ClassNotFoundException ignored) { PWP_LOG.warn("TaczHelper.isTaczLoaded: исключение", ignored); }
+            } catch (ClassNotFoundException ignored) {
+                PWP_LOG.warn("TaczHelper.isTaczLoaded: исключение", ignored);
+            }
         }
         return taczLoaded;
     }

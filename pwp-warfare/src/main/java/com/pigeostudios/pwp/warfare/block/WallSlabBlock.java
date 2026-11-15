@@ -11,16 +11,14 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 // Используется в бункерах и стенах с амбразурой, имеет те же стадии строительства,
 // что и обычная стена, общая сущность WALL_BE
 public class WallSlabBlock extends WallBlock {
-   private static final VoxelShape SHAPE = Shapes.or(
-      Shapes.box(0.0, 0.0, 0.0, 1.0, 0.5, 1.0),
-      Shapes.box(0.45, 0.5, 0.45, 0.55, 1.0, 0.55)
-   );
+    private static final VoxelShape SHAPE =
+            Shapes.or(Shapes.box(0.0, 0.0, 0.0, 1.0, 0.5, 1.0), Shapes.box(0.45, 0.5, 0.45, 0.55, 1.0, 0.55));
 
-   public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return SHAPE;
-   }
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
 
-   public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return SHAPE;
-   }
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
 }

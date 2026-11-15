@@ -1,19 +1,19 @@
 package com.pigeostudios.pwp.drone.client;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.PostChain;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.List;
-
 public class FPVShaderHandler {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(FPVShaderHandler.class);
     /** Ошибка рефлексии повторяется каждый кадр — логируем только первую. */
     private static boolean uniformErrorLogged = false;
+
     private static boolean passesErrorLogged = false;
     private static PostChain shader;
     private static boolean loaded;
@@ -60,8 +60,9 @@ public class FPVShaderHandler {
 
         try {
             // Set uniforms via reflection (PostChain internals are private)
-            float time = mc.level != null ? (mc.level.getGameTime() + partialTick) * 0.05f % 100 :
-                          System.currentTimeMillis() / 850f % 100;
+            float time = mc.level != null
+                    ? (mc.level.getGameTime() + partialTick) * 0.05f % 100
+                    : System.currentTimeMillis() / 850f % 100;
             setUniform("Time", time);
             setUniform("Dist", dist);
 
@@ -134,8 +135,7 @@ public class FPVShaderHandler {
             // Find getEffect() method
             for (Method m : passClass.getDeclaredMethods()) {
                 String n = m.getName();
-                if ((n.equals("getEffect") || n.equals("getShader"))
-                    && m.getParameterCount() == 0) {
+                if ((n.equals("getEffect") || n.equals("getShader")) && m.getParameterCount() == 0) {
                     cachedGetEffect = m;
                     break;
                 }
@@ -150,15 +150,18 @@ public class FPVShaderHandler {
             for (Method m : effectClass.getDeclaredMethods()) {
                 String n = m.getName();
                 if ((n.equals("getUniform") || n.startsWith("m_109") || n.startsWith("m_173") || n.startsWith("m_83"))
-                    && m.getParameterCount() == 1 && m.getParameterTypes()[0] == String.class) {
+                        && m.getParameterCount() == 1
+                        && m.getParameterTypes()[0] == String.class) {
                     cachedGetUniform = m;
                     break;
                 }
             }
             if (cachedGetUniform == null) {
                 for (Method m : effectClass.getDeclaredMethods()) {
-                    if (m.getParameterCount() == 1 && m.getParameterTypes()[0] == String.class
-                        && (m.getReturnType().getSimpleName().contains("Uniform") || m.getReturnType().getSimpleName().equals("Object"))) {
+                    if (m.getParameterCount() == 1
+                            && m.getParameterTypes()[0] == String.class
+                            && (m.getReturnType().getSimpleName().contains("Uniform")
+                                    || m.getReturnType().getSimpleName().equals("Object"))) {
                         cachedGetUniform = m;
                         break;
                     }
@@ -173,15 +176,17 @@ public class FPVShaderHandler {
             for (Method m : timeUniform.getClass().getDeclaredMethods()) {
                 String n = m.getName();
                 if ((n.equals("set") || n.startsWith("m_"))
-                    && m.getParameterCount() == 1 && m.getParameterTypes()[0] == float.class) {
+                        && m.getParameterCount() == 1
+                        && m.getParameterTypes()[0] == float.class) {
                     cachedSetFloat = m;
                     break;
                 }
             }
             if (cachedSetFloat == null) {
                 for (Method m : timeUniform.getClass().getDeclaredMethods()) {
-                    if (m.getParameterCount() == 1 && m.getParameterTypes()[0] == float.class
-                        && m.getReturnType().getSimpleName().equals("void")) {
+                    if (m.getParameterCount() == 1
+                            && m.getParameterTypes()[0] == float.class
+                            && m.getReturnType().getSimpleName().equals("void")) {
                         cachedSetFloat = m;
                         break;
                     }

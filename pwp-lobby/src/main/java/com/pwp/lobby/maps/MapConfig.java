@@ -39,10 +39,12 @@ public class MapConfig {
     public static class Teams {
         public TeamConfig BLUE = new TeamConfig();
         public TeamConfig RED = new TeamConfig();
+
         {
             RED.faction = "redfor";
         }
     }
+
     public List<MainZoneConfig> mainZones;
     public List<CapturePointConfig> capturePoints;
     public MapBoundsConfig mapBounds = new MapBoundsConfig();

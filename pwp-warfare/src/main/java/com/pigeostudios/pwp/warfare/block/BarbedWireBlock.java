@@ -15,8 +15,8 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
@@ -32,68 +32,73 @@ import org.jetbrains.annotations.Nullable;
 // Блок колючей проволоки
 // Наносит урон игрокам при прохождении через неё
 public class BarbedWireBlock extends BaseEntityBlock {
-   // Флаг завершения строительства
-   public static final BooleanProperty CONSTRUCTED = BooleanProperty.create("constructed");
-   public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
-   public static final BooleanProperty VALID = BooleanProperty.create("valid");
-   // Стадия строительства (0 - чертёж, 1 - начало, 2 - почти готово)
-   public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
-   private static final VoxelShape SHAPE = Block.box(1.0, 0.0, 1.0, 15.0, 15.0, 15.0);
+    // Флаг завершения строительства
+    public static final BooleanProperty CONSTRUCTED = BooleanProperty.create("constructed");
+    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final BooleanProperty VALID = BooleanProperty.create("valid");
+    // Стадия строительства (0 - чертёж, 1 - начало, 2 - почти готово)
+    public static final IntegerProperty BUILD_STAGE = IntegerProperty.create("build_stage", 0, 2);
+    private static final VoxelShape SHAPE = Block.box(1.0, 0.0, 1.0, 15.0, 15.0, 15.0);
 
-   public BarbedWireBlock() {
-      super(Properties.of().mapColor(MapColor.METAL).strength(3.0F, 9.0F).noOcclusion());
-      this.registerDefaultState(
-         (BlockState)((BlockState)((BlockState)((BlockState)this.stateDefinition.any()).setValue(CONSTRUCTED, false)).setValue(FACING, Direction.NORTH))
-            .setValue(VALID, true).setValue(BUILD_STAGE, 0)
-      );
-   }
+    public BarbedWireBlock() {
+        super(Properties.of().mapColor(MapColor.METAL).strength(3.0F, 9.0F).noOcclusion());
+        this.registerDefaultState((BlockState)
+                ((BlockState) ((BlockState) ((BlockState) this.stateDefinition.any()).setValue(CONSTRUCTED, false))
+                                .setValue(FACING, Direction.NORTH))
+                        .setValue(VALID, true)
+                        .setValue(BUILD_STAGE, 0));
+    }
 
-   // Наносит урон и замедляет сущность при прохождении через проволоку
-   public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-      if ((Boolean)state.getValue(CONSTRUCTED)) {
-         entity.makeStuckInBlock(state, new Vec3(0.25, 0.05, 0.25));
-         if (!level.isClientSide && entity instanceof LivingEntity && level.getGameTime() % 20L == 0L) {
-            entity.hurt(level.damageSources().cactus(), 3.0F);
-         }
-      }
-   }
+    // Наносит урон и замедляет сущность при прохождении через проволоку
+    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+        if ((Boolean) state.getValue(CONSTRUCTED)) {
+            entity.makeStuckInBlock(state, new Vec3(0.25, 0.05, 0.25));
+            if (!level.isClientSide && entity instanceof LivingEntity && level.getGameTime() % 20L == 0L) {
+                entity.hurt(level.damageSources().cactus(), 3.0F);
+            }
+        }
+    }
 
-   public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return Shapes.empty();
-   }
+    public VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return Shapes.empty();
+    }
 
-   public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-      return SHAPE;
-   }
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return SHAPE;
+    }
 
-   public float getDestroySpeed(BlockState state, BlockGetter level, BlockPos pos) {
-      return state.getValue(CONSTRUCTED) ? 3.0F : 0.3F;
-   }
+    public float getDestroySpeed(BlockState state, BlockGetter level, BlockPos pos) {
+        return state.getValue(CONSTRUCTED) ? 3.0F : 0.3F;
+    }
 
-   public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos, Explosion explosion) {
-      return 9.0F;
-   }
+    public float getExplosionResistance(BlockState state, BlockGetter level, BlockPos pos, Explosion explosion) {
+        return 9.0F;
+    }
 
-   public RenderShape getRenderShape(BlockState state) {
-      return RenderShape.MODEL;
-   }
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
 
-   protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
-      builder.add(new Property[]{CONSTRUCTED, FACING, VALID, BUILD_STAGE});
-   }
+    protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
+        builder.add(new Property[] {CONSTRUCTED, FACING, VALID, BUILD_STAGE});
+    }
 
-   @Nullable
-   public BlockState getStateForPlacement(BlockPlaceContext context) {
-      return (BlockState)this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
-   }
+    @Nullable
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return (BlockState) this.defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
 
-   @Nullable
-   public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-      return new BarbedWireBlockEntity(pos, state);
-   }
+    @Nullable
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new BarbedWireBlockEntity(pos, state);
+    }
 
-   @Nullable
-   public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-      return level.isClientSide ? null : createTickerHelper(type, (BlockEntityType)ModBlocks.WIRE_BE.get(), BarbedWireBlockEntity::tick);
-   }
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type) {
+        return level.isClientSide
+                ? null
+                : createTickerHelper(type, (BlockEntityType) ModBlocks.WIRE_BE.get(), BarbedWireBlockEntity::tick);
+    }
 }

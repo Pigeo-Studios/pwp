@@ -14,9 +14,15 @@ public class TopBar {
         int ty = y + (h - 9) / 2;
 
         int matchSec = ClientData.isGameStarted && ClientData.matchStartTime > 0
-            ? (int)((System.currentTimeMillis() - ClientData.matchStartTime) / 1000) : 0;
-        gui.drawString(f, String.format("%02d:%02d", matchSec / 60, matchSec % 60),
-            x + 8, ty, PWPTheme.Colors.TEXT_PRIMARY, false);
+                ? (int) ((System.currentTimeMillis() - ClientData.matchStartTime) / 1000)
+                : 0;
+        gui.drawString(
+                f,
+                String.format("%02d:%02d", matchSec / 60, matchSec % 60),
+                x + 8,
+                ty,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
 
         int tx = x + 100;
         gui.drawString(f, DeployData.blueFaction.toUpperCase(), tx, ty, PWPTheme.Colors.TEAM_BLUE, false);
@@ -30,8 +36,13 @@ public class TopBar {
         int mbX = x + w - f.width(DeployData.playerName) - 78;
         gui.drawString(f, "[MAP]", mbX, ty, PWPTheme.Colors.TEXT_DIM, false);
 
-        gui.drawString(f, DeployData.playerName, x + w - f.width(DeployData.playerName) - 10, ty,
-            PWPTheme.Colors.TEXT_PRIMARY, false);
+        gui.drawString(
+                f,
+                DeployData.playerName,
+                x + w - f.width(DeployData.playerName) - 10,
+                ty,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
     }
 
     public boolean mouseClicked(double mx, double my, int btn, int x, int y, int w) {

@@ -6,30 +6,30 @@ import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 public class SquadUIHelper {
 
     private static final int SIDEBAR_WIDTH = 170;
-    private static final ResourceLocation ARROW_DOWN = new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
+    private static final ResourceLocation ARROW_DOWN =
+            new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
     private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
     private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
 
     private SquadUIHelper() {}
 
-    public static void renderSquadList(GuiGraphics gui, int mx, int my, Set<Integer> expandedSquads, boolean applyCmdVisible) {
+    public static void renderSquadList(
+            GuiGraphics gui, int mx, int my, Set<Integer> expandedSquads, boolean applyCmdVisible) {
         String myName = Minecraft.getInstance().player.getScoreboardName();
         String myTeam = getPlayerTeam().toUpperCase();
         String myDim = Minecraft.getInstance().level.dimension().location().toString();
@@ -61,9 +61,16 @@ public class SquadUIHelper {
                 actionText = "Покинуть";
                 isLeave = true;
             } else if (!amIInSquad) {
-                if (squad.isLocked) { actionText = "Закрыт"; isDisabled = true; }
-                else if (squad.members.size() >= 9) { actionText = "Полный"; isDisabled = true; }
-                else { actionText = "Вступить"; isJoin = true; }
+                if (squad.isLocked) {
+                    actionText = "Закрыт";
+                    isDisabled = true;
+                } else if (squad.members.size() >= 9) {
+                    actionText = "Полный";
+                    isDisabled = true;
+                } else {
+                    actionText = "Вступить";
+                    isJoin = true;
+                }
             }
 
             int actionX = 0;
@@ -72,7 +79,8 @@ public class SquadUIHelper {
                 int ah = 12;
                 actionX = Math.max(SIDEBAR_WIDTH - aw - 6, minActionX);
                 int actionY = currentY - 1;
-                boolean hover = mx >= actionX && mx <= actionX + aw && my >= actionY && my <= actionY + ah && !isDisabled;
+                boolean hover =
+                        mx >= actionX && mx <= actionX + aw && my >= actionY && my <= actionY + ah && !isDisabled;
                 int r = PWPTheme.Spacing.RADIUS_SMALL;
 
                 if (isJoin) {
@@ -80,15 +88,33 @@ public class SquadUIHelper {
                     int border = hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
                     RoundedRect.fill(gui, actionX, actionY, aw, ah, r, bg);
                     RoundedRect.border(gui, actionX, actionY, aw, ah, r, 1, border);
-                    gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, PWPTheme.Colors.TEXT_PRIMARY, false);
+                    gui.drawString(
+                            PWPTheme.Fonts.display(),
+                            actionText,
+                            actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2,
+                            actionY + 2,
+                            PWPTheme.Colors.TEXT_PRIMARY,
+                            false);
                 } else if (isLeave) {
                     if (hover) {
                         RoundedRect.fill(gui, actionX, actionY, aw, ah, r, 0x22FF0000);
                     }
                     int textCol = hover ? PWPTheme.Colors.DANGER : PWPTheme.Colors.TEXT_DIM;
-                    gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, textCol, false);
+                    gui.drawString(
+                            PWPTheme.Fonts.display(),
+                            actionText,
+                            actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2,
+                            actionY + 2,
+                            textCol,
+                            false);
                 } else if (isDisabled) {
-                    gui.drawString(PWPTheme.Fonts.display(), actionText, actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2, actionY + 2, PWPTheme.Colors.TEXT_DIM, false);
+                    gui.drawString(
+                            PWPTheme.Fonts.display(),
+                            actionText,
+                            actionX + aw / 2 - PWPTheme.Fonts.display().width(actionText) / 2,
+                            actionY + 2,
+                            PWPTheme.Colors.TEXT_DIM,
+                            false);
                 }
             } else {
                 // No action button, shift icons right if name is long
@@ -107,7 +133,13 @@ public class SquadUIHelper {
         }
     }
 
-    private static void renderSquadIcons(GuiGraphics gui, WarfareWorldData.Squad squad, boolean amILeader, boolean isExpanded, int actionX, int currentY) {
+    private static void renderSquadIcons(
+            GuiGraphics gui,
+            WarfareWorldData.Squad squad,
+            boolean amILeader,
+            boolean isExpanded,
+            int actionX,
+            int currentY) {
         RenderSystem.enableBlend();
         int arrowX = (actionX > 0 ? actionX : 160) - 12;
         if (isExpanded) {
@@ -127,7 +159,14 @@ public class SquadUIHelper {
         }
     }
 
-    private static int renderMembers(GuiGraphics gui, int mx, int my, int currentY, WarfareWorldData.Squad squad, boolean isMySquad, String myName) {
+    private static int renderMembers(
+            GuiGraphics gui,
+            int mx,
+            int my,
+            int currentY,
+            WarfareWorldData.Squad squad,
+            boolean isMySquad,
+            String myName) {
         for (String member : getSortedMembers(squad)) {
             boolean isOnline = Minecraft.getInstance().getConnection().getPlayerInfo(member) != null;
             int col = getMemberColor(squad, member, isOnline);
@@ -135,7 +174,8 @@ public class SquadUIHelper {
 
             String kName = ClientData.playerKits.getOrDefault(member, "Unassigned");
             if (!kName.equals("Unassigned") && !kName.isEmpty()) {
-                ResourceLocation kitIcon = new ResourceLocation("pwpwarfare", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
+                ResourceLocation kitIcon = new ResourceLocation(
+                        "pwpwarfare", "textures/gui/kits/" + kName.toLowerCase().replace(" ", "_") + ".png");
                 gui.blit(kitIcon, xOffset, currentY, 0, 0, 10, 10, 10, 10);
                 xOffset += 12;
             }
@@ -161,7 +201,8 @@ public class SquadUIHelper {
         return 0xFFFFFF;
     }
 
-    public static void handleSquadClick(double mx, double my, Set<Integer> expandedSquads, PWPContextMenu contextMenu, boolean applyCmdVisible) {
+    public static void handleSquadClick(
+            double mx, double my, Set<Integer> expandedSquads, PWPContextMenu contextMenu, boolean applyCmdVisible) {
         String myName = Minecraft.getInstance().player.getScoreboardName();
         boolean amIInSquad = isPlayerInSquad();
         String myTeam = getPlayerTeam().toUpperCase();
@@ -190,14 +231,16 @@ public class SquadUIHelper {
             int minActionX2 = nameEndX2 + 28;
 
             int aw = actionText.isEmpty() ? 0 : PWPTheme.Fonts.display().width(actionText) + 12;
-            int actionX = aw > 0 ? Math.max(SIDEBAR_WIDTH - aw - 6, minActionX2) : (minActionX2 > 160 ? minActionX2 : 0);
+            int actionX =
+                    aw > 0 ? Math.max(SIDEBAR_WIDTH - aw - 6, minActionX2) : (minActionX2 > 160 ? minActionX2 : 0);
             int arrowX = (actionX > 0 ? actionX : 160) - 12;
             int lockX = arrowX - 12;
 
             if (my >= currentY && my <= currentY + 11) {
                 if (aw > 0 && mx >= actionX && mx <= actionX + aw) {
                     if (isMySquad) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(2, squad.id, ""));
-                    else if (!squad.isLocked && squad.members.size() < 9) PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(1, squad.id, ""));
+                    else if (!squad.isLocked && squad.members.size() < 9)
+                        PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(1, squad.id, ""));
                 } else if (mx >= arrowX && mx <= arrowX + 10) {
                     if (isExpanded) expandedSquads.remove(squad.id);
                     else expandedSquads.add(squad.id);
@@ -214,7 +257,11 @@ public class SquadUIHelper {
                         if (isMySquad && !member.equals(myName)) {
                             List<String> options = buildContextOptions(squad, myName);
                             if (!options.isEmpty()) {
-                                contextMenu.show((int) mx, (int) my, options, idx -> handleContextAction(idx, options, squad.id, member));
+                                contextMenu.show(
+                                        (int) mx,
+                                        (int) my,
+                                        options,
+                                        idx -> handleContextAction(idx, options, squad.id, member));
                             }
                         }
                         return;
@@ -259,8 +306,10 @@ public class SquadUIHelper {
         String opt = options.get(idx);
         switch (opt) {
             case "Promote to SL" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(4, squadId, target));
-            case "Set FTL Bravo", "Pass FTL Bravo" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(6, squadId, target));
-            case "Set FTL Charlie", "Pass FTL Charlie" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(7, squadId, target));
+            case "Set FTL Bravo", "Pass FTL Bravo" -> PacketHandler.INSTANCE.sendToServer(
+                    new PacketSquadAction(6, squadId, target));
+            case "Set FTL Charlie", "Pass FTL Charlie" -> PacketHandler.INSTANCE.sendToServer(
+                    new PacketSquadAction(7, squadId, target));
             case "Add to Bravo" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(8, squadId, target));
             case "Add to Charlie" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(9, squadId, target));
             case "Remove from FT" -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(10, squadId, target));
@@ -325,7 +374,13 @@ public class SquadUIHelper {
         gui.drawString(PWPTheme.Fonts.display(), customName, startX + 38, startY, teamColor, false);
         RenderSystem.enableBlend();
         gui.blit(ticketIcon, startX + 38, startY + 11, 0, 0, 8, 8, 8, 8);
-        gui.drawString(PWPTheme.Fonts.display(), String.valueOf(tickets), startX + 50, startY + 11, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                String.valueOf(tickets),
+                startX + 50,
+                startY + 11,
+                PWPTheme.Colors.TEXT_ACCENT,
+                false);
     }
 
     public static boolean isApplyCmdVisible() {
@@ -367,26 +422,29 @@ public class SquadUIHelper {
         boolean isBlue = myTeam.contains("BLUE");
         int teamCMDId = isBlue ? ClientData.blueCMDId : ClientData.redCMDId;
         return ClientData.clientSquads.stream()
-            .filter(s -> s.team.equalsIgnoreCase(myTeam))
-            .filter(s -> s.dimension != null && s.dimension.equals(myDim))
-            .sorted((a, b) -> {
-                if (a.id == teamCMDId) return -1;
-                if (b.id == teamCMDId) return 1;
-                return Integer.compare(a.id, b.id);
-            }).collect(Collectors.toList());
+                .filter(s -> s.team.equalsIgnoreCase(myTeam))
+                .filter(s -> s.dimension != null && s.dimension.equals(myDim))
+                .sorted((a, b) -> {
+                    if (a.id == teamCMDId) return -1;
+                    if (b.id == teamCMDId) return 1;
+                    return Integer.compare(a.id, b.id);
+                })
+                .collect(Collectors.toList());
     }
 
     public static List<String> getSortedMembers(WarfareWorldData.Squad squad) {
         List<String> sorted = new ArrayList<>();
         if (!squad.leader.isEmpty() && squad.members.contains(squad.leader)) sorted.add(squad.leader);
         for (String m : squad.members) {
-            if (!m.equals(squad.leader) && !squad.bravoMembers.contains(m) && !squad.charlieMembers.contains(m)) sorted.add(m);
+            if (!m.equals(squad.leader) && !squad.bravoMembers.contains(m) && !squad.charlieMembers.contains(m))
+                sorted.add(m);
         }
         if (!squad.bravoLeader.isEmpty() && squad.members.contains(squad.bravoLeader)) sorted.add(squad.bravoLeader);
         for (String m : squad.bravoMembers) {
             if (!m.equals(squad.bravoLeader) && squad.members.contains(m)) sorted.add(m);
         }
-        if (!squad.charlieLeader.isEmpty() && squad.members.contains(squad.charlieLeader)) sorted.add(squad.charlieLeader);
+        if (!squad.charlieLeader.isEmpty() && squad.members.contains(squad.charlieLeader))
+            sorted.add(squad.charlieLeader);
         for (String m : squad.charlieMembers) {
             if (!m.equals(squad.charlieLeader) && squad.members.contains(m)) sorted.add(m);
         }
@@ -398,5 +456,7 @@ public class SquadUIHelper {
         return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
     }
 
-    public static int getSidebarWidth() { return SIDEBAR_WIDTH; }
+    public static int getSidebarWidth() {
+        return SIDEBAR_WIDTH;
+    }
 }

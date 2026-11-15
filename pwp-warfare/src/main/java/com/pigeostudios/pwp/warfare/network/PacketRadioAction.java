@@ -1,9 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
-import com.pigeostudios.pwp.warfare.block.AGSConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.AGSConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
-import com.pigeostudios.pwp.warfare.block.M2ConstructionBlock;
 import com.pigeostudios.pwp.warfare.block.M2ConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.block.MortarConstructionBlock;
@@ -28,267 +26,306 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.NetworkEvent.Context;
+import net.minecraftforge.network.PacketDistributor;
 
 // Пакет действий с радиостанцией: установка точки сбора, строительство хабов и техники
 // Отправляется лидерами отрядов при использовании радио
 public class PacketRadioAction {
-   private final int actionId;
+    private final int actionId;
 
-   public PacketRadioAction(int actionId) {
-      this.actionId = actionId;
-   }
+    public PacketRadioAction(int actionId) {
+        this.actionId = actionId;
+    }
 
-   public static void encode(PacketRadioAction msg, FriendlyByteBuf buf) {
-      buf.writeInt(msg.actionId);
-   }
+    public static void encode(PacketRadioAction msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.actionId);
+    }
 
-   public static PacketRadioAction decode(FriendlyByteBuf buf) {
-      return new PacketRadioAction(buf.readInt());
-   }
+    public static PacketRadioAction decode(FriendlyByteBuf buf) {
+        return new PacketRadioAction(buf.readInt());
+    }
 
-   // Обрабатывает действие радио: actionId 0 - точка сбора, остальные - строительство
-   public static void handle(PacketRadioAction msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         ServerPlayer player = ctx.get().getSender();
-         if (player != null) {
-            ServerLevel currentLevel = player.serverLevel();
-            WarfareWorldData data = WarfareWorldData.get(currentLevel);
-            String pName = player.getScoreboardName();
-            WarfareWorldData.Squad playerSquad = null;
-            boolean isLeader = false;
+    // Обрабатывает действие радио: actionId 0 - точка сбора, остальные - строительство
+    public static void handle(PacketRadioAction msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null) {
+                ServerLevel currentLevel = player.serverLevel();
+                WarfareWorldData data = WarfareWorldData.get(currentLevel);
+                String pName = player.getScoreboardName();
+                WarfareWorldData.Squad playerSquad = null;
+                boolean isLeader = false;
 
-            for (WarfareWorldData.Squad s : data.squads) {
-               if (s.members.contains(pName)) {
-                  playerSquad = s;
-                  if (s.leader.equals(pName)) {
-                     isLeader = true;
-                  }
-                  break;
-               }
-            }
+                for (WarfareWorldData.Squad s : data.squads) {
+                    if (s.members.contains(pName)) {
+                        playerSquad = s;
+                        if (s.leader.equals(pName)) {
+                            isLeader = true;
+                        }
+                        break;
+                    }
+                }
 
-            if (!player.isCreative()) {
-               if (player.getTeam() == null) {
-                   player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть в команде!").withStyle(ChatFormatting.RED));
-                  return;
-               }
+                if (!player.isCreative()) {
+                    if (player.getTeam() == null) {
+                        player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть в команде!")
+                                .withStyle(ChatFormatting.RED));
+                        return;
+                    }
 
-               if (playerSquad == null) {
-                   player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть в отряде в этом мире!").withStyle(ChatFormatting.RED));
-                  return;
-               }
+                    if (playerSquad == null) {
+                        player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть в отряде в этом мире!")
+                                .withStyle(ChatFormatting.RED));
+                        return;
+                    }
 
-               if (!isLeader) {
-                   player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть командиром отряда!").withStyle(ChatFormatting.RED));
-                  return;
-               }
-            }
+                    if (!isLeader) {
+                        player.sendSystemMessage(Component.literal("Доступ запрещён: нужно быть командиром отряда!")
+                                .withStyle(ChatFormatting.RED));
+                        return;
+                    }
+                }
 
-            ItemStack stack = player.getMainHandItem();
-            long currentGameTime = currentLevel.getGameTime();
-            if (msg.actionId == 0) {
-               long lastUse = playerSquad.nextRallyAvailableTick;
-               if (currentGameTime < lastUse && !player.isCreative()) {
-                  long timeLeft = (lastUse - currentGameTime) / 20L;
-                   player.sendSystemMessage(Component.literal("Кулдаун рали: " + timeLeft + "с").withStyle(ChatFormatting.RED));
-                  return;
-               }
+                ItemStack stack = player.getMainHandItem();
+                long currentGameTime = currentLevel.getGameTime();
+                if (msg.actionId == 0) {
+                    long lastUse = playerSquad.nextRallyAvailableTick;
+                    if (currentGameTime < lastUse && !player.isCreative()) {
+                        long timeLeft = (lastUse - currentGameTime) / 20L;
+                        player.sendSystemMessage(Component.literal("Кулдаун рали: " + timeLeft + "с")
+                                .withStyle(ChatFormatting.RED));
+                        return;
+                    }
 
-               String team = "NEUTRAL";
-               if (player.getTeam() != null) {
-                  String rawTeamName = player.getTeam().getName();
-                  if (rawTeamName.equalsIgnoreCase("Blue")) {
-                     team = "BLUE";
-                  } else if (rawTeamName.equalsIgnoreCase("Red")) {
-                     team = "RED";
-                  }
-               }
+                    String team = "NEUTRAL";
+                    if (player.getTeam() != null) {
+                        String rawTeamName = player.getTeam().getName();
+                        if (rawTeamName.equalsIgnoreCase("Blue")) {
+                            team = "BLUE";
+                        } else if (rawTeamName.equalsIgnoreCase("Red")) {
+                            team = "RED";
+                        }
+                    }
 
-               if (team.equals("NEUTRAL") && player.isCreative()) {
-                  team = "BLUE";
-               }
+                    if (team.equals("NEUTRAL") && player.isCreative()) {
+                        team = "BLUE";
+                    }
 
-               if (trySpawnRally(player, currentLevel, team, playerSquad, data)) {
-                  playerSquad.nextRallyAvailableTick = currentGameTime + 6000L;
-                   player.sendSystemMessage(Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
+                    if (trySpawnRally(player, currentLevel, team, playerSquad, data)) {
+                        playerSquad.nextRallyAvailableTick = currentGameTime + 6000L;
+                        player.sendSystemMessage(
+                                Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
+                    } else {
+                        playerSquad.nextRallyAvailableTick = currentGameTime + 300L;
+                    }
+
+                    data.setDirty();
+                    PacketHandler.INSTANCE.send(
+                            PacketDistributor.DIMENSION.with(player.level()::dimension),
+                            new PacketSyncSquads(data.squads));
                 } else {
-                   playerSquad.nextRallyAvailableTick = currentGameTime + 300L;
-               }
-
-               data.setDirty();
-               PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(player.level()::dimension), new PacketSyncSquads(data.squads));
-            } else {
-               handleConstructionLogic(msg.actionId, player, currentLevel, data);
+                    handleConstructionLogic(msg.actionId, player, currentLevel, data);
+                }
             }
-         }
-      });
-      ctx.get().setPacketHandled(true);
-   }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 
-   // Обработка строительства: хаб (actionId=14) и чертежи техники (20-23)
-   private static void handleConstructionLogic(int actionId, ServerPlayer player, ServerLevel level, WarfareWorldData data) {
-      BlockPos targetPos = player.blockPosition();
-      if (!level.getBlockState(targetPos).canBeReplaced() && actionId != 14) {
-         targetPos = targetPos.relative(player.getDirection());
-      }
+    // Обработка строительства: хаб (actionId=14) и чертежи техники (20-23)
+    private static void handleConstructionLogic(
+            int actionId, ServerPlayer player, ServerLevel level, WarfareWorldData data) {
+        BlockPos targetPos = player.blockPosition();
+        if (!level.getBlockState(targetPos).canBeReplaced() && actionId != 14) {
+            targetPos = targetPos.relative(player.getDirection());
+        }
 
-      if (actionId == 14) {
-         String playerTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-         long hubCount = data.hubs.stream().filter(h -> h.team.equalsIgnoreCase(playerTeam)).count();
-         if (hubCount >= ((Integer)WarfareConfig.MAX_HUBS_PER_TEAM.get()).intValue() && !player.isCreative()) {
-             player.sendSystemMessage(Component.literal("Достигнут лимит ФОБ для этого мира!").withStyle(ChatFormatting.RED));
-            return;
-         }
-
-         for (WarfareWorldData.HubInfo existingHub : data.hubs) {
-            if (existingHub.team.equalsIgnoreCase(playerTeam)
-               && existingHub.pos.distSqr(targetPos) < (Integer)WarfareConfig.MIN_HUB_DISTANCE.get() * (Integer)WarfareConfig.MIN_HUB_DISTANCE.get()) {
-                player.sendSystemMessage(Component.literal("Слишком близко к союзному ФОБ!").withStyle(ChatFormatting.RED));
-               return;
-            }
-         }
-
-         if ((Boolean)WarfareConfig.HUB_PLACEMENT_REQUIRES_CRATE.get() && !player.isCreative()) {
-            double crateCheckRad = 50.0;
-            AABB area = new AABB(targetPos).inflate(crateCheckRad);
-            List<SupplyCrateEntity> crates = level.getEntitiesOfClass(SupplyCrateEntity.class, area);
-            SupplyCrateEntity targetCrate = crates.stream()
-               .filter(c -> c.getTeamOwner().equals("NEUTRAL") || c.getTeamOwner().equalsIgnoreCase(playerTeam))
-               .findFirst()
-               .orElse(null);
-            if (targetCrate == null) {
-                player.sendSystemMessage(Component.literal("Для установки ФОБ нужен ящик снабжения в радиусе 50 блоков!").withStyle(ChatFormatting.RED));
-               return;
+        if (actionId == 14) {
+            String playerTeam =
+                    player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
+            long hubCount = data.hubs.stream()
+                    .filter(h -> h.team.equalsIgnoreCase(playerTeam))
+                    .count();
+            if (hubCount >= ((Integer) WarfareConfig.MAX_HUBS_PER_TEAM.get()).intValue() && !player.isCreative()) {
+                player.sendSystemMessage(
+                        Component.literal("Достигнут лимит ФОБ для этого мира!").withStyle(ChatFormatting.RED));
+                return;
             }
 
-             targetCrate.discard();
-             player.sendSystemMessage(Component.literal("Ящик снабжения израсходован на установку ФОБ.").withStyle(ChatFormatting.YELLOW));
-         }
+            for (WarfareWorldData.HubInfo existingHub : data.hubs) {
+                if (existingHub.team.equalsIgnoreCase(playerTeam)
+                        && existingHub.pos.distSqr(targetPos)
+                                < (Integer) WarfareConfig.MIN_HUB_DISTANCE.get()
+                                        * (Integer) WarfareConfig.MIN_HUB_DISTANCE.get()) {
+                    player.sendSystemMessage(
+                            Component.literal("Слишком близко к союзному ФОБ!").withStyle(ChatFormatting.RED));
+                    return;
+                }
+            }
 
-         level.setBlock(targetPos, ((Block)ModBlocks.HUB_BLOCK.get()).defaultBlockState(), 3);
-         if (level.getBlockEntity(targetPos) instanceof HubBlockEntity hubEntity) {
-            hubEntity.setTeam(playerTeam);
-            level.sendBlockUpdated(targetPos, level.getBlockState(targetPos), level.getBlockState(targetPos), 3);
-         }
+            if ((Boolean) WarfareConfig.HUB_PLACEMENT_REQUIRES_CRATE.get() && !player.isCreative()) {
+                double crateCheckRad = 50.0;
+                AABB area = new AABB(targetPos).inflate(crateCheckRad);
+                List<SupplyCrateEntity> crates = level.getEntitiesOfClass(SupplyCrateEntity.class, area);
+                SupplyCrateEntity targetCrate = crates.stream()
+                        .filter(c -> c.getTeamOwner().equals("NEUTRAL")
+                                || c.getTeamOwner().equalsIgnoreCase(playerTeam))
+                        .findFirst()
+                        .orElse(null);
+                if (targetCrate == null) {
+                    player.sendSystemMessage(
+                            Component.literal("Для установки ФОБ нужен ящик снабжения в радиусе 50 блоков!")
+                                    .withStyle(ChatFormatting.RED));
+                    return;
+                }
 
-         data.hubs.add(new WarfareWorldData.HubInfo(targetPos, playerTeam, false, level.dimension().location().toString()));
-         data.setDirty();
-         PacketHandler.sendToAllClients(level, data);
-          player.sendSystemMessage(Component.literal("Блюпринт ФОБ установлен!").withStyle(ChatFormatting.GREEN));
-      } else if (actionId == 22) {
-         placeBlueprint(
-            level,
-            targetPos,
-            player,
-            (BlockState)((Block)ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get()).defaultBlockState().setValue(MortarConstructionBlock.FACING, player.getDirection().getOpposite()),
-            "Mortar"
-         );
-      } else if (actionId == 23) {
-         placeBlueprint(
-            level,
-            targetPos,
-            player,
-            (BlockState)((Block)ModBlocks.TOW_CONSTRUCTION_BLOCK.get()).defaultBlockState().setValue(TOWConstructionBlock.FACING, player.getDirection().getOpposite()),
-            "TOW"
-         );
-      }
-   }
+                targetCrate.discard();
+                player.sendSystemMessage(Component.literal("Ящик снабжения израсходован на установку ФОБ.")
+                        .withStyle(ChatFormatting.YELLOW));
+            }
 
-   private static void placeBlueprint(ServerLevel level, BlockPos pos, ServerPlayer player, BlockState state, String name) {
-      if (level.getBlockState(pos).isAir() || level.getBlockState(pos).canBeReplaced()) {
-         level.setBlock(pos, state, 3);
-         BlockEntity be = level.getBlockEntity(pos);
-         String pTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
-         if (be instanceof M2ConstructionBlockEntity m2) {
-            m2.setTeam(pTeam);
-         } else if (be instanceof AGSConstructionBlockEntity ags) {
-            ags.setTeam(pTeam);
-         } else if (be instanceof MortarConstructionBlockEntity mortar) {
-            mortar.setTeam(pTeam);
-         } else if (be instanceof TOWConstructionBlockEntity tow) {
-            tow.setTeam(pTeam);
-         }
+            level.setBlock(targetPos, ((Block) ModBlocks.HUB_BLOCK.get()).defaultBlockState(), 3);
+            if (level.getBlockEntity(targetPos) instanceof HubBlockEntity hubEntity) {
+                hubEntity.setTeam(playerTeam);
+                level.sendBlockUpdated(targetPos, level.getBlockState(targetPos), level.getBlockState(targetPos), 3);
+            }
 
-          player.sendSystemMessage(Component.literal(name + " — блюпринт установлен.").withStyle(ChatFormatting.GREEN));
-      }
-   }
+            data.hubs.add(new WarfareWorldData.HubInfo(
+                    targetPos, playerTeam, false, level.dimension().location().toString()));
+            data.setDirty();
+            PacketHandler.sendToAllClients(level, data);
+            player.sendSystemMessage(
+                    Component.literal("Блюпринт ФОБ установлен!").withStyle(ChatFormatting.GREEN));
+        } else if (actionId == 22) {
+            placeBlueprint(
+                    level,
+                    targetPos,
+                    player,
+                    (BlockState) ((Block) ModBlocks.MORTAR_CONSTRUCTION_BLOCK.get())
+                            .defaultBlockState()
+                            .setValue(
+                                    MortarConstructionBlock.FACING,
+                                    player.getDirection().getOpposite()),
+                    "Mortar");
+        } else if (actionId == 23) {
+            placeBlueprint(
+                    level,
+                    targetPos,
+                    player,
+                    (BlockState) ((Block) ModBlocks.TOW_CONSTRUCTION_BLOCK.get())
+                            .defaultBlockState()
+                            .setValue(
+                                    TOWConstructionBlock.FACING,
+                                    player.getDirection().getOpposite()),
+                    "TOW");
+        }
+    }
 
-   // Пытается разместить точку сбора отряда: проверяет дистанцию до точек,
-   // наличие врагов и союзников поблизости
-   private static boolean trySpawnRally(ServerPlayer player, ServerLevel level, String team, WarfareWorldData.Squad squad, WarfareWorldData data) {
-      BlockPos pos = player.blockPosition();
+    private static void placeBlueprint(
+            ServerLevel level, BlockPos pos, ServerPlayer player, BlockState state, String name) {
+        if (level.getBlockState(pos).isAir() || level.getBlockState(pos).canBeReplaced()) {
+            level.setBlock(pos, state, 3);
+            BlockEntity be = level.getBlockEntity(pos);
+            String pTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
+            if (be instanceof M2ConstructionBlockEntity m2) {
+                m2.setTeam(pTeam);
+            } else if (be instanceof AGSConstructionBlockEntity ags) {
+                ags.setTeam(pTeam);
+            } else if (be instanceof MortarConstructionBlockEntity mortar) {
+                mortar.setTeam(pTeam);
+            } else if (be instanceof TOWConstructionBlockEntity tow) {
+                tow.setTeam(pTeam);
+            }
 
-      for (WarfareWorldData.CapturePoint point : data.capturePoints) {
-         Vec3 center = point.area.getCenter();
-         if (pos.distToCenterSqr(center.x, center.y, center.z)
-            < (Integer)WarfareConfig.MIN_RALLY_POINT_DISTANCE.get() * (Integer)WarfareConfig.MIN_RALLY_POINT_DISTANCE.get()) {
-             player.sendSystemMessage(Component.literal("Слишком близко к точке захвата!").withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(
+                    Component.literal(name + " — блюпринт установлен.").withStyle(ChatFormatting.GREEN));
+        }
+    }
+
+    // Пытается разместить точку сбора отряда: проверяет дистанцию до точек,
+    // наличие врагов и союзников поблизости
+    private static boolean trySpawnRally(
+            ServerPlayer player, ServerLevel level, String team, WarfareWorldData.Squad squad, WarfareWorldData data) {
+        BlockPos pos = player.blockPosition();
+
+        for (WarfareWorldData.CapturePoint point : data.capturePoints) {
+            Vec3 center = point.area.getCenter();
+            if (pos.distToCenterSqr(center.x, center.y, center.z)
+                    < (Integer) WarfareConfig.MIN_RALLY_POINT_DISTANCE.get()
+                            * (Integer) WarfareConfig.MIN_RALLY_POINT_DISTANCE.get()) {
+                player.sendSystemMessage(
+                        Component.literal("Слишком близко к точке захвата!").withStyle(ChatFormatting.RED));
+                return false;
+            }
+        }
+
+        int checkRadius = (Integer) WarfareConfig.RALLY_BLOCK_RADIUS.get();
+        AABB enemyBox = new AABB(pos).inflate(checkRadius);
+
+        for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, enemyBox)) {
+            if (!p.isSpectator()
+                    && p.getTeam() != null
+                    && !p.getTeam().getName().equalsIgnoreCase(team)) {
+                player.sendSystemMessage(Component.literal("Рядом враги! Нельзя развернуть рали.")
+                        .withStyle(ChatFormatting.RED));
+                return false;
+            }
+        }
+
+        int playerSquadId = player.getPersistentData().getInt("WARFARE_SquadID");
+        AABB squadBox = new AABB(pos).inflate(5.0);
+        int squadMatesNearby = 0;
+
+        for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, squadBox)) {
+            if (p != player && !p.isSpectator()) {
+                int otherSquadId = p.getPersistentData().getInt("WARFARE_SquadID");
+                if (playerSquadId != 0 && otherSquadId == playerSquadId) {
+                    squadMatesNearby++;
+                }
+            }
+        }
+
+        if (squadMatesNearby < 1 && !player.isCreative()) {
+            player.sendSystemMessage(
+                    Component.literal("Нужен минимум 1 участник отряда рядом!").withStyle(ChatFormatting.RED));
             return false;
-         }
-      }
+        }
 
-      int checkRadius = (Integer)WarfareConfig.RALLY_BLOCK_RADIUS.get();
-      AABB enemyBox = new AABB(pos).inflate(checkRadius);
-
-      for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, enemyBox)) {
-         if (!p.isSpectator() && p.getTeam() != null && !p.getTeam().getName().equalsIgnoreCase(team)) {
-             player.sendSystemMessage(Component.literal("Рядом враги! Нельзя развернуть рали.").withStyle(ChatFormatting.RED));
-            return false;
-         }
-      }
-
-      int playerSquadId = player.getPersistentData().getInt("WARFARE_SquadID");
-      AABB squadBox = new AABB(pos).inflate(5.0);
-      int squadMatesNearby = 0;
-
-      for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, squadBox)) {
-         if (p != player && !p.isSpectator()) {
-            int otherSquadId = p.getPersistentData().getInt("WARFARE_SquadID");
-            if (playerSquadId != 0 && otherSquadId == playerSquadId) {
-               squadMatesNearby++;
+        if (squad.rallyPos != null && level.isLoaded(squad.rallyPos)) {
+            if (level.getBlockEntity(squad.rallyPos) instanceof RallyPointBlockEntity rbe) {
+                rbe.isDecay = true;
             }
-         }
-      }
 
-      if (squadMatesNearby < 1 && !player.isCreative()) {
-          player.sendSystemMessage(Component.literal("Нужен минимум 1 участник отряда рядом!").withStyle(ChatFormatting.RED));
-         return false;
-      }
+            level.removeBlock(squad.rallyPos, false);
+        }
 
-      if (squad.rallyPos != null && level.isLoaded(squad.rallyPos)) {
-         if (level.getBlockEntity(squad.rallyPos) instanceof RallyPointBlockEntity rbe) {
-            rbe.isDecay = true;
-         }
+        BlockState rallyState = team.equals("BLUE")
+                ? ((Block) ModBlocks.BLUE_RALLY_BLOCK.get()).defaultBlockState()
+                : ((Block) ModBlocks.RED_RALLY_BLOCK.get()).defaultBlockState();
+        level.setBlock(pos, rallyState, 3);
+        BlockEntity be = level.getBlockEntity(pos);
+        if (be instanceof RallyPointBlockEntity rbe) {
+            rbe.setSquadId(squad.id);
+        }
 
-         level.removeBlock(squad.rallyPos, false);
-      }
+        squad.rallyPos = pos;
+        squad.rallyDimension = level.dimension().location().toString();
+        squad.rallyExpiryTick = level.getGameTime() + 12000L;
+        if (be instanceof RallyPointBlockEntity rbe) {
+            rbe.setExpiryTick(squad.rallyExpiryTick);
+        }
 
-      BlockState rallyState = team.equals("BLUE") ? ((Block)ModBlocks.BLUE_RALLY_BLOCK.get()).defaultBlockState() : ((Block)ModBlocks.RED_RALLY_BLOCK.get()).defaultBlockState();
-      level.setBlock(pos, rallyState, 3);
-      BlockEntity be = level.getBlockEntity(pos);
-      if (be instanceof RallyPointBlockEntity rbe) {
-         rbe.setSquadId(squad.id);
-      }
+        player.sendSystemMessage(Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
+        if (team.equals("BLUE")) {
+            data.blueRallies.add(pos);
+        } else {
+            data.redRallies.add(pos);
+        }
 
-      squad.rallyPos = pos;
-      squad.rallyDimension = level.dimension().location().toString();
-      squad.rallyExpiryTick = level.getGameTime() + 12000L;
-      if (be instanceof RallyPointBlockEntity rbe) {
-         rbe.setExpiryTick(squad.rallyExpiryTick);
-      }
-
-       player.sendSystemMessage(Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
-      if (team.equals("BLUE")) {
-         data.blueRallies.add(pos);
-      } else {
-         data.redRallies.add(pos);
-      }
-
-      data.setDirty();
-      PacketHandler.sendToAllClients(level, data);
-      PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
-      return true;
-   }
+        data.setDirty();
+        PacketHandler.sendToAllClients(level, data);
+        PacketHandler.INSTANCE.send(
+                PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
+        return true;
+    }
 }

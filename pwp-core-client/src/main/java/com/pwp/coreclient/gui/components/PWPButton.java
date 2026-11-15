@@ -13,7 +13,11 @@ import net.minecraft.sounds.SoundEvents;
 public class PWPButton extends AbstractWidget {
 
     public enum Style {
-        PRIMARY, ACCENT, DANGER, DARK, GHOST
+        PRIMARY,
+        ACCENT,
+        DANGER,
+        DARK,
+        GHOST
     }
 
     public interface OnPress {
@@ -65,7 +69,9 @@ public class PWPButton extends AbstractWidget {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (this.active && this.visible && this.loading) return false;
         if (this.active && this.visible && clicked(mouseX, mouseY)) {
-            Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+            Minecraft.getInstance()
+                    .getSoundManager()
+                    .play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
             this.onPress.onPress(this);
             return true;
         }
@@ -73,8 +79,7 @@ public class PWPButton extends AbstractWidget {
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput output) {
-    }
+    protected void updateWidgetNarration(NarrationElementOutput output) {}
 
     @Override
     protected void renderWidget(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
@@ -87,7 +92,8 @@ public class PWPButton extends AbstractWidget {
 
         boolean hovered = this.isHovered();
         boolean active = this.active;
-        boolean pressedNow = active && hovered && Minecraft.getInstance().mouseHandler.isLeftPressed();
+        boolean pressedNow =
+                active && hovered && Minecraft.getInstance().mouseHandler.isLeftPressed();
 
         float hoverTarget = (hovered && active) ? 1.0F : 0.0F;
         float pressTarget = pressedNow ? 1.0F : 0.0F;
@@ -157,8 +163,8 @@ public class PWPButton extends AbstractWidget {
         int r = PWPTheme.Spacing.RADIUS_SMALL;
 
         if (showAccentGlow) {
-            int glowColor = PWPTheme.Colors.multiplyAlpha(
-                    PWPTheme.Shadows.ACCENT_GLOW_SMALL, Math.max(hoverAnim, pressAnim));
+            int glowColor =
+                    PWPTheme.Colors.multiplyAlpha(PWPTheme.Shadows.ACCENT_GLOW_SMALL, Math.max(hoverAnim, pressAnim));
             RoundedRect.glow(gui, x, y, w, h, r, 2, glowColor);
         }
 
@@ -185,7 +191,8 @@ public class PWPButton extends AbstractWidget {
             gui.drawString(mcFont, shortText, x + 5, textY + 1, shadowColor, false);
             gui.drawString(mcFont, shortText, x + 5, textY, textColor, false);
         } else {
-            gui.drawString(mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY + 1, shadowColor, false);
+            gui.drawString(
+                    mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY + 1, shadowColor, false);
             gui.drawString(mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY, textColor, false);
         }
 

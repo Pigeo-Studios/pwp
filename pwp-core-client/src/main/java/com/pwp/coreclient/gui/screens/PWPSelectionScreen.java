@@ -1,17 +1,16 @@
 package com.pwp.coreclient.gui.screens;
 
+import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPCard;
 import com.pwp.coreclient.gui.components.PWPLayout;
-import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Component;
-
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class PWPSelectionScreen extends Screen {
 
@@ -42,8 +41,16 @@ public class PWPSelectionScreen extends Screen {
         public final boolean disabled;
         public final int x, y, w, h;
 
-        public SelectionItem(int index, String label, boolean selected, boolean hovered, boolean disabled,
-                              int x, int y, int w, int h) {
+        public SelectionItem(
+                int index,
+                String label,
+                boolean selected,
+                boolean hovered,
+                boolean disabled,
+                int x,
+                int y,
+                int w,
+                int h) {
             this.index = index;
             this.label = label;
             this.selected = selected;
@@ -56,24 +63,48 @@ public class PWPSelectionScreen extends Screen {
         }
     }
 
-    public PWPSelectionScreen(String title, String instruction, List<String> items,
-                              BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
-                              Consumer<Integer> onConfirm) {
+    public PWPSelectionScreen(
+            String title,
+            String instruction,
+            List<String> items,
+            BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
+            Consumer<Integer> onConfirm) {
         this(title, instruction, items, cardRenderer, onConfirm, -1);
     }
 
-    public PWPSelectionScreen(String title, String instruction, List<String> items,
-                              BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
-                              Consumer<Integer> onConfirm, int autoSelectSeconds) {
-        this(title, instruction, items, cardRenderer, onConfirm, autoSelectSeconds,
-            130, 50, PWPTheme.Spacing.GRID_GAP, null, false);
+    public PWPSelectionScreen(
+            String title,
+            String instruction,
+            List<String> items,
+            BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
+            Consumer<Integer> onConfirm,
+            int autoSelectSeconds) {
+        this(
+                title,
+                instruction,
+                items,
+                cardRenderer,
+                onConfirm,
+                autoSelectSeconds,
+                130,
+                50,
+                PWPTheme.Spacing.GRID_GAP,
+                null,
+                false);
     }
 
-    public PWPSelectionScreen(String title, String instruction, List<String> items,
-                              BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
-                              Consumer<Integer> onConfirm, int autoSelectSeconds,
-                              int cardW, int cardH, int gap,
-                              IntPredicate disabledPredicate, boolean instantSelect) {
+    public PWPSelectionScreen(
+            String title,
+            String instruction,
+            List<String> items,
+            BiConsumer<GuiGraphics, SelectionItem> cardRenderer,
+            Consumer<Integer> onConfirm,
+            int autoSelectSeconds,
+            int cardW,
+            int cardH,
+            int gap,
+            IntPredicate disabledPredicate,
+            boolean instantSelect) {
         super(Component.literal(title));
         this.title = title;
         this.instruction = instruction;
@@ -99,15 +130,17 @@ public class PWPSelectionScreen extends Screen {
         int btnH = 28;
 
         confirmBtn = addRenderableWidget(new PWPButton(
-            PWPLayout.centerX(width, btnW), height - 55, btnW, btnH,
-            Component.literal("Подтвердить"),
-            btn -> {
-                if (selectedIndex >= 0 && onConfirm != null) {
-                    onConfirm.accept(selectedIndex);
-                }
-            },
-            PWPButton.Style.ACCENT
-        ));
+                PWPLayout.centerX(width, btnW),
+                height - 55,
+                btnW,
+                btnH,
+                Component.literal("Подтвердить"),
+                btn -> {
+                    if (selectedIndex >= 0 && onConfirm != null) {
+                        onConfirm.accept(selectedIndex);
+                    }
+                },
+                PWPButton.Style.ACCENT));
         confirmBtn.active = false;
     }
 
@@ -118,7 +151,13 @@ public class PWPSelectionScreen extends Screen {
 
         var font = PWPTheme.Fonts.display();
         if (instruction != null && !instruction.isEmpty()) {
-            gui.drawString(font, Component.literal(instruction), width / 2 - font.width(instruction) / 2, 28, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(
+                    font,
+                    Component.literal(instruction),
+                    width / 2 - font.width(instruction) / 2,
+                    28,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
         }
 
         int contentW = PWPLayout.contentWidth(width);
@@ -143,7 +182,8 @@ public class PWPSelectionScreen extends Screen {
             PWPCard.State state = PWPCard.getState(isSelected, isHovered, isDisabled);
             PWPCard.render(gui, ix, iy, cardW, cardH, state);
 
-            SelectionItem si = new SelectionItem(i, items.get(i), isSelected, isHovered, isDisabled, ix, iy, cardW, cardH);
+            SelectionItem si =
+                    new SelectionItem(i, items.get(i), isSelected, isHovered, isDisabled, ix, iy, cardW, cardH);
             cardRenderer.accept(gui, si);
         }
 
@@ -155,7 +195,13 @@ public class PWPSelectionScreen extends Screen {
                 confirmBtn.active = true;
             }
             String timerText = "Автовыбор через " + remaining + "с";
-            gui.drawString(font, Component.literal(timerText), width / 2 - font.width(timerText) / 2, height - 85, PWPTheme.Colors.TEXT_DIM, false);
+            gui.drawString(
+                    font,
+                    Component.literal(timerText),
+                    width / 2 - font.width(timerText) / 2,
+                    height - 85,
+                    PWPTheme.Colors.TEXT_DIM,
+                    false);
         }
 
         super.render(gui, mouseX, mouseY, partialTick);
@@ -164,8 +210,13 @@ public class PWPSelectionScreen extends Screen {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!instantSelect && button == 0 && selectedIndex >= 0 && confirmBtn.active) {
-            if (PWPCard.isHovered(confirmBtn.getX(), confirmBtn.getY(), confirmBtn.getWidth(), confirmBtn.getHeight(),
-                (int) mouseX, (int) mouseY)) {
+            if (PWPCard.isHovered(
+                    confirmBtn.getX(),
+                    confirmBtn.getY(),
+                    confirmBtn.getWidth(),
+                    confirmBtn.getHeight(),
+                    (int) mouseX,
+                    (int) mouseY)) {
                 return super.mouseClicked(mouseX, mouseY, button);
             }
         }

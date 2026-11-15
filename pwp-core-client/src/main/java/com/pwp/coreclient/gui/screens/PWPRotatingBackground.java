@@ -1,9 +1,8 @@
 package com.pwp.coreclient.gui.screens;
 
+import java.util.Random;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-
-import java.util.Random;
 
 public class PWPRotatingBackground {
 

@@ -1,20 +1,20 @@
 package com.pigeostudios.pwp.warfare.network;
 
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.google.gson.JsonParseException;
-import com.pwp.api.core.CoreApi;
-import com.pwp.api.util.ServerThread;
-import java.util.concurrent.CompletableFuture;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.core.CoreApi;
+import com.pwp.api.util.ServerThread;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.NetworkEvent.Context;
+import net.minecraftforge.network.PacketDistributor;
 
 public class PacketRequestData {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(PacketRequestData.class);
@@ -45,7 +45,8 @@ public class PacketRequestData {
             ServerThread.thenOnServer(fetch(msg.dataType, params, player), player.server, response -> {
                 if (player.hasDisconnected()) return;
                 String json = toResult(msg.dataType, params, response, player);
-                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSendData(msg.dataType, json));
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.PLAYER.with(() -> player), new PacketSendData(msg.dataType, json));
             });
         });
         ctx.get().setPacketHandled(true);
@@ -122,7 +123,7 @@ public class PacketRequestData {
         // Фолбэк: киты текущего матча из памяти (API недоступен)
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
         Map<String, WarfareWorldData.KitInfo> target =
-            faction.equalsIgnoreCase(data.blueFaction) ? data.blueKits : data.redKits;
+                faction.equalsIgnoreCase(data.blueFaction) ? data.blueKits : data.redKits;
         if (target != null) {
             for (WarfareWorldData.KitInfo k : target.values()) {
                 JsonObject entry = new JsonObject();

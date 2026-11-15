@@ -13,8 +13,7 @@ import java.util.Set;
  */
 public final class ChunkCorridor {
 
-    private ChunkCorridor() {
-    }
+    private ChunkCorridor() {}
 
     /** Сравнивает старый и новый коридоры. */
     public static ChunkCorridorDiff diff(long[] oldCorridor, long[] newCorridor) {

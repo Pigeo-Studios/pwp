@@ -1,7 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -16,8 +15,13 @@ public class PacketSendData {
         this.jsonData = jsonData;
     }
 
-    public String getDataType() { return dataType; }
-    public String getJsonData() { return jsonData; }
+    public String getDataType() {
+        return dataType;
+    }
+
+    public String getJsonData() {
+        return jsonData;
+    }
 
     public static void encode(PacketSendData msg, FriendlyByteBuf buf) {
         buf.writeUtf(msg.dataType);

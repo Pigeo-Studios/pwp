@@ -59,7 +59,10 @@ public class PacketAction {
             ServerPlayer player = ctx.get().getSender();
             if (player == null) return;
             if (!PwpPermissions.isAdmin(player)) {
-                LOG.warn("Игрок {} без прав прислал админ-действие {}", player.getGameProfile().getName(), msg.action);
+                LOG.warn(
+                        "Игрок {} без прав прислал админ-действие {}",
+                        player.getGameProfile().getName(),
+                        msg.action);
                 reply(player, msg.action, false, "Недостаточно прав");
                 return;
             }
@@ -77,8 +80,10 @@ public class PacketAction {
                 return;
             }
             ServerThread.thenOnServer(call, player.server, resp -> {
-                String error = resp != null && resp.has("error") && !resp.get("error").isJsonNull()
-                        ? resp.get("error").getAsString() : "core-service недоступен";
+                String error =
+                        resp != null && resp.has("error") && !resp.get("error").isJsonNull()
+                                ? resp.get("error").getAsString()
+                                : "core-service недоступен";
                 boolean ok = CoreApi.isSuccess(resp);
                 reply(player, msg.action, ok, ok ? "" : error);
             });
@@ -91,8 +96,14 @@ public class PacketAction {
         switch (action) {
             case SAVE_SKIN:
                 if (!has(p, "skinId", "name", "slotType", "rarity", "modelPath")) return null;
-                return CoreApi.saveSkin(str(p, "skinId"), str(p, "name"), str(p, "description"),
-                        str(p, "slotType"), str(p, "weaponTag"), str(p, "rarity"), str(p, "modelPath"));
+                return CoreApi.saveSkin(
+                        str(p, "skinId"),
+                        str(p, "name"),
+                        str(p, "description"),
+                        str(p, "slotType"),
+                        str(p, "weaponTag"),
+                        str(p, "rarity"),
+                        str(p, "modelPath"));
             case DELETE_SKIN:
                 if (!has(p, "skinId")) return null;
                 return CoreApi.deleteSkin(str(p, "skinId"));
@@ -110,7 +121,8 @@ public class PacketAction {
         result.addProperty("action", action);
         result.addProperty("success", success);
         result.addProperty("error", error);
-        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
+        PacketHandler.INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player),
                 new PacketDataResponse(PacketDataResponse.ACTION_RESULT, result.toString()));
     }
 

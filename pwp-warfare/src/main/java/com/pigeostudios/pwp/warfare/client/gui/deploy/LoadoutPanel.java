@@ -3,12 +3,10 @@ package com.pigeostudios.pwp.warfare.client.gui.deploy;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.world.item.ItemStack;
-
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
 
 public class LoadoutPanel {
 
@@ -16,7 +14,9 @@ public class LoadoutPanel {
 
     public void render(GuiGraphics gui, int x, int y, int w, int maxH, int mx, int my, String selectedKit) {
         var f = PWPTheme.Fonts.display();
-        var kitO = DeployData.kits.stream().filter(k -> k.name().equals(selectedKit)).findFirst();
+        var kitO = DeployData.kits.stream()
+                .filter(k -> k.name().equals(selectedKit))
+                .findFirst();
         if (kitO.isEmpty()) return;
         var kit = kitO.get();
 
@@ -82,18 +82,19 @@ public class LoadoutPanel {
             long elapsed = now - start;
             long duration = expanding ? FADE_IN_MS : FADE_OUT_MS;
             float alpha = expanding
-                ? Math.min(1f, (float)elapsed / duration)
-                : Math.max(0f, 1f - (float)elapsed / duration);
+                    ? Math.min(1f, (float) elapsed / duration)
+                    : Math.max(0f, 1f - (float) elapsed / duration);
             boolean showAlts = alpha > 0 && hasAlt;
 
-            String squadLabel = switch (slot.label()) {
-                case "PRIMARY" -> "СТВОЛ";
-                case "SECONDARY" -> "ВТОРИЧКА";
-                case "THROWABLE" -> "ГРАНАТЫ";
-                case "SPECIAL" -> "СПЕЦ";
-                case "BACKPACK" -> "РЮКЗАК";
-                default -> slot.label();
-            };
+            String squadLabel =
+                    switch (slot.label()) {
+                        case "PRIMARY" -> "СТВОЛ";
+                        case "SECONDARY" -> "ВТОРИЧКА";
+                        case "THROWABLE" -> "ГРАНАТЫ";
+                        case "SPECIAL" -> "СПЕЦ";
+                        case "BACKPACK" -> "РЮКЗАК";
+                        default -> slot.label();
+                    };
 
             gui.drawString(f, squadLabel, x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
             cy += 10;
@@ -111,8 +112,13 @@ public class LoadoutPanel {
 
             if (hasAlt) {
                 String arr = expanding ? "\u25B2" : "\u25BC";
-                gui.drawString(f, arr, x + w - pad - 12, cy + 5,
-                    shouldExpand ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM, false);
+                gui.drawString(
+                        f,
+                        arr,
+                        x + w - pad - 12,
+                        cy + 5,
+                        shouldExpand ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM,
+                        false);
             }
             cy += barH + 2;
 
@@ -199,13 +205,15 @@ public class LoadoutPanel {
         int r = (color >> 16) & 0xFF;
         int g = (color >> 8) & 0xFF;
         int b = color & 0xFF;
-        a = (int)(a * alpha);
+        a = (int) (a * alpha);
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     public boolean mouseClicked(double mx, double my, int btn, int x, int y, int w, int maxH, String selectedKit) {
         if (btn != 0) return false;
-        var kitO = DeployData.kits.stream().filter(k -> k.name().equals(selectedKit)).findFirst();
+        var kitO = DeployData.kits.stream()
+                .filter(k -> k.name().equals(selectedKit))
+                .findFirst();
         if (kitO.isEmpty()) return false;
         var kit = kitO.get();
 

@@ -1,12 +1,11 @@
 package com.pwp.coreclient.network;
 
+import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
-
 public class VoteFactionPacket {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteFactionPacket.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteFactionPacket.class);
 
     public final String blueFaction;
     public final String redFaction;
@@ -32,8 +31,10 @@ public class VoteFactionPacket {
                 try {
                     Class<?> vmClass = Class.forName("com.pwp.lobby.FactionVotingManager");
                     vmClass.getMethod("vote", java.util.UUID.class, String.class, String.class)
-                           .invoke(null, player.getUUID(), msg.blueFaction, msg.redFaction);
-                } catch (Exception ignored) { PWP_LOG.warn("VoteFactionPacket.handle: исключение", ignored); }
+                            .invoke(null, player.getUUID(), msg.blueFaction, msg.redFaction);
+                } catch (Exception ignored) {
+                    PWP_LOG.warn("VoteFactionPacket.handle: исключение", ignored);
+                }
             }
         });
         ctx.get().setPacketHandled(true);

@@ -51,7 +51,10 @@ public final class MatchPolicy {
     /** Применяет ответ; null (core-service недоступен) оставляет последнее известное значение. */
     static void apply(JsonObject data) {
         if (data == null) return;
-        if (data.has("canStartNewMatch")) canStart = data.get("canStartNewMatch").getAsBoolean();
-        reason = data.has("reason") && !data.get("reason").isJsonNull() ? data.get("reason").getAsString() : null;
+        if (data.has("canStartNewMatch"))
+            canStart = data.get("canStartNewMatch").getAsBoolean();
+        reason = data.has("reason") && !data.get("reason").isJsonNull()
+                ? data.get("reason").getAsString()
+                : null;
     }
 }

@@ -5,54 +5,60 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 // Предмет-маркер для вызова грузовика снабжения
 // Содержит информацию о команде, типе техники и штрафе за потерю
 public class SupplyTruckMarkerItem extends Item {
-   private final String team;
-   private final int penalty;
-   private final String vehicleType;
-   private final int maxMats;
+    private final String team;
+    private final int penalty;
+    private final String vehicleType;
+    private final int maxMats;
 
-   public SupplyTruckMarkerItem(String team, int penalty, String vehicleType, int maxMats) {
-      super(new Properties().stacksTo(1));
-      this.team = team;
-      this.penalty = penalty;
-      this.vehicleType = vehicleType;
-      this.maxMats = maxMats;
-   }
+    public SupplyTruckMarkerItem(String team, int penalty, String vehicleType, int maxMats) {
+        super(new Properties().stacksTo(1));
+        this.team = team;
+        this.penalty = penalty;
+        this.vehicleType = vehicleType;
+        this.maxMats = maxMats;
+    }
 
-   public String getTeam() {
-      return this.team;
-   }
+    public String getTeam() {
+        return this.team;
+    }
 
-   public int getPenalty() {
-      return this.penalty;
-   }
+    public int getPenalty() {
+        return this.penalty;
+    }
 
-   public String getVehicleType() {
-      return this.vehicleType;
-   }
+    public String getVehicleType() {
+        return this.vehicleType;
+    }
 
-   public int getMaxMats() {
-      return this.maxMats;
-   }
+    public int getMaxMats() {
+        return this.maxMats;
+    }
 
-   public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-      ChatFormatting color = this.team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-      tooltip.add(Component.literal("Команда: " + this.team).withStyle(color));
-      tooltip.add(Component.literal("Тип: " + this.vehicleType).withStyle(ChatFormatting.GRAY));
-      tooltip.add(Component.literal("Макс. " + WarfareConfig.SUPPLY_TRUCK_CRATES.get() + " ящиков. Нажмите X, чтобы сбросить.").withStyle(ChatFormatting.YELLOW));
-      if (this.maxMats > 0) {
-         tooltip.add(Component.literal("Внутри: " + this.maxMats + " материалов").withStyle(ChatFormatting.YELLOW));
-      }
+    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+        ChatFormatting color = this.team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
+        tooltip.add(Component.literal("Команда: " + this.team).withStyle(color));
+        tooltip.add(Component.literal("Тип: " + this.vehicleType).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.literal(
+                        "Макс. " + WarfareConfig.SUPPLY_TRUCK_CRATES.get() + " ящиков. Нажмите X, чтобы сбросить.")
+                .withStyle(ChatFormatting.YELLOW));
+        if (this.maxMats > 0) {
+            tooltip.add(
+                    Component.literal("Внутри: " + this.maxMats + " материалов").withStyle(ChatFormatting.YELLOW));
+        }
 
-      tooltip.add(Component.literal("Штраф при потере: -" + this.penalty + " тикетов").withStyle(ChatFormatting.RED));
-      tooltip.add(Component.literal("thank exactly").withStyle(ChatFormatting.DARK_PURPLE).withStyle(ChatFormatting.ITALIC));
-   }
+        tooltip.add(Component.literal("Штраф при потере: -" + this.penalty + " тикетов")
+                .withStyle(ChatFormatting.RED));
+        tooltip.add(Component.literal("thank exactly")
+                .withStyle(ChatFormatting.DARK_PURPLE)
+                .withStyle(ChatFormatting.ITALIC));
+    }
 }

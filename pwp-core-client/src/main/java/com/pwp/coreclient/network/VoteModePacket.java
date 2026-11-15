@@ -1,12 +1,11 @@
 package com.pwp.coreclient.network;
 
+import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
-
 public class VoteModePacket {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteModePacket.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteModePacket.class);
 
     public final String modeName;
 
@@ -28,8 +27,11 @@ public class VoteModePacket {
             if (player != null) {
                 try {
                     Class<?> lmClass = Class.forName("com.pwp.lobby.LobbyMod");
-                    lmClass.getMethod("voteMode", java.util.UUID.class, String.class).invoke(null, player.getUUID(), msg.modeName);
-                } catch (Exception ignored) { PWP_LOG.warn("VoteModePacket.handle: исключение", ignored); }
+                    lmClass.getMethod("voteMode", java.util.UUID.class, String.class)
+                            .invoke(null, player.getUUID(), msg.modeName);
+                } catch (Exception ignored) {
+                    PWP_LOG.warn("VoteModePacket.handle: исключение", ignored);
+                }
             }
         });
         ctx.get().setPacketHandled(true);

@@ -7,21 +7,19 @@ import com.pigeostudios.pwp.warfare.network.PacketRequestCMD;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.PacketSquadAction;
 import com.pigeostudios.pwp.warfare.network.PacketSquadChat;
+import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-
-import java.util.HashSet;
-import java.util.Set;
 
 public class SquadSelectionScreen extends Screen {
 
@@ -55,26 +53,42 @@ public class SquadSelectionScreen extends Screen {
             if (s.members.contains(myName)) expandedSquads.add(s.id);
         }
 
-        applyCmdButton = addRenderableWidget(new PWPButton(10, 10, 150, 20,
-            Component.literal("Стать командиром"),
-            b -> { PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD()); b.visible = false; },
-            PWPButton.Style.DARK));
+        applyCmdButton = addRenderableWidget(new PWPButton(
+                10,
+                10,
+                150,
+                20,
+                Component.literal("Стать командиром"),
+                b -> {
+                    PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
+                    b.visible = false;
+                },
+                PWPButton.Style.DARK));
 
-        kitButton = addRenderableWidget(new PWPButton(10, height - BOTTOM_BAR_H + 8, 150, 22,
-            Component.literal("\u2694 Снаряжение"),
-            b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
-            PWPButton.Style.DARK));
+        kitButton = addRenderableWidget(new PWPButton(
+                10,
+                height - BOTTOM_BAR_H + 8,
+                150,
+                22,
+                Component.literal("\u2694 Снаряжение"),
+                b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
+                PWPButton.Style.DARK));
         kitButton.visible = isInSquad;
 
-        nameInput = new EditBox(PWPTheme.Fonts.display(), 10, height - 55, 150, 20, Component.literal("Название отряда"));
+        nameInput =
+                new EditBox(PWPTheme.Fonts.display(), 10, height - 55, 150, 20, Component.literal("Название отряда"));
         nameInput.setMaxLength(12);
         nameInput.setVisible(!isInSquad);
         addRenderableWidget(nameInput);
 
-        createButton = addRenderableWidget(new PWPButton(10, height - 30, 150, 20,
-            Component.literal("Создать отряд"),
-            b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
-            PWPButton.Style.DARK));
+        createButton = addRenderableWidget(new PWPButton(
+                10,
+                height - 30,
+                150,
+                20,
+                Component.literal("Создать отряд"),
+                b -> PacketHandler.INSTANCE.sendToServer(new PacketSquadAction(0, 0, nameInput.getValue())),
+                PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
 
         int rightW = width - SquadUIHelper.getSidebarWidth();
@@ -86,10 +100,20 @@ public class SquadSelectionScreen extends Screen {
 
         int chatX = 175;
         int chatW = width - SquadUIHelper.getSidebarWidth() - 10;
-        chatModeButton = addRenderableWidget(new PWPButton(chatX, height - 25, 50, 20, getChatModeText(),
-            b -> { chatMode = (chatMode + 1) % 3; b.setMessage(getChatModeText()); }, PWPButton.Style.DARK));
+        chatModeButton = addRenderableWidget(new PWPButton(
+                chatX,
+                height - 25,
+                50,
+                20,
+                getChatModeText(),
+                b -> {
+                    chatMode = (chatMode + 1) % 3;
+                    b.setMessage(getChatModeText());
+                },
+                PWPButton.Style.DARK));
 
-        chatInput = new EditBox(PWPTheme.Fonts.display(), chatX + 55, height - 25, chatW - 55, 20, Component.literal("Chat"));
+        chatInput = new EditBox(
+                PWPTheme.Fonts.display(), chatX + 55, height - 25, chatW - 55, 20, Component.literal("Chat"));
         chatInput.setMaxLength(256);
         addRenderableWidget(chatInput);
     }
@@ -153,13 +177,19 @@ public class SquadSelectionScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        if (mapCtx.visible) { mapCtx.mouseClicked(mx, my, btn); return true; }
+        if (mapCtx.visible) {
+            mapCtx.mouseClicked(mx, my, btn);
+            return true;
+        }
         if (contextMenu.isVisible()) {
             contextMenu.mouseClicked(mx, my, btn);
             return true;
         }
         if (mapRenderer.isMouseOver(mx, my)) {
-            if (btn == 1) { handleMapRightClick(mx, my); return true; }
+            if (btn == 1) {
+                handleMapRightClick(mx, my);
+                return true;
+            }
             if (mapRenderer.mouseClicked(mx, my, btn)) return true;
             return true;
         }
@@ -190,20 +220,25 @@ public class SquadSelectionScreen extends Screen {
     private void handleMapRightClick(double mx, double my) {
         LocalPlayer p = minecraft.player;
         if (!SquadUIHelper.isSquadLeaderOrFTL(p)) {
-            p.displayClientMessage(Component.translatable("gui.pwpwarfare.map_marker.error").withStyle(ChatFormatting.RED), true);
+            p.displayClientMessage(
+                    Component.translatable("gui.pwpwarfare.map_marker.error").withStyle(ChatFormatting.RED), true);
             return;
         }
-        int wx = (int)(mapRenderer.getCenterX(p) + (mx - (mapX + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
-        int wz = (int)(mapRenderer.getCenterZ(p) + (my - (mapY + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
-        mapCtx.open((int)mx, (int)my, (cat, icon) -> {
+        int wx = (int) (mapRenderer.getCenterX(p) + (mx - (mapX + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
+        int wz = (int) (mapRenderer.getCenterZ(p) + (my - (mapY + mapSize / 2.0)) * mapRenderer.getBlocksPerPixel());
+        mapCtx.open((int) mx, (int) my, (cat, icon) -> {
             if ("arrow".equals(icon) && ("enemy".equals(cat) || "team".equals(cat))) return;
             PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(
-                "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad", cat, icon, new BlockPos(wx, 64, wz)));
+                    "enemy".equals(cat) ? "enemy" : "team".equals(cat) ? "team" : "squad",
+                    cat,
+                    icon,
+                    new BlockPos(wx, 64, wz)));
         });
     }
 
     private void renderTopBar(GuiGraphics gui) {
-        SquadUIHelper.renderTeamHeader(gui, 180, 10, getPlayerTeam().toUpperCase().contains("BLUE"));
+        SquadUIHelper.renderTeamHeader(
+                gui, 180, 10, getPlayerTeam().toUpperCase().contains("BLUE"));
     }
 
     private Component getChatModeText() {
@@ -219,5 +254,7 @@ public class SquadSelectionScreen extends Screen {
     }
 
     @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 }

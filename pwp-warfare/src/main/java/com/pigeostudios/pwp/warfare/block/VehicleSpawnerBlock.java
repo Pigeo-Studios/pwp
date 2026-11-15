@@ -14,8 +14,8 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
@@ -23,36 +23,41 @@ import org.jetbrains.annotations.Nullable;
 // Блок спаунера техники
 // Позволяет в креативном режиме настраивать и спаунить технику
 public class VehicleSpawnerBlock extends BaseEntityBlock {
-   public VehicleSpawnerBlock() {
-      super(Properties.copy(Blocks.DROPPER).strength(-1.0F, 3600000.0F));
-   }
+    public VehicleSpawnerBlock() {
+        super(Properties.copy(Blocks.DROPPER).strength(-1.0F, 3600000.0F));
+    }
 
-   public RenderShape getRenderShape(BlockState state) {
-      return RenderShape.MODEL;
-   }
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
 
-   @Nullable
-   public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-      return new VehicleSpawnerBlockEntity(pos, state);
-   }
+    @Nullable
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new VehicleSpawnerBlockEntity(pos, state);
+    }
 
-   // Открывает меню спаунера техники (только админ, op 2+)
-   public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-      if (!level.isClientSide) {
-         if (PwpPermissions.isAdmin(player)) {
-            if (level.getBlockEntity(pos) instanceof VehicleSpawnerBlockEntity spawner) {
-               NetworkHooks.openScreen((ServerPlayer)player, spawner, pos);
+    // Открывает меню спаунера техники (только админ, op 2+)
+    public InteractionResult use(
+            BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!level.isClientSide) {
+            if (PwpPermissions.isAdmin(player)) {
+                if (level.getBlockEntity(pos) instanceof VehicleSpawnerBlockEntity spawner) {
+                    NetworkHooks.openScreen((ServerPlayer) player, spawner, pos);
+                }
+            } else {
+                player.displayClientMessage(Component.literal("Доступ запрещён: только администратор"), true);
             }
-         } else {
-             player.displayClientMessage(Component.literal("Доступ запрещён: только администратор"), true);
-         }
-      }
+        }
 
-      return InteractionResult.SUCCESS;
-   }
+        return InteractionResult.SUCCESS;
+    }
 
-   @Nullable
-   public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-      return level.isClientSide ? null : createTickerHelper(type, (BlockEntityType)ModBlocks.VEHICLE_SPAWNER_BE.get(), VehicleSpawnerBlockEntity::tick);
-   }
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type) {
+        return level.isClientSide
+                ? null
+                : createTickerHelper(
+                        type, (BlockEntityType) ModBlocks.VEHICLE_SPAWNER_BE.get(), VehicleSpawnerBlockEntity::tick);
+    }
 }

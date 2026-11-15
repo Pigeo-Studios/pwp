@@ -15,11 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ru.lavafrai.uncomplicatedfpv.entity.AddonDroneEntity.class)
 public class DroneConnectMixin {
 
-   @Inject(method = "beginRemoteControl", at = @At("HEAD"), cancellable = true, remap = false)
-   private void pwpwarfare$blockConnectWhileDeploying(ServerPlayer player, CallbackInfoReturnable<Boolean> cir) {
-      Entity self = (Entity) (Object) this;
-      if (self.getPersistentData().getBoolean("WARFARE_DroneDeploying")) {
-         cir.setReturnValue(false);
-      }
-   }
+    @Inject(method = "beginRemoteControl", at = @At("HEAD"), cancellable = true, remap = false)
+    private void pwpwarfare$blockConnectWhileDeploying(ServerPlayer player, CallbackInfoReturnable<Boolean> cir) {
+        Entity self = (Entity) (Object) this;
+        if (self.getPersistentData().getBoolean("WARFARE_DroneDeploying")) {
+            cir.setReturnValue(false);
+        }
+    }
 }

@@ -16,92 +16,101 @@ import net.minecraft.world.level.block.state.BlockState;
 // Сущность блока строительства миномёта
 // Отслеживает прогресс строительства и количество копающих игроков
 public class MortarConstructionBlockEntity extends BlockEntity {
-   // Максимальный прогресс строительства (2400 тиков)
-   public static final int MAX_PROGRESS = 2400;
-   private int currentProgress = 0;
-   private int activeDiggers = 0;
-   private String teamOwner = "NEUTRAL";
+    // Максимальный прогресс строительства (2400 тиков)
+    public static final int MAX_PROGRESS = 2400;
+    private int currentProgress = 0;
+    private int activeDiggers = 0;
+    private String teamOwner = "NEUTRAL";
 
-   public MortarConstructionBlockEntity(BlockPos pos, BlockState state) {
-      super((BlockEntityType)ModBlocks.MORTAR_CONSTRUCTION_BE.get(), pos, state);
-   }
+    public MortarConstructionBlockEntity(BlockPos pos, BlockState state) {
+        super((BlockEntityType) ModBlocks.MORTAR_CONSTRUCTION_BE.get(), pos, state);
+    }
 
-   public void setTeam(String team) {
-      this.teamOwner = team;
-      this.setChanged();
-   }
+    public void setTeam(String team) {
+        this.teamOwner = team;
+        this.setChanged();
+    }
 
-   public String getTeam() {
-      return this.teamOwner;
-   }
+    public String getTeam() {
+        return this.teamOwner;
+    }
 
-   public float getPercentage() {
-      return this.currentProgress / 2400.0F;
-   }
+    public float getPercentage() {
+        return this.currentProgress / 2400.0F;
+    }
 
-   public void addProgress() {
-      if (this.currentProgress < 2400) {
-         this.activeDiggers++;
-         this.setChanged();
-      }
-   }
+    public void addProgress() {
+        if (this.currentProgress < 2400) {
+            this.activeDiggers++;
+            this.setChanged();
+        }
+    }
 
-   public void addCreativeProgress(int amount) {
-      this.currentProgress += amount;
-      if (this.currentProgress >= 2400) {
-         this.currentProgress = 2400;
-      }
+    public void addCreativeProgress(int amount) {
+        this.currentProgress += amount;
+        if (this.currentProgress >= 2400) {
+            this.currentProgress = 2400;
+        }
 
-      this.setChanged();
-   }
+        this.setChanged();
+    }
 
-   // Тик строительства - обновляет прогресс, завершает по достижении MAX_PROGRESS
-   public static void tick(Level level, BlockPos pos, BlockState state, MortarConstructionBlockEntity entity) {
-      if (!level.isClientSide) {
-         if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
-            if (entity.activeDiggers > 0) {
-               float speed = entity.activeDiggers >= 2 ? 2.0F : 1.0F;
-               float multiplier = ((Double)WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
-               speed *= multiplier;
-               entity.currentProgress = entity.currentProgress + (int)Math.ceil(speed);
+    // Тик строительства - обновляет прогресс, завершает по достижении MAX_PROGRESS
+    public static void tick(Level level, BlockPos pos, BlockState state, MortarConstructionBlockEntity entity) {
+        if (!level.isClientSide) {
+            if (entity.activeDiggers > 0 || entity.currentProgress > 0) {
+                if (entity.activeDiggers > 0) {
+                    float speed = entity.activeDiggers >= 2 ? 2.0F : 1.0F;
+                    float multiplier = ((Double) WarfareConfig.DIGGING_SPEED_MULTIPLIER.get()).floatValue();
+                    speed *= multiplier;
+                    entity.currentProgress = entity.currentProgress + (int) Math.ceil(speed);
+                }
+
+                if (entity.currentProgress >= 2400 && state.getBlock() instanceof MortarConstructionBlock block) {
+                    ((ServerLevel) level)
+                            .sendParticles(
+                                    ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                                    pos.getX() + 0.5,
+                                    pos.getY() + 0.5,
+                                    pos.getZ() + 0.5,
+                                    25,
+                                    0.6,
+                                    0.4,
+                                    0.6,
+                                    0.05);
+                    block.finishConstruction((ServerLevel) level, pos, state);
+                }
+
+                if (level.getGameTime() % 10L == 0L) {
+                    level.sendBlockUpdated(pos, state, state, 3);
+                }
             }
 
-            if (entity.currentProgress >= 2400 && state.getBlock() instanceof MortarConstructionBlock block) {
-               ((ServerLevel)level)
-                  .sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 25, 0.6, 0.4, 0.6, 0.05);
-               block.finishConstruction((ServerLevel)level, pos, state);
-            }
+            entity.activeDiggers = 0;
+        }
+    }
 
-            if (level.getGameTime() % 10L == 0L) {
-               level.sendBlockUpdated(pos, state, state, 3);
-            }
-         }
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        tag.putInt("BuildProgress", this.currentProgress);
+        tag.putString("TeamOwner", this.teamOwner);
+    }
 
-         entity.activeDiggers = 0;
-      }
-   }
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        this.currentProgress = tag.getInt("BuildProgress");
+        if (tag.contains("TeamOwner")) {
+            this.teamOwner = tag.getString("TeamOwner");
+        }
+    }
 
-   protected void saveAdditional(CompoundTag tag) {
-      super.saveAdditional(tag);
-      tag.putInt("BuildProgress", this.currentProgress);
-      tag.putString("TeamOwner", this.teamOwner);
-   }
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
 
-   public void load(CompoundTag tag) {
-      super.load(tag);
-      this.currentProgress = tag.getInt("BuildProgress");
-      if (tag.contains("TeamOwner")) {
-         this.teamOwner = tag.getString("TeamOwner");
-      }
-   }
-
-   public Packet<ClientGamePacketListener> getUpdatePacket() {
-      return ClientboundBlockEntityDataPacket.create(this);
-   }
-
-   public CompoundTag getUpdateTag() {
-      CompoundTag tag = new CompoundTag();
-      this.saveAdditional(tag);
-      return tag;
-   }
+    public CompoundTag getUpdateTag() {
+        CompoundTag tag = new CompoundTag();
+        this.saveAdditional(tag);
+        return tag;
+    }
 }

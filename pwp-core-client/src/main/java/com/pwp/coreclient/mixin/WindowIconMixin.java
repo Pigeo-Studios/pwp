@@ -1,22 +1,21 @@
 package com.pwp.coreclient.mixin;
 
-import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWImage;
-import org.lwjgl.system.MemoryUtil;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import javax.imageio.ImageIO;
+import net.minecraft.client.Minecraft;
+import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class WindowIconMixin {
@@ -25,7 +24,7 @@ public class WindowIconMixin {
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void pwp_setCustomWindow(CallbackInfo ci) {
-        Minecraft mc = (Minecraft)(Object)this;
+        Minecraft mc = (Minecraft) (Object) this;
         long handle = mc.getWindow().getWindow();
         if (handle == 0) {
             LOGGER.warn("Window handle is 0, cannot set icon/title");
@@ -46,7 +45,7 @@ public class WindowIconMixin {
         List<ByteBuffer> buffers = new ArrayList<>();
         int count = 0;
 
-        for (String name : new String[]{icon16, icon32}) {
+        for (String name : new String[] {icon16, icon32}) {
             String path = "/assets/pwp_core_client/icons/" + name;
             try (InputStream stream = WindowIconMixin.class.getResourceAsStream(path)) {
                 if (stream == null) {

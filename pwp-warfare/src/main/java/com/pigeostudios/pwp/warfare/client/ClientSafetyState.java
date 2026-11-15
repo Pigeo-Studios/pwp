@@ -6,7 +6,7 @@ package com.pigeostudios.pwp.warfare.client;
 // ложную анимацию выстрела. Даже если флаг устарел — сервер всё равно
 // заблокирует выстрел.
 public class ClientSafetyState {
-   public static boolean inMainZone = false;
+    public static boolean inMainZone = false;
 
-   private ClientSafetyState() {}
+    private ClientSafetyState() {}
 }

@@ -7,16 +7,15 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.ClientResponseCache;
 import com.pwp.coreclient.network.PacketDataRequest;
 import com.pwp.coreclient.network.PacketHandler;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 public class StatsScreen extends Screen {
 
@@ -46,16 +45,36 @@ public class StatsScreen extends Screen {
     private static final int CONTENT_BOTTOM_OFFSET = 36;
 
     private static final String[] LB_CATEGORIES = {
-        "kills", "deaths", "kd", "wins", "winrate",
-        "vehicle_kills", "vehicles_destroyed", "air_destroyed",
-        "captures", "damage", "healing", "headshots",
-        "playtime", "level"
+        "kills",
+        "deaths",
+        "kd",
+        "wins",
+        "winrate",
+        "vehicle_kills",
+        "vehicles_destroyed",
+        "air_destroyed",
+        "captures",
+        "damage",
+        "healing",
+        "headshots",
+        "playtime",
+        "level"
     };
     private static final String[] LB_CATEGORY_NAMES = {
-        "Убийства", "Смерти", "K/D", "Победы", "WinRate",
-        "Техникой", "Техника уничтожена", "Авиация",
-        "Захваты", "Урон", "Лечение", "Хэдшоты",
-        "Наиграно", "Уровень"
+        "Убийства",
+        "Смерти",
+        "K/D",
+        "Победы",
+        "WinRate",
+        "Техникой",
+        "Техника уничтожена",
+        "Авиация",
+        "Захваты",
+        "Урон",
+        "Лечение",
+        "Хэдшоты",
+        "Наиграно",
+        "Уровень"
     };
 
     private List<int[]> catBounds = new ArrayList<>();
@@ -120,40 +139,65 @@ public class StatsScreen extends Screen {
         clearWidgets();
         int cx = width / 2;
 
-        addRenderableWidget(Button.builder(
-                Component.literal("Моя статистика"),
-                b -> { tab = TAB_MY_STATS; scrollOffset = 0; init(); })
-                .bounds(cx - 160, 6, 80, 22).build());
+        addRenderableWidget(Button.builder(Component.literal("Моя статистика"), b -> {
+                    tab = TAB_MY_STATS;
+                    scrollOffset = 0;
+                    init();
+                })
+                .bounds(cx - 160, 6, 80, 22)
+                .build());
 
-        addRenderableWidget(Button.builder(
-                Component.literal("Лидеры"),
-                b -> { tab = TAB_LEADERBOARD; scrollOffset = 0; loading = true; requestLeaderboard(); init(); })
-                .bounds(cx - 76, 6, 90, 22).build());
+        addRenderableWidget(Button.builder(Component.literal("Лидеры"), b -> {
+                    tab = TAB_LEADERBOARD;
+                    scrollOffset = 0;
+                    loading = true;
+                    requestLeaderboard();
+                    init();
+                })
+                .bounds(cx - 76, 6, 90, 22)
+                .build());
 
-        addRenderableWidget(Button.builder(
-                Component.literal("\u2715 Закрыть"),
-                b -> onClose())
-                .bounds(cx - 50, height - 28, 100, 22).build());
+        addRenderableWidget(Button.builder(Component.literal("\u2715 Закрыть"), b -> onClose())
+                .bounds(cx - 50, height - 28, 100, 22)
+                .build());
 
         if (tab == TAB_LEADERBOARD && lbTotalPages > 1) {
             int pageY = 30;
-            addRenderableWidget(Button.builder(
-                    Component.literal("\u25C0"),
-                    b -> { if (lbPage > 0) { lbPage--; scrollOffset = 0; loading = true; requestLeaderboard(); init(); }})
-                    .bounds(cx + 80, pageY, 20, 18).build());
-            addRenderableWidget(Button.builder(
-                    Component.literal("\u25B6"),
-                    b -> { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; loading = true; requestLeaderboard(); init(); }})
-                    .bounds(cx + 104, pageY, 20, 18).build());
-            addRenderableWidget(Button.builder(
-                    Component.literal((lbPage + 1) + "/" + lbTotalPages),
-                    b -> {})
-                    .bounds(cx + 52, pageY, 26, 18).build());
+            addRenderableWidget(Button.builder(Component.literal("\u25C0"), b -> {
+                        if (lbPage > 0) {
+                            lbPage--;
+                            scrollOffset = 0;
+                            loading = true;
+                            requestLeaderboard();
+                            init();
+                        }
+                    })
+                    .bounds(cx + 80, pageY, 20, 18)
+                    .build());
+            addRenderableWidget(Button.builder(Component.literal("\u25B6"), b -> {
+                        if (lbPage < lbTotalPages - 1) {
+                            lbPage++;
+                            scrollOffset = 0;
+                            loading = true;
+                            requestLeaderboard();
+                            init();
+                        }
+                    })
+                    .bounds(cx + 104, pageY, 20, 18)
+                    .build());
+            addRenderableWidget(Button.builder(Component.literal((lbPage + 1) + "/" + lbTotalPages), b -> {})
+                    .bounds(cx + 52, pageY, 26, 18)
+                    .build());
         }
     }
 
-    public int getStatsTab() { return tab; }
-    public void setStatsTab(int t) { tab = t; }
+    public int getStatsTab() {
+        return tab;
+    }
+
+    public void setStatsTab(int t) {
+        tab = t;
+    }
 
     public void setPanelSize(int w, int h) {
         this.width = w;
@@ -166,22 +210,61 @@ public class StatsScreen extends Screen {
         }
     }
 
-    public boolean isLbPagePrevEnabled() { return lbPage > 0; }
-    public boolean isLbPageNextEnabled() { return lbPage < lbTotalPages - 1; }
-    public int getLbPage() { return lbPage; }
-    public int getLbTotalPages() { return lbTotalPages; }
-    public void lbPagePrev() { if (lbPage > 0) { lbPage--; scrollOffset = 0; loading = true; requestLeaderboard(); } }
-    public void lbPageNext() { if (lbPage < lbTotalPages - 1) { lbPage++; scrollOffset = 0; loading = true; requestLeaderboard(); } }
+    public boolean isLbPagePrevEnabled() {
+        return lbPage > 0;
+    }
+
+    public boolean isLbPageNextEnabled() {
+        return lbPage < lbTotalPages - 1;
+    }
+
+    public int getLbPage() {
+        return lbPage;
+    }
+
+    public int getLbTotalPages() {
+        return lbTotalPages;
+    }
+
+    public void lbPagePrev() {
+        if (lbPage > 0) {
+            lbPage--;
+            scrollOffset = 0;
+            loading = true;
+            requestLeaderboard();
+        }
+    }
+
+    public void lbPageNext() {
+        if (lbPage < lbTotalPages - 1) {
+            lbPage++;
+            scrollOffset = 0;
+            loading = true;
+            requestLeaderboard();
+        }
+    }
 
     public void renderContent(GuiGraphics gui, int mx, int my, int clipY, int clipH) {
         int cx = width / 2;
 
         if (loading) {
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a77Загрузка...", cx - PWPTheme.Fonts.display().width("\u00a77Загрузка...")/2, clipY + 40, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a77Загрузка...",
+                    cx - PWPTheme.Fonts.display().width("\u00a77Загрузка...") / 2,
+                    clipY + 40,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
             return;
         }
         if (errorMsg != null) {
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx - PWPTheme.Fonts.display().width("\u00a7c" + errorMsg)/2, clipY + 40, 0xFF5555, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a7c" + errorMsg,
+                    cx - PWPTheme.Fonts.display().width("\u00a7c" + errorMsg) / 2,
+                    clipY + 40,
+                    0xFF5555,
+                    false);
             return;
         }
 
@@ -230,15 +313,36 @@ public class StatsScreen extends Screen {
         super.render(gui, mx, my, pt);
 
         int cx = width / 2;
-        gui.drawString(PWPTheme.Fonts.display(), Component.literal("СТАТИСТИКА"), cx - PWPTheme.Fonts.display().width(Component.literal("СТАТИСТИКА").getString())/2, 32, PWPTheme.Colors.TEXT_ACCENT, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                Component.literal("СТАТИСТИКА"),
+                cx
+                        - PWPTheme.Fonts.display()
+                                        .width(Component.literal("СТАТИСТИКА").getString())
+                                / 2,
+                32,
+                PWPTheme.Colors.TEXT_ACCENT,
+                false);
         gui.fill(cx - 55, 42, cx + 55, 43, PWPTheme.Colors.ACCENT);
 
         if (loading) {
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a77Загрузка...", cx - PWPTheme.Fonts.display().width("\u00a77Загрузка...")/2, height / 2, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a77Загрузка...",
+                    cx - PWPTheme.Fonts.display().width("\u00a77Загрузка...") / 2,
+                    height / 2,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
             return;
         }
         if (errorMsg != null) {
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a7c" + errorMsg, cx - PWPTheme.Fonts.display().width("\u00a7c" + errorMsg)/2, height / 2, 0xFF5555, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a7c" + errorMsg,
+                    cx - PWPTheme.Fonts.display().width("\u00a7c" + errorMsg) / 2,
+                    height / 2,
+                    0xFF5555,
+                    false);
             return;
         }
 
@@ -308,8 +412,10 @@ public class StatsScreen extends Screen {
             JsonObject p = cachedPlayerStats.getAsJsonObject("player");
             if (p.has("nickname")) nick = p.get("nickname").getAsString();
         }
-        if (cachedPlayerStats.has("level")) level = cachedPlayerStats.get("level").getAsInt();
-        if (cachedPlayerStats.has("prestige")) prestige = cachedPlayerStats.get("prestige").getAsInt();
+        if (cachedPlayerStats.has("level"))
+            level = cachedPlayerStats.get("level").getAsInt();
+        if (cachedPlayerStats.has("prestige"))
+            prestige = cachedPlayerStats.get("prestige").getAsInt();
 
         JsonObject st = cachedPlayerStats.has("stats") ? cachedPlayerStats.getAsJsonObject("stats") : cachedPlayerStats;
 
@@ -317,11 +423,23 @@ public class StatsScreen extends Screen {
 
         gui.fill(leftX, y, leftX + panelW, y + 26, PWPTheme.Colors.SURFACE_LIGHT);
         gui.fill(leftX, y + 26, leftX + panelW, y + 27, PWPTheme.Colors.BORDER);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige, leftX + 8, y + 4, 0xFFFFFF, false);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77Матчи: " + intVal(st, "matchesPlayed"), leftX + 8, y + 14, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                "\u00a7f" + nick + "  \u00a77Lv." + level + " \u00a7e\u2726" + prestige,
+                leftX + 8,
+                y + 4,
+                0xFFFFFF,
+                false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                "\u00a77Матчи: " + intVal(st, "matchesPlayed"),
+                leftX + 8,
+                y + 14,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
         y += 30;
 
-        y = drawPanel(gui, leftX, y, panelW, "БОЙ", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "БОЙ", new String[][] {
             {"Убийства", intVal(st, "kills"), "Смерти", intVal(st, "deaths")},
             {"K/D", formatKd(st), "Спасения", intVal(st, "revives")},
             {"Убито техникой", intVal(st, "vehicleKills"), "Захваты", intVal(st, "captures")},
@@ -329,18 +447,24 @@ public class StatsScreen extends Screen {
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "ТЕХНИКА", new String[][]{
-            {"Уничтожено техники", intVal(st, "vehiclesDestroyed"), "Сбито авиации", intVal(st, "airVehiclesDestroyed")},
+        y = drawPanel(gui, leftX, y, panelW, "ТЕХНИКА", new String[][] {
+            {"Уничтожено техники", intVal(st, "vehiclesDestroyed"), "Сбито авиации", intVal(st, "airVehiclesDestroyed")
+            },
         });
         y += 6;
 
-        y = drawPanel(gui, leftX, y, panelW, "ПОДДЕРЖКА", new String[][]{
+        y = drawPanel(gui, leftX, y, panelW, "ПОДДЕРЖКА", new String[][] {
             {"Нанесено урона", doubleVal(st, "damageDealt"), "Вылечено", doubleVal(st, "healingDone")},
-            {"Доставлено припасов", intVal(st, "suppliesDelivered"), "Макс. дистанция", doubleVal(st, "longestKill") + "м"},
+            {
+                "Доставлено припасов",
+                intVal(st, "suppliesDelivered"),
+                "Макс. дистанция",
+                doubleVal(st, "longestKill") + "м"
+            },
         });
         y += 6;
 
-        int matchesBottom = drawPanel(gui, leftX, y, panelW, "МАТЧИ", new String[][]{
+        int matchesBottom = drawPanel(gui, leftX, y, panelW, "МАТЧИ", new String[][] {
             {"Сыграно", intVal(st, "matchesPlayed"), "Побед", intVal(st, "wins")},
             {"Поражений", intVal(st, "losses"), "Процент побед", formatWins(st)},
             {"Наиграно", formatPlaytime(st), "Убийств/матч", formatKpg(st)},
@@ -425,7 +549,7 @@ public class StatsScreen extends Screen {
         int y = clipY + 4 - (int) scrollOffset;
 
         catBounds.clear();
-        catBounds.add(new int[]{leftX - 10, 0, 0, 0, -1});
+        catBounds.add(new int[] {leftX - 10, 0, 0, 0, -1});
 
         int catX = leftX;
         int catY = y;
@@ -433,20 +557,32 @@ public class StatsScreen extends Screen {
             int bw = PWPTheme.Fonts.display().width(LB_CATEGORY_NAMES[i]) + 14;
             boolean isSel = lbOrderBy.equals(LB_CATEGORIES[i]);
             boolean hover = mx >= catX && mx <= catX + bw && my >= catY && my <= catY + 18;
-            int bg = isSel ? PWPTheme.Colors.ACCENT_DIM : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
+            int bg = isSel
+                    ? PWPTheme.Colors.ACCENT_DIM
+                    : (hover ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
             gui.fill(catX, catY, catX + bw, catY + 18, bg);
 
-            int borderCol = isSel ? PWPTheme.Colors.ACCENT : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
+            int borderCol =
+                    isSel ? PWPTheme.Colors.ACCENT : (hover ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER);
             gui.fill(catX, catY, catX + bw, catY + 1, borderCol);
             gui.fill(catX, catY + 17, catX + bw, catY + 18, borderCol);
             gui.fill(catX, catY, catX + 1, catY + 18, borderCol);
             gui.fill(catX + bw - 1, catY, catX + bw, catY + 18, borderCol);
 
             String textColor = isSel ? "\u00a7e" : (hover ? "\u00a7f" : "\u00a77");
-            gui.drawString(PWPTheme.Fonts.display(), textColor + LB_CATEGORY_NAMES[i], catX + 6, catY + 5, PWPTheme.Colors.TEXT_PRIMARY, false);
-            catBounds.add(new int[]{catX, catY, bw, 18, i});
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    textColor + LB_CATEGORY_NAMES[i],
+                    catX + 6,
+                    catY + 5,
+                    PWPTheme.Colors.TEXT_PRIMARY,
+                    false);
+            catBounds.add(new int[] {catX, catY, bw, 18, i});
             catX += bw + 4;
-            if (catX + 60 > leftX + w) { catX = leftX; catY += 20; }
+            if (catX + 60 > leftX + w) {
+                catX = leftX;
+                catY += 20;
+            }
         }
 
         y = catY + 22;
@@ -454,11 +590,36 @@ public class StatsScreen extends Screen {
         int headerY = y;
         gui.fill(leftX, headerY, leftX + w, headerY + 1, PWPTheme.Colors.BORDER);
         gui.fill(leftX, headerY + 1, leftX + w, headerY + 14, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77Игрок", leftX + 28, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + getColLabel(lbOrderBy), leftX + 190, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77K/D", leftX + 270, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "\u00a77WinRate", leftX + 310, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(), "\u00a77#", leftX + 6, headerY + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                "\u00a77Игрок",
+                leftX + 28,
+                headerY + 4,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                "\u00a77" + getColLabel(lbOrderBy),
+                leftX + 190,
+                headerY + 4,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                "\u00a77K/D",
+                leftX + 270,
+                headerY + 4,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
+        gui.drawString(
+                PWPTheme.Fonts.display(),
+                "\u00a77WinRate",
+                leftX + 310,
+                headerY + 4,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
 
         int rowY = headerY + 16;
         int rankOffset = lbPage * 10;
@@ -480,22 +641,53 @@ public class StatsScreen extends Screen {
             gui.drawString(PWPTheme.Fonts.display(), rankStr, leftX + 6, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
 
             String nameStr = e.nickname;
-            if (PWPTheme.Fonts.display().width(nameStr) > 120) nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
-            gui.drawString(PWPTheme.Fonts.display(), (isMe ? "\u00a7e" : "\u00a7f") + nameStr, leftX + 28, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
+            if (PWPTheme.Fonts.display().width(nameStr) > 120)
+                nameStr = PWPTheme.Fonts.display().plainSubstrByWidth(nameStr, 118) + "...";
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    (isMe ? "\u00a7e" : "\u00a7f") + nameStr,
+                    leftX + 28,
+                    rowY + 3,
+                    PWPTheme.Colors.TEXT_PRIMARY,
+                    false);
 
             String colVal = truncateText(getColValue(e, lbOrderBy), 70);
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a7f" + colVal, leftX + 190, rowY + 3, PWPTheme.Colors.TEXT_PRIMARY, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a7f" + colVal,
+                    leftX + 190,
+                    rowY + 3,
+                    PWPTheme.Colors.TEXT_PRIMARY,
+                    false);
 
             String kdStr = String.format("%.2f", e.kd);
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + kdStr, leftX + 270, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a77" + kdStr,
+                    leftX + 270,
+                    rowY + 3,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
 
             String wrStr = String.format("%.1f%%", e.winRate);
-            gui.drawString(PWPTheme.Fonts.display(), "\u00a77" + wrStr, leftX + 310, rowY + 3, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    "\u00a77" + wrStr,
+                    leftX + 310,
+                    rowY + 3,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
 
             if (isMe) {
                 String meLabel = "\u00a7e\u25C0 вы";
                 int meW = PWPTheme.Fonts.display().width(meLabel);
-                gui.drawString(PWPTheme.Fonts.display(), meLabel, leftX + w - meW - 6, rowY + 3, PWPTheme.Colors.TEXT_ACCENT, false);
+                gui.drawString(
+                        PWPTheme.Fonts.display(),
+                        meLabel,
+                        leftX + w - meW - 6,
+                        rowY + 3,
+                        PWPTheme.Colors.TEXT_ACCENT,
+                        false);
             }
 
             rowY += rowH;
@@ -530,11 +722,17 @@ public class StatsScreen extends Screen {
         };
     }
 
-    private String intStr(int v) { return String.format("%,d", v); }
+    private String intStr(int v) {
+        return String.format("%,d", v);
+    }
 
     private String intVal(JsonObject obj, String key) {
         if (obj == null || !obj.has(key)) return "0";
-        try { return String.format("%,d", obj.get(key).getAsInt()); } catch (Exception e) { return "0"; }
+        try {
+            return String.format("%,d", obj.get(key).getAsInt());
+        } catch (Exception e) {
+            return "0";
+        }
     }
 
     private String doubleVal(JsonObject obj, String key) {
@@ -544,7 +742,9 @@ public class StatsScreen extends Screen {
             if (v >= 1000) return String.format("%,.0f", v);
             if (v == (long) v) return String.format("%,.0f", v);
             return String.format("%,.1f", v);
-        } catch (Exception e) { return "0"; }
+        } catch (Exception e) {
+            return "0";
+        }
     }
 
     private String formatKd(JsonObject obj) {
@@ -624,9 +824,20 @@ public class StatsScreen extends Screen {
             winRate = totalGames == 0 ? 0 : Math.round((double) wins / totalGames * 1000.0) / 10.0;
         }
 
-        private String get(JsonObject o, String k, String d) { return o.has(k) ? o.get(k).getAsString() : d; }
-        private int get(JsonObject o, String k, int d) { return o.has(k) ? o.get(k).getAsInt() : d; }
-        private long getLong(JsonObject o, String k) { return o.has(k) ? o.get(k).getAsLong() : 0; }
-        private double getDouble(JsonObject o, String k) { return o.has(k) ? o.get(k).getAsDouble() : 0; }
+        private String get(JsonObject o, String k, String d) {
+            return o.has(k) ? o.get(k).getAsString() : d;
+        }
+
+        private int get(JsonObject o, String k, int d) {
+            return o.has(k) ? o.get(k).getAsInt() : d;
+        }
+
+        private long getLong(JsonObject o, String k) {
+            return o.has(k) ? o.get(k).getAsLong() : 0;
+        }
+
+        private double getDouble(JsonObject o, String k) {
+            return o.has(k) ? o.get(k).getAsDouble() : 0;
+        }
     }
 }

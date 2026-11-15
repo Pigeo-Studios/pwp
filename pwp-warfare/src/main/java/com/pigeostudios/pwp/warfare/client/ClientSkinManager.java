@@ -102,7 +102,10 @@ public class ClientSkinManager {
                 if (texMap == null) continue;
 
                 texMap.put(MinecraftProfileTexture.Type.SKIN, tex);
-            } catch (Exception ignored) { com.pwp.api.util.LogOnce.warn(LOGGER, "ClientSkinManager:105", "ClientSkinManager.applyAllSkins: исключение", ignored); }
+            } catch (Exception ignored) {
+                com.pwp.api.util.LogOnce.warn(
+                        LOGGER, "ClientSkinManager:105", "ClientSkinManager.applyAllSkins: исключение", ignored);
+            }
         }
     }
 
@@ -122,9 +125,13 @@ public class ClientSkinManager {
         if (faction == null || faction.equals("none")) return;
 
         String kit = ClientData.playerKits.getOrDefault(player.getScoreboardName(), "Unassigned");
-        ResourceLocation tex = new ResourceLocation("pwpwarfare",
-                "textures/skins/" + faction.toLowerCase() + "/" +
-                (kit.equals("Unassigned") || kit.isEmpty() ? "base" : kit.toLowerCase().replace(" ", "_").replace("-", "_")) + ".png");
+        ResourceLocation tex = new ResourceLocation(
+                "pwpwarfare",
+                "textures/skins/" + faction.toLowerCase() + "/"
+                        + (kit.equals("Unassigned") || kit.isEmpty()
+                                ? "base"
+                                : kit.toLowerCase().replace(" ", "_").replace("-", "_"))
+                        + ".png");
 
         try {
             PlayerInfo info = getPlayerInfoField(player);
@@ -134,7 +141,10 @@ public class ClientSkinManager {
             if (texMap == null) return;
 
             texMap.put(MinecraftProfileTexture.Type.SKIN, tex);
-        } catch (Exception ignored) { com.pwp.api.util.LogOnce.warn(LOGGER, "ClientSkinManager:137", "ClientSkinManager.applyDefaultSkin: исключение", ignored); }
+        } catch (Exception ignored) {
+            com.pwp.api.util.LogOnce.warn(
+                    LOGGER, "ClientSkinManager:137", "ClientSkinManager.applyDefaultSkin: исключение", ignored);
+        }
     }
 
     private static PlayerInfo getPlayerInfoField(AbstractClientPlayer player) {

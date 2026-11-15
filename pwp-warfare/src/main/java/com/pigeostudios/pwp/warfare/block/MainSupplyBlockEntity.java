@@ -29,178 +29,208 @@ import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.registries.ForgeRegistries;
 
-// ╨а╨О╨б╤У╨бтА░╨а╨Е╨а╤Х╨б╨Г╨бтАЪ╨б╨К ╨а┬▒╨а┬╗╨а╤Х╨а╤Ф╨а┬░ ╨а╤Ц╨а┬╗╨а┬░╨а╨Ж╨а╨Е╨а╤Х╨а╤Ц╨а╤Х ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П
-// ╨атА║╨а┬╡╨бтАб╨а╤С╨бтАЪ ╨а╤С╨а╤Ц╨б╨В╨а╤Х╨а╤Ф╨а╤Х╨а╨Ж, ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨б╨П╨а┬╡╨бтАЪ ╨а┬▒╨а╤Х╨а┬╡╨а╤Ч╨б╨В╨а╤С╨а╤Ч╨а┬░╨б╨Г╨бтА╣ ╨а╤Ц╨б╨В╨б╤У╨а┬╖╨а╤Х╨а╨Ж╨а╤С╨а╤Ф╨а╤Х╨а╨Ж ╨а╤С ╨а╤Ч╨а┬╡╨б╨В╨а┬╡╨а╨Ж╨а╤Х╨а╤Х╨б╨В╨б╤У╨а┬╢╨а┬░╨а┬╡╨бтАЪ/╨б╨В╨а┬╡╨а╤Ш╨а╤Х╨а╨Е╨бтАЪ╨а╤С╨б╨В╨б╤У╨а┬╡╨бтАЪ ╨бтАЪ╨а┬╡╨бтАж╨а╨Е╨а╤С╨а╤Ф╨б╤У
+// ╨а╨О╨б╤У╨бтА░╨а╨Е╨а╤Х╨б╨Г╨бтАЪ╨б╨К ╨а┬▒╨а┬╗╨а╤Х╨а╤Ф╨а┬░ ╨а╤Ц╨а┬╗╨а┬░╨а╨Ж╨а╨Е╨а╤Х╨а╤Ц╨а╤Х
+// ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П
+// ╨атА║╨а┬╡╨бтАб╨а╤С╨бтАЪ ╨а╤С╨а╤Ц╨б╨В╨а╤Х╨а╤Ф╨а╤Х╨а╨Ж, ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨б╨П╨а┬╡╨бтАЪ
+// ╨а┬▒╨а╤Х╨а┬╡╨а╤Ч╨б╨В╨а╤С╨а╤Ч╨а┬░╨б╨Г╨бтА╣ ╨а╤Ц╨б╨В╨б╤У╨а┬╖╨а╤Х╨а╨Ж╨а╤С╨а╤Ф╨а╤Х╨а╨Ж ╨а╤С
+// ╨а╤Ч╨а┬╡╨б╨В╨а┬╡╨а╨Ж╨а╤Х╨а╤Х╨б╨В╨б╤У╨а┬╢╨а┬░╨а┬╡╨бтАЪ/╨б╨В╨а┬╡╨а╤Ш╨а╤Х╨а╨Е╨бтАЪ╨а╤С╨б╨В╨б╤У╨а┬╡╨бтАЪ
+// ╨бтАЪ╨а┬╡╨бтАж╨а╨Е╨а╤С╨а╤Ф╨б╤У
 public class MainSupplyBlockEntity extends BlockEntity {
-   // ╨а╤Ю╨а┬░╨атДЦ╨а╤Ш╨а┬╡╨б╨В ╨а╤Ч╨б╨В╨а╤Х╨а╨Ж╨а┬╡╨б╨В╨а╤Ф╨а╤С (╨а╤Ф╨а┬░╨а┬╢╨а╥С╨бтА╣╨а┬╡ 20 ╨бтАЪ╨а╤С╨а╤Ф╨а╤Х╨а╨Ж)
-   private int checkTimer = 0;
+    // ╨а╤Ю╨а┬░╨атДЦ╨а╤Ш╨а┬╡╨б╨В ╨а╤Ч╨б╨В╨а╤Х╨а╨Ж╨а┬╡╨б╨В╨а╤Ф╨а╤С (╨а╤Ф╨а┬░╨а┬╢╨а╥С╨бтА╣╨а┬╡ 20 ╨бтАЪ╨а╤С╨а╤Ф╨а╤Х╨а╨Ж)
+    private int checkTimer = 0;
 
-   public MainSupplyBlockEntity(BlockPos pos, BlockState state) {
-      super((BlockEntityType)ModBlocks.MAIN_SUPPLY_BE.get(), pos, state);
-   }
+    public MainSupplyBlockEntity(BlockPos pos, BlockState state) {
+        super((BlockEntityType) ModBlocks.MAIN_SUPPLY_BE.get(), pos, state);
+    }
 
-   // ╨а╤Ю╨а╤С╨а╤Ф ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П: ╨а┬╗╨а┬╡╨бтАб╨а┬╡╨а╨Е╨а╤С╨а┬╡ ╨а╤С╨а╤Ц╨б╨В╨а╤Х╨а╤Ф╨а╤Х╨а╨Ж, ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨а┬╡╨а╨Е╨а╤С╨а┬╡ ╨а╤Ц╨б╨В╨б╤У╨а┬╖╨а╤Х╨а╨Ж╨а╤С╨а╤Ф╨а╤Х╨а╨Ж, ╨б╨В╨а┬╡╨а╤Ш╨а╤Х╨а╨Е╨бтАЪ ╨бтАЪ╨а┬╡╨бтАж╨а╨Е╨а╤С╨а╤Ф╨а╤С
-   public static void tick(Level level, BlockPos pos, BlockState state, MainSupplyBlockEntity entity) {
-      if (!level.isClientSide) {
-         entity.checkTimer++;
-         if (entity.checkTimer >= 20) {
-            entity.checkTimer = 0;
-            if ((Boolean)WarfareConfig.MAIN_SUPPLY_HEALING.get()) {
-               int healRad = (Integer)WarfareConfig.MAIN_SUPPLY_HEAL_RADIUS.get();
-               AABB healArea = new AABB(pos).inflate(healRad);
+    // ╨а╤Ю╨а╤С╨а╤Ф ╨б╨Г╨а╨Е╨а┬░╨а┬▒╨а┬╢╨а┬╡╨а╨Е╨а╤С╨б╨П: ╨а┬╗╨а┬╡╨бтАб╨а┬╡╨а╨Е╨а╤С╨а┬╡ ╨а╤С╨а╤Ц╨б╨В╨а╤Х╨а╤Ф╨а╤Х╨а╨Ж,
+    // ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨а┬╡╨а╨Е╨а╤С╨а┬╡ ╨а╤Ц╨б╨В╨б╤У╨а┬╖╨а╤Х╨а╨Ж╨а╤С╨а╤Ф╨а╤Х╨а╨Ж, ╨б╨В╨а┬╡╨а╤Ш╨а╤Х╨а╨Е╨бтАЪ
+    // ╨бтАЪ╨а┬╡╨бтАж╨а╨Е╨а╤С╨а╤Ф╨а╤С
+    public static void tick(Level level, BlockPos pos, BlockState state, MainSupplyBlockEntity entity) {
+        if (!level.isClientSide) {
+            entity.checkTimer++;
+            if (entity.checkTimer >= 20) {
+                entity.checkTimer = 0;
+                if ((Boolean) WarfareConfig.MAIN_SUPPLY_HEALING.get()) {
+                    int healRad = (Integer) WarfareConfig.MAIN_SUPPLY_HEAL_RADIUS.get();
+                    AABB healArea = new AABB(pos).inflate(healRad);
 
-               for (Player p : level.getEntitiesOfClass(Player.class, healArea)) {
-                  if (p.isAlive() && !p.isSpectator()) {
-                     p.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, false, false, true));
-                  }
-               }
-            }
-
-            AABB searchArea = new AABB(pos).inflate(15.0);
-            List<Entity> nearbyEntities = level.getEntitiesOfClass(Entity.class, searchArea);
-            nearbyEntities.sort((e1, e2) -> {
-               boolean p1HasPlayer = e1.getPassengers().stream().anyMatch(px -> px instanceof Player);
-               boolean p2HasPlayer = e2.getPassengers().stream().anyMatch(px -> px instanceof Player);
-               if (p1HasPlayer && !p2HasPlayer) {
-                  return -1;
-               } else {
-                  return !p1HasPlayer && p2HasPlayer ? 1 : 0;
-               }
-            });
-            long currentTime = level.getGameTime();
-
-            for (Entity vehicle : nearbyEntities) {
-               int statusKind = 0;
-               int statusSeconds = 0;
-               long lastSeenTime = vehicle.getPersistentData().getLong("WARFARE_LastSupplyTime");
-               if (vehicle.getPersistentData().contains("WARFARE_VehicleMaxMats")) {
-                  int maxMats = vehicle.getPersistentData().getInt("WARFARE_VehicleMaxMats");
-                  vehicle.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
-               }
-
-               if (currentTime - lastSeenTime > 200L) {
-                  vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
-                  vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
-               }
-
-               vehicle.getPersistentData().putLong("WARFARE_LastSupplyTime", currentTime);
-               if (vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
-                  int currentAmmo = vehicle.getPersistentData().getInt("WARFARE_SupplyAmmo");
-                  int maxCrates = (Integer)WarfareConfig.SUPPLY_TRUCK_CRATES.get();
-                  if (currentAmmo < maxCrates) {
-                     int supplyTimer = vehicle.getPersistentData().getInt("WARFARE_TruckReloadTimer");
-                     if (++supplyTimer >= 15) {
-                        vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", currentAmmo + 1);
-                        vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
-                         sendChatMessageToPassengers(vehicle, "[Снабжение] +1 ящик загружен (" + (currentAmmo + 1) + "/" + maxCrates + ")", ChatFormatting.GOLD);
-                        spawnEffects(level, vehicle);
-                      } else {
-                         vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", supplyTimer);
-                         statusKind = PacketVehicleStatus.KIND_LOADING_CRATE;
-                         statusSeconds = 15 - supplyTimer;
-                      }
-                  } else {
-                     vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
-                  }
-               }
-
-               if (vehicle.getPersistentData().contains("WARFARE_SpawnerPos")) {
-                  long nextSupplyTime = vehicle.getPersistentData().getLong("WARFARE_NextSupplyTime");
-                   if (currentTime < nextSupplyTime) {
-                      long secondsLeft = (nextSupplyTime - currentTime) / 20L;
-                      vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
-                      statusKind = PacketVehicleStatus.KIND_REARM_COOLDOWN;
-                      statusSeconds = (int)secondsLeft;
-                   } else {
-                     int repairTimer = vehicle.getPersistentData().getInt("WARFARE_RepairTimer");
-                     if (++repairTimer >= 30) {
-                        if (vehicle instanceof LivingEntity living) {
-                           living.setHealth(living.getMaxHealth());
+                    for (Player p : level.getEntitiesOfClass(Player.class, healArea)) {
+                        if (p.isAlive() && !p.isSpectator()) {
+                            p.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 60, 0, false, false, true));
                         }
+                    }
+                }
 
-                        long spawnerPosLong = vehicle.getPersistentData().getLong("WARFARE_SpawnerPos");
-                        BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
-                        if (level.isLoaded(spawnerPos) && level.getBlockEntity(spawnerPos) instanceof VehicleSpawnerBlockEntity spawner) {
-                           vehicle.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(vehInv -> {
-                              if (vehInv instanceof IItemHandlerModifiable modifiable) {
-                                 for (int i = 0; i < vehInv.getSlots(); i++) {
-                                    modifiable.setStackInSlot(i, ItemStack.EMPTY);
-                                 }
-                              }
+                AABB searchArea = new AABB(pos).inflate(15.0);
+                List<Entity> nearbyEntities = level.getEntitiesOfClass(Entity.class, searchArea);
+                nearbyEntities.sort((e1, e2) -> {
+                    boolean p1HasPlayer = e1.getPassengers().stream().anyMatch(px -> px instanceof Player);
+                    boolean p2HasPlayer = e2.getPassengers().stream().anyMatch(px -> px instanceof Player);
+                    if (p1HasPlayer && !p2HasPlayer) {
+                        return -1;
+                    } else {
+                        return !p1HasPlayer && p2HasPlayer ? 1 : 0;
+                    }
+                });
+                long currentTime = level.getGameTime();
 
-                              int slotsToCopy = 32;
+                for (Entity vehicle : nearbyEntities) {
+                    int statusKind = 0;
+                    int statusSeconds = 0;
+                    long lastSeenTime = vehicle.getPersistentData().getLong("WARFARE_LastSupplyTime");
+                    if (vehicle.getPersistentData().contains("WARFARE_VehicleMaxMats")) {
+                        int maxMats = vehicle.getPersistentData().getInt("WARFARE_VehicleMaxMats");
+                        vehicle.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                    }
 
-                              for (int i = 0; i < slotsToCopy && i < vehInv.getSlots(); i++) {
-                                 ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);
-                                 if (!sourceStack.isEmpty()) {
-                                    insertItem(vehInv, i, sourceStack.copy());
-                                 }
-                              }
-
-                               Item batteryItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "large_battery_pack"));
-                               if (batteryItem != null) {
-                                  for (int i = 0; i < vehInv.getSlots(); i++) {
-                                     if (vehInv.getStackInSlot(i).isEmpty()) {
-                                        ItemStack battery = new ItemStack(batteryItem);
-                                        // Полный заряд (ёмкость large_battery_pack = 20 000 000), иначе техника встанет без энергии
-                                        battery.getOrCreateTag().putInt("Energy", 20000000);
-                                        insertItem(vehInv, i, battery);
-                                        break;
-                                     }
-                                  }
-                               }
-                           });
-                        }
-
+                    if (currentTime - lastSeenTime > 200L) {
                         vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
-                        vehicle.getPersistentData().putLong("WARFARE_NextSupplyTime", currentTime + 600L);
-                         sendChatMessageToPassengers(vehicle, "[База] Техника полностью пополнена и отремонтирована!", ChatFormatting.GREEN);
-                        spawnEffects(level, vehicle);
-                      } else {
-                         vehicle.getPersistentData().putInt("WARFARE_RepairTimer", repairTimer);
-                         statusKind = PacketVehicleStatus.KIND_REARMING;
-                         statusSeconds = 30 - repairTimer;
-                      }
-                   }
-                }
+                        vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
+                    }
 
-                if (statusKind != 0) {
-                   sendVehicleStatus(vehicle, statusKind, statusSeconds);
+                    vehicle.getPersistentData().putLong("WARFARE_LastSupplyTime", currentTime);
+                    if (vehicle.getPersistentData().getBoolean("WARFARE_IsSupplyTruck")) {
+                        int currentAmmo = vehicle.getPersistentData().getInt("WARFARE_SupplyAmmo");
+                        int maxCrates = (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get();
+                        if (currentAmmo < maxCrates) {
+                            int supplyTimer = vehicle.getPersistentData().getInt("WARFARE_TruckReloadTimer");
+                            if (++supplyTimer >= 15) {
+                                vehicle.getPersistentData().putInt("WARFARE_SupplyAmmo", currentAmmo + 1);
+                                vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
+                                sendChatMessageToPassengers(
+                                        vehicle,
+                                        "[Снабжение] +1 ящик загружен (" + (currentAmmo + 1) + "/" + maxCrates + ")",
+                                        ChatFormatting.GOLD);
+                                spawnEffects(level, vehicle);
+                            } else {
+                                vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", supplyTimer);
+                                statusKind = PacketVehicleStatus.KIND_LOADING_CRATE;
+                                statusSeconds = 15 - supplyTimer;
+                            }
+                        } else {
+                            vehicle.getPersistentData().putInt("WARFARE_TruckReloadTimer", 0);
+                        }
+                    }
+
+                    if (vehicle.getPersistentData().contains("WARFARE_SpawnerPos")) {
+                        long nextSupplyTime = vehicle.getPersistentData().getLong("WARFARE_NextSupplyTime");
+                        if (currentTime < nextSupplyTime) {
+                            long secondsLeft = (nextSupplyTime - currentTime) / 20L;
+                            vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
+                            statusKind = PacketVehicleStatus.KIND_REARM_COOLDOWN;
+                            statusSeconds = (int) secondsLeft;
+                        } else {
+                            int repairTimer = vehicle.getPersistentData().getInt("WARFARE_RepairTimer");
+                            if (++repairTimer >= 30) {
+                                if (vehicle instanceof LivingEntity living) {
+                                    living.setHealth(living.getMaxHealth());
+                                }
+
+                                long spawnerPosLong =
+                                        vehicle.getPersistentData().getLong("WARFARE_SpawnerPos");
+                                BlockPos spawnerPos = BlockPos.of(spawnerPosLong);
+                                if (level.isLoaded(spawnerPos)
+                                        && level.getBlockEntity(spawnerPos)
+                                                instanceof VehicleSpawnerBlockEntity spawner) {
+                                    vehicle.getCapability(ForgeCapabilities.ITEM_HANDLER)
+                                            .ifPresent(vehInv -> {
+                                                if (vehInv instanceof IItemHandlerModifiable modifiable) {
+                                                    for (int i = 0; i < vehInv.getSlots(); i++) {
+                                                        modifiable.setStackInSlot(i, ItemStack.EMPTY);
+                                                    }
+                                                }
+
+                                                int slotsToCopy = 32;
+
+                                                for (int i = 0; i < slotsToCopy && i < vehInv.getSlots(); i++) {
+                                                    ItemStack sourceStack = spawner.inventory.getStackInSlot(i + 1);
+                                                    if (!sourceStack.isEmpty()) {
+                                                        insertItem(vehInv, i, sourceStack.copy());
+                                                    }
+                                                }
+
+                                                Item batteryItem = (Item) ForgeRegistries.ITEMS.getValue(
+                                                        new ResourceLocation("superbwarfare", "large_battery_pack"));
+                                                if (batteryItem != null) {
+                                                    for (int i = 0; i < vehInv.getSlots(); i++) {
+                                                        if (vehInv.getStackInSlot(i)
+                                                                .isEmpty()) {
+                                                            ItemStack battery = new ItemStack(batteryItem);
+                                                            // Полный заряд (ёмкость large_battery_pack = 20 000 000),
+                                                            // иначе техника встанет без энергии
+                                                            battery.getOrCreateTag()
+                                                                    .putInt("Energy", 20000000);
+                                                            insertItem(vehInv, i, battery);
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            });
+                                }
+
+                                vehicle.getPersistentData().putInt("WARFARE_RepairTimer", 0);
+                                vehicle.getPersistentData().putLong("WARFARE_NextSupplyTime", currentTime + 600L);
+                                sendChatMessageToPassengers(
+                                        vehicle,
+                                        "[База] Техника полностью пополнена и отремонтирована!",
+                                        ChatFormatting.GREEN);
+                                spawnEffects(level, vehicle);
+                            } else {
+                                vehicle.getPersistentData().putInt("WARFARE_RepairTimer", repairTimer);
+                                statusKind = PacketVehicleStatus.KIND_REARMING;
+                                statusSeconds = 30 - repairTimer;
+                            }
+                        }
+                    }
+
+                    if (statusKind != 0) {
+                        sendVehicleStatus(vehicle, statusKind, statusSeconds);
+                    }
                 }
             }
-         }
-      }
-   }
+        }
+    }
 
-   private static void insertItem(IItemHandler handler, int slot, ItemStack stack) {
-      if (handler instanceof IItemHandlerModifiable modifiable) {
-         modifiable.setStackInSlot(slot, stack);
-      } else {
-         handler.insertItem(slot, stack, false);
-      }
-   }
+    private static void insertItem(IItemHandler handler, int slot, ItemStack stack) {
+        if (handler instanceof IItemHandlerModifiable modifiable) {
+            modifiable.setStackInSlot(slot, stack);
+        } else {
+            handler.insertItem(slot, stack, false);
+        }
+    }
 
-   private static void sendVehicleStatus(Entity vehicle, int kind, int secondsLeft) {
-      PacketVehicleStatus pkt = new PacketVehicleStatus(vehicle.getId(), kind, secondsLeft);
-      for (Entity passenger : vehicle.getPassengers()) {
-         if (passenger instanceof ServerPlayer sp) {
-            PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), pkt);
-         }
-      }
-   }
+    private static void sendVehicleStatus(Entity vehicle, int kind, int secondsLeft) {
+        PacketVehicleStatus pkt = new PacketVehicleStatus(vehicle.getId(), kind, secondsLeft);
+        for (Entity passenger : vehicle.getPassengers()) {
+            if (passenger instanceof ServerPlayer sp) {
+                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> sp), pkt);
+            }
+        }
+    }
 
-   private static void sendChatMessageToPassengers(Entity vehicle, String msg, ChatFormatting color) {
-      for (Entity passenger : vehicle.getPassengers()) {
-         if (passenger instanceof Player player) {
-            player.displayClientMessage(Component.literal(msg).withStyle(color), false);
-         }
-      }
-   }
+    private static void sendChatMessageToPassengers(Entity vehicle, String msg, ChatFormatting color) {
+        for (Entity passenger : vehicle.getPassengers()) {
+            if (passenger instanceof Player player) {
+                player.displayClientMessage(Component.literal(msg).withStyle(color), false);
+            }
+        }
+    }
 
-   // ╨а╨О╨а╤Ч╨а┬░╨б╤У╨а╨Е╨а╤С╨бтАЪ ╨бтАб╨а┬░╨б╨Г╨бтАЪ╨а╤С╨бтАа╨бтА╣ ╨б╨М╨бтАЮ╨бтАЮ╨а┬╡╨а╤Ф╨бтАЪ╨а┬░ ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨а┬╡╨а╨Е╨а╤С╨б╨П
-   private static void spawnEffects(Level level, Entity vehicle) {
-      if (level instanceof ServerLevel serverLevel) {
-         serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, vehicle.getX(), vehicle.getY() + 1.5, vehicle.getZ(), 10, 1.0, 1.0, 1.0, 0.1);
-      }
-   }
+    // ╨а╨О╨а╤Ч╨а┬░╨б╤У╨а╨Е╨а╤С╨бтАЪ ╨бтАб╨а┬░╨б╨Г╨бтАЪ╨а╤С╨бтАа╨бтА╣ ╨б╨М╨бтАЮ╨бтАЮ╨а┬╡╨а╤Ф╨бтАЪ╨а┬░
+    // ╨а╤Ч╨а╤Х╨а╤Ч╨а╤Х╨а┬╗╨а╨Е╨а┬╡╨а╨Е╨а╤С╨б╨П
+    private static void spawnEffects(Level level, Entity vehicle) {
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    ParticleTypes.HAPPY_VILLAGER,
+                    vehicle.getX(),
+                    vehicle.getY() + 1.5,
+                    vehicle.getZ(),
+                    10,
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.1);
+        }
+    }
 }

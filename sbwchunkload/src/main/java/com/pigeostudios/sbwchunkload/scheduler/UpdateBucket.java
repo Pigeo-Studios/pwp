@@ -1,7 +1,6 @@
 package com.pigeostudios.sbwchunkload.scheduler;
 
 import com.pigeostudios.sbwchunkload.state.ProjectileState;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
 

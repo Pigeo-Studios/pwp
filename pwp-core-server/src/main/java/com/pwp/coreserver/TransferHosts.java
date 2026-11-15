@@ -1,12 +1,11 @@
 package com.pwp.coreserver;
 
 import com.pwp.api.util.Parse;
-import net.minecraft.server.level.ServerPlayer;
-
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Выбор адреса для переброса игроков между лобби и матч-серверами.
@@ -26,8 +25,7 @@ public final class TransferHosts {
 
     private static volatile String lanHost = null;
 
-    private TransferHosts() {
-    }
+    private TransferHosts() {}
 
     /** LAN-адрес серверной машины (автоопределение, результат кэшируется). */
     public static String getLanHost() {
@@ -49,7 +47,8 @@ public final class TransferHosts {
             ip = player.getIpAddress();
         } catch (RuntimeException e) {
             // Соединение уже закрыто — считаем игрока внешним (домен работает всегда)
-            CoreServerMod.log.warn("Не удалось получить IP игрока {}", player.getGameProfile().getName(), e);
+            CoreServerMod.log.warn(
+                    "Не удалось получить IP игрока {}", player.getGameProfile().getName(), e);
         }
         if (isPrivateIp(ip)) {
             return getLanHost();

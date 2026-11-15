@@ -11,11 +11,13 @@ public class PacketForceCMD {
     public final String team;
 
     public PacketForceCMD(int squadId, String team) {
-        this.squadId = squadId; this.team = team;
+        this.squadId = squadId;
+        this.team = team;
     }
 
     public static void encode(PacketForceCMD msg, FriendlyByteBuf buf) {
-        buf.writeInt(msg.squadId); buf.writeUtf(msg.team);
+        buf.writeInt(msg.squadId);
+        buf.writeUtf(msg.team);
     }
 
     public static PacketForceCMD decode(FriendlyByteBuf buf) {

@@ -137,17 +137,13 @@ public class MovementHandler {
     @SubscribeEvent
     public void onCameraSetup(ViewportEvent.ComputeCameraAngles event) {
         float pt = (float) event.getPartialTick();
-        event.setRoll(event.getRoll()
-                + Mth.lerp(pt, this.prevTilt, this.currentTilt));
+        event.setRoll(event.getRoll() + Mth.lerp(pt, this.prevTilt, this.currentTilt));
         this.swayTime += pt * 0.035f;
         if (this.fatigue > 0.01f) {
             float amp = this.fatigue * 0.8f;
-            event.setYaw(event.getYaw()
-                    + (float) (Math.sin(this.swayTime)
-                            + Math.sin(this.swayTime * 0.45f)) * amp);
+            event.setYaw(event.getYaw() + (float) (Math.sin(this.swayTime) + Math.sin(this.swayTime * 0.45f)) * amp);
             event.setPitch(event.getPitch()
-                    + (float) (Math.cos(this.swayTime * 0.65f)
-                            + Math.cos(this.swayTime * 0.25f)) * (amp * 0.5f));
+                    + (float) (Math.cos(this.swayTime * 0.65f) + Math.cos(this.swayTime * 0.25f)) * (amp * 0.5f));
         }
     }
 
@@ -156,8 +152,7 @@ public class MovementHandler {
     public void onFOVUpdate(ViewportEvent.ComputeFov event) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p != null && p.isSprinting()) {
-            event.setFOV(event.getFOV()
-                    + p.getDeltaMovement().length() * 12.0f);
+            event.setFOV(event.getFOV() + p.getDeltaMovement().length() * 12.0f);
         }
     }
 }

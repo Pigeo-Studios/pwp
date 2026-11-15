@@ -19,7 +19,7 @@ import net.minecraftforge.fml.config.ModConfig;
 public class SBWChunkLoadMod {
 
     public SBWChunkLoadMod() {
-        ModLoadingContext.get().registerConfig(
-            ModConfig.Type.SERVER, ChunkLoadingConfig.SPEC, "sbwchunkload-server.toml");
+        ModLoadingContext.get()
+                .registerConfig(ModConfig.Type.SERVER, ChunkLoadingConfig.SPEC, "sbwchunkload-server.toml");
     }
 }

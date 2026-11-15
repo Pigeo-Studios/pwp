@@ -11,13 +11,13 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 // Серверные события мода
 // Обрабатывает чат и направляет сообщения в систему связи отряда
 public class ModServerEvents {
-   @SubscribeEvent
-   public static void onServerChat(ServerChatEvent event) {
-      ServerPlayer player = event.getPlayer();
-      String message = event.getMessage().getString();
-      if (!message.startsWith("/")) {
-         event.setCanceled(true);
-         PacketSquadChat.processChat(player, message, 1);
-      }
-   }
+    @SubscribeEvent
+    public static void onServerChat(ServerChatEvent event) {
+        ServerPlayer player = event.getPlayer();
+        String message = event.getMessage().getString();
+        if (!message.startsWith("/")) {
+            event.setCanceled(true);
+            PacketSquadChat.processChat(player, message, 1);
+        }
+    }
 }

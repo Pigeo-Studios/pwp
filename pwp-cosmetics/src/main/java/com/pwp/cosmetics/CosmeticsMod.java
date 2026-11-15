@@ -24,13 +24,21 @@ public class CosmeticsMod {
 
     private void initNetwork() {
         NETWORK = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(MODID, "main"),
-            () -> PROTOCOL_VERSION, PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals
-        );
-        NETWORK.registerMessage(packetId++, PacketCosmeticEquip.class,
-            PacketCosmeticEquip::encode, PacketCosmeticEquip::decode, PacketCosmeticEquip::handle);
-        NETWORK.registerMessage(packetId++, PacketCosmeticEquipResult.class,
-            PacketCosmeticEquipResult::encode, PacketCosmeticEquipResult::decode, PacketCosmeticEquipResult::handle);
+                new ResourceLocation(MODID, "main"),
+                () -> PROTOCOL_VERSION,
+                PROTOCOL_VERSION::equals,
+                PROTOCOL_VERSION::equals);
+        NETWORK.registerMessage(
+                packetId++,
+                PacketCosmeticEquip.class,
+                PacketCosmeticEquip::encode,
+                PacketCosmeticEquip::decode,
+                PacketCosmeticEquip::handle);
+        NETWORK.registerMessage(
+                packetId++,
+                PacketCosmeticEquipResult.class,
+                PacketCosmeticEquipResult::encode,
+                PacketCosmeticEquipResult::decode,
+                PacketCosmeticEquipResult::handle);
     }
-
 }

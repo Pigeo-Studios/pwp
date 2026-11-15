@@ -2,7 +2,6 @@ package com.pigeostudios.pwp.warfare.menu;
 
 import com.mojang.datafixers.util.Pair;
 import java.util.*;
-import java.util.stream.Collectors;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.Container;
@@ -16,133 +15,147 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 public class KitEditorMenu extends AbstractContainerMenu {
-   public static final int MAX_KIT_SLOTS = 49;
+    public static final int MAX_KIT_SLOTS = 49;
     public final Container kitInventory;
     public final String faction;
     public final String team;
-   public final String kitName;
-   public String category = "INFANTRY";
-   public String description = "";
-   public boolean isLeaderOnly;
-   public int maxPerTeam;
-   public int maxPerSquad;
-   public int minSquadPlayers;
-   public final boolean[] resupplyFlags;
-   public final boolean[] saveNbtFlags;
-   public final Map<Integer, List<String>> slotSkins;
-   private static final ResourceLocation[] ARMOR_SLOT_TEXTURES = new ResourceLocation[]{
-      InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS, InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS, InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE, InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
-   };
+    public final String kitName;
+    public String category = "INFANTRY";
+    public String description = "";
+    public boolean isLeaderOnly;
+    public int maxPerTeam;
+    public int maxPerSquad;
+    public int minSquadPlayers;
+    public final boolean[] resupplyFlags;
+    public final boolean[] saveNbtFlags;
+    public final Map<Integer, List<String>> slotSkins;
+    private static final ResourceLocation[] ARMOR_SLOT_TEXTURES = new ResourceLocation[] {
+        InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS,
+        InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS,
+        InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE,
+        InventoryMenu.EMPTY_ARMOR_SLOT_HELMET
+    };
 
     public KitEditorMenu(int id, Inventory playerInv, FriendlyByteBuf data) {
-       this(
-          id,
-          playerInv,
-          new SimpleContainer(49),
-          data.readUtf(),    // faction
-          data.readUtf(),    // team
-          data.readUtf(),
-          data.readUtf(),
-          data.readUtf(),
-          data.readBoolean(),
-          data.readInt(),
-          data.readInt(),
-          data.readInt(),
-          new boolean[49],
-          new boolean[49],
-          new HashMap<>()
-       );
+        this(
+                id,
+                playerInv,
+                new SimpleContainer(49),
+                data.readUtf(), // faction
+                data.readUtf(), // team
+                data.readUtf(),
+                data.readUtf(),
+                data.readUtf(),
+                data.readBoolean(),
+                data.readInt(),
+                data.readInt(),
+                data.readInt(),
+                new boolean[49],
+                new boolean[49],
+                new HashMap<>());
 
-      for (int i = 0; i < 49; i++) {
-         this.resupplyFlags[i] = data.readBoolean();
-      }
+        for (int i = 0; i < 49; i++) {
+            this.resupplyFlags[i] = data.readBoolean();
+        }
 
-      for (int i = 0; i < 49; i++) {
-         this.saveNbtFlags[i] = data.readBoolean();
-      }
+        for (int i = 0; i < 49; i++) {
+            this.saveNbtFlags[i] = data.readBoolean();
+        }
 
-      int skinCount = data.readInt();
-      for (int i = 0; i < skinCount; i++) {
-         int slot = data.readInt();
-         int listSize = data.readInt();
-         List<String> ids = new ArrayList<>();
-         for (int j = 0; j < listSize; j++) ids.add(data.readUtf());
-         this.slotSkins.put(slot, ids);
-      }
-   }
+        int skinCount = data.readInt();
+        for (int i = 0; i < skinCount; i++) {
+            int slot = data.readInt();
+            int listSize = data.readInt();
+            List<String> ids = new ArrayList<>();
+            for (int j = 0; j < listSize; j++) ids.add(data.readUtf());
+            this.slotSkins.put(slot, ids);
+        }
+    }
 
     public KitEditorMenu(
-       int id, Inventory playerInv, Container kitInv, String f, String t, String k, String cat, String desc, boolean l, int mt, int ms, int minPlayers,
-       boolean[] flags, boolean[] nbtFlags, Map<Integer, List<String>> slotSkins
-    ) {
-       super((MenuType)ModMenuTypes.KIT_EDITOR_MENU.get(), id);
-       this.kitInventory = kitInv;
-       this.faction = f;
-       this.team = t;
-      this.kitName = k;
-      this.category = cat;
-      this.description = desc;
-      this.isLeaderOnly = l;
-      this.maxPerTeam = mt;
-      this.maxPerSquad = ms;
-      this.minSquadPlayers = minPlayers;
-      this.resupplyFlags = flags;
-      this.saveNbtFlags = nbtFlags;
-      this.slotSkins = slotSkins;
+            int id,
+            Inventory playerInv,
+            Container kitInv,
+            String f,
+            String t,
+            String k,
+            String cat,
+            String desc,
+            boolean l,
+            int mt,
+            int ms,
+            int minPlayers,
+            boolean[] flags,
+            boolean[] nbtFlags,
+            Map<Integer, List<String>> slotSkins) {
+        super((MenuType) ModMenuTypes.KIT_EDITOR_MENU.get(), id);
+        this.kitInventory = kitInv;
+        this.faction = f;
+        this.team = t;
+        this.kitName = k;
+        this.category = cat;
+        this.description = desc;
+        this.isLeaderOnly = l;
+        this.maxPerTeam = mt;
+        this.maxPerSquad = ms;
+        this.minSquadPlayers = minPlayers;
+        this.resupplyFlags = flags;
+        this.saveNbtFlags = nbtFlags;
+        this.slotSkins = slotSkins;
 
-      // Hotbar 0-8 (PR, SE, TH, SP, B1-B5)
-      for (int col = 0; col < 9; col++) {
-         this.addSlot(new Slot(kitInv, col, 8 + col * 18, 144));
-      }
+        // Hotbar 0-8 (PR, SE, TH, SP, B1-B5)
+        for (int col = 0; col < 9; col++) {
+            this.addSlot(new Slot(kitInv, col, 8 + col * 18, 144));
+        }
 
-      // Inventory 9-35 (3 rows of 9)
-      for (int row = 0; row < 3; row++) {
-         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 86 + row * 18));
-         }
-      }
-
-      for (int i = 0; i < 4; i++) {
-         final int armorIndex = i;
-         int slotIndex = 36 + i;
-         this.addSlot(new Slot(kitInv, slotIndex, 8 + i * 18, 164) {
-            public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
-               return Pair.of(InventoryMenu.BLOCK_ATLAS, KitEditorMenu.ARMOR_SLOT_TEXTURES[armorIndex]);
+        // Inventory 9-35 (3 rows of 9)
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                this.addSlot(new Slot(kitInv, 9 + col + row * 9, 8 + col * 18, 86 + row * 18));
             }
-         });
-      }
+        }
 
-      this.addSlot(new Slot(kitInv, 40, 84, 164) {
-         public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
-            return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
-         }
-      });
+        for (int i = 0; i < 4; i++) {
+            final int armorIndex = i;
+            int slotIndex = 36 + i;
+            this.addSlot(new Slot(kitInv, slotIndex, 8 + i * 18, 164) {
+                public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
+                    return Pair.of(InventoryMenu.BLOCK_ATLAS, KitEditorMenu.ARMOR_SLOT_TEXTURES[armorIndex]);
+                }
+            });
+        }
 
-      // Extra 41-48 (ПРОЧЕЕ) — right panel, 4 columns x 2 rows
-      int exX = 176;
-      for (int row = 0; row < 2; row++) {
-         for (int col = 0; col < 4; col++) {
-            int idx = 41 + row * 4 + col;
-            this.addSlot(new Slot(kitInv, idx, exX + col * 20, 98 + row * 24));
-         }
-      }
+        this.addSlot(new Slot(kitInv, 40, 84, 164) {
+            public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
+                return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
+            }
+        });
 
-      for (int i = 0; i < 3; i++) {
-         for (int j = 0; j < 9; j++) {
-            this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, 180 + i * 18));
-         }
-      }
+        // Extra 41-48 (ПРОЧЕЕ) — right panel, 4 columns x 2 rows
+        int exX = 176;
+        for (int row = 0; row < 2; row++) {
+            for (int col = 0; col < 4; col++) {
+                int idx = 41 + row * 4 + col;
+                this.addSlot(new Slot(kitInv, idx, exX + col * 20, 98 + row * 24));
+            }
+        }
 
-      for (int i = 0; i < 9; i++) {
-         this.addSlot(new Slot(playerInv, i, 8 + i * 18, 238));
-      }
-   }
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 9; j++) {
+                this.addSlot(new Slot(playerInv, j + i * 9 + 9, 8 + j * 18, 180 + i * 18));
+            }
+        }
 
-   public boolean stillValid(Player p) {
-      return true;
-   }
+        for (int i = 0; i < 9; i++) {
+            this.addSlot(new Slot(playerInv, i, 8 + i * 18, 238));
+        }
+    }
 
-   public ItemStack quickMoveStack(Player p, int index) {
-      return ItemStack.EMPTY;
-   }
+    public boolean stillValid(Player p) {
+        return true;
+    }
+
+    public ItemStack quickMoveStack(Player p, int index) {
+        return ItemStack.EMPTY;
+    }
 }

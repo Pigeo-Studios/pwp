@@ -1,11 +1,5 @@
 package com.pwp.lobby;
 
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.server.ServerLifecycleHooks;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.gson.Gson;
 import java.io.*;
 import java.net.InetSocketAddress;
@@ -14,6 +8,11 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.server.ServerLifecycleHooks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ServerManager {
 
@@ -44,7 +43,7 @@ public class ServerManager {
         volatile String error;
         volatile String phase; // "template","map","config","booting", or null when done
         volatile long phaseStartedAt;
-        volatile long logDoneAt;  // when "Done" was found in log file (0 = not yet)
+        volatile long logDoneAt; // when "Done" was found in log file (0 = not yet)
         volatile long portOpenAt; // when port was detected open (0 = not yet)
         long lastBroadcastMs;
 
@@ -66,8 +65,8 @@ public class ServerManager {
         return startMatchServer(mapName, maxPlayers, mapWorldPath, null);
     }
 
-    public static StartResult startMatchServer(String mapName, int maxPlayers, String mapWorldPath,
-                                                Consumer<Path> configCustomizer) {
+    public static StartResult startMatchServer(
+            String mapName, int maxPlayers, String mapWorldPath, Consumer<Path> configCustomizer) {
         StartResult result = new StartResult();
 
         Path templatePath = Paths.get(TEMPLATE_PATH).toAbsolutePath().normalize();
@@ -143,7 +142,8 @@ public class ServerManager {
                     }
                 }
 
-                String voidGen = "{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biomes\":\"minecraft:the_void\",\"structures\":{\"structures\":{}}}";
+                String voidGen =
+                        "{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biomes\":\"minecraft:the_void\",\"structures\":{\"structures\":{}}}";
                 StringBuilder props = new StringBuilder();
                 props.append("server-port=").append(port).append("\n");
                 props.append("level-name=").append(mapName).append("\n");
@@ -159,9 +159,15 @@ public class ServerManager {
                 props.append("gamemode=adventure\n");
                 props.append("allow-flight=true\n");
                 if (matchConfig != null && matchConfig.server != null) {
-                    props.append("view-distance=").append(matchConfig.server.viewDistance).append("\n");
-                    props.append("simulation-distance=").append(matchConfig.server.simulationDistance).append("\n");
-                    props.append("entity-broadcast-range-percentage=").append(matchConfig.server.entityBroadcastRange).append("\n");
+                    props.append("view-distance=")
+                            .append(matchConfig.server.viewDistance)
+                            .append("\n");
+                    props.append("simulation-distance=")
+                            .append(matchConfig.server.simulationDistance)
+                            .append("\n");
+                    props.append("entity-broadcast-range-percentage=")
+                            .append(matchConfig.server.entityBroadcastRange)
+                            .append("\n");
                 }
                 Files.writeString(serverDir.resolve("server.properties"), props.toString());
 
@@ -185,9 +191,7 @@ public class ServerManager {
                 File sDir = serverDir.toFile();
 
                 ProcessBuilder pb = new ProcessBuilder(
-                        "cmd.exe", "/c",
-                        "start", title, "/D", dir, "/WAIT",
-                        "cmd", "/c", "run.bat", "nogui");
+                        "cmd.exe", "/c", "start", title, "/D", dir, "/WAIT", "cmd", "/c", "run.bat", "nogui");
                 pb.directory(sDir);
                 pb.environment().put("JAVA_HOME", System.getProperty("java.home"));
 
@@ -198,7 +202,11 @@ public class ServerManager {
                 instance.failed = true;
                 instance.error = e.getMessage();
                 instance.phase = null;
-                try { if (Files.exists(serverDir)) deleteDirectory(serverDir); } catch (IOException ignored) { log.warn("ServerManager.startMatchServer: исключение", ignored); }
+                try {
+                    if (Files.exists(serverDir)) deleteDirectory(serverDir);
+                } catch (IOException ignored) {
+                    log.warn("ServerManager.startMatchServer: исключение", ignored);
+                }
             }
         });
 
@@ -221,7 +229,11 @@ public class ServerManager {
             if (si.process == null) continue; // still starting (copying template/map)
             if (!si.process.isAlive() && !si.failed) {
                 int exitCode = -1;
-                try { exitCode = si.process.exitValue(); } catch (Exception ignored) { log.warn("ServerManager.tick: исключение", ignored); }
+                try {
+                    exitCode = si.process.exitValue();
+                } catch (Exception ignored) {
+                    log.warn("ServerManager.tick: исключение", ignored);
+                }
                 log.warn("Server {} process died prematurely (exitCode={})", si.serverId, exitCode);
                 // Read last lines of match server log for diagnostics
                 Path logFile = si.directory.resolve("logs/latest.log");
@@ -232,7 +244,9 @@ public class ServerManager {
                         for (int i = start; i < lines.size(); i++) {
                             log.warn("MATCH_LOG[{}]: {}", si.serverId, lines.get(i));
                         }
-                    } catch (Exception ignored) { log.warn("ServerManager.tick: исключение", ignored); }
+                    } catch (Exception ignored) {
+                        log.warn("ServerManager.tick: исключение", ignored);
+                    }
                 } else {
                     log.warn("MATCH_LOG[{}]: logs/latest.log not found", si.serverId);
                 }
@@ -256,7 +270,9 @@ public class ServerManager {
                                 break;
                             }
                         }
-                    } catch (IOException ignored) { log.warn("ServerManager.tick: исключение", ignored); }
+                    } catch (IOException ignored) {
+                        log.warn("ServerManager.tick: исключение", ignored);
+                    }
                 }
                 // Method 2: fallback — port open + 55s (covers ~44s from port to "Done")
                 if (si.logDoneAt == 0 && si.portOpenAt == 0) {
@@ -264,9 +280,11 @@ public class ServerManager {
                         s.connect(new InetSocketAddress("127.0.0.1", si.port), 200);
                         si.portOpenAt = System.currentTimeMillis();
                         log.info("Server {} port open, fallback boot in 55s", si.serverId);
-                    } catch (IOException ignored) { log.warn("ServerManager.tick: исключение", ignored); }
+                    } catch (IOException ignored) {
+                        log.warn("ServerManager.tick: исключение", ignored);
+                    }
                 }
-                boolean logReady  = si.logDoneAt  != 0 && now - si.logDoneAt  >= 2000;
+                boolean logReady = si.logDoneAt != 0 && now - si.logDoneAt >= 2000;
                 boolean portReady = si.portOpenAt != 0 && now - si.portOpenAt >= 55000;
                 if (logReady || portReady) {
                     si.booted = true;
@@ -282,23 +300,27 @@ public class ServerManager {
             if (si.phase != null && !si.failed && now - si.lastBroadcastMs > 2000) {
                 si.lastBroadcastMs = now;
                 long elapsed = (now - si.phaseStartedAt) / 1000;
-                String msg = switch (si.phase) {
-                    case "template" -> "§7[PWP] Copying server template... §e" + elapsed + "s";
-                    case "map" -> "§7[PWP] Copying map world... §e" + elapsed + "s";
-                    case "config" -> "§7[PWP] Preparing config... §e" + elapsed + "s";
-                    case "booting" -> "§7[PWP] Starting server... §e" + elapsed + "s";
-                    default -> null;
-                };
+                String msg =
+                        switch (si.phase) {
+                            case "template" -> "§7[PWP] Copying server template... §e" + elapsed + "s";
+                            case "map" -> "§7[PWP] Copying map world... §e" + elapsed + "s";
+                            case "config" -> "§7[PWP] Preparing config... §e" + elapsed + "s";
+                            case "booting" -> "§7[PWP] Starting server... §e" + elapsed + "s";
+                            default -> null;
+                        };
                 if (msg != null) {
                     String finalMsg = msg;
-                    server.getPlayerList().getPlayers().forEach(p ->
-                            p.sendSystemMessage(Component.literal(finalMsg), false));
+                    server.getPlayerList()
+                            .getPlayers()
+                            .forEach(p -> p.sendSystemMessage(Component.literal(finalMsg), false));
                 }
             }
             if (si.booted && si.phase != null) {
                 si.phase = null;
-                server.getPlayerList().getPlayers().forEach(p ->
-                        p.sendSystemMessage(Component.literal("§a[PWP] Match server ready! §7(port " + si.port + ")"), false));
+                server.getPlayerList()
+                        .getPlayers()
+                        .forEach(p -> p.sendSystemMessage(
+                                Component.literal("§a[PWP] Match server ready! §7(port " + si.port + ")"), false));
             }
         }
     }
@@ -308,10 +330,19 @@ public class ServerManager {
         if (si == null) return;
         if (si.process.isAlive()) {
             si.process.destroy();
-            try { si.process.waitFor(10, TimeUnit.SECONDS); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try {
+                si.process.waitFor(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             if (si.process.isAlive()) si.process.destroyForcibly();
         }
-        try { deleteDirectory(si.directory); log.info("Cleaned up {}", si.directory.getFileName()); } catch (IOException ignored) { log.warn("ServerManager.stopServer: исключение", ignored); }
+        try {
+            deleteDirectory(si.directory);
+            log.info("Cleaned up {}", si.directory.getFileName());
+        } catch (IOException ignored) {
+            log.warn("ServerManager.stopServer: исключение", ignored);
+        }
     }
 
     public static ServerInstance getServer(int serverId) {
@@ -346,7 +377,8 @@ public class ServerManager {
 
     // --- private helpers ---
 
-    private static void writeSBWServerConfig(Path serverDir, String levelName, ServerMatchConfig.Superbwarfare cfg) throws IOException {
+    private static void writeSBWServerConfig(Path serverDir, String levelName, ServerMatchConfig.Superbwarfare cfg)
+            throws IOException {
         Path scDir = serverDir.resolve(levelName).resolve("serverconfig");
         Files.createDirectories(scDir);
         String toml = "[vehicle]\n\tvehicle_info_display_distance = " + cfg.vehicleInfoDisplayDistance
@@ -377,8 +409,11 @@ public class ServerManager {
     /** Убить процесс, слушающий порт (зомби матч-сервер от прошлого запуска). */
     private static void killPort(int port) {
         try {
-            ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c",
-                    "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr \":" + port + " \" ^| findstr \"LISTENING\"') do @taskkill /F /PID %a");
+            ProcessBuilder pb = new ProcessBuilder(
+                    "cmd.exe",
+                    "/c",
+                    "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr \":" + port
+                            + " \" ^| findstr \"LISTENING\"') do @taskkill /F /PID %a");
             Process p = pb.start();
             p.waitFor(30, TimeUnit.SECONDS);
             log.info("Port {} freed (killed zombie if any)", port);
@@ -391,14 +426,17 @@ public class ServerManager {
         Files.createDirectories(target);
         String src = source.toAbsolutePath() + "\\";
         String dst = target.toAbsolutePath() + "\\";
-        ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "robocopy", src, dst,
-                "/E", "/MT:2", "/NFL", "/NDL", "/NJH", "/NJS", "/R:0", "/W:0");
+        ProcessBuilder pb = new ProcessBuilder(
+                "cmd.exe", "/c", "robocopy", src, dst, "/E", "/MT:2", "/NFL", "/NDL", "/NJH", "/NJS", "/R:0", "/W:0");
         Process p = pb.start();
         try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
             while (br.readLine() != null) {}
         }
         try {
-            if (!p.waitFor(5, TimeUnit.MINUTES)) { p.destroyForcibly(); throw new IOException("robocopy timed out"); }
+            if (!p.waitFor(5, TimeUnit.MINUTES)) {
+                p.destroyForcibly();
+                throw new IOException("robocopy timed out");
+            }
             if (p.exitValue() > 7) throw new IOException("robocopy failed: " + p.exitValue());
         } catch (InterruptedException e) {
             p.destroyForcibly();

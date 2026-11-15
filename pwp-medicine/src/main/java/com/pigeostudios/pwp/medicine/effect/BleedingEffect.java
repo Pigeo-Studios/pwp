@@ -1,7 +1,7 @@
 package com.pigeostudios.pwp.medicine.effect;
 
-import java.util.UUID;
 import com.pigeostudios.pwp.medicine.event.EventHandler;
+import java.util.UUID;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -15,8 +15,7 @@ import net.minecraft.world.entity.player.Player;
 
 // Эффект кровотечения.
 // Наносит периодический урон игроку, пока тот не умрёт или не исцелится.
-public class BleedingEffect
-extends MobEffect {
+public class BleedingEffect extends MobEffect {
     public BleedingEffect() {
         super(MobEffectCategory.HARMFUL, 0xFF0000); // Красный цвет эффекта
     }
@@ -24,7 +23,7 @@ extends MobEffect {
     // Вызывается каждый тик для применения эффекта
     public void applyEffectTick(LivingEntity entity, int amplifier) {
         if (entity instanceof Player) {
-            Player victim = (Player)entity;
+            Player victim = (Player) entity;
             if (!victim.level().isClientSide) { // Только на сервере
                 // Если игрок в состоянии "нокаут" — снимаем кровотечение
                 if (victim.getPersistentData().getBoolean("PWP_IsDowned")) {
@@ -39,10 +38,14 @@ extends MobEffect {
                     UUID attackerUUID = EventHandler.BLEEDING_SOURCES.get(victim.getUUID());
                     Player attacker = attackerUUID != null ? victim.level().getPlayerByUUID(attackerUUID) : null;
                     // Кастомный тип урона "bleeding" из pwp_medicine
-                    Registry<DamageType> registry = victim.level().registryAccess().registry(Registries.DAMAGE_TYPE).orElse(null);
+                    Registry<DamageType> registry = victim.level()
+                            .registryAccess()
+                            .registry(Registries.DAMAGE_TYPE)
+                            .orElse(null);
                     if (registry != null && registry.getHolderOrThrow(EventHandler.BLEEDING_DAMAGE_KEY) != null) {
-                        Holder.Reference<DamageType> holder = registry.getHolderOrThrow(EventHandler.BLEEDING_DAMAGE_KEY);
-                        source = new DamageSource(holder, (Entity)attacker, (Entity)attacker);
+                        Holder.Reference<DamageType> holder =
+                                registry.getHolderOrThrow(EventHandler.BLEEDING_DAMAGE_KEY);
+                        source = new DamageSource(holder, (Entity) attacker, (Entity) attacker);
                     } else {
                         source = victim.damageSources().genericKill(); // Фолбэк: общий урон
                     }

@@ -50,7 +50,8 @@ public class PacketVehicleDriveAnswer {
         Entity vehicle = level.getEntity(vehicleId);
         if (vehicle == null) return;
 
-        ServerPlayer requester = (ServerPlayer) level.getServer().getPlayerList().getPlayer(requesterUUID);
+        ServerPlayer requester =
+                (ServerPlayer) level.getServer().getPlayerList().getPlayer(requesterUUID);
         if (requester == null) return;
 
         UUID vehicleUUID = vehicle.getUUID();
@@ -58,10 +59,18 @@ public class PacketVehicleDriveAnswer {
         if (accept) {
             data.addApprovedDriver(vehicleUUID, requesterUUID);
             vehicle.getPersistentData().remove("WARFARE_FreshVehicle");
-            requester.displayClientMessage(Component.literal("\u2705 Ваша заявка на управление техникой принята!").withStyle(ChatFormatting.GREEN), true);
+            requester.displayClientMessage(
+                    Component.literal("\u2705 Ваша заявка на управление техникой принята!")
+                            .withStyle(ChatFormatting.GREEN),
+                    true);
         } else {
-            requester.getPersistentData().putLong("WARFARE_DriveRequestCooldown_" + vehicleId, level.getGameTime() + 6000);
-            requester.displayClientMessage(Component.literal("\u274C Заявка отклонена. Повтор через 5 минут.").withStyle(ChatFormatting.RED), true);
+            requester
+                    .getPersistentData()
+                    .putLong("WARFARE_DriveRequestCooldown_" + vehicleId, level.getGameTime() + 6000);
+            requester.displayClientMessage(
+                    Component.literal("\u274C Заявка отклонена. Повтор через 5 минут.")
+                            .withStyle(ChatFormatting.RED),
+                    true);
         }
     }
 }

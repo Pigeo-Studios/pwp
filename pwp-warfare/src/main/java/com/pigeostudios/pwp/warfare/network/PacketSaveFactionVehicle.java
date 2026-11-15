@@ -1,9 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.security.PwpPermissions;
 import com.pwp.api.util.ServerThread;
@@ -17,7 +15,7 @@ import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.registries.ForgeRegistries;
 
 public class PacketSaveFactionVehicle {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketSaveFactionVehicle.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PacketSaveFactionVehicle.class);
     private final String faction;
     private final String vehicleName;
     private final String displayName;
@@ -28,9 +26,16 @@ public class PacketSaveFactionVehicle {
     private final String category;
     private final ItemStack[] inventory;
 
-    public PacketSaveFactionVehicle(String faction, String vehicleName, String displayName,
-                                    String vehicleId, float yaw, int respawnTime, int initialTime,
-                                    String category, ItemStack[] inventory) {
+    public PacketSaveFactionVehicle(
+            String faction,
+            String vehicleName,
+            String displayName,
+            String vehicleId,
+            float yaw,
+            int respawnTime,
+            int initialTime,
+            String category,
+            ItemStack[] inventory) {
         this.faction = faction;
         this.vehicleName = vehicleName;
         this.displayName = displayName;
@@ -51,9 +56,9 @@ public class PacketSaveFactionVehicle {
         buf.writeInt(msg.respawnTime);
         buf.writeInt(msg.initialTime);
         buf.writeUtf(msg.category != null ? msg.category : "");
-            for (int i = 0; i < 33; i++) {
-                buf.writeItem(msg.inventory[i]);
-            }
+        for (int i = 0; i < 33; i++) {
+            buf.writeItem(msg.inventory[i]);
+        }
     }
 
     public static PacketSaveFactionVehicle decode(FriendlyByteBuf buf) {
@@ -69,7 +74,8 @@ public class PacketSaveFactionVehicle {
         for (int i = 0; i < 33; i++) {
             inv[i] = buf.readItem();
         }
-        return new PacketSaveFactionVehicle(faction, vehicleName, displayName, vehicleId, yaw, respawnTime, initialTime, category, inv);
+        return new PacketSaveFactionVehicle(
+                faction, vehicleName, displayName, vehicleId, yaw, respawnTime, initialTime, category, inv);
     }
 
     public static void handle(PacketSaveFactionVehicle msg, Supplier<Context> ctx) {
@@ -89,7 +95,9 @@ public class PacketSaveFactionVehicle {
                         if (stack.hasTag()) {
                             try {
                                 itemData.add("tag", PacketSaveFactionKit.nbtToJson(stack.getTag()));
-                            } catch (Exception ignored) { PWP_LOG.warn("PacketSaveFactionVehicle.handle: исключение", ignored); }
+                            } catch (Exception ignored) {
+                                PWP_LOG.warn("PacketSaveFactionVehicle.handle: исключение", ignored);
+                            }
                         }
                         itemJson.add("item", itemData);
                         itemsArray.add(itemJson);
@@ -106,13 +114,16 @@ public class PacketSaveFactionVehicle {
                 payload.addProperty("category", msg.category);
                 payload.addProperty("inventory", itemsArray.toString());
 
-                ServerThread.thenOnServer(CoreApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload), player.server, resp -> {
-                    if (resp == null) {
-                        player.displayClientMessage(Component.literal("§cCore API: техника не сохранена"), true);
-                    } else {
-                        player.displayClientMessage(Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
-                    }
-                });
+                ServerThread.thenOnServer(
+                        CoreApi.saveFactionVehicle(msg.faction, msg.vehicleName, payload), player.server, resp -> {
+                            if (resp == null) {
+                                player.displayClientMessage(
+                                        Component.literal("§cCore API: техника не сохранена"), true);
+                            } else {
+                                player.displayClientMessage(
+                                        Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
+                            }
+                        });
             }
         });
         ctx.get().setPacketHandled(true);

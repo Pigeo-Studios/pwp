@@ -6,18 +6,24 @@ import com.pwp.coreclient.gui.components.PWPProgressBar;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.LobbyStatePacket;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class VoteTabRenderer {
-   private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteTabRenderer.class);
+    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteTabRenderer.class);
 
-    private enum Phase { IDLE, MAP, MODE, FACTION, FINISHED, MATCH }
+    private enum Phase {
+        IDLE,
+        MAP,
+        MODE,
+        FACTION,
+        FINISHED,
+        MATCH
+    }
 
     private static class Option {
         String id, name, desc, f1, f2, worldPath;
@@ -30,12 +36,32 @@ public class VoteTabRenderer {
         Option(String id, String name, String desc, String f1, String f2, int votes, int color) {
             this(id, name, desc, f1, f2, votes, color, null, null, null);
         }
+
         Option(String id, String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon) {
             this(id, name, desc, f1, f2, votes, color, icon, null, null);
         }
-        Option(String id, String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon, String worldPath, java.util.List<ResourceLocation> teamFlags) {
-            this.id = id; this.name = name; this.desc = desc; this.f1 = f1; this.f2 = f2;
-            this.votes = votes; this.color = color; this.icon = icon; this.worldPath = worldPath; this.teamFlags = teamFlags;
+
+        Option(
+                String id,
+                String name,
+                String desc,
+                String f1,
+                String f2,
+                int votes,
+                int color,
+                ResourceLocation icon,
+                String worldPath,
+                java.util.List<ResourceLocation> teamFlags) {
+            this.id = id;
+            this.name = name;
+            this.desc = desc;
+            this.f1 = f1;
+            this.f2 = f2;
+            this.votes = votes;
+            this.color = color;
+            this.icon = icon;
+            this.worldPath = worldPath;
+            this.teamFlags = teamFlags;
             this.bar = new PWPProgressBar();
         }
     }
@@ -85,8 +111,14 @@ public class VoteTabRenderer {
         boolean phaseChanged = pkt.phase != lastPacketPhase;
         lastPacketPhase = pkt.phase;
         if (phaseChanged) {
-            selMap = -1; selMode = -1; selFact1 = -1; selFact2 = -1;
-            votMap = -1; votMode = -1; votFact1 = -1; votFact2 = -1;
+            selMap = -1;
+            selMode = -1;
+            selFact1 = -1;
+            selFact2 = -1;
+            votMap = -1;
+            votMode = -1;
+            votFact1 = -1;
+            votFact2 = -1;
         }
 
         switch (pkt.phase) {
@@ -135,14 +167,17 @@ public class VoteTabRenderer {
         mapOpts.clear();
         int len = pkt.mapNames != null ? pkt.mapNames.length : 0;
         for (int i = 0; i < len; i++) {
-            mapOpts.add(new Option(pkt.mapNames[i],
+            mapOpts.add(new Option(
+                    pkt.mapNames[i],
                     i < pkt.mapDisplayNames.length ? pkt.mapDisplayNames[i] : pkt.mapNames[i],
                     i < pkt.mapDescriptions.length ? pkt.mapDescriptions[i] : null,
                     i < pkt.blueFactions.length ? pkt.blueFactions[i] : null,
                     i < pkt.redFactions.length ? pkt.redFactions[i] : null,
                     i < pkt.voteCounts.length ? pkt.voteCounts[i] : 0,
-                    0xFF8B6B3D + i * 0x112233, null,
-                    i < pkt.worldPaths.length ? pkt.worldPaths[i] : null, null));
+                    0xFF8B6B3D + i * 0x112233,
+                    null,
+                    i < pkt.worldPaths.length ? pkt.worldPaths[i] : null,
+                    null));
         }
         reuseBars(prev, mapOpts);
         if (selMap >= mapOpts.size()) selMap = -1;
@@ -154,10 +189,12 @@ public class VoteTabRenderer {
         modeOpts.clear();
         int len = pkt.modeNames != null ? pkt.modeNames.length : 0;
         for (int i = 0; i < len; i++) {
-            modeOpts.add(new Option(pkt.modeNames[i],
+            modeOpts.add(new Option(
+                    pkt.modeNames[i],
                     i < pkt.modeDisplayNames.length ? pkt.modeDisplayNames[i] : pkt.modeNames[i],
                     i < pkt.modeDescriptions.length ? pkt.modeDescriptions[i] : null,
-                    null, null,
+                    null,
+                    null,
                     i < pkt.modeVoteCounts.length ? pkt.modeVoteCounts[i] : 0,
                     i == 0 ? 0xFFC8812A : 0xFF3D6FA5));
         }
@@ -169,9 +206,13 @@ public class VoteTabRenderer {
     private void rebuildFactions(LobbyStatePacket pkt) {
         List<Option> prev = new ArrayList<>(factOpts);
         factOpts.clear();
-        java.util.Map<String,String> fnames = new java.util.HashMap<>();
-        fnames.put("usa","США"); fnames.put("ukraine","Украина"); fnames.put("nato","НАТО");
-        fnames.put("russia","Россия"); fnames.put("insurgency","Insurgency"); fnames.put("pmc","ЧВК");
+        java.util.Map<String, String> fnames = new java.util.HashMap<>();
+        fnames.put("usa", "США");
+        fnames.put("ukraine", "Украина");
+        fnames.put("nato", "НАТО");
+        fnames.put("russia", "Россия");
+        fnames.put("insurgency", "Insurgency");
+        fnames.put("pmc", "ЧВК");
         int len1 = pkt.team1Factions != null ? pkt.team1Factions.length : 0;
         for (int i = 0; i < 3; i++) {
             String n = i < len1 ? pkt.team1Factions[i] : "";
@@ -216,8 +257,17 @@ public class VoteTabRenderer {
         }
     }
 
-    private static ResourceLocation flag(String n) { return n != null && !n.isEmpty() ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png") : null; }
-    private static void recalc(List<Option> o) { int t = 0; for (Option x : o) t += x.votes; for (Option x : o) x.bar.setProgress(t > 0 ? (float)x.votes/t : 0); }
+    private static ResourceLocation flag(String n) {
+        return n != null && !n.isEmpty()
+                ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png")
+                : null;
+    }
+
+    private static void recalc(List<Option> o) {
+        int t = 0;
+        for (Option x : o) t += x.votes;
+        for (Option x : o) x.bar.setProgress(t > 0 ? (float) x.votes / t : 0);
+    }
 
     private static ResourceLocation getMapPreview(String worldPath) {
         if (worldPath == null || worldPath.isEmpty()) return null;
@@ -232,23 +282,29 @@ public class VoteTabRenderer {
             float t = Math.min(e / 500f, 1), ez = eoc(t);
             if (transitionTo == Phase.FINISHED) {
                 // FACTION -> FINISHED: dark overlay fade in/out, then cards slide up
-                int ovAlpha = (int)(Math.min(1, t * 2) * 0xCC);
+                int ovAlpha = (int) (Math.min(1, t * 2) * 0xCC);
                 g.fill(0, 70, sw, sh - 16, (ovAlpha << 24) | 0x06080A);
                 if (t > 0.3f) {
                     float cardT = Math.min((t - 0.3f) / 0.7f, 1);
-                    RenderSystem.setShaderColor(1,1,1, cardT);
+                    RenderSystem.setShaderColor(1, 1, 1, cardT);
                     renderPhase(g, sw, sh, mx, my, transitionTo, now);
-                    RenderSystem.setShaderColor(1,1,1,1);
+                    RenderSystem.setShaderColor(1, 1, 1, 1);
                 }
             } else {
-                RenderSystem.setShaderColor(1,1,1,1-ez);
+                RenderSystem.setShaderColor(1, 1, 1, 1 - ez);
                 renderPhase(g, sw, sh, mx, my, transitionFrom, now);
-                RenderSystem.setShaderColor(1,1,1,ez);
+                RenderSystem.setShaderColor(1, 1, 1, ez);
                 renderPhase(g, sw, sh, mx, my, transitionTo, now);
-                RenderSystem.setShaderColor(1,1,1,1);
+                RenderSystem.setShaderColor(1, 1, 1, 1);
             }
-            if (t >= 1) { transitioning = false; currentPhase = transitionTo; }
-        } else { renderPhase(g, sw, sh, mx, my, currentPhase, now); renderAfter(g, sw, sh, mx, my, now); }
+            if (t >= 1) {
+                transitioning = false;
+                currentPhase = transitionTo;
+            }
+        } else {
+            renderPhase(g, sw, sh, mx, my, currentPhase, now);
+            renderAfter(g, sw, sh, mx, my, now);
+        }
     }
 
     private void renderAfter(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
@@ -258,7 +314,9 @@ public class VoteTabRenderer {
         if (currentPhase == Phase.MAP || currentPhase == Phase.MODE) {
             if (hoveredCard >= 0) {
                 List<Option> opts = currentPhase == Phase.MAP ? mapOpts : modeOpts;
-                if (hoveredCard < opts.size() && opts.get(hoveredCard).desc != null && !opts.get(hoveredCard).desc.isEmpty()) {
+                if (hoveredCard < opts.size()
+                        && opts.get(hoveredCard).desc != null
+                        && !opts.get(hoveredCard).desc.isEmpty()) {
                     tooltipTarget = hoveredCard;
                 }
             }
@@ -270,7 +328,9 @@ public class VoteTabRenderer {
                 List<Option> opts = currentPhase == Phase.MAP ? mapOpts : modeOpts;
                 if (tooltipTarget < opts.size()) tooltipText = opts.get(tooltipTarget).desc;
             }
-        } else { tooltipHoverStart = now; }
+        } else {
+            tooltipHoverStart = now;
+        }
 
         if (tooltipText != null) renderTooltip(g, tooltipText, mx, my, sw, sh, now);
     }
@@ -288,14 +348,22 @@ public class VoteTabRenderer {
         StringBuilder cur = new StringBuilder();
         for (String w : words) {
             String test = cur.length() == 0 ? w : cur + " " + w;
-            if (f.width(test) > maxW && cur.length() > 0) { lines.add(cur.toString()); cur = new StringBuilder(w); }
-            else { if (cur.length() > 0) cur.append(" "); cur.append(w); }
+            if (f.width(test) > maxW && cur.length() > 0) {
+                lines.add(cur.toString());
+                cur = new StringBuilder(w);
+            } else {
+                if (cur.length() > 0) cur.append(" ");
+                cur.append(w);
+            }
         }
         if (cur.length() > 0) lines.add(cur.toString());
 
         int lineH = 12;
         int tw = 0;
-        for (String ln : lines) { int lw = f.width(ln); if (lw > tw) tw = lw; }
+        for (String ln : lines) {
+            int lw = f.width(ln);
+            if (lw > tw) tw = lw;
+        }
         int th = lines.size() * lineH + 12;
         int pad = 8;
         tw = Math.min(tw + pad * 2, sw - 20);
@@ -317,16 +385,28 @@ public class VoteTabRenderer {
         }
     }
 
-    private static float eoc2(float t) { return t < 0.5f ? 2*t*t : -1 + (4-2*t)*t; }
+    private static float eoc2(float t) {
+        return t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    }
 
-    private static float eoc(float t) { float f = 1-t; return 1-f*f*f; }
+    private static float eoc(float t) {
+        float f = 1 - t;
+        return 1 - f * f * f;
+    }
+
     private static String suffix(int v) {
         if (v % 10 == 1 && v % 100 != 11) return "";
         if (v % 10 >= 2 && v % 10 <= 4 && (v % 100 < 10 || v % 100 >= 20)) return "а";
         return "ов";
     }
 
-    private void xition(Phase to) { transitionFrom = currentPhase; transitionTo = to; transitioning = true; transitionTime = System.currentTimeMillis(); if (to == Phase.FINISHED) finishedAnimStart = transitionTime; }
+    private void xition(Phase to) {
+        transitionFrom = currentPhase;
+        transitionTo = to;
+        transitioning = true;
+        transitionTime = System.currentTimeMillis();
+        if (to == Phase.FINISHED) finishedAnimStart = transitionTime;
+    }
 
     private void renderPhase(GuiGraphics g, int sw, int sh, int mx, int my, Phase p, long now) {
         switch (p) {
@@ -342,85 +422,139 @@ public class VoteTabRenderer {
     private void matchInfo(GuiGraphics g, int sw, int sh) {
         var f = PWPTheme.Fonts.display();
         String title = matchStarting ? "МАТЧ ЗАПУСКАЕТСЯ" : "МАТЧ ИДЁТ";
-        g.drawString(f, Component.literal(title), sw/2 - f.width(title)/2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw/2 - 80, 96, sw/2 + 80, 97, PWPTheme.Colors.ACCENT);
+        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
+        g.fill(sw / 2 - 80, 96, sw / 2 + 80, 97, PWPTheme.Colors.ACCENT);
 
         String map = matchMapDisplay.isEmpty() ? "-" : matchMapDisplay;
-        g.drawString(f, Component.literal("Карта: " + map), sw/2 - f.width("Карта: " + map)/2, 130, 0xFFFFFF, false);
+        g.drawString(
+                f, Component.literal("Карта: " + map), sw / 2 - f.width("Карта: " + map) / 2, 130, 0xFFFFFF, false);
 
         String modeTxt = matchModeDisplay.isEmpty() ? "" : "Режим: " + matchModeDisplay;
-        if (!modeTxt.isEmpty()) g.drawString(f, Component.literal(modeTxt), sw/2 - f.width(modeTxt)/2, 152, PWPTheme.Colors.TEXT_SECONDARY, false);
+        if (!modeTxt.isEmpty())
+            g.drawString(
+                    f,
+                    Component.literal(modeTxt),
+                    sw / 2 - f.width(modeTxt) / 2,
+                    152,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
 
-        String factions = matchBlueFaction.isEmpty() ? "" : matchBlueFaction.toUpperCase() + " vs " + matchRedFaction.toUpperCase();
+        String factions = matchBlueFaction.isEmpty()
+                ? ""
+                : matchBlueFaction.toUpperCase() + " vs " + matchRedFaction.toUpperCase();
         if (!factions.isEmpty()) {
-            g.drawString(f, Component.literal(factions), sw/2 - f.width(factions)/2, 176, PWPTheme.Colors.TEXT_PRIMARY, false);
+            g.drawString(
+                    f,
+                    Component.literal(factions),
+                    sw / 2 - f.width(factions) / 2,
+                    176,
+                    PWPTheme.Colors.TEXT_PRIMARY,
+                    false);
             String t = matchBlueTickets + " : " + matchRedTickets;
-            g.drawString(f, Component.literal(t), sw/2 - f.width(t)/2, 192, PWPTheme.Colors.TEXT_DIM, false);
+            g.drawString(f, Component.literal(t), sw / 2 - f.width(t) / 2, 192, PWPTheme.Colors.TEXT_DIM, false);
         }
         String h = matchStarting ? "Сервер матча готовится..." : "Откройте вкладку ИГРА для подключения";
-        g.drawString(f, Component.literal(h), sw/2 - f.width(h)/2, 230, PWPTheme.Colors.TEXT_DIM, false);
-    }
-    private void idle(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
-        var f = PWPTheme.Fonts.display();
-        g.drawString(f, Component.literal("ГОЛОСОВАНИЕ"), sw/2 - f.width("ГОЛОСОВАНИЕ")/2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw/2 - 60, 96, sw/2 + 60, 97, PWPTheme.Colors.ACCENT);
-        String s = "ОЖИДАНИЕ ГОЛОСОВАНИЯ";
-        g.drawString(f, Component.literal(s), sw/2 - f.width(s)/2, 130, PWPTheme.Colors.TEXT_SECONDARY, false);
-        String h = "Голосование начнётся автоматически";
-        g.drawString(f, Component.literal(h), sw/2 - f.width(h)/2, 150, PWPTheme.Colors.TEXT_DIM, false);
+        g.drawString(f, Component.literal(h), sw / 2 - f.width(h) / 2, 230, PWPTheme.Colors.TEXT_DIM, false);
     }
 
-    private void voteGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now, String title, List<Option> opts, int sel, boolean factions) {
+    private void idle(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
+        var f = PWPTheme.Fonts.display();
+        g.drawString(
+                f,
+                Component.literal("ГОЛОСОВАНИЕ"),
+                sw / 2 - f.width("ГОЛОСОВАНИЕ") / 2,
+                82,
+                PWPTheme.Colors.TEXT_ACCENT,
+                false);
+        g.fill(sw / 2 - 60, 96, sw / 2 + 60, 97, PWPTheme.Colors.ACCENT);
+        String s = "ОЖИДАНИЕ ГОЛОСОВАНИЯ";
+        g.drawString(f, Component.literal(s), sw / 2 - f.width(s) / 2, 130, PWPTheme.Colors.TEXT_SECONDARY, false);
+        String h = "Голосование начнётся автоматически";
+        g.drawString(f, Component.literal(h), sw / 2 - f.width(h) / 2, 150, PWPTheme.Colors.TEXT_DIM, false);
+    }
+
+    private void voteGrid(
+            GuiGraphics g,
+            int sw,
+            int sh,
+            int mx,
+            int my,
+            long now,
+            String title,
+            List<Option> opts,
+            int sel,
+            boolean factions) {
         var f = PWPTheme.Fonts.display();
         int rem = Math.max(0, voteDurationSec);
         // Store remaining for faction vote timer reference
         for (Option o : opts) o.remainingSec = rem;
-        g.drawString(f, Component.literal(title), sw/2 - f.width(title)/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw/2 - f.width(title)/2 - 4, 94, sw/2 + f.width(title)/2 + 4, 95, PWPTheme.Colors.ACCENT);
-        String tmr = String.format("Осталось: %d:%02d", rem/60, rem%60);
-        g.drawString(f, Component.literal(tmr), sw/2 - f.width(tmr)/2, 104, PWPTheme.Colors.TEXT_SECONDARY, false);
+        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
+        g.fill(sw / 2 - f.width(title) / 2 - 4, 94, sw / 2 + f.width(title) / 2 + 4, 95, PWPTheme.Colors.ACCENT);
+        String tmr = String.format("Осталось: %d:%02d", rem / 60, rem % 60);
+        g.drawString(f, Component.literal(tmr), sw / 2 - f.width(tmr) / 2, 104, PWPTheme.Colors.TEXT_SECONDARY, false);
         int cw = 200, ch = 130, gap = 12, cols = 2;
-        int rows = (opts.size()+cols-1)/cols, gw = cols*cw+(cols-1)*gap, gh = rows*ch+(rows-1)*gap, gx = (sw-gw)/2, gy = 118;
+        int rows = (opts.size() + cols - 1) / cols,
+                gw = cols * cw + (cols - 1) * gap,
+                gh = rows * ch + (rows - 1) * gap,
+                gx = (sw - gw) / 2,
+                gy = 118;
         hoveredCard = -1;
         for (int i = 0; i < opts.size(); i++) {
-            int col = i%cols, row = i/cols, cx = gx+col*(cw+gap), cy = gy+row*(ch+gap);
-            boolean hv = mx>=cx&&mx<=cx+cw&&my>=cy&&my<=cy+ch;
+            int col = i % cols, row = i / cols, cx = gx + col * (cw + gap), cy = gy + row * (ch + gap);
+            boolean hv = mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch;
             if (hv) hoveredCard = i;
-            renderCard(g, cx, cy, cw, ch, opts.get(i), i==sel, hv, now, factions);
+            renderCard(g, cx, cy, cw, ch, opts.get(i), i == sel, hv, now, factions);
         }
         int voted = title.contains("КАРТУ") ? votMap : (title.contains("РЕЖИМ") ? votMode : -1);
-        boolean canVote = sel>=0 && sel!=voted;
-        int by = gy+gh+14, bw = 180, bh = 28, bx = (sw-bw)/2;
+        boolean canVote = sel >= 0 && sel != voted;
+        int by = gy + gh + 14, bw = 180, bh = 28, bx = (sw - bw) / 2;
         voteButtonY = by;
-        boolean bhv = mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh;
-        String bt = voted>=0 ? "ИЗМЕНИТЬ ГОЛОС" : "ГОЛОСОВАТЬ";
-        RoundedRect.fill(g, bx, by, bw, bh, 3, canVote ? (bhv ? PWPTheme.Colors.ACCENT_SOFT : PWPTheme.Colors.ACCENT) : PWPTheme.Colors.SURFACE_DIM);
+        boolean bhv = mx >= bx && mx <= bx + bw && my >= by && my <= by + bh;
+        String bt = voted >= 0 ? "ИЗМЕНИТЬ ГОЛОС" : "ГОЛОСОВАТЬ";
+        RoundedRect.fill(
+                g,
+                bx,
+                by,
+                bw,
+                bh,
+                3,
+                canVote ? (bhv ? PWPTheme.Colors.ACCENT_SOFT : PWPTheme.Colors.ACCENT) : PWPTheme.Colors.SURFACE_DIM);
         RoundedRect.border(g, bx, by, bw, bh, 3, 1, canVote ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-        g.drawString(f, Component.literal(bt), bx+bw/2-f.width(bt)/2, by+8, canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM, false);
+        g.drawString(
+                f,
+                Component.literal(bt),
+                bx + bw / 2 - f.width(bt) / 2,
+                by + 8,
+                canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM,
+                false);
     }
+
     private void factionGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
         var f = PWPTheme.Fonts.display();
         int rem = Math.max(0, voteDurationSec);
         String title = "ВЫБОР СТОРОНЫ";
-        g.drawString(f, Component.literal(title), sw/2-f.width(title)/2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw/2-f.width(title)/2-4, 94, sw/2+f.width(title)/2+4, 95, PWPTheme.Colors.ACCENT);
-        String tmr = String.format("Осталось: %d:%02d", rem/60, rem%60);
-        g.drawString(f, Component.literal(tmr), sw/2-f.width(tmr)/2, 104, PWPTheme.Colors.TEXT_SECONDARY, false);
+        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
+        g.fill(sw / 2 - f.width(title) / 2 - 4, 94, sw / 2 + f.width(title) / 2 + 4, 95, PWPTheme.Colors.ACCENT);
+        String tmr = String.format("Осталось: %d:%02d", rem / 60, rem % 60);
+        g.drawString(f, Component.literal(tmr), sw / 2 - f.width(tmr) / 2, 104, PWPTheme.Colors.TEXT_SECONDARY, false);
 
         int cw = 155, ch = 80, gap = 10;
-        int gw = 2*cw+gap, gx = (sw-gw)/2, gy = 118;
+        int gw = 2 * cw + gap, gx = (sw - gw) / 2, gy = 118;
         int cardGap = 4;
         int colH = 3 * (ch + cardGap) - cardGap;
 
         // Center divider
-        g.fill(sw/2-1, gy-12, sw/2+1, gy+colH, PWPTheme.Colors.BORDER);
+        g.fill(sw / 2 - 1, gy - 12, sw / 2 + 1, gy + colH, PWPTheme.Colors.BORDER);
 
         // Team labels
         String t1 = "КОМАНДА 1", t2 = "КОМАНДА 2";
         boolean isInv = "invasion".equalsIgnoreCase(mode);
-        if (isInv) { t1 = "АТАКУЕТ"; t2 = "ОБОРОНЯЕТСЯ"; }
-        g.drawString(f, Component.literal(t1), gx+cw/2-f.width(t1)/2, gy-12, 0xFF3D6FA5, false);
-        g.drawString(f, Component.literal(t2), gx+cw+gap+cw/2-f.width(t2)/2, gy-12, 0xFFA53D3D, false);
+        if (isInv) {
+            t1 = "АТАКУЕТ";
+            t2 = "ОБОРОНЯЕТСЯ";
+        }
+        g.drawString(f, Component.literal(t1), gx + cw / 2 - f.width(t1) / 2, gy - 12, 0xFF3D6FA5, false);
+        g.drawString(f, Component.literal(t2), gx + cw + gap + cw / 2 - f.width(t2) / 2, gy - 12, 0xFFA53D3D, false);
 
         factionPerTeamBars();
 
@@ -431,67 +565,93 @@ public class VoteTabRenderer {
             int col = i / 3, row = i % 3;
             int cx = gx + col * (cw + gap);
             int cy = cardY + row * (ch + cardGap);
-            boolean hv = mx>=cx&&mx<=cx+cw&&my>=cy&&my<=cy+ch;
+            boolean hv = mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch;
             if (hv) hoveredCard = i;
             boolean sel = (col == 0) ? (row == selFact1) : (row == selFact2);
             renderFactionCard(g, cx, cy, cw, ch, factOpts.get(i), sel, hv, now);
         }
 
         // Vote button
-        boolean canVote = (selFact1 >= 0 || votFact1 >= 0) && (selFact2 >= 0 || votFact2 >= 0)
-            && (selFact1 != votFact1 || selFact2 != votFact2);
+        boolean canVote = (selFact1 >= 0 || votFact1 >= 0)
+                && (selFact2 >= 0 || votFact2 >= 0)
+                && (selFact1 != votFact1 || selFact2 != votFact2);
         int by = cardY + colH + 10;
         voteButtonY = by;
-        int bw = 180, bh = 26, bx = (sw-bw)/2;
-        boolean bhv = mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh;
+        int bw = 180, bh = 26, bx = (sw - bw) / 2;
+        boolean bhv = mx >= bx && mx <= bx + bw && my >= by && my <= by + bh;
         boolean voted = votFact1 >= 0 && votFact2 >= 0;
         String bt = voted ? "ИЗМЕНИТЬ ВЫБОР" : "ПРОГОЛОСОВАТЬ";
-        RoundedRect.fill(g, bx, by, bw, bh, 3, canVote ? (bhv?PWPTheme.Colors.ACCENT_SOFT:PWPTheme.Colors.ACCENT) : PWPTheme.Colors.SURFACE_DIM);
+        RoundedRect.fill(
+                g,
+                bx,
+                by,
+                bw,
+                bh,
+                3,
+                canVote ? (bhv ? PWPTheme.Colors.ACCENT_SOFT : PWPTheme.Colors.ACCENT) : PWPTheme.Colors.SURFACE_DIM);
         RoundedRect.border(g, bx, by, bw, bh, 3, 1, canVote ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-        g.drawString(f, Component.literal(bt), bx+bw/2-f.width(bt)/2, by+7, canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM, false);
+        g.drawString(
+                f,
+                Component.literal(bt),
+                bx + bw / 2 - f.width(bt) / 2,
+                by + 7,
+                canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM,
+                false);
     }
 
-    private void renderFactionCard(GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now) {
+    private void renderFactionCard(
+            GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now) {
         var f = PWPTheme.Fonts.display();
         PWPCard.State st = sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT);
         PWPCard.render(g, x, y, w, h, st);
-        if (sel) RoundedRect.glow(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, 2, PWPTheme.Shadows.ACCENT_GLOW_MEDIUM);
+        if (sel)
+            RoundedRect.glow(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, 2, PWPTheme.Shadows.ACCENT_GLOW_MEDIUM);
 
         int cy = y + 6;
         if (o.icon != null) {
-            RenderSystem.setShaderColor(1,1,1,1);
-            g.blit(o.icon, x+w/2-20, cy, 0, 0, 40, 23, 40, 23);
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            g.blit(o.icon, x + w / 2 - 20, cy, 0, 0, 40, 23, 40, 23);
             cy += 28;
-        } else { g.fill(x+6, cy, x+w-6, cy+22, o.color); cy+=26; }
+        } else {
+            g.fill(x + 6, cy, x + w - 6, cy + 22, o.color);
+            cy += 26;
+        }
 
         String n = o.name;
-        if (f.width(n) > w-12) n = f.plainSubstrByWidth(n, w-16)+"...";
-        g.drawString(f, Component.literal(n), x+w/2-f.width(n)/2, cy, 0xFFFFFF, false);
+        if (f.width(n) > w - 12) n = f.plainSubstrByWidth(n, w - 16) + "...";
+        g.drawString(f, Component.literal(n), x + w / 2 - f.width(n) / 2, cy, 0xFFFFFF, false);
         cy += 11;
 
-        o.bar.render(g, x+8, cy, w-16, 5, now, sel ? PWPTheme.Colors.ACCENT : o.color);
+        o.bar.render(g, x + 8, cy, w - 16, 5, now, sel ? PWPTheme.Colors.ACCENT : o.color);
         cy += 8;
-        String vs = o.votes+" голос"+suffix(o.votes);
-        g.drawString(f, Component.literal(vs), x+w/2-f.width(vs)/2, cy, PWPTheme.Colors.TEXT_DIM, false);
+        String vs = o.votes + " голос" + suffix(o.votes);
+        g.drawString(f, Component.literal(vs), x + w / 2 - f.width(vs) / 2, cy, PWPTheme.Colors.TEXT_DIM, false);
     }
 
-    private void renderCard(GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now, boolean showF) {
+    private void renderCard(
+            GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now, boolean showF) {
         var f = PWPTheme.Fonts.display();
-        PWPCard.render(g, x, y, w, h, sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT));
-        int px = x+8, py = y+8, pw = w-16, ph = h/3;
+        PWPCard.render(
+                g, x, y, w, h, sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT));
+        int px = x + 8, py = y + 8, pw = w - 16, ph = h / 3;
         ResourceLocation preview = getMapPreview(o.worldPath);
         if (preview != null) {
-            g.fill(px, py, px+pw, py+ph, 0xFF000000);
+            g.fill(px, py, px + pw, py + ph, 0xFF000000);
             int rw = pw - 2, rh = ph - 2;
-            g.blit(preview, px+1, py+1, 0, 0, rw, rh, rw, rh);
+            g.blit(preview, px + 1, py + 1, 0, 0, rw, rh, rw, rh);
         } else {
-            g.fill(px, py, px+pw, py+ph, 0xFF000000);
-            g.fill(px+1, py+1, px+pw-1, py+ph-1, sel ? PWPTheme.Colors.lerp(o.color, PWPTheme.Colors.ACCENT, 0.3f) : o.color);
+            g.fill(px, py, px + pw, py + ph, 0xFF000000);
+            g.fill(
+                    px + 1,
+                    py + 1,
+                    px + pw - 1,
+                    py + ph - 1,
+                    sel ? PWPTheme.Colors.lerp(o.color, PWPTheme.Colors.ACCENT, 0.3f) : o.color);
         }
         String t = o.name;
-        if (f.width(t) > pw-8) t = f.plainSubstrByWidth(t, pw-12)+"...";
-        g.drawString(f, Component.literal(t), px+6, py+ph/2-4, 0xFFFFFFFF, false);
-        int ly = py+ph+6;
+        if (f.width(t) > pw - 8) t = f.plainSubstrByWidth(t, pw - 12) + "...";
+        g.drawString(f, Component.literal(t), px + 6, py + ph / 2 - 4, 0xFFFFFFFF, false);
+        int ly = py + ph + 6;
 
         if (o.desc != null && !o.desc.isEmpty()) {
             int maxW = w - 24;
@@ -499,82 +659,149 @@ public class VoteTabRenderer {
             if (f.width(d) > maxW) {
                 int splitIdx = 0;
                 for (int j = 1; j < d.length(); j++) {
-                    if (f.width(d.substring(0, j)) > maxW) { splitIdx = j - 1; break; }
+                    if (f.width(d.substring(0, j)) > maxW) {
+                        splitIdx = j - 1;
+                        break;
+                    }
                 }
                 if (splitIdx > 5) {
                     String l1 = d.substring(0, splitIdx);
                     String l2 = d.substring(splitIdx).trim();
-                    if (f.width(l2) > maxW) l2 = f.plainSubstrByWidth(l2, maxW-4)+"...";
-                    g.drawString(f, Component.literal(l1), x+10, ly, PWPTheme.Colors.TEXT_DIM, false); ly+=10;
-                    g.drawString(f, Component.literal(l2), x+10, ly, PWPTheme.Colors.TEXT_DIM, false); ly+=11;
+                    if (f.width(l2) > maxW) l2 = f.plainSubstrByWidth(l2, maxW - 4) + "...";
+                    g.drawString(f, Component.literal(l1), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
+                    ly += 10;
+                    g.drawString(f, Component.literal(l2), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
+                    ly += 11;
                 } else {
-                    g.drawString(f, Component.literal(f.plainSubstrByWidth(d, maxW-4)+"..."), x+10, ly, PWPTheme.Colors.TEXT_DIM, false); ly+=11;
+                    g.drawString(
+                            f,
+                            Component.literal(f.plainSubstrByWidth(d, maxW - 4) + "..."),
+                            x + 10,
+                            ly,
+                            PWPTheme.Colors.TEXT_DIM,
+                            false);
+                    ly += 11;
                 }
             } else {
-                g.drawString(f, Component.literal(d), x+10, ly, PWPTheme.Colors.TEXT_DIM, false); ly+=11;
+                g.drawString(f, Component.literal(d), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
+                ly += 11;
             }
         }
-        int bw = w-20, bx = x+10;
+        int bw = w - 20, bx = x + 10;
         o.bar.render(g, bx, ly, bw, 6, now, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_ACCENT);
         ly += 10;
-        String vs = o.votes+" голос"+suffix(o.votes);
-        g.drawString(f, Component.literal(vs), x+10, ly, PWPTheme.Colors.TEXT_DIM, false);
+        String vs = o.votes + " голос" + suffix(o.votes);
+        g.drawString(f, Component.literal(vs), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
     }
+
     private void finished(GuiGraphics g, int sw, int sh, long now) {
         var f = PWPTheme.Fonts.display();
         String title = "ГОЛОСОВАНИЕ ЗАВЕРШЕНО";
-        g.drawString(f, Component.literal(title), sw/2-f.width(title)/2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw/2-80, 96, sw/2+80, 97, PWPTheme.Colors.ACCENT);
+        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
+        g.fill(sw / 2 - 80, 96, sw / 2 + 80, 97, PWPTheme.Colors.ACCENT);
 
-        Option wMap = mapOpts.stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
-        Option wMode = modeOpts.stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+        Option wMap = mapOpts.stream()
+                .max((a, b) -> Integer.compare(a.votes, b.votes))
+                .orElse(null);
+        Option wMode = modeOpts.stream()
+                .max((a, b) -> Integer.compare(a.votes, b.votes))
+                .orElse(null);
         // factOpts может быть пустым/неполным, если фаза faction-vote не приходила
         // в этой сессии (заход в лобби уже на экране результатов) — subList упал бы.
         Option wF1 = null, wF2 = null;
         if (factOpts.size() >= 6) {
-            wF1 = factOpts.subList(0,3).stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
-            wF2 = factOpts.subList(3,6).stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+            wF1 = factOpts.subList(0, 3).stream()
+                    .max((a, b) -> Integer.compare(a.votes, b.votes))
+                    .orElse(null);
+            wF2 = factOpts.subList(3, 6).stream()
+                    .max((a, b) -> Integer.compare(a.votes, b.votes))
+                    .orElse(null);
         } else if (!factOpts.isEmpty()) {
-            wF1 = factOpts.stream().max((a,b)->Integer.compare(a.votes,b.votes)).orElse(null);
+            wF1 = factOpts.stream()
+                    .max((a, b) -> Integer.compare(a.votes, b.votes))
+                    .orElse(null);
         }
 
         long animStart = finishedAnimStart;
         int cardW = 190, cardH = 160, gap = 16;
-        int totalW = 3*cardW + 2*gap;
+        int totalW = 3 * cardW + 2 * gap;
         int startX = (sw - totalW) / 2;
         int baseY = 130;
 
         // Card 1: Map (stagger 0ms)
         String w1 = wMap != null ? wMap.name : "-";
         String v1 = wMap != null ? wMap.votes + " голос" + suffix(wMap.votes) : "0";
-        drawWinnerCard(g, startX, baseY, cardW, cardH, "КАРТА", w1, v1, wMap != null ? wMap.color : 0xFF666666, now, animStart, 0);
+        drawWinnerCard(
+                g,
+                startX,
+                baseY,
+                cardW,
+                cardH,
+                "КАРТА",
+                w1,
+                v1,
+                wMap != null ? wMap.color : 0xFF666666,
+                now,
+                animStart,
+                0);
 
         // Card 2: Mode (stagger 200ms)
         String w2 = wMode != null ? wMode.name : "-";
         String v2 = wMode != null ? wMode.votes + " голос" + suffix(wMode.votes) : "0";
-        drawWinnerCard(g, startX+cardW+gap, baseY, cardW, cardH, "РЕЖИМ", w2, v2, wMode != null ? wMode.color : 0xFF666666, now, animStart, 200);
+        drawWinnerCard(
+                g,
+                startX + cardW + gap,
+                baseY,
+                cardW,
+                cardH,
+                "РЕЖИМ",
+                w2,
+                v2,
+                wMode != null ? wMode.color : 0xFF666666,
+                now,
+                animStart,
+                200);
 
         // Card 3: Sides (stagger 400ms) — split card with two flags
-        drawWinnerSplitCard(g, startX+2*(cardW+gap), baseY, cardW, cardH, "СТОРОНЫ", wF1, wF2, now, animStart, 400);
+        drawWinnerSplitCard(
+                g, startX + 2 * (cardW + gap), baseY, cardW, cardH, "СТОРОНЫ", wF1, wF2, now, animStart, 400);
 
         // New vote button
         int btnY = baseY + cardH + 30;
-        int bw = 180, bh = 28, bx = (sw-bw)/2;
+        int bw = 180, bh = 28, bx = (sw - bw) / 2;
         RoundedRect.fill(g, bx, btnY, bw, bh, 3, PWPTheme.Colors.ACCENT);
         RoundedRect.border(g, bx, btnY, bw, bh, 3, 1, PWPTheme.Colors.ACCENT);
-        g.drawString(f, Component.literal("НОВОЕ ГОЛОСОВАНИЕ"), bx+bw/2-f.width("НОВОЕ ГОЛОСОВАНИЕ")/2, btnY+8, 0xFF0A0C0E, false);
+        g.drawString(
+                f,
+                Component.literal("НОВОЕ ГОЛОСОВАНИЕ"),
+                bx + bw / 2 - f.width("НОВОЕ ГОЛОСОВАНИЕ") / 2,
+                btnY + 8,
+                0xFF0A0C0E,
+                false);
 
         // Update mouseClicked target Y for this button
         voteButtonY = btnY;
     }
 
-    private void drawWinnerCard(GuiGraphics g, int x, int baseY, int w, int h, String label, String name, String votes, int color, long now, long animStart, int delayMs) {
+    private void drawWinnerCard(
+            GuiGraphics g,
+            int x,
+            int baseY,
+            int w,
+            int h,
+            String label,
+            String name,
+            String votes,
+            int color,
+            long now,
+            long animStart,
+            int delayMs) {
         long elapsed = now - animStart - delayMs;
         if (elapsed < 0) return;
         float t = Math.min(elapsed / 600f, 1);
         float eased = eoc(t);
-        int y = baseY + (int)(50 * (1 - eased));
-        int alpha = Math.min(255, (int)(255 * eased));
+        int y = baseY + (int) (50 * (1 - eased));
+        int alpha = Math.min(255, (int) (255 * eased));
         if (alpha < 5) return;
 
         var f = PWPTheme.Fonts.display();
@@ -586,30 +813,41 @@ public class VoteTabRenderer {
 
         // Preview color block
         int pColor = PWPTheme.Colors.withAlpha(color, alpha);
-        g.fill(x+10, y+10, x+w-10, y+50, pColor);
+        g.fill(x + 10, y + 10, x + w - 10, y + 50, pColor);
 
         // Label
         int lc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_ACCENT, alpha);
-        g.drawString(f, Component.literal(label), x+w/2-f.width(label)/2, y+58, lc, false);
+        g.drawString(f, Component.literal(label), x + w / 2 - f.width(label) / 2, y + 58, lc, false);
 
         // Name
         String n = name;
-        if (f.width(n) > w-16) n = f.plainSubstrByWidth(n, w-20)+"...";
+        if (f.width(n) > w - 16) n = f.plainSubstrByWidth(n, w - 20) + "...";
         int nc = PWPTheme.Colors.withAlpha(0xFFFFFF, alpha);
-        g.drawString(f, Component.literal(n), x+w/2-f.width(n)/2, y+74, nc, false);
+        g.drawString(f, Component.literal(n), x + w / 2 - f.width(n) / 2, y + 74, nc, false);
 
         // Votes
         int vc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_DIM, alpha);
-        g.drawString(f, Component.literal(votes), x+w/2-f.width(votes)/2, y+92, vc, false);
+        g.drawString(f, Component.literal(votes), x + w / 2 - f.width(votes) / 2, y + 92, vc, false);
     }
 
-    private void drawWinnerSplitCard(GuiGraphics g, int x, int baseY, int w, int h, String label, Option wF1, Option wF2, long now, long animStart, int delayMs) {
+    private void drawWinnerSplitCard(
+            GuiGraphics g,
+            int x,
+            int baseY,
+            int w,
+            int h,
+            String label,
+            Option wF1,
+            Option wF2,
+            long now,
+            long animStart,
+            int delayMs) {
         long elapsed = now - animStart - delayMs;
         if (elapsed < 0) return;
         float t = Math.min(elapsed / 600f, 1);
         float eased = eoc(t);
-        int y = baseY + (int)(50 * (1 - eased));
-        int alpha = Math.min(255, (int)(255 * eased));
+        int y = baseY + (int) (50 * (1 - eased));
+        int alpha = Math.min(255, (int) (255 * eased));
         if (alpha < 5) return;
 
         var f = PWPTheme.Fonts.display();
@@ -622,50 +860,62 @@ public class VoteTabRenderer {
 
         // Label at top
         int lc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_ACCENT, alpha);
-        g.drawString(f, Component.literal(label), x+w/2-f.width(label)/2, y+6, lc, false);
+        g.drawString(f, Component.literal(label), x + w / 2 - f.width(label) / 2, y + 6, lc, false);
 
         // Divider line
         int divX = x + halfW;
-        g.fill(divX-1, y+18, divX+1, y+h-6, PWPTheme.Colors.BORDER);
+        g.fill(divX - 1, y + 18, divX + 1, y + h - 6, PWPTheme.Colors.BORDER);
 
         // Left faction (Team 1)
         int ly = y + 22;
         if (wF1 != null && wF1.icon != null) {
-            RenderSystem.setShaderColor(1,1,1, alpha/255f);
-            g.blit(wF1.icon, x+halfW/2-20, ly, 0, 0, 40, 23, 40, 23);
+            RenderSystem.setShaderColor(1, 1, 1, alpha / 255f);
+            g.blit(wF1.icon, x + halfW / 2 - 20, ly, 0, 0, 40, 23, 40, 23);
             ly += 27;
         }
         if (wF1 != null) {
             int nc = PWPTheme.Colors.withAlpha(0xFFFFFF, alpha);
-            g.drawString(f, Component.literal(wF1.name), x+halfW/2-f.width(wF1.name)/2, ly, nc, false);
+            g.drawString(f, Component.literal(wF1.name), x + halfW / 2 - f.width(wF1.name) / 2, ly, nc, false);
             ly += 12;
             int vc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_DIM, alpha);
-            g.drawString(f, Component.literal(wF1.votes+" голос"+suffix(wF1.votes)), x+halfW/2-f.width(wF1.votes+" голос"+suffix(wF1.votes))/2, ly, vc, false);
+            g.drawString(
+                    f,
+                    Component.literal(wF1.votes + " голос" + suffix(wF1.votes)),
+                    x + halfW / 2 - f.width(wF1.votes + " голос" + suffix(wF1.votes)) / 2,
+                    ly,
+                    vc,
+                    false);
         }
         String t1n = "КОМАНДА 1";
         int tc1 = PWPTheme.Colors.withAlpha(0xFF3D6FA5, alpha);
-        g.drawString(f, Component.literal(t1n), x+halfW/2-f.width(t1n)/2, y+h-14, tc1, false);
+        g.drawString(f, Component.literal(t1n), x + halfW / 2 - f.width(t1n) / 2, y + h - 14, tc1, false);
 
         // Right faction (Team 2)
         int rx = x + halfW;
         ly = y + 22;
         if (wF2 != null && wF2.icon != null) {
-            RenderSystem.setShaderColor(1,1,1, alpha/255f);
-            g.blit(wF2.icon, rx+halfW/2-20, ly, 0, 0, 40, 23, 40, 23);
+            RenderSystem.setShaderColor(1, 1, 1, alpha / 255f);
+            g.blit(wF2.icon, rx + halfW / 2 - 20, ly, 0, 0, 40, 23, 40, 23);
             ly += 27;
         }
         if (wF2 != null) {
             int nc = PWPTheme.Colors.withAlpha(0xFFFFFF, alpha);
-            g.drawString(f, Component.literal(wF2.name), rx+halfW/2-f.width(wF2.name)/2, ly, nc, false);
+            g.drawString(f, Component.literal(wF2.name), rx + halfW / 2 - f.width(wF2.name) / 2, ly, nc, false);
             ly += 12;
             int vc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_DIM, alpha);
-            g.drawString(f, Component.literal(wF2.votes+" голос"+suffix(wF2.votes)), rx+halfW/2-f.width(wF2.votes+" голос"+suffix(wF2.votes))/2, ly, vc, false);
+            g.drawString(
+                    f,
+                    Component.literal(wF2.votes + " голос" + suffix(wF2.votes)),
+                    rx + halfW / 2 - f.width(wF2.votes + " голос" + suffix(wF2.votes)) / 2,
+                    ly,
+                    vc,
+                    false);
         }
         String t2n = "КОМАНДА 2";
         int tc2 = PWPTheme.Colors.withAlpha(0xFFA53D3D, alpha);
-        g.drawString(f, Component.literal(t2n), rx+halfW/2-f.width(t2n)/2, y+h-14, tc2, false);
+        g.drawString(f, Component.literal(t2n), rx + halfW / 2 - f.width(t2n) / 2, y + h - 14, tc2, false);
 
-        RenderSystem.setShaderColor(1,1,1,1);
+        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     public boolean mouseClicked(double mx, double my) {
@@ -679,7 +929,8 @@ public class VoteTabRenderer {
                 case MODE -> selMode = hoveredCard;
                 case FACTION -> {
                     int col = hoveredCard / 3, row = hoveredCard % 3;
-                    if (col == 0) selFact1 = row; else selFact2 = row;
+                    if (col == 0) selFact1 = row;
+                    else selFact2 = row;
                 }
             }
             return true;
@@ -689,34 +940,44 @@ public class VoteTabRenderer {
         if (currentPhase == Phase.MAP || currentPhase == Phase.MODE || currentPhase == Phase.FACTION) {
             int bw = 180, bh = 28, bx = (screenWidth - bw) / 2;
             int by = voteButtonY;
-            if (mx >= bx && mx <= bx+bw && my >= by && my <= by+bh) {
+            if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) {
                 if (currentPhase == Phase.FACTION) {
                     if ((selFact1 < 0 && votFact1 < 0) || (selFact2 < 0 && votFact2 < 0)) return false;
                     if (selFact1 == votFact1 && selFact2 == votFact2) return false;
                     String blueId = selFact1 >= 0 ? factOpts.get(selFact1).id : "";
-                    String redId = selFact2 >= 0 ? factOpts.get(3+selFact2).id : "";
+                    String redId = selFact2 >= 0 ? factOpts.get(3 + selFact2).id : "";
                     if (blueId.isEmpty() || redId.isEmpty()) return false;
                     try {
                         var conn = Minecraft.getInstance().player.connection;
                         if (conn != null) conn.sendCommand("votefaction " + blueId + " " + redId);
-                    } catch (Exception ignored) { PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored); }
-                    votFact1 = selFact1; votFact2 = selFact2;
+                    } catch (Exception ignored) {
+                        PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored);
+                    }
+                    votFact1 = selFact1;
+                    votFact2 = selFact2;
                     factionPerTeamBars();
                     return true;
                 } else {
-                    int sel = currentPhase==Phase.MAP ? selMap : selMode;
-                    int vot = currentPhase==Phase.MAP ? votMap : votMode;
+                    int sel = currentPhase == Phase.MAP ? selMap : selMode;
+                    int vot = currentPhase == Phase.MAP ? votMap : votMode;
                     if (sel >= 0 && sel != vot) {
-                        List<Option> opts = currentPhase==Phase.MAP ? mapOpts : modeOpts;
+                        List<Option> opts = currentPhase == Phase.MAP ? mapOpts : modeOpts;
                         String cmdId = opts.get(sel).id;
                         if (cmdId == null || cmdId.isEmpty()) return false;
                         String cmd = currentPhase == Phase.MAP ? "votemap " : "votemode ";
                         try {
                             var conn = Minecraft.getInstance().player.connection;
                             if (conn != null) conn.sendCommand(cmd + cmdId);
-                        } catch (Exception ignored) { PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored); }
-                        if (currentPhase == Phase.MAP) { votMap = sel; recalc(mapOpts); }
-                        else { votMode = sel; recalc(modeOpts); }
+                        } catch (Exception ignored) {
+                            PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored);
+                        }
+                        if (currentPhase == Phase.MAP) {
+                            votMap = sel;
+                            recalc(mapOpts);
+                        } else {
+                            votMode = sel;
+                            recalc(modeOpts);
+                        }
                         return true;
                     }
                 }
@@ -727,12 +988,14 @@ public class VoteTabRenderer {
         if (currentPhase == Phase.FINISHED) {
             if (now - finishedEnterTime < 600) return false;
             int bw = 180, bh = 28, bx = (screenWidth - bw) / 2;
-            if (mx >= bx && mx <= bx+bw && my >= voteButtonY && my <= voteButtonY+bh) {
+            if (mx >= bx && mx <= bx + bw && my >= voteButtonY && my <= voteButtonY + bh) {
                 // Запросить актуальное состояние (новое голосование начнётся автоматически)
                 try {
                     var conn = Minecraft.getInstance().player.connection;
                     if (conn != null) conn.sendCommand("pwp");
-                } catch (Exception ignored) { PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored); }
+                } catch (Exception ignored) {
+                    PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored);
+                }
                 return true;
             }
         }

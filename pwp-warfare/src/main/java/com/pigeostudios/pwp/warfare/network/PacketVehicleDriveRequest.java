@@ -1,7 +1,6 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
@@ -63,30 +62,33 @@ public class PacketVehicleDriveRequest {
         String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
 
         WarfareWorldData.Squad playerSquad = data.squads.stream()
-            .filter(s -> s.id == squadId && s.team.equalsIgnoreCase(team))
-            .findFirst().orElse(null);
+                .filter(s -> s.id == squadId && s.team.equalsIgnoreCase(team))
+                .findFirst()
+                .orElse(null);
         if (playerSquad == null) return;
 
         ServerPlayer slPlayer = level.getServer().getPlayerList().getPlayerByName(playerSquad.leader);
         if (slPlayer == null) return;
 
-        Component approveCmd = Component.literal("[ПРИНЯТЬ \u2705]")
-            .withStyle(style -> style.withColor(ChatFormatting.GREEN)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
-                    "/vanswer approve " + vehicleId + " " + player.getUUID()))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    Component.literal("Разрешить управление"))));
-        Component denyCmd = Component.literal("[ОТКЛОНИТЬ \u274C]")
-            .withStyle(style -> style.withColor(ChatFormatting.RED)
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
-                    "/vanswer deny " + vehicleId + " " + player.getUUID()))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    Component.literal("Отклонить запрос"))));
+        Component approveCmd = Component.literal("[ПРИНЯТЬ \u2705]").withStyle(style -> style.withColor(
+                        ChatFormatting.GREEN)
+                .withClickEvent(new ClickEvent(
+                        ClickEvent.Action.RUN_COMMAND, "/vanswer approve " + vehicleId + " " + player.getUUID()))
+                .withHoverEvent(
+                        new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Разрешить управление"))));
+        Component denyCmd = Component.literal("[ОТКЛОНИТЬ \u274C]").withStyle(style -> style.withColor(
+                        ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(
+                        ClickEvent.Action.RUN_COMMAND, "/vanswer deny " + vehicleId + " " + player.getUUID()))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Отклонить запрос"))));
 
         slPlayer.sendSystemMessage(Component.literal("\u26A1 " + pName + " запрашивает управление " + vType + " ")
-            .append(approveCmd).append(" ").append(denyCmd));
+                .append(approveCmd)
+                .append(" ")
+                .append(denyCmd));
 
-        player.displayClientMessage(Component.literal("Запрос отправлен командиру отряда").withStyle(ChatFormatting.GREEN), true);
+        player.displayClientMessage(
+                Component.literal("Запрос отправлен командиру отряда").withStyle(ChatFormatting.GREEN), true);
     }
 
     private static boolean isSpecialistVehicle(String vType) {
@@ -100,7 +102,9 @@ public class PacketVehicleDriveRequest {
     }
 
     private static boolean hasCorrectKit(String vType, String kit) {
-        if (vType.equalsIgnoreCase("HELICOPTER") || vType.toUpperCase().contains("CAS") || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
+        if (vType.equalsIgnoreCase("HELICOPTER")
+                || vType.toUpperCase().contains("CAS")
+                || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
             return kit.equals("Pilot") || kit.equals("Pilot Officer");
         }
         if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {

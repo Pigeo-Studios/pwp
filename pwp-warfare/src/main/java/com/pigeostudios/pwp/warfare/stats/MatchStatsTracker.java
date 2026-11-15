@@ -4,25 +4,22 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pwp.api.core.CoreApi;
-import com.pwp.coreserver.TransferHosts;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
+import com.pwp.coreserver.TransferHosts;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 public class MatchStatsTracker {
 
@@ -92,7 +89,12 @@ public class MatchStatsTracker {
 
         if (distance > k.longestKill) k.longestKill = distance;
 
-        log.debug("KILL: {} → {} ({}, {:.1f}m)", killer.getScoreboardName(), victim.getScoreboardName(), weapon, distance);
+        log.debug(
+                "KILL: {} → {} ({}, {:.1f}m)",
+                killer.getScoreboardName(),
+                victim.getScoreboardName(),
+                weapon,
+                distance);
     }
 
     public void recordTeamKill(ServerPlayer killer, ServerPlayer victim) {
@@ -184,7 +186,9 @@ public class MatchStatsTracker {
         match.addProperty("durationSeconds", durationSec);
 
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        match.addProperty("startedAt", java.time.LocalDateTime.now().minusSeconds(durationSec).format(fmt));
+        match.addProperty(
+                "startedAt",
+                java.time.LocalDateTime.now().minusSeconds(durationSec).format(fmt));
         match.addProperty("endedAt", java.time.LocalDateTime.now().format(fmt));
 
         JsonArray playersArr = new JsonArray();
@@ -244,11 +248,16 @@ public class MatchStatsTracker {
 
                     try {
                         JsonObject rewardResult = CoreApi.await(CoreApi.calculateRewards(
-                            ps.uuid, ps.team, winner,
-                            ps.kills, 0, ps.vehicleKills,
-                            ps.captures, ps.revives, 0,
-                            durationSec / 60
-                        ));
+                                ps.uuid,
+                                ps.team,
+                                winner,
+                                ps.kills,
+                                0,
+                                ps.vehicleKills,
+                                ps.captures,
+                                ps.revives,
+                                0,
+                                durationSec / 60));
 
                         if (rewardResult != null && rewardResult.has("data")) {
                             JsonObject data = rewardResult.getAsJsonObject("data");
@@ -258,14 +267,23 @@ public class MatchStatsTracker {
                             throw new Exception("API returned null, using fallback");
                         }
                     } catch (Exception e) {
-                        log.warn("Награды для {} рассчитаны локально (core-service не ответил): {}", ps.nickname, e.getMessage());
-                        xp = ps.kills * 50L + ps.vehicleKills * 150L
-                            + ps.captures * 100L + ps.revives * 75L
-                            + durationSec / 60 * 10L;
-                        coins = ps.kills * 10L + ps.vehicleKills * 30L
-                            + ps.captures * 25L + ps.revives * 15L;
-                        if (isWin) { xp += 200; coins += 50; }
-                        else { xp += 100; coins += 20; }
+                        log.warn(
+                                "Награды для {} рассчитаны локально (core-service не ответил): {}",
+                                ps.nickname,
+                                e.getMessage());
+                        xp = ps.kills * 50L
+                                + ps.vehicleKills * 150L
+                                + ps.captures * 100L
+                                + ps.revives * 75L
+                                + durationSec / 60 * 10L;
+                        coins = ps.kills * 10L + ps.vehicleKills * 30L + ps.captures * 25L + ps.revives * 15L;
+                        if (isWin) {
+                            xp += 200;
+                            coins += 50;
+                        } else {
+                            xp += 100;
+                            coins += 20;
+                        }
                     }
 
                     CoreApi.await(CoreApi.addXp(ps.uuid, xp, "MATCH"));
@@ -293,9 +311,15 @@ public class MatchStatsTracker {
                     statsDelta.addProperty("teamKills", ps.teamKills);
                     JsonObject saveResult = CoreApi.await(CoreApi.saveStats(ps.uuid, statsDelta));
                     if (saveResult != null) {
-                        log.info("Stats saved for {}: {}k/{}d/{}v/{}vd/{}ad/{}pt",
-                            ps.nickname, ps.kills, ps.deaths, ps.vehicleKills,
-                            ps.vehiclesDestroyed, ps.airVehiclesDestroyed, durationSec);
+                        log.info(
+                                "Stats saved for {}: {}k/{}d/{}v/{}vd/{}ad/{}pt",
+                                ps.nickname,
+                                ps.kills,
+                                ps.deaths,
+                                ps.vehicleKills,
+                                ps.vehiclesDestroyed,
+                                ps.airVehiclesDestroyed,
+                                durationSec);
                     }
 
                     log.info("{} earned {} XP and {} Coins", ps.nickname, xp, coins);
@@ -306,45 +330,55 @@ public class MatchStatsTracker {
         } else {
             log.info("pwp_core_client not installed, skipping match save");
         }
-
     }
 
     public static void scheduleServerShutdown(int delaySeconds) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) { log.error("scheduleServerShutdown: no server!"); return; }
+        if (server == null) {
+            log.error("scheduleServerShutdown: no server!");
+            return;
+        }
         log.info("scheduleServerShutdown: scheduling in {}s", delaySeconds);
-        new Thread(() -> {
-            try {
-                log.info("Shutdown thread sleeping {}s...", delaySeconds);
-                Thread.sleep((long) delaySeconds * 1000L);
-                log.info("Shutdown delay complete, transferring players...");
-                server.execute(() -> {
-                    try {
-                        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                            // Локальные игроки получают LAN-адрес лобби, внешние — домен
-                            String host = TransferHosts.resolveTransferHost(player);
-                            player.sendSystemMessage(
-                                    Component.literal("§e[PWP] Возврат в лобби..."), false);
-                            PacketHandler.INSTANCE.send(
-                                    PacketDistributor.PLAYER.with(() -> player),
-                                    new ConnectToServerPacket(host, 25565));
-                        }
-                        Thread.sleep(2000);
-                    } catch (Exception ex) {
-                        log.warn("Transfer failed, halting anyway: {}", ex.getMessage());
-                    }
-                    try {
-                        server.halt(false);
-                    } catch (Exception ex) {
-                        log.error("Failed to halt server: {}", ex.getMessage());
-                    }
-                });
-            } catch (InterruptedException e) {
-                log.warn("Shutdown delay interrupted, halting immediately");
-                Thread.currentThread().interrupt();
-                try { server.halt(false); } catch (Exception ignored) { log.warn("MatchStatsTracker.scheduleServerShutdown: исключение", ignored); }
-            }
-        }, "PWPMatchShutdown").start();
+        new Thread(
+                        () -> {
+                            try {
+                                log.info("Shutdown thread sleeping {}s...", delaySeconds);
+                                Thread.sleep((long) delaySeconds * 1000L);
+                                log.info("Shutdown delay complete, transferring players...");
+                                server.execute(() -> {
+                                    try {
+                                        for (ServerPlayer player :
+                                                server.getPlayerList().getPlayers()) {
+                                            // Локальные игроки получают LAN-адрес лобби, внешние — домен
+                                            String host = TransferHosts.resolveTransferHost(player);
+                                            player.sendSystemMessage(
+                                                    Component.literal("§e[PWP] Возврат в лобби..."), false);
+                                            PacketHandler.INSTANCE.send(
+                                                    PacketDistributor.PLAYER.with(() -> player),
+                                                    new ConnectToServerPacket(host, 25565));
+                                        }
+                                        Thread.sleep(2000);
+                                    } catch (Exception ex) {
+                                        log.warn("Transfer failed, halting anyway: {}", ex.getMessage());
+                                    }
+                                    try {
+                                        server.halt(false);
+                                    } catch (Exception ex) {
+                                        log.error("Failed to halt server: {}", ex.getMessage());
+                                    }
+                                });
+                            } catch (InterruptedException e) {
+                                log.warn("Shutdown delay interrupted, halting immediately");
+                                Thread.currentThread().interrupt();
+                                try {
+                                    server.halt(false);
+                                } catch (Exception ignored) {
+                                    log.warn("MatchStatsTracker.scheduleServerShutdown: исключение", ignored);
+                                }
+                            }
+                        },
+                        "PWPMatchShutdown")
+                .start();
     }
 
     public long getStartedAt() {

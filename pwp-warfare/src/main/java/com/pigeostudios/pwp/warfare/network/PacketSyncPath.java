@@ -17,15 +17,25 @@ public class PacketSyncPath {
     public final List<PathPoint> points;
 
     public PacketSyncPath(UUID pathId, String team, String type, int squadNum, long createdAt, List<PathPoint> points) {
-        this.pathId = pathId; this.team = team; this.type = type;
-        this.squadNum = squadNum; this.createdAt = createdAt; this.points = points;
+        this.pathId = pathId;
+        this.team = team;
+        this.type = type;
+        this.squadNum = squadNum;
+        this.createdAt = createdAt;
+        this.points = points;
     }
 
     public static void encode(PacketSyncPath msg, FriendlyByteBuf buf) {
-        buf.writeUUID(msg.pathId); buf.writeUtf(msg.team); buf.writeUtf(msg.type);
-        buf.writeInt(msg.squadNum); buf.writeLong(msg.createdAt);
+        buf.writeUUID(msg.pathId);
+        buf.writeUtf(msg.team);
+        buf.writeUtf(msg.type);
+        buf.writeInt(msg.squadNum);
+        buf.writeLong(msg.createdAt);
         buf.writeInt(msg.points.size());
-        for (var p : msg.points) { buf.writeDouble(p.x); buf.writeDouble(p.z); }
+        for (var p : msg.points) {
+            buf.writeDouble(p.x);
+            buf.writeDouble(p.z);
+        }
     }
 
     public static PacketSyncPath decode(FriendlyByteBuf buf) {
@@ -41,7 +51,8 @@ public class PacketSyncPath {
 
     public static void handle(PacketSyncPath msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            PathCache.serverPaths.put(msg.pathId, new PathCache.ServerPath(msg.type, msg.squadNum, msg.points, msg.createdAt));
+            PathCache.serverPaths.put(
+                    msg.pathId, new PathCache.ServerPath(msg.type, msg.squadNum, msg.points, msg.createdAt));
         });
         ctx.get().setPacketHandled(true);
     }

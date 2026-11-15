@@ -11,10 +11,17 @@ import net.minecraftforge.network.NetworkEvent;
 public class PacketRemovePath {
     public final UUID pathId;
 
-    public PacketRemovePath(UUID pathId) { this.pathId = pathId; }
+    public PacketRemovePath(UUID pathId) {
+        this.pathId = pathId;
+    }
 
-    public static void encode(PacketRemovePath msg, FriendlyByteBuf buf) { buf.writeUUID(msg.pathId); }
-    public static PacketRemovePath decode(FriendlyByteBuf buf) { return new PacketRemovePath(buf.readUUID()); }
+    public static void encode(PacketRemovePath msg, FriendlyByteBuf buf) {
+        buf.writeUUID(msg.pathId);
+    }
+
+    public static PacketRemovePath decode(FriendlyByteBuf buf) {
+        return new PacketRemovePath(buf.readUUID());
+    }
 
     public static void handle(PacketRemovePath msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {

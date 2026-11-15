@@ -8,6 +8,10 @@ import net.minecraftforge.fml.ModLoadingContext;
 // Регистрация экрана конфигурации мода в главном меню Forge
 public class ClientRegistration {
     public static void registerConfigScreen() {
-        ModLoadingContext.get().registerExtensionPoint(ConfigScreenHandler.ConfigScreenFactory.class, () -> new ConfigScreenHandler.ConfigScreenFactory((mc, lastScreen) -> new ConfigScreen((Screen)lastScreen)));
+        ModLoadingContext.get()
+                .registerExtensionPoint(
+                        ConfigScreenHandler.ConfigScreenFactory.class,
+                        () -> new ConfigScreenHandler.ConfigScreenFactory(
+                                (mc, lastScreen) -> new ConfigScreen((Screen) lastScreen)));
     }
 }

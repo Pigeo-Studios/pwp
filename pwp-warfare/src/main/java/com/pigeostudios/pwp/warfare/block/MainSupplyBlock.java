@@ -11,8 +11,8 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.BlockBehaviour.Properties;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition.Builder;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -24,33 +24,38 @@ import org.jetbrains.annotations.Nullable;
 // Поворачивается фасадом к игроку при установке (в оригинале AAS поворота нет —
 // баг, исправлен здесь); коллизия — стандартный блок 1x1x1, как в AAS
 public class MainSupplyBlock extends BaseEntityBlock {
-   public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
-   public MainSupplyBlock() {
-      super(Properties.of().mapColor(MapColor.METAL).strength(-1.0F, 3600000.0F).noOcclusion());
-      this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
-   }
+    public MainSupplyBlock() {
+        super(Properties.of()
+                .mapColor(MapColor.METAL)
+                .strength(-1.0F, 3600000.0F)
+                .noOcclusion());
+        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
+    }
 
-   public RenderShape getRenderShape(BlockState state) {
-      return RenderShape.MODEL;
-   }
+    public RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
+    }
 
-   protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
-      builder.add(new Property[]{FACING});
-   }
+    protected void createBlockStateDefinition(Builder<Block, BlockState> builder) {
+        builder.add(new Property[] {FACING});
+    }
 
-   @Nullable
-   public BlockState getStateForPlacement(BlockPlaceContext context) {
-      return (BlockState)this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
-   }
+    @Nullable
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return (BlockState) this.defaultBlockState()
+                .setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
 
-   @Nullable
-   public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-      return new MainSupplyBlockEntity(pos, state);
-   }
+    @Nullable
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new MainSupplyBlockEntity(pos, state);
+    }
 
-   @Nullable
-   public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-      return createTickerHelper(type, (BlockEntityType)ModBlocks.MAIN_SUPPLY_BE.get(), MainSupplyBlockEntity::tick);
-   }
+    @Nullable
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(
+            Level level, BlockState state, BlockEntityType<T> type) {
+        return createTickerHelper(type, (BlockEntityType) ModBlocks.MAIN_SUPPLY_BE.get(), MainSupplyBlockEntity::tick);
+    }
 }

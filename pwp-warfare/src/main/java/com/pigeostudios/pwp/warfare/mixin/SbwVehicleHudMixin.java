@@ -24,16 +24,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @OnlyIn(Dist.CLIENT)
 @Mixin(VehicleMainWeaponHudOverlay.class)
 public abstract class SbwVehicleHudMixin {
-   @Inject(
-      method = "renderWeaponInfoFirst(Lnet/minecraft/client/gui/GuiGraphics;Lcom/atsuishio/superbwarfare/entity/vehicle/base/VehicleEntity;Lnet/minecraft/world/entity/player/Player;Lcom/atsuishio/superbwarfare/data/gun/GunData;Lnet/minecraft/client/gui/Font;III)V",
-      at = @At("HEAD"),
-      cancellable = true,
-      remap = false,
-      require = 0
-   )
-   private static void pwp$blockWeaponHudInMainZone(GuiGraphics gui, VehicleEntity vehicle, Player player, GunData data, Font font, int a, int b, int c, CallbackInfo ci) {
-      if (ClientSafetyState.inMainZone || NotificationFeed.hasVisibleEntries()) {
-         ci.cancel();
-      }
-   }
+    @Inject(
+            method =
+                    "renderWeaponInfoFirst(Lnet/minecraft/client/gui/GuiGraphics;Lcom/atsuishio/superbwarfare/entity/vehicle/base/VehicleEntity;Lnet/minecraft/world/entity/player/Player;Lcom/atsuishio/superbwarfare/data/gun/GunData;Lnet/minecraft/client/gui/Font;III)V",
+            at = @At("HEAD"),
+            cancellable = true,
+            remap = false,
+            require = 0)
+    private static void pwp$blockWeaponHudInMainZone(
+            GuiGraphics gui,
+            VehicleEntity vehicle,
+            Player player,
+            GunData data,
+            Font font,
+            int a,
+            int b,
+            int c,
+            CallbackInfo ci) {
+        if (ClientSafetyState.inMainZone || NotificationFeed.hasVisibleEntries()) {
+            ci.cancel();
+        }
+    }
 }

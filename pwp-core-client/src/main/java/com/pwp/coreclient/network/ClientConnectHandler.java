@@ -1,8 +1,8 @@
 package com.pwp.coreclient.network;
 
+import com.pwp.coreclient.gui.screens.PWPMainMenuScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
-import com.pwp.coreclient.gui.screens.PWPMainMenuScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraftforge.api.distmarker.Dist;

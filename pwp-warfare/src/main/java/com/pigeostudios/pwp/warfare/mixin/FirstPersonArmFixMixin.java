@@ -21,32 +21,32 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // Принудительно показывает руку игрока, даже если предмет в руке пуст
 public class FirstPersonArmFixMixin {
     @Inject(method = "renderArmWithItem", at = @At("HEAD"))
-   private void pwpwarfare$forceShowArm(
-      AbstractClientPlayer player,
-      float partialTicks,
-      float pitch,
-      InteractionHand hand,
-      float swingProgress,
-      ItemStack stack,
-      float equipProgress,
-      PoseStack poseStack,
-      MultiBufferSource buffer,
-      int combinedLight,
-      CallbackInfo ci
-   ) {
-      if (stack.isEmpty()) {
-         EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-         PlayerRenderer renderer = (PlayerRenderer)dispatcher.getRenderer(player);
-         PlayerModel<AbstractClientPlayer> model = (PlayerModel<AbstractClientPlayer>)renderer.getModel();
-         HumanoidArm mainArm = player.getMainArm();
-         boolean isRightArm = hand == InteractionHand.MAIN_HAND ? mainArm == HumanoidArm.RIGHT : mainArm == HumanoidArm.LEFT;
-         if (isRightArm) {
-            model.rightArm.visible = true;
-            model.rightSleeve.visible = true;
-         } else {
-            model.leftArm.visible = true;
-            model.leftSleeve.visible = true;
-         }
-      }
-   }
+    private void pwpwarfare$forceShowArm(
+            AbstractClientPlayer player,
+            float partialTicks,
+            float pitch,
+            InteractionHand hand,
+            float swingProgress,
+            ItemStack stack,
+            float equipProgress,
+            PoseStack poseStack,
+            MultiBufferSource buffer,
+            int combinedLight,
+            CallbackInfo ci) {
+        if (stack.isEmpty()) {
+            EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+            PlayerRenderer renderer = (PlayerRenderer) dispatcher.getRenderer(player);
+            PlayerModel<AbstractClientPlayer> model = (PlayerModel<AbstractClientPlayer>) renderer.getModel();
+            HumanoidArm mainArm = player.getMainArm();
+            boolean isRightArm =
+                    hand == InteractionHand.MAIN_HAND ? mainArm == HumanoidArm.RIGHT : mainArm == HumanoidArm.LEFT;
+            if (isRightArm) {
+                model.rightArm.visible = true;
+                model.rightSleeve.visible = true;
+            } else {
+                model.leftArm.visible = true;
+                model.leftSleeve.visible = true;
+            }
+        }
+    }
 }

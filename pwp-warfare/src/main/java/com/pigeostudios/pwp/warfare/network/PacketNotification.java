@@ -9,29 +9,29 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // в ленту уведомлений одной строчкой. textKey — ключ из lang, severity —
 // NotificationFeed.SEVERITY_INFO (акцентная полоска) / SEVERITY_DANGER (красная).
 public class PacketNotification {
-   private final String textKey;
-   private final byte severity;
+    private final String textKey;
+    private final byte severity;
 
-   public PacketNotification(String textKey, byte severity) {
-      this.textKey = textKey;
-      this.severity = severity;
-   }
+    public PacketNotification(String textKey, byte severity) {
+        this.textKey = textKey;
+        this.severity = severity;
+    }
 
-   public static void encode(PacketNotification msg, FriendlyByteBuf buf) {
-      buf.writeUtf(msg.textKey);
-      buf.writeByte(msg.severity);
-   }
+    public static void encode(PacketNotification msg, FriendlyByteBuf buf) {
+        buf.writeUtf(msg.textKey);
+        buf.writeByte(msg.severity);
+    }
 
-   public static PacketNotification decode(FriendlyByteBuf buf) {
-      return new PacketNotification(buf.readUtf(), buf.readByte());
-   }
+    public static PacketNotification decode(FriendlyByteBuf buf) {
+        return new PacketNotification(buf.readUtf(), buf.readByte());
+    }
 
-   public static void handle(PacketNotification msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         if (ctx.get().getDirection().getReceptionSide().isClient()) {
-            NotificationFeed.push(msg.textKey, msg.severity);
-         }
-      });
-      ctx.get().setPacketHandled(true);
-   }
+    public static void handle(PacketNotification msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            if (ctx.get().getDirection().getReceptionSide().isClient()) {
+                NotificationFeed.push(msg.textKey, msg.severity);
+            }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 }

@@ -1,11 +1,10 @@
 package com.pigeostudios.sbwchunkload.state;
 
 import com.pigeostudios.sbwchunkload.classifier.ProjectileProfile;
+import java.lang.ref.WeakReference;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-
-import java.lang.ref.WeakReference;
 
 /**
  * Состояние отслеживаемого снаряда. Чистое состояние — не знает ни про
@@ -21,6 +20,7 @@ public final class ProjectileState {
 
     /** Мягкая ссылка на сущность (не держит её в памяти). */
     private final WeakReference<Entity> entityRef;
+
     private final int entityId;
 
     /** Уровень, в котором летит снаряд (для освобождения тикетов после GC). */

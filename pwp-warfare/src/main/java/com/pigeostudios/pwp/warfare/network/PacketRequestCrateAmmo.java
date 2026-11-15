@@ -2,9 +2,6 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
-import com.pigeostudios.pwp.warfare.item.AGSAmmoItem;
-import com.pigeostudios.pwp.warfare.item.M2AmmoItem;
-import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
@@ -15,124 +12,139 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.ItemLike;
 import net.minecraftforge.network.NetworkEvent.Context;
 import net.minecraftforge.registries.ForgeRegistries;
 
 // Пакет запроса боеприпасов из ящика снабжения (SupplyCrate)
 // Позволяет пополнить кит или взять тяжёлые боеприпасы
 public class PacketRequestCrateAmmo {
-   private final int entityId;
-   private final int type;
+    private final int entityId;
+    private final int type;
 
-   public PacketRequestCrateAmmo(int entityId, int type) {
-      this.entityId = entityId;
-      this.type = type;
-   }
+    public PacketRequestCrateAmmo(int entityId, int type) {
+        this.entityId = entityId;
+        this.type = type;
+    }
 
-   public static void encode(PacketRequestCrateAmmo msg, FriendlyByteBuf buf) {
-      buf.writeInt(msg.entityId);
-      buf.writeInt(msg.type);
-   }
+    public static void encode(PacketRequestCrateAmmo msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.entityId);
+        buf.writeInt(msg.type);
+    }
 
-   public static PacketRequestCrateAmmo decode(FriendlyByteBuf buf) {
-      return new PacketRequestCrateAmmo(buf.readInt(), buf.readInt());
-   }
+    public static PacketRequestCrateAmmo decode(FriendlyByteBuf buf) {
+        return new PacketRequestCrateAmmo(buf.readInt(), buf.readInt());
+    }
 
-   // Проверяет наличие ящика, дистанцию, стоимость и выдаёт предметы
-   public static void handle(PacketRequestCrateAmmo msg, Supplier<Context> ctx) {
-      ctx.get().enqueueWork(() -> {
-         ServerPlayer player = ctx.get().getSender();
-         if (player != null) {
-            if (player.level().getEntity(msg.entityId) instanceof SupplyCrateEntity crate) {
-               if (!(player.distanceToSqr(crate) > 64.0)) {
-                  int cost = 0;
-                  switch (msg.type) {
-                     case 0:
-                        cost = (Integer)WarfareConfig.HUB_RESUPPLY_COST.get();
-                        break;
-                     case 3:
-                        cost = 20;
-                        break;
-                     case 4:
-                        cost = 50;
-                  }
+    // Проверяет наличие ящика, дистанцию, стоимость и выдаёт предметы
+    public static void handle(PacketRequestCrateAmmo msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null) {
+                if (player.level().getEntity(msg.entityId) instanceof SupplyCrateEntity crate) {
+                    if (!(player.distanceToSqr(crate) > 64.0)) {
+                        int cost = 0;
+                        switch (msg.type) {
+                            case 0:
+                                cost = (Integer) WarfareConfig.HUB_RESUPPLY_COST.get();
+                                break;
+                            case 3:
+                                cost = 20;
+                                break;
+                            case 4:
+                                cost = 50;
+                        }
 
-                  if (msg.type == 0) {
-                     String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
-                     if (kitName.isEmpty()) {
-                         player.sendSystemMessage(Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
-                     } else {
-                        long lastFobUse = player.getPersistentData().getLong("WARFARE_LastFobResupply");
-                        long currentTime = player.level().getGameTime();
-                        if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
-                            player.sendSystemMessage(Component.literal("Пополнение кита на кулдауне!").withStyle(ChatFormatting.RED));
+                        if (msg.type == 0) {
+                            String kitName = player.getPersistentData().getString("WARFARE_CurrentKit");
+                            if (kitName.isEmpty()) {
+                                player.sendSystemMessage(
+                                        Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
+                            } else {
+                                long lastFobUse = player.getPersistentData().getLong("WARFARE_LastFobResupply");
+                                long currentTime = player.level().getGameTime();
+                                if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
+                                    player.sendSystemMessage(Component.literal("Пополнение кита на кулдауне!")
+                                            .withStyle(ChatFormatting.RED));
+                                } else if (!player.isCreative() && crate.getMaterials() < cost) {
+                                    player.sendSystemMessage(
+                                            Component.literal("Недостаточно материалов в ящике! Нужно: " + cost)
+                                                    .withStyle(ChatFormatting.RED));
+                                } else {
+                                    WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                                    String t = player.getTeam() != null
+                                            ? player.getTeam().getName().toUpperCase()
+                                            : "NEUTRAL";
+                                    WarfareWorldData.KitInfo kit =
+                                            t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
+                                    if (kit != null) {
+                                        if (ResupplyHandler.resupplyPlayer(player, kit, false)) {
+                                            if (!player.isCreative()) {
+                                                crate.setMaterials(crate.getMaterials() - cost);
+                                                player.getPersistentData()
+                                                        .putLong("WARFARE_LastFobResupply", currentTime);
+                                            }
+
+                                            player.sendSystemMessage(
+                                                    Component.literal("Кит пополнен! (-" + cost + " материалов)")
+                                                            .withStyle(ChatFormatting.GREEN));
+                                        } else {
+                                            player.sendSystemMessage(Component.literal("БК уже полон!")
+                                                    .withStyle(ChatFormatting.YELLOW));
+                                        }
+                                    }
+                                }
+                            }
                         } else if (!player.isCreative() && crate.getMaterials() < cost) {
-                           player.sendSystemMessage(Component.literal("Недостаточно материалов в ящике! Нужно: " + cost).withStyle(ChatFormatting.RED));
+                            player.sendSystemMessage(
+                                    Component.literal("Недостаточно материалов в ящике! Нужно: " + cost)
+                                            .withStyle(ChatFormatting.RED));
                         } else {
-                           WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                           String t = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-                           WarfareWorldData.KitInfo kit = t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
-                           if (kit != null) {
-                              if (ResupplyHandler.resupplyPlayer(player, kit, false)) {
-                                 if (!player.isCreative()) {
-                                    crate.setMaterials(crate.getMaterials() - cost);
-                                    player.getPersistentData().putLong("WARFARE_LastFobResupply", currentTime);
-                                 }
+                            boolean success = false;
+                            if (msg.type == 3) {
+                                Item mortarItem = (Item) ForgeRegistries.ITEMS.getValue(
+                                        new ResourceLocation("superbwarfare", "mortar_shell"));
+                                if (mortarItem == null || mortarItem == Items.AIR) {
+                                    mortarItem = Items.ARROW;
+                                }
 
-                                  player.sendSystemMessage(Component.literal("Кит пополнен! (-" + cost + " материалов)").withStyle(ChatFormatting.GREEN));
-                               } else {
-                                  player.sendSystemMessage(Component.literal("БК уже полон!").withStyle(ChatFormatting.YELLOW));
-                               }
-                           }
+                                ItemStack stack = new ItemStack(mortarItem, 8);
+                                if (player.getInventory().add(stack)) {
+                                    success = true;
+                                } else {
+                                    player.drop(stack, false);
+                                }
+
+                                success = true;
+                            } else if (msg.type == 4) {
+                                Item towItem = (Item) ForgeRegistries.ITEMS.getValue(
+                                        new ResourceLocation("superbwarfare", "medium_anti_ground_missile"));
+                                if (towItem == null || towItem == Items.AIR) {
+                                    towItem = Items.SPECTRAL_ARROW;
+                                }
+
+                                ItemStack stack = new ItemStack(towItem, 2);
+                                if (player.getInventory().add(stack)) {
+                                    success = true;
+                                } else {
+                                    player.drop(stack, false);
+                                }
+
+                                success = true;
+                            }
+
+                            if (success) {
+                                if (!player.isCreative()) {
+                                    crate.setMaterials(0);
+                                }
+
+                                player.sendSystemMessage(Component.literal("Тяжёлый БК пополнен! Ящик израсходован.")
+                                        .withStyle(ChatFormatting.GREEN));
+                            }
                         }
-                     }
-                  } else if (!player.isCreative() && crate.getMaterials() < cost) {
-                      player.sendSystemMessage(Component.literal("Недостаточно материалов в ящике! Нужно: " + cost).withStyle(ChatFormatting.RED));
-                  } else {
-                      boolean success = false;
-                      if (msg.type == 3) {
-                        Item mortarItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "mortar_shell"));
-                        if (mortarItem == null || mortarItem == Items.AIR) {
-                           mortarItem = Items.ARROW;
-                        }
-
-                        ItemStack stack = new ItemStack(mortarItem, 8);
-                        if (player.getInventory().add(stack)) {
-                           success = true;
-                        } else {
-                           player.drop(stack, false);
-                        }
-
-                        success = true;
-                     } else if (msg.type == 4) {
-                        Item towItem = (Item)ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "medium_anti_ground_missile"));
-                        if (towItem == null || towItem == Items.AIR) {
-                           towItem = Items.SPECTRAL_ARROW;
-                        }
-
-                        ItemStack stack = new ItemStack(towItem, 2);
-                        if (player.getInventory().add(stack)) {
-                           success = true;
-                        } else {
-                           player.drop(stack, false);
-                        }
-
-                        success = true;
-                     }
-
-                     if (success) {
-                        if (!player.isCreative()) {
-                           crate.setMaterials(0);
-                        }
-
-                         player.sendSystemMessage(Component.literal("Тяжёлый БК пополнен! Ящик израсходован.").withStyle(ChatFormatting.GREEN));
-                     }
-                  }
-               }
+                    }
+                }
             }
-         }
-      });
-      ctx.get().setPacketHandled(true);
-   }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 }

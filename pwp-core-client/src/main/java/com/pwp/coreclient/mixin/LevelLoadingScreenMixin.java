@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin({ LevelLoadingScreen.class, ReceivingLevelScreen.class })
+@Mixin({LevelLoadingScreen.class, ReceivingLevelScreen.class})
 public class LevelLoadingScreenMixin {
 
     @Unique
@@ -66,7 +66,13 @@ public class LevelLoadingScreenMixin {
         PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
 
         String loadText = "Загрузка мира...";
-        gui.drawString(font, Component.literal(loadText), cx - font.width(loadText) / 2, cy - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
+        gui.drawString(
+                font,
+                Component.literal(loadText),
+                cx - font.width(loadText) / 2,
+                cy - 30,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
         PWPUtils.renderSpinner(gui, cx, cy + 4, elapsed);
 
         // Tips

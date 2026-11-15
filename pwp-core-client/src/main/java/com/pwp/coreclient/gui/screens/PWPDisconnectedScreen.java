@@ -63,14 +63,21 @@ public class PWPDisconnectedScreen extends Screen {
         PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
 
         String title = "Соединение разорвано";
-        gui.drawString(font, Component.literal(title), cx - font.width(title) / 2, cy - 20, PWPTheme.Colors.DANGER, false);
+        gui.drawString(
+                font, Component.literal(title), cx - font.width(title) / 2, cy - 20, PWPTheme.Colors.DANGER, false);
 
         if (!reasonStr.isEmpty()) {
             int maxW = (int) (w * 0.55f);
             if (font.width(reasonStr) > maxW) {
                 reasonStr = font.plainSubstrByWidth(reasonStr, maxW - 4) + "...";
             }
-            gui.drawString(font, Component.literal(reasonStr), cx - font.width(reasonStr) / 2, cy + 4, PWPTheme.Colors.TEXT_SECONDARY, false);
+            gui.drawString(
+                    font,
+                    Component.literal(reasonStr),
+                    cx - font.width(reasonStr) / 2,
+                    cy + 4,
+                    PWPTheme.Colors.TEXT_SECONDARY,
+                    false);
         }
         gui.setColor(1, 1, 1, 1);
 
@@ -78,11 +85,13 @@ public class PWPDisconnectedScreen extends Screen {
 
         if (fade >= 1 && children().isEmpty()) {
             addRenderableWidget(new PWPButton(
-                cx - 80, cy + 50, 160, 28,
-                Component.literal("Вернуться в меню"),
-                btn -> Minecraft.getInstance().setScreen(new PWPMainMenuScreen()),
-                PWPButton.Style.ACCENT
-            ));
+                    cx - 80,
+                    cy + 50,
+                    160,
+                    28,
+                    Component.literal("Вернуться в меню"),
+                    btn -> Minecraft.getInstance().setScreen(new PWPMainMenuScreen()),
+                    PWPButton.Style.ACCENT));
         }
     }
 

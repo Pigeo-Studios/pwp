@@ -12,89 +12,105 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.NetworkEvent.Context;
+import net.minecraftforge.network.PacketDistributor;
 
 // Пакет запроса меню выбора кита
 // Отправляется клиентом для получения списка доступных китов
 public class PacketRequestKitMenu {
-   public static void encode(PacketRequestKitMenu msg, FriendlyByteBuf buf) {
-   }
+    public static void encode(PacketRequestKitMenu msg, FriendlyByteBuf buf) {}
 
-   public static PacketRequestKitMenu decode(FriendlyByteBuf buf) {
-      return new PacketRequestKitMenu();
-   }
+    public static PacketRequestKitMenu decode(FriendlyByteBuf buf) {
+        return new PacketRequestKitMenu();
+    }
 
-   // Собирает список доступных китов с учётом лимитов и отправляет клиенту
+    // Собирает список доступных китов с учётом лимитов и отправляет клиенту
     public static void sendKitMenu(ServerPlayer player, WarfareWorldData data) {
-       if (player.getTeam() == null) return;
-       String teamName = player.getTeam().getName().toUpperCase();
-       String pName = player.getScoreboardName();
-       WarfareWorldData.Squad mySquad = null;
+        if (player.getTeam() == null) return;
+        String teamName = player.getTeam().getName().toUpperCase();
+        String pName = player.getScoreboardName();
+        WarfareWorldData.Squad mySquad = null;
 
-       for (WarfareWorldData.Squad s : data.squads) {
-          if (s.members.contains(pName)) { mySquad = s; break; }
-       }
+        for (WarfareWorldData.Squad s : data.squads) {
+            if (s.members.contains(pName)) {
+                mySquad = s;
+                break;
+            }
+        }
 
         boolean amILeader = mySquad != null && mySquad.leader.equals(pName);
         if (!amILeader) amILeader = player.getPersistentData().getBoolean("WARFARE_IsSquadLeader");
-       List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
+        List<PacketOpenPlayerKitMenu.KitDTO> dtoList = new ArrayList<>();
 
-       Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
-       // Порядок: базовые роли из KIT_NAMES, варианты (X (…)) — сразу после своей роли, остальное — в конец
-       List<String> order = new ArrayList<>();
-       Set<String> added = new HashSet<>();
-       for (String base : WarfareWorldData.KIT_NAMES) {
-          if (kits.containsKey(base) && added.add(base)) order.add(base);
-          List<String> variants = new ArrayList<>();
-          for (String k : kits.keySet()) {
-             if (k.startsWith(base + " (")) variants.add(k);
-          }
-          variants.sort(String::compareTo);
-          for (String v : variants) {
-             if (added.add(v)) order.add(v);
-          }
-       }
-       for (String k : kits.keySet()) {
-          if (added.add(k)) order.add(k);
-       }
+        Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
+        // Порядок: базовые роли из KIT_NAMES, варианты (X (…)) — сразу после своей роли, остальное — в конец
+        List<String> order = new ArrayList<>();
+        Set<String> added = new HashSet<>();
+        for (String base : WarfareWorldData.KIT_NAMES) {
+            if (kits.containsKey(base) && added.add(base)) order.add(base);
+            List<String> variants = new ArrayList<>();
+            for (String k : kits.keySet()) {
+                if (k.startsWith(base + " (")) variants.add(k);
+            }
+            variants.sort(String::compareTo);
+            for (String v : variants) {
+                if (added.add(v)) order.add(v);
+            }
+        }
+        for (String k : kits.keySet()) {
+            if (added.add(k)) order.add(k);
+        }
 
-       for (String kitName : order) {
-          WarfareWorldData.KitInfo kit = kits.get(kitName);
-          if (kit != null && (!kit.isLeaderOnly || amILeader || player.isCreative()) && (kit.maxPerTeam != 0 || kitName.equals("Unassigned"))) {
-             int tCount = 0, sCount = 0;
-             for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
-                if (p != player && p.getTeam() != null && p.getTeam().getName().toUpperCase().equals(teamName)) {
-                   String cKit = p.getPersistentData().getString("WARFARE_CurrentKit");
-                   String pKit = p.getPersistentData().getString("WARFARE_PendingKit");
-                   if (cKit.equals(kitName) || pKit.equals(kitName)) {
-                      tCount++;
-                      if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) sCount++;
-                   }
+        for (String kitName : order) {
+            WarfareWorldData.KitInfo kit = kits.get(kitName);
+            if (kit != null
+                    && (!kit.isLeaderOnly || amILeader || player.isCreative())
+                    && (kit.maxPerTeam != 0 || kitName.equals("Unassigned"))) {
+                int tCount = 0, sCount = 0;
+                for (ServerPlayer p : player.server.getPlayerList().getPlayers()) {
+                    if (p != player
+                            && p.getTeam() != null
+                            && p.getTeam().getName().toUpperCase().equals(teamName)) {
+                        String cKit = p.getPersistentData().getString("WARFARE_CurrentKit");
+                        String pKit = p.getPersistentData().getString("WARFARE_PendingKit");
+                        if (cKit.equals(kitName) || pKit.equals(kitName)) {
+                            tCount++;
+                            if (mySquad != null && mySquad.members.contains(p.getScoreboardName())) sCount++;
+                        }
+                    }
                 }
-             }
 
-             boolean available = true;
-             String reason = "";
-             if (kit.maxPerTeam > 0 && tCount >= kit.maxPerTeam) { available = false; reason = "Team Full (" + tCount + "/" + kit.maxPerTeam + ")"; }
-             else if (kit.maxPerSquad > 0 && sCount >= kit.maxPerSquad) { available = false; reason = "Squad Full (" + sCount + "/" + kit.maxPerSquad + ")"; }
-             else if (kit.minSquadPlayers > 0 && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) { available = false; reason = "Need " + kit.minSquadPlayers + " players in Squad"; }
-             else if ("FIRE_SUPPORT".equals(kit.category) && ResupplyHandler.countFireSupportOthersInSquad(player, data) >= 3) {
-                available = false;
-                reason = "Max 3 Fire Support per Squad";
-             }
+                boolean available = true;
+                String reason = "";
+                if (kit.maxPerTeam > 0 && tCount >= kit.maxPerTeam) {
+                    available = false;
+                    reason = "Team Full (" + tCount + "/" + kit.maxPerTeam + ")";
+                } else if (kit.maxPerSquad > 0 && sCount >= kit.maxPerSquad) {
+                    available = false;
+                    reason = "Squad Full (" + sCount + "/" + kit.maxPerSquad + ")";
+                } else if (kit.minSquadPlayers > 0
+                        && (mySquad == null || mySquad.members.size() < kit.minSquadPlayers)) {
+                    available = false;
+                    reason = "Need " + kit.minSquadPlayers + " players in Squad";
+                } else if ("FIRE_SUPPORT".equals(kit.category)
+                        && ResupplyHandler.countFireSupportOthersInSquad(player, data) >= 3) {
+                    available = false;
+                    reason = "Max 3 Fire Support per Squad";
+                }
 
-             String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
-             if (myCurrentKit.isEmpty()) myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
-             boolean isSelected = myCurrentKit.equals(kitName);
-             List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
-             PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems);
-             if (kit.slotSkins != null) {
-                for (var e : kit.slotSkins.entrySet()) dto.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
-             }
-             dtoList.add(dto);
-          }
-       }
+                String myCurrentKit = player.getPersistentData().getString("WARFARE_PendingKit");
+                if (myCurrentKit.isEmpty())
+                    myCurrentKit = player.getPersistentData().getString("WARFARE_CurrentKit");
+                boolean isSelected = myCurrentKit.equals(kitName);
+                List<ItemStack> kitPreviewItems = new ArrayList<>(kit.inventory);
+                PacketOpenPlayerKitMenu.KitDTO dto = new PacketOpenPlayerKitMenu.KitDTO(
+                        kitName, kit.category, kit.description, available, reason, isSelected, kitPreviewItems);
+                if (kit.slotSkins != null) {
+                    for (var e : kit.slotSkins.entrySet()) dto.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
+                }
+                dtoList.add(dto);
+            }
+        }
 
         // Attach player's saved slot selections for persistent UI state
         Map<String, Integer> restoredSelections = new HashMap<>();
@@ -103,18 +119,18 @@ public class PacketRequestKitMenu {
             restoredSelections.put(key, selTag.getInt(key));
         }
 
-        PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player),
-            new PacketOpenPlayerKitMenu(dtoList, restoredSelections));
+        PacketHandler.INSTANCE.send(
+                PacketDistributor.PLAYER.with(() -> player), new PacketOpenPlayerKitMenu(dtoList, restoredSelections));
     }
 
     public static void handle(PacketRequestKitMenu msg, Supplier<Context> ctx) {
-       ctx.get().enqueueWork(() -> {
-          ServerPlayer player = ctx.get().getSender();
-          if (player != null && player.getTeam() != null) {
-             WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-             sendKitMenu(player, data);
-          }
-       });
-       ctx.get().setPacketHandled(true);
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null && player.getTeam() != null) {
+                WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+                sendKitMenu(player, data);
+            }
+        });
+        ctx.get().setPacketHandled(true);
     }
 }

@@ -1,10 +1,9 @@
 package com.pwp.coreclient.network;
 
 import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
+import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
 
 /**
  * Единый авторитетный пакет состояния лобби.
@@ -99,29 +98,69 @@ public class LobbyStatePacket {
     public final String[] mRedFactions;
     public final String[] mWorldPaths;
 
-    public LobbyStatePacket(int phase, int remainingSeconds, int onlinePlayers, int totalVotes,
-                            String leadingName, boolean canStartNewMatch, String policyReason, String mode,
-                            boolean requestOpen,
-                            String[] mapNames, String[] mapDisplayNames, String[] mapDescriptions,
-                            int[] maxPlayers, int[] voteCounts, String[] worldPaths,
-                            String[] blueFactions, String[] redFactions,
-                            String[] modeNames, String[] modeDisplayNames, String[] modeDescriptions,
-                            int[] modeVoteCounts,
-                            String[] team1Factions, String[] team2Factions,
-                            int[] team1Votes, int[] team2Votes,
-                            int myMapVote, int myModeVote, int myFaction1, int myFaction2,
-                            String resultMap, int resultMapVotes,
-                            String resultMode, int resultModeVotes,
-                            String resultF1, int resultF1Votes,
-                            String resultF2, int resultF2Votes,
-                            String matchMapDisplay, String matchModeDisplay, String matchWorldPath,
-                            String matchBlueFaction, String matchRedFaction, String matchStatus,
-                            int matchBlueTickets, int matchRedTickets, int matchServerId,
-                            int matchElapsed, int matchPlayers, int matchMaxPlayers, boolean matchCanJoin,
-                            int matchCount, int[] mServerIds, String[] mDisplayNames, String[] mStatuses,
-                            int[] mBlueTickets, int[] mRedTickets, int[] mPlayers, int[] mMaxPlayers,
-                            int[] mElapsed, String[] mBlueFactions, String[] mRedFactions,
-                            String[] mWorldPaths) {
+    public LobbyStatePacket(
+            int phase,
+            int remainingSeconds,
+            int onlinePlayers,
+            int totalVotes,
+            String leadingName,
+            boolean canStartNewMatch,
+            String policyReason,
+            String mode,
+            boolean requestOpen,
+            String[] mapNames,
+            String[] mapDisplayNames,
+            String[] mapDescriptions,
+            int[] maxPlayers,
+            int[] voteCounts,
+            String[] worldPaths,
+            String[] blueFactions,
+            String[] redFactions,
+            String[] modeNames,
+            String[] modeDisplayNames,
+            String[] modeDescriptions,
+            int[] modeVoteCounts,
+            String[] team1Factions,
+            String[] team2Factions,
+            int[] team1Votes,
+            int[] team2Votes,
+            int myMapVote,
+            int myModeVote,
+            int myFaction1,
+            int myFaction2,
+            String resultMap,
+            int resultMapVotes,
+            String resultMode,
+            int resultModeVotes,
+            String resultF1,
+            int resultF1Votes,
+            String resultF2,
+            int resultF2Votes,
+            String matchMapDisplay,
+            String matchModeDisplay,
+            String matchWorldPath,
+            String matchBlueFaction,
+            String matchRedFaction,
+            String matchStatus,
+            int matchBlueTickets,
+            int matchRedTickets,
+            int matchServerId,
+            int matchElapsed,
+            int matchPlayers,
+            int matchMaxPlayers,
+            boolean matchCanJoin,
+            int matchCount,
+            int[] mServerIds,
+            String[] mDisplayNames,
+            String[] mStatuses,
+            int[] mBlueTickets,
+            int[] mRedTickets,
+            int[] mPlayers,
+            int[] mMaxPlayers,
+            int[] mElapsed,
+            String[] mBlueFactions,
+            String[] mRedFactions,
+            String[] mWorldPaths) {
         this.phase = phase;
         this.remainingSeconds = remainingSeconds;
         this.onlinePlayers = onlinePlayers;
@@ -193,13 +232,19 @@ public class LobbyStatePacket {
     // ====== encode / decode ======
 
     private static void writeStringArr(FriendlyByteBuf buf, String[] arr) {
-        if (arr == null) { buf.writeInt(0); return; }
+        if (arr == null) {
+            buf.writeInt(0);
+            return;
+        }
         buf.writeInt(arr.length);
         for (String s : arr) buf.writeUtf(s != null ? s : "");
     }
 
     private static void writeIntArr(FriendlyByteBuf buf, int[] arr) {
-        if (arr == null) { buf.writeInt(0); return; }
+        if (arr == null) {
+            buf.writeInt(0);
+            return;
+        }
         buf.writeInt(arr.length);
         for (int v : arr) buf.writeInt(v);
     }
@@ -290,7 +335,9 @@ public class LobbyStatePacket {
         writeStringArr(buf, msg.mWorldPaths);
     }
 
-    private static String opt(String s) { return s == null || s.isEmpty() ? null : s; }
+    private static String opt(String s) {
+        return s == null || s.isEmpty() ? null : s;
+    }
 
     public static LobbyStatePacket decode(FriendlyByteBuf buf) {
         int phase = buf.readInt();
@@ -363,21 +410,68 @@ public class LobbyStatePacket {
         String[] mRedFactions = readStringArr(buf);
         String[] mWorldPaths = readStringArr(buf);
 
-        return new LobbyStatePacket(phase, remainingSeconds, onlinePlayers, totalVotes,
-                leadingName, canStartNewMatch, policyReason, mode, requestOpen,
-                mapNames, mapDisplayNames, mapDescriptions, maxPlayers, voteCounts, worldPaths,
-                blueFactions, redFactions,
-                modeNames, modeDisplayNames, modeDescriptions, modeVoteCounts,
-                team1Factions, team2Factions, team1Votes, team2Votes,
-                myMapVote, myModeVote, myFaction1, myFaction2,
-                resultMap, resultMapVotes, resultMode, resultModeVotes,
-                resultF1, resultF1Votes, resultF2, resultF2Votes,
-                matchMapDisplay, matchModeDisplay, matchWorldPath,
-                matchBlueFaction, matchRedFaction, matchStatus,
-                matchBlueTickets, matchRedTickets, matchServerId,
-                matchElapsed, matchPlayers, matchMaxPlayers, matchCanJoin,
-                matchCount, mServerIds, mDisplayNames, mStatuses,
-                mBlueTickets, mRedTickets, mPlayers, mMaxPlayers, mElapsed, mBlueFactions, mRedFactions,
+        return new LobbyStatePacket(
+                phase,
+                remainingSeconds,
+                onlinePlayers,
+                totalVotes,
+                leadingName,
+                canStartNewMatch,
+                policyReason,
+                mode,
+                requestOpen,
+                mapNames,
+                mapDisplayNames,
+                mapDescriptions,
+                maxPlayers,
+                voteCounts,
+                worldPaths,
+                blueFactions,
+                redFactions,
+                modeNames,
+                modeDisplayNames,
+                modeDescriptions,
+                modeVoteCounts,
+                team1Factions,
+                team2Factions,
+                team1Votes,
+                team2Votes,
+                myMapVote,
+                myModeVote,
+                myFaction1,
+                myFaction2,
+                resultMap,
+                resultMapVotes,
+                resultMode,
+                resultModeVotes,
+                resultF1,
+                resultF1Votes,
+                resultF2,
+                resultF2Votes,
+                matchMapDisplay,
+                matchModeDisplay,
+                matchWorldPath,
+                matchBlueFaction,
+                matchRedFaction,
+                matchStatus,
+                matchBlueTickets,
+                matchRedTickets,
+                matchServerId,
+                matchElapsed,
+                matchPlayers,
+                matchMaxPlayers,
+                matchCanJoin,
+                matchCount,
+                mServerIds,
+                mDisplayNames,
+                mStatuses,
+                mBlueTickets,
+                mRedTickets,
+                mPlayers,
+                mMaxPlayers,
+                mElapsed,
+                mBlueFactions,
+                mRedFactions,
                 mWorldPaths);
     }
 

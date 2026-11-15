@@ -1,9 +1,7 @@
 package com.pwp.cosmetics;
 
-import net.minecraft.world.item.ItemStack;
-
 import java.util.*;
-import java.util.stream.Collectors;
+import net.minecraft.world.item.ItemStack;
 
 public class CosmeticManager {
 
@@ -21,7 +19,8 @@ public class CosmeticManager {
 
     public static void setEquipment(UUID playerUuid, String slotType, String role, String skinId, ItemStack item) {
         String key = slotType + ":" + (role != null ? role : "ALL");
-        playerEquipment.computeIfAbsent(playerUuid, k -> new HashMap<>())
+        playerEquipment
+                .computeIfAbsent(playerUuid, k -> new HashMap<>())
                 .computeIfAbsent(key, k -> new ArrayList<>())
                 .add(new SkinData(skinId, item));
     }
@@ -34,7 +33,8 @@ public class CosmeticManager {
         }
     }
 
-    public static void setEquipmentSingle(UUID playerUuid, String slotType, String role, String skinId, ItemStack item) {
+    public static void setEquipmentSingle(
+            UUID playerUuid, String slotType, String role, String skinId, ItemStack item) {
         String key = slotType + ":" + (role != null ? role : "ALL");
         List<SkinData> list = new ArrayList<>();
         if (skinId != null && !skinId.isEmpty()) {

@@ -1,18 +1,16 @@
 package com.pwp.coreserver;
 
 import com.pwp.api.core.CoreApi;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 @Mod(CoreServerMod.MODID)
 public class CoreServerMod {
@@ -73,11 +71,9 @@ public class CoreServerMod {
             log.warn("Failed to read config/pwpcore.txt: {}", e.getMessage());
         }
         if (FMLEnvironment.dist.isDedicatedServer()) {
-            throw new RuntimeException(
-                "PWP Core Server cannot start: No API key configured.\n" +
-                "Set the PWP_API_KEY environment variable or create config/pwpcore.txt\n" +
-                "with the API key from core-service's config.json api.keys[0]."
-            );
+            throw new RuntimeException("PWP Core Server cannot start: No API key configured.\n"
+                    + "Set the PWP_API_KEY environment variable or create config/pwpcore.txt\n"
+                    + "with the API key from core-service's config.json api.keys[0].");
         }
         return "";
     }

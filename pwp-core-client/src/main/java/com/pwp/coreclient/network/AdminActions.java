@@ -18,7 +18,9 @@ public final class AdminActions {
 
     public static void send(String action, JsonObject params, Consumer<Result> onResult) {
         ClientResponseCache.actionResultListener = json -> {
-            if (json == null || !json.has("action") || !action.equals(json.get("action").getAsString())) return;
+            if (json == null
+                    || !json.has("action")
+                    || !action.equals(json.get("action").getAsString())) return;
             ClientResponseCache.actionResultListener = null;
             boolean ok = json.has("success") && json.get("success").getAsBoolean();
             String error = json.has("error") ? json.get("error").getAsString() : "";

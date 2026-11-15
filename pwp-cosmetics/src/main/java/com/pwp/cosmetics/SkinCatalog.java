@@ -44,7 +44,9 @@ public final class SkinCatalog {
             Map<String, String> map = new HashMap<>();
             for (JsonElement e : arr) {
                 JsonObject s = e.getAsJsonObject();
-                String mp = s.has("modelPath") && !s.get("modelPath").isJsonNull() ? s.get("modelPath").getAsString() : "";
+                String mp = s.has("modelPath") && !s.get("modelPath").isJsonNull()
+                        ? s.get("modelPath").getAsString()
+                        : "";
                 if (!mp.isEmpty()) map.put(s.get("skinId").getAsString(), mp);
             }
             modelPaths = Collections.unmodifiableMap(map);

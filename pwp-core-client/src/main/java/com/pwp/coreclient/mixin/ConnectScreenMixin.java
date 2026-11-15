@@ -8,7 +8,6 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ConnectScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -39,7 +38,12 @@ public class ConnectScreenMixin {
         int boxY = h / 2 - 38;
 
         if (pwp_cancelButton == null) {
-            pwp_cancelButton = new PWPButton(0, 0, 200, 20, Component.literal("Отмена"),
+            pwp_cancelButton = new PWPButton(
+                    0,
+                    0,
+                    200,
+                    20,
+                    Component.literal("Отмена"),
                     btn -> Minecraft.getInstance().setScreen(((ConnectScreenAccessor) (Object) this).pwpGetParent()),
                     PWPButton.Style.GHOST);
             // Регистрация через addRenderableWidget: рефмап-запись для
@@ -85,7 +89,13 @@ public class ConnectScreenMixin {
         PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
 
         String connectText = "Подключение к серверу...";
-        gui.drawString(font, Component.literal(connectText), cx - font.width(connectText) / 2, h / 2 - 30, PWPTheme.Colors.TEXT_PRIMARY, false);
+        gui.drawString(
+                font,
+                Component.literal(connectText),
+                cx - font.width(connectText) / 2,
+                h / 2 - 30,
+                PWPTheme.Colors.TEXT_PRIMARY,
+                false);
         PWPUtils.renderSpinner(gui, cx, h / 2 + 4, elapsed);
 
         // Tips

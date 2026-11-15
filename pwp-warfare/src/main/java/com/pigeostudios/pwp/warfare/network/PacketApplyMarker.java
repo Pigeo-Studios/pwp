@@ -16,87 +16,89 @@ import net.minecraftforge.network.NetworkEvent.Context;
 // Пакет применения маркера транспортного средства или грузовика снабжения
 // Отправляется клиентом при использовании маркера на сущности
 public class PacketApplyMarker {
-   private final int targetEntityId;
+    private final int targetEntityId;
 
-   public PacketApplyMarker(int entityId) {
-      this.targetEntityId = entityId;
-   }
+    public PacketApplyMarker(int entityId) {
+        this.targetEntityId = entityId;
+    }
 
-   public static void encode(PacketApplyMarker msg, FriendlyByteBuf buf) {
-      buf.writeInt(msg.targetEntityId);
-   }
+    public static void encode(PacketApplyMarker msg, FriendlyByteBuf buf) {
+        buf.writeInt(msg.targetEntityId);
+    }
 
-   public static PacketApplyMarker decode(FriendlyByteBuf buf) {
-      return new PacketApplyMarker(buf.readInt());
-   }
+    public static PacketApplyMarker decode(FriendlyByteBuf buf) {
+        return new PacketApplyMarker(buf.readInt());
+    }
 
-   // Обрабатывает применение маркера: проверяет дистанцию, тип предмета,
-   // записывает данные о транспортном средстве в мир и синхронизирует с клиентами
-   public static void handle(PacketApplyMarker msg, Supplier<Context> ctx) {
-      ctx.get()
-         .enqueueWork(
-            () -> {
-               ServerPlayer player = ctx.get().getSender();
-               if (player != null) {
-                  ServerLevel level = player.serverLevel();
-                  Entity target = level.getEntity(msg.targetEntityId);
-                  ItemStack stack = player.getMainHandItem();
-                  WarfareWorldData data = WarfareWorldData.get(level);
-                  if (target != null && player.distanceTo(target) < 10.0F) {
-                     String team = "";
-                     String type = "";
-                     int penalty = 0;
-                     int maxMats = 0;
-                     boolean isSupply = false;
-                     if (stack.getItem() instanceof VehicleMarkerItem markerItem) {
+    // Обрабатывает применение маркера: проверяет дистанцию, тип предмета,
+    // записывает данные о транспортном средстве в мир и синхронизирует с клиентами
+    public static void handle(PacketApplyMarker msg, Supplier<Context> ctx) {
+        ctx.get().enqueueWork(() -> {
+            ServerPlayer player = ctx.get().getSender();
+            if (player != null) {
+                ServerLevel level = player.serverLevel();
+                Entity target = level.getEntity(msg.targetEntityId);
+                ItemStack stack = player.getMainHandItem();
+                WarfareWorldData data = WarfareWorldData.get(level);
+                if (target != null && player.distanceTo(target) < 10.0F) {
+                    String team = "";
+                    String type = "";
+                    int penalty = 0;
+                    int maxMats = 0;
+                    boolean isSupply = false;
+                    if (stack.getItem() instanceof VehicleMarkerItem markerItem) {
                         team = markerItem.getTeam();
                         type = markerItem.getType();
                         penalty = markerItem.getPenalty();
                         maxMats = markerItem.getMaxMats();
-                     } else if (stack.getItem() instanceof SupplyTruckMarkerItem supplyItem) {
+                    } else if (stack.getItem() instanceof SupplyTruckMarkerItem supplyItem) {
                         team = supplyItem.getTeam();
                         type = supplyItem.getVehicleType();
                         penalty = supplyItem.getPenalty();
                         maxMats = supplyItem.getMaxMats();
                         isSupply = true;
-                     }
+                    }
 
-                     if (!team.isEmpty()) {
+                    if (!team.isEmpty()) {
                         target.getPersistentData().putString("WARFARE_VehicleTeam", team);
                         target.getPersistentData().putString("WARFARE_VehicleType", type);
                         target.getPersistentData().putInt("WARFARE_TicketPenalty", penalty);
                         if (isSupply) {
-                           target.getPersistentData().putBoolean("WARFARE_IsSupplyTruck", true);
-                           target.getPersistentData().putInt("WARFARE_SupplyAmmo", (Integer)WarfareConfig.SUPPLY_TRUCK_CRATES.get());
+                            target.getPersistentData().putBoolean("WARFARE_IsSupplyTruck", true);
+                            target.getPersistentData()
+                                    .putInt("WARFARE_SupplyAmmo", (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get());
                         } else {
-                           target.getPersistentData().remove("WARFARE_IsSupplyTruck");
-                           target.getPersistentData().remove("WARFARE_SupplyAmmo");
+                            target.getPersistentData().remove("WARFARE_IsSupplyTruck");
+                            target.getPersistentData().remove("WARFARE_SupplyAmmo");
                         }
 
                         if (maxMats > 0) {
-                           target.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
-                           target.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
+                            target.getPersistentData().putInt("WARFARE_VehicleMaxMats", maxMats);
+                            target.getPersistentData().putInt("WARFARE_VehicleMats", maxMats);
                         }
 
                         data.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
                         BlockPos spawnerPos = null;
                         if (target.getPersistentData().contains("WARFARE_SpawnerPos")) {
-                           spawnerPos = BlockPos.of(target.getPersistentData().getLong("WARFARE_SpawnerPos"));
+                            spawnerPos = BlockPos.of(target.getPersistentData().getLong("WARFARE_SpawnerPos"));
                         }
 
-                         int tPenalty = target.getPersistentData().getInt("WARFARE_TicketPenalty");
-                         data.markedVehicles
-                            .add(
-                               new WarfareWorldData.VehicleRecord(
-                                  target.getUUID(), team, type, target.getX(), target.getY(), target.getZ(), target.getYRot(), spawnerPos, tPenalty
-                               )
-                            );
+                        int tPenalty = target.getPersistentData().getInt("WARFARE_TicketPenalty");
+                        data.markedVehicles.add(new WarfareWorldData.VehicleRecord(
+                                target.getUUID(),
+                                team,
+                                type,
+                                target.getX(),
+                                target.getY(),
+                                target.getZ(),
+                                target.getYRot(),
+                                spawnerPos,
+                                tPenalty));
                         PacketHandler.sendToAllClients(level, data);
-                     }
-                  }
-               }
+                    }
+                }
             }
-         );
-      ctx.get().setPacketHandled(true);
-   }
+        });
+        ctx.get().setPacketHandled(true);
+    }
 }

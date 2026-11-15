@@ -1,12 +1,10 @@
 package com.pwp.coreclient.network;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pwp.coreclient.PlayerData;
 import java.util.UUID;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -19,6 +17,7 @@ public class PacketDataResponse {
     private static final Gson GSON = new Gson();
     /** Тип ответа на админ-действие {@link PacketAction}: {@code {action, success, error}}. */
     public static final String ACTION_RESULT = "actionResult";
+
     private final String type;
     private final String jsonData;
 
@@ -53,8 +52,8 @@ public class PacketDataResponse {
                     if (json.has("data")) {
                         JsonObject profile = json.getAsJsonObject("data");
                         String uuid = profile.has("player")
-                            ? profile.getAsJsonObject("player").get("uuid").getAsString()
-                            : "";
+                                ? profile.getAsJsonObject("player").get("uuid").getAsString()
+                                : "";
                         if (!uuid.isEmpty()) {
                             PlayerData.put(UUID.fromString(uuid), profile);
                         }

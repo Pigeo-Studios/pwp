@@ -18,9 +18,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @OnlyIn(Dist.CLIENT)
 @Mixin(Gui.class)
 public abstract class GuiOverlayMessageMixin {
-   @Inject(method = "setOverlayMessage(Lnet/minecraft/network/chat/Component;Z)V", at = @At("HEAD"), cancellable = true)
-   private void pwp$captureOverlayMessage(Component component, boolean animateFromBottom, CallbackInfo ci) {
-      FeedbackMessageBlock.show(component);
-      ci.cancel();
-   }
+    @Inject(
+            method = "setOverlayMessage(Lnet/minecraft/network/chat/Component;Z)V",
+            at = @At("HEAD"),
+            cancellable = true)
+    private void pwp$captureOverlayMessage(Component component, boolean animateFromBottom, CallbackInfo ci) {
+        FeedbackMessageBlock.show(component);
+        ci.cancel();
+    }
 }

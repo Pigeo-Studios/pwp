@@ -1,13 +1,16 @@
 package com.pwp.coreclient.gui.screens;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.components.*;
 import com.pwp.coreclient.gui.components.PWPToastManager;
-import com.pwp.coreclient.gui.theme.PWPIcons;
+import com.pwp.coreclient.gui.screens.tabs.*;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.network.*;
-import com.pwp.coreclient.gui.screens.tabs.*;
+import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -15,19 +18,12 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-
 public class PWPLobbyScreen extends Screen {
 
     private static PWPLobbyScreen instance;
     private static final Map<String, ResourceLocation> imageCache = new HashMap<>();
 
-    private static final String[] TAB_NAMES = { "ИГРА", "ГОЛОСОВАНИЕ", "ЛИДЕРЫ", "ПРОФИЛЬ" };
+    private static final String[] TAB_NAMES = {"ИГРА", "ГОЛОСОВАНИЕ", "ЛИДЕРЫ", "ПРОФИЛЬ"};
     private static final int TAB_PADDING = 14;
 
     private LobbyTab currentTab = LobbyTab.IGRA;
@@ -55,6 +51,7 @@ public class PWPLobbyScreen extends Screen {
         openTime = System.currentTimeMillis();
         instance = this;
     }
+
     @Override
     public void onClose() {
         super.onClose();
@@ -78,7 +75,8 @@ public class PWPLobbyScreen extends Screen {
             } else {
                 // Экран закрыт: не спамим по КД. Открываем только при переходе в фазу матча
                 // или если игрок уже голосовал в этой фазе (показать прогресс/итоги)
-                open = pkt.phase != lastSeenPhase && closedPhase != pkt.phase
+                open = pkt.phase != lastSeenPhase
+                        && closedPhase != pkt.phase
                         && (isMatchPhase(pkt.phase) || (isVotePhase(pkt.phase) && hasVotedInPhase(pkt)));
             }
             lastSeenPhase = pkt.phase;
@@ -98,8 +96,7 @@ public class PWPLobbyScreen extends Screen {
     }
 
     private static boolean isMatchPhase(int phase) {
-        return phase == LobbyStatePacket.PHASE_MATCH_STARTING
-                || phase == LobbyStatePacket.PHASE_MATCH_PLAYING;
+        return phase == LobbyStatePacket.PHASE_MATCH_STARTING || phase == LobbyStatePacket.PHASE_MATCH_PLAYING;
     }
 
     private static boolean hasVotedInPhase(LobbyStatePacket pkt) {
@@ -116,8 +113,8 @@ public class PWPLobbyScreen extends Screen {
         if (lastState == null) {
             currentTab = switch (pkt.phase) {
                 case LobbyStatePacket.PHASE_MAP_VOTE,
-                     LobbyStatePacket.PHASE_MODE_VOTE,
-                     LobbyStatePacket.PHASE_FACTION_VOTE -> LobbyTab.GOLOSOVANIE;
+                        LobbyStatePacket.PHASE_MODE_VOTE,
+                        LobbyStatePacket.PHASE_FACTION_VOTE -> LobbyTab.GOLOSOVANIE;
                 default -> LobbyTab.IGRA;
             };
         }
@@ -129,12 +126,12 @@ public class PWPLobbyScreen extends Screen {
         // Тост — только если игрок уже сидит в GUI (иначе экран откроется сам и тост будет дублем)
         if (screenWasOpen && prevPacketPhase >= 0 && pkt.phase != prevPacketPhase) {
             switch (pkt.phase) {
-                case LobbyStatePacket.PHASE_MAP_VOTE ->
-                    PWPToastManager.show("Голосование за карту началось!", PWPToastManager.ToastType.INFO);
-                case LobbyStatePacket.PHASE_MODE_VOTE ->
-                    PWPToastManager.show("Голосование за режим!", PWPToastManager.ToastType.INFO);
-                case LobbyStatePacket.PHASE_FACTION_VOTE ->
-                    PWPToastManager.show("Голосование за фракции!", PWPToastManager.ToastType.INFO);
+                case LobbyStatePacket.PHASE_MAP_VOTE -> PWPToastManager.show(
+                        "Голосование за карту началось!", PWPToastManager.ToastType.INFO);
+                case LobbyStatePacket.PHASE_MODE_VOTE -> PWPToastManager.show(
+                        "Голосование за режим!", PWPToastManager.ToastType.INFO);
+                case LobbyStatePacket.PHASE_FACTION_VOTE -> PWPToastManager.show(
+                        "Голосование за фракции!", PWPToastManager.ToastType.INFO);
                 default -> {}
             }
         }
@@ -170,14 +167,18 @@ public class PWPLobbyScreen extends Screen {
         String key = prefix + Integer.toHexString(worldPath.hashCode());
         if (imageCache.containsKey(key)) return imageCache.get(key);
         try {
-            NativeImage img = NativeImage.read(new FileInputStream(Paths.get(worldPath, "icon.png").toFile()));
+            NativeImage img = NativeImage.read(
+                    new FileInputStream(Paths.get(worldPath, "icon.png").toFile()));
             DynamicTexture tex = new DynamicTexture(img);
             ResourceLocation rl = new ResourceLocation("pwp_core_client", "map_preview/" + key);
             Minecraft.getInstance().getTextureManager().register(rl, tex);
             imageCache.put(key, rl);
             return rl;
-        } catch (Exception e) { return null; }
+        } catch (Exception e) {
+            return null;
+        }
     }
+
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         long now = System.currentTimeMillis();
@@ -204,7 +205,13 @@ public class PWPLobbyScreen extends Screen {
         var font = PWPTheme.Fonts.display();
         gui.drawString(font, Component.literal("PWP"), 20, 16, PWPTheme.Colors.TEXT_ACCENT, false);
         String online = "ОНЛАЙН: " + onlinePlayers;
-        gui.drawString(font, Component.literal(online), width - 20 - font.width(online), 16, PWPTheme.Colors.TEXT_SECONDARY, false);
+        gui.drawString(
+                font,
+                Component.literal(online),
+                width - 20 - font.width(online),
+                16,
+                PWPTheme.Colors.TEXT_SECONDARY,
+                false);
         gui.fill(16, 36, width - 16, 37, PWPTheme.Colors.BORDER);
     }
 
@@ -221,9 +228,12 @@ public class PWPLobbyScreen extends Screen {
             boolean active = currentTab.ordinal() == i;
             boolean hovered = mouseX >= cx && mouseX <= cx + tabW && mouseY >= tabY && mouseY <= tabY + 20;
             if (hovered) hoveredTab = i;
-            int color = active ? PWPTheme.Colors.TEXT_ACCENT : (hovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY);
+            int color = active
+                    ? PWPTheme.Colors.TEXT_ACCENT
+                    : (hovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY);
             gui.drawString(font, Component.literal(TAB_NAMES[i]), cx + TAB_PADDING, tabY + 4, color, false);
-            if (active) gui.fill(cx + TAB_PADDING, tabY + 20, cx + tabW - TAB_PADDING, tabY + 22, PWPTheme.Colors.ACCENT);
+            if (active)
+                gui.fill(cx + TAB_PADDING, tabY + 20, cx + tabW - TAB_PADDING, tabY + 22, PWPTheme.Colors.ACCENT);
             cx += tabW;
         }
     }
@@ -243,24 +253,32 @@ public class PWPLobbyScreen extends Screen {
         if (elapsed < 400) {
             float t = Math.min(elapsed / 400f, 1);
             float f = t < 0.5f ? t * 2 : 1 - (t - 0.5f) * 2;
-            int alpha = Math.min(255, Math.max(0, (int)(f * 128)));
+            int alpha = Math.min(255, Math.max(0, (int) (f * 128)));
             if (alpha > 0) gui.fill(16, 44, width - 16, height - 16, (alpha << 24) | 0x06080A);
-        } else { tabSwitchTime = -1; }
+        } else {
+            tabSwitchTime = -1;
+        }
     }
 
     private void renderBottomBar(GuiGraphics gui) {
         var font = PWPTheme.Fonts.display();
         String status = "ПОДКЛЮЧЕНО  |  PWP ЛОББИ";
         gui.fill(0, height - 14, width, height, PWPTheme.Colors.SURFACE_TOP);
-        gui.drawString(font, Component.literal(status), width / 2 - font.width(status) / 2, height - 10, PWPTheme.Colors.TEXT_DIM, false);
+        gui.drawString(
+                font,
+                Component.literal(status),
+                width / 2 - font.width(status) / 2,
+                height - 10,
+                PWPTheme.Colors.TEXT_DIM,
+                false);
     }
 
     private void renderOpenFade(GuiGraphics gui, long now) {
         long elapsed = now - openTime;
         if (elapsed >= 200) return;
         float t = elapsed / 200f;
-        float eased = t < 0.5f ? 2*t*t : -1 + (4-2*t)*t;
-        int alpha = (int)((1 - eased) * 255);
+        float eased = t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        int alpha = (int) ((1 - eased) * 255);
         if (alpha > 0) gui.fill(0, 0, width, height, (alpha << 24) | 0x06080A);
     }
 
@@ -310,6 +328,12 @@ public class PWPLobbyScreen extends Screen {
     }
 
     @Override
-    public boolean shouldCloseOnEsc() { return true; }
-    @Override public boolean isPauseScreen() { return false; }
+    public boolean shouldCloseOnEsc() {
+        return true;
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
 }

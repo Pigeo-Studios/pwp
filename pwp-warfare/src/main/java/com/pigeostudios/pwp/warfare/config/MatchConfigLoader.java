@@ -2,14 +2,12 @@ package com.pigeostudios.pwp.warfare.config;
 
 import com.google.gson.Gson;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.GameRules;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class MatchConfigLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger(MatchConfigLoader.class);
@@ -47,7 +45,8 @@ public class MatchConfigLoader {
         gr.getRule(GameRules.RULE_SHOWDEATHMESSAGES).set(config.rules.showDeathMessages, level.getServer());
         gr.getRule(GameRules.RULE_COMMANDBLOCKOUTPUT).set(!config.rules.commandFeedback, level.getServer());
         gr.getRule(GameRules.RULE_SENDCOMMANDFEEDBACK).set(!config.rules.commandFeedback, level.getServer());
-        gr.getRule(GameRules.RULE_SPECTATORSGENERATECHUNKS).set(config.rules.spectatorsGenerateChunks, level.getServer());
+        gr.getRule(GameRules.RULE_SPECTATORSGENERATECHUNKS)
+                .set(config.rules.spectatorsGenerateChunks, level.getServer());
 
         WarfareWorldData data = WarfareWorldData.get(level);
         data.hideNametags = config.rules.hideNametags;
@@ -59,7 +58,9 @@ public class MatchConfigLoader {
         data.disableFireSpread = config.rules.disableFireSpread;
         data.disableWeatherCycle = config.rules.disableWeatherCycle;
 
-        LOGGER.info("Applied match config (hideNametags={}, weather={})",
-                config.rules.hideNametags, !config.rules.disableWeatherCycle);
+        LOGGER.info(
+                "Applied match config (hideNametags={}, weather={})",
+                config.rules.hideNametags,
+                !config.rules.disableWeatherCycle);
     }
 }

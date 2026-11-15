@@ -15,12 +15,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class EntityShouldBlockExplodeMixin {
 
     @Inject(
-        method = "shouldBlockExplode(Lnet/minecraft/world/level/Explosion;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;F)Z",
-        at = @At("RETURN"),
-        cancellable = true
-    )
-    private void pwp$gateExplosion(Explosion explosion, BlockGetter level, BlockPos pos, BlockState state, float power,
-                                    CallbackInfoReturnable<Boolean> cir) {
+            method =
+                    "shouldBlockExplode(Lnet/minecraft/world/level/Explosion;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;F)Z",
+            at = @At("RETURN"),
+            cancellable = true)
+    private void pwp$gateExplosion(
+            Explosion explosion,
+            BlockGetter level,
+            BlockPos pos,
+            BlockState state,
+            float power,
+            CallbackInfoReturnable<Boolean> cir) {
         if (!cir.getReturnValueZ()) return;
         if (PWPBlastLogic.shouldProtect(state)) {
             cir.setReturnValue(false);

@@ -12,10 +12,18 @@ import net.minecraftforge.network.NetworkEvent;
 
 public class PacketRemoveMarker {
     private final UUID id;
-    public PacketRemoveMarker(UUID id) { this.id = id; }
 
-    public static void encode(PacketRemoveMarker msg, FriendlyByteBuf buf) { buf.writeUUID(msg.id); }
-    public static PacketRemoveMarker decode(FriendlyByteBuf buf) { return new PacketRemoveMarker(buf.readUUID()); }
+    public PacketRemoveMarker(UUID id) {
+        this.id = id;
+    }
+
+    public static void encode(PacketRemoveMarker msg, FriendlyByteBuf buf) {
+        buf.writeUUID(msg.id);
+    }
+
+    public static PacketRemoveMarker decode(FriendlyByteBuf buf) {
+        return new PacketRemoveMarker(buf.readUUID());
+    }
 
     public static void handle(PacketRemoveMarker msg, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
@@ -34,7 +42,10 @@ public class PacketRemoveMarker {
                 if (cmdSquadId != -1) {
                     String pName = p.getScoreboardName();
                     for (var s : data.squads) {
-                        if (s.id == cmdSquadId && s.leader.equals(pName)) { isCMD = true; break; }
+                        if (s.id == cmdSquadId && s.leader.equals(pName)) {
+                            isCMD = true;
+                            break;
+                        }
                     }
                 }
                 if (!isOwner && !isCMD) return;

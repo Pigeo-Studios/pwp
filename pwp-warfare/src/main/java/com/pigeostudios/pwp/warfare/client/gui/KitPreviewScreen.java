@@ -1,11 +1,11 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
+import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -26,13 +26,14 @@ public class KitPreviewScreen extends Screen {
 
     @Override
     protected void init() {
-        addRenderableWidget(
-            new PWPButton(width / 2 - 40, height - 30, 80, 20,
+        addRenderableWidget(new PWPButton(
+                width / 2 - 40,
+                height - 30,
+                80,
+                20,
                 Component.translatable("gui.pwpwarfare.kit_preview.back"),
                 b -> minecraft.setScreen(parent),
-                PWPButton.Style.PRIMARY
-            )
-        );
+                PWPButton.Style.PRIMARY));
     }
 
     @Override

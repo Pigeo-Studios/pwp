@@ -30,7 +30,9 @@ public class PacketSyncPlayerSkin {
     }
 
     public static void handle(PacketSyncPlayerSkin msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientSkinManager.handlePacket(msg)));
+        ctx.get()
+                .enqueueWork(() ->
+                        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> ClientSkinManager.handlePacket(msg)));
         ctx.get().setPacketHandled(true);
     }
 }

@@ -9,6 +9,8 @@ import com.pigeostudios.sbwchunkload.corridor.ChunkRasterizer;
 import com.pigeostudios.sbwchunkload.scheduler.TimingWheel;
 import com.pigeostudios.sbwchunkload.state.ProjectileState;
 import com.pigeostudios.sbwchunkload.ticket.ChunkTicketManager;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -16,9 +18,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Публичный API трекинга снарядов. Единственные обязанности:
@@ -53,11 +52,15 @@ public final class ProjectileTracker {
 
     /** Причины снятия снаряда с трекинга (для debug). */
     private enum DropCause {
-        NONE, REMOVED, BORDER, DISTANCE, AGE, STATIONARY
+        NONE,
+        REMOVED,
+        BORDER,
+        DISTANCE,
+        AGE,
+        STATIONARY
     }
 
-    private ProjectileTracker() {
-    }
+    private ProjectileTracker() {}
 
     // ===== Публичный API =====
 
@@ -201,8 +204,7 @@ public final class ProjectileTracker {
             case DISTANCE -> droppedDistance++;
             case AGE -> droppedAge++;
             case STATIONARY -> droppedStationary++;
-            default -> {
-            }
+            default -> {}
         }
     }
 
@@ -220,10 +222,10 @@ public final class ProjectileTracker {
         // Smart-update: пересчёт коридора только если что-то реально
         // изменилось. Иначе — простое продление существующих тикетов.
         boolean needsRecalc = force
-            || currentChunk != state.lastChunk()
-            || !contains(state.corridor(), currentChunk)          // снаряд вылетел из коридора
-            || speedChanged(speed, state.lastVelocity().length())
-            || directionChanged(state.lastVelocity(), velocity);
+                || currentChunk != state.lastChunk()
+                || !contains(state.corridor(), currentChunk) // снаряд вылетел из коридора
+                || speedChanged(speed, state.lastVelocity().length())
+                || directionChanged(state.lastVelocity(), velocity);
 
         if (!needsRecalc) {
             // Ничего не изменилось: продлить тикеты текущего коридора
@@ -255,8 +257,7 @@ public final class ProjectileTracker {
     }
 
     /** Коридор от текущей позиции до упреждённой точки. */
-    private static long[] buildCorridor(ProjectileState state, Vec3 position, Vec3 velocity,
-                                        double speed, int tick) {
+    private static long[] buildCorridor(ProjectileState state, Vec3 position, Vec3 velocity, double speed, int tick) {
         Vec3 target;
         if (speed < 0.01) {
             // Не движется (бомба в первые тики) — держим текущий чанк.
@@ -265,8 +266,7 @@ public final class ProjectileTracker {
             int lookahead = lookahead(state.profile(), speed);
             target = position.add(velocity.normalize().scale(lookahead));
         }
-        return ChunkRasterizer.buildCorridor(position, target,
-            ChunkLoadingConfig.CORRIDOR_WIDTH.get());
+        return ChunkRasterizer.buildCorridor(position, target, ChunkLoadingConfig.CORRIDOR_WIDTH.get());
     }
 
     /**
@@ -279,8 +279,8 @@ public final class ProjectileTracker {
         if (!ChunkLoadingConfig.ADAPTIVE_LOOKAHEAD.get()) {
             return Math.min(ChunkLoadingConfig.LOOKAHEAD_BLOCKS.get(), max);
         }
-        int adaptive = (int) Math.ceil(speed * profile.refreshInterval()
-            * ChunkLoadingConfig.PREDICTION_MULTIPLIER.get());
+        int adaptive =
+                (int) Math.ceil(speed * profile.refreshInterval() * ChunkLoadingConfig.PREDICTION_MULTIPLIER.get());
         return Math.max(profile.minimumLookahead(), Math.min(adaptive, max));
     }
 

@@ -1,13 +1,12 @@
 package com.pigeostudios.sbwchunkload.ticket;
 
 import com.pigeostudios.sbwchunkload.config.ChunkLoadingConfig;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Единственное место, которое знает про Minecraft-тикеты. Tracker/Corridor
@@ -41,7 +40,7 @@ public final class ChunkTicketManager {
     private static final Object SHARED_TICKET_VALUE = 0x5B7C;
 
     private static final TicketType<Integer> PROJECTILE_TICKET_TYPE =
-        TicketType.create("sbwchunkload:projectile", Integer::compareTo);
+            TicketType.create("sbwchunkload:projectile", Integer::compareTo);
 
     private final TicketCache cache = new TicketCache();
 
@@ -50,6 +49,7 @@ public final class ChunkTicketManager {
 
     /** Счётчики для debug. */
     private long totalRefreshes = 0;
+
     private long totalSkipsSmart = 0;
     private long totalSkipsDedup = 0;
     private long totalSkipsBorder = 0;
@@ -57,8 +57,7 @@ public final class ChunkTicketManager {
 
     private static final Map<ServerLevel, ChunkTicketManager> INSTANCES = new HashMap<>();
 
-    private ChunkTicketManager() {
-    }
+    private ChunkTicketManager() {}
 
     /** Менеджер на уровень (тикеты ставятся в чанк-кэш уровня). */
     public static ChunkTicketManager of(ServerLevel level) {
@@ -82,7 +81,7 @@ public final class ChunkTicketManager {
     public void ensureLoaded(ServerLevel level, long chunkKey, int tick) {
         // Smart-режим: чанк уже тикается — тикет не нужен вообще.
         if (ChunkLoadingConfig.SMART_CHUNK_LOADING.get()
-            && level.isPositionEntityTicking(new ChunkPos(chunkKey).getWorldPosition())) {
+                && level.isPositionEntityTicking(new ChunkPos(chunkKey).getWorldPosition())) {
             totalSkipsSmart++;
             return;
         }

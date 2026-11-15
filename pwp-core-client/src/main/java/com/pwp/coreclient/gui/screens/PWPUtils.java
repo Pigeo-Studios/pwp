@@ -1,10 +1,9 @@
 package com.pwp.coreclient.gui.screens;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.pwp.coreclient.gui.animations.Easing;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.mojang.blaze3d.vertex.PoseStack;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 

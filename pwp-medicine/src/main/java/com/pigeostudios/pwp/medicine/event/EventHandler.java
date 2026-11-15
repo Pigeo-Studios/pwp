@@ -1,9 +1,9 @@
 package com.pigeostudios.pwp.medicine.event;
 
-import java.util.HashMap;
-import java.util.UUID;
 import com.pigeostudios.pwp.medicine.config.PWPConfig;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
+import java.util.HashMap;
+import java.util.UUID;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -20,21 +20,22 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 // Обработчик событий мода: пассивные эффекты, наложение кровотечения, очистка при смерти.
-@Mod.EventBusSubscriber(modid="pwp_medicine")
+@Mod.EventBusSubscriber(modid = "pwp_medicine")
 public class EventHandler {
     // Флаги для пассивных эффектов: flag7 — ХП <= 14, flag3 — ХП <= 6
     private static final HashMap<UUID, Boolean> flag7 = new HashMap();
     private static final HashMap<UUID, Boolean> flag3 = new HashMap();
     // Карта: UUID жертвы -> UUID атакующего (для отслеживания источника кровотечения)
     public static final HashMap<UUID, UUID> BLEEDING_SOURCES = new HashMap();
-    public static final ResourceKey<DamageType> BLEEDING_DAMAGE_KEY = ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("pwp_medicine", "bleeding"));
+    public static final ResourceKey<DamageType> BLEEDING_DAMAGE_KEY =
+            ResourceKey.create(Registries.DAMAGE_TYPE, new ResourceLocation("pwp_medicine", "bleeding"));
 
     // Пассивные эффекты в зависимости от уровня здоровья
     @SubscribeEvent
     public static void onPlayerTick(LivingEvent.LivingTickEvent event) {
         LivingEntity livingEntity = event.getEntity();
         if (livingEntity instanceof Player) {
-            Player player = (Player)livingEntity;
+            Player player = (Player) livingEntity;
             if (!player.level().isClientSide) { // Только на сервере
                 float hp = player.getHealth();
                 int ticks = player.tickCount;
@@ -87,7 +88,7 @@ public class EventHandler {
     public static void onLivingDamage(LivingDamageEvent event) {
         LivingEntity livingEntity = event.getEntity();
         if (livingEntity instanceof Player) {
-            Player victim = (Player)livingEntity;
+            Player victim = (Player) livingEntity;
             if (!victim.level().isClientSide) { // Только на сервере
                 // Не накладываем кровотечение если игрок верхом
                 if (victim.isPassenger()) {
@@ -102,7 +103,8 @@ public class EventHandler {
                     return;
                 }
                 // Проверяем порог урона
-                if (event.getAmount() < PWPConfig.BLEEDING_DAMAGE_THRESHOLD.get().floatValue()) {
+                if (event.getAmount()
+                        < PWPConfig.BLEEDING_DAMAGE_THRESHOLD.get().floatValue()) {
                     return;
                 }
                 // Роллим шанс кровотечения
@@ -112,7 +114,7 @@ public class EventHandler {
                     // Запоминаем атакующего для сообщения о смерти
                     Entity attacker = event.getSource().getEntity();
                     if (attacker instanceof Player) {
-                        Player playerAttacker = (Player)attacker;
+                        Player playerAttacker = (Player) attacker;
                         BLEEDING_SOURCES.put(victim.getUUID(), playerAttacker.getUUID());
                     } else {
                         BLEEDING_SOURCES.remove(victim.getUUID());
@@ -127,7 +129,7 @@ public class EventHandler {
     public static void onPlayerDeath(LivingDeathEvent event) {
         LivingEntity livingEntity = event.getEntity();
         if (livingEntity instanceof Player) {
-            Player victim = (Player)livingEntity;
+            Player victim = (Player) livingEntity;
             if (victim.hasEffect(ModEffects.BLEEDING.get())) {
                 victim.removeEffect(ModEffects.BLEEDING.get());
             }

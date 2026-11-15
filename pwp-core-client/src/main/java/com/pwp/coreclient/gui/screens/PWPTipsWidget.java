@@ -3,34 +3,32 @@ package com.pwp.coreclient.gui.screens;
 import com.pwp.coreclient.gui.animations.Easing;
 import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
 public class PWPTipsWidget {
 
     public static final List<String> TIPS = List.of(
-        "Используйте тактическое оборудование для победы",
-        "Связь с отрядом — ключ к успеху",
-        "Следите за уровнем брони и здоровья",
-        "Захватывайте точки, чтобы получить преимущество",
-        "Техника уязвима с тыла и флангов",
-        "Совет: используйте укрытия чтобы избежать огня",
-        "Аптечки восстанавливают здоровье",
-        "Боеприпасы можно пополнить на точке",
-        "Совет: внимательно слушайте шаги противника",
-        "Не забывайте перезаряжаться перед боем",
-        "Совет: используйте дымовые гранаты для прикрытия",
-        "Совет: маркеры на карте помогут координации",
-        "Совет: экипировка влияет на скорость передвижения",
-        "Совет: ночное время снижает видимость — используйте ПНВ",
-        "Совет: поддерживайте союзников огнём"
-    );
+            "Используйте тактическое оборудование для победы",
+            "Связь с отрядом — ключ к успеху",
+            "Следите за уровнем брони и здоровья",
+            "Захватывайте точки, чтобы получить преимущество",
+            "Техника уязвима с тыла и флангов",
+            "Совет: используйте укрытия чтобы избежать огня",
+            "Аптечки восстанавливают здоровье",
+            "Боеприпасы можно пополнить на точке",
+            "Совет: внимательно слушайте шаги противника",
+            "Не забывайте перезаряжаться перед боем",
+            "Совет: используйте дымовые гранаты для прикрытия",
+            "Совет: маркеры на карте помогут координации",
+            "Совет: экипировка влияет на скорость передвижения",
+            "Совет: ночное время снижает видимость — используйте ПНВ",
+            "Совет: поддерживайте союзников огнём");
 
     private static final long SHOW_MS = 4000;
     private static final long FADE_MS = 350;
@@ -119,7 +117,16 @@ public class PWPTipsWidget {
         }
     }
 
-    private void drawTip(GuiGraphics gui, Font font, TipLayout layout, int boxX, int boxY, int boxH, int cx, int alpha, float slideY) {
+    private void drawTip(
+            GuiGraphics gui,
+            Font font,
+            TipLayout layout,
+            int boxX,
+            int boxY,
+            int boxH,
+            int cx,
+            int alpha,
+            float slideY) {
         if (alpha <= 0) return;
         int textColor = PWPUtils.withAlpha(PWPTheme.Colors.TEXT_SECONDARY, alpha);
         int textBlockH = layout.lineCount() * font.lineHeight;
