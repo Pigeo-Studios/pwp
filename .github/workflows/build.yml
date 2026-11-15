@@ -1,0 +1,52 @@
+# Сборка всех модов PWP: gradlew build -x test (включая spotlessCheck и проверки рефмапов).
+# Прод-жарники чужих модов (compileOnly) берутся sparse-checkout'ом из Pigeo-Studios/Pwpfiles.
+# Если Pwpfiles приватный — нужен секрет PWPFILES_TOKEN (fine-grained PAT, Contents: read).
+name: build
+
+on:
+  push:
+    branches: [main, 'rewrite/**']
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Прод-жарники из Pwpfiles
+        uses: actions/checkout@v4
+        with:
+          repository: Pigeo-Studios/Pwpfiles
+          token: ${{ secrets.PWPFILES_TOKEN || github.token }}
+          path: Pwpfiles
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            mods/tacz-1.20.1-1.1.8-hotfix.jar
+            mods/superbwarfare-0.8.9-final-mc1.20.1-6effe4385-all.jar
+            mods/pointblank-forge-1.20.1-1.11.1.jar
+            mods/uncomplicated-fpv-1.0.0.jar
+            mods/geckolib-forge-1.20.1-4.8.4.jar
+            mods/curios-forge-5.14.1+1.20.1.jar
+            mods/voicechat-forge-1.20.1-2.6.20.jar
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Сборка
+        shell: bash
+        env:
+          PWPFILES_DIR: ${{ github.workspace }}/Pwpfiles
+        # gradle.properties задаёт локальный путь JDK разработчика — переопределяем на JDK раннера
+        run: ./gradlew build -x test "-Dorg.gradle.java.home=$JAVA_HOME" --console=plain
+
+      - name: Тесты
+        shell: bash
+        env:
+          PWPFILES_DIR: ${{ github.workspace }}/Pwpfiles
+        run: ./gradlew test "-Dorg.gradle.java.home=$JAVA_HOME" --console=plain

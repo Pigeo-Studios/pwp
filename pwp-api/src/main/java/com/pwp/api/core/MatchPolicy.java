@@ -48,6 +48,15 @@ public final class MatchPolicy {
         });
     }
 
+    /** Кэш без запуска обновления (для тестов и диагностики). */
+    static boolean cachedCanStart() {
+        return canStart;
+    }
+
+    static String cachedReason() {
+        return reason;
+    }
+
     /** Применяет ответ; null (core-service недоступен) оставляет последнее известное значение. */
     static void apply(JsonObject data) {
         if (data == null) return;
