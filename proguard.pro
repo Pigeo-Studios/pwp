@@ -60,6 +60,12 @@
 # ------------------------------------------------------------
 -keepclassmembers class com.pwp.lobby.ServerManager$ServerMatchConfig { <fields>; }
 -keepclassmembers class com.pwp.lobby.ServerManager$ServerMatchConfig$* { <fields>; }
+# maps/<map>/map_config.json (лобби) и match_config.json (матч-сервер) — тоже Gson по именам полей
+-keepclassmembers class com.pwp.lobby.maps.MapConfig { <fields>; }
+-keepclassmembers class com.pwp.lobby.maps.MapConfig$* { <fields>; }
+-keepclassmembers class com.pigeostudios.pwp.warfare.config.MatchConfig { <fields>; }
+-keepclassmembers class com.pigeostudios.pwp.warfare.config.MatchConfig$* { <fields>; }
+# pwp-api: рефлексии и Gson-POJO нет (Heartbeat собирает JsonObject вручную) — keep не нужен
 
 # ------------------------------------------------------------
 # 5. Имена констант enum — .name() уходит строкой клиенту/

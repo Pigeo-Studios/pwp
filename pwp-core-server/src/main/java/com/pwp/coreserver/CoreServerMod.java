@@ -17,7 +17,6 @@ public class CoreServerMod {
     public static final String MODID = "pwpcore";
     public static final Logger log = LoggerFactory.getLogger(CoreServerMod.class);
     public static final String API_BASE = "http://localhost:8080";
-    public static final String API_KEY = loadApiKey();
 
     public static boolean isMatchServer = false;
 
@@ -33,12 +32,10 @@ public class CoreServerMod {
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
-        if (API_KEY.isEmpty()) {
-            log.error("PWP Core Server cannot start: No API key configured.");
-            log.error("Set PWP_API_KEY environment variable or create config/pwpcore.txt");
-            return;
-        }
-        CoreApi.configure(API_BASE, API_KEY);
+        // Ключ читается ТОЛЬКО на выделенном сервере (commonSetup регистрируется только там):
+        // у клиента ключа нет и быть не должно — весь HTTP к core-service идёт через сервер
+        String apiKey = loadApiKey();
+        CoreApi.configure(API_BASE, apiKey);
         log.info("CoreApi configured with base: {}", API_BASE);
 
         String dirName = Path.of("").toAbsolutePath().getFileName().toString();
@@ -70,11 +67,8 @@ public class CoreServerMod {
         } catch (Exception e) {
             log.warn("Failed to read config/pwpcore.txt: {}", e.getMessage());
         }
-        if (FMLEnvironment.dist.isDedicatedServer()) {
-            throw new RuntimeException("PWP Core Server cannot start: No API key configured.\n"
-                    + "Set the PWP_API_KEY environment variable or create config/pwpcore.txt\n"
-                    + "with the API key from core-service's config.json api.keys[0].");
-        }
-        return "";
+        throw new IllegalStateException("PWP Core Server cannot start: No API key configured. "
+                + "Set the PWP_API_KEY environment variable or create config/pwpcore.txt "
+                + "with the API key from core-service's config.json api.keys[0].");
     }
 }

@@ -7,7 +7,8 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 public class PacketHandler {
 
-    private static final String PROTOCOL_VERSION = "1";
+    // 2 — этап 1: PacketAction вместо PacketApiAction, новый формат LobbyStatePacket
+    private static final String PROTOCOL_VERSION = "2";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(CoreClientMod.MODID, "network"),
             () -> PROTOCOL_VERSION,
