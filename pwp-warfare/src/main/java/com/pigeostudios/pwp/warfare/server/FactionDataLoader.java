@@ -22,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
@@ -79,6 +80,16 @@ public final class FactionDataLoader {
     public static void start(ServerLevel serverLevel, WarfareWorldData data) {
         level = serverLevel;
         SLOTS.clear();
+        // Ожидавшие деплоя прошлого матча — деплой не выполнится сам, игрок подтверждает заново
+        for (UUID id : PENDING_DEPLOYS.keySet()) {
+            ServerPlayer p = serverLevel.getServer().getPlayerList().getPlayer(id);
+            if (p != null && !p.hasDisconnected()) {
+                p.displayClientMessage(
+                        Component.literal("Матч перезапущен — нажмите «Деплой» снова")
+                                .withStyle(ChatFormatting.YELLOW),
+                        true);
+            }
+        }
         PENDING_DEPLOYS.clear();
         put(Team.BLUE, data.match.blueFaction);
         put(Team.RED, data.match.redFaction);
@@ -131,6 +142,18 @@ public final class FactionDataLoader {
         if (event.phase != TickEvent.Phase.END || SLOTS.isEmpty()) return;
         MinecraftServer server = event.getServer();
         if (GameClock.serverTicks(server) % 20 == 0) tryLoads(server);
+    }
+
+    /**
+     * Сервер остановлен (одиночная игра: выход в меню и повторное открытие мира — тот же JVM):
+     * статическое состояние не должно пережить сервер — иначе ссылка на выгруженный мир и
+     * «готовые» слоты прошлого мира.
+     */
+    @SubscribeEvent
+    public static void onServerStopped(ServerStoppedEvent event) {
+        level = null;
+        SLOTS.clear();
+        PENDING_DEPLOYS.clear();
     }
 
     @SubscribeEvent
