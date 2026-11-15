@@ -36,13 +36,13 @@ public class PacketCMDVote {
                 boolean isBlue = team.equals("BLUE");
                 if (WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) {
                     if (isBlue) {
-                        if (data.blueCmdVoteActive
-                                && !player.getScoreboardName().equals(data.blueCmdCandidateName)) {
-                            data.blueCmdVotes.put(player.getUUID(), msg.agree);
+                        if (data.squadRegistry.blueCmdVoteActive
+                                && !player.getScoreboardName().equals(data.squadRegistry.blueCmdCandidateName)) {
+                            data.squadRegistry.blueCmdVotes.put(player.getUUID(), msg.agree);
                         }
-                    } else if (data.redCmdVoteActive
-                            && !player.getScoreboardName().equals(data.redCmdCandidateName)) {
-                        data.redCmdVotes.put(player.getUUID(), msg.agree);
+                    } else if (data.squadRegistry.redCmdVoteActive
+                            && !player.getScoreboardName().equals(data.squadRegistry.redCmdCandidateName)) {
+                        data.squadRegistry.redCmdVotes.put(player.getUUID(), msg.agree);
                     }
 
                     data.setDirty();

@@ -79,14 +79,14 @@ public class PacketApplyMarker {
                             WarfareData.of(target).putInt(WarfareKeys.VEHICLE_MATS, maxMats);
                         }
 
-                        data.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
+                        data.vehicles.markedVehicles.removeIf(v -> v.uuid.equals(target.getUUID()));
                         BlockPos spawnerPos = null;
                         if (WarfareData.of(target).contains(WarfareKeys.SPAWNER_POS)) {
                             spawnerPos = BlockPos.of(WarfareData.of(target).getLong(WarfareKeys.SPAWNER_POS));
                         }
 
                         int tPenalty = WarfareData.of(target).getInt(WarfareKeys.TICKET_PENALTY);
-                        data.markedVehicles.add(new WarfareWorldData.VehicleRecord(
+                        data.vehicles.markedVehicles.add(new WarfareWorldData.VehicleRecord(
                                 target.getUUID(),
                                 team,
                                 type,

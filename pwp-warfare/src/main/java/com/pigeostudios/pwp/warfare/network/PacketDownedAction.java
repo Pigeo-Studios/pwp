@@ -50,7 +50,8 @@ public class PacketDownedAction {
                         String faction = "none";
                         if (player.getTeam() != null) {
                             String teamName = player.getTeam().getName();
-                            faction = teamName.equalsIgnoreCase("Blue") ? data.blueFaction : data.redFaction;
+                            faction =
+                                    teamName.equalsIgnoreCase("Blue") ? data.match.blueFaction : data.match.redFaction;
                         }
 
                         SoundEvent finalSound;

@@ -70,7 +70,7 @@ public class PacketSquadChat {
                     WarfareWorldData.get(sender.serverLevel().getServer().overworld());
             WarfareWorldData.Squad playerSquad = null;
 
-            for (WarfareWorldData.Squad s : data.squads) {
+            for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                 if (s.members.contains(senderName)) {
                     playerSquad = s;
                     break;

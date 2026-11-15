@@ -40,13 +40,13 @@ public class PacketConfirmArtStrike {
                         player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
                 int mySquadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
                 boolean isSL = WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER);
-                int teamCmdId = team.equals("BLUE") ? data.blueCMDId : data.redCMDId;
+                int teamCmdId = team.equals("BLUE") ? data.squadRegistry.blueCMDId : data.squadRegistry.redCMDId;
                 if (mySquadId == teamCmdId && teamCmdId != -1 && isSL) {
                     WarfareWorldData.ArtStrikeRequest request =
-                            team.equals("BLUE") ? data.blueArtRequest : data.redArtRequest;
+                            team.equals("BLUE") ? data.match.blueArtRequest : data.match.redArtRequest;
                     if (request != null) {
                         if (msg.accept) {
-                            data.activeStrikes.add(new WarfareWorldData.ActiveStrike(request.pos, team));
+                            data.match.activeStrikes.add(new WarfareWorldData.ActiveStrike(request.pos, team));
                             level.getServer()
                                     .getPlayerList()
                                     .broadcastSystemMessage(
@@ -59,12 +59,13 @@ public class PacketConfirmArtStrike {
                         }
 
                         if (team.equals("BLUE")) {
-                            data.blueArtRequest = null;
+                            data.match.blueArtRequest = null;
                         } else {
-                            data.redArtRequest = null;
+                            data.match.redArtRequest = null;
                         }
 
-                        data.activeMarkers.removeIf(m -> m.type.equals("Artillery Request") && m.team.equals(team));
+                        data.markers.activeMarkers.removeIf(
+                                m -> m.type.equals("Artillery Request") && m.team.equals(team));
                         data.setDirty();
                         PacketHandler.sendToAllClients(level, data);
                     }

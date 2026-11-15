@@ -522,10 +522,10 @@ public class PacketHandler {
                 for (ServerLevel level : server.getAllLevels()) {
                     WarfareWorldData data = WarfareWorldData.get(level);
                     if (tName.equalsIgnoreCase("Blue")) {
-                        faction = data.blueFaction;
+                        faction = data.match.blueFaction;
                         break;
                     } else if (tName.equalsIgnoreCase("Red")) {
-                        faction = data.redFaction;
+                        faction = data.match.redFaction;
                         break;
                     }
                 }
@@ -539,10 +539,10 @@ public class PacketHandler {
 
     private static PacketSyncGameData createSyncPacket(
             WarfareWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
-        boolean hasBlue = !data.blueRallies.isEmpty();
-        boolean hasRed = !data.redRallies.isEmpty();
-        String bName = getFactionName(data.blueFaction, true);
-        String rName = getFactionName(data.redFaction, false);
+        boolean hasBlue = !data.structures.blueRallies.isEmpty();
+        boolean hasRed = !data.structures.redRallies.isEmpty();
+        String bName = getFactionName(data.match.blueFaction, true);
+        String rName = getFactionName(data.match.redFaction, false);
         int blueCount = 0, redCount = 0;
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
@@ -553,64 +553,64 @@ public class PacketHandler {
             }
         }
         return new PacketSyncGameData(
-                data.blueTickets,
-                data.redTickets,
+                data.match.blueTickets,
+                data.match.redTickets,
                 blueCount,
                 redCount,
                 hasBlue,
                 hasRed,
                 blueBleed,
                 redBleed,
-                data.respawnTimer,
+                data.match.respawnTimer,
                 bBlocked,
                 rBlocked,
                 (Boolean) WarfareConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
                 (Integer) WarfareConfig.HUB_SPAWN_MATERIAL_COST.get(),
-                data.mapCenterX,
-                data.mapCenterZ,
-                data.mapSizeBlocks,
-                data.currentMapImage,
-                data.markedVehicles,
-                data.hubs,
-                data.vehicleStations,
-                data.blueFaction,
-                data.redFaction,
+                data.match.mapCenterX,
+                data.match.mapCenterZ,
+                data.match.mapSizeBlocks,
+                data.match.currentMapImage,
+                data.vehicles.markedVehicles,
+                data.structures.hubs,
+                data.structures.vehicleStations,
+                data.match.blueFaction,
+                data.match.redFaction,
                 bName,
                 rName,
-                data.gameMode != null ? data.gameMode : "aas",
-                data.isGameStarted,
-                data.invasionSetupActive,
-                data.invasionSetupTimer,
-                data.invasionDefender != null ? data.invasionDefender : "RED",
-                data.capturePoints,
-                data.blueSpawns,
-                data.redSpawns,
-                data.neutralSpawns,
+                data.match.gameMode != null ? data.match.gameMode : "aas",
+                data.match.isGameStarted,
+                data.match.invasionSetupActive,
+                data.match.invasionSetupTimer,
+                data.match.invasionDefender != null ? data.match.invasionDefender : "RED",
+                data.match.capturePoints,
+                data.match.blueSpawns,
+                data.match.redSpawns,
+                data.match.neutralSpawns,
                 getPlayerKitsMap(),
-                data.activeMarkers,
-                data.voteActive,
-                data.voteTimer,
-                data.votes,
-                data.blueCMDId,
-                data.redCMDId,
-                data.blueCmdVoteActive,
-                data.blueCmdCandidateName,
-                data.blueCmdCandidateId,
-                data.blueCmdVoteTimer,
-                data.blueCmdVotes,
-                data.redCmdVoteActive,
-                data.redCmdCandidateName,
-                data.redCmdCandidateId,
-                data.redCmdVoteTimer,
-                data.redCmdVotes,
-                data.activeStrikes,
-                data.blueArtRequest != null ? data.blueArtRequest.pos : BlockPos.ZERO,
-                data.redArtRequest != null ? data.redArtRequest.pos : BlockPos.ZERO,
-                data.blueArtRequest != null ? data.blueArtRequest.timer : 0,
-                data.redArtRequest != null ? data.redArtRequest.timer : 0,
-                data.blueArtRequest != null ? data.blueArtRequest.requesterName : "",
-                data.redArtRequest != null ? data.redArtRequest.requesterName : "",
-                data.blueReady,
-                data.redReady);
+                data.markers.activeMarkers,
+                data.match.voteActive,
+                data.match.voteTimer,
+                data.match.votes,
+                data.squadRegistry.blueCMDId,
+                data.squadRegistry.redCMDId,
+                data.squadRegistry.blueCmdVoteActive,
+                data.squadRegistry.blueCmdCandidateName,
+                data.squadRegistry.blueCmdCandidateId,
+                data.squadRegistry.blueCmdVoteTimer,
+                data.squadRegistry.blueCmdVotes,
+                data.squadRegistry.redCmdVoteActive,
+                data.squadRegistry.redCmdCandidateName,
+                data.squadRegistry.redCmdCandidateId,
+                data.squadRegistry.redCmdVoteTimer,
+                data.squadRegistry.redCmdVotes,
+                data.match.activeStrikes,
+                data.match.blueArtRequest != null ? data.match.blueArtRequest.pos : BlockPos.ZERO,
+                data.match.redArtRequest != null ? data.match.redArtRequest.pos : BlockPos.ZERO,
+                data.match.blueArtRequest != null ? data.match.blueArtRequest.timer : 0,
+                data.match.redArtRequest != null ? data.match.redArtRequest.timer : 0,
+                data.match.blueArtRequest != null ? data.match.blueArtRequest.requesterName : "",
+                data.match.redArtRequest != null ? data.match.redArtRequest.requesterName : "",
+                data.match.blueReady,
+                data.match.redReady);
     }
 }

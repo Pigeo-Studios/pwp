@@ -60,7 +60,7 @@ public class PacketRadioAction {
                 WarfareWorldData.Squad playerSquad = null;
                 boolean isLeader = false;
 
-                for (WarfareWorldData.Squad s : data.squads) {
+                for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                     if (s.members.contains(pName)) {
                         playerSquad = s;
                         if (s.leader.equals(pName)) {
@@ -126,7 +126,7 @@ public class PacketRadioAction {
                     data.setDirty();
                     PacketHandler.INSTANCE.send(
                             PacketDistributor.DIMENSION.with(player.level()::dimension),
-                            new PacketSyncSquads(data.squads));
+                            new PacketSyncSquads(data.squadRegistry.squads));
                 } else {
                     handleConstructionLogic(msg.actionId, player, currentLevel, data);
                 }
@@ -146,7 +146,7 @@ public class PacketRadioAction {
         if (actionId == 14) {
             String playerTeam =
                     player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
-            long hubCount = data.hubs.stream()
+            long hubCount = data.structures.hubs.stream()
                     .filter(h -> h.team.equalsIgnoreCase(playerTeam))
                     .count();
             if (hubCount >= ((Integer) WarfareConfig.MAX_HUBS_PER_TEAM.get()).intValue() && !player.isCreative()) {
@@ -155,7 +155,7 @@ public class PacketRadioAction {
                 return;
             }
 
-            for (WarfareWorldData.HubInfo existingHub : data.hubs) {
+            for (WarfareWorldData.HubInfo existingHub : data.structures.hubs) {
                 if (existingHub.team.equalsIgnoreCase(playerTeam)
                         && existingHub.pos.distSqr(targetPos)
                                 < (Integer) WarfareConfig.MIN_HUB_DISTANCE.get()
@@ -193,7 +193,7 @@ public class PacketRadioAction {
                 level.sendBlockUpdated(targetPos, level.getBlockState(targetPos), level.getBlockState(targetPos), 3);
             }
 
-            data.hubs.add(new WarfareWorldData.HubInfo(
+            data.structures.hubs.add(new WarfareWorldData.HubInfo(
                     targetPos, playerTeam, false, level.dimension().location().toString()));
             data.setDirty();
             PacketHandler.sendToAllClients(level, data);
@@ -251,7 +251,7 @@ public class PacketRadioAction {
             ServerPlayer player, ServerLevel level, String team, WarfareWorldData.Squad squad, WarfareWorldData data) {
         BlockPos pos = player.blockPosition();
 
-        for (WarfareWorldData.CapturePoint point : data.capturePoints) {
+        for (WarfareWorldData.CapturePoint point : data.match.capturePoints) {
             Vec3 center = point.area.getCenter();
             if (pos.distToCenterSqr(center.x, center.y, center.z)
                     < (Integer) WarfareConfig.MIN_RALLY_POINT_DISTANCE.get()
@@ -320,15 +320,15 @@ public class PacketRadioAction {
 
         player.sendSystemMessage(Component.literal("Рали отряда развёрнуто!").withStyle(ChatFormatting.GREEN));
         if (team.equals("BLUE")) {
-            data.blueRallies.add(pos);
+            data.structures.blueRallies.add(pos);
         } else {
-            data.redRallies.add(pos);
+            data.structures.redRallies.add(pos);
         }
 
         data.setDirty();
         PacketHandler.sendToAllClients(level, data);
         PacketHandler.INSTANCE.send(
-                PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
+                PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squadRegistry.squads));
         return true;
     }
 }

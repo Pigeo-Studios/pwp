@@ -101,11 +101,11 @@ public class HubBlock extends BaseEntityBlock {
                 WarfareWorldData data = WarfareWorldData.get(serverLevel);
                 int penalty = 10;
                 if (hubTeam.equalsIgnoreCase("BLUE")) {
-                    data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                    data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
                             serverLevel, "BLUE player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.BLUE);
                 } else if (hubTeam.equalsIgnoreCase("RED")) {
-                    data.redTickets = Math.max(0, data.redTickets - penalty);
+                    data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
                             serverLevel, "RED player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.RED);
                 }
@@ -124,16 +124,16 @@ public class HubBlock extends BaseEntityBlock {
                 && !level.isClientSide) {
             ServerLevel serverLevel = (ServerLevel) level;
             WarfareWorldData data = WarfareWorldData.get(serverLevel);
-            data.hubs.removeIf(h -> h.pos.equals(pos));
+            data.structures.hubs.removeIf(h -> h.pos.equals(pos));
             if ((Boolean) state.getValue(CONSTRUCTED)) {
                 String hubTeam = hub.getTeam();
                 if (!hub.wasDismantled && !hubTeam.equals("NEUTRAL")) {
                     int penalty = 30;
                     if (hubTeam.equalsIgnoreCase("BLUE")) {
-                        data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                        data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                         this.broadcastMessage(serverLevel, "BLUE FOB Destroyed! (-30 Tickets)", ChatFormatting.BLUE);
                     } else if (hubTeam.equalsIgnoreCase("RED")) {
-                        data.redTickets = Math.max(0, data.redTickets - penalty);
+                        data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                         this.broadcastMessage(serverLevel, "RED FOB Destroyed! (-30 Tickets)", ChatFormatting.RED);
                     }
                 }

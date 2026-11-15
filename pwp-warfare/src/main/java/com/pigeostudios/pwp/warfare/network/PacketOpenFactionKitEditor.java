@@ -67,13 +67,14 @@ public class PacketOpenFactionKitEditor {
             WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
             WarfareWorldData.KitInfo kit = apiKit;
             String kitTeam = "BLUE";
-            if (msg.faction.equalsIgnoreCase(data.blueFaction)) kitTeam = "BLUE";
-            else if (msg.faction.equalsIgnoreCase(data.redFaction)) kitTeam = "RED";
+            if (msg.faction.equalsIgnoreCase(data.match.blueFaction)) kitTeam = "BLUE";
+            else if (msg.faction.equalsIgnoreCase(data.match.redFaction)) kitTeam = "RED";
 
             if (kit == null) { // фолбэк на загруженные в память киты
-                if (msg.faction.equalsIgnoreCase(data.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
+                if (msg.faction.equalsIgnoreCase(data.match.blueFaction) && data.blueKits.containsKey(msg.kitName)) {
                     kit = data.blueKits.get(msg.kitName);
-                } else if (msg.faction.equalsIgnoreCase(data.redFaction) && data.redKits.containsKey(msg.kitName)) {
+                } else if (msg.faction.equalsIgnoreCase(data.match.redFaction)
+                        && data.redKits.containsKey(msg.kitName)) {
                     kit = data.redKits.get(msg.kitName);
                 }
             }

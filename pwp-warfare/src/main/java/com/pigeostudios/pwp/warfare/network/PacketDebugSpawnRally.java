@@ -49,12 +49,12 @@ public class PacketDebugSpawnRally {
                 scoreboard.addPlayerToTeam(player.getScoreboardName(), pTeam);
                 if (msg.team.equals("BLUE")) {
                     player.level().setBlock(pos, ((Block) ModBlocks.BLUE_RALLY_BLOCK.get()).defaultBlockState(), 3);
-                    data.blueRallies.add(pos);
+                    data.structures.blueRallies.add(pos);
                     player.sendSystemMessage(Component.literal("DEBUG: BLUE Rally spawned at feet & Joined Blue Team")
                             .withStyle(ChatFormatting.BLUE));
                 } else {
                     player.level().setBlock(pos, ((Block) ModBlocks.RED_RALLY_BLOCK.get()).defaultBlockState(), 3);
-                    data.redRallies.add(pos);
+                    data.structures.redRallies.add(pos);
                     player.sendSystemMessage(Component.literal("DEBUG: RED Rally spawned at feet & Joined Red Team")
                             .withStyle(ChatFormatting.RED));
                 }

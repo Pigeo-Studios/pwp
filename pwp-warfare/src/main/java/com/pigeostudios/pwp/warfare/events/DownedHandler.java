@@ -48,7 +48,7 @@ public class DownedHandler {
                 && event.getSource().getEntity() instanceof ServerPlayer) {
             WarfareWorldData data =
                     WarfareWorldData.get((ServerLevel) event.getEntity().level());
-            if (!data.isGameStarted || data.isPaused) {
+            if (!data.match.isGameStarted || data.match.isPaused) {
                 event.setCanceled(true);
                 return;
             }
@@ -175,7 +175,7 @@ public class DownedHandler {
         boolean showMessages = level.getGameRules().getBoolean(GameRules.RULE_SHOWDEATHMESSAGES);
         if (showMessages) {
             WarfareWorldData wd = WarfareWorldData.get(level);
-            if (!wd.hideDeathMessages) {
+            if (!wd.match.hideDeathMessages) {
                 MutableComponent logMsg;
                 if (killerName != null && !killerName.isEmpty()) {
                     logMsg = Component.literal(victimName)
@@ -305,7 +305,7 @@ public class DownedHandler {
         String currentDim = player.level().dimension().location().toString();
 
         boolean insideZone = false;
-        for (WarfareWorldData.MainProtectionZone zone : data.mainZones) {
+        for (WarfareWorldData.MainProtectionZone zone : data.structures.mainZones) {
             if (zone.team.equalsIgnoreCase(teamName) && zone.isInside(player.position())) {
                 insideZone = true;
                 break;
@@ -314,7 +314,8 @@ public class DownedHandler {
 
         if (insideZone) return;
 
-        BlockPos spawn = teamName.equals("BLUE") ? data.blueSpawns.get(currentDim) : data.redSpawns.get(currentDim);
+        BlockPos spawn =
+                teamName.equals("BLUE") ? data.match.blueSpawns.get(currentDim) : data.match.redSpawns.get(currentDim);
         if (spawn == null) return;
 
         player.teleportTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);

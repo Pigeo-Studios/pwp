@@ -29,8 +29,8 @@ public class PacketVoteAction {
             ServerPlayer player = ctx.get().getSender();
             if (player != null && player.getTeam() != null) {
                 WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                if (data.voteActive) {
-                    data.votes.put(player.getUUID(), msg.agree);
+                if (data.match.voteActive) {
+                    data.match.votes.put(player.getUUID(), msg.agree);
                     data.setDirty();
                     PacketHandler.sendToAllClients(player.serverLevel(), data);
                 }

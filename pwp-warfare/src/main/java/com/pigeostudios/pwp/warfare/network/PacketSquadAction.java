@@ -89,7 +89,7 @@ public class PacketSquadAction {
                         for (int i = 1; i < 1000; i++) {
                             boolean idTaken = false;
 
-                            for (WarfareWorldData.Squad s : data.squads) {
+                            for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                                 if (s.id == i) {
                                     idTaken = true;
                                     break;
@@ -107,7 +107,7 @@ public class PacketSquadAction {
                         WarfareWorldData.Squad newSquad =
                                 new WarfareWorldData.Squad(newId, finalName, pTeam, pName, currentDim);
                         newSquad.members.add(pName);
-                        data.squads.add(newSquad);
+                        data.squadRegistry.squads.add(newSquad);
                         updatePlayerTags(player, newId, true);
                         if ((Boolean) WarfareConfig.AUTO_GIVE_SL_RADIO.get()) {
                             giveRadio(player);
@@ -117,7 +117,7 @@ public class PacketSquadAction {
                                 Component.literal("Отряд создан: " + finalName).withStyle(ChatFormatting.GOLD));
                         PacketRequestKitMenu.sendKitMenu(player, data);
                     } else if (msg.action == 1) {
-                        for (WarfareWorldData.Squad s : data.squads) {
+                        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                             if (s.id == msg.squadId && s.team.equalsIgnoreCase(pTeam)) {
                                 if (s.isLocked && !player.isCreative()) {
                                     player.sendSystemMessage(
@@ -148,7 +148,7 @@ public class PacketSquadAction {
                     } else if (msg.action == 3) {
                         WarfareWorldData.Squad targetSquad = null;
 
-                        for (WarfareWorldData.Squad s : data.squads) {
+                        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                             if (s.id == msg.squadId) {
                                 targetSquad = s;
                                 break;
@@ -325,9 +325,9 @@ public class PacketSquadAction {
                                     PacketRequestKitMenu.sendKitMenu(mem, data);
                                 }
                             }
-                            if (mySquad.id == data.blueCMDId) data.blueCMDId = -1;
-                            if (mySquad.id == data.redCMDId) data.redCMDId = -1;
-                            data.squads.remove(mySquad);
+                            if (mySquad.id == data.squadRegistry.blueCMDId) data.squadRegistry.blueCMDId = -1;
+                            if (mySquad.id == data.squadRegistry.redCMDId) data.squadRegistry.redCMDId = -1;
+                            data.squadRegistry.squads.remove(mySquad);
                             player.sendSystemMessage(
                                     Component.literal("Отряд расформирован.").withStyle(ChatFormatting.GOLD));
                         }
@@ -336,7 +336,7 @@ public class PacketSquadAction {
                     data.setDirty();
                     PacketHandler.INSTANCE.send(
                             PacketDistributor.DIMENSION.with(player.level()::dimension),
-                            new PacketSyncSquads(data.squads));
+                            new PacketSyncSquads(data.squadRegistry.squads));
                 }
             }
         });
@@ -347,7 +347,7 @@ public class PacketSquadAction {
         for (String natoName : NATO_ALPHABET) {
             boolean taken = false;
 
-            for (WarfareWorldData.Squad s : data.squads) {
+            for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                 if (s.team.equalsIgnoreCase(teamName) && s.name.equalsIgnoreCase(natoName)) {
                     taken = true;
                     break;
@@ -359,11 +359,11 @@ public class PacketSquadAction {
             }
         }
 
-        return "Squad " + (data.squads.size() + 1);
+        return "Squad " + (data.squadRegistry.squads.size() + 1);
     }
 
     public static WarfareWorldData.Squad getPlayerSquad(String playerName, WarfareWorldData data) {
-        for (WarfareWorldData.Squad s : data.squads) {
+        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
             if (s.members.contains(playerName)) {
                 return s;
             }
@@ -376,20 +376,24 @@ public class PacketSquadAction {
     public static void leaveCurrentSquad(ServerPlayer player, WarfareWorldData data) {
         String pName = player.getScoreboardName();
 
-        for (WarfareWorldData.Squad s : data.squads) {
+        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
             if (s.members.contains(pName)) {
                 s.members.remove(pName);
                 s.removeFromFireteams(pName);
                 String pTeam =
                         player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "NEUTRAL";
                 boolean voteCancelled = false;
-                if (pTeam.equals("BLUE") && data.blueCmdVoteActive && data.blueCmdCandidateName.equals(pName)) {
-                    data.blueCmdVoteActive = false;
-                    data.blueCmdVotes.clear();
+                if (pTeam.equals("BLUE")
+                        && data.squadRegistry.blueCmdVoteActive
+                        && data.squadRegistry.blueCmdCandidateName.equals(pName)) {
+                    data.squadRegistry.blueCmdVoteActive = false;
+                    data.squadRegistry.blueCmdVotes.clear();
                     voteCancelled = true;
-                } else if (pTeam.equals("RED") && data.redCmdVoteActive && data.redCmdCandidateName.equals(pName)) {
-                    data.redCmdVoteActive = false;
-                    data.redCmdVotes.clear();
+                } else if (pTeam.equals("RED")
+                        && data.squadRegistry.redCmdVoteActive
+                        && data.squadRegistry.redCmdCandidateName.equals(pName)) {
+                    data.squadRegistry.redCmdVoteActive = false;
+                    data.squadRegistry.redCmdVotes.clear();
                     voteCancelled = true;
                 }
 
@@ -411,12 +415,12 @@ public class PacketSquadAction {
                             }
                         }
                     } else {
-                        if (s.id == data.blueCMDId) {
-                            data.blueCMDId = -1;
+                        if (s.id == data.squadRegistry.blueCMDId) {
+                            data.squadRegistry.blueCMDId = -1;
                         }
 
-                        if (s.id == data.redCMDId) {
-                            data.redCMDId = -1;
+                        if (s.id == data.squadRegistry.redCMDId) {
+                            data.squadRegistry.redCMDId = -1;
                         }
                     }
                 }
@@ -424,7 +428,7 @@ public class PacketSquadAction {
             }
         }
 
-        data.squads.removeIf(sx -> sx.members.isEmpty());
+        data.squadRegistry.squads.removeIf(sx -> sx.members.isEmpty());
         WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
         WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, "");
         player.getInventory().clearContent();
@@ -432,7 +436,7 @@ public class PacketSquadAction {
         player.inventoryMenu.broadcastChanges();
         player.containerMenu.broadcastChanges();
         removePlayerTags(player);
-        if (!data.isGameStarted) {
+        if (!data.match.isGameStarted) {
             player.displayClientMessage(Component.literal("§eВы вышли из отряда. Кит до игры очищен."), true);
         } else {
             player.displayClientMessage(Component.literal("§eВы вышли из отряда. Снаряжение сброшено."), true);

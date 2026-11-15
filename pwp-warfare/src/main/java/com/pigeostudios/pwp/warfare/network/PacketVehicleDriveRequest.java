@@ -64,7 +64,7 @@ public class PacketVehicleDriveRequest {
         String pName = player.getScoreboardName();
         String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
 
-        WarfareWorldData.Squad playerSquad = data.squads.stream()
+        WarfareWorldData.Squad playerSquad = data.squadRegistry.squads.stream()
                 .filter(s -> s.id == squadId && s.team.equalsIgnoreCase(team))
                 .findFirst()
                 .orElse(null);

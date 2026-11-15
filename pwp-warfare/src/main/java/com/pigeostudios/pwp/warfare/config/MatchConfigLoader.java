@@ -49,14 +49,14 @@ public class MatchConfigLoader {
                 .set(config.rules.spectatorsGenerateChunks, level.getServer());
 
         WarfareWorldData data = WarfareWorldData.get(level);
-        data.hideNametags = config.rules.hideNametags;
-        data.hideDeathMessages = config.rules.showDeathMessages;
-        data.disableHunger = config.rules.disableHunger;
-        data.disableNaturalRegen = config.rules.disableNaturalRegen;
-        data.disableBlockDrops = config.rules.disableBlockDrops;
-        data.disableEntityDrops = config.rules.disableEntityDrops;
-        data.disableFireSpread = config.rules.disableFireSpread;
-        data.disableWeatherCycle = config.rules.disableWeatherCycle;
+        data.match.hideNametags = config.rules.hideNametags;
+        data.match.hideDeathMessages = config.rules.showDeathMessages;
+        data.match.disableHunger = config.rules.disableHunger;
+        data.match.disableNaturalRegen = config.rules.disableNaturalRegen;
+        data.match.disableBlockDrops = config.rules.disableBlockDrops;
+        data.match.disableEntityDrops = config.rules.disableEntityDrops;
+        data.match.disableFireSpread = config.rules.disableFireSpread;
+        data.match.disableWeatherCycle = config.rules.disableWeatherCycle;
 
         LOGGER.info(
                 "Applied match config (hideNametags={}, weather={})",

@@ -439,8 +439,8 @@ public class PacketBuildRequest {
                                     .setValue(VehicleStationBlock.FACING, facing);
                             level.setBlock(msg.pos, state, 3);
                             WarfareWorldData data = WarfareWorldData.get(level);
-                            data.vehicleStations.removeIf(s -> s.pos.equals(msg.pos));
-                            data.vehicleStations.add(new WarfareWorldData.VehicleStationInfo(
+                            data.structures.vehicleStations.removeIf(s -> s.pos.equals(msg.pos));
+                            data.structures.vehicleStations.add(new WarfareWorldData.VehicleStationInfo(
                                     msg.pos, team, level.dimension().location().toString()));
                             data.setDirty();
                             PacketHandler.sendToAllClients(level, data);
@@ -691,7 +691,7 @@ public class PacketBuildRequest {
         int hubRadius = (Integer) WarfareConfig.HUB_BUILD_RADIUS.get();
         double maxHubSq = hubRadius * hubRadius;
 
-        for (WarfareWorldData.HubInfo hubInfo : data.hubs) {
+        for (WarfareWorldData.HubInfo hubInfo : data.structures.hubs) {
             if ((hubInfo.dimension == null || hubInfo.dimension.equals(currentDim))
                     && hubInfo.pos.distSqr(pos) <= maxHubSq
                     && level.isLoaded(hubInfo.pos)
@@ -744,7 +744,7 @@ public class PacketBuildRequest {
             int hubRadius = (Integer) WarfareConfig.HUB_BUILD_RADIUS.get();
             double maxHubSq = hubRadius * hubRadius;
 
-            for (WarfareWorldData.HubInfo hubInfo : data.hubs) {
+            for (WarfareWorldData.HubInfo hubInfo : data.structures.hubs) {
                 if (remainingToDeduct <= 0) {
                     break;
                 }

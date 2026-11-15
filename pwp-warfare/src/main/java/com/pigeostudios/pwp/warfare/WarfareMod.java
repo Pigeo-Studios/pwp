@@ -81,7 +81,7 @@ public class WarfareMod {
 
     public static void applyMapConfig(ServerLevel level) {
         WarfareWorldData data = WarfareWorldData.get(level);
-        if (data.configApplied) return;
+        if (data.match.configApplied) return;
 
         String levelName = "world";
         try {
@@ -119,42 +119,42 @@ public class WarfareMod {
                 JsonObject teams = root.getAsJsonObject("teams");
                 if (teams.has("BLUE")) {
                     JsonObject blue = teams.getAsJsonObject("BLUE");
-                    data.blueFaction = blue.get("faction").getAsString();
-                    data.blueTickets = blue.get("tickets").getAsInt();
+                    data.match.blueFaction = blue.get("faction").getAsString();
+                    data.match.blueTickets = blue.get("tickets").getAsInt();
                 }
                 if (teams.has("RED")) {
                     JsonObject red = teams.getAsJsonObject("RED");
-                    data.redFaction = red.get("faction").getAsString();
-                    data.redTickets = red.get("tickets").getAsInt();
+                    data.match.redFaction = red.get("faction").getAsString();
+                    data.match.redTickets = red.get("tickets").getAsInt();
                 }
             }
 
             if (root.has("settings")) {
                 JsonObject settings = root.getAsJsonObject("settings");
                 if (settings.has("respawnTimer"))
-                    data.respawnTimer = settings.get("respawnTimer").getAsInt();
+                    data.match.respawnTimer = settings.get("respawnTimer").getAsInt();
                 if (settings.has("deathTicketCost"))
-                    data.deathTicketCost = settings.get("deathTicketCost").getAsInt();
+                    data.match.deathTicketCost = settings.get("deathTicketCost").getAsInt();
             }
 
             if (root.has("mapBounds")) {
                 JsonObject bounds = root.getAsJsonObject("mapBounds");
                 if (bounds.has("centerX"))
-                    data.mapCenterX = bounds.get("centerX").getAsInt();
+                    data.match.mapCenterX = bounds.get("centerX").getAsInt();
                 if (bounds.has("centerZ"))
-                    data.mapCenterZ = bounds.get("centerZ").getAsInt();
+                    data.match.mapCenterZ = bounds.get("centerZ").getAsInt();
                 if (bounds.has("sizeBlocks"))
-                    data.mapSizeBlocks = bounds.get("sizeBlocks").getAsInt();
-                level.getWorldBorder().setCenter(data.mapCenterX, data.mapCenterZ);
-                level.getWorldBorder().setSize(data.mapSizeBlocks);
+                    data.match.mapSizeBlocks = bounds.get("sizeBlocks").getAsInt();
+                level.getWorldBorder().setCenter(data.match.mapCenterX, data.match.mapCenterZ);
+                level.getWorldBorder().setSize(data.match.mapSizeBlocks);
             }
 
             if (root.has("image")) {
-                data.currentMapImage = root.get("image").getAsString();
+                data.match.currentMapImage = root.get("image").getAsString();
             }
 
             if (root.has("mainZones")) {
-                data.mainZones.clear();
+                data.structures.mainZones.clear();
                 var zones = root.getAsJsonArray("mainZones");
                 for (var el : zones) {
                     JsonObject zone = el.getAsJsonObject();
@@ -169,7 +169,7 @@ public class WarfareMod {
                             p2.get("x").getAsInt(),
                             p2.get("y").getAsInt(),
                             p2.get("z").getAsInt());
-                    data.mainZones.add(new WarfareWorldData.MainProtectionZone(team, shape, aabb));
+                    data.structures.mainZones.add(new WarfareWorldData.MainProtectionZone(team, shape, aabb));
                 }
             }
 
@@ -181,21 +181,24 @@ public class WarfareMod {
                     String patternName =
                             chosen.has("name") ? chosen.get("name").getAsString() : "Pattern " + patternIdx;
                     JsonArray points = chosen.getAsJsonArray("points");
-                    data.capturePoints.clear();
+                    data.match.capturePoints.clear();
                     for (var el : points) {
-                        data.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
+                        data.match.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
                     }
-                    LOGGER.info("Loaded capture point pattern: {} ({} points)", patternName, data.capturePoints.size());
+                    LOGGER.info(
+                            "Loaded capture point pattern: {} ({} points)",
+                            patternName,
+                            data.match.capturePoints.size());
                 } else {
                     LOGGER.warn("Invalid capture point pattern index {}, falling back to default", patternIdx);
                 }
             }
 
-            if (root.has("capturePoints") && data.capturePoints.isEmpty()) {
-                data.capturePoints.clear();
+            if (root.has("capturePoints") && data.match.capturePoints.isEmpty()) {
+                data.match.capturePoints.clear();
                 var points = root.getAsJsonArray("capturePoints");
                 for (var el : points) {
-                    data.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
+                    data.match.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
                 }
             }
 
@@ -214,9 +217,9 @@ public class WarfareMod {
                             int sz = spawn.get("z").getAsInt();
                             BlockPos pos = new BlockPos(sx, sy, sz);
                             if (teamKey.equals("BLUE")) {
-                                data.blueSpawns.put(dim, pos);
+                                data.match.blueSpawns.put(dim, pos);
                             } else {
-                                data.redSpawns.put(dim, pos);
+                                data.match.redSpawns.put(dim, pos);
                             }
                         }
                     }
@@ -241,22 +244,22 @@ public class WarfareMod {
                 }
             }
 
-            if (data.hideDeathMessages) {
+            if (data.match.hideDeathMessages) {
                 level.getGameRules()
                         .getRule(net.minecraft.world.level.GameRules.RULE_SHOWDEATHMESSAGES)
                         .set(false, level.getServer());
             }
-            if (data.disableNaturalRegen) {
+            if (data.match.disableNaturalRegen) {
                 level.getGameRules()
                         .getRule(net.minecraft.world.level.GameRules.RULE_NATURAL_REGENERATION)
                         .set(false, level.getServer());
             }
-            if (data.disableBlockDrops) {
+            if (data.match.disableBlockDrops) {
                 level.getGameRules()
                         .getRule(net.minecraft.world.level.GameRules.RULE_DOBLOCKDROPS)
                         .set(false, level.getServer());
             }
-            if (data.disableEntityDrops) {
+            if (data.match.disableEntityDrops) {
                 level.getGameRules()
                         .getRule(net.minecraft.world.level.GameRules.RULE_DOENTITYDROPS)
                         .set(false, level.getServer());
@@ -264,12 +267,12 @@ public class WarfareMod {
                         .getRule(net.minecraft.world.level.GameRules.RULE_DOMOBLOOT)
                         .set(false, level.getServer());
             }
-            if (data.disableFireSpread) {
+            if (data.match.disableFireSpread) {
                 level.getGameRules()
                         .getRule(net.minecraft.world.level.GameRules.RULE_DOFIRETICK)
                         .set(false, level.getServer());
             }
-            if (data.disableWeatherCycle) {
+            if (data.match.disableWeatherCycle) {
                 level.getGameRules()
                         .getRule(net.minecraft.world.level.GameRules.RULE_DAYLIGHT)
                         .set(false, level.getServer());
@@ -278,7 +281,7 @@ public class WarfareMod {
                         .set(false, level.getServer());
             }
 
-            data.configApplied = true;
+            data.match.configApplied = true;
             data.setDirty();
             LOGGER.info(
                     "Map config applied successfully for map: {}",
@@ -286,13 +289,13 @@ public class WarfareMod {
 
             // INVASION mode: set all points to defender, adjust tickets
             String mode = root.has("mode") ? root.get("mode").getAsString() : "aas";
-            data.gameMode = mode;
-            if (mode.equals("invasion") && !data.capturePoints.isEmpty()) {
+            data.match.gameMode = mode;
+            if (mode.equals("invasion") && !data.match.capturePoints.isEmpty()) {
                 String defender = root.has("invasionDefender")
                         ? root.get("invasionDefender").getAsString()
                         : "RED";
-                data.invasionDefender = defender;
-                for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+                data.match.invasionDefender = defender;
+                for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
                     cp.owner = defender;
                     cp.progress = 1.0F;
                     cp.capturingTeam = "NONE";
@@ -303,10 +306,11 @@ public class WarfareMod {
                     if (modes.has("invasion")) {
                         JsonObject inv = modes.getAsJsonObject("invasion");
                         if (inv.has("captureBonus")) {
-                            data.invasionCaptureBonus = inv.get("captureBonus").getAsInt();
+                            data.match.invasionCaptureBonus =
+                                    inv.get("captureBonus").getAsInt();
                         }
                         if (inv.has("setupPhaseSeconds")) {
-                            data.invasionSetupTimer =
+                            data.match.invasionSetupTimer =
                                     inv.get("setupPhaseSeconds").getAsInt();
                         }
                     }
@@ -314,15 +318,15 @@ public class WarfareMod {
                 LOGGER.info(
                         "INVASION mode: defender={}, captureBonus={}, setupTimer={}s",
                         defender,
-                        data.invasionCaptureBonus,
-                        data.invasionSetupTimer);
+                        data.match.invasionCaptureBonus,
+                        data.match.invasionSetupTimer);
             }
 
             // Start waiting phase (5 min timer), then voting
-            data.waitingActive = true;
-            data.waitingTimer = 300;
-            data.voteActive = false;
-            data.votes.clear();
+            data.match.waitingActive = true;
+            data.match.waitingTimer = 300;
+            data.match.voteActive = false;
+            data.match.votes.clear();
             PacketHandler.sendToAllClients(level, data);
         } catch (IOException e) {
             LOGGER.error("Failed to read map_config.json", e);

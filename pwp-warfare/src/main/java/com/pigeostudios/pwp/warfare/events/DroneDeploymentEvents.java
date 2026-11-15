@@ -122,7 +122,7 @@ public class DroneDeploymentEvents {
 
         // Игра должна идти.
         WarfareWorldData data = WarfareWorldData.get(level);
-        if (!data.isGameStarted && !player.isCreative()) {
+        if (!data.match.isGameStarted && !player.isCreative()) {
             player.displayClientMessage(
                     net.minecraft.network.chat.Component.literal("Игра ещё не началась!")
                             .withStyle(net.minecraft.ChatFormatting.RED),

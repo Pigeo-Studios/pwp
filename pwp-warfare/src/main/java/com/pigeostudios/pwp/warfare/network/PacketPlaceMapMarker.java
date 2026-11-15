@@ -54,21 +54,21 @@ public class PacketPlaceMapMarker {
                     }
 
                     WarfareWorldData.ArtStrikeRequest activeReq =
-                            team.equals("BLUE") ? data.blueArtRequest : data.redArtRequest;
+                            team.equals("BLUE") ? data.match.blueArtRequest : data.match.redArtRequest;
                     if (activeReq != null) {
                         return;
                     }
 
                     BlockPos strikePos = new BlockPos(msg.x, 64, msg.z);
                     if (team.equals("BLUE")) {
-                        data.blueArtRequest = new WarfareWorldData.ArtStrikeRequest(pName, strikePos);
+                        data.match.blueArtRequest = new WarfareWorldData.ArtStrikeRequest(pName, strikePos);
                     } else {
-                        data.redArtRequest = new WarfareWorldData.ArtStrikeRequest(pName, strikePos);
+                        data.match.redArtRequest = new WarfareWorldData.ArtStrikeRequest(pName, strikePos);
                     }
 
-                    data.activeMarkers.add(new WarfareWorldData.MapMarker(
+                    data.markers.activeMarkers.add(new WarfareWorldData.MapMarker(
                             strikePos, "Artillery Request", team, GameClock.worldTicks(level) + 3600L));
-                    int cmdId = team.equals("BLUE") ? data.blueCMDId : data.redCMDId;
+                    int cmdId = team.equals("BLUE") ? data.squadRegistry.blueCMDId : data.squadRegistry.redCMDId;
 
                     for (ServerPlayer p : level.players()) {
                         if (p.getTeam() != null
@@ -86,7 +86,7 @@ public class PacketPlaceMapMarker {
                     data.setDirty();
                     PacketHandler.sendToAllClients(level, data);
                 } else {
-                    data.activeMarkers.add(new WarfareWorldData.MapMarker(
+                    data.markers.activeMarkers.add(new WarfareWorldData.MapMarker(
                             new BlockPos(msg.x, 64, msg.z), msg.type, team, GameClock.worldTicks(level) + 3600L));
                     data.setDirty();
                     PacketHandler.sendToAllClients(level, data);

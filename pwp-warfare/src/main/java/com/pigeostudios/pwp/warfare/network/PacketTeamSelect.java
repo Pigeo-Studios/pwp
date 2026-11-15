@@ -77,12 +77,13 @@ public class PacketTeamSelect {
             PacketHandler.broadcastPlayerSkin(player);
             PacketHandler.sendToAllClients(player.serverLevel(), data);
             PacketHandler.INSTANCE.send(
-                    PacketDistributor.DIMENSION.with(player.level()::dimension), new PacketSyncSquads(data.squads));
-            if (data.isGameStarted) {
+                    PacketDistributor.DIMENSION.with(player.level()::dimension),
+                    new PacketSyncSquads(data.squadRegistry.squads));
+            if (data.match.isGameStarted) {
                 String currentDim = player.level().dimension().location().toString();
                 BlockPos mainSpawn = msg.teamName.equalsIgnoreCase("BLUE")
-                        ? data.blueSpawns.get(currentDim)
-                        : data.redSpawns.get(currentDim);
+                        ? data.match.blueSpawns.get(currentDim)
+                        : data.match.redSpawns.get(currentDim);
                 if (mainSpawn != null) {
                     player.teleportTo(mainSpawn.getX() + 0.5, mainSpawn.getY(), mainSpawn.getZ() + 0.5);
                     player.sendSystemMessage(Component.literal("Матч идёт! Телепортация на главную базу...")

@@ -54,7 +54,7 @@ public class PacketPlacePath {
             String pName = p.getScoreboardName();
             WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
             boolean authorized = false;
-            for (WarfareWorldData.Squad s : data.squads) {
+            for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                 if (s.members.contains(pName)
                         && (s.leader.equals(pName) || s.bravoLeader.equals(pName) || s.charlieLeader.equals(pName))) {
                     authorized = true;

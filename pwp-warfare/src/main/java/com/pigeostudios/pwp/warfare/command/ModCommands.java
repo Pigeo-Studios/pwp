@@ -724,7 +724,8 @@ public class ModCommands {
                                                                                                             .getAvailableMapImages());
                                                                                     if (images.isEmpty())
                                                                                         images.add(
-                                                                                                data.currentMapImage);
+                                                                                                data.match
+                                                                                                        .currentMapImage);
                                                                                     return SharedSuggestionProvider
                                                                                             .suggest(images, builder);
                                                                                 })
@@ -741,7 +742,8 @@ public class ModCommands {
                                                                                                     .getLevel();
                                                                                     WarfareWorldData data =
                                                                                             WarfareWorldData.get(level);
-                                                                                    data.currentMapImage = imgName;
+                                                                                    data.match.currentMapImage =
+                                                                                            imgName;
                                                                                     data.setDirty();
                                                                                     PacketHandler.sendToAllClients(
                                                                                             level, data);
@@ -779,8 +781,8 @@ public class ModCommands {
                                                                                                     .getLevel();
                                                                                     WarfareWorldData data =
                                                                                             WarfareWorldData.get(level);
-                                                                                    data.mapCenterX = x;
-                                                                                    data.mapCenterZ = z;
+                                                                                    data.match.mapCenterX = x;
+                                                                                    data.match.mapCenterZ = z;
                                                                                     data.setDirty();
                                                                                     PacketHandler.sendToAllClients(
                                                                                             level, data);
@@ -806,7 +808,7 @@ public class ModCommands {
                                                                     WarfareWorldData data = WarfareWorldData.get(
                                                                             ((CommandSourceStack) ctx.getSource())
                                                                                     .getLevel());
-                                                                    data.mapSizeBlocks = size;
+                                                                    data.match.mapSizeBlocks = size;
                                                                     data.setDirty();
                                                                     PacketHandler.sendToAllClients(
                                                                             ((CommandSourceStack) ctx.getSource())
@@ -853,12 +855,12 @@ public class ModCommands {
                                     ServerLevel level = ((CommandSourceStack) ctx.getSource()).getLevel();
                                     WarfareWorldData data = WarfareWorldData.get(level);
                                     boolean active = BoolArgumentType.getBool(ctx, "active");
-                                    data.voteActive = active;
+                                    data.match.voteActive = active;
                                     if (active) {
-                                        data.voteTimer = (Integer) WarfareConfig.VOTE_AUTO_START_TIME.get() * 60;
-                                        data.votes.clear();
-                                        data.blueReady = false;
-                                        data.redReady = false;
+                                        data.match.voteTimer = (Integer) WarfareConfig.VOTE_AUTO_START_TIME.get() * 60;
+                                        data.match.votes.clear();
+                                        data.match.blueReady = false;
+                                        data.match.redReady = false;
                                     }
 
                                     data.setDirty();
@@ -916,7 +918,7 @@ public class ModCommands {
                     ServerLevel level = player.serverLevel();
                     WarfareWorldData data = WarfareWorldData.get(level);
 
-                    if (!data.isGameStarted) {
+                    if (!data.match.isGameStarted) {
                         player.sendSystemMessage(
                                 Component.literal("Игра не активна!").withStyle(ChatFormatting.RED));
                         return 0;
@@ -957,12 +959,12 @@ public class ModCommands {
             ServerPlayer player = ((CommandSourceStack) ctx.getSource()).getPlayerOrException();
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
-            if (!data.voteActive || data.isGameStarted) {
+            if (!data.match.voteActive || data.match.isGameStarted) {
                 player.sendSystemMessage(
                         Component.literal("Нет активного голосования.").withStyle(ChatFormatting.RED));
                 return 0;
             }
-            data.votes.put(player.getUUID(), true);
+            data.match.votes.put(player.getUUID(), true);
             player.sendSystemMessage(
                     Component.literal("Вы проголосовали ЗА старт матча!").withStyle(ChatFormatting.GREEN));
             PacketHandler.sendToAllClients(level, data);
@@ -1013,7 +1015,7 @@ public class ModCommands {
         WarfareWorldData data = WarfareWorldData.get(level);
         List<String> pointNames = new ArrayList<>();
 
-        for (WarfareWorldData.CapturePoint p : data.capturePoints) {
+        for (WarfareWorldData.CapturePoint p : data.match.capturePoints) {
             pointNames.add(p.name);
         }
 
@@ -1024,14 +1026,14 @@ public class ModCommands {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
         if (active) {
-            data.playedBlueSiren = false;
-            data.playedRedSiren = false;
+            data.match.playedBlueSiren = false;
+            data.match.playedRedSiren = false;
             GameLogicEvents.startGameCountdown(level);
             source.sendSuccess(
                     () -> Component.literal("Отсчёт запущен в этом мире!").withStyle(ChatFormatting.GREEN), true);
         } else {
-            data.isGameStarted = false;
-            data.invasionSetupActive = false;
+            data.match.isGameStarted = false;
+            data.match.invasionSetupActive = false;
             GameLogicEvents.cancelCountdown(level);
             data.setDirty();
             syncDataToAll(level, data);
@@ -1046,11 +1048,11 @@ public class ModCommands {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
         String cleanMode = mode.equalsIgnoreCase("invasion") ? "invasion" : "aas";
-        data.gameMode = cleanMode;
-        if (cleanMode.equals("invasion") && !data.capturePoints.isEmpty()) {
-            String defender = data.invasionDefender != null ? data.invasionDefender : "RED";
+        data.match.gameMode = cleanMode;
+        if (cleanMode.equals("invasion") && !data.match.capturePoints.isEmpty()) {
+            String defender = data.match.invasionDefender != null ? data.match.invasionDefender : "RED";
 
-            for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+            for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
                 cp.owner = defender;
                 cp.progress = 1.0F;
                 cp.capturingTeam = "NONE";
@@ -1069,10 +1071,12 @@ public class ModCommands {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
         String defender = team.equalsIgnoreCase("blue") ? "BLUE" : "RED";
-        data.invasionDefender = defender;
-        if (data.gameMode != null && data.gameMode.equals("invasion") && !data.capturePoints.isEmpty()) {
+        data.match.invasionDefender = defender;
+        if (data.match.gameMode != null
+                && data.match.gameMode.equals("invasion")
+                && !data.match.capturePoints.isEmpty()) {
 
-            for (WarfareWorldData.CapturePoint cp : data.capturePoints) {
+            for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
                 cp.owner = defender;
                 cp.progress = 1.0F;
                 cp.capturingTeam = "NONE";
@@ -1092,7 +1096,7 @@ public class ModCommands {
     private static int setRespawnTime(CommandSourceStack source, int seconds) {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
-        data.respawnTimer = seconds;
+        data.match.respawnTimer = seconds;
         data.setDirty();
         syncDataToAll(level, data);
         source.sendSuccess(
@@ -1108,9 +1112,9 @@ public class ModCommands {
         String cleanFaction = faction.toLowerCase();
         String valueToSave = cleanFaction.equals("clear") ? "none" : cleanFaction;
         if (team.equalsIgnoreCase("blue")) {
-            data.blueFaction = valueToSave;
+            data.match.blueFaction = valueToSave;
         } else if (team.equalsIgnoreCase("red")) {
-            data.redFaction = valueToSave;
+            data.match.redFaction = valueToSave;
         }
 
         data.setDirty();
@@ -1122,14 +1126,14 @@ public class ModCommands {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
         if (team.equalsIgnoreCase("blue")) {
-            data.blueTickets = amount;
+            data.match.blueTickets = amount;
             if (amount > 50) {
-                data.playedBlueSiren = false;
+                data.match.playedBlueSiren = false;
             }
         } else if (team.equalsIgnoreCase("red")) {
-            data.redTickets = amount;
+            data.match.redTickets = amount;
             if (amount > 50) {
-                data.playedRedSiren = false;
+                data.match.playedRedSiren = false;
             }
         }
 
@@ -1145,7 +1149,7 @@ public class ModCommands {
     private static int setDeathTickets(CommandSourceStack source, int amount) {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
-        data.deathTicketCost = amount;
+        data.match.deathTicketCost = amount;
         data.setDirty();
         syncDataToAll(level, data);
         source.sendSuccess(
@@ -1177,11 +1181,12 @@ public class ModCommands {
         MarkerManager.syncToPlayer(player);
         PathManager.syncToPlayer(player);
         syncDataToAll(level, data);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
-        if (data.isGameStarted) {
+        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
+        if (data.match.isGameStarted) {
             String currentDim = player.level().dimension().location().toString();
-            BlockPos mainSpawn =
-                    internalTeamName.equals("Blue") ? data.blueSpawns.get(currentDim) : data.redSpawns.get(currentDim);
+            BlockPos mainSpawn = internalTeamName.equals("Blue")
+                    ? data.match.blueSpawns.get(currentDim)
+                    : data.match.redSpawns.get(currentDim);
             if (mainSpawn != null) {
                 player.teleportTo(mainSpawn.getX() + 0.5, mainSpawn.getY(), mainSpawn.getZ() + 0.5);
                 player.sendSystemMessage(Component.literal("Матч идёт! Телепортация на главную базу...")
@@ -1235,7 +1240,7 @@ public class ModCommands {
             area = new AABB(minX, minY, minZ, maxX, maxY, maxZ);
         }
 
-        data.capturePoints.add(new WarfareWorldData.CapturePoint(
+        data.match.capturePoints.add(new WarfareWorldData.CapturePoint(
                 name, area, bp, rp, time, penalty, captureDeduct, shape.toUpperCase(), lockMinutes, gainNeut, gainCap));
         data.setDirty();
         source.sendSuccess(
@@ -1249,7 +1254,7 @@ public class ModCommands {
     private static int removePoint(CommandSourceStack source, String name) {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
-        boolean removed = data.capturePoints.removeIf(p -> p.name.equals(name));
+        boolean removed = data.match.capturePoints.removeIf(p -> p.name.equals(name));
         if (removed) {
             data.setDirty();
             syncDataToAll(level, data);
@@ -1269,7 +1274,7 @@ public class ModCommands {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
 
-        for (WarfareWorldData.CapturePoint point : data.capturePoints) {
+        for (WarfareWorldData.CapturePoint point : data.match.capturePoints) {
             if (point.name.equals(name)) {
                 point.owner = "NEUTRAL";
                 point.progress = 0.0F;
@@ -1297,7 +1302,7 @@ public class ModCommands {
             return 0;
         }
 
-        for (WarfareWorldData.CapturePoint point : data.capturePoints) {
+        for (WarfareWorldData.CapturePoint point : data.match.capturePoints) {
             if (point.name.equals(name)) {
                 point.owner = targetTeam;
                 point.progress = 1.0F;
@@ -1330,11 +1335,11 @@ public class ModCommands {
         WarfareWorldData data = WarfareWorldData.get(level);
         String currentDim = level.dimension().location().toString();
         if (teamName.equalsIgnoreCase("blue")) {
-            data.blueSpawns.put(currentDim, pos);
+            data.match.blueSpawns.put(currentDim, pos);
         } else if (teamName.equalsIgnoreCase("red")) {
-            data.redSpawns.put(currentDim, pos);
+            data.match.redSpawns.put(currentDim, pos);
         } else if (teamName.equalsIgnoreCase("none")) {
-            data.neutralSpawns.put(currentDim, pos);
+            data.match.neutralSpawns.put(currentDim, pos);
         }
 
         data.setDirty();
@@ -1512,8 +1517,9 @@ public class ModCommands {
                     Math.max(pos1.getZ(), pos2.getZ()) + 1);
         }
 
-        data.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
-        data.mainZones.add(new WarfareWorldData.MainProtectionZone(team.toUpperCase(), shape.toUpperCase(), area));
+        data.structures.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
+        data.structures.mainZones.add(
+                new WarfareWorldData.MainProtectionZone(team.toUpperCase(), shape.toUpperCase(), area));
         data.setDirty();
         source.sendSuccess(
                 () -> Component.literal(team.toUpperCase() + " Main Protection Zone successfully added!")
@@ -1525,7 +1531,7 @@ public class ModCommands {
     private static int removeMainZone(CommandSourceStack source, String team) {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
-        boolean removed = data.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
+        boolean removed = data.structures.mainZones.removeIf(z -> z.team.equalsIgnoreCase(team));
         if (removed) {
             data.setDirty();
             source.sendSuccess(
@@ -1546,7 +1552,7 @@ public class ModCommands {
 
         for (ServerPlayer player : source.getServer().getPlayerList().getPlayers()) {
             if (WarfareData.of(player).contains(WarfareKeys.SQUAD_ID)) {
-                boolean belongsToTeam = data.squads.stream()
+                boolean belongsToTeam = data.squadRegistry.squads.stream()
                         .anyMatch(s -> s.id == WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID)
                                 && s.team.equalsIgnoreCase(targetTeam));
                 if (belongsToTeam) {
@@ -1556,11 +1562,11 @@ public class ModCommands {
             }
         }
 
-        data.squads.removeIf(squad -> squad.team.equalsIgnoreCase(targetTeam));
+        data.squadRegistry.squads.removeIf(squad -> squad.team.equalsIgnoreCase(targetTeam));
         if (targetTeam.equals("BLUE")) {
-            data.blueCMDId = -1;
+            data.squadRegistry.blueCMDId = -1;
         } else if (targetTeam.equals("RED")) {
-            data.redCMDId = -1;
+            data.squadRegistry.redCMDId = -1;
         }
 
         data.setDirty();
@@ -1586,7 +1592,7 @@ public class ModCommands {
         WarfareWorldData data = WarfareWorldData.get(level);
         if (data == null) return 0;
         String team = null;
-        for (var s : data.squads) {
+        for (var s : data.squadRegistry.squads) {
             if (s.id == squadId) {
                 team = s.team;
                 break;
@@ -1597,8 +1603,8 @@ public class ModCommands {
             return 0;
         }
         boolean isBlue = team.toUpperCase().contains("BLUE");
-        if (isBlue) data.blueCMDId = squadId;
-        else data.redCMDId = squadId;
+        if (isBlue) data.squadRegistry.blueCMDId = squadId;
+        else data.squadRegistry.redCMDId = squadId;
         data.setDirty();
         PacketHandler.sendToAllClients(level, data);
         String finalTeam = team;
@@ -1612,10 +1618,10 @@ public class ModCommands {
     private static int togglePause(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
-        data.isPaused = !data.isPaused;
+        data.match.isPaused = !data.match.isPaused;
         data.setDirty();
         PacketHandler.sendToAllClients(level, data);
-        if (data.isPaused) {
+        if (data.match.isPaused) {
             Scoreboard scoreboard = level.getScoreboard();
             PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
             PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");

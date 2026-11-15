@@ -31,8 +31,8 @@ public class PacketForceCMD {
             WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
             if (data == null) return;
             boolean isBlue = msg.team.toUpperCase().contains("BLUE");
-            if (isBlue) data.blueCMDId = msg.squadId;
-            else data.redCMDId = msg.squadId;
+            if (isBlue) data.squadRegistry.blueCMDId = msg.squadId;
+            else data.squadRegistry.redCMDId = msg.squadId;
             data.setDirty();
         });
         ctx.get().setPacketHandled(true);

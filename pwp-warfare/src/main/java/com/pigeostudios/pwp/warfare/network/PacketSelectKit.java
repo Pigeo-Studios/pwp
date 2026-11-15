@@ -61,8 +61,8 @@ public class PacketSelectKit {
                 PacketHandler.sendToAllClients(player.serverLevel(), data);
                 String pTeam =
                         player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-                boolean isReserved = !data.isGameStarted
-                        || (data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender));
+                boolean isReserved = !data.match.isGameStarted
+                        || (data.match.invasionSetupActive && !pTeam.equalsIgnoreCase(data.match.invasionDefender));
                 if (isReserved) {
                     player.sendSystemMessage(Component.translatable("pwpwarfare.message.kit_reserved", msg.kitName)
                             .withStyle(ChatFormatting.YELLOW));

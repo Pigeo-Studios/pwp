@@ -74,10 +74,10 @@ public class PathManager {
     public static boolean isTeamCMD(ServerPlayer p, String team) {
         WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
         if (data == null) return false;
-        int cmdId = team.toUpperCase().contains("BLUE") ? data.blueCMDId : data.redCMDId;
+        int cmdId = team.toUpperCase().contains("BLUE") ? data.squadRegistry.blueCMDId : data.squadRegistry.redCMDId;
         if (cmdId == -1) return false;
         String pName = p.getScoreboardName();
-        for (var s : data.squads) {
+        for (var s : data.squadRegistry.squads) {
             if (s.id == cmdId && s.leader.equals(pName)) return true;
         }
         return false;
@@ -95,16 +95,16 @@ public class PathManager {
     }
 
     public static void saveTo(WarfareWorldData data) {
-        data.savedPaths.clear();
+        data.markers.savedPaths.clear();
         for (StoredPath p : all) {
-            data.savedPaths.add(new WarfareWorldData.PathSnapshot(
+            data.markers.savedPaths.add(new WarfareWorldData.PathSnapshot(
                     p.id(), p.owner(), p.team(), p.type(), p.squadNum(), p.createdAt(), new ArrayList<>(p.points())));
         }
     }
 
     public static void loadFrom(WarfareWorldData data) {
         all.clear();
-        for (var snap : data.savedPaths) {
+        for (var snap : data.markers.savedPaths) {
             all.add(new StoredPath(
                     snap.id(),
                     snap.owner(),

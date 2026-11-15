@@ -46,7 +46,7 @@ public class PacketPlacePing {
                 if (hit.getType() == Type.BLOCK) {
                     BlockPos target = hit.getBlockPos().relative(hit.getDirection());
 
-                    for (WarfareWorldData.Squad s : data.squads) {
+                    for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                         if (s.members.contains(pName)) {
                             long time = GameClock.worldTicks(player.level());
                             if (s.leader.equals(pName)) {
@@ -82,7 +82,7 @@ public class PacketPlacePing {
                             data.setDirty();
                             PacketHandler.INSTANCE.send(
                                     PacketDistributor.DIMENSION.with(player.level()::dimension),
-                                    new PacketSyncSquads(data.squads));
+                                    new PacketSyncSquads(data.squadRegistry.squads));
                             break;
                         }
                     }

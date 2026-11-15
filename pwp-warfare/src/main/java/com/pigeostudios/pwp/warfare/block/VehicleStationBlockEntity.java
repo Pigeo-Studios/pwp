@@ -380,7 +380,7 @@ public class VehicleStationBlockEntity extends BlockEntity {
             BlockPos nearestHub = null;
             double nearestDist = Double.MAX_VALUE;
 
-            for (WarfareWorldData.HubInfo h : data.hubs) {
+            for (WarfareWorldData.HubInfo h : data.structures.hubs) {
                 if (h.team.equalsIgnoreCase(this.teamOwner)
                         && level.getBlockEntity(h.pos) instanceof HubBlockEntity hub) {
                     double dist = h.pos.distSqr(pos);

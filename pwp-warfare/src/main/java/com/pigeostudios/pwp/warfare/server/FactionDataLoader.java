@@ -77,8 +77,8 @@ public final class FactionDataLoader {
         level = serverLevel;
         SLOTS.clear();
         PENDING_DEPLOYS.clear();
-        put(Team.BLUE, data.blueFaction);
-        put(Team.RED, data.redFaction);
+        put(Team.BLUE, data.match.blueFaction);
+        put(Team.RED, data.match.redFaction);
         long now = GameClock.serverTicks(serverLevel.getServer());
         SLOTS.values().forEach(m -> m.values().forEach(s -> s.nextAttemptTick = now));
         tryLoads(serverLevel.getServer());

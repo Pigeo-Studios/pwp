@@ -78,13 +78,13 @@ public class RallyPointBlock extends BaseEntityBlock {
                 WarfareWorldData data = WarfareWorldData.get(serverLevel);
                 int penalty = 10;
                 if (rallyTeam.equals("BLUE")) {
-                    data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                    data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
                             serverLevel,
                             "BLUE player dismantled Friendly Rally Point! (-10 Tickets)",
                             ChatFormatting.BLUE);
                 } else if (rallyTeam.equals("RED")) {
-                    data.redTickets = Math.max(0, data.redTickets - penalty);
+                    data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
                             serverLevel,
                             "RED player dismantled Friendly Rally Point! (-10 Tickets)",
@@ -92,7 +92,7 @@ public class RallyPointBlock extends BaseEntityBlock {
                 }
                 int squadId = rallyBe.getSquadId();
                 if (squadId != -1) {
-                    for (WarfareWorldData.Squad s : data.squads) {
+                    for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                         if (s.id == squadId) {
                             s.nextRallyAvailableTick = -1L;
                             break;
@@ -102,7 +102,8 @@ public class RallyPointBlock extends BaseEntityBlock {
                 data.setDirty();
                 PacketHandler.sendToAllClients(serverLevel, data);
                 PacketHandler.INSTANCE.send(
-                        PacketDistributor.DIMENSION.with(() -> level.dimension()), new PacketSyncSquads(data.squads));
+                        PacketDistributor.DIMENSION.with(() -> level.dimension()),
+                        new PacketSyncSquads(data.squadRegistry.squads));
             }
         }
         super.playerWillDestroy(level, pos, state, player);
@@ -117,11 +118,11 @@ public class RallyPointBlock extends BaseEntityBlock {
             if (!rallyBe.isDecay && !rallyBe.wasDismantled) {
                 int penalty = 20;
                 if (state.getBlock() == ModBlocks.BLUE_RALLY_BLOCK.get()) {
-                    data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                    data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
                             serverLevel, "BLUE Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.BLUE);
                 } else if (state.getBlock() == ModBlocks.RED_RALLY_BLOCK.get()) {
-                    data.redTickets = Math.max(0, data.redTickets - penalty);
+                    data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
                             serverLevel, "RED Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.RED);
                 }

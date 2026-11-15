@@ -71,7 +71,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public void setRemoved() {
         if (this.level != null && !this.level.isClientSide) {
             WarfareWorldData data = WarfareWorldData.get((ServerLevel) this.level);
-            data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+            data.vehicles.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
         }
         super.setRemoved();
     }
@@ -79,10 +79,10 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     public void syncToWorldData() {
         if (this.level == null || this.level.isClientSide) return;
         WarfareWorldData data = WarfareWorldData.get((ServerLevel) this.level);
-        data.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
+        data.vehicles.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(this.worldPosition));
         WarfareWorldData.SpawnerInfo info = getSpawnerInfo();
         if (info != null) {
-            data.spawnerInfos.add(info);
+            data.vehicles.spawnerInfos.add(info);
             data.setDirty();
         }
     }
@@ -127,11 +127,11 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                 be.loadTimer--;
             } else {
                 WarfareWorldData data = WarfareWorldData.get((ServerLevel) level);
-                if (data.isGameStarted) {
+                if (data.match.isGameStarted) {
                     // During invasion setup: skip vehicle spawn for attackers
-                    if (data.invasionSetupActive) {
+                    if (data.match.invasionSetupActive) {
                         String vTeam = getSpawnerTeam(be);
-                        if (!vTeam.equalsIgnoreCase(data.invasionDefender)) {
+                        if (!vTeam.equalsIgnoreCase(data.match.invasionDefender)) {
                             if (be.hasSpawnedOnce || be.targetSpawnTick != 0L || be.lastVehicleUUID != null) {
                                 be.hasSpawnedOnce = false;
                                 be.targetSpawnTick = 0L;
@@ -144,7 +144,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                         }
                     }
                     long currentTick = GameClock.worldTicks(level);
-                    boolean vehicleExistsGlobally = data.markedVehicles.stream()
+                    boolean vehicleExistsGlobally = data.vehicles.markedVehicles.stream()
                             .anyMatch(v -> v.spawnerPos != null && v.spawnerPos.equals(pos));
                     if (vehicleExistsGlobally) {
                         if (be.targetSpawnTick != 0L) {
@@ -256,9 +256,9 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                             WarfareData.of(entity).put(WarfareKeys.INITIAL_LOADOUT, loadoutTag);
 
                             WarfareWorldData worldData = WarfareWorldData.get((ServerLevel) this.level);
-                            worldData.markedVehicles.removeIf(
+                            worldData.vehicles.markedVehicles.removeIf(
                                     v -> v.spawnerPos != null && v.spawnerPos.equals(this.worldPosition));
-                            worldData.markedVehicles.add(new WarfareWorldData.VehicleRecord(
+                            worldData.vehicles.markedVehicles.add(new WarfareWorldData.VehicleRecord(
                                     entity.getUUID(),
                                     vTeam,
                                     vType,

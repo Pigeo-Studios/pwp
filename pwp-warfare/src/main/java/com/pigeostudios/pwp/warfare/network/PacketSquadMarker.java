@@ -42,7 +42,7 @@ public class PacketSquadMarker {
                 long expiry = GameClock.worldTicks(level) + 6000L;
                 String pName = player.getScoreboardName();
 
-                for (WarfareWorldData.Squad s : data.squads) {
+                for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                     if (s.members.contains(pName)) {
                         if (s.leader.equals(pName)) {
                             if (msg.type == 6) {
@@ -73,7 +73,8 @@ public class PacketSquadMarker {
 
                         data.setDirty();
                         PacketHandler.INSTANCE.send(
-                                PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squads));
+                                PacketDistributor.DIMENSION.with(level::dimension),
+                                new PacketSyncSquads(data.squadRegistry.squads));
                         break;
                     }
                 }

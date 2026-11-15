@@ -140,7 +140,7 @@ public class HubBlockEntity extends BlockEntity {
     private void syncHubMaterials() {
         if (this.level instanceof ServerLevel serverLevel) {
             WarfareWorldData data = WarfareWorldData.get(serverLevel);
-            for (WarfareWorldData.HubInfo h : data.hubs) {
+            for (WarfareWorldData.HubInfo h : data.structures.hubs) {
                 if (h.pos.equals(this.worldPosition)) {
                     h.materials = this.constructionMaterials;
                     data.setDirty();
@@ -225,7 +225,7 @@ public class HubBlockEntity extends BlockEntity {
                                         0.05);
                         WarfareWorldData data = WarfareWorldData.get((ServerLevel) level);
 
-                        for (WarfareWorldData.HubInfo h : data.hubs) {
+                        for (WarfareWorldData.HubInfo h : data.structures.hubs) {
                             if (h.pos.equals(pos)) {
                                 h.constructed = true;
                                 data.setDirty();
@@ -302,11 +302,11 @@ public class HubBlockEntity extends BlockEntity {
                 if (!hubTeam.equals("NEUTRAL")) {
                     int penalty = 10;
                     if (hubTeam.equalsIgnoreCase("BLUE")) {
-                        data.blueTickets = Math.max(0, data.blueTickets - penalty);
+                        data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                         broadcastMessage(
                                 serverLevel, "BLUE player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.BLUE);
                     } else if (hubTeam.equalsIgnoreCase("RED")) {
-                        data.redTickets = Math.max(0, data.redTickets - penalty);
+                        data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                         broadcastMessage(
                                 serverLevel, "RED player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.RED);
                     }

@@ -63,16 +63,16 @@ public class MarkerManager {
     }
 
     public static void saveTo(WarfareWorldData data) {
-        data.savedMarkers.clear();
+        data.markers.savedMarkers.clear();
         for (MapMarker m : all) {
-            data.savedMarkers.add(new WarfareWorldData.MarkerSnapshot(
+            data.markers.savedMarkers.add(new WarfareWorldData.MarkerSnapshot(
                     m.id, m.team, m.category, m.iconType, m.pos, m.ownerUUID, m.createdAt));
         }
     }
 
     public static void loadFrom(WarfareWorldData data) {
         all.clear();
-        for (var snap : data.savedMarkers) {
+        for (var snap : data.markers.savedMarkers) {
             all.add(new MapMarker(
                     snap.id(),
                     snap.team(),

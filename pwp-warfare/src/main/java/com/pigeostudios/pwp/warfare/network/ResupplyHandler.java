@@ -299,7 +299,7 @@ public class ResupplyHandler {
         String teamName = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
         if (teamName.isEmpty()) return 0;
         Map<String, WarfareWorldData.KitInfo> kits = teamName.equals("BLUE") ? data.blueKits : data.redKits;
-        for (WarfareWorldData.Squad s : data.squads) {
+        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
             if (s.members.contains(pName)) {
                 int count = 0;
                 for (String member : s.members) {
@@ -336,7 +336,7 @@ public class ResupplyHandler {
                         String pName = player.getScoreboardName();
                         WarfareWorldData.Squad mySquad = null;
 
-                        for (WarfareWorldData.Squad s : data.squads) {
+                        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                             if (s.members.contains(pName)) {
                                 mySquad = s;
                                 break;

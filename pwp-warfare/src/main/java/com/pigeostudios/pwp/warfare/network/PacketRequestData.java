@@ -127,7 +127,7 @@ public class PacketRequestData {
         // Фолбэк: киты текущего матча из памяти (API недоступен)
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
         Map<String, WarfareWorldData.KitInfo> target =
-                faction.equalsIgnoreCase(data.blueFaction) ? data.blueKits : data.redKits;
+                faction.equalsIgnoreCase(data.match.blueFaction) ? data.blueKits : data.redKits;
         if (target != null) {
             for (WarfareWorldData.KitInfo k : target.values()) {
                 JsonObject entry = new JsonObject();

@@ -55,8 +55,8 @@ public class MainZoneFireGuard {
         if (entity instanceof Player player && (player.isCreative() || player.isSpectator())) return false;
         if (!(entity.level() instanceof ServerLevel level)) return false;
         WarfareWorldData data = WarfareWorldData.get(level);
-        if (data == null || data.mainZones.isEmpty()) return false;
-        List<WarfareWorldData.MainProtectionZone> zones = data.mainZones;
+        if (data == null || data.structures.mainZones.isEmpty()) return false;
+        List<WarfareWorldData.MainProtectionZone> zones = data.structures.mainZones;
         for (WarfareWorldData.MainProtectionZone zone : zones) {
             if (zone.isInside(entity.position())) return true;
         }

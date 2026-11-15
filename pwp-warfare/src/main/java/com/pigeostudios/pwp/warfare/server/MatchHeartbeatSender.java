@@ -50,13 +50,13 @@ public class MatchHeartbeatSender {
             CoreApi.sendHeartbeat(new Heartbeat("match_" + dir, online)
                     .port(port)
                     .match(
-                            data.currentMapImage != null ? data.currentMapImage : "",
-                            data.gameMode != null ? data.gameMode : "aas",
-                            data.blueFaction,
-                            data.redFaction,
-                            data.blueTickets,
-                            data.redTickets,
-                            data.isGameStarted ? "PLAYING" : "STARTING",
+                            data.match.currentMapImage != null ? data.match.currentMapImage : "",
+                            data.match.gameMode != null ? data.match.gameMode : "aas",
+                            data.match.blueFaction,
+                            data.match.redFaction,
+                            data.match.blueTickets,
+                            data.match.redTickets,
+                            data.match.isGameStarted ? "PLAYING" : "STARTING",
                             server.getPlayerList().getMaxPlayers(),
                             MatchStatsTracker.get().getStartedAt(),
                             online));

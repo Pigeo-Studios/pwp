@@ -83,7 +83,7 @@ public class VehicleStationBlock extends BaseEntityBlock {
                 && level.getBlockEntity(pos) instanceof VehicleStationBlockEntity) {
             com.pigeostudios.pwp.warfare.world.WarfareWorldData data =
                     WarfareWorldData.get((net.minecraft.server.level.ServerLevel) level);
-            data.vehicleStations.removeIf(s -> s.pos.equals(pos));
+            data.structures.vehicleStations.removeIf(s -> s.pos.equals(pos));
             data.setDirty();
             PacketHandler.sendToAllClients((net.minecraft.server.level.ServerLevel) level, data);
         }

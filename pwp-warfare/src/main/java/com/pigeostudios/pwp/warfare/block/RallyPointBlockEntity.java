@@ -45,7 +45,7 @@ public class RallyPointBlockEntity extends BlockEntity {
         if (this.squadId != -1) {
             WarfareWorldData data = WarfareWorldData.get(level);
             boolean changed = false;
-            for (WarfareWorldData.Squad s : data.squads) {
+            for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                 if (s.id == this.squadId) {
                     if (s.rallyPos != null && s.rallyPos.equals(this.worldPosition)) {
                         s.rallyPos = null;
@@ -57,7 +57,8 @@ public class RallyPointBlockEntity extends BlockEntity {
             }
             if (changed) {
                 data.setDirty();
-                PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squads));
+                PacketHandler.INSTANCE.send(
+                        PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
             }
         }
     }

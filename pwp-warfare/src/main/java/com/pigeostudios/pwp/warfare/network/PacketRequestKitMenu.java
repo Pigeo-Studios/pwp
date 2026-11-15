@@ -33,7 +33,7 @@ public class PacketRequestKitMenu {
         String pName = player.getScoreboardName();
         WarfareWorldData.Squad mySquad = null;
 
-        for (WarfareWorldData.Squad s : data.squads) {
+        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
             if (s.members.contains(pName)) {
                 mySquad = s;
                 break;

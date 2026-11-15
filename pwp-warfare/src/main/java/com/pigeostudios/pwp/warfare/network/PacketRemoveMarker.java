@@ -37,11 +37,11 @@ public class PacketRemoveMarker {
                 WarfareWorldData data = WarfareWorldData.get(p.serverLevel());
                 int cmdSquadId = -1;
                 String teamName = p.getTeam() != null ? p.getTeam().getName() : "";
-                if (teamName.toUpperCase().contains("BLUE")) cmdSquadId = data.blueCMDId;
-                else if (teamName.toUpperCase().contains("RED")) cmdSquadId = data.redCMDId;
+                if (teamName.toUpperCase().contains("BLUE")) cmdSquadId = data.squadRegistry.blueCMDId;
+                else if (teamName.toUpperCase().contains("RED")) cmdSquadId = data.squadRegistry.redCMDId;
                 if (cmdSquadId != -1) {
                     String pName = p.getScoreboardName();
-                    for (var s : data.squads) {
+                    for (var s : data.squadRegistry.squads) {
                         if (s.id == cmdSquadId && s.leader.equals(pName)) {
                             isCMD = true;
                             break;

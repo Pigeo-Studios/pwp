@@ -28,7 +28,7 @@ public class PacketDebugFill {
                 String pTeam =
                         player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "BLUE";
 
-                for (WarfareWorldData.CapturePoint point : data.capturePoints) {
+                for (WarfareWorldData.CapturePoint point : data.match.capturePoints) {
                     if (point.isInside(player.position())) {
                         String oldOwner = point.owner;
                         point.progress += 0.255F;

@@ -224,7 +224,7 @@ public class InteractionEvents {
             boolean isStarted = false;
             if (level instanceof ServerLevel serverLevel) {
                 WarfareWorldData data = WarfareWorldData.get(serverLevel);
-                isStarted = data.isGameStarted || data.waitingActive;
+                isStarted = data.match.isGameStarted || data.match.waitingActive;
             } else if (level.isClientSide) {
                 isStarted = ClientData.isGameStarted;
             }
@@ -242,7 +242,7 @@ public class InteractionEvents {
     public static void onBlockPlace(EntityPlaceEvent event) {
         if (event.getPlacedBlock().is((Block) ModBlocks.GAME_START_TRIGGER.get())
                 && event.getLevel() instanceof ServerLevel level) {
-            WarfareWorldData.get(level).triggerBlocks.add(event.getPos());
+            WarfareWorldData.get(level).structures.triggerBlocks.add(event.getPos());
             WarfareWorldData.get(level).setDirty();
         }
     }
@@ -251,7 +251,7 @@ public class InteractionEvents {
     public static void onBlockBreak(BreakEvent event) {
         if (event.getState().is((Block) ModBlocks.GAME_START_TRIGGER.get())
                 && event.getLevel() instanceof ServerLevel level) {
-            WarfareWorldData.get(level).triggerBlocks.remove(event.getPos());
+            WarfareWorldData.get(level).structures.triggerBlocks.remove(event.getPos());
             WarfareWorldData.get(level).setDirty();
         }
 
@@ -259,7 +259,7 @@ public class InteractionEvents {
             Player player = event.getPlayer();
             if (!player.isCreative() && event.getLevel() instanceof ServerLevel serverLevel) {
                 WarfareWorldData data = WarfareWorldData.get(serverLevel);
-                boolean isStarted = data.isGameStarted || data.waitingActive;
+                boolean isStarted = data.match.isGameStarted || data.match.waitingActive;
                 if (isStarted && !isBlockWhitelisted(event.getState())) {
                     event.setCanceled(true);
                 }
@@ -313,18 +313,18 @@ public class InteractionEvents {
                 if (!level.isClientSide) {
                     ServerPlayer sPlayer = (ServerPlayer) player;
                     WarfareWorldData data = WarfareWorldData.get(sPlayer.serverLevel());
-                    if (!data.isGameStarted && !sPlayer.isCreative()) {
+                    if (!data.match.isGameStarted && !sPlayer.isCreative()) {
                         sPlayer.sendSystemMessage(
                                 Component.literal("Игра ещё не началась!").withStyle(ChatFormatting.RED));
                         event.setCanceled(true);
                         return;
                     }
 
-                    if (data.invasionSetupActive && !sPlayer.isCreative()) {
+                    if (data.match.invasionSetupActive && !sPlayer.isCreative()) {
                         String pTeam = sPlayer.getTeam() != null
                                 ? sPlayer.getTeam().getName().toUpperCase()
                                 : "";
-                        if (!pTeam.equalsIgnoreCase(data.invasionDefender)) {
+                        if (!pTeam.equalsIgnoreCase(data.match.invasionDefender)) {
                             sPlayer.sendSystemMessage(
                                     Component.literal("Основное снабжение недоступно во время подготовки!")
                                             .withStyle(ChatFormatting.RED));

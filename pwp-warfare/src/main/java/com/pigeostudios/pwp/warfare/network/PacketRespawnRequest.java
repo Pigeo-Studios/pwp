@@ -78,8 +78,9 @@ public class PacketRespawnRequest {
             }
 
             boolean isBlue = team.equals("BLUE");
-            Map<String, BlockPos> mainSpawns =
-                    isBlue ? data.blueSpawns : (team.equals("RED") ? data.redSpawns : data.neutralSpawns);
+            Map<String, BlockPos> mainSpawns = isBlue
+                    ? data.match.blueSpawns
+                    : (team.equals("RED") ? data.match.redSpawns : data.match.neutralSpawns);
             if (type.equals("MAIN")) {
                 if (mainSpawns.containsKey(currentDim)) {
                     targetPos = mainSpawns.get(currentDim);
@@ -125,7 +126,7 @@ public class PacketRespawnRequest {
                         BlockPos reqPos = new BlockPos(
                                 Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
 
-                        for (WarfareWorldData.HubInfo h : data.hubs) {
+                        for (WarfareWorldData.HubInfo h : data.structures.hubs) {
                             if (h.pos.equals(reqPos) && h.team.equalsIgnoreCase(team) && h.constructed) {
                                 int hubRadius = (Integer) WarfareConfig.HUB_BLOCK_RADIUS.get();
                                 int hubEnemiesReq = (Integer) WarfareConfig.HUB_BLOCK_ENEMY_COUNT.get();
@@ -192,12 +193,12 @@ public class PacketRespawnRequest {
                     player.setGameMode(GameType.SURVIVAL);
                 }
 
-                if (data.isGameStarted) {
+                if (data.match.isGameStarted) {
                     String pTeam = player.getTeam() != null
                             ? player.getTeam().getName().toUpperCase()
                             : "";
                     boolean isSetupAttacker =
-                            data.invasionSetupActive && !pTeam.equalsIgnoreCase(data.invasionDefender);
+                            data.match.invasionSetupActive && !pTeam.equalsIgnoreCase(data.match.invasionDefender);
                     if (!isSetupAttacker) {
                         if (WarfareData.of(player).contains(WarfareKeys.PENDING_KIT)) {
                             ResupplyHandler.tryApplyPendingKit(player, data);
@@ -225,7 +226,7 @@ public class PacketRespawnRequest {
     }
 
     private static WarfareWorldData.Squad getPlayerSquad(String playerName, WarfareWorldData data) {
-        for (WarfareWorldData.Squad s : data.squads) {
+        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
             if (s.members.contains(playerName)) {
                 return s;
             }

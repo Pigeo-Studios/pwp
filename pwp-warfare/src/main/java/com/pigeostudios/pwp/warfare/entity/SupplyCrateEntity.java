@@ -340,7 +340,7 @@ public class SupplyCrateEntity extends Entity {
             double searchRadiusSq = 7500.0;
             String currentDim = currentLevel.dimension().location().toString();
 
-            for (WarfareWorldData.HubInfo hubInfo : data.hubs) {
+            for (WarfareWorldData.HubInfo hubInfo : data.structures.hubs) {
                 if ((hubInfo.dimension == null || hubInfo.dimension.equals(currentDim)) && hubInfo.constructed) {
                     BlockPos hubPos = hubInfo.pos;
                     if (hubPos.distSqr(myPos) <= searchRadiusSq

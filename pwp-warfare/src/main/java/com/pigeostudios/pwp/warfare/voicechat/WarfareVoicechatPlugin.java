@@ -140,7 +140,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
                                 || (squad.charlieLeader != null && squad.charlieLeader.equals(pName)));
                 if (isLeader) {
                     // Командирский канал: у слушателей звук из правого уха
-                    for (WarfareWorldData.Squad s : data.squads) {
+                    for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                         if (!s.team.equalsIgnoreCase(senderTeam)) continue;
                         if (s.leader != null
                                 && !s.leader.isEmpty()
@@ -211,7 +211,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
 
                 if (channel == Channel.COMMAND) {
                     PacketRadioVoiceActivity rpkt = new PacketRadioVoiceActivity(pName);
-                    for (WarfareWorldData.Squad s : data.squads) {
+                    for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
                         if (!s.team.equalsIgnoreCase(senderTeam)) continue;
                         if (s.leader != null && !s.leader.isEmpty() && s.members.contains(s.leader)) {
                             ServerPlayer p = sender.server.getPlayerList().getPlayerByName(s.leader);
@@ -314,7 +314,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
     }
 
     public static WarfareWorldData.Squad getPlayerSquad(String playerName, WarfareWorldData data) {
-        for (WarfareWorldData.Squad s : data.squads) {
+        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
             if (s.members.contains(playerName)) {
                 return s;
             }

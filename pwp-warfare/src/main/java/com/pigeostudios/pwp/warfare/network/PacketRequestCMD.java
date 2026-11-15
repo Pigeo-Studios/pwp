@@ -26,23 +26,26 @@ public class PacketRequestCMD {
                 String pName = player.getScoreboardName();
                 String team = player.getTeam().getName().toUpperCase();
                 boolean isBlue = team.equals("BLUE");
-                boolean alreadyVoting = isBlue ? data.blueCmdVoteActive : data.redCmdVoteActive;
+                boolean alreadyVoting =
+                        isBlue ? data.squadRegistry.blueCmdVoteActive : data.squadRegistry.redCmdVoteActive;
                 if (!alreadyVoting) {
-                    int currentCMD = isBlue ? data.blueCMDId : data.redCMDId;
+                    int currentCMD = isBlue ? data.squadRegistry.blueCMDId : data.squadRegistry.redCMDId;
                     if (currentCMD == -1) {
                         if (WarfareData.of(player).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) {
                             if (isBlue) {
-                                data.blueCmdVoteActive = true;
-                                data.blueCmdCandidateName = pName;
-                                data.blueCmdCandidateId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
-                                data.blueCmdVoteTimer = 600;
-                                data.blueCmdVotes.clear();
+                                data.squadRegistry.blueCmdVoteActive = true;
+                                data.squadRegistry.blueCmdCandidateName = pName;
+                                data.squadRegistry.blueCmdCandidateId =
+                                        WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
+                                data.squadRegistry.blueCmdVoteTimer = 600;
+                                data.squadRegistry.blueCmdVotes.clear();
                             } else {
-                                data.redCmdVoteActive = true;
-                                data.redCmdCandidateName = pName;
-                                data.redCmdCandidateId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
-                                data.redCmdVoteTimer = 600;
-                                data.redCmdVotes.clear();
+                                data.squadRegistry.redCmdVoteActive = true;
+                                data.squadRegistry.redCmdCandidateName = pName;
+                                data.squadRegistry.redCmdCandidateId =
+                                        WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
+                                data.squadRegistry.redCmdVoteTimer = 600;
+                                data.squadRegistry.redCmdVotes.clear();
                             }
 
                             data.setDirty();

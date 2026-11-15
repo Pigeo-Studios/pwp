@@ -13,7 +13,6 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.LongTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
@@ -29,72 +28,15 @@ import net.minecraftforge.registries.ForgeRegistries;
 // Хранит состояние захвата точек, отрядов, FOB, техники и настроек игры
 public class WarfareWorldData extends SavedData {
     private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(WarfareWorldData.class);
-    public List<WarfareWorldData.CapturePoint> capturePoints = new ArrayList<>();
-    public List<BlockPos> blueRallies = new ArrayList<>();
-    public List<BlockPos> redRallies = new ArrayList<>();
-    public List<WarfareWorldData.HubInfo> hubs = new ArrayList<>();
-    public List<WarfareWorldData.VehicleStationInfo> vehicleStations = new ArrayList<>();
-    public List<WarfareWorldData.Squad> squads = new ArrayList<>();
-    public int blueCMDId = -1;
-    public int redCMDId = -1;
-    public boolean blueCmdVoteActive = false;
-    public String blueCmdCandidateName = "";
-    public int blueCmdCandidateId = -1;
-    public int blueCmdVoteTimer = 0;
-    public Map<UUID, Boolean> blueCmdVotes = new HashMap<>();
-    public boolean redCmdVoteActive = false;
-    public String redCmdCandidateName = "";
-    public int redCmdCandidateId = -1;
-    public int redCmdVoteTimer = 0;
-    public Map<UUID, Boolean> redCmdVotes = new HashMap<>();
-    public long blueArtStrikeCD = 0L;
-    public long redArtStrikeCD = 0L;
-    public String shapeType = "CUBE";
-    public int lockDurationMinutes = 0;
-    public long lockedUntilTick = 0L;
-    public Map<String, BlockPos> blueSpawns = new HashMap<>();
-    public Map<String, BlockPos> redSpawns = new HashMap<>();
-    public Map<String, BlockPos> neutralSpawns = new HashMap<>();
-    public List<WarfareWorldData.VehicleRecord> markedVehicles = new ArrayList<>();
-    public final List<WarfareWorldData.SpawnerInfo> spawnerInfos = new java.util.concurrent.CopyOnWriteArrayList<>();
-    public Map<UUID, Set<UUID>> approvedDrivers = new HashMap<>();
-    public int blueTickets = 800;
-    public int redTickets = 800;
-    public int respawnTimer = 10;
-    public int deathTicketCost = 2;
-    public String blueFaction = "none";
-    public String redFaction = "none";
-    public boolean isGameStarted = false;
-    public int countdownTicks = 0;
-    public String gameMode = "aas";
-    public String invasionDefender = "RED";
-    public int invasionCaptureBonus = 100;
-    public boolean countdownActive = false;
-    public boolean playedBlueSiren = false;
-    public boolean playedRedSiren = false;
+
+    // Состояние мира разделено по реестрам (этап 2); NBT — прежний плоский формат
+    public final MatchState match = new MatchState();
+    public final SquadRegistry squadRegistry = new SquadRegistry();
+    public final StructureRegistry structures = new StructureRegistry();
+    public final MarkerRegistry markers = new MarkerRegistry();
+    public final VehicleRegistry vehicles = new VehicleRegistry();
     public Map<String, WarfareWorldData.KitInfo> blueKits = new HashMap<>();
     public Map<String, WarfareWorldData.KitInfo> redKits = new HashMap<>();
-    public Map<String, FactionVehicleData> blueFactionVehicles = new HashMap<>();
-    public Map<String, FactionVehicleData> redFactionVehicles = new HashMap<>();
-    public List<ConfigVehicleSpawner> configVehicleSpawners = new ArrayList<>();
-    public int mapCenterX = 0;
-    public int mapCenterZ = 0;
-    public int mapSizeBlocks = 2048;
-    public String currentMapImage = "map1";
-    public boolean configApplied = false;
-    public boolean hideDeathMessages = false;
-    public boolean hideNametags = false;
-    public boolean disableHunger = false;
-    public boolean disableNaturalRegen = false;
-    public boolean disableBlockDrops = true;
-    public boolean disableEntityDrops = true;
-    public boolean disableFireSpread = true;
-    public boolean disableWeatherCycle = true;
-    public boolean isPaused = false;
-    public boolean waitingActive = false;
-    public int waitingTimer = 0;
-    public boolean invasionSetupActive = false;
-    public int invasionSetupTimer = 300;
 
     public List<String> getAvailableMapImages() {
         List<String> images = new ArrayList<>();
@@ -178,7 +120,7 @@ public class WarfareWorldData extends SavedData {
         if (apiResponse == null || !apiResponse.has("data")) return;
         JsonArray arr = apiResponse.getAsJsonArray("data");
         Map<String, FactionVehicleData> target =
-                team.equalsIgnoreCase("BLUE") ? this.blueFactionVehicles : this.redFactionVehicles;
+                team.equalsIgnoreCase("BLUE") ? this.vehicles.blueFactionVehicles : this.vehicles.redFactionVehicles;
         target.clear();
         for (int i = 0; i < arr.size(); i++) {
             JsonObject obj = arr.get(i).getAsJsonObject();
@@ -262,22 +204,21 @@ public class WarfareWorldData extends SavedData {
             spawner.z = obj.get("z").getAsInt();
             if (obj.has("yaw")) spawner.yaw = obj.get("yaw").getAsFloat();
             spawner.fixed = obj.has("fixed") && obj.get("fixed").getAsBoolean();
-            configVehicleSpawners.add(spawner);
+            this.vehicles.configVehicleSpawners.add(spawner);
         }
     }
 
     // Слоты, чей чанк на момент старта матча не был загружен — доустанавливаются
     // retryPendingVehicleSpawners() по мере прогрузки чанков (ретрай в тике GameLogicEvents)
-    public List<ConfigVehicleSpawner> pendingVehicleSpawners = new ArrayList<>();
 
     public void fillVehicleSpawnersFromFactionDefaults(ServerLevel level) {
-        pendingVehicleSpawners.clear();
+        this.vehicles.pendingVehicleSpawners.clear();
 
-        for (ConfigVehicleSpawner cfg : configVehicleSpawners) {
+        for (ConfigVehicleSpawner cfg : this.vehicles.configVehicleSpawners) {
             BlockPos pos = new BlockPos(cfg.x, cfg.y, cfg.z);
             if (!level.isLoaded(pos)) {
                 // Чанк ещё не прогружен — не теряем слот, дождёмся загрузки
-                pendingVehicleSpawners.add(cfg);
+                this.vehicles.pendingVehicleSpawners.add(cfg);
                 continue;
             }
             applyConfigVehicleSpawner(cfg, level);
@@ -286,8 +227,8 @@ public class WarfareWorldData extends SavedData {
 
     // Доустанавливает спавнеры, пропущенные на старте матча из-за незагруженного чанка
     public void retryPendingVehicleSpawners(ServerLevel level) {
-        if (pendingVehicleSpawners.isEmpty()) return;
-        var it = pendingVehicleSpawners.iterator();
+        if (this.vehicles.pendingVehicleSpawners.isEmpty()) return;
+        var it = this.vehicles.pendingVehicleSpawners.iterator();
         while (it.hasNext()) {
             ConfigVehicleSpawner cfg = it.next();
             if (level.isLoaded(new BlockPos(cfg.x, cfg.y, cfg.z))) {
@@ -295,13 +236,14 @@ public class WarfareWorldData extends SavedData {
                 it.remove();
             }
         }
-        if (!pendingVehicleSpawners.isEmpty()) setDirty();
+        if (!this.vehicles.pendingVehicleSpawners.isEmpty()) setDirty();
     }
 
     private void applyConfigVehicleSpawner(ConfigVehicleSpawner cfg, ServerLevel level) {
         BlockPos pos = new BlockPos(cfg.x, cfg.y, cfg.z);
-        Map<String, FactionVehicleData> factionData =
-                cfg.team.equalsIgnoreCase("BLUE") ? this.blueFactionVehicles : this.redFactionVehicles;
+        Map<String, FactionVehicleData> factionData = cfg.team.equalsIgnoreCase("BLUE")
+                ? this.vehicles.blueFactionVehicles
+                : this.vehicles.redFactionVehicles;
         FactionVehicleData veh = null;
         if (cfg.vehicleName != null && !cfg.vehicleName.isEmpty()) {
             // Слот с явно указанной машиной (обратная совместимость)
@@ -343,15 +285,6 @@ public class WarfareWorldData extends SavedData {
             }
         }
     }
-
-    public List<BlockPos> triggerBlocks = new ArrayList<>();
-    public WarfareWorldData.ArtStrikeRequest blueArtRequest = null;
-    public WarfareWorldData.ArtStrikeRequest redArtRequest = null;
-    public List<WarfareWorldData.ActiveStrike> activeStrikes = new ArrayList<>();
-    public List<WarfareWorldData.MapMarker> activeMarkers = new ArrayList<>();
-    public List<WarfareWorldData.MainProtectionZone> mainZones = new ArrayList<>();
-    public final List<MarkerSnapshot> savedMarkers = new ArrayList<>();
-    public final List<PathSnapshot> savedPaths = new ArrayList<>();
 
     public record MarkerSnapshot(
             UUID id, String team, String category, String iconType, BlockPos pos, UUID ownerUUID, long createdAt) {
@@ -417,24 +350,21 @@ public class WarfareWorldData extends SavedData {
         }
     }
 
-    public boolean voteActive = false;
-    public int voteTimer = 0;
-    public boolean blueReady = false;
-    public boolean redReady = false;
-    public Map<UUID, Boolean> votes = new HashMap<>();
-
     public boolean hasApprovedDriver(UUID vehicleUUID, UUID playerUUID) {
-        Set<UUID> drivers = approvedDrivers.get(vehicleUUID);
+        Set<UUID> drivers = this.vehicles.approvedDrivers.get(vehicleUUID);
         return drivers != null && drivers.contains(playerUUID);
     }
 
     public void addApprovedDriver(UUID vehicleUUID, UUID playerUUID) {
-        approvedDrivers.computeIfAbsent(vehicleUUID, k -> new HashSet<>()).add(playerUUID);
+        this.vehicles
+                .approvedDrivers
+                .computeIfAbsent(vehicleUUID, k -> new HashSet<>())
+                .add(playerUUID);
         setDirty();
     }
 
     public void removeApprovedDrivers(UUID vehicleUUID) {
-        approvedDrivers.remove(vehicleUUID);
+        this.vehicles.approvedDrivers.remove(vehicleUUID);
         setDirty();
     }
 
@@ -448,140 +378,6 @@ public class WarfareWorldData extends SavedData {
     public CompoundTag save(CompoundTag tag) {
         com.pigeostudios.pwp.warfare.server.MarkerManager.saveTo(this);
         com.pigeostudios.pwp.warfare.server.PathManager.saveTo(this);
-        tag.putInt("BlueTickets", this.blueTickets);
-        tag.putInt("RedTickets", this.redTickets);
-        tag.putInt("RespawnTimer", this.respawnTimer);
-        tag.putInt("DeathTicketCost", this.deathTicketCost);
-        tag.putString("BlueFaction", this.blueFaction);
-        tag.putString("RedFaction", this.redFaction);
-        tag.putBoolean("IsGameStarted", this.isGameStarted);
-        tag.putInt("CountdownTicks", this.countdownTicks);
-        tag.putBoolean("CountdownActive", this.countdownActive);
-        tag.putString("GameMode", this.gameMode != null ? this.gameMode : "aas");
-        tag.putString("InvasionDefender", this.invasionDefender != null ? this.invasionDefender : "RED");
-        tag.putInt("InvasionCapBonus", this.invasionCaptureBonus);
-        tag.putBoolean("PlayedBlueSiren", this.playedBlueSiren);
-        tag.putBoolean("PlayedRedSiren", this.playedRedSiren);
-        tag.putInt("MapCenterX", this.mapCenterX);
-        tag.putInt("MapCenterZ", this.mapCenterZ);
-        tag.putInt("MapSizeBlocks", this.mapSizeBlocks);
-        tag.putString("CurrentMapImage", this.currentMapImage);
-        tag.putBoolean("HideDeathMessages", this.hideDeathMessages);
-        tag.putBoolean("HideNametags", this.hideNametags);
-        tag.putBoolean("DisableHunger", this.disableHunger);
-        tag.putBoolean("DisableNaturalRegen", this.disableNaturalRegen);
-        tag.putBoolean("DisableBlockDrops", this.disableBlockDrops);
-        tag.putBoolean("DisableEntityDrops", this.disableEntityDrops);
-        tag.putBoolean("DisableFireSpread", this.disableFireSpread);
-        tag.putBoolean("DisableWeatherCycle", this.disableWeatherCycle);
-        tag.putBoolean("IsPaused", this.isPaused);
-        tag.putBoolean("WaitingActive", this.waitingActive);
-        tag.putInt("WaitingTimer", this.waitingTimer);
-        tag.putBoolean("InvasionSetupActive", this.invasionSetupActive);
-        tag.putInt("InvasionSetupTimer", this.invasionSetupTimer);
-        tag.putLong("BlueArtCD", this.blueArtStrikeCD);
-        tag.putLong("RedArtCD", this.redArtStrikeCD);
-        tag.putInt("BlueCMDId", this.blueCMDId);
-        tag.putInt("RedCMDId", this.redCMDId);
-        tag.putBoolean("BlueCmdActive", this.blueCmdVoteActive);
-        tag.putString("BlueCmdCandName", this.blueCmdCandidateName);
-        tag.putInt("BlueCmdCandId", this.blueCmdCandidateId);
-        tag.putInt("BlueCmdTimer", this.blueCmdVoteTimer);
-        CompoundTag blueVotesTag = new CompoundTag();
-        this.blueCmdVotes.forEach((uuid, val) -> blueVotesTag.putBoolean(uuid.toString(), val));
-        tag.put("BlueCmdVotesMap", blueVotesTag);
-        tag.putBoolean("RedCmdActive", this.redCmdVoteActive);
-        tag.putString("RedCmdCandName", this.redCmdCandidateName);
-        tag.putInt("RedCmdCandId", this.redCmdCandidateId);
-        tag.putInt("RedCmdTimer", this.redCmdVoteTimer);
-        CompoundTag redVotesTag = new CompoundTag();
-        this.redCmdVotes.forEach((uuid, val) -> redVotesTag.putBoolean(uuid.toString(), val));
-        tag.put("RedCmdVotesMap", redVotesTag);
-        ListTag vehicleList = new ListTag();
-
-        for (WarfareWorldData.VehicleRecord v : this.markedVehicles) {
-            vehicleList.add(v.save());
-        }
-
-        ListTag triggerList = new ListTag();
-
-        for (BlockPos p : this.triggerBlocks) {
-            triggerList.add(LongTag.valueOf(p.asLong()));
-        }
-
-        tag.put("TriggerBlocks", triggerList);
-        tag.put("MarkedVehicles", vehicleList);
-        ListTag markerList = new ListTag();
-
-        for (WarfareWorldData.MapMarker m : this.activeMarkers) {
-            markerList.add(m.save());
-        }
-
-        tag.put("TacticalMarkers", markerList);
-        ListTag pwpMarkerList = new ListTag();
-        for (MarkerSnapshot m : this.savedMarkers) pwpMarkerList.add(m.save());
-        tag.put("PwpMarkers", pwpMarkerList);
-        ListTag pathList = new ListTag();
-        for (PathSnapshot p : this.savedPaths) pathList.add(p.save());
-        tag.put("PwpPaths", pathList);
-        ListTag blueList = new ListTag();
-
-        for (BlockPos pos : this.blueRallies) {
-            blueList.add(LongTag.valueOf(pos.asLong()));
-        }
-
-        tag.put("BlueRallies", blueList);
-        ListTag mainZoneList = new ListTag();
-
-        for (WarfareWorldData.MainProtectionZone zone : this.mainZones) {
-            mainZoneList.add(zone.save());
-        }
-
-        tag.put("MainZones", mainZoneList);
-        ListTag redList = new ListTag();
-
-        for (BlockPos pos : this.redRallies) {
-            redList.add(LongTag.valueOf(pos.asLong()));
-        }
-
-        tag.put("RedRallies", redList);
-        ListTag hubList = new ListTag();
-
-        for (WarfareWorldData.HubInfo h : this.hubs) {
-            hubList.add(h.save());
-        }
-
-        tag.put("HubsData", hubList);
-        ListTag supplyList = new ListTag();
-
-        for (WarfareWorldData.VehicleStationInfo s : this.vehicleStations) {
-            supplyList.add(s.save());
-        }
-
-        tag.put("VehicleStations", supplyList);
-        CompoundTag blueSpawnsTag = new CompoundTag();
-        this.blueSpawns.forEach((dim, pos) -> blueSpawnsTag.putLong(dim, pos.asLong()));
-        tag.put("BlueSpawnsMap", blueSpawnsTag);
-        CompoundTag redSpawnsTag = new CompoundTag();
-        this.redSpawns.forEach((dim, pos) -> redSpawnsTag.putLong(dim, pos.asLong()));
-        tag.put("RedSpawnsMap", redSpawnsTag);
-        CompoundTag neutralSpawnsTag = new CompoundTag();
-        this.neutralSpawns.forEach((dim, pos) -> neutralSpawnsTag.putLong(dim, pos.asLong()));
-        tag.put("NeutralSpawnsMap", neutralSpawnsTag);
-        ListTag pointsList = new ListTag();
-
-        for (WarfareWorldData.CapturePoint point : this.capturePoints) {
-            pointsList.add(point.save());
-        }
-
-        tag.put("CapturePoints", pointsList);
-        ListTag squadList = new ListTag();
-
-        for (WarfareWorldData.Squad s : this.squads) {
-            squadList.add(s.save());
-        }
-
-        tag.put("Squads", squadList);
         CompoundTag bKitsTag = new CompoundTag();
 
         for (WarfareWorldData.KitInfo k : this.blueKits.values()) {
@@ -596,212 +392,21 @@ public class WarfareWorldData extends SavedData {
         }
 
         tag.put("RedKits", rKitsTag);
-        if (this.blueArtRequest != null) {
-            CompoundTag req = new CompoundTag();
-            req.putString("Name", this.blueArtRequest.requesterName);
-            req.putLong("Pos", this.blueArtRequest.pos.asLong());
-            req.putInt("Timer", this.blueArtRequest.timer);
-            tag.put("BlueArtReq", req);
-        }
-
-        if (this.redArtRequest != null) {
-            CompoundTag req = new CompoundTag();
-            req.putString("Name", this.redArtRequest.requesterName);
-            req.putLong("Pos", this.redArtRequest.pos.asLong());
-            req.putInt("Timer", this.redArtRequest.timer);
-            tag.put("RedArtReq", req);
-        }
-
-        ListTag artList = new ListTag();
-
-        for (WarfareWorldData.ActiveStrike s : this.activeStrikes) {
-            CompoundTag sTag = new CompoundTag();
-            sTag.putLong("Pos", s.pos.asLong());
-            sTag.putString("Team", s.team);
-            sTag.putInt("Stage", s.stage);
-            sTag.putInt("Ticks", s.ticksLeft);
-            artList.add(sTag);
-        }
-
-        tag.put("ActiveStrikesList", artList);
+        this.match.save(tag);
+        this.squadRegistry.save(tag);
+        this.structures.save(tag);
+        this.markers.save(tag);
+        this.vehicles.save(tag);
         return tag;
     }
 
     public static WarfareWorldData load(CompoundTag tag) {
         WarfareWorldData data = new WarfareWorldData();
-        data.blueTickets = tag.getInt("BlueTickets");
-        data.redTickets = tag.getInt("RedTickets");
-        data.respawnTimer = tag.getInt("RespawnTimer");
-        data.deathTicketCost = tag.getInt("DeathTicketCost");
-        data.blueFaction = tag.getString("BlueFaction");
-        data.redFaction = tag.getString("RedFaction");
-        data.isGameStarted = tag.getBoolean("IsGameStarted");
-        data.countdownTicks = tag.getInt("CountdownTicks");
-        data.countdownActive = tag.getBoolean("CountdownActive");
-        data.gameMode = tag.contains("GameMode") ? tag.getString("GameMode") : "aas";
-        data.invasionDefender = tag.contains("InvasionDefender") ? tag.getString("InvasionDefender") : "RED";
-        data.invasionCaptureBonus = tag.contains("InvasionCapBonus") ? tag.getInt("InvasionCapBonus") : 100;
-        data.playedBlueSiren = tag.getBoolean("PlayedBlueSiren");
-        data.playedRedSiren = tag.getBoolean("PlayedRedSiren");
-        data.mapCenterX = tag.getInt("MapCenterX");
-        data.mapCenterZ = tag.getInt("MapCenterZ");
-        data.mapSizeBlocks = tag.contains("MapSizeBlocks") ? tag.getInt("MapSizeBlocks") : 2048;
-        data.currentMapImage = tag.contains("CurrentMapImage") ? tag.getString("CurrentMapImage") : "map1";
-        data.hideDeathMessages = tag.contains("HideDeathMessages") && tag.getBoolean("HideDeathMessages");
-        data.hideNametags = tag.contains("HideNametags") && tag.getBoolean("HideNametags");
-        data.disableHunger = tag.contains("DisableHunger") && tag.getBoolean("DisableHunger");
-        data.disableNaturalRegen = tag.contains("DisableNaturalRegen") && tag.getBoolean("DisableNaturalRegen");
-        data.disableBlockDrops = !tag.contains("DisableBlockDrops") || tag.getBoolean("DisableBlockDrops");
-        data.disableEntityDrops = !tag.contains("DisableEntityDrops") || tag.getBoolean("DisableEntityDrops");
-        data.disableFireSpread = !tag.contains("DisableFireSpread") || tag.getBoolean("DisableFireSpread");
-        data.disableWeatherCycle = !tag.contains("DisableWeatherCycle") || tag.getBoolean("DisableWeatherCycle");
-        data.isPaused = tag.contains("IsPaused") && tag.getBoolean("IsPaused");
-        data.waitingActive = tag.contains("WaitingActive") && tag.getBoolean("WaitingActive");
-        data.waitingTimer = tag.contains("WaitingTimer") ? tag.getInt("WaitingTimer") : 0;
-        data.invasionSetupActive = tag.contains("InvasionSetupActive") && tag.getBoolean("InvasionSetupActive");
-        data.invasionSetupTimer = tag.contains("InvasionSetupTimer") ? tag.getInt("InvasionSetupTimer") : 300;
-        data.blueArtStrikeCD = tag.getLong("BlueArtCD");
-        data.redArtStrikeCD = tag.getLong("RedArtCD");
-        data.blueCMDId = tag.getInt("BlueCMDId");
-        data.redCMDId = tag.getInt("RedCMDId");
-        data.blueCmdVoteActive = tag.getBoolean("BlueCmdActive");
-        data.blueCmdCandidateName = tag.getString("BlueCmdCandName");
-        data.blueCmdCandidateId = tag.getInt("BlueCmdCandId");
-        data.blueCmdVoteTimer = tag.getInt("BlueCmdTimer");
-        if (tag.contains("BlueCmdVotesMap")) {
-            CompoundTag cv = tag.getCompound("BlueCmdVotesMap");
-
-            for (String key : cv.getAllKeys()) {
-                data.blueCmdVotes.put(UUID.fromString(key), cv.getBoolean(key));
-            }
-        }
-
-        data.redCmdVoteActive = tag.getBoolean("RedCmdActive");
-        data.redCmdCandidateName = tag.getString("RedCmdCandName");
-        data.redCmdCandidateId = tag.getInt("RedCmdCandId");
-        data.redCmdVoteTimer = tag.getInt("RedCmdTimer");
-        if (tag.contains("RedCmdVotesMap")) {
-            CompoundTag cv = tag.getCompound("RedCmdVotesMap");
-
-            for (String key : cv.getAllKeys()) {
-                data.redCmdVotes.put(UUID.fromString(key), cv.getBoolean(key));
-            }
-        }
-
-        if (tag.contains("TacticalMarkers")) {
-            ListTag list = tag.getList("TacticalMarkers", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.activeMarkers.add(WarfareWorldData.MapMarker.load(list.getCompound(i)));
-            }
-        }
-
-        if (tag.contains("PwpMarkers")) {
-            ListTag list = tag.getList("PwpMarkers", 10);
-            for (int i = 0; i < list.size(); i++) data.savedMarkers.add(MarkerSnapshot.load(list.getCompound(i)));
-        }
-        if (tag.contains("PwpPaths")) {
-            ListTag list = tag.getList("PwpPaths", 10);
-            for (int i = 0; i < list.size(); i++) data.savedPaths.add(PathSnapshot.load(list.getCompound(i)));
-        }
-
-        if (tag.contains("TriggerBlocks")) {
-            for (Tag t : tag.getList("TriggerBlocks", 4)) {
-                data.triggerBlocks.add(BlockPos.of(((LongTag) t).getAsLong()));
-            }
-        }
-
-        if (tag.contains("MainZones")) {
-            ListTag list = tag.getList("MainZones", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.mainZones.add(WarfareWorldData.MainProtectionZone.load(list.getCompound(i)));
-            }
-        }
-
-        if (tag.contains("MarkedVehicles")) {
-            ListTag list = tag.getList("MarkedVehicles", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.markedVehicles.add(WarfareWorldData.VehicleRecord.load(list.getCompound(i)));
-            }
-        }
-
-        if (tag.contains("BlueRallies")) {
-            for (Tag t : tag.getList("BlueRallies", 4)) {
-                data.blueRallies.add(BlockPos.of(((LongTag) t).getAsLong()));
-            }
-        }
-
-        if (tag.contains("RedRallies")) {
-            for (Tag t : tag.getList("RedRallies", 4)) {
-                data.redRallies.add(BlockPos.of(((LongTag) t).getAsLong()));
-            }
-        }
-
-        if (tag.contains("HubsData")) {
-            ListTag list = tag.getList("HubsData", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.hubs.add(WarfareWorldData.HubInfo.load(list.getCompound(i)));
-            }
-        }
-
-        if (tag.contains("VehicleStations")) {
-            ListTag list = tag.getList("VehicleStations", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.vehicleStations.add(WarfareWorldData.VehicleStationInfo.load(list.getCompound(i)));
-            }
-        } else if (tag.contains("MainSupplies")) {
-            // Миграция старых сохранений
-            ListTag list = tag.getList("MainSupplies", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.vehicleStations.add(WarfareWorldData.VehicleStationInfo.load(list.getCompound(i)));
-            }
-        }
-
-        if (tag.contains("BlueSpawnsMap")) {
-            CompoundTag map = tag.getCompound("BlueSpawnsMap");
-
-            for (String key : map.getAllKeys()) {
-                data.blueSpawns.put(key, BlockPos.of(map.getLong(key)));
-            }
-        }
-
-        if (tag.contains("RedSpawnsMap")) {
-            CompoundTag map = tag.getCompound("RedSpawnsMap");
-
-            for (String key : map.getAllKeys()) {
-                data.redSpawns.put(key, BlockPos.of(map.getLong(key)));
-            }
-        }
-
-        if (tag.contains("NeutralSpawnsMap")) {
-            CompoundTag map = tag.getCompound("NeutralSpawnsMap");
-
-            for (String key : map.getAllKeys()) {
-                data.neutralSpawns.put(key, BlockPos.of(map.getLong(key)));
-            }
-        }
-
-        if (tag.contains("CapturePoints")) {
-            ListTag list = tag.getList("CapturePoints", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.capturePoints.add(WarfareWorldData.CapturePoint.load(list.getCompound(i)));
-            }
-        }
-
-        if (tag.contains("Squads")) {
-            ListTag list = tag.getList("Squads", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                data.squads.add(WarfareWorldData.Squad.load(list.getCompound(i)));
-            }
-        }
-
+        data.match.load(tag);
+        data.squadRegistry.load(tag);
+        data.structures.load(tag);
+        data.markers.load(tag);
+        data.vehicles.load(tag);
         if (tag.contains("BlueKits")) {
             CompoundTag bk = tag.getCompound("BlueKits");
 
@@ -815,33 +420,6 @@ public class WarfareWorldData extends SavedData {
 
             for (String key : rk.getAllKeys()) {
                 data.redKits.put(key, WarfareWorldData.KitInfo.load(rk.getCompound(key)));
-            }
-        }
-
-        if (tag.contains("BlueArtReq")) {
-            CompoundTag req = tag.getCompound("BlueArtReq");
-            data.blueArtRequest =
-                    new WarfareWorldData.ArtStrikeRequest(req.getString("Name"), BlockPos.of(req.getLong("Pos")));
-            data.blueArtRequest.timer = req.getInt("Timer");
-        }
-
-        if (tag.contains("RedArtReq")) {
-            CompoundTag req = tag.getCompound("RedArtReq");
-            data.redArtRequest =
-                    new WarfareWorldData.ArtStrikeRequest(req.getString("Name"), BlockPos.of(req.getLong("Pos")));
-            data.redArtRequest.timer = req.getInt("Timer");
-        }
-
-        if (tag.contains("ActiveStrikesList")) {
-            ListTag list = tag.getList("ActiveStrikesList", 10);
-
-            for (int i = 0; i < list.size(); i++) {
-                CompoundTag sTag = list.getCompound(i);
-                WarfareWorldData.ActiveStrike s =
-                        new WarfareWorldData.ActiveStrike(BlockPos.of(sTag.getLong("Pos")), sTag.getString("Team"));
-                s.stage = sTag.getInt("Stage");
-                s.ticksLeft = sTag.getInt("Ticks");
-                data.activeStrikes.add(s);
             }
         }
 
