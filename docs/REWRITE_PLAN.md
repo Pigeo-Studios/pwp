@@ -137,12 +137,37 @@
 - Рефлексия core-client → pwp-lobby (`Class.forName` в Vote*/JoinMatch*-пакетах) — заменить на интерфейс в pwp-api (этап 2 / цикл сессий).
 - В core-service часть пустых catch была ожидаемым фолбэком (version.txt, git describe) — теперь пишут warn при старте; при переписывании сервиса заменить на явные проверки.
 
-### Этап 2. Ядро данных
-- Capability `PlayerWarfareData` вместо всех `WARFARE_*` в `persistentData` (с миграцией старых ключей при логине).
-- `WarfareWorldData` → `MatchState`, `SquadRegistry`, `StructureRegistry`, `MarkerRegistry`, `VehicleRegistry` (NBT-формат совместим, миграция).
-- `GameClock` — единственный источник времени (tick vs мировое время).
-- Сетевой слой v2: один пакет = одно действие, record-DTO, валидация на сервере. Протокол поднимается до `2` (клиенты обновляются лаунчером разом).
-- Юнит-тесты на чистую логику (тикеты, захват, лимиты китов, кулдауны).
+### Этап 2. Ядро данных — ✅ сделан (ветка `rewrite/stage-2` от `rewrite/stage-1`)
+- [x] Capability `PlayerWarfareData` (`pwpwarfare:player_data`) вместо ключей `WARFARE_*` в persistentData игрока. Единая точка — `WarfareData.of(entity)`: игрок → capability, прочие сущности (техника, дроны) → persistentData как раньше. Реестр всех 61 ключа с типом и значением по умолчанию — `data/state/WarfareKeys` (+ динамический `driveRequestCooldown(id)`); строковые `"WARFARE_*"` вне него запрещены. Имена ключей в NBT прежние.
+- [x] Миграция: при первом обращении к данным игрока и при входе (`PlayerLoggedInEvent`, HIGHEST) все `WARFARE_*` из persistentData переезжают в capability и удаляются оттуда (`WarfareMigration`, значение в capability не перетирается). Клон после смерти копирует тот же набор ключей, что и раньше (отряд, лидер, киты, кулдауны ресапплая/респавна) — `reviveCaps/invalidateCaps`; проверено по байткоду Forge: `restoreFrom` копирует только `PlayerPersisted`, т.е. поведение совпадает.
+- [x] `WarfareWorldData` → `MatchState`, `SquadRegistry`, `StructureRegistry`, `MarkerRegistry`, `VehicleRegistry` (`world/`). Каждый реестр владеет полями и сам пишет/читает свои ключи в КОРНЕ тега — формат прежний, старые миры грузятся без миграции (включая `MainSupplies` → `VehicleStations`). Обращения `data.X` → `data.<реестр>.X`. Киты фракций (`blueKits/redKits`) пока в `WarfareWorldData` — переедут в `KitService` (этап 3).
+- [x] `GameClock` (pwp-api) — единственный источник времени на сервере: `serverTicks` (сбрасывается при рестарте — только для состояния в памяти) и `worldTicks` (level.dat — для всего сохраняемого). Все серверные `getTickCount()/getGameTime()` в pwp-warfare переведены без смены часов (кулдаун дронов — мировое время, канал деплоя — серверный тик). `Cooldown` — чистая логика «до» (перезапись, а не прибавление).
+- [x] Сеть v2 (`pwp-api/net`): `Net.C2S/S2C` (record-DTO, `validate()` до логики, обработка только живого отправителя, исключения логируются), `Net.Registrar` (новые — в конец), `Validate`, `Payloads` (строки до 1 МБ вместо `writeUtf` 32767). Протоколы: `pwpwarfare:main`=3, `pwp_core_client:network`=3.
+  - Отряды: `PacketSquadAction` (12 действий по номеру) → `squad/SquadPackets.*` (по пакету на действие) + `squad/SquadActions` (метод на действие, логика без изменений).
+  - Админ-действия: `PacketAction(action, json)` → `AdminAction.SaveSkin/DeleteSkin/DeleteFactionVehicle` (типизированные поля, op 2+ на сервере).
+- [x] Перенесено из этапа 1: две системы запросов данных → одна (`core-client network/data`: `DataRequest`/`DataResponse` + серверный реестр `DataRequests`, warfare регистрирует `factionKits`, клиентский `ClientDataResponses` раскладывает ответы в кэши core-client и подписчиков warfare); лимит 32767 снят (`Payloads`); рефлексия core-client → lobby заменена интерфейсом `pwp-api/lobby/LobbyActions` (keep-правила сняты); мёртвые `VoteMap/VoteMode/VoteFaction/JoinMatchPacket` удалены (GUI голосует командами).
+- [x] Чистые правила + тесты: `match/CaptureLogic` (захват/нейтрализация за тик, тикеты AAS/Invasion в прежнем порядке побочных эффектов), `match/KitLimits` (команда/отряд/мин. отряд/3 FIRE_SUPPORT — общие для меню и спавна).
+- [x] Юнит-тесты: pwp-api 20 (Parse, CoreApi data, RequestGuard, Cooldown, Validate/Payloads), pwp-warfare 22 (миграция и формат ключей, формат реестров, захват, лимиты китов), pwp-core-client — UI-кит (анимации, геометрия радиалки/скролла/адаптива).
+- [x] UI-кит 6.1 (`pwp-core-client/ui`): `UIWidget`, `UILayer` (порядок событий, контекстное меню/модалка/тултип поверх), `UIPanel`, `UIButton` (стили PWPButton), `UIIconButton`, `UITabs`, `UIScrollList`, `UITooltip`, `UIRadialMenu` (одно меню + `UIAction` от провайдера), `UIContextMenu`, `UIModal`, `UIProgressBar`, `UIToast`; `UIAnim` (easing, реальное время), `UIMath` (чистая геометрия), `UIDraw`. Цвета — только `PWPTheme` (добавлены `Styles.Radial`, `Styles.Modal`). Существующие экраны не переводились.
+
+**Доработки этапа 1, сделанные в начале этапа 2 (ветка `rewrite/stage-1`):**
+- Колбэки HTTP: `ServerThread.thenForPlayer` — игрок берётся заново по UUID, офлайн — колбэк не вызывается (экип/снятие скина, загрузка косметики, запросы данных, админ-действия, редактор/сохранение китов и техники, мут голоса).
+- Антиспам `RequestGuard`: кулдаун + один запрос в полёте на игрока/тип.
+- `FactionDataLoader`: киты/техника фракций грузятся с повтором раз в 10 с; деплой до загрузки китов откладывается («Загрузка китов…») и выполняется автоматически.
+- Ключ API читается только на выделенном сервере (раньше статик-поле `CoreServerMod` читало `PWP_API_KEY`/`pwpcore.txt` и на клиенте). ProGuard: keep полей `MapConfig` (лобби) и `MatchConfig` (матч) — Gson по именам полей не был защищён.
+
+**Найдено на этапе 2, перенесено дальше:**
+- Остальные многодейственные пакеты (`PacketDownedAction`, `PacketRadioAction`, `PacketVoteAction`, строковые типы маркеров) и все прочие пакеты pwpwarfare (~60) ещё на `registerMessage` со старыми классами — переводить на `Net.C2S/S2C` вместе с переносом их фич (этапы 3–5).
+- Два клиентских кэша одних и тех же данных (`coreclient.ClientResponseCache` и `warfare.ClientData`) — транспорт уже один; кэши свести при переводе экранов на UI-кит (этап 6).
+- `GameLogicEvents`: рефлексия `getMethod("getHealth"/"getLastDamageSource")` на сущностях техники SBW — заменить адаптером `compat/` (этап 7).
+- Клиентский код ещё читает `level.getGameTime()` напрямую для анимаций (HUD/оверлеи) — допустимо (клиентское время отрисовки), правило GameClock — для серверной логики.
+- `WarfareWorldData` всё ещё держит киты фракций и методы `loadKitsFromApi`/`parseConfigVehicleSpawners` — этап 3 (`KitService`, `VehicleService`).
+
+**Изменения поведения этапа 2 (проверить в игре):**
+- Деплой до загрузки китов не теряется: сообщение «Загрузка китов…», спавн выполнится сам.
+- Повторные быстрые клики (экип скина, сохранение кита/техники, запросы данных) игнорируются/показывают «Подождите…».
+- Ответы каталогов (скины/техника/киты) больше не упираются в 32767 символов.
+- Старые клиенты не подключатся к новому серверу (версии каналов подняты) — обновление через лаунчер.
 
 ### Этап 3. Матч, отряды, киты, деплой
 - `GameLogicEvents` → `match/` (тикеты, захват, AAS/Invasion, победа), `squad/`, `kit/`, `deploy/`.
