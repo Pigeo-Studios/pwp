@@ -44,7 +44,7 @@
 - [ ] Киты из API (19 ролей, 6 фракций, `__ALT__PRIMARY` слоты 41–42, категории, лимит 3 FIRE_SUPPORT на отряд, лимиты ролей)
 - [ ] `KitUtil.getEffectiveKit` (Pending ?: Current), `syncMyKit`, выбор/применение кита, пополнение
 - [ ] Редакторы китов: `KitEditorScreen/Menu`, `FactionKitListScreen`, `PacketSaveFactionKit`, `PacketPasteKit/Team`, `kit_setup`/`faction_kit_setup`
-- [ ] Скины китов (`KitSkinSelectScreen`, `slotSkins`)
+- [ ] Скины китов (`KitSkinSelectScreen`, `slotSkins`). Косметика (этап 1): экипировка `PacketCosmeticEquip` → `CosmeticService` (владение, сервер собирает предмет из `modelPath`), загрузка при входе `CosmeticService.loadForPlayer`, ответ `PacketCosmeticEquipResult` с профилем; один скин на слот (`setEquipmentSingle`), как ключ `(uuid, slot_type, role)` в БД
 
 ### 1.3 Деплой / респавн
 - [ ] `DeployScreen` (TopBar, RoleGrid, LoadoutPanel, LoadoutEditor, SpawnPanel, PortraitRenderer, TaczHelper)
@@ -86,7 +86,7 @@
 - [ ] `WarfareOverlay` (тикеты, точки, компас, ники, отряд), `NotificationFeed`, `FeedbackMessageBlock` (+ `GuiOverlayMessageMixin`), скрытие SBW HUD в зоне
 - [ ] Лобби (pwp-core-client): MainMenu, Lobby, Selection, Loading, Stats, вкладки Play/Leader/Vote, `LobbyStatePacket`
 - [ ] Выбор команды/фракции (`TeamSelectionScreen`, `FactionSelectScreen`, `KitTeamSelectScreen`), `WarfareConfigScreen`
-- [ ] Голос: `WarfareVoicechatPlugin`, squad/command PTT, индикаторы голоса, voicemute
+- [ ] Голос: `WarfareVoicechatPlugin`, squad/command PTT, индикаторы голоса, voicemute (этап 1: проверка мута — неблокирующий кэш 5 с с фоновым обновлением; команды мута — асинхронно)
 - [ ] Клавиши: drop_supply, open_squad_menu, show_map, show_nicknames, place_ping, squad_ptt, command_ptt
 
 ### 1.10 Модели / анимации / ассеты
@@ -111,13 +111,31 @@
 
 ## 3. Этапы (по порядку, каждый — рабочий билд)
 
-### Этап 1. Фундамент и безопасность
-- Сборка в облаке/CI (сеть до Forge-мавенов + прод-жарники SBW/TACZ/pointblank/UFPV), `gradlew build` зелёный.
-- Spotless-форматирование всего кода + переименование `varN` (отдельный коммит, без логики).
-- Пустые `catch` → лог; `System.err` → SLF4J.
-- Безопасность: серверная проверка владения скином, права через permission/роль вместо креатива, убрать глобальный trust-all.
-- Один асинхронный HTTP-клиент (`java.net.http.HttpClient` + `CompletableFuture` → `server.execute`). Удалить `CoreAPI`, `PacketApiAction`.
-- Новый модуль `pwp-api` (общие DTO/константы/пакетный каркас); core-client перестаёт зависеть от core-server.
+### Этап 1. Фундамент и безопасность — ✅ сделан (ветка `rewrite/stage-1`)
+- [x] Сборка в облаке/CI: `.github/workflows/build.yml` (windows-latest, JDK 17, прод-жарники sparse-checkout из Pwpfiles, секрет `PWPFILES_TOKEN`). Локально `gradlew build -x test` зелёный.
+- [x] Spotless (palantir-java-format) + переименование `varN` — отдельный коммит; `spotlessCheck` входит в `build`.
+- [x] Пустые `catch` → лог (104 шт., моды + core-service; в покадровом коде — `LogOnce`); разбор ввода — `Parse.*` без исключений; `System.err/out` → SLF4J.
+- [x] Безопасность: владение скином проверяет сервер (`CosmeticService`), предмет скина собирает сервер (`SkinCatalog`); права редакторов/отладки — `PwpPermissions.isAdmin` (op 2+); глобальный trust-all убран.
+- [x] Один асинхронный HTTP-клиент `CoreApi` (`java.net.http` + `CompletableFuture` → `ServerThread.thenOnServer`). Удалены `CoreServerApi`, `CoreAPI`, `PacketApiAction`, `PacketSyncCosmeticEquip`, мёртвый `PlayerPermissions`.
+- [x] Модуль `pwp-api` (CoreApi, Heartbeat, MatchPolicy, ServerThread, PwpPermissions, Parse, LogOnce, Urls); core-client не зависит от core-server.
+- [x] Экранирование URL (`Urls.enc` для пути и query — `getLeaderboard orderBy` и др.).
+- [x] Исправлены «кракозябры» (UTF-8, прочитанный как cp1251) в 35 файлах — видимые игроку строки.
+- [x] Канал `pwpwarfare` объявлялся с литералом `"1"` мимо `PROTOCOL_VERSION` — исправлено, версия 2. `pwp_cosmetics` — 2.
+- [x] Юнит-тесты pwp-api (8 шт.).
+
+**Изменения поведения этапа 1 (проверить в игре):**
+- Обычный игрок не может надеть некупленный скин (раньше меню выдавало любой скин бесплатно). Админ (op 2+) — может: сервер выдаёт предмет с источником `admin`.
+- Экраны скинов/техники (`SkinInventoryScreen`, `SkinEditor/SkinList`, `FactionVehicleList`) раньше ходили в core-service напрямую с клиента на `localhost:8080` — у удалённых игроков не работали. Теперь всё через сервер.
+- Редакторы китов/техники/скинов, спавнер техники, отладочные пакеты, вставка китов — только op 2+ (креатив без op больше не даёт доступа).
+- Киты/техника фракций грузятся асинхронно после применения map_config (в фазе ожидания 300 с), затем рассылается синхронизация.
+- Повторный вход больше не дублирует экипировку косметики (`CosmeticManager` очищается перед загрузкой).
+
+**Найдено на этапе 1, перенесено в следующие этапы:**
+- `MatchStatsTracker.scheduleServerShutdown`: `Thread.sleep(2000)` на главном потоке перед `server.halt` и статистика без ретрая — блок «Цикл сессий».
+- `PacketDataResponse`/`PacketSendData` пишут JSON в `writeUtf` (лимит 32767): большой каталог скинов/техники может не влезть — этап 2 (сетевой слой v2, DTO вместо сырого JSON).
+- Две параллельные системы запросов данных GUI: `coreclient.PacketDataRequest/Response` и `warfare.PacketRequestData/PacketSendData` (+ `ClientResponseCache` и `ClientData`) — свести в одну на этапе 2.
+- Рефлексия core-client → pwp-lobby (`Class.forName` в Vote*/JoinMatch*-пакетах) — заменить на интерфейс в pwp-api (этап 2 / цикл сессий).
+- В core-service часть пустых catch была ожидаемым фолбэком (version.txt, git describe) — теперь пишут warn при старте; при переписывании сервиса заменить на явные проверки.
 
 ### Этап 2. Ядро данных
 - Capability `PlayerWarfareData` вместо всех `WARFARE_*` в `persistentData` (с миграцией старых ключей при логине).
