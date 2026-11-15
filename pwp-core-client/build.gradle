@@ -115,18 +115,12 @@ repositories {
     mavenCentral()
 }
 
+sourceSets.main.java.srcDir '../pwp-logic/src/coreclient/java' // чистая логика из pwp-logic (тесты — там)
+
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
     implementation project(':pwp-api')
-
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     implementation 'com.google.code.gson:gson:2.11.0'
     implementation 'org.slf4j:slf4j-api:2.0.16'
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-}
-
-// Юнит-тесты чистой логики UI-кита (без запуска Minecraft)
-test {
-    useJUnitPlatform()
 }

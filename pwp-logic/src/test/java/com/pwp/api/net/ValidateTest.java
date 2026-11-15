@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.FriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 
 class ValidateTest {
@@ -34,13 +32,5 @@ class ValidateTest {
         assertNull(Validate.oneOf("t", "BLUE", "BLUE", "RED"));
         assertNotNull(Validate.oneOf("t", "GREEN", "BLUE", "RED"));
         assertNotNull(Validate.oneOf("t", null, "BLUE"));
-    }
-
-    @Test
-    void largePayloadExceedsOldUtfLimit() {
-        String big = "{\"data\":\"" + "я".repeat(40_000) + "\"}"; // > 32767 символов и > 64 КБ байт
-        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
-        Payloads.writeLarge(buf, big);
-        assertEquals(big, Payloads.readLarge(buf));
     }
 }

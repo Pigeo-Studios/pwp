@@ -32,6 +32,7 @@ minecraft {
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.main.java.srcDir '../pwp-logic/src/api/java' // чистая логика из pwp-logic (тесты — там)
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'

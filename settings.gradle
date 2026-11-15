@@ -7,6 +7,7 @@ pluginManagement {
 
 rootProject.name = 'pwp'
 
+include 'pwp-logic'
 include 'pwp-api'
 include 'pwp-core-client'
 include 'pwp-core-server'

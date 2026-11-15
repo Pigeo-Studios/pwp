@@ -6,19 +6,75 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.pigeostudios.pwp.warfare.match.CaptureLogic.Event;
 import com.pigeostudios.pwp.warfare.match.CaptureLogic.Tickets;
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData.CapturePoint;
-import net.minecraft.world.phys.AABB;
 import org.junit.jupiter.api.Test;
 
 class CaptureLogicTest {
-    /** deduct=30, penalty=20, gainNeut=5, gainCap=10. */
-    private static CapturePoint point() {
-        return new CapturePoint("A", new AABB(0, 0, 0, 1, 1, 1), 1, 1, 1, 20, 30, "CUBE", 0, 5, 10);
+    /** Точка для тестов (в игре — WarfareWorldData.CapturePoint). */
+    static final class P implements CaptureLogic.Point {
+        String owner = "NEUTRAL";
+        String capturingTeam = "NONE";
+        float progress;
+        final int penalty;
+        final int deduct;
+        final int gainNeut;
+        final int gainCap;
+
+        P(int penalty, int deduct, int gainNeut, int gainCap) {
+            this.penalty = penalty;
+            this.deduct = deduct;
+            this.gainNeut = gainNeut;
+            this.gainCap = gainCap;
+        }
+
+        public String owner() {
+            return owner;
+        }
+
+        public void owner(String o) {
+            owner = o;
+        }
+
+        public String capturingTeam() {
+            return capturingTeam;
+        }
+
+        public void capturingTeam(String t) {
+            capturingTeam = t;
+        }
+
+        public float progress() {
+            return progress;
+        }
+
+        public void progress(float v) {
+            progress = v;
+        }
+
+        public int captureDeduction() {
+            return deduct;
+        }
+
+        public int ticketPenalty() {
+            return penalty;
+        }
+
+        public int ticketGainNeutralize() {
+            return gainNeut;
+        }
+
+        public int ticketGainCapture() {
+            return gainCap;
+        }
+    }
+
+    /** penalty=20, deduct=30, gainNeut=5, gainCap=10. */
+    private static P point() {
+        return new P(20, 30, 5, 10);
     }
 
     @Test
     void neutralPointIsCapturedAfterEnoughTicks() {
-        CapturePoint p = point();
+        P p = point();
         assertEquals(Event.NONE, CaptureLogic.step(p, "BLUE", 0.5F));
         assertEquals("BLUE", p.capturingTeam);
         assertEquals(Event.CAPTURED, CaptureLogic.step(p, "BLUE", 0.5F));
@@ -28,7 +84,7 @@ class CaptureLogicTest {
 
     @Test
     void enemyProgressOnNeutralIsDrainedFirst() {
-        CapturePoint p = point();
+        P p = point();
         CaptureLogic.step(p, "RED", 0.3F);
         assertEquals(Event.NONE, CaptureLogic.step(p, "BLUE", 0.2F));
         assertEquals("RED", p.capturingTeam, "пока прогресс красных не обнулён");
@@ -39,7 +95,7 @@ class CaptureLogicTest {
 
     @Test
     void ownedPointIsNeutralizedButOwnerResetIsDeferred() {
-        CapturePoint p = point();
+        P p = point();
         p.owner = "RED";
         p.progress = 0.4F;
         assertEquals(Event.NONE, CaptureLogic.step(p, "BLUE", 0.2F));
@@ -52,7 +108,7 @@ class CaptureLogicTest {
 
     @Test
     void ownerReinforcesUpToFull() {
-        CapturePoint p = point();
+        P p = point();
         p.owner = "BLUE";
         p.progress = 0.9F;
         assertEquals(Event.NONE, CaptureLogic.step(p, "BLUE", 0.5F));
@@ -61,7 +117,7 @@ class CaptureLogicTest {
 
     @Test
     void ticketsAas() {
-        CapturePoint p = point();
+        P p = point();
         assertEquals(new Tickets(0, -30), CaptureLogic.onCapturedPrimary(p, "BLUE", false, 0));
         assertTrue(CaptureLogic.checkGameOverAfterCapture(p, false));
         assertEquals(new Tickets(10, 0), CaptureLogic.onCapturedGain(p, "BLUE"));
@@ -72,7 +128,7 @@ class CaptureLogicTest {
 
     @Test
     void ticketsInvasion() {
-        CapturePoint p = point();
+        P p = point();
         assertEquals(new Tickets(0, 100), CaptureLogic.onCapturedPrimary(p, "RED", true, 0), "бонус по умолчанию 100");
         assertEquals(new Tickets(250, 0), CaptureLogic.onCapturedPrimary(p, "BLUE", true, 250));
         p.owner = "BLUE";
@@ -81,7 +137,7 @@ class CaptureLogicTest {
 
     @Test
     void noDeductionNoGameOverCheckInAas() {
-        CapturePoint p = new CapturePoint("B", new AABB(0, 0, 0, 1, 1, 1), 1, 1, 1, 0, 0, "CUBE", 0, 0, 0);
+        P p = new P(0, 0, 0, 0);
         assertEquals(Tickets.ZERO, CaptureLogic.onCapturedPrimary(p, "BLUE", false, 0));
         assertFalse(CaptureLogic.checkGameOverAfterCapture(p, false));
         assertEquals(Tickets.ZERO, CaptureLogic.onCapturedGain(p, "BLUE"));

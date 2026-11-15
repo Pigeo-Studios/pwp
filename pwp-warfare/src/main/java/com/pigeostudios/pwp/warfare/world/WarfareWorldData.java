@@ -459,7 +459,58 @@ public class WarfareWorldData extends SavedData {
         }
     }
 
-    public static class CapturePoint {
+    public static class CapturePoint implements com.pigeostudios.pwp.warfare.match.CaptureLogic.Point {
+        // --- CaptureLogic.Point: логика захвата через методы; поля прежние (NBT/сеть) ---
+        @Override
+        public String owner() {
+            return owner;
+        }
+
+        @Override
+        public void owner(String value) {
+            this.owner = value;
+        }
+
+        @Override
+        public String capturingTeam() {
+            return capturingTeam;
+        }
+
+        @Override
+        public void capturingTeam(String value) {
+            this.capturingTeam = value;
+        }
+
+        @Override
+        public float progress() {
+            return progress;
+        }
+
+        @Override
+        public void progress(float value) {
+            this.progress = value;
+        }
+
+        @Override
+        public int captureDeduction() {
+            return captureDeduction;
+        }
+
+        @Override
+        public int ticketPenalty() {
+            return ticketPenalty;
+        }
+
+        @Override
+        public int ticketGainNeutralize() {
+            return ticketGainNeutralize;
+        }
+
+        @Override
+        public int ticketGainCapture() {
+            return ticketGainCapture;
+        }
+
         public String name;
         public AABB area;
         public int bluePriority;

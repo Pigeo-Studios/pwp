@@ -45,6 +45,7 @@ minecraft {
 }
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.main.java.srcDir '../pwp-logic/src/warfare/java' // чистая логика из pwp-logic (тесты — там)
 
 mixin {
     add sourceSets.main, "pwpwarfare.refmap.json"
