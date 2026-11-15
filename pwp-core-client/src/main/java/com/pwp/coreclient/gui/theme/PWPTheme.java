@@ -388,6 +388,35 @@ public class PWPTheme {
             public static final int COLOR = Colors.BORDER;
         }
 
+        /** Радиальное меню UI-кита (ui.UIRadialMenu). */
+        public static class Radial {
+            public static final int OVERLAY = Colors.BACKGROUND_DIM;
+            public static final int SECTOR = 0xCC12151A;
+            public static final int SECTOR_HOVER = 0xE01A1E26;
+            public static final int SECTOR_DISABLED = 0x8812151A;
+            public static final int SECTOR_BORDER = Colors.BORDER_LIGHT;
+            public static final int SECTOR_ACTIVE_EDGE = Colors.ACCENT;
+            public static final int CENTER = Colors.SURFACE;
+            public static final int TEXT = Colors.TEXT_PRIMARY;
+            public static final int TEXT_DISABLED = Colors.TEXT_DIM;
+            /** Внутренний и внешний радиус в долях меньшей стороны экрана. */
+            public static final float INNER_RADIUS = 0.08F;
+
+            public static final float OUTER_RADIUS = 0.26F;
+        }
+
+        /** Модальное окно и контекстное меню UI-кита. */
+        public static class Modal {
+            public static final int OVERLAY = Colors.BACKGROUND_DIM;
+            public static final int BG = Colors.SURFACE;
+            public static final int HEADER_BG = Colors.SURFACE_TOP;
+            public static final int BORDER = Colors.BORDER_ACCENT;
+            public static final int TITLE = Colors.TEXT_ACCENT;
+            public static final int TEXT = Colors.TEXT_PRIMARY;
+            public static final int MENU_ITEM_HOVER = Colors.SURFACE_LIGHT;
+            public static final int MENU_SEPARATOR = Colors.BORDER;
+        }
+
         private Styles() {}
     }
 }
