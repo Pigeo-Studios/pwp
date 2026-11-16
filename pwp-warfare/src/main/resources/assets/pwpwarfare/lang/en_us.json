@@ -451,5 +451,17 @@
     "gui.pwpwarfare.skin_list.delete": "Delete",
     "gui.pwpwarfare.skin_list.edit": "Edit",
     "gui.pwpwarfare.team_select.too_many": "TOO MANY PLAYERS",
-    "gui.pwpwarfare.team_select.players": "%s players"
+    "gui.pwpwarfare.team_select.players": "%s players",
+    "gui.pwpwarfare.victory.winner": "%s — victory!",
+    "gui.pwpwarfare.victory.stats": "YOUR MATCH",
+    "gui.pwpwarfare.victory.stat.kills": "Kills",
+    "gui.pwpwarfare.victory.stat.deaths": "Deaths",
+    "gui.pwpwarfare.victory.stat.kd": "K/D",
+    "gui.pwpwarfare.victory.stat.revives": "Revives",
+    "gui.pwpwarfare.victory.stat.score": "Score",
+    "gui.pwpwarfare.victory.stat.time": "Time",
+    "gui.pwpwarfare.victory.stat.vehicle_kills": "Vehicle kills",
+    "gui.pwpwarfare.victory.stat.vehicles_destroyed": "Vehicles destroyed",
+    "gui.pwpwarfare.victory.stat.captures": "Captures",
+    "gui.pwpwarfare.victory.stat.headshots": "Headshots"
 }

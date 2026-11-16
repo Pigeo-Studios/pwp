@@ -451,5 +451,17 @@
     "gui.pwpwarfare.skin_list.delete": "Удалить",
     "gui.pwpwarfare.skin_list.edit": "Изменить",
     "gui.pwpwarfare.team_select.too_many": "СЛИШКОМ МНОГО ИГРОКОВ",
-    "gui.pwpwarfare.team_select.players": "Игроков: %s"
+    "gui.pwpwarfare.team_select.players": "Игроков: %s",
+    "gui.pwpwarfare.victory.winner": "%s — победа!",
+    "gui.pwpwarfare.victory.stats": "ВАШ МАТЧ",
+    "gui.pwpwarfare.victory.stat.kills": "Убийств",
+    "gui.pwpwarfare.victory.stat.deaths": "Смертей",
+    "gui.pwpwarfare.victory.stat.kd": "K/D",
+    "gui.pwpwarfare.victory.stat.revives": "Реанимаций",
+    "gui.pwpwarfare.victory.stat.score": "Счёт",
+    "gui.pwpwarfare.victory.stat.time": "Время",
+    "gui.pwpwarfare.victory.stat.vehicle_kills": "Убито техникой",
+    "gui.pwpwarfare.victory.stat.vehicles_destroyed": "Уничтожено техники",
+    "gui.pwpwarfare.victory.stat.captures": "Захватов",
+    "gui.pwpwarfare.victory.stat.headshots": "В голову"
 }

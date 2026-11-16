@@ -451,5 +451,17 @@
     "gui.pwpwarfare.skin_list.delete": "Видалити",
     "gui.pwpwarfare.skin_list.edit": "Змінити",
     "gui.pwpwarfare.team_select.too_many": "ЗАБАГАТО ГРАВЦІВ",
-    "gui.pwpwarfare.team_select.players": "Гравців: %s"
+    "gui.pwpwarfare.team_select.players": "Гравців: %s",
+    "gui.pwpwarfare.victory.winner": "%s — перемога!",
+    "gui.pwpwarfare.victory.stats": "ВАШ МАТЧ",
+    "gui.pwpwarfare.victory.stat.kills": "Вбивств",
+    "gui.pwpwarfare.victory.stat.deaths": "Смертей",
+    "gui.pwpwarfare.victory.stat.kd": "K/D",
+    "gui.pwpwarfare.victory.stat.revives": "Реанімацій",
+    "gui.pwpwarfare.victory.stat.score": "Рахунок",
+    "gui.pwpwarfare.victory.stat.time": "Час",
+    "gui.pwpwarfare.victory.stat.vehicle_kills": "Вбито технікою",
+    "gui.pwpwarfare.victory.stat.vehicles_destroyed": "Знищено техніки",
+    "gui.pwpwarfare.victory.stat.captures": "Захоплень",
+    "gui.pwpwarfare.victory.stat.headshots": "У голову"
 }

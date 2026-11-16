@@ -1,9 +1,11 @@
 package com.pigeostudios.pwp.warfare.client.gui.devtest;
 
+import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleEditorScreen;
 import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleListScreen;
 import com.pigeostudios.pwp.warfare.client.gui.FactionVehicleSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SkinEditorScreen;
+import com.pigeostudios.pwp.warfare.client.gui.VictoryScreen;
 import com.pigeostudios.pwp.warfare.client.gui.WarfareConfigScreen;
 import com.pwp.coreclient.gui.devtest.UiGallery;
 import java.util.ArrayList;
@@ -30,6 +32,29 @@ public final class WarfareAdminFixtures {
     }
 
     public static void registerAll() {
+        UiGallery.register(
+                "warfare.victory",
+                () -> new VictoryScreen(
+                        s("Украина"),
+                        "ukraine",
+                        s("Противник потерял все тикеты"),
+                        true,
+                        23,
+                        7,
+                        2,
+                        1,
+                        1,
+                        4,
+                        9,
+                        6,
+                        4820,
+                        1834));
+        UiGallery.register(
+                "warfare.victory.red",
+                () -> new VictoryScreen(
+                        s("Россия"), "russia", s("Все точки захвачены"), false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45));
+        UiGallery.register("warfare.downed", () -> DownedScreen.preview(90));
+        UiGallery.register("warfare.downed.critical", () -> DownedScreen.preview(12));
         UiGallery.register("warfare.admin.config", () -> new WarfareConfigScreen(null).asPreview());
         UiGallery.register("warfare.admin.skin_editor", () -> new SkinEditorScreen(null).previewItems(items()));
         UiGallery.register("warfare.admin.skin_editor.edit", () -> {

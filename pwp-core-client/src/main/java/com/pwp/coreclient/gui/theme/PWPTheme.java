@@ -317,6 +317,13 @@ public class PWPTheme {
         public static final int FORM_MAX_W_TWO = 620;
         public static final float FORM_LABEL_FRACTION = 0.45F;
         public static final int FORM_ACTION_MAX_W = 140;
+        /** Экран итогов матча (VictoryScreen) и нока (DownedScreen). */
+        public static final int VICTORY_PANEL_MAX_W = 420;
+
+        public static final int VICTORY_STAT_MIN_W = 80;
+        public static final int VICTORY_STAT_H = 24;
+        public static final int DOWNED_PANEL_W = 320;
+        public static final float DOWNED_VIGNETTE = 0.35F;
 
         private Spacing() {}
     }
