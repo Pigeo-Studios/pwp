@@ -50,6 +50,7 @@ public class ClientModEvents {
         if (com.pwp.coreclient.gui.devtest.UiGallery.enabled()) {
             com.pigeostudios.pwp.warfare.client.gui.devtest.WarfareUiFixtures.registerAll();
             com.pigeostudios.pwp.warfare.client.gui.devtest.WarfareAdminFixtures.registerAll();
+            com.pigeostudios.pwp.warfare.client.gui.devtest.KitSkinFixtures.registerAll();
         }
         event.enqueueWork(() -> {
             MenuScreens.register((MenuType) ModMenuTypes.VEHICLE_SPAWNER_MENU.get(), VehicleSpawnerScreen::new);

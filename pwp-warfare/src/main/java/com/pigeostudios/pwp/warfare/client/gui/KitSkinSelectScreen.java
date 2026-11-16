@@ -4,23 +4,49 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
-import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.screens.PWPRotatingBackground;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.network.data.DataRequest;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.UILayer;
+import com.pwp.coreclient.ui.UIMath;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.*;
+import java.util.function.IntFunction;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
+/**
+ * Разрешённые скины по слотам кита (открывается из {@link KitEditorScreen}). Слева — слоты с
+ * оружием (хотбар 0-8 и альтернативы 41-48), справа — для выбранного слота либо категория
+ * «любой скин категории» (маркер {@code __CAT__}), либо список конкретных скинов. «Готово»
+ * записывает выбор в {@code menu.slotSkins} и возвращает в редактор (сохранение — там).
+ */
 public class KitSkinSelectScreen extends Screen {
 
     private static final String[] CATEGORIES = {"PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
     private static final String CAT_PREFIX = "__CAT__";
 
-    private final KitEditorMenu menu;
+    /** Скин из каталога (тип данных {@code skins}). */
+    public record SkinOption(String skinId, String name, String weaponTag, String rarity) {}
+
+    private final Map<Integer, List<String>> menuSkins;
+    private final IntFunction<ItemStack> slotItem;
     private final Screen parentScreen;
     private final Map<Integer, List<String>> allowedSkins;
     private final Map<Integer, String> slotCategories;
@@ -28,19 +54,35 @@ public class KitSkinSelectScreen extends Screen {
     private List<SkinOption> allSkins = new ArrayList<>();
     private int selectedSlot = -1;
     private int skinScroll = 0;
+    private int slotScroll = 0;
     private boolean requested;
+    /** Тест-стенд UI: без запроса на сервер, «Готово» только закрывает. */
+    private boolean preview;
 
-    private static class SkinOption {
-        String skinId, name, weaponTag, rarity;
-    }
+    private final UILayer layer = new UILayer();
+    /** Кликабельные области последнего кадра (слоты, категории, скины). */
+    private final List<Map.Entry<Rect, Runnable>> hits = new ArrayList<>();
+
+    private Rect panel = Rect.of(0, 0, 0, 0);
+    private Rect content = panel;
+    private Rect slotsArea = panel;
+    private Rect detailArea = panel;
+    private Rect footer = panel;
+    private final long openedAt = System.currentTimeMillis();
 
     public KitSkinSelectScreen(KitEditorMenu menu, Screen parentScreen) {
-        super(Component.literal("Allowed Skins per Slot"));
-        this.menu = menu;
+        this(menu.slotSkins, menu.kitInventory::getItem, parentScreen);
+    }
+
+    private KitSkinSelectScreen(
+            Map<Integer, List<String>> menuSkins, IntFunction<ItemStack> slotItem, Screen parentScreen) {
+        super(Component.translatable("gui.pwpwarfare.kit_skin.title"));
+        this.menuSkins = menuSkins;
+        this.slotItem = slotItem;
         this.parentScreen = parentScreen;
         this.allowedSkins = new HashMap<>();
         this.slotCategories = new HashMap<>();
-        for (Map.Entry<Integer, List<String>> e : menu.slotSkins.entrySet()) {
+        for (Map.Entry<Integer, List<String>> e : menuSkins.entrySet()) {
             List<String> list = new ArrayList<>(e.getValue());
             if (!list.isEmpty() && list.get(0).startsWith(CAT_PREFIX)) {
                 slotCategories.put(e.getKey(), list.get(0).substring(CAT_PREFIX.length()));
@@ -52,11 +94,42 @@ public class KitSkinSelectScreen extends Screen {
         for (int i = 41; i < 49; i++) weaponSlots.add(i);
     }
 
+    /** Экран для тест-стенда: предметы слотов, текущие настройки и каталог скинов — фикстуры. */
+    public static KitSkinSelectScreen preview(
+            Map<Integer, ItemStack> items, Map<Integer, List<String>> slotSkins, List<SkinOption> skins) {
+        KitSkinSelectScreen s =
+                new KitSkinSelectScreen(new HashMap<>(slotSkins), i -> items.getOrDefault(i, ItemStack.EMPTY), null);
+        s.preview = true;
+        s.allSkins = new ArrayList<>(skins);
+        return s;
+    }
+
     @Override
     protected void init() {
-        addRenderableWidget(new PWPButton(
-                this.width - 100, 8, 80, 20, Component.literal("Done"), b -> saveAndClose(), PWPButton.Style.PRIMARY));
-        loadSkins();
+        layer.clear();
+        relayout();
+        UIButton done = new UIButton(tr("done"), this::saveAndClose)
+                .style(UIButton.Style.ACCENT)
+                .icon(UIIcon.CHECK);
+        int bw = Math.max(Spacing.BUTTON_WIDTH * 2 / 3, done.preferredWidth());
+        done.setBounds(
+                footer.right() - bw, footer.bottom() - Spacing.BUTTON_SMALL_HEIGHT, bw, Spacing.BUTTON_SMALL_HEIGHT);
+        layer.add(done);
+        if (!preview && !requested) loadSkins();
+    }
+
+    private void relayout() {
+        int m = Math.max(WTheme.MARGIN_MIN, Math.min(WTheme.MARGIN_MAX, Math.round(width * WTheme.MARGIN_FRACTION)));
+        int pw = Math.min(width - 2 * m, WTheme.SKIN_SELECT_MAX_W);
+        int ph = Math.min(height - 2 * m, WTheme.SKIN_SELECT_MAX_H);
+        panel = Rect.of((width - pw) / 2, (height - ph) / 2, pw, ph);
+        int headerH = WDraw.headerHeight(height);
+        Rect inner = panel.inset(Spacing.SM, headerH + Spacing.SM, Spacing.SM, Spacing.SM);
+        footer = inner.bottomStrip(Spacing.BUTTON_SMALL_HEIGHT);
+        content = inner.above(Spacing.BUTTON_SMALL_HEIGHT, Spacing.SM);
+        int lw = Math.round(content.w() * WTheme.SKIN_SLOTS_FRACTION);
+        slotsArea = content.left(lw);
+        detailArea = content.rightOf(lw, Spacing.MD);
     }
 
     private void loadSkins() {
@@ -75,40 +148,36 @@ public class KitSkinSelectScreen extends Screen {
             List<SkinOption> list = new ArrayList<>();
             for (JsonElement e : arr) {
                 JsonObject o = e.getAsJsonObject();
-                SkinOption s = new SkinOption();
-                s.skinId = o.get("skinId").getAsString();
-                s.name = o.has("name") ? o.get("name").getAsString() : s.skinId;
-                s.weaponTag = o.get("weaponTag").getAsString();
-                s.rarity = o.get("rarity").getAsString();
-                list.add(s);
+                String id = o.get("skinId").getAsString();
+                list.add(new SkinOption(
+                        id,
+                        o.has("name") ? o.get("name").getAsString() : id,
+                        o.get("weaponTag").getAsString(),
+                        o.get("rarity").getAsString()));
             }
             allSkins = list;
         }
     }
 
     private void saveAndClose() {
-        menu.slotSkins.clear();
+        menuSkins.clear();
         for (Map.Entry<Integer, String> e : slotCategories.entrySet()) {
-            menu.slotSkins.put(e.getKey(), Collections.singletonList(CAT_PREFIX + e.getValue()));
+            menuSkins.put(e.getKey(), Collections.singletonList(CAT_PREFIX + e.getValue()));
         }
         for (Map.Entry<Integer, List<String>> e : allowedSkins.entrySet()) {
-            menu.slotSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
+            menuSkins.put(e.getKey(), new ArrayList<>(e.getValue()));
         }
-        if (this.minecraft.player != null) {
-            this.minecraft.player.displayClientMessage(
-                    Component.literal("§aНастройки скинов сохранены! Нажмите 'Сохранить' в редакторе китов."), true);
+        if (!preview && this.minecraft.player != null) {
+            this.minecraft.player.displayClientMessage(tr("saved"), true);
         }
-        if (parentScreen != null) {
-            this.minecraft.setScreen(parentScreen);
-        } else {
-            this.minecraft.setScreen(null);
-        }
+        this.minecraft.setScreen(parentScreen);
     }
 
     private String getWeaponTagForSlot(int slot) {
-        ItemStack stack = menu.kitInventory.getItem(slot);
+        ItemStack stack = slotItem.apply(slot);
         if (stack.isEmpty()) return "any";
-        String id = ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
+        ResourceLocation key = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        String id = key != null ? key.toString() : "";
         if (id.contains("knife") || id.contains("bayonet") || id.contains("dagger") || id.contains("sword"))
             return "knife";
         if (id.contains("pistol") || id.contains("deagle") || id.contains("glock") || id.contains("revolver"))
@@ -123,222 +192,256 @@ public class KitSkinSelectScreen extends Screen {
         return "any";
     }
 
-    @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), "Allowed Skins per Slot", this.width / 2, 8, 0xFFC8CBCE);
-
-        int leftX = 8, leftY = 34;
-        gui.fill(leftX - 2, leftY - 2, leftX + 220, this.height - 10, 0xFF1E222A);
-        gui.fill(leftX, leftY, leftX + 220, this.height - 12, 0xCC0A0C0E);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), "Weapon Slots", leftX + 110, leftY + 2, 0xFFC8CBCE);
-
-        int sy = leftY + 16;
-        for (int i = 0; i < weaponSlots.size(); i++) {
-            int slot = weaponSlots.get(i);
-            int col = i % 2, row = i / 2;
-            int sx = leftX + 4 + col * 106, sry = sy + row * 28;
-            if (sry + 26 > this.height - 14) break;
-
-            boolean hover = mx >= sx && mx <= sx + 102 && my >= sry && my <= sry + 24;
-            boolean sel = selectedSlot == slot;
-            boolean hasCategory = slotCategories.containsKey(slot);
-            boolean hasSkins =
-                    allowedSkins.containsKey(slot) && !allowedSkins.get(slot).isEmpty();
-
-            int borderColor = sel ? 0xFFC8812A : hasCategory ? 0xFF3D7A40 : hasSkins ? 0xFF3D6FA5 : 0xFF1E222A;
-            gui.fill(sx, sry, sx + 102, sry + 24, sel ? 0xFF2A2F3A : hover ? 0x881A1E26 : 0x2212151A);
-            gui.renderOutline(sx, sry, 102, 24, borderColor);
-
-            ItemStack stack = menu.kitInventory.getItem(slot);
-            if (!stack.isEmpty()) gui.renderItem(stack, sx + 3, sry + 4);
-
-            String label = slot < 9 ? "S" + slot : "C" + (slot - 41);
-            gui.drawString(PWPTheme.Fonts.display(), label, sx + 21, sry + 7, 0xFF7A7D84, false);
-            if (hasCategory) {
-                gui.drawString(
-                        PWPTheme.Fonts.display(),
-                        "CAT:" + slotCategories.get(slot),
-                        sx + 38,
-                        sry + 7,
-                        0xFF3D7A40,
-                        false);
-            } else {
-                int count =
-                        allowedSkins.getOrDefault(slot, Collections.emptyList()).size();
-                if (count > 0)
-                    gui.drawString(PWPTheme.Fonts.display(), count + " skins", sx + 38, sry + 7, 0xFF3D6FA5, false);
-            }
-            if (sel) gui.drawString(PWPTheme.Fonts.display(), "\u25B6", sx + 90, sry + 7, 0xFFC8812A, false);
+    /** Скины, подходящие слоту (по тегу оружия или «any»), разрешённые — первыми. */
+    private List<SkinOption> matchingSkins(int slot, List<String> allowed) {
+        String tag = getWeaponTagForSlot(slot);
+        List<SkinOption> out = new ArrayList<>();
+        for (SkinOption so : allSkins) {
+            if (so.weaponTag().equals(tag) || so.weaponTag().equals("any")) out.add(so);
         }
-
-        int rightX = this.width - 240;
-        int rightY = 34;
-        int rightW = 230;
-        int rightH = this.height - 50;
-
-        if (selectedSlot >= 0) {
-            gui.fill(rightX - 2, rightY - 2, rightX + rightW + 2, rightY + rightH + 2, 0xFF1E222A);
-            gui.fill(rightX, rightY, rightX + rightW, rightY + rightH, 0xCC0A0C0E);
-
-            boolean isCategory = slotCategories.containsKey(selectedSlot);
-            String curCat = isCategory ? slotCategories.get(selectedSlot) : null;
-
-            int btnY = rightY + 4;
-            int btnW = (rightW - 8) / 5;
-            for (int i = 0; i < CATEGORIES.length; i++) {
-                int bx = rightX + 4 + i * (btnW + 1);
-                int color = CATEGORIES[i].equals(curCat) ? 0xFF3D7A40 : 0xFF1E222A;
-                gui.fill(bx, btnY, bx + btnW, btnY + 16, CATEGORIES[i].equals(curCat) ? 0xFF1A2E1A : 0x2212151A);
-                gui.renderOutline(bx, btnY, btnW, 16, color);
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(),
-                        CATEGORIES[i].substring(0, Math.min(4, CATEGORIES[i].length())),
-                        bx + btnW / 2,
-                        btnY + 3,
-                        color);
-            }
-
-            if (isCategory) {
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(),
-                        "Any " + curCat + " skin equipped by player",
-                        rightX + rightW / 2,
-                        btnY + 24,
-                        0xFF3D7A40);
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(),
-                        "will replace default item in this slot",
-                        rightX + rightW / 2,
-                        btnY + 36,
-                        0xFF3D7A40);
-            } else {
-                List<String> allowed = allowedSkins.computeIfAbsent(selectedSlot, k -> new ArrayList<>());
-                String tag = getWeaponTagForSlot(selectedSlot);
-                int totalMatching = 0;
-                for (SkinOption so : allSkins) {
-                    if (so.weaponTag.equals(tag) || so.weaponTag.equals("any")) totalMatching++;
-                }
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(),
-                        "Skins: " + allowed.size() + "/" + totalMatching,
-                        rightX + rightW / 2,
-                        btnY + 24,
-                        0xFFC8CBCE);
-
-                List<SkinOption> sortedSkins = new ArrayList<>(allSkins);
-                sortedSkins.sort((a, b) -> {
-                    boolean aA = allowed.contains(a.skinId);
-                    boolean bA = allowed.contains(b.skinId);
-                    if (aA != bA) return aA ? -1 : 1;
-                    return 0;
-                });
-                int skinY = btnY + 36;
-                for (int si = skinScroll; si < sortedSkins.size(); si++) {
-                    SkinOption so = sortedSkins.get(si);
-                    if (skinY + 18 > rightY + rightH - 4) break;
-                    if (!so.weaponTag.equals(tag) && !so.weaponTag.equals("any")) continue;
-
-                    boolean isAllowed = allowed.contains(so.skinId);
-                    boolean isHover = mx >= rightX + 2 && mx <= rightX + rightW - 2 && my >= skinY && my <= skinY + 16;
-
-                    gui.fill(
-                            rightX + 2,
-                            skinY,
-                            rightX + rightW - 2,
-                            skinY + 16,
-                            isAllowed ? 0xFF1A2E1A : isHover ? 0x881A1E26 : 0x2212151A);
-                    gui.renderOutline(rightX + 2, skinY, rightW - 4, 16, isAllowed ? 0xFF3D7A40 : 0xFF1E222A);
-
-                    String sn = so.name.length() > 20 ? so.name.substring(0, 19) + "." : so.name;
-                    gui.drawString(
-                            PWPTheme.Fonts.display(),
-                            sn,
-                            rightX + 20,
-                            skinY + 3,
-                            isAllowed ? 0xFF3D7A40 : 0xFFC8CBCE,
-                            false);
-                    gui.drawString(
-                            PWPTheme.Fonts.display(),
-                            isAllowed ? "\u2713" : "\u25CB",
-                            rightX + 6,
-                            skinY + 3,
-                            isAllowed ? 0xFF3D7A40 : 0xFF4A4D54,
-                            false);
-
-                    skinY += 18;
-                }
-                if (totalMatching == 0) {
-                    gui.drawCenteredString(
-                            PWPTheme.Fonts.display(), "No matching skins", rightX + rightW / 2, btnY + 60, 0xFF4A4D54);
-                }
-            }
-        } else {
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(), "Click a weapon slot", this.width / 2, this.height / 2, 0xFF4A4D54);
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(), "to configure skins", this.width / 2, this.height / 2 + 14, 0xFF4A4D54);
-        }
-
-        super.render(gui, mx, my, pt);
+        out.sort((a, b) -> Boolean.compare(allowed.contains(b.skinId()), allowed.contains(a.skinId())));
+        return out;
     }
+
+    private static Component tr(String key) {
+        return Component.translatable("gui.pwpwarfare.kit_skin." + key);
+    }
+
+    private static Component slotName(int slot) {
+        return slot < 9
+                ? Component.translatable("gui.pwpwarfare.kit_skin.slot", slot)
+                : Component.translatable("gui.pwpwarfare.kit_skin.alt_slot", slot - 41);
+    }
+
+    private static Component categoryName(String cat) {
+        return Component.translatable("gui.pwpwarfare.kit_skin.cat." + cat.toLowerCase(Locale.ROOT));
+    }
+
+    private static int rarityColor(String rarity) {
+        return switch (rarity == null ? "" : rarity.toUpperCase(Locale.ROOT)) {
+            case "UNCOMMON" -> WTheme.RARITY_UNCOMMON;
+            case "RARE" -> WTheme.RARITY_RARE;
+            case "EPIC" -> WTheme.RARITY_EPIC;
+            case "LEGENDARY" -> WTheme.RARITY_LEGENDARY;
+            case "MYTHIC" -> WTheme.RARITY_MYTHIC;
+            default -> WTheme.RARITY_COMMON;
+        };
+    }
+
+    // ================================================================ рисование
+
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        if (Minecraft.getInstance().level != null) UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
+        else PWPRotatingBackground.render(g, 0, 0, width, height);
+        float o = Math.max(
+                0.01F, UIMath.stagger(System.currentTimeMillis() - openedAt, 0, 0, 0, PWPTheme.Animations.ENTER));
+        hits.clear();
+        int configured = 0;
+        for (int s : weaponSlots) {
+            if (slotCategories.containsKey(s)
+                    || !allowedSkins.getOrDefault(s, List.of()).isEmpty()) configured++;
+        }
+        WDraw.panel(
+                g,
+                font,
+                panel,
+                WDraw.headerHeight(height),
+                WarfareIcon.EDIT,
+                getTitle(),
+                Component.translatable("gui.pwpwarfare.kit_skin.configured", configured, weaponSlots.size()),
+                o);
+
+        renderSlots(g, mx, my, o);
+        UIDraw.vline(
+                g,
+                slotsArea.right() + Spacing.MD / 2,
+                content.y(),
+                content.bottom(),
+                UIDraw.fade(PWPTheme.Styles.Glass.HEADER_DIVIDER, o));
+        renderDetail(g, mx, my, o);
+
+        UIDraw.hline(g, footer.x(), footer.right(), footer.y() - Spacing.XS, PWPTheme.Styles.Glass.HEADER_DIVIDER);
+        WDraw.text(g, font, tr("hint"), footer, Align.START, PWPTheme.Text.CAPTION, false, o);
+        super.render(g, mx, my, pt);
+        layer.render(g, mx, my, pt, width, height);
+    }
+
+    private void renderSlots(GuiGraphics g, int mx, int my, float o) {
+        int secH = font.lineHeight + Spacing.XS;
+        WDraw.section(g, font, slotsArea.top(secH), tr("slots"), PWPTheme.Text.ACCENT, o);
+        Rect list = slotsArea.below(secH, Spacing.XS);
+        int rowH = WTheme.SKIN_SLOT_ROW_H, gap = Spacing.XXS;
+        int cols = list.w() >= 2 * WTheme.SKIN_SLOT_MIN_W + gap ? 2 : 1;
+        int colW = (list.w() - (cols - 1) * gap) / cols;
+        int fitRows = Math.max(1, (list.h() + gap) / (rowH + gap));
+        int totalRows = (weaponSlots.size() + cols - 1) / cols;
+        slotScroll = Math.max(0, Math.min(slotScroll, totalRows - fitRows));
+        for (int i = slotScroll * cols; i < weaponSlots.size(); i++) {
+            int row = i / cols - slotScroll, col = i % cols;
+            if (row >= fitRows) break;
+            int slot = weaponSlots.get(i);
+            Rect r = Rect.of(list.x() + col * (colW + gap), list.y() + row * (rowH + gap), colW, rowH);
+            boolean sel = selectedSlot == slot;
+            WDraw.tile(g, r, r.contains(mx, my) ? 1F : 0F, sel ? 1F : 0F, 1F, o);
+            Rect icon = Rect.of(
+                    r.x() + Spacing.XS, r.y() + (rowH - WTheme.ITEM_SIZE) / 2, WTheme.ITEM_SIZE, WTheme.ITEM_SIZE);
+            ItemStack stack = slotItem.apply(slot);
+            if (!stack.isEmpty()) g.renderItem(stack, icon.x(), icon.y());
+            else WDraw.well(g, icon, o);
+            Rect text = r.inset(Spacing.XS + WTheme.ITEM_SIZE + Spacing.XS, 0, Spacing.XS, 0);
+            Component status = null;
+            int sc = PWPTheme.Text.MUTED;
+            if (slotCategories.containsKey(slot)) {
+                status = categoryName(slotCategories.get(slot));
+                sc = WTheme.STATUS_OK;
+            } else {
+                int count = allowedSkins.getOrDefault(slot, List.of()).size();
+                if (count > 0) {
+                    status = Component.translatable("gui.pwpwarfare.kit_skin.count", count);
+                    sc = Colors.INFO;
+                }
+            }
+            int sw = status != null ? WDraw.text(g, font, status, text, Align.END, sc, false, o) + Spacing.XS : 0;
+            WDraw.text(
+                    g,
+                    font,
+                    slotName(slot),
+                    text.withWidth(Math.max(0, text.w() - sw)),
+                    Align.START,
+                    sel ? PWPTheme.Text.HEADING : PWPTheme.Text.MUTED,
+                    false,
+                    o);
+            hits.add(Map.entry(r, () -> {
+                selectedSlot = (selectedSlot == slot) ? -1 : slot;
+                skinScroll = 0;
+            }));
+        }
+        if (totalRows > fitRows) WDraw.scrollbar(g, list, totalRows * (rowH + gap), slotScroll * (rowH + gap), o);
+    }
+
+    private void renderDetail(GuiGraphics g, int mx, int my, float o) {
+        if (selectedSlot < 0) {
+            WDraw.emptyState(g, font, detailArea, WarfareIcon.EDIT, tr("pick_title"), tr("pick_hint"), o);
+            return;
+        }
+        int secH = font.lineHeight + Spacing.XS;
+        WDraw.section(g, font, detailArea.top(secH), slotName(selectedSlot), PWPTheme.Text.ACCENT, o);
+        Rect rest = detailArea.below(secH, Spacing.XS);
+
+        // Категории: клик по выбранной — снять, по другой — назначить (конкретные скины сбрасываются)
+        String curCat = slotCategories.get(selectedSlot);
+        int catH = WTheme.SKIN_CAT_H, gap = Spacing.XXS;
+        int cw = (rest.w() - (CATEGORIES.length - 1) * gap) / CATEGORIES.length;
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            String cat = CATEGORIES[i];
+            Rect r = Rect.of(rest.x() + i * (cw + gap), rest.y(), cw, catH);
+            boolean on = cat.equals(curCat);
+            WDraw.tile(g, r, r.contains(mx, my) ? 1F : 0F, on ? 1F : 0F, 1F, o);
+            WDraw.text(
+                    g,
+                    font,
+                    categoryName(cat),
+                    r.inset(Spacing.XXS, 0),
+                    Align.CENTER,
+                    on ? WTheme.STATUS_OK : PWPTheme.Text.MUTED,
+                    false,
+                    o);
+            int slot = selectedSlot;
+            hits.add(Map.entry(r, () -> {
+                if (cat.equals(slotCategories.get(slot))) {
+                    slotCategories.remove(slot);
+                } else {
+                    slotCategories.put(slot, cat);
+                    allowedSkins.remove(slot);
+                }
+            }));
+        }
+        Rect body = rest.below(catH, Spacing.SM);
+
+        if (curCat != null) {
+            WDraw.paragraph(
+                    g,
+                    font,
+                    Component.translatable("gui.pwpwarfare.kit_skin.category_hint", categoryName(curCat)),
+                    body,
+                    WTheme.EMPTY_HINT_LINES,
+                    WTheme.STATUS_OK,
+                    o);
+            return;
+        }
+
+        List<String> allowed = allowedSkins.computeIfAbsent(selectedSlot, k -> new ArrayList<>());
+        List<SkinOption> skins = matchingSkins(selectedSlot, allowed);
+        Rect countRow = body.top(font.lineHeight + Spacing.XXS);
+        WDraw.text(
+                g,
+                font,
+                Component.translatable("gui.pwpwarfare.kit_skin.allowed", allowed.size(), skins.size()),
+                countRow,
+                Align.START,
+                PWPTheme.Text.BODY,
+                false,
+                o);
+        Rect list = body.below(countRow.h(), Spacing.XS);
+        if (skins.isEmpty()) {
+            boolean loading = requested && allSkins.isEmpty();
+            WDraw.emptyState(
+                    g,
+                    font,
+                    list,
+                    WarfareIcon.EDIT,
+                    tr(loading ? "loading" : "empty_title"),
+                    loading ? null : tr("empty_hint"),
+                    o);
+            return;
+        }
+        int rowH = WTheme.SKIN_ROW_H, rgap = Spacing.XXS;
+        int fit = Math.max(1, (list.h() + rgap) / (rowH + rgap));
+        skinScroll = Math.max(0, Math.min(skinScroll, skins.size() - fit));
+        for (int i = skinScroll; i < skins.size() && i - skinScroll < fit; i++) {
+            SkinOption so = skins.get(i);
+            Rect r = Rect.of(
+                    list.x(),
+                    list.y() + (i - skinScroll) * (rowH + rgap),
+                    list.w() - WTheme.SCROLLBAR_W - Spacing.XXS,
+                    rowH);
+            boolean on = allowed.contains(so.skinId());
+            WDraw.tile(g, r, r.contains(mx, my) ? 1F : 0F, on ? 1F : 0F, 1F, o);
+            int is = WTheme.ICON_ROW;
+            Rect box = Rect.of(r.x() + Spacing.XS, r.y() + (rowH - is) / 2, is, is);
+            WDraw.well(g, box, o);
+            if (on) UIDraw.icon(g, UIIcon.CHECK, box.x(), box.y(), is, UIDraw.fade(WTheme.STATUS_OK, o));
+            Rect text = r.inset(Spacing.XS + is + Spacing.XS, 0, Spacing.XS, 0);
+            int rc = rarityColor(so.rarity());
+            int rw = WDraw.text(g, font, Component.literal(so.rarity()), text, Align.END, rc, false, o);
+            WDraw.text(
+                    g,
+                    font,
+                    Component.literal(so.name()),
+                    text.withWidth(Math.max(0, text.w() - rw - Spacing.SM)),
+                    Align.START,
+                    on ? WTheme.STATUS_OK : PWPTheme.Text.BODY,
+                    false,
+                    o);
+            hits.add(Map.entry(r, () -> {
+                if (allowed.contains(so.skinId())) allowed.remove(so.skinId());
+                else allowed.add(so.skinId());
+            }));
+        }
+        WDraw.scrollbar(g, list, skins.size() * (rowH + rgap), skinScroll * (rowH + rgap), o);
+    }
+
+    // ================================================================ ввод
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        int leftX = 8, leftY = 34, sy = leftY + 16;
-        for (int i = 0; i < weaponSlots.size(); i++) {
-            int slot = weaponSlots.get(i);
-            int col = i % 2, row = i / 2;
-            int sx = leftX + 4 + col * 106, sry = sy + row * 28;
-            if (sry + 26 > this.height - 14) break;
-            if (mx >= sx && mx <= sx + 102 && my >= sry && my <= sry + 24) {
-                selectedSlot = (selectedSlot == slot) ? -1 : slot;
-                skinScroll = 0;
-                return true;
-            }
-        }
-
-        if (selectedSlot >= 0) {
-            int rightX = this.width - 240, rightY = 34, rightW = 230, rightH = this.height - 50;
-            int btnY = rightY + 4;
-            int btnW = (rightW - 8) / 5;
-
-            for (int i = 0; i < CATEGORIES.length; i++) {
-                int bx = rightX + 4 + i * (btnW + 1);
-                if (mx >= bx && mx <= bx + btnW && my >= btnY && my <= btnY + 16) {
-                    String cat = CATEGORIES[i];
-                    String current = slotCategories.get(selectedSlot);
-                    if (cat.equals(current)) {
-                        slotCategories.remove(selectedSlot);
-                    } else {
-                        slotCategories.put(selectedSlot, cat);
-                        allowedSkins.remove(selectedSlot);
-                    }
+        if (layer.mouseClicked(mx, my, btn)) return true;
+        if (btn == 0) {
+            for (Map.Entry<Rect, Runnable> h : hits) {
+                if (h.getKey().contains(mx, my)) {
+                    h.getValue().run();
                     return true;
-                }
-            }
-
-            if (!slotCategories.containsKey(selectedSlot)) {
-                List<String> allowed = allowedSkins.computeIfAbsent(selectedSlot, k -> new ArrayList<>());
-                String tag = getWeaponTagForSlot(selectedSlot);
-                List<SkinOption> sortedSkins = new ArrayList<>(allSkins);
-                sortedSkins.sort((a, b) -> {
-                    boolean aA = allowed.contains(a.skinId);
-                    boolean bA = allowed.contains(b.skinId);
-                    if (aA != bA) return aA ? -1 : 1;
-                    return 0;
-                });
-                int skinY = btnY + 36;
-                for (int si = skinScroll; si < sortedSkins.size(); si++) {
-                    SkinOption so = sortedSkins.get(si);
-                    if (skinY + 18 > rightY + rightH - 4) break;
-                    if (!so.weaponTag.equals(tag) && !so.weaponTag.equals("any")) continue;
-                    if (mx >= rightX + 2 && mx <= rightX + rightW - 2 && my >= skinY && my <= skinY + 16) {
-                        if (allowed.contains(so.skinId)) allowed.remove(so.skinId);
-                        else allowed.add(so.skinId);
-                        return true;
-                    }
-                    skinY += 18;
                 }
             }
         }
@@ -346,12 +449,29 @@ public class KitSkinSelectScreen extends Screen {
     }
 
     @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        layer.mouseReleased(mx, my, button);
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        if (selectedSlot >= 0 && mx >= this.width - 240) {
-            skinScroll = Math.max(0, Math.min(skinScroll - (int) delta * 3, allSkins.size() - 1));
+        int step = (int) Math.signum(delta);
+        if (selectedSlot >= 0 && detailArea.contains(mx, my)) {
+            skinScroll = Math.max(0, skinScroll - step * 3); // верхняя граница — при рисовании
+            return true;
+        }
+        if (slotsArea.contains(mx, my)) {
+            slotScroll = Math.max(0, slotScroll - step);
             return true;
         }
         return super.mouseScrolled(mx, my, delta);
+    }
+
+    @Override
+    public void onClose() {
+        // Esc = как раньше: вернуться в редактор без записи изменений
+        this.minecraft.setScreen(parentScreen);
     }
 
     @Override

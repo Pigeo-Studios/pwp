@@ -282,4 +282,18 @@ public final class WTheme {
     public static final int NUMBER_FIELD_W = 24;
     /** Кнопки «−/+» и поворота у числового поля спавнера. */
     public static final int STEP_BUTTON_W = 14;
+
+    // ------------------------------------------------------------ скины кита по слотам
+    public static final int SKIN_SELECT_MAX_W = 560;
+
+    public static final int SKIN_SELECT_MAX_H = 360;
+    /** Доля ширины под колонку слотов (остальное — категории и скины выбранного слота). */
+    public static final float SKIN_SLOTS_FRACTION = 0.42F;
+
+    public static final int SKIN_SLOT_ROW_H = 22;
+    /** Минимальная ширина плитки слота, при которой слоты идут в две колонки. */
+    public static final int SKIN_SLOT_MIN_W = 96;
+
+    public static final int SKIN_CAT_H = 16;
+    public static final int SKIN_ROW_H = 16;
 }
