@@ -20,6 +20,12 @@ public abstract class UIWidget {
     protected boolean visible = true;
     protected boolean enabled = true;
     protected UITooltip.Content tooltip;
+    /** Прозрачность 0..1 (фейд появления); виджет умножает на неё свои цвета. */
+    protected float opacity = 1F;
+    /** Сдвиг при рисовании (слайд появления); на hit-test не влияет. Применяет {@link UILayer}. */
+    protected int offsetX;
+
+    protected int offsetY;
 
     protected UIWidget(int x, int y, int width, int height) {
         setBounds(x, y, width, height);
@@ -33,11 +39,44 @@ public abstract class UIWidget {
         return this;
     }
 
+    public UIWidget setBounds(com.pwp.coreclient.ui.layout.Rect r) {
+        return setBounds(r.x(), r.y(), r.w(), r.h());
+    }
+
+    public com.pwp.coreclient.ui.layout.Rect bounds() {
+        return com.pwp.coreclient.ui.layout.Rect.of(x, y, width, height);
+    }
+
+    /** Анимация появления: прозрачность и сдвиг рисования. */
+    public UIWidget setAppearance(float opacity, int offsetX, int offsetY) {
+        this.opacity = Math.max(0F, Math.min(1F, opacity));
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+        return this;
+    }
+
+    public float opacity() {
+        return opacity;
+    }
+
+    public int offsetX() {
+        return offsetX;
+    }
+
+    public int offsetY() {
+        return offsetY;
+    }
+
     /** Рисование; вызывается каждый кадр, только если {@link #visible}. */
     public abstract void render(GuiGraphics g, int mouseX, int mouseY, float partialTick);
 
     /** true — клик обработан (дальше не передаётся). */
     public boolean mouseClicked(double mx, double my, int button) {
+        return false;
+    }
+
+    /** Отпускание кнопки мыши (сброс pressed-состояния). */
+    public boolean mouseReleased(double mx, double my, int button) {
         return false;
     }
 

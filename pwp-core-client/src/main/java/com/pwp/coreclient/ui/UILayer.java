@@ -53,7 +53,14 @@ public final class UILayer {
         int mx = blocked ? Integer.MIN_VALUE : mouseX;
         int my = blocked ? Integer.MIN_VALUE : mouseY;
         for (UIWidget w : widgets) {
-            if (w.isVisible()) w.render(g, mx, my, partialTick);
+            if (!w.isVisible() || w.opacity() <= 0F) continue;
+            boolean shifted = w.offsetX() != 0 || w.offsetY() != 0;
+            if (shifted) {
+                g.pose().pushPose();
+                g.pose().translate(w.offsetX(), w.offsetY(), 0);
+            }
+            w.render(g, mx, my, partialTick);
+            if (shifted) g.pose().popPose();
         }
         if (contextMenu.isVisible()) contextMenu.render(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY, screenW, screenH, blocked);
@@ -103,6 +110,19 @@ public final class UILayer {
             if (w.isVisible() && w.mouseClicked(mx, my, button)) return true;
         }
         return false;
+    }
+
+    /** Отпускание мыши получают ВСЕ виджеты (сброс нажатия, даже если курсор ушёл). */
+    public boolean mouseReleased(double mx, double my, int button) {
+        boolean handled = false;
+        for (int i = widgets.size() - 1; i >= 0; i--) {
+            if (widgets.get(i).mouseReleased(mx, my, button)) handled = true;
+        }
+        return handled;
+    }
+
+    public List<UIWidget> widgets() {
+        return java.util.Collections.unmodifiableList(widgets);
     }
 
     public boolean mouseScrolled(double mx, double my, double delta) {

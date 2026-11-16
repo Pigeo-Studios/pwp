@@ -60,4 +60,23 @@ public final class UIMath {
         int v = Math.round(Math.min(screenW, screenH) * fraction);
         return Math.max(min, Math.min(max, v));
     }
+
+    /**
+     * Прогресс появления элемента {@code index} при ступенчатом входе экрана: 0 до старта
+     * (delay + index * stagger), затем ease-out-cubic за {@code duration} мс, потом 1.
+     */
+    public static float stagger(long elapsedMs, int index, long delayMs, long staggerMs, long durationMs) {
+        double t = (elapsedMs - delayMs - (double) index * staggerMs) / Math.max(1, durationMs);
+        if (t <= 0) return 0F;
+        if (t >= 1) return 1F;
+        return (float) (1 - Math.pow(1 - t, 3));
+    }
+
+    /** Позиция бегущего блока индикатора загрузки (0..1 туда-обратно) по времени. */
+    public static float pingPong(long elapsedMs, long periodMs) {
+        if (periodMs <= 0) return 0F;
+        double t = (Math.floorMod(elapsedMs, periodMs)) / (double) periodMs; // 0..1
+        double tri = t < 0.5 ? t * 2 : 2 - t * 2; // 0..1..0
+        return (float) (tri < 0.5 ? 4 * tri * tri * tri : 1 - Math.pow(-2 * tri + 2, 3) / 2);
+    }
 }

@@ -191,6 +191,57 @@ public class PWPTheme {
         public static final int TOGGLE_WIDTH = 36;
         public static final int TOGGLE_HEIGHT = 16;
 
+        // --- Редизайн 2026-11 (тактический стиль: строгая сетка, 1px линии) ---
+        /** Тонкая линия обводки/разделителя. */
+        public static final int HAIRLINE = 1;
+        /** Акцентная полоса у активного элемента (hover / selected). */
+        public static final int ACCENT_BAR = 2;
+
+        public static final int ACCENT_BAR_SELECTED = 3;
+        /** Сдвиг контента нажатой кнопки вниз. */
+        public static final int PRESS_SHIFT = 1;
+        /** Высота шапки стеклянной панели (COMPACT / обычная). */
+        public static final int PANEL_HEADER_COMPACT = 16;
+
+        public static final int PANEL_HEADER = 20;
+        /** Поле экрана: доля ширины, пределы. */
+        public static final float SCREEN_MARGIN_FRACTION = 0.06F;
+
+        public static final int SCREEN_MARGIN_MIN = 12;
+        public static final int SCREEN_MARGIN_MAX = 96;
+        /** Колонка главного меню: доля ширины экрана, пределы. */
+        public static final float MENU_WIDTH_FRACTION = 0.26F;
+
+        public static final int MENU_WIDTH_MIN = 150;
+        public static final int MENU_WIDTH_MAX = 300;
+        /** Кнопки меню по плотности (COMPACT / NORMAL / LARGE). */
+        public static final int MENU_PRIMARY_H_COMPACT = 22;
+
+        public static final int MENU_PRIMARY_H = 30;
+        public static final int MENU_PRIMARY_H_LARGE = 34;
+        public static final int MENU_BUTTON_H_COMPACT = 20;
+        public static final int MENU_BUTTON_H = 22;
+        public static final int MENU_BUTTON_H_LARGE = 24;
+        public static final int MENU_GAP_COMPACT = 2;
+        public static final int MENU_GAP = 4;
+        /** Центральная панель (загрузка/дисконнект): доля ширины, пределы. */
+        public static final float DIALOG_WIDTH_FRACTION = 0.42F;
+
+        public static final int DIALOG_WIDTH_MIN = 220;
+        public static final int DIALOG_WIDTH_MAX = 420;
+        /** Индикатор загрузки (неопределённый прогресс): высота и доля бегущего блока. */
+        public static final int LOADER_BAR_H = 3;
+
+        public static final int LOADER_BLOCK_DIV = 4;
+        /** Размер угла 9-slice текстур (совпадает с tools/generate_ui_textures.py). */
+        public static final int FRAME_CORNER = 6;
+
+        public static final int SHADOW_CORNER = 12;
+        /** На сколько тень выходит за панель и насколько сдвинута вниз. */
+        public static final int SHADOW_SPREAD = 8;
+
+        public static final int SHADOW_DROP = 3;
+
         private Spacing() {}
     }
 
@@ -209,6 +260,15 @@ public class PWPTheme {
         public static final int STAGGER_FAST = 30;
         public static final int STAGGER_NORMAL = 60;
         public static final int STAGGER_SLOW = 100;
+
+        /** Нажатие кнопки (реакция на mouse down). */
+        public static final int DURATION_PRESS = 60;
+        /** Вход экрана: длительность появления элемента и сдвиг снизу (px). */
+        public static final int ENTER = 260;
+
+        public static final int ENTER_SLIDE = 10;
+        /** Период бегущего индикатора загрузки (мс). */
+        public static final int LOADER_PERIOD = 1400;
 
         public static final int FADE_IN = 0;
         public static final int FADE_OUT = 1;
@@ -244,6 +304,63 @@ public class PWPTheme {
     }
 
     private PWPTheme() {}
+
+    // ============================================================
+    //  ТИПОГРАФИКА (ванильный шрифт: строка 9px, масштаб — только целый)
+    // ============================================================
+
+    public static class Text {
+        /** Межстрочный интервал поверх font.lineHeight. */
+        public static final int LINE_GAP = 2;
+        /** Целочисленный масштаб логотипа по плотности (COMPACT / NORMAL / LARGE). */
+        public static final int LOGO_SCALE_COMPACT = 2;
+
+        public static final int LOGO_SCALE = 4;
+        public static final int LOGO_SCALE_LARGE = 5;
+
+        public static final int HEADING = Colors.TEXT_PRIMARY;
+        public static final int BODY = Colors.TEXT_PRIMARY;
+        public static final int MUTED = Colors.TEXT_SECONDARY;
+        public static final int CAPTION = 0xFF8C9097;
+        public static final int ACCENT = Colors.TEXT_ACCENT;
+        public static final int DANGER = 0xFFD05858;
+        public static final int LOGO = Colors.ACCENT;
+
+        private Text() {}
+    }
+
+    // ============================================================
+    //  ТЕКСТУРЫ UI-кита (генератор tools/generate_ui_textures.py)
+    // ============================================================
+
+    public static class Textures {
+        private static net.minecraft.resources.ResourceLocation ui(String name) {
+            return new net.minecraft.resources.ResourceLocation("pwp_core_client", "textures/gui/ui/" + name + ".png");
+        }
+
+        /** Тайл шума 64x64 (повтор через GL_REPEAT, без растяжения). */
+        public static final net.minecraft.resources.ResourceLocation NOISE = ui("noise");
+        /** Тайл скан-лайнов 64x64 (каждая вторая строка). */
+        public static final net.minecraft.resources.ResourceLocation SCANLINES = ui("scanlines");
+
+        public static final int TILE_SIZE = 64;
+        /** 9-slice рамка 32x32 с уголками-скобами, угол {@link Spacing#FRAME_CORNER}. */
+        public static final net.minecraft.resources.ResourceLocation FRAME = ui("frame");
+
+        public static final int FRAME_SIZE = 32;
+        /** 9-slice мягкая тень 32x32, угол {@link Spacing#SHADOW_CORNER}. */
+        public static final net.minecraft.resources.ResourceLocation SHADOW = ui("shadow");
+
+        public static final int SHADOW_SIZE = 32;
+        /** Атлас иконок 128x32 (ячейки 16x16), индексы — ui.UIIcon. */
+        public static final net.minecraft.resources.ResourceLocation ICONS = ui("icons");
+
+        public static final int ICONS_W = 128;
+        public static final int ICONS_H = 32;
+        public static final int ICON_CELL = 16;
+
+        private Textures() {}
+    }
 
     // ============================================================
     //  СТИЛИ КОМПОНЕНТОВ
@@ -398,6 +515,104 @@ public class PWPTheme {
             public static final int TEXT = Colors.TEXT_PRIMARY;
             public static final int MENU_ITEM_HOVER = Colors.SURFACE_LIGHT;
             public static final int MENU_SEPARATOR = Colors.BORDER;
+        }
+
+        // ============================================================
+        //  Редизайн 2026-11: тактический стиль (Squad / Hell Let Loose)
+        // ============================================================
+
+        /** Стеклянная панель поверх затемнённого мира: полупрозрачно + градиент + 1px обводка. */
+        public static class Glass {
+            public static final int BG = 0xB80B0E12;
+            public static final int BG_STRONG = 0xE00A0C10;
+            /** Вертикальный градиент поверх заливки (сверху светлее). */
+            public static final int SHEEN_TOP = 0x16FFFFFF;
+
+            public static final int SHEEN_BOTTOM = 0x00FFFFFF;
+            public static final int BORDER = 0x40FFFFFF;
+            /** Внутренняя 1px линия-хайлайт у верхней кромки. */
+            public static final int HIGHLIGHT = 0x1AFFFFFF;
+            /** Тинт 9-slice рамки frame.png (уголки-скобы). */
+            public static final int FRAME_TINT = 0x8CC8CBCE;
+
+            public static final int HEADER_TOP = 0x40000000;
+            public static final int HEADER_BOTTOM = 0x14000000;
+            public static final int HEADER_DIVIDER = 0x33FFFFFF;
+            /** Тинт тени shadow.png под панелью. */
+            public static final int SHADOW_TINT = 0x99000000;
+            /** Тинт тайла шума поверх панели. */
+            public static final int NOISE_TINT = 0x59FFFFFF;
+        }
+
+        /** Фон экрана поверх картинки мира. */
+        public static class Backdrop {
+            /** Общее затемнение (верх/низ вертикального градиента). */
+            public static final int SCRIM_TOP = 0x8C05070A;
+
+            public static final int SCRIM_BOTTOM = 0xD905070A;
+            /** Тень от левого края под колонку меню (слева -> прозрачно), доля ширины. */
+            public static final int SIDE_SHADE = 0xC0000000;
+
+            public static final float SIDE_SHADE_FRACTION = 0.55F;
+            /** Виньетка: цвет края и доля меньшей стороны экрана, на которую она заходит. */
+            public static final int VIGNETTE = 0xA8000000;
+
+            public static final float VIGNETTE_FRACTION = 0.28F;
+            public static final int NOISE_TINT = 0x73FFFFFF;
+            public static final int SCANLINE_TINT = 0x12FFFFFF;
+            /** Полосы шапки/подвала экрана. */
+            public static final int BAR_TOP = 0xA0000000;
+
+            public static final int BAR_BOTTOM = 0x60000000;
+            public static final int BAR_LINE = 0x26FFFFFF;
+        }
+
+        /** Кнопки/карточки UI-кита (UIButton, UICard) в тактическом стиле. */
+        public static class Control {
+            public static final int BG = 0x99101318;
+            public static final int BG_HOVER = 0xCC1A1E26;
+            public static final int BG_PRESSED = 0xE0080A0D;
+            public static final int BG_SELECTED = 0xCC231C10;
+            public static final int BG_DISABLED = 0x59101318;
+            public static final int SHEEN_TOP = 0x12FFFFFF;
+            public static final int SHEEN_BOTTOM = 0x00FFFFFF;
+            public static final int BORDER = 0x33FFFFFF;
+            public static final int BORDER_HOVER = 0x73FFFFFF;
+            public static final int BORDER_SELECTED = Colors.ACCENT_DIM;
+            public static final int BORDER_DISABLED = 0x14FFFFFF;
+            public static final int ACCENT_BAR = Colors.ACCENT;
+            public static final int TEXT = Colors.TEXT_PRIMARY;
+            public static final int TEXT_HOVER = 0xFFF0F1F2;
+            public static final int TEXT_DISABLED = Colors.TEXT_DIM;
+            public static final int SUBTEXT = Colors.TEXT_SECONDARY;
+            public static final int ICON = Colors.TEXT_SECONDARY;
+            public static final int ICON_HOVER = Colors.ACCENT;
+            /** Главная (акцентная) кнопка: вертикальный градиент. */
+            public static final int PRIMARY_TOP = 0xF0D08A30;
+
+            public static final int PRIMARY_BOTTOM = 0xF0A0661C;
+            public static final int PRIMARY_TOP_HOVER = 0xFFE09A3C;
+            public static final int PRIMARY_BOTTOM_HOVER = 0xFFB07424;
+            public static final int PRIMARY_BORDER = 0xFFE8B060;
+            public static final int PRIMARY_TEXT = 0xFF0A0C0E;
+            public static final int DANGER_TOP = 0xE0A53D3D;
+            public static final int DANGER_BOTTOM = 0xE0702424;
+            public static final int DANGER_BORDER = 0xFFC86060;
+        }
+
+        /** Цвета категорий ролей (иконки UIIcon.DIRECT_COMBAT..SUPPORT). */
+        public static class Role {
+            public static final int DIRECT_COMBAT = 0xFFC8CBCE;
+            public static final int FIRE_SUPPORT = 0xFFC8812A;
+            public static final int SPECIALIST = 0xFF5F8FC4;
+            public static final int SUPPORT = 0xFF4CAF50;
+        }
+
+        /** Индикатор загрузки. */
+        public static class Loader {
+            public static final int TRACK = 0x33FFFFFF;
+            public static final int FILL = Colors.ACCENT;
+            public static final int FILL_GLOW = 0x40C8812A;
         }
 
         private Styles() {}
