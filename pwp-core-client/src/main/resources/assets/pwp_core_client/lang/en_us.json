@@ -180,5 +180,8 @@
     "pwp_core.uitest.empty_data": "EMPTY DATA",
     "pwp_core.uitest.none": "No screens registered",
     "pwp_core.uitest.hint": "/pwpui open <id> · /pwpui next · /pwpui list",
-    "pwp_core.uitest.unknown": "Unknown UI screen: %s"
+    "pwp_core.uitest.unknown": "Unknown UI screen: %s",
+    "pwp_core.stats.title": "STATISTICS",
+    "pwp_core.stats.tab.mine": "MY STATS",
+    "pwp_core.stats.hint": "ESC — close"
 }

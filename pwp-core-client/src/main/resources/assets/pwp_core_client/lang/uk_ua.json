@@ -180,5 +180,8 @@
     "pwp_core.uitest.empty_data": "ПОРОЖНІ ДАНІ",
     "pwp_core.uitest.none": "Екрани не зареєстровані",
     "pwp_core.uitest.hint": "/pwpui open <id> · /pwpui next · /pwpui list",
-    "pwp_core.uitest.unknown": "Невідомий екран UI: %s"
+    "pwp_core.uitest.unknown": "Невідомий екран UI: %s",
+    "pwp_core.stats.title": "СТАТИСТИКА",
+    "pwp_core.stats.tab.mine": "МОЯ СТАТИСТИКА",
+    "pwp_core.stats.hint": "ESC — закрити"
 }

@@ -1,7 +1,10 @@
 package com.pwp.coreclient.gui.components;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -101,101 +104,69 @@ public class PWPButton extends AbstractWidget {
         hoverAnim += (hoverTarget - hoverAnim) * speed;
         pressAnim += (pressTarget - pressAnim) * speed;
 
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, this.animAlpha);
-
-        int bg, border, textColor;
-        boolean showAccentGlow = false;
-
+        // Тактический стиль UI-кита (как UIButton): стекло + блик + 1px обводка, акцентная
+        // полоса слева при наведении; ACCENT/DANGER — вертикальный градиент. API кнопки прежний.
+        float o = this.animAlpha;
+        Rect r = Rect.of(this.getX(), this.getY(), this.width, this.height);
+        int textColor;
         if (!active) {
-            bg = PWPTheme.Styles.Button.DARK_BG;
-            border = PWPTheme.Colors.BORDER;
-            textColor = PWPTheme.Colors.TEXT_DIM;
+            UIDraw.rect(gui, r, UIDraw.fade(Styles.Control.BG_DISABLED, o));
+            UIDraw.outline(gui, r, UIDraw.fade(Styles.Control.BORDER_DISABLED, o));
+            textColor = Styles.Control.TEXT_DISABLED;
+        } else if (style == Style.ACCENT || style == Style.DANGER) {
+            boolean accent = style == Style.ACCENT;
+            int top = Colors.lerp(
+                    accent ? Styles.Control.PRIMARY_TOP : Styles.Control.DANGER_TOP,
+                    accent ? Styles.Control.PRIMARY_TOP_HOVER : Styles.Button.DANGER_HOVER,
+                    hoverAnim);
+            int bottom = Colors.lerp(
+                    accent ? Styles.Control.PRIMARY_BOTTOM : Styles.Control.DANGER_BOTTOM,
+                    accent ? Styles.Control.PRIMARY_BOTTOM_HOVER : Styles.Button.DANGER_PRESSED,
+                    hoverAnim);
+            top = Colors.lerp(top, Styles.Control.BG_PRESSED, pressAnim * 0.35F);
+            bottom = Colors.lerp(bottom, Styles.Control.BG_PRESSED, pressAnim * 0.35F);
+            UIDraw.gradientV(gui, r, UIDraw.fade(top, o), UIDraw.fade(bottom, o));
+            UIDraw.hline(gui, r.x() + 1, r.right() - 1, r.y() + 1, UIDraw.fade(Styles.Glass.HIGHLIGHT, o));
+            UIDraw.outline(
+                    gui, r, UIDraw.fade(accent ? Styles.Control.PRIMARY_BORDER : Styles.Control.DANGER_BORDER, o));
+            textColor = accent ? Styles.Control.PRIMARY_TEXT : Styles.Control.TEXT_HOVER;
         } else {
-            switch (style) {
-                case ACCENT: {
-                    int base = PWPTheme.Colors.lerp(
-                            PWPTheme.Styles.Button.ACCENT_BG, PWPTheme.Styles.Button.ACCENT_HOVER, hoverAnim);
-                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.ACCENT_PRESSED, pressAnim);
-                    border = PWPTheme.Colors.ACCENT_DIM;
-                    textColor = PWPTheme.Styles.Button.ACCENT_TEXT;
-                    showAccentGlow = hoverAnim > 0.01F;
-                    break;
-                }
-                case DANGER: {
-                    int base = PWPTheme.Colors.lerp(
-                            PWPTheme.Styles.Button.DANGER_BG, PWPTheme.Styles.Button.DANGER_HOVER, hoverAnim);
-                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.DANGER_PRESSED, pressAnim);
-                    border = PWPTheme.Colors.DANGER;
-                    textColor = PWPTheme.Styles.Button.DANGER_TEXT;
-                    break;
-                }
-                case DARK: {
-                    int base = PWPTheme.Colors.lerp(
-                            PWPTheme.Styles.Button.DARK_BG, PWPTheme.Styles.Button.DARK_HOVER, hoverAnim);
-                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.DARK_PRESSED, pressAnim);
-                    border = hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.DARK_BORDER;
-                    textColor = PWPTheme.Colors.TEXT_PRIMARY;
-                    break;
-                }
-                case GHOST: {
-                    int ghostBg = PWPTheme.Colors.lerp(0x00000000, PWPTheme.Colors.SURFACE_LIGHT, hoverAnim);
-                    int ghostBorder = PWPTheme.Colors.lerp(0x00000000, PWPTheme.Colors.BORDER_FOCUS, hoverAnim);
-                    border = ghostBorder;
-                    bg = ghostBg;
-                    textColor = hoverAnim > 0.01F ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
-                    break;
-                }
-                default: {
-                    int base = PWPTheme.Colors.lerp(
-                            PWPTheme.Styles.Button.PRIMARY_BG, PWPTheme.Styles.Button.PRIMARY_HOVER, hoverAnim);
-                    bg = PWPTheme.Colors.lerp(base, PWPTheme.Styles.Button.PRIMARY_PRESSED, pressAnim);
-                    border = hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Styles.Button.PRIMARY_BORDER;
-                    textColor = PWPTheme.Colors.TEXT_PRIMARY;
-                    break;
-                }
-            }
+            boolean ghost = style == Style.GHOST;
+            int base = ghost ? Colors.withAlpha(Styles.Control.BG, 0) : Styles.Control.BG;
+            int bg = Colors.lerp(
+                    Colors.lerp(base, Styles.Control.BG_HOVER, hoverAnim), Styles.Control.BG_PRESSED, pressAnim);
+            int borderBase = ghost ? Colors.withAlpha(Styles.Control.BORDER, 0) : Styles.Control.BORDER;
+            UIDraw.rect(gui, r, UIDraw.fade(bg, o));
+            UIDraw.gradientV(
+                    gui,
+                    r,
+                    UIDraw.fade(Styles.Control.SHEEN_TOP, o * (ghost ? hoverAnim : 1F)),
+                    UIDraw.fade(Styles.Control.SHEEN_BOTTOM, o));
+            UIDraw.outline(gui, r, UIDraw.fade(Colors.lerp(borderBase, Styles.Control.BORDER_HOVER, hoverAnim), o));
+            int bar = Math.round(hoverAnim * PWPTheme.Spacing.ACCENT_BAR);
+            if (bar > 0) UIDraw.accentBar(gui, r.x(), r.y(), r.h(), bar, UIDraw.fade(Styles.Control.ACCENT_BAR, o));
+            textColor = Colors.lerp(
+                    ghost ? Styles.Control.SUBTEXT : Styles.Control.TEXT, Styles.Control.TEXT_HOVER, hoverAnim);
         }
-
-        int x = this.getX();
-        int y = this.getY();
-        int w = this.width;
-        int h = this.height;
-        int r = PWPTheme.Spacing.RADIUS_SMALL;
-
-        if (showAccentGlow) {
-            int glowColor =
-                    PWPTheme.Colors.multiplyAlpha(PWPTheme.Shadows.ACCENT_GLOW_SMALL, Math.max(hoverAnim, pressAnim));
-            RoundedRect.glow(gui, x, y, w, h, r, 2, glowColor);
-        }
-
-        RoundedRect.fill(gui, x, y, w, h, r, bg);
-        RoundedRect.border(gui, x, y, w, h, r, 1, border);
 
         if (loading && active) {
             long cycle = now % 1200;
-            float loadProgress = (float) cycle / 1200.0F;
-            int loadW = Math.max(8, w / 4);
-            int loadX = x + (int) ((w - loadW) * loadProgress);
-            gui.fill(loadX, y + h - 2, loadX + loadW, y + h, PWPTheme.Colors.ACCENT);
+            int loadW = Math.max(8, r.w() / 4);
+            int loadX = r.x() + (int) ((r.w() - loadW) * (cycle / 1200F));
+            gui.fill(loadX, r.bottom() - 2, loadX + loadW, r.bottom(), UIDraw.fade(Styles.Loader.FILL, o));
         }
 
-        var mcFont = PWPTheme.Fonts.display();
-        String msgStr = this.getMessage().getString();
-        int textW = mcFont.width(msgStr);
-        int textY = y + (h - 8) / 2;
-
-        int shadowColor = 0x40000000;
-
-        if (textW > w - 10) {
-            String shortText = mcFont.plainSubstrByWidth(msgStr, w - 14) + "...";
-            gui.drawString(mcFont, shortText, x + 5, textY + 1, shadowColor, false);
-            gui.drawString(mcFont, shortText, x + 5, textY, textColor, false);
-        } else {
-            gui.drawString(
-                    mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY + 1, shadowColor, false);
-            gui.drawString(mcFont, this.getMessage(), x + w / 2 - mcFont.width(msgStr) / 2, textY, textColor, false);
-        }
-
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        var font = PWPTheme.Fonts.display();
+        Component shown = UIDraw.ellipsize(font, this.getMessage(), r.w() - 2 * PWPTheme.Spacing.SM);
+        int shift = Math.round(pressAnim * PWPTheme.Spacing.PRESS_SHIFT);
+        int textY = r.y() + (r.h() - font.lineHeight) / 2 + 1 + shift;
+        UIDraw.text(
+                gui,
+                font,
+                shown,
+                r.centerX() - font.width(shown) / 2,
+                textY,
+                UIDraw.fade(textColor, o),
+                style != Style.ACCENT && active);
     }
 }

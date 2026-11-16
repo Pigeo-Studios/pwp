@@ -299,6 +299,10 @@ public class PWPTheme {
         public static final int SELECTION_MAX_COLS = 6;
         /** Кнопка экрана в галерее тест-стенда UI. */
         public static final int GALLERY_ITEM_MIN_W = 150;
+        /** Тосты: максимальная ширина и отступ сверху (ниже верхней полосы экрана). */
+        public static final int TOAST_MAX_W = 220;
+
+        public static final int TOAST_TOP = 36;
 
         private Spacing() {}
     }

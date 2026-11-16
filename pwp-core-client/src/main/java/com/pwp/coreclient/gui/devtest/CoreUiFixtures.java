@@ -83,6 +83,27 @@ public final class CoreUiFixtures {
         UiGallery.register("core.lobby.leaders", () -> lobby(idle(), LobbyTab.LIDERY));
         UiGallery.register("core.lobby.profile", () -> lobby(idle(), LobbyTab.PROFIL));
         UiGallery.register("core.selection", CoreUiFixtures::selection);
+        UiGallery.register(
+                "core.stats.mine",
+                () -> com.pwp.coreclient.gui.StatsScreen.preview(
+                        () -> empty() ? emptyLeaderboard() : leaderboard(), uuid -> empty() ? null : profile(), 0));
+        UiGallery.register(
+                "core.stats.leaders",
+                () -> com.pwp.coreclient.gui.StatsScreen.preview(
+                        () -> empty() ? emptyLeaderboard() : leaderboard(), uuid -> empty() ? null : profile(), 1));
+        UiGallery.register("core.toasts", () -> {
+            Screen s = lobby(idle(), LobbyTab.IGRA);
+            com.pwp.coreclient.gui.components.PWPToastManager.clear();
+            String msg = longs() ? LONG_RU : "Голосование за карту началось!";
+            com.pwp.coreclient.gui.components.PWPToastManager.show(
+                    msg, com.pwp.coreclient.gui.components.PWPToastManager.ToastType.INFO);
+            com.pwp.coreclient.gui.components.PWPToastManager.show(
+                    longs() ? LONG_UK : "Скин сохранён",
+                    com.pwp.coreclient.gui.components.PWPToastManager.ToastType.SUCCESS);
+            com.pwp.coreclient.gui.components.PWPToastManager.show(
+                    "Не удалось загрузить профиль", com.pwp.coreclient.gui.components.PWPToastManager.ToastType.ERROR);
+            return s;
+        });
     }
 
     // ================================================================ лобби
