@@ -237,4 +237,14 @@ public final class WTheme {
     public static final int CTX_BG = 0xE00A0C10;
 
     public static final int CTX_CMD = 0xFFFFCC00;
+    /** Слот предпросмотра кита (16 + рамка). */
+    public static final int PREVIEW_SLOT = 18;
+    /** Редкость скинов (как в прежнем списке скинов). */
+    public static final int RARITY_COMMON = 0xFF6A6D73;
+
+    public static final int RARITY_UNCOMMON = 0xFF3D6FA5;
+    public static final int RARITY_RARE = 0xFF7A4A8A;
+    public static final int RARITY_EPIC = 0xFFC8812A;
+    public static final int RARITY_LEGENDARY = 0xFFA53D3D;
+    public static final int RARITY_MYTHIC = 0xFFFFD700;
 }

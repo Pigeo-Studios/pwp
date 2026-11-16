@@ -227,7 +227,7 @@
     "gui.pwpwarfare.kit_editor.skins": "Скины",
     "gui.pwpwarfare.kit_skin_select.title": "Скины оружия",
     "gui.pwpwarfare.skin_list.title": "Настройка скинов",
-    "gui.pwpwarfare.skin_list.add": "+ Добавить скин",
+    "gui.pwpwarfare.skin_list.add": "Добавить скин",
     "gui.pwpwarfare.skin_list.refresh": "Обновить",
     "gui.pwpwarfare.skin_editor.add": "Добавить скин",
     "gui.pwpwarfare.skin_editor.edit": "Редактировать скин",
@@ -442,5 +442,14 @@
     "gui.pwpwarfare.faction_vehicle_editor.display_name": "Отображаемое имя",
     "gui.pwpwarfare.faction_vehicle_editor.category": "Категория",
     "gui.pwpwarfare.faction_vehicle_editor.mod": "Мод",
-    "gui.pwpwarfare.faction_vehicle_editor.need_name": "Название техники не может быть пустым"
+    "gui.pwpwarfare.faction_vehicle_editor.need_name": "Название техники не может быть пустым",
+    "gui.pwpwarfare.kit_preview.inventory": "Рюкзак",
+    "gui.pwpwarfare.kit_preview.hotbar": "Панель быстрого доступа",
+    "gui.pwpwarfare.kit_preview.equipment": "Экипировка",
+    "gui.pwpwarfare.skin_list.empty": "Скинов пока нет",
+    "gui.pwpwarfare.skin_list.empty_hint": "Нажмите «Добавить скин» выше, чтобы создать.",
+    "gui.pwpwarfare.skin_list.delete": "Удалить",
+    "gui.pwpwarfare.skin_list.edit": "Изменить",
+    "gui.pwpwarfare.team_select.too_many": "СЛИШКОМ МНОГО ИГРОКОВ",
+    "gui.pwpwarfare.team_select.players": "Игроков: %s"
 }

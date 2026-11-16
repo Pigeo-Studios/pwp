@@ -227,7 +227,7 @@
     "gui.pwpwarfare.kit_skin_select.title": "Kit Weapon Skins",
     "gui.pwpwarfare.kit_editor.skins": "Skins",
     "gui.pwpwarfare.skin_list.title": "Skin Setup",
-    "gui.pwpwarfare.skin_list.add": "+ Add Skin",
+    "gui.pwpwarfare.skin_list.add": "Add skin",
     "gui.pwpwarfare.skin_list.refresh": "Refresh",
     "gui.pwpwarfare.skin_editor.add": "Add Skin",
     "gui.pwpwarfare.skin_editor.edit": "Edit Skin",
@@ -442,5 +442,14 @@
     "gui.pwpwarfare.faction_vehicle_editor.display_name": "Display name",
     "gui.pwpwarfare.faction_vehicle_editor.category": "Category",
     "gui.pwpwarfare.faction_vehicle_editor.mod": "Mod",
-    "gui.pwpwarfare.faction_vehicle_editor.need_name": "Vehicle name cannot be empty"
+    "gui.pwpwarfare.faction_vehicle_editor.need_name": "Vehicle name cannot be empty",
+    "gui.pwpwarfare.kit_preview.inventory": "Backpack",
+    "gui.pwpwarfare.kit_preview.hotbar": "Hotbar",
+    "gui.pwpwarfare.kit_preview.equipment": "Equipment",
+    "gui.pwpwarfare.skin_list.empty": "No skins defined",
+    "gui.pwpwarfare.skin_list.empty_hint": "Use “Add skin” above to create one.",
+    "gui.pwpwarfare.skin_list.delete": "Delete",
+    "gui.pwpwarfare.skin_list.edit": "Edit",
+    "gui.pwpwarfare.team_select.too_many": "TOO MANY PLAYERS",
+    "gui.pwpwarfare.team_select.players": "%s players"
 }

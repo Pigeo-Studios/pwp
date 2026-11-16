@@ -90,13 +90,14 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
         String joinText;
         int joinColor;
         if (si.disabled) {
-            joinText = "TOO MANY PLAYERS";
+            joinText = Component.translatable("gui.pwpwarfare.team_select.too_many")
+                    .getString();
             joinColor = PWPTheme.Colors.TEXT_DIM;
         } else if (si.hovered) {
-            joinText = "JOIN";
+            joinText = Component.translatable("gui.pwpwarfare.team_select.join").getString();
             joinColor = PWPTheme.Colors.TEXT_PRIMARY;
         } else {
-            joinText = "JOIN";
+            joinText = Component.translatable("gui.pwpwarfare.team_select.join").getString();
             joinColor = PWPTheme.Colors.TEXT_ACCENT;
         }
         gui.drawString(
@@ -107,7 +108,8 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
                 joinColor,
                 false);
 
-        String playersText = playerCount + " players";
+        String playersText = Component.translatable("gui.pwpwarfare.team_select.players", playerCount)
+                .getString();
         gui.drawString(
                 PWPTheme.Fonts.display(),
                 Component.literal(playersText).withStyle(si.disabled ? ChatFormatting.DARK_GRAY : ChatFormatting.GRAY),

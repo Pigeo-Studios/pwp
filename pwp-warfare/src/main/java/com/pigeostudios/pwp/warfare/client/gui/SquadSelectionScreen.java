@@ -11,6 +11,9 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.HashSet;
 import java.util.Set;
 import net.minecraft.ChatFormatting;
@@ -58,7 +61,7 @@ public class SquadSelectionScreen extends Screen {
                 10,
                 150,
                 20,
-                Component.literal("Стать командиром"),
+                Component.translatable("gui.pwpwarfare.deploy.squad.apply_cmd"),
                 b -> {
                     PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
                     b.visible = false;
@@ -70,13 +73,18 @@ public class SquadSelectionScreen extends Screen {
                 height - BOTTOM_BAR_H + 8,
                 150,
                 22,
-                Component.literal("\u2694 Снаряжение"),
+                Component.translatable("gui.pwpwarfare.deploy.loadout.panel"),
                 b -> PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu()),
                 PWPButton.Style.DARK));
         kitButton.visible = isInSquad;
 
-        nameInput =
-                new EditBox(PWPTheme.Fonts.display(), 10, height - 55, 150, 20, Component.literal("Название отряда"));
+        nameInput = new EditBox(
+                PWPTheme.Fonts.display(),
+                10,
+                height - 55,
+                150,
+                20,
+                Component.translatable("gui.pwpwarfare.deploy.squad.name_hint"));
         nameInput.setMaxLength(12);
         nameInput.setVisible(!isInSquad);
         addRenderableWidget(nameInput);
@@ -86,7 +94,7 @@ public class SquadSelectionScreen extends Screen {
                 height - 30,
                 150,
                 20,
-                Component.literal("Создать отряд"),
+                Component.translatable("gui.pwpwarfare.deploy.squad.create"),
                 b -> PacketHandler.INSTANCE.sendToServer(new SquadPackets.Create(nameInput.getValue())),
                 PWPButton.Style.DARK));
         createButton.visible = !isInSquad;
@@ -113,7 +121,12 @@ public class SquadSelectionScreen extends Screen {
                 PWPButton.Style.DARK));
 
         chatInput = new EditBox(
-                PWPTheme.Fonts.display(), chatX + 55, height - 25, chatW - 55, 20, Component.literal("Chat"));
+                PWPTheme.Fonts.display(),
+                chatX + 55,
+                height - 25,
+                chatW - 55,
+                20,
+                Component.translatable("gui.pwpwarfare.deploy.chat.title"));
         chatInput.setMaxLength(256);
         addRenderableWidget(chatInput);
     }
@@ -151,18 +164,17 @@ public class SquadSelectionScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         int sbw = SquadUIHelper.getSidebarWidth();
-        gui.fill(0, 0, sbw, height - BOTTOM_BAR_H, PWPTheme.Colors.SURFACE);
-        gui.fill(0, height - BOTTOM_BAR_H, sbw, height, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.fill(sbw, 0, width, TOP_BAR_HEIGHT, PWPTheme.Colors.SURFACE_TOP);
-        gui.fill(sbw, TOP_BAR_HEIGHT, width, height, 0xCC06080A);
+        // мир затемняется общим слоем; сайдбар и полосы — стекло/градиент (без сплошных заливок)
+        UIBackdrop.overlay(gui, width, height, UIBackdrop.Shade.LEFT);
+        UIDraw.glass(gui, Rect.of(0, 0, sbw, height - BOTTOM_BAR_H), 1F, false);
+        UIBackdrop.bar(gui, Rect.of(0, height - BOTTOM_BAR_H, sbw, BOTTOM_BAR_H), false);
+        UIBackdrop.bar(gui, Rect.of(sbw, 0, width - sbw, TOP_BAR_HEIGHT), true);
 
         int clipBottom = height - BOTTOM_BAR_H - 2;
         int clipTop = applyCmdButton.visible ? 32 : 8;
         gui.enableScissor(0, clipTop, sbw, clipBottom);
         SquadUIHelper.renderSquadList(gui, mx, my, expandedSquads, applyCmdButton.visible);
         gui.disableScissor();
-
-        gui.fill(4, height - BOTTOM_BAR_H, sbw - 4, height - BOTTOM_BAR_H + 1, PWPTheme.Colors.ACCENT);
 
         mapRenderer.render(gui, mx, my, pt);
         mapCtx.render(gui, mx, my);
@@ -243,9 +255,12 @@ public class SquadSelectionScreen extends Screen {
 
     private Component getChatModeText() {
         return switch (chatMode) {
-            case 0 -> Component.literal("Все").withStyle(ChatFormatting.LIGHT_PURPLE);
-            case 2 -> Component.literal("Отряд").withStyle(ChatFormatting.GREEN);
-            default -> Component.literal("Команда").withStyle(ChatFormatting.BLUE);
+            case 0 -> Component.translatable("gui.pwpwarfare.deploy.chat.channel.all")
+                    .withStyle(ChatFormatting.LIGHT_PURPLE);
+            case 2 -> Component.translatable("gui.pwpwarfare.deploy.chat.channel.sqd")
+                    .withStyle(ChatFormatting.GREEN);
+            default -> Component.translatable("gui.pwpwarfare.deploy.chat.channel.team")
+                    .withStyle(ChatFormatting.BLUE);
         };
     }
 

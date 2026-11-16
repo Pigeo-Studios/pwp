@@ -76,7 +76,7 @@ public class MapMarkerGridScreen extends Screen {
     public void render(GuiGraphics g, int mx, int my, float pt) {
         UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
         Rect p = panel();
-        Rect c = WDraw.panel(
+        WDraw.panel(
                 g,
                 font,
                 p,
@@ -85,6 +85,7 @@ public class MapMarkerGridScreen extends Screen {
                 title,
                 Component.literal(String.valueOf(markerTypes.size())),
                 1F);
+        Rect c = content(p);
         if (markerTypes.isEmpty()) {
             WDraw.emptyState(
                     g, font, c, WarfareIcon.MARKER, Component.translatable("gui.pwpwarfare.map.no_markers"), null, 1F);

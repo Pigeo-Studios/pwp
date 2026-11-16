@@ -3,23 +3,24 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.CardGridScreen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.network.AdminActions;
 import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-public class SkinListScreen extends Screen {
-
+/**
+ * Админ: список скинов (DataRequest «skins», как раньше). Карточка — имя, слот/оружие, цвет
+ * редкости; в углу — изменить (SkinEditorScreen.editExisting) и удалить (AdminActions.deleteSkin);
+ * над сеткой — «добавить» и «обновить».
+ */
+public class SkinListScreen extends CardGridScreen {
     private List<SkinEntry> skins = new ArrayList<>();
-    private int scrollOffset = 0;
     private boolean loading = true;
     private boolean requested;
 
@@ -33,21 +34,8 @@ public class SkinListScreen extends Screen {
 
     @Override
     protected void init() {
-        int cx = this.width / 2;
-        addRenderableWidget(new PWPButton(
-                cx - 40,
-                10,
-                90,
-                20,
-                Component.literal("+ Add Skin"),
-                b -> {
-                    Minecraft.getInstance().setScreen(new SkinEditorScreen(this));
-                },
-                PWPButton.Style.PRIMARY));
-        addRenderableWidget(new PWPButton(
-                cx + 55, 10, 55, 20, Component.literal("Refresh"), b -> loadSkins(), PWPButton.Style.PRIMARY));
-
-        loadSkins();
+        super.init();
+        if (!requested) loadSkins();
     }
 
     public void loadSkins() {
@@ -80,120 +68,75 @@ public class SkinListScreen extends Screen {
             }
             skins = loaded;
             loading = false;
-            scrollOffset = 0;
         }
     }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), this.title, this.width / 2, 36, 0xFFC8CBCE);
+    protected boolean loading() {
+        return loading;
+    }
 
-        int startX = (this.width - 440) / 2;
-        int y = 50;
+    @Override
+    protected WarfareIcon titleIcon() {
+        return WarfareIcon.LAYERS;
+    }
 
-        if (skins.isEmpty()) {
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    "No skins defined. Click '+ Add Skin' to create one.",
-                    this.width / 2,
-                    this.height / 2,
-                    0xFF7A7D84);
+    @Override
+    protected Component emptyTitle() {
+        return Component.translatable("gui.pwpwarfare.skin_list.empty");
+    }
+
+    @Override
+    protected Component emptyHint() {
+        return Component.translatable("gui.pwpwarfare.skin_list.empty_hint");
+    }
+
+    @Override
+    protected List<Action> toolbar() {
+        return List.of(
+                new Action(
+                        WarfareIcon.PLUS,
+                        Component.translatable("gui.pwpwarfare.skin_list.add"),
+                        () -> Minecraft.getInstance().setScreen(new SkinEditorScreen(this))),
+                new Action(
+                        WarfareIcon.CLOCK,
+                        Component.translatable("gui.pwpwarfare.skin_list.refresh"),
+                        this::loadSkins));
+    }
+
+    @Override
+    protected List<Card> cards() {
+        List<Card> out = new ArrayList<>();
+        for (SkinEntry se : skins) {
+            Runnable edit = () -> {
+                SkinEditorScreen s = new SkinEditorScreen(this);
+                s.editExisting(se.skinId, se.name, se.slotType, se.weaponTag, se.rarity, se.modelPath);
+                Minecraft.getInstance().setScreen(s);
+            };
+            out.add(Card.of(se.skinId, Component.literal(se.name), edit)
+                    .subtitle(Component.literal(se.slotType + " · " + se.weaponTag))
+                    .icon(WarfareIcon.LAYERS)
+                    .accent(rarityColor(se.rarity))
+                    .actions(
+                            new Action(
+                                    WarfareIcon.TRASH,
+                                    Component.translatable("gui.pwpwarfare.skin_list.delete"),
+                                    () -> AdminActions.deleteSkin(se.skinId, r -> loadSkins())),
+                            new Action(
+                                    WarfareIcon.EDIT, Component.translatable("gui.pwpwarfare.skin_list.edit"), edit)));
         }
-
-        RenderSystem.enableBlend();
-        if (!skins.isEmpty())
-            for (int i = Math.min(scrollOffset, skins.size() - 1); i < skins.size(); i++) {
-                int row = i - scrollOffset;
-                int ry = y + row * 28;
-                if (ry + 26 > this.height) break;
-
-                SkinEntry se = skins.get(i);
-                int rarityColor = getRarityColor(se.rarity);
-
-                gui.fill(startX, ry, startX + 440, ry + 24, 0xCC12151A);
-                gui.renderOutline(startX, ry, 440, 24, 0xFF1E222A);
-
-                gui.drawString(PWPTheme.Fonts.display(), se.name, startX + 6, ry + 7, rarityColor, false);
-                gui.drawString(PWPTheme.Fonts.display(), se.slotType, startX + 160, ry + 7, 0xFF7A7D84, false);
-                gui.drawString(PWPTheme.Fonts.display(), se.weaponTag, startX + 260, ry + 7, 0xFF3D6FA5, false);
-                gui.drawString(PWPTheme.Fonts.display(), se.rarity, startX + 350, ry + 7, rarityColor, false);
-
-                boolean hovered = mx >= startX && mx <= startX + 440 && my >= ry && my <= ry + 24;
-                if (hovered) {
-                    if (mx >= startX + 380 && mx < startX + 410) {
-                        gui.drawString(PWPTheme.Fonts.display(), "Del", startX + 382, ry + 7, 0xFFA53D3D, false);
-                    } else if (mx >= startX + 410) {
-                        gui.drawString(PWPTheme.Fonts.display(), "Edit", startX + 412, ry + 7, 0xFFC8812A, false);
-                    }
-                }
-            }
-        RenderSystem.disableBlend();
-
-        super.render(gui, mx, my, pt);
+        return out;
     }
 
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        int startX = (this.width - 440) / 2;
-        int y = 50;
-
-        if (!skins.isEmpty())
-            for (int i = Math.min(scrollOffset, skins.size() - 1); i < skins.size(); i++) {
-                int row = i - scrollOffset;
-                int ry = y + row * 28;
-                if (ry + 26 > this.height) break;
-
-                if (mx >= startX && mx <= startX + 440 && my >= ry && my <= ry + 24) {
-                    SkinEntry se = skins.get(i);
-                    if (mx >= startX + 410) {
-                        SkinEditorScreen s = new SkinEditorScreen(this);
-                        s.editExisting(se.skinId, se.name, se.slotType, se.weaponTag, se.rarity, se.modelPath);
-                        Minecraft.getInstance().setScreen(s);
-                    } else if (mx >= startX + 380 && mx < startX + 410) {
-                        deleteSkin(se.skinId);
-                    }
-                    return true;
-                }
-            }
-        return super.mouseClicked(mx, my, button);
-    }
-
-    private void deleteSkin(String skinId) {
-        AdminActions.deleteSkin(skinId, r -> loadSkins());
-    }
-
-    @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
-        if (skins.isEmpty()) return true;
-        int maxScroll = Math.max(0, skins.size() - 1);
-        if (delta > 0) scrollOffset = Math.max(0, scrollOffset - 1);
-        else scrollOffset = Math.min(maxScroll, scrollOffset + 1);
-        return true;
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
-
-    private int getRarityColor(String rarity) {
-        if (rarity == null) return 0xFF6A6D73;
-        switch (rarity.toUpperCase()) {
-            case "COMMON":
-                return 0xFF6A6D73;
-            case "UNCOMMON":
-                return 0xFF3D6FA5;
-            case "RARE":
-                return 0xFF7A4A8A;
-            case "EPIC":
-                return 0xFFC8812A;
-            case "LEGENDARY":
-                return 0xFFA53D3D;
-            case "MYTHIC":
-                return 0xFFFFD700;
-            default:
-                return 0xFF6A6D73;
-        }
+    private static int rarityColor(String rarity) {
+        if (rarity == null) return WTheme.RARITY_COMMON;
+        return switch (rarity.toUpperCase()) {
+            case "UNCOMMON" -> WTheme.RARITY_UNCOMMON;
+            case "RARE" -> WTheme.RARITY_RARE;
+            case "EPIC" -> WTheme.RARITY_EPIC;
+            case "LEGENDARY" -> WTheme.RARITY_LEGENDARY;
+            case "MYTHIC" -> WTheme.RARITY_MYTHIC;
+            default -> WTheme.RARITY_COMMON;
+        };
     }
 }

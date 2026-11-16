@@ -227,7 +227,7 @@
     "gui.pwpwarfare.kit_editor.skins": "Скіни",
     "gui.pwpwarfare.kit_skin_select.title": "Скіни зброї",
     "gui.pwpwarfare.skin_list.title": "Налаштування скінів",
-    "gui.pwpwarfare.skin_list.add": "+ Додати скін",
+    "gui.pwpwarfare.skin_list.add": "Додати скин",
     "gui.pwpwarfare.skin_list.refresh": "Оновити",
     "gui.pwpwarfare.skin_editor.add": "Додати скін",
     "gui.pwpwarfare.skin_editor.edit": "Редагувати скін",
@@ -442,5 +442,14 @@
     "gui.pwpwarfare.faction_vehicle_editor.display_name": "Відображуване імʼя",
     "gui.pwpwarfare.faction_vehicle_editor.category": "Категорія",
     "gui.pwpwarfare.faction_vehicle_editor.mod": "Мод",
-    "gui.pwpwarfare.faction_vehicle_editor.need_name": "Назва техніки не може бути порожньою"
+    "gui.pwpwarfare.faction_vehicle_editor.need_name": "Назва техніки не може бути порожньою",
+    "gui.pwpwarfare.kit_preview.inventory": "Рюкзак",
+    "gui.pwpwarfare.kit_preview.hotbar": "Панель швидкого доступу",
+    "gui.pwpwarfare.kit_preview.equipment": "Екіпірування",
+    "gui.pwpwarfare.skin_list.empty": "Скинів поки немає",
+    "gui.pwpwarfare.skin_list.empty_hint": "Натисніть «Додати скин» вище, щоб створити.",
+    "gui.pwpwarfare.skin_list.delete": "Видалити",
+    "gui.pwpwarfare.skin_list.edit": "Змінити",
+    "gui.pwpwarfare.team_select.too_many": "ЗАБАГАТО ГРАВЦІВ",
+    "gui.pwpwarfare.team_select.players": "Гравців: %s"
 }

@@ -1,82 +1,133 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+/**
+ * Предпросмотр кита: рюкзак (слоты 9–35), хотбар (0–8) и экипировка (36–40) в стеклянной
+ * панели, тултип предмета под курсором. Список короче 41 — недостающие слоты пустые.
+ */
 public class KitPreviewScreen extends Screen {
     private final Screen parent;
-    private final String kitName;
     private final List<ItemStack> items;
-    private static final int SLOT_SIZE = 18;
-    private static final int PANEL_PAD = 10;
+    private UIButton back;
 
     public KitPreviewScreen(Screen parent, String kitName, List<ItemStack> items) {
         super(Component.literal(DeployData.getDisplayName(kitName)));
         this.parent = parent;
-        this.kitName = kitName;
-        this.items = items;
+        this.items = items == null ? List.of() : items;
     }
 
     @Override
     protected void init() {
-        addRenderableWidget(new PWPButton(
-                width / 2 - 40,
-                height - 30,
-                80,
-                20,
-                Component.translatable("gui.pwpwarfare.kit_preview.back"),
-                b -> minecraft.setScreen(parent),
-                PWPButton.Style.PRIMARY));
+        back = new UIButton(
+                        Component.translatable("gui.pwpwarfare.kit_preview.back"), () -> minecraft.setScreen(parent))
+                .icon(com.pwp.coreclient.ui.UIIcon.BACK);
+    }
+
+    private ItemStack item(int i) {
+        return i >= 0 && i < items.size() && items.get(i) != null ? items.get(i) : ItemStack.EMPTY;
+    }
+
+    private Rect panel() {
+        int s = WTheme.PREVIEW_SLOT;
+        int w = 9 * s + 2 * Spacing.SM;
+        int headerH = WDraw.headerHeight(height);
+        int lh = font.lineHeight + Spacing.XS;
+        int h = headerH
+                + Spacing.SM
+                + 3 * (lh)
+                + 5 * s
+                + 2 * Spacing.XS
+                + Spacing.SM
+                + Spacing.BUTTON_HEIGHT
+                + Spacing.SM;
+        return Rect.of(
+                (width - w) / 2, Math.max(Spacing.XS, (height - h) / 2), w, Math.min(h, height - 2 * Spacing.XS));
     }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-
-        int gridW = 9 * SLOT_SIZE;
-        int gridH = 3 * SLOT_SIZE + 2 * SLOT_SIZE;
-        int panelW = gridW + PANEL_PAD * 2;
-        int panelH = gridH + PANEL_PAD * 2 + 30;
-        int cx = (width - panelW) / 2;
-        int cy = (height - panelH) / 2;
-
-        PWPPanel.render(gui, cx, cy, panelW, panelH);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, cy + 4, PWPTheme.Colors.TEXT_PRIMARY);
-        gui.fill(cx + 4, cy + 14, cx + panelW - 4, cy + 15, PWPTheme.Colors.ACCENT);
-
-        int startX = cx + PANEL_PAD;
-        int startY = cy + 24;
-
-        for (int i = 0; i < 27; i++) {
-            int x = startX + i % 9 * SLOT_SIZE;
-            int y = startY + i / 9 * SLOT_SIZE;
-            drawSlot(gui, x, y, items.get(i + 9));
-        }
-        for (int i = 0; i < 9; i++) {
-            int x = startX + i * SLOT_SIZE;
-            int y = startY + 3 * SLOT_SIZE;
-            drawSlot(gui, x, y, items.get(i));
-        }
-        for (int i = 0; i < 5; i++) {
-            int x = startX + i * SLOT_SIZE;
-            int y = startY + 4 * SLOT_SIZE + 4;
-            drawSlot(gui, x, y, items.get(i + 36));
-        }
-
-        super.render(gui, mx, my, pt);
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
+        Rect p = panel();
+        Rect c = WDraw.panel(g, font, p, WDraw.headerHeight(height), WarfareIcon.BACKPACK, title, null, 1F);
+        int s = WTheme.PREVIEW_SLOT;
+        int lh = font.lineHeight + Spacing.XS;
+        int y = c.y();
+        ItemStack hovered = ItemStack.EMPTY;
+        WDraw.section(
+                g,
+                font,
+                Rect.of(c.x(), y, c.w(), lh),
+                Component.translatable("gui.pwpwarfare.kit_preview.inventory"),
+                PWPTheme.Colors.ACCENT,
+                1F);
+        y += lh;
+        for (int i = 0; i < 27; i++) hovered = slot(g, c.x() + i % 9 * s, y + i / 9 * s, item(i + 9), mx, my, hovered);
+        y += 3 * s + Spacing.XS;
+        WDraw.section(
+                g,
+                font,
+                Rect.of(c.x(), y, c.w(), lh),
+                Component.translatable("gui.pwpwarfare.kit_preview.hotbar"),
+                PWPTheme.Colors.ACCENT,
+                1F);
+        y += lh;
+        for (int i = 0; i < 9; i++) hovered = slot(g, c.x() + i * s, y, item(i), mx, my, hovered);
+        y += s + Spacing.XS;
+        WDraw.section(
+                g,
+                font,
+                Rect.of(c.x(), y, c.w(), lh),
+                Component.translatable("gui.pwpwarfare.kit_preview.equipment"),
+                PWPTheme.Colors.ACCENT,
+                1F);
+        y += lh;
+        for (int i = 0; i < 5; i++) hovered = slot(g, c.x() + i * s, y, item(i + 36), mx, my, hovered);
+        int bw = Math.min(c.w(), back.preferredWidth() + Spacing.LG);
+        back.setBounds(Rect.of(
+                p.centerX() - bw / 2, p.bottom() - Spacing.SM - Spacing.BUTTON_HEIGHT, bw, Spacing.BUTTON_HEIGHT));
+        back.render(g, mx, my, pt);
+        if (!hovered.isEmpty()) g.renderTooltip(font, hovered, mx, my);
     }
 
-    private void drawSlot(GuiGraphics gui, int x, int y, ItemStack stack) {
-        gui.fill(x, y, x + 17, y + 17, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.renderOutline(x, y, 17, 17, PWPTheme.Colors.BORDER);
-        gui.renderFakeItem(stack, x + 1, y + 1);
-        gui.renderItemDecorations(PWPTheme.Fonts.display(), stack, x + 1, y + 1);
+    private ItemStack slot(GuiGraphics g, int x, int y, ItemStack stack, int mx, int my, ItemStack hovered) {
+        Rect r = Rect.of(x, y, WTheme.PREVIEW_SLOT - 1, WTheme.PREVIEW_SLOT - 1);
+        boolean over = r.contains(mx, my);
+        WDraw.well(g, r, 1F);
+        if (over) UIDraw.rect(g, r.inset(1), WTheme.ROW_HOVER);
+        g.renderFakeItem(stack, x + 1, y + 1);
+        g.renderItemDecorations(font, stack, x + 1, y + 1);
+        return over && !stack.isEmpty() ? stack : hovered;
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (back != null && back.mouseClicked(mx, my, btn)) return true;
+        return super.mouseClicked(mx, my, btn);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int btn) {
+        if (back != null) back.mouseReleased(mx, my, btn);
+        return super.mouseReleased(mx, my, btn);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 }

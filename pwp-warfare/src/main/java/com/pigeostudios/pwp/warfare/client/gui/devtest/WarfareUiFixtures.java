@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.client.gui.devtest;
 import com.pigeostudios.pwp.warfare.client.gui.DefenseRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
 import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.KitPreviewScreen;
 import com.pigeostudios.pwp.warfare.client.gui.PlayerKitSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMarkerRadialScreen;
@@ -48,6 +49,7 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.deploy.teams", () -> deploy(0, false));
         UiGallery.register("warfare.deploy.rules", () -> deploy(2, false));
         UiGallery.register("warfare.kits.select", WarfareUiFixtures::kitSelect);
+        UiGallery.register("warfare.kits.preview", WarfareUiFixtures::kitPreview);
         UiGallery.register("warfare.radial.radio", () -> new RadioRadialScreen().asPreview());
         UiGallery.register("warfare.radial.defense", () -> new DefenseRadialScreen(null).asPreview());
         UiGallery.register("warfare.radial.walls", () -> new WallRadialScreen(null).asPreview());
@@ -58,6 +60,19 @@ public final class WarfareUiFixtures {
     }
 
     // ------------------------------------------------------------ киты
+
+    private static KitPreviewScreen kitPreview() {
+        List<ItemStack> items = new ArrayList<>();
+        if (!UiGallery.emptyData()) {
+            items.add(new ItemStack(Items.CROSSBOW));
+            items.add(new ItemStack(Items.IRON_SWORD));
+            items.add(new ItemStack(Items.SNOWBALL, 4));
+            for (int i = 3; i < 36; i++) items.add(i % 4 == 0 ? new ItemStack(Items.BREAD, 8) : ItemStack.EMPTY);
+            items.add(new ItemStack(Items.IRON_HELMET));
+            items.add(new ItemStack(Items.IRON_CHESTPLATE));
+        }
+        return new KitPreviewScreen(null, name("Rifleman", 0), items);
+    }
 
     private static PlayerKitSelectScreen kitSelect() {
         List<PacketOpenPlayerKitMenu.KitDTO> list = new ArrayList<>();

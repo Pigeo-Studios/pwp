@@ -30,7 +30,12 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public abstract class CardGridScreen extends Screen {
     /** Мелкое действие в углу карточки (иконка + подсказка). */
-    public record Action(WarfareIcon icon, Component tooltip, Runnable run) {}
+    public record Action(WarfareIcon icon, Component tooltip, Runnable run) {
+        /** run == null — действие недоступно (рисуется приглушённым, клик игнорируется). */
+        public boolean enabled() {
+            return run != null;
+        }
+    }
 
     /**
      * Карточка.
@@ -161,12 +166,38 @@ public abstract class CardGridScreen extends Screen {
         int w = Math.max(Math.min(WTheme.CARD_PANEL_MIN_W, maxW), Math.min(maxW, natural));
         int headerH = WDraw.headerHeight(height);
         int gridH = Grid.height(Math.max(1, count), cols, cardH(), Spacing.XS);
-        int h = Math.min(height - 2 * Spacing.LG, headerH + 2 * Spacing.SM + Math.max(gridH, WTheme.CARD_EMPTY_H));
+        int h = Math.min(
+                height - 2 * Spacing.LG, headerH + 2 * Spacing.SM + toolbarH() + Math.max(gridH, WTheme.CARD_EMPTY_H));
         return Rect.of((width - w) / 2, (height - h) / 2, w, Math.max(0, h));
     }
 
+    /** Кнопки над сеткой (копировать/вставить всё и т.п.); подпись = tooltip действия. */
+    protected List<Action> toolbar() {
+        return List.of();
+    }
+
+    private int toolbarH() {
+        return toolbar().isEmpty() ? 0 : WTheme.SMALL_BUTTON_H + Spacing.XS;
+    }
+
+    private Rect toolbarRow(Rect p) {
+        return Rect.of(
+                p.x() + Spacing.SM,
+                p.y() + WDraw.headerHeight(height) + Spacing.SM,
+                p.w() - 2 * Spacing.SM,
+                WTheme.SMALL_BUTTON_H);
+    }
+
+    private Rect[] toolbarRects(Rect p) {
+        List<Action> t = toolbar();
+        int[] w = new int[t.size()];
+        for (int i = 0; i < w.length; i++) w[i] = font.width(t.get(i).tooltip()) + WTheme.ICON_SMALL + 3 * Spacing.XS;
+        return com.pwp.coreclient.ui.layout.Flow.row(
+                toolbarRow(p), Spacing.XS, com.pwp.coreclient.ui.layout.Flow.Justify.START, w);
+    }
+
     private Rect content(Rect p) {
-        return p.inset(Spacing.SM, WDraw.headerHeight(height) + Spacing.SM, Spacing.SM, Spacing.SM);
+        return p.inset(Spacing.SM, WDraw.headerHeight(height) + Spacing.SM + toolbarH(), Spacing.SM, Spacing.SM);
     }
 
     private Rect[] cells(Rect c, int count) {
@@ -192,7 +223,7 @@ public abstract class CardGridScreen extends Screen {
         UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
         List<Card> cards = loading() ? List.of() : cards();
         Rect p = panel(cards.size());
-        Rect c = WDraw.panel(
+        WDraw.panel(
                 g,
                 font,
                 p,
@@ -201,6 +232,8 @@ public abstract class CardGridScreen extends Screen {
                 title,
                 loading() ? null : Component.literal(String.valueOf(cards.size())),
                 1F);
+        Rect c = content(p);
+        renderToolbar(g, p, mx, my);
         if (loading()) {
             float t = UIMath.pingPong(System.currentTimeMillis(), PWPTheme.Animations.LOADER_PERIOD);
             WDraw.emptyState(
@@ -217,6 +250,35 @@ public abstract class CardGridScreen extends Screen {
             renderCards(g, c, cards, mx, my);
         }
         super.render(g, mx, my, pt);
+    }
+
+    private void renderToolbar(GuiGraphics g, Rect p, int mx, int my) {
+        List<Action> t = toolbar();
+        if (t.isEmpty()) return;
+        Rect[] rs = toolbarRects(p);
+        for (int i = 0; i < t.size(); i++) {
+            Action a = t.get(i);
+            Rect r = rs[i];
+            float h = hover.get("toolbar#" + i, a.enabled() && r.contains(mx, my));
+            WDraw.tile(g, r, h, 0F, a.enabled() ? 1F : 0F, 1F);
+            int color = a.enabled() ? Colors.lerp(PWPTheme.Text.BODY, PWPTheme.Text.HEADING, h) : Colors.TEXT_DIM;
+            WDraw.icon(
+                    g,
+                    a.icon(),
+                    r.x() + Spacing.XS,
+                    r.centerY() - WTheme.ICON_SMALL / 2,
+                    WTheme.ICON_SMALL,
+                    a.enabled() ? Colors.ACCENT : Colors.TEXT_DIM);
+            WDraw.text(
+                    g,
+                    font,
+                    a.tooltip(),
+                    r.inset(WTheme.ICON_SMALL + 2 * Spacing.XS, 0, Spacing.XS, 0),
+                    com.pwp.coreclient.ui.layout.Align.START,
+                    color,
+                    false,
+                    1F);
+        }
     }
 
     private void renderCards(GuiGraphics g, Rect c, List<Card> cards, int mx, int my) {
@@ -340,7 +402,9 @@ public abstract class CardGridScreen extends Screen {
                     ar.centerX() - is / 2,
                     ar.centerY() - is / 2,
                     is,
-                    Colors.lerp(PWPTheme.Text.MUTED, Colors.ACCENT, ah));
+                    card.actions().get(a).enabled()
+                            ? Colors.lerp(PWPTheme.Text.MUTED, Colors.ACCENT, ah)
+                            : Colors.TEXT_DIM);
         }
     }
 
@@ -350,6 +414,14 @@ public abstract class CardGridScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int btn) {
         if (btn == 0 && !loading()) {
             List<Card> cards = cards();
+            Rect[] tb = toolbarRects(panel(cards.size()));
+            for (int i = 0; i < tb.length; i++) {
+                if (tb[i].contains(mx, my)) {
+                    Action a = toolbar().get(i);
+                    if (a.enabled()) a.run().run();
+                    return true;
+                }
+            }
             Rect c = content(panel(cards.size()));
             if (c.contains(mx, my) && !cards.isEmpty()) {
                 Rect[] cells = cells(c, cards.size());
@@ -358,7 +430,8 @@ public abstract class CardGridScreen extends Screen {
                     Rect[] ar = actionRects(cells[i], card.actions().size());
                     for (int a = 0; a < ar.length; a++) {
                         if (ar[a].contains(mx, my)) {
-                            card.actions().get(a).run().run();
+                            if (card.actions().get(a).enabled())
+                                card.actions().get(a).run().run();
                             return true;
                         }
                     }
