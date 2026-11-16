@@ -214,4 +214,27 @@ public final class WTheme {
     public static final int CARD_EMPTY_H = 80;
     /** Кнопка-действие в углу карточки. */
     public static final int CARD_ACTION = 12;
+
+    // ------------------------------------------------------------ отряды
+    public static final int SQUAD_ROW_H = 14;
+    /** Цвета звеньев (Браво/Чарли) в списке отряда. */
+    public static final int FT_BRAVO_LEAD = Colors.INFO;
+
+    public static final int FT_BRAVO = 0xFFAAD4AA;
+    public static final int FT_CHARLIE_LEAD = Colors.TEXT_ACCENT;
+    public static final int FT_CHARLIE = 0xFF88BBFF;
+    /** Тултип легенды техники: максимум строк таймеров. */
+    public static final int LEGEND_TIMER_LINES = 8;
+    /** Объекты карты: кольцо захвата, линия порядка точек, материалы FOB. */
+    public static final int MAP_OBJECTIVE_R = 11;
+
+    public static final int MAP_RING_W = 2;
+    public static final int MAP_RING_TRACK = 0x66000000;
+    public static final int MAP_RING_NEUTRAL = 0xFFB0B4B8;
+    public static final int MAP_LATTICE = 0x80E2E4E6;
+    public static final int MAP_MATS_TEXT = 0xFFFFAA00;
+    /** Контекстное меню карты (маркеры/пути). */
+    public static final int CTX_BG = 0xE00A0C10;
+
+    public static final int CTX_CMD = 0xFFFFCC00;
 }

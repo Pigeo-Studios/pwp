@@ -1,13 +1,24 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.gui.ui.AnimMap;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.util.Parse;
+import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public class SquadContextMenu {
@@ -20,6 +31,7 @@ public class SquadContextMenu {
     private Runnable deleteCallback;
     private boolean isCMD;
     private float expandAnim;
+    private final AnimMap groupHover = new AnimMap();
     private long closeTimer = -1;
     private int expandedEnemyCol = -1;
     private float enemyExpandAnim;
@@ -36,7 +48,12 @@ public class SquadContextMenu {
 
     record Group(String id, String color, String icon, int dx, int dy) {}
 
-    record Item(String id, String label) {}
+    record Item(String id, String label) {
+        /** Подпись: ключ перевода (gui.*) или готовая строка (имя отряда). */
+        String text() {
+            return label.startsWith("gui.") ? Component.translatable(label).getString() : label;
+        }
+    }
 
     record ColGroup(String title, List<Item> items) {}
 
@@ -52,57 +69,62 @@ public class SquadContextMenu {
         ITEMS.put(
                 "team",
                 List.of(
-                        new Item("player_self", "МЕТКА ДВИЖ"),
-                        new Item("hat", "АТАКА"),
-                        new Item("rally", "РАЛЛИ"),
-                        new Item("fob", "СТРОЙКА"),
-                        new Item("infantry", "НАБЛЮД"),
-                        new Item("fob_m", "ФОБ"),
-                        new Item("hab_m", "ХАБ"),
-                        new Item("mortar_m", "МИНОМЁТ"),
-                        new Item("ammo_m", "Б/П"),
-                        new Item("repair_m", "РЕМОНТ"),
-                        new Item("pickup_m", "ЗАХВАТ")));
+                        new Item("player_self", "gui.pwpwarfare.map.menu.move_mark"),
+                        new Item("hat", "gui.pwpwarfare.map.menu.attack"),
+                        new Item("rally", "gui.pwpwarfare.map.menu.rally"),
+                        new Item("fob", "gui.pwpwarfare.map.menu.build"),
+                        new Item("infantry", "gui.pwpwarfare.map.menu.observe"),
+                        new Item("fob_m", "gui.pwpwarfare.map.menu.fob"),
+                        new Item("hab_m", "gui.pwpwarfare.map.menu.hab"),
+                        new Item("mortar_m", "gui.pwpwarfare.map.menu.mortar"),
+                        new Item("ammo_m", "gui.pwpwarfare.map.menu.ammo"),
+                        new Item("repair_m", "gui.pwpwarfare.map.menu.repair"),
+                        new Item("pickup_m", "gui.pwpwarfare.map.menu.capture")));
         ITEMS.put(
                 "cmd_top",
                 List.of(
-                        new Item("player_self", "МЕТКА ДВИЖ"),
-                        new Item("fob_m", "ФОБ"),
-                        new Item("hab_m", "ХАБ"),
-                        new Item("mortar_m", "МИНОМЁТ"),
-                        new Item("ammo_m", "Б/П"),
-                        new Item("repair_m", "РЕМОНТ"),
-                        new Item("pickup_m", "ЗАХВАТ"),
-                        new Item("logistic_m", "ЛОГИСТИКА"),
-                        new Item("transport_m", "ТРАНСПОРТ")));
+                        new Item("player_self", "gui.pwpwarfare.map.menu.move_mark"),
+                        new Item("fob_m", "gui.pwpwarfare.map.menu.fob"),
+                        new Item("hab_m", "gui.pwpwarfare.map.menu.hab"),
+                        new Item("mortar_m", "gui.pwpwarfare.map.menu.mortar"),
+                        new Item("ammo_m", "gui.pwpwarfare.map.menu.ammo"),
+                        new Item("repair_m", "gui.pwpwarfare.map.menu.repair"),
+                        new Item("pickup_m", "gui.pwpwarfare.map.menu.capture"),
+                        new Item("logistic_m", "gui.pwpwarfare.map.menu.logistics"),
+                        new Item("transport_m", "gui.pwpwarfare.map.menu.transport")));
     }
 
     private static final List<ColGroup> ENEMY_COLS = List.of(
             new ColGroup(
                     "infantry_r",
                     List.of(
-                            new Item("infantry", "ПЕХОТА"),
-                            new Item("mg", "MG"),
-                            new Item("marksman", "МАРКСМАН"),
-                            new Item("lat", "LAT"),
-                            new Item("hat", "HAT"))),
+                            new Item("infantry", "gui.pwpwarfare.map.menu.infantry"),
+                            new Item("mg", "gui.pwpwarfare.map.menu.mg"),
+                            new Item("marksman", "gui.pwpwarfare.map.menu.marksman"),
+                            new Item("lat", "gui.pwpwarfare.map.menu.lat"),
+                            new Item("hat", "gui.pwpwarfare.map.menu.hat"))),
             new ColGroup(
                     "light_veh_r",
                     List.of(
-                            new Item("light_veh", "LTV"), new Item("apc", "APC"),
-                            new Item("ifv", "IFV"), new Item("tank", "ТАНК"),
-                            new Item("tracked_ifv", "ГУСЕНИЧНАЯ"), new Item("aaa", "ЗЕНИТКА"))),
+                            new Item("light_veh", "gui.pwpwarfare.map.menu.ltv"),
+                                    new Item("apc", "gui.pwpwarfare.map.menu.apc"),
+                            new Item("ifv", "gui.pwpwarfare.map.menu.ifv"),
+                                    new Item("tank", "gui.pwpwarfare.map.menu.tank"),
+                            new Item("tracked_ifv", "gui.pwpwarfare.map.menu.tracked"),
+                                    new Item("aaa", "gui.pwpwarfare.map.menu.aa"))),
             new ColGroup(
                     "drone_r",
                     List.of(
-                            new Item("drone", "ДРОН"),
-                            new Item("transport_helo", "ТРАНСП"),
-                            new Item("attack_helo", "ШТУРМ"))),
+                            new Item("drone", "gui.pwpwarfare.map.menu.drone"),
+                            new Item("transport_helo", "gui.pwpwarfare.map.menu.transport_helo"),
+                            new Item("attack_helo", "gui.pwpwarfare.map.menu.attack_helo"))),
             new ColGroup(
                     "hab_r",
                     List.of(
-                            new Item("hab", "ХАБ"), new Item("hmg", "HMG"),
-                            new Item("mortar", "МИНОМЁТ"), new Item("mine", "МИНА"))));
+                            new Item("hab", "gui.pwpwarfare.map.menu.hab"),
+                                    new Item("hmg", "gui.pwpwarfare.map.menu.hmg"),
+                            new Item("mortar", "gui.pwpwarfare.map.menu.mortar"),
+                                    new Item("mine", "gui.pwpwarfare.map.menu.mine"))));
 
     // ───── Open ─────
     public void open(int mx, int my, BiConsumer<String, String> callback) {
@@ -213,7 +235,7 @@ public class SquadContextMenu {
         var cat = ENEMY_COLS.get(colIdx);
         int maxLabelW = 0;
         for (var it : cat.items()) {
-            int lw = f.width(it.label());
+            int lw = f.width(it.text());
             if (lw > maxLabelW) maxLabelW = lw;
         }
         return Math.max(ENEMY_COL_W, ICON + 6 + maxLabelW + PAD * 2);
@@ -506,16 +528,13 @@ public class SquadContextMenu {
         if (deleteCallback != null) {
             int sz = 18;
             boolean hoDel = Math.abs(mx - x) < sz && Math.abs(my - y) < sz;
-            int tc = hoDel ? 0xFFFF6666 : 0xFFAA2222;
-            g.fill(x - sz, y - sz, x + sz + 1, y + sz + 1, 0x88000000);
-            g.hLine(x - sz, x + sz, y - sz, tc);
-            g.hLine(x - sz, x + sz, y + sz, tc);
-            g.vLine(x - sz, y - sz, y + sz, tc);
-            g.vLine(x + sz, y - sz, y + sz, tc);
-            g.fill(x - 7, y - 4, x + 8, y + 7, tc);
-            g.fill(x - 4, y - 7, x + 5, y - 4, tc);
+            Rect del = Rect.of(x - sz, y - sz, 2 * sz + 1, 2 * sz + 1);
+            UIDraw.rect(g, del, WTheme.CTX_BG);
+            UIDraw.outline(g, del, hoDel ? WTheme.STATUS_BAD : Colors.withAlpha(WTheme.STATUS_BAD, 0x80));
+            WDraw.icon(g, WarfareIcon.TRASH, x - 8, y - 8, 16, hoDel ? WTheme.STATUS_BAD : PWPTheme.Text.MUTED);
         } else {
-            g.fill(x - 1, y - 1, x + 2, y + 2, 0xFFFFFFFF);
+            UIDraw.rect(g, Rect.of(x - 1, y - 1, 3, 3), PWPTheme.Text.HEADING);
+            UIDraw.outline(g, Rect.of(x - 3, y - 3, 7, 7), Colors.withAlpha(Colors.ACCENT, 0x99));
         }
 
         // ─── 4 buttons ───
@@ -523,14 +542,7 @@ public class SquadContextMenu {
             if (("cmd_top".equals(gr.id) || "cmd_squads".equals(gr.id)) && !isCMD) continue;
             int gx = x + gr.dx, gy = y + gr.dy;
             boolean sel = gr.id.equals(expanded) || (expandAnim > 0.01F && gr.id.equals(activeGroup));
-            int bg = sel ? 0x88000000 : 0x44000000;
-            g.fill(gx - 18, gy - 18, gx + 18, gy + 18, bg);
-            if (sel) {
-                g.hLine(gx - 18, gx + 18, gy - 18, 0xFFFFFFFF);
-                g.hLine(gx - 18, gx + 18, gy + 18, 0xFFFFFFFF);
-                g.vLine(gx - 18, gy - 18, gy + 18, 0xFFFFFFFF);
-                g.vLine(gx + 18, gy - 18, gy + 18, 0xFFFFFFFF);
-            }
+            WDraw.tile(g, Rect.of(gx - 18, gy - 18, 36, 36), groupHover.get(gr.id, sel), sel ? 1F : 0F, 1F, 1F);
             ResourceLocation ico =
                     new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + gr.icon + gr.color + ".png");
             g.blit(ico, gx - 14, gy - 14, 0, 0, 28, 28, 28, 28);
@@ -563,11 +575,7 @@ public class SquadContextMenu {
                 renderEnemyHeader(g, f, eg, sp, pw, ph, alpha, aMul, itemAlpha);
                 renderEnemySubPanels(g, f, eg, sp, pw, ph, alpha, aMul, itemAlpha, mx, my);
             } else {
-                g.fill(sp[0], sp[1], sp[0] + pw, sp[1] + ph, bgColor);
-                g.hLine(sp[0], sp[0] + pw, sp[1], borderColor);
-                g.hLine(sp[0], sp[0] + pw, sp[1] + ph - 1, borderColor);
-                g.vLine(sp[0], sp[1], sp[1] + ph, borderColor);
-                g.vLine(sp[0] + pw - 1, sp[1], sp[1] + ph, borderColor);
+                panel(g, Rect.of(sp[0], sp[1], pw, ph));
 
                 if ("cmd_squads".equals(eg.id)) {
                     renderSquadCircles(g, f, eg, sp, pw, ph, alpha, aMul, itemAlpha);
@@ -589,8 +597,8 @@ public class SquadContextMenu {
             int hx = sp[0] + PAD + c * ENEMY_HEADER_COL_W;
             boolean hho = eg.id.equals(activeGroup) && hoverCol == c && hoverRow == -1;
             boolean catOpen = c == expandedEnemyCol;
-            int hBg = catOpen ? (BG_ALPHA << 24) | BG_COLOR : (hho ? (HOVER_BG << 24) : (ITEM_BG << 24));
-            g.fill(hx, sy, hx + ENEMY_HEADER_COL_W, sy + ENEMY_HEADER_H, hBg);
+            WDraw.tile(
+                    g, Rect.of(hx, sy, ENEMY_HEADER_COL_W, ENEMY_HEADER_H), hho ? 1F : 0F, catOpen ? 1F : 0F, 1F, 1F);
             String iconFile = headerIcons[c] + eg.color + ".png";
             ResourceLocation hi = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + iconFile);
             int iconSize = 14;
@@ -628,7 +636,7 @@ public class SquadContextMenu {
 
         int maxLabelW = 0;
         for (var it : cat.items()) {
-            int lw = f.width(it.label());
+            int lw = f.width(it.text());
             if (lw > maxLabelW) maxLabelW = lw;
         }
         int pwSub = Math.max(ENEMY_COL_W, ICON + 6 + maxLabelW + PAD * 2);
@@ -638,22 +646,18 @@ public class SquadContextMenu {
         int py = sy;
         int phSub = cat.items().size() * ENEMY_ITEM_H;
 
-        g.fill(px, py, px + pwSub, py + phSub, (BG_ALPHA << 24) | BG_COLOR);
-        g.hLine(px, px + pwSub, py, (BG_ALPHA << 24) | 0x444444);
-        g.hLine(px, px + pwSub, py + phSub - 1, (BG_ALPHA << 24) | 0x444444);
-        g.vLine(px, py, py + phSub, (BG_ALPHA << 24) | 0x444444);
-        g.vLine(px + pwSub - 1, py, py + phSub, (BG_ALPHA << 24) | 0x444444);
+        panel(g, Rect.of(px, py, pwSub, phSub));
 
         for (int i = 0; i < cat.items().size(); i++) {
             var it = cat.items().get(i);
             int iy = py + i * ENEMY_ITEM_H;
             boolean ho = hoverCol == expandedEnemyCol && hoverRow == i;
-            g.fill(px + 1, iy, px + pwSub - 1, iy + ENEMY_ITEM_H, ho ? (HOVER_BG << 24) : (ITEM_BG << 24));
+            row(g, Rect.of(px + 1, iy, pwSub - 2, ENEMY_ITEM_H), ho);
             ResourceLocation ii =
                     new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + it.id() + eg.color + ".png");
             g.blit(ii, px + 2, iy + 1, 0, 0, ICON, ICON, ICON, ICON);
-            int itxtCol = (BG_ALPHA << 24) | (ho ? 0xFFFFFF : 0xAAAAAA);
-            g.drawString(f, it.label(), px + ICON + 5, iy + 3, itxtCol, false);
+            int itxtCol = ho ? PWPTheme.Text.HEADING : PWPTheme.Text.MUTED;
+            g.drawString(f, it.text(), px + ICON + 5, iy + 3, itxtCol, false);
         }
     }
 
@@ -673,15 +677,10 @@ public class SquadContextMenu {
             int cy = sp[1] + PAD + row * (CIR_SIZE + 12) + CIR_SIZE / 2;
             boolean ho = eg.id.equals(activeGroup) && hoverCol == col && hoverRow == row;
 
-            int squadId;
-            try {
-                squadId = Integer.parseInt(items.get(i).id());
-            } catch (NumberFormatException e) {
-                squadId = -1;
-            }
+            int squadId = Parse.intOr(items.get(i).id(), -1);
             boolean isCmdSquad = squadId == cmdIdForRender;
-            int borderCol = (cirAlpha << 24) | (isCmdSquad ? 0xFFCC00 : 0x44CC44);
-            int fillCol = (cirAlpha << 24) | (isCmdSquad ? 0x332200 : 0x113311);
+            int borderCol = UIDraw.fade(isCmdSquad ? WTheme.CTX_CMD : WTheme.STATUS_OK, aMul);
+            int fillCol = UIDraw.fade(Colors.withAlpha(isCmdSquad ? WTheme.CTX_CMD : WTheme.STATUS_OK, 0x33), aMul);
 
             if (ho)
                 g.fill(
@@ -699,16 +698,16 @@ public class SquadContextMenu {
             String numStr = String.valueOf(i + 1);
             int tw = f.width(numStr);
             int tx = cx - tw / 2, ty = cy - 4;
-            int numCol = (cirAlpha << 24) | (isCmdSquad ? 0xFFCC00 : 0x44CC44);
+            int numCol = borderCol;
             g.drawString(f, numStr, tx - 1, ty, 0xFF000000, false);
             g.drawString(f, numStr, tx + 1, ty, 0xFF000000, false);
             g.drawString(f, numStr, tx, ty - 1, 0xFF000000, false);
             g.drawString(f, numStr, tx, ty + 1, 0xFF000000, false);
             g.drawString(f, numStr, tx, ty, numCol, false);
 
-            String sqName = items.get(i).label();
+            String sqName = items.get(i).text();
             int nw = f.width(sqName);
-            int labelCol = (cirAlpha << 24) | 0x999999;
+            int labelCol = UIDraw.fade(PWPTheme.Text.MUTED, aMul);
             g.drawString(f, sqName, cx - nw / 2, cy + CIR_SIZE / 2 + 2, labelCol, false);
         }
     }
@@ -722,16 +721,30 @@ public class SquadContextMenu {
         for (int i = 0; i < items.size(); i++) {
             var it = items.get(i);
             boolean ho = eg.id.equals(activeGroup) && hoverRow == i;
-            g.fill(sp[0] + 1, sy, sp[0] + pw - 1, sy + SUB_ROW, ho ? (HOVER_BG << 24) : (ITEM_BG << 24));
+            row(g, Rect.of(sp[0] + 1, sy, pw - 2, SUB_ROW), ho);
             String rawId = it.id();
             if (rawId.endsWith("_m")) rawId = rawId.substring(0, rawId.length() - 2);
             String iconFile = "player_self".equals(rawId) ? "player_self" : rawId;
             ResourceLocation ii =
                     new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + iconFile + eg.color + ".png");
             g.blit(ii, sp[0] + PAD, sy + 2, 0, 0, ICON, ICON, ICON, ICON);
-            int itxtCol = itemAlpha << 24 | (ho ? 0xFFFFFF : 0xAAAAAA);
-            g.drawString(f, it.label(), sp[0] + PAD + ICON + 4, sy + 4, itxtCol, false);
+            int itxtCol = ho ? PWPTheme.Text.HEADING : PWPTheme.Text.MUTED;
+            g.drawString(f, it.text(), sp[0] + PAD + ICON + 4, sy + 4, itxtCol, false);
             sy += SUB_ROW;
+        }
+    }
+
+    private static void panel(GuiGraphics g, Rect r) {
+        UIDraw.shadow(g, r, 0.8F);
+        UIDraw.rect(g, r, WTheme.CTX_BG);
+        UIDraw.gradientV(g, r, PWPTheme.Styles.Glass.SHEEN_TOP, PWPTheme.Styles.Glass.SHEEN_BOTTOM);
+        UIDraw.outline(g, r, PWPTheme.Styles.Glass.BORDER);
+    }
+
+    private static void row(GuiGraphics g, Rect r, boolean hovered) {
+        if (hovered) {
+            UIDraw.rect(g, r, WTheme.ROW_HOVER);
+            UIDraw.accentBar(g, r.x(), r.y(), r.h(), Spacing.ACCENT_BAR, Colors.ACCENT);
         }
     }
 }

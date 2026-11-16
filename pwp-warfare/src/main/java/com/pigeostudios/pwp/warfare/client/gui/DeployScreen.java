@@ -10,6 +10,7 @@ import com.pigeostudios.pwp.warfare.client.gui.deploy.RulesPanel;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.SpawnPanel;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
 import com.pigeostudios.pwp.warfare.client.gui.ui.AnimMap;
+import com.pigeostudios.pwp.warfare.client.gui.ui.SquadList;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
@@ -644,7 +645,6 @@ public class DeployScreen extends Screen {
         boolean applyVisible = applyCmdVisible();
         applyCmdBtn.setVisible(applyVisible);
         // список отрядов рисует SquadUIHelper в своих координатах (x от 5, y от 0)
-        int dx = squadDx(list);
         if (ClientData.clientSquads.isEmpty() || Minecraft.getInstance().level == null) {
             WDraw.emptyState(
                     g,
@@ -656,10 +656,7 @@ public class DeployScreen extends Screen {
                     o);
         } else {
             g.enableScissor(list.x(), list.y(), list.right(), list.bottom());
-            g.pose().pushPose();
-            g.pose().translate(dx, list.y(), 0);
-            SquadUIHelper.renderSquadList(g, mx - dx, my - list.y(), expandedSquads, applyVisible);
-            g.pose().popPose();
+            SquadList.render(g, list, squadInset(l, applyVisible), mx, my, expandedSquads);
             g.disableScissor();
         }
         if (applyVisible) {
@@ -740,8 +737,9 @@ public class DeployScreen extends Screen {
         return Minecraft.getInstance().player != null && SquadUIHelper.isApplyCmdVisible();
     }
 
-    private static int squadDx(Rect list) {
-        return list.x() - 5 + Spacing.XXS;
+    /** Отступ списка отрядов под кнопку «стать командиром». */
+    private static int squadInset(Layout l, boolean applyVisible) {
+        return applyVisible ? l.applyCmd().h() + Spacing.XS : 0;
     }
 
     private Rect channelRect(Rect input) {
@@ -1014,9 +1012,7 @@ public class DeployScreen extends Screen {
             if (btn == 0 && l.squads().contains(mx, my)) {
                 Rect list = l.squadList();
                 if (list.contains(mx, my) && !preview && Minecraft.getInstance().level != null) {
-                    int dx = squadDx(list);
-                    SquadUIHelper.handleSquadClick(
-                            mx - dx, my - list.y(), expandedSquads, contextMenu, applyCmdVisible());
+                    SquadList.click(list, squadInset(l, applyCmdVisible()), mx, my, expandedSquads, contextMenu);
                     if (!contextMenu.isVisible()) return true;
                 }
                 // переключатель канала чата

@@ -10,14 +10,17 @@ import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.ModKeyBindings;
+import com.pigeostudios.pwp.warfare.client.gui.map.MapDraw;
 import com.pigeostudios.pwp.warfare.client.gui.map.MapHud;
 import com.pigeostudios.pwp.warfare.client.gui.map.MapLayers;
 import com.pigeostudios.pwp.warfare.client.gui.map.MapView;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIDraw;
 import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -232,7 +235,7 @@ public class SquadMapRenderer {
                 path.add(new Vec3(rPos.getX() + 0.5, rPos.getY(), rPos.getZ() + 0.5));
             }
         }
-        int lineColor = 1728053247;
+        int lineColor = WTheme.MAP_LATTICE;
         for (int i = 0; i < path.size() - 1; i++) {
             Vec3 p1 = path.get(i);
             Vec3 p2 = path.get(i + 1);
@@ -316,12 +319,19 @@ public class SquadMapRenderer {
             g.blit(flagTex, pX - 8, pY - 4, 16, 9, 0, 0, 64, 36, 64, 36);
             setFilter(flagTex, false);
             RenderSystem.setShaderColor(1, 1, 1, 1);
-            var f = PWPTheme.Fonts.display();
-            g.pose().pushPose();
-            g.pose().translate(pX, pY + 7, 101);
-            g.pose().scale(0.6F, 0.6F, 1);
-            g.drawCenteredString(f, cp.name, 0, 0, 0xFFFFFF);
-            g.pose().popPose();
+            // кольцо прогресса захвата цветом захватывающей/владеющей команды + подпись-плашка
+            String ringTeam = !capTeam.equals("NONE") && !capTeam.equals("NEUTRAL") ? capTeam : owner;
+            int ringColor = ringTeam.equals("BLUE")
+                    ? WTheme.TEAM_BLUE
+                    : (ringTeam.equals("RED") ? WTheme.TEAM_RED : WTheme.MAP_RING_NEUTRAL);
+            MapDraw.progressRing(g, pX, pY, WTheme.MAP_OBJECTIVE_R, owner.equals("NEUTRAL") ? progress : 1F, ringColor);
+            MapDraw.label(
+                    g,
+                    Minecraft.getInstance().font,
+                    Component.literal(cp.name),
+                    pX,
+                    pY + WTheme.MAP_OBJECTIVE_R + 1,
+                    WTheme.MAP_LABEL_TEXT);
         }
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }
@@ -446,10 +456,18 @@ public class SquadMapRenderer {
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 165);
                 RenderSystem.setShaderColor(1, 1, 1, 1);
+                UIDraw.rect(g, Rect.of(matsX - 1, matsY - 1, matsW + 12, 10), WTheme.MAP_LABEL_BG);
                 setFilter(MATS_ICON, true);
                 g.blit(MATS_ICON, matsX, matsY, 8, 8, 0, 0, 16, 16, 16, 16);
                 setFilter(MATS_ICON, false);
-                g.drawString(PWPTheme.Fonts.display(), matsText, matsX + 10, matsY + 1, -22016, false);
+                UIDraw.text(
+                        g,
+                        Minecraft.getInstance().font,
+                        Component.literal(matsText),
+                        matsX + 10,
+                        matsY,
+                        WTheme.MAP_MATS_TEXT,
+                        false);
                 g.pose().popPose();
             }
         }
@@ -516,7 +534,8 @@ public class SquadMapRenderer {
         }
     }
 
-    private static String factionName(String f) {
+    /** Русское имя фракции для подписей (null — нет фракции). */
+    public static String factionName(String f) {
         if (f == null || f.isEmpty() || "none".equals(f)) return null;
         return switch (f.toLowerCase()) {
             case "usa" -> "\u0421\u0428\u0410";
@@ -535,160 +554,9 @@ public class SquadMapRenderer {
         };
     }
 
-    public void renderVehicleLegend(GuiGraphics g, int panelX, int panelY, int panelW, int mx, int my) {
-        if (ClientData.clientSpawners == null || ClientData.clientSpawners.isEmpty()) return;
-        var f = Minecraft.getInstance().font;
-        int currentY = panelY + 4;
-        g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFF555555);
-        g.drawString(f, "\u0422\u0415\u0425\u041D\u0418\u041A\u0410", panelX + 4, currentY, 0xFFCCCCCC, false);
-        currentY += 12;
-
-        String hoverType = null;
-        String hoverTeam = null;
-        int hoverY = 0;
-        int rowH = 12;
-
-        for (String team : new String[] {"BLUE", "RED"}) {
-            boolean hasAny = false;
-            java.util.Map<String, int[]> groups = new java.util.LinkedHashMap<>();
-            java.util.Map<String, Integer> penalties = new java.util.LinkedHashMap<>();
-            java.util.Map<String, Boolean> allSpawned = new java.util.LinkedHashMap<>();
-
-            for (var s : ClientData.clientSpawners) {
-                if (!s.team.equalsIgnoreCase(team)) continue;
-                int[] counts = groups.computeIfAbsent(s.type, k -> new int[2]);
-                counts[1]++; // total
-                if (s.isAlive) counts[0]++; // alive
-                penalties.putIfAbsent(s.type, s.ticketPenalty);
-                allSpawned.merge(s.type, s.hasSpawnedOnce, Boolean::logicalAnd);
-            }
-
-            for (var entry : groups.entrySet()) {
-                String type = entry.getKey();
-                int[] counts = entry.getValue();
-                int alive = counts[0], total = counts[1];
-                int penalty = penalties.getOrDefault(type, 0);
-                boolean allHaveSpawned = allSpawned.getOrDefault(type, false);
-
-                if (!hasAny) {
-                    int teamColor = team.equals("BLUE") ? 0xFF4488FF : 0xFFFF4444;
-                    String faction = team.equals("BLUE")
-                            ? com.pigeostudios.pwp.warfare.client.ClientData.BLUE_FACTION
-                            : com.pigeostudios.pwp.warfare.client.ClientData.RED_FACTION;
-                    String displayName = factionName(faction);
-                    if (displayName == null || displayName.isEmpty() || "none".equals(faction))
-                        displayName = team.equals("BLUE")
-                                ? "\u0421\u0418\u041D\u0418\u0415"
-                                : "\u041A\u0420\u0410\u0421\u041D\u042B\u0415";
-                    g.drawString(f, displayName, panelX + 4, currentY, teamColor, false);
-                    currentY += 10;
-                    hasAny = true;
-                }
-
-                int rowBg = 0;
-                if (mx >= panelX && mx <= panelX + panelW && my >= currentY && my < currentY + rowH) {
-                    rowBg = 0x44FFFFFF;
-                    hoverType = type;
-                    hoverTeam = team;
-                    hoverY = currentY;
-                }
-                if (rowBg != 0) g.fill(panelX, currentY, panelX + panelW, currentY + rowH, rowBg);
-
-                ResourceLocation icon = VEHICLE_ICONS.getOrDefault(type, VEHICLE_ICONS.get("DEFAULT"));
-                setFilter(icon, true);
-                g.blit(icon, panelX + 4, currentY + 1, 10, 10, 0, 0, 16, 16, 16, 16);
-                setFilter(icon, false);
-
-                String name = type;
-                int maxNameW = panelW - 70;
-                if (f.width(name) > maxNameW) {
-                    name = f.plainSubstrByWidth(name, maxNameW - 4) + "..";
-                }
-                g.drawString(f, name, panelX + 18, currentY + 2, 0xFFFFFF, false);
-
-                String countStr = alive + "/" + total;
-                int countColor;
-                if (alive == 0) {
-                    countColor = allHaveSpawned ? 0xFFFF4444 : 0xFF4488FF;
-                } else {
-                    countColor = alive < total ? 0xFFFFAA00 : 0xFF88FF88;
-                }
-                g.drawString(f, countStr, panelX + panelW - f.width(countStr) - 4, currentY + 2, countColor, false);
-
-                currentY += rowH;
-            }
-        }
-
-        if (hoverType != null) {
-            var p2 = Minecraft.getInstance().player;
-            String myTeam = p2 != null && p2.getTeam() != null ? p2.getTeam().getName() : "";
-            boolean isMyTeam = hoverTeam != null && myTeam.equalsIgnoreCase(hoverTeam);
-            long currentTick = Minecraft.getInstance().level != null
-                    ? Minecraft.getInstance().level.getGameTime()
-                    : 0;
-            java.util.List<String> timerLines = new java.util.ArrayList<>();
-            if (isMyTeam) {
-                for (var s : ClientData.clientSpawners) {
-                    if (s.team.equalsIgnoreCase(hoverTeam)
-                            && s.type.equals(hoverType)
-                            && !s.isAlive
-                            && s.targetSpawnTick > currentTick) {
-                        long sec = (s.targetSpawnTick - currentTick) / 20;
-                        String timeStr = sec >= 60 ? (sec / 60) + "\u043C " + (sec % 60) + "\u0441" : sec + "\u0441";
-                        String label = s.hasSpawnedOnce
-                                ? "\u0420\u0435\u0441\u043F\u0430\u0432\u043D"
-                                : "\u041F\u043E\u044F\u0432\u0438\u0442\u0441\u044F";
-                        timerLines.add(label + ": " + timeStr);
-                    }
-                }
-            }
-            timerLines.sort(null);
-
-            int aliveCount = 0;
-            boolean anyNeverSpawned = false;
-            for (var s : ClientData.clientSpawners) {
-                if (s.team.equalsIgnoreCase(hoverTeam) && s.type.equals(hoverType)) {
-                    if (s.isAlive) aliveCount++;
-                    if (!s.hasSpawnedOnce) anyNeverSpawned = true;
-                }
-            }
-
-            String aliveTxt = "\uD83D\uDFE2 \u0411\u043E\u0435\u0433\u043E\u0442\u043E\u0432: " + aliveCount;
-            int maxW = f.width(hoverType);
-            maxW = Math.max(maxW, f.width(aliveTxt));
-            for (String l : timerLines) maxW = Math.max(maxW, f.width("  " + l));
-            int tipW = Math.min(maxW + 12, 140);
-
-            int tooltipX = panelX + panelW + 4;
-            int tooltipY = hoverY - 4;
-            if (tooltipX + tipW > Minecraft.getInstance().getWindow().getGuiScaledWidth()) {
-                tooltipX = panelX - tipW;
-            }
-
-            int tipH = 24 + (timerLines.isEmpty() ? 0 : 14 + timerLines.size() * 10);
-            g.fill(tooltipX, tooltipY, tooltipX + tipW, tooltipY + tipH, 0xCC0A0C10);
-            g.drawString(f, hoverType, tooltipX + 4, tooltipY + 2, 0xFFFFFF, false);
-            g.drawString(f, aliveTxt, tooltipX + 4, tooltipY + 14, anyNeverSpawned ? 0xFF4488FF : 0xFF88FF88, false);
-            if (!timerLines.isEmpty()) {
-                int ty = tooltipY + 24;
-                g.drawString(
-                        f,
-                        "\u23F3 \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435:",
-                        tooltipX + 4,
-                        ty,
-                        0xFFFFAA00,
-                        false);
-                ty += 10;
-                for (String line : timerLines) {
-                    g.drawString(f, "  " + line, tooltipX + 4, ty, 0xFFCCCCCC, false);
-                    ty += 10;
-                    if (ty - tooltipY > 100) {
-                        g.drawString(f, "  ...", tooltipX + 4, ty, 0xFF888888, false);
-                        break;
-                    }
-                }
-            }
-        }
+    /** Иконка типа техники для легенды/карты (DEFAULT — если тип неизвестен). */
+    public static ResourceLocation vehicleIcon(String type) {
+        return VEHICLE_ICONS.getOrDefault(type, VEHICLE_ICONS.get("DEFAULT"));
     }
 
     private void renderAllPlayers(GuiGraphics g, LocalPlayer self, double cx, double cz, double bpp) {

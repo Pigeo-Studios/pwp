@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
+import com.pigeostudios.pwp.warfare.client.gui.map.VehicleLegend;
+import com.pigeostudios.pwp.warfare.client.gui.ui.SquadList;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
@@ -21,6 +23,7 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.ui.UIBackdrop;
 import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UITooltip;
 import com.pwp.coreclient.ui.layout.Align;
 import com.pwp.coreclient.ui.layout.Fit;
 import com.pwp.coreclient.ui.layout.Flow;
@@ -45,6 +48,7 @@ public class SquadMapScreen extends Screen {
     private record Layout(Rect top, Rect bottom, Rect left, Rect squadList, Rect createRow, Rect right, Rect map) {}
 
     private final SquadMapRenderer map = new SquadMapRenderer();
+    private final VehicleLegend legend = new VehicleLegend();
     private final SquadContextMenu ctx = new SquadContextMenu();
     private final PWPContextMenu contextMenu = new PWPContextMenu();
     private final Set<Integer> expandedSquads = new HashSet<>();
@@ -193,10 +197,6 @@ public class SquadMapScreen extends Screen {
         return new Layout(top, bottom, cols[0], lc[0], lc[1], cols[2], mapRect);
     }
 
-    private static int squadDx(Rect list) {
-        return list.x() - 5 + Spacing.XXS;
-    }
-
     private void renderLeftPanel(GuiGraphics g, Layout l, int mx, int my) {
         WDraw.panel(
                 g,
@@ -214,12 +214,9 @@ public class SquadMapScreen extends Screen {
             applyCmdBtn.setY(list.y() + Spacing.XXS);
             applyCmdBtn.setWidth(Math.min(list.w(), Spacing.BUTTON_WIDTH + Spacing.XXL));
         }
-        int dx = squadDx(list);
+        int inset = applyVisible ? applyCmdBtn.getHeight() + 2 * Spacing.XXS : 0;
         g.enableScissor(list.x(), list.y(), list.right(), list.bottom());
-        g.pose().pushPose();
-        g.pose().translate(dx, list.y(), 0);
-        SquadUIHelper.renderSquadList(g, mx - dx, my - list.y(), expandedSquads, applyVisible);
-        g.pose().popPose();
+        SquadList.render(g, list, inset, mx, my, expandedSquads);
         g.disableScissor();
 
         Rect row = l.createRow();
@@ -309,7 +306,7 @@ public class SquadMapScreen extends Screen {
                 Component.translatable("gui.pwpwarfare.map.vehicles"),
                 null,
                 1F);
-        if (ClientData.clientSpawners == null || ClientData.clientSpawners.isEmpty()) {
+        if (VehicleLegend.isEmpty()) {
             WDraw.emptyState(
                     g,
                     font,
@@ -321,8 +318,9 @@ public class SquadMapScreen extends Screen {
             return;
         }
         g.enableScissor(c.x(), c.y(), c.right(), c.bottom());
-        map.renderVehicleLegend(g, c.x(), c.y() - Spacing.XS - font.lineHeight - Spacing.XXS, c.w(), mx, my);
+        UITooltip.Content tip = legend.render(g, c, mx, my);
         g.disableScissor();
+        if (tip != null) UITooltip.render(g, tip, mx, my, width, height, 1F);
     }
 
     private void renderBottomBar(GuiGraphics g, Layout l) {
@@ -362,9 +360,8 @@ public class SquadMapScreen extends Screen {
             if (super.mouseClicked(mx, my, btn)) return true;
             Rect list = l.squadList();
             if (list.contains(mx, my)) {
-                int dx = squadDx(list);
-                SquadUIHelper.handleSquadClick(
-                        mx - dx, my - list.y(), expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
+                int inset = SquadUIHelper.isApplyCmdVisible() ? applyCmdBtn.getHeight() + 2 * Spacing.XXS : 0;
+                SquadList.click(list, inset, mx, my, expandedSquads, contextMenu);
             }
             return true;
         }
