@@ -247,4 +247,39 @@ public final class WTheme {
     public static final int RARITY_EPIC = 0xFFC8812A;
     public static final int RARITY_LEGENDARY = 0xFFA53D3D;
     public static final int RARITY_MYTHIC = 0xFFFFD700;
+
+    // ------------------------------------------------------------ контейнерные экраны (редактор кита, спавнер)
+    /**
+     * Размеры панелей контейнеров. Слоты ставит меню в координатах относительно угла панели —
+     * менять размер можно, но геометрия меню (KitEditorMenu/VehicleSpawnerMenu) должна влезать.
+     */
+    public static final int KIT_EDITOR_W = 256;
+
+    public static final int KIT_EDITOR_H = 286;
+    public static final int SPAWNER_W = 196;
+    public static final int SPAWNER_H = 245;
+    /** Шапка контейнерного экрана (над первыми полями). */
+    public static final int CONTAINER_HEADER_H = 16;
+    /** Подложка слота: 16 + рамка 1px. */
+    public static final int SLOT_WELL = 18;
+    /** Метка категории над слотом кита. */
+    public static final int SLOT_TAG_H = 8;
+
+    public static final int SLOT_TAG_BG = 0xC0060809;
+    /** Цвета категорий слотов кита: основное, вторичка, граната, спец, рюкзак. */
+    public static final int KIT_TAG_PRIMARY = Colors.ACCENT;
+
+    public static final int KIT_TAG_SECONDARY = Colors.INFO;
+    public static final int KIT_TAG_THROWABLE = Colors.WARNING;
+    public static final int KIT_TAG_SPECIAL = 0xFFFF8800;
+    public static final int KIT_TAG_BACKPACK = PWPTheme.Text.MUTED;
+    /** Пометки слота кита поверх предмета: пополнение (СКМ) и сохранение NBT (Shift+СКМ). */
+    public static final int KIT_RESUPPLY_VEIL = 0x6000FF40;
+
+    public static final int KIT_SAVE_NBT_VEIL = 0x6000C8FF;
+    public static final int KIT_LEGEND_SWATCH = 6;
+    /** Узкое числовое поле (лимиты кита). */
+    public static final int NUMBER_FIELD_W = 24;
+    /** Кнопки «−/+» и поворота у числового поля спавнера. */
+    public static final int STEP_BUTTON_W = 14;
 }

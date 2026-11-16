@@ -1,13 +1,21 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.menu.KitEditorMenu;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionKit;
 import com.pigeostudios.pwp.warfare.network.PacketSaveKit;
 import com.pwp.api.util.Parse;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.UILayer;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -16,19 +24,44 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
 
+/**
+ * Редактор кита (контейнер). Слоты ставит {@link KitEditorMenu} — здесь только отрисовка вокруг
+ * них в тактическом стиле (стеклянная панель, подложки слотов, метки категорий) и настройки кита.
+ *
+ * <p>Раскладка (координаты от угла панели, слоты — из меню): шапка 0..16, настройки 18..82
+ * (имя/категория, описание, «только лидер» + скины, лимиты), кит 86..160 (рюкзак 9-35 + хотбар
+ * 0-8 с метками), броня 164, альтернативы 41-48 справа, инвентарь игрока 180..254, легенда снизу.
+ */
 public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
 
     private EditBox descBox, maxTeamBox, maxSquadBox, minPlayersBox;
     private boolean keepContainerOpen;
+    private final UILayer layer = new UILayer();
+    private UIButton leaderButton;
 
     private static final String ALT_PREFIX = "__ALT__";
     private static final String[] ALT_CATS = {"PRIMARY", "SECONDARY", "THROWABLE", "SPECIAL", "BACKPACK"};
-    private static final String[] ALT_LABELS = {"P", "S", "T", "X", "B"};
+    private static final int[] TAG_COLORS = {
+        WTheme.KIT_TAG_PRIMARY,
+        WTheme.KIT_TAG_SECONDARY,
+        WTheme.KIT_TAG_THROWABLE,
+        WTheme.KIT_TAG_SPECIAL,
+        WTheme.KIT_TAG_BACKPACK
+    };
+    private static final int BACKPACK = 4;
+
+    // Строки настроек (y от верха панели)
+    private static final int ROW_NAME = WTheme.CONTAINER_HEADER_H + Spacing.XS;
+    private static final int ROW_DESC = ROW_NAME + WTheme.FIELD_H + Spacing.XXS;
+    private static final int ROW_FLAGS = ROW_DESC + WTheme.FIELD_H + Spacing.XXS;
+    private static final int ROW_LIMITS = ROW_FLAGS + WTheme.FIELD_H + Spacing.XXS;
+    /** Правая колонка (альтернативы, подписи): от этого x до правого края панели. */
+    private static final int RIGHT_COL_X = 172;
 
     public KitEditorScreen(KitEditorMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
-        this.imageWidth = 256;
-        this.imageHeight = 286;
+        this.imageWidth = WTheme.KIT_EDITOR_W;
+        this.imageHeight = WTheme.KIT_EDITOR_H;
         this.inventoryLabelY = 1000;
         this.titleLabelY = 1000;
     }
@@ -42,158 +75,262 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
     protected void init() {
         super.init();
         keepContainerOpen = false;
+        layer.clear();
         int x = leftPos, y = topPos;
+        int pad = Spacing.XS + Spacing.XXS;
 
-        descBox = new EditBox(PWPTheme.Fonts.display(), x + 60, y + 20, 170, 14, Component.literal(""));
-        descBox.setValue(menu.description);
-        addRenderableWidget(descBox);
+        // Описание: подпись слева, поле до правого края
+        int descX = x + pad + font.width(tr("description")) + Spacing.XS;
+        descBox = field(descX, y + ROW_DESC, x + imageWidth - pad - descX, menu.description);
 
-        int r2y = y + 56;
-        maxTeamBox = new EditBox(PWPTheme.Fonts.display(), x + 86, r2y, 34, 14, Component.literal("-1"));
-        maxTeamBox.setValue(String.valueOf(menu.maxPerTeam));
-        addRenderableWidget(maxTeamBox);
+        // Лимиты: «подпись [поле]» подряд
+        int cx = x + pad;
+        cx += font.width(tr("limit_team")) + Spacing.XS;
+        maxTeamBox = number(cx, y + ROW_LIMITS, menu.maxPerTeam);
+        cx += WTheme.NUMBER_FIELD_W + Spacing.SM;
+        cx += font.width(tr("limit_squad")) + Spacing.XS;
+        maxSquadBox = number(cx, y + ROW_LIMITS, menu.maxPerSquad);
+        cx += WTheme.NUMBER_FIELD_W + Spacing.SM;
+        cx += font.width(tr("limit_min_players")) + Spacing.XS;
+        minPlayersBox = number(cx, y + ROW_LIMITS, menu.minSquadPlayers);
 
-        maxSquadBox = new EditBox(PWPTheme.Fonts.display(), x + 138, r2y, 34, 14, Component.literal("-1"));
-        maxSquadBox.setValue(String.valueOf(menu.maxPerSquad));
-        addRenderableWidget(maxSquadBox);
+        // Кнопки: сохранить (шапка), «только лидер» и скины (строка флагов)
+        UIButton save = new UIButton(tr("save"), this::saveKit)
+                .style(UIButton.Style.ACCENT)
+                .icon(UIIcon.CHECK);
+        int sw = save.preferredWidth();
+        save.setBounds(
+                x + imageWidth - Spacing.XXS - sw, y + Spacing.XXS / 2, sw, WTheme.CONTAINER_HEADER_H - Spacing.XXS);
+        layer.add(save);
 
-        minPlayersBox = new EditBox(PWPTheme.Fonts.display(), x + 190, r2y, 28, 14, Component.literal("0"));
-        minPlayersBox.setValue(String.valueOf(menu.minSquadPlayers));
-        addRenderableWidget(minPlayersBox);
+        leaderButton = new UIButton(leaderLabel(), () -> {
+                    menu.isLeaderOnly = !menu.isLeaderOnly;
+                    leaderButton.selected(menu.isLeaderOnly).label(leaderLabel());
+                })
+                .style(UIButton.Style.DARK)
+                .selected(menu.isLeaderOnly);
+        leaderButton.setBounds(x + pad, y + ROW_FLAGS, leaderButton.preferredWidth(), WTheme.SMALL_BUTTON_H);
+        layer.add(leaderButton);
 
-        addRenderableWidget(new PWPButton(
-                x + imageWidth - 52,
-                y + 2,
-                46,
-                16,
-                Component.literal("Сохр."),
-                b -> saveKit(),
-                PWPButton.Style.ACCENT));
+        UIButton skins = new UIButton(tr("skins"), () -> {
+                    keepContainerOpen = true;
+                    Minecraft.getInstance().setScreen(new KitSkinSelectScreen(menu, this));
+                })
+                .style(UIButton.Style.DARK);
+        int kw = skins.preferredWidth();
+        skins.setBounds(x + imageWidth - pad - kw, y + ROW_FLAGS, kw, WTheme.SMALL_BUTTON_H);
+        layer.add(skins);
     }
+
+    private EditBox field(int x, int y, int w, String value) {
+        EditBox box = new EditBox(
+                font,
+                x + Spacing.XXS,
+                y + (WTheme.FIELD_H - font.lineHeight) / 2 + 1,
+                w - Spacing.XS,
+                font.lineHeight,
+                Component.empty());
+        box.setBordered(false);
+        box.setValue(value != null ? value : "");
+        addRenderableWidget(box);
+        return box;
+    }
+
+    private EditBox number(int x, int y, int value) {
+        return field(x, y, WTheme.NUMBER_FIELD_W, String.valueOf(value));
+    }
+
+    /** Подложка поля = прямоугольник EditBox с полями (обратная к {@link #field}). */
+    private static Rect fieldRect(EditBox box) {
+        return Rect.of(
+                box.getX() - Spacing.XXS,
+                box.getY() - (WTheme.FIELD_H - box.getHeight()) / 2 - 1,
+                box.getWidth() + Spacing.XS,
+                WTheme.FIELD_H);
+    }
+
+    private Component leaderLabel() {
+        return tr(menu.isLeaderOnly ? "leader_only" : "leader_only_off");
+    }
+
+    private static Component tr(String key) {
+        return Component.translatable("gui.pwpwarfare.kit_editor." + key);
+    }
+
+    // ================================================================ рисование
 
     @Override
     public void render(GuiGraphics gui, int mx, int my, float pt) {
         renderBackground(gui);
-        int x = leftPos, y = topPos;
-        var f = PWPTheme.Fonts.display();
-
-        RoundedRect.fill(gui, x, y, imageWidth, imageHeight, 6, PWPTheme.Colors.SURFACE);
-        RoundedRect.border(gui, x, y, imageWidth, imageHeight, 6, 1, PWPTheme.Colors.BORDER);
-
-        gui.fill(x, y, x + imageWidth, y + 16, 0xE60E1117);
-        gui.drawCenteredString(f, "KIT: " + menu.kitName, x + imageWidth / 2, y + 4, PWPTheme.Colors.TEXT_ACCENT);
-
-        // Settings area
-        RoundedRect.fill(gui, x + 2, y + 18, imageWidth - 4, 60, 4, 0x2212151A);
-        RoundedRect.border(gui, x + 2, y + 18, imageWidth - 4, 60, 4, 1, PWPTheme.Colors.BORDER);
-
-        gui.drawString(f, "Имя:", x + 6, y + 20, PWPTheme.Colors.TEXT_DIM, false);
-        gui.drawString(f, menu.kitName, x + 40, y + 20, PWPTheme.Colors.ACCENT, false);
-
-        gui.drawString(f, "Описание:", x + 6, y + 34, PWPTheme.Colors.TEXT_DIM, false);
-
-        String cat = menu.category != null && !menu.category.isEmpty() ? menu.category : "INFANTRY";
-        gui.drawString(f, "Кат: " + cat, x + 6, y + 48, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        // Leader toggle
-        int lx = x + 6, ly = y + 61;
-        gui.fill(lx, ly, lx + 12, ly + 12, menu.isLeaderOnly ? 0x44C8812A : 0x2212151A);
-        gui.renderOutline(lx, ly, 12, 12, menu.isLeaderOnly ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-        if (menu.isLeaderOnly) gui.drawString(f, "\u2713", lx + 2, ly, PWPTheme.Colors.ACCENT, false);
-        gui.drawString(f, "Только лидер", lx + 16, ly + 1, PWPTheme.Colors.TEXT_DIM, false);
-        gui.drawString(f, "Team:", lx + 110, ly + 1, PWPTheme.Colors.TEXT_DIM, false);
-        gui.drawString(f, "Squad:", lx + 160, ly + 1, PWPTheme.Colors.TEXT_DIM, false);
-
-        // [Skins]
-        gui.drawString(f, "[Скины]", x + imageWidth - 56, ly + 1, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        // Slot area
-        RoundedRect.fill(gui, x + 7, y + 84, 164, 96, 4, 0xFF15191E);
-        RoundedRect.border(gui, x + 7, y + 84, 164, 96, 4, 1, PWPTheme.Colors.BORDER);
-        for (int si = 0; si < 9; si++) {
-            Slot s = menu.slots.get(si);
-            int sx = leftPos + s.x, sy = topPos + s.y;
-            String lbl;
-            if (si < 4) {
-                lbl = new String[] {"PR", "SE", "TH", "SP"}[si];
-            } else {
-                String altCat = getAltCategory(si);
-                lbl = altCat != null ? categoryLetter(altCat) : (isWeaponSlot(si) ? "P" : "B");
-            }
-            int lw2 = f.width(lbl) + 4;
-            int bc = lbl.equals("P")
-                    ? PWPTheme.Colors.ACCENT
-                    : (lbl.equals("S")
-                            ? PWPTheme.Colors.INFO
-                            : (lbl.equals("T")
-                                    ? PWPTheme.Colors.WARNING
-                                    : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
-            if (si >= 4) {
-                gui.fill(sx - 2, sy - 8, sx + lw2 + 2, sy - 8 + 10, 0x2212151A);
-                gui.renderOutline(sx - 2, sy - 8, lw2 + 4, 10, bc);
-            }
-            gui.drawString(f, lbl, sx, sy - 7, bc, false);
-        }
-        gui.drawString(f, "БРОНЯ \u2192", x + 8, y + 156, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        // Right panel: АЛЬТЕРНАТИВЫ
-        int rx = x + 174, rw = imageWidth - 180;
-        RoundedRect.fill(gui, rx, y + 84, rw, 76, 4, 0xFF15191E);
-        RoundedRect.border(gui, rx, y + 84, rw, 76, 4, 1, PWPTheme.Colors.BORDER);
-        gui.drawString(f, "АЛЬТ", rx + 4, y + 86, PWPTheme.Colors.TEXT_DIM, false);
-        for (int si = 41; si <= 48; si++) {
-            Slot s = menu.slots.get(si);
-            int sx = leftPos + s.x, sy = topPos + s.y;
-            String altCat = getAltCategory(si);
-            String lbl = altCat != null ? categoryLetter(altCat) : "B";
-            int lw2 = f.width(lbl) + 4;
-            int bc = lbl.equals("P")
-                    ? PWPTheme.Colors.ACCENT
-                    : (lbl.equals("S")
-                            ? PWPTheme.Colors.INFO
-                            : (lbl.equals("T")
-                                    ? PWPTheme.Colors.WARNING
-                                    : (lbl.equals("X") ? 0xFFFF8800 : PWPTheme.Colors.TEXT_DIM)));
-            gui.fill(sx - 2, sy - 8, sx + lw2 + 2, sy - 8 + 10, 0x2212151A);
-            gui.renderOutline(sx - 2, sy - 8, lw2 + 4, 10, bc);
-            gui.drawString(f, lbl, sx, sy - 7, bc, false);
-        }
-
-        // Player inventory bg
-        RoundedRect.fill(gui, x + 7, y + 180, 164, 80, 4, 0xFF15191E);
-        RoundedRect.border(gui, x + 7, y + 180, 164, 80, 4, 1, PWPTheme.Colors.BORDER);
-        gui.drawString(f, "ИНВЕНТАРЬ", x + 10, y + 182, PWPTheme.Colors.TEXT_DIM, false);
-
         super.render(gui, mx, my, pt);
-        renderTooltip(gui, mx, my);
 
-        // Slot overlays (resupply/saveNBT)
+        // Метки категорий над слотами хотбара (0-8) и альтернатив (41-48) — поверх предметов
+        for (int si = 0; si < 9; si++) renderTag(gui, si);
+        for (int si = 41; si <= 48 && si < menu.slots.size(); si++) renderTag(gui, si);
+
+        // Пометки пополнения / сохранения NBT
         for (Slot slot : menu.slots) {
             if (slot.container == menu.kitInventory) {
                 int idx = slot.getContainerSlot();
                 if (idx >= 0 && idx < 49) {
                     int sx = leftPos + slot.x, sy = topPos + slot.y;
-                    if (menu.saveNbtFlags[idx]) gui.fill(sx, sy, sx + 16, sy + 16, 0x6000C8FF);
-                    else if (menu.resupplyFlags[idx]) gui.fill(sx, sy, sx + 16, sy + 16, 0x6000FF40);
+                    if (menu.saveNbtFlags[idx])
+                        gui.fill(sx, sy, sx + WTheme.ITEM_SIZE, sy + WTheme.ITEM_SIZE, WTheme.KIT_SAVE_NBT_VEIL);
+                    else if (menu.resupplyFlags[idx])
+                        gui.fill(sx, sy, sx + WTheme.ITEM_SIZE, sy + WTheme.ITEM_SIZE, WTheme.KIT_RESUPPLY_VEIL);
                 }
             }
         }
 
-        // Legend
-        int ly2 = y + imageHeight - 14;
-        gui.fill(x + 8, ly2, x + 14, ly2 + 6, 0x6000FF40);
-        gui.drawString(f, "Resupply", x + 16, ly2, PWPTheme.Colors.SUCCESS, false);
-        gui.fill(x + 80, ly2, x + 86, ly2 + 6, 0x6000C8FF);
-        gui.drawString(f, "SaveNBT", x + 88, ly2, PWPTheme.Colors.INFO, false);
-        gui.drawString(
-                f, "СКМ = Resupply, Shift+СКМ = SaveNBT", x + 8, y + imageHeight - 26, PWPTheme.Colors.TEXT_DIM, false);
+        renderTooltip(gui, mx, my);
     }
 
     @Override
-    protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {}
+    protected void renderBg(GuiGraphics gui, float pt, int mx, int my) {
+        int x = leftPos, y = topPos;
+        int pad = Spacing.XS + Spacing.XXS;
+        Rect panel = Rect.of(x, y, imageWidth, imageHeight);
+        UIDraw.glass(gui, panel, 1F, true);
+        WDraw.header(
+                gui,
+                font,
+                panel.top(WTheme.CONTAINER_HEADER_H),
+                WarfareIcon.EDIT,
+                Component.translatable("gui.pwpwarfare.kit_editor.title", menu.kitName),
+                null,
+                1F);
+
+        // --- настройки
+        Rect nameRow = Rect.of(x + pad, y + ROW_NAME, imageWidth - 2 * pad, WTheme.FIELD_H);
+        int lw = WDraw.text(gui, font, tr("name"), nameRow, Align.START, PWPTheme.Text.MUTED, false, 1F);
+        String cat = menu.category != null && !menu.category.isEmpty() ? menu.category : "INFANTRY";
+        Component catPill = Component.translatable("gui.pwpwarfare.kit_editor.category", cat);
+        int pw = WDraw.pillWidth(font, catPill);
+        WDraw.pill(
+                gui,
+                font,
+                nameRow.right() - pw,
+                nameRow.y() + (nameRow.h() - WDraw.pillHeight(font)) / 2,
+                catPill,
+                PWPTheme.Text.ACCENT,
+                1F);
+        WDraw.text(
+                gui,
+                font,
+                Component.literal(menu.kitName),
+                Rect.of(nameRow.x() + lw + Spacing.XS, nameRow.y(), nameRow.w() - lw - pw - Spacing.SM, nameRow.h()),
+                Align.START,
+                PWPTheme.Colors.ACCENT,
+                false,
+                1F);
+
+        labelLeftOf(gui, descBox, tr("description"));
+        WDraw.field(gui, fieldRect(descBox), descBox.isFocused(), 1F);
+        labelLeftOf(gui, maxTeamBox, tr("limit_team"));
+        labelLeftOf(gui, maxSquadBox, tr("limit_squad"));
+        labelLeftOf(gui, minPlayersBox, tr("limit_min_players"));
+        for (EditBox b : new EditBox[] {maxTeamBox, maxSquadBox, minPlayersBox})
+            WDraw.field(gui, fieldRect(b), b.isFocused(), 1F);
+
+        // --- подложки всех слотов меню
+        for (Slot s : menu.slots) {
+            WDraw.well(gui, Rect.of(x + s.x - 1, y + s.y - 1, WTheme.SLOT_WELL, WTheme.SLOT_WELL), 1F);
+        }
+
+        // --- подписи групп
+        Slot offhand = menu.slots.get(40);
+        Rect armorRow = Rect.of(
+                x + offhand.x + WTheme.SLOT_WELL + Spacing.XS,
+                y + offhand.y,
+                RIGHT_COL_X - offhand.x - WTheme.SLOT_WELL - Spacing.XS,
+                WTheme.ITEM_SIZE);
+        WDraw.section(gui, font, armorRow, tr("armor"), PWPTheme.Text.ACCENT, 1F);
+
+        Slot firstAlt = menu.slots.get(41);
+        int altBottom = y + menu.slots.get(48).y + WTheme.ITEM_SIZE + Spacing.XS;
+        Rect altRow =
+                Rect.of(x + RIGHT_COL_X, altBottom, imageWidth - RIGHT_COL_X - pad, font.lineHeight + Spacing.XXS);
+        WDraw.section(gui, font, altRow, tr("alternatives"), PWPTheme.Text.ACCENT, 1F);
+        UIDraw.vline(
+                gui,
+                x + firstAlt.x - Spacing.XS,
+                y + firstAlt.y - WTheme.SLOT_TAG_H,
+                altBottom,
+                PWPTheme.Styles.Glass.HEADER_DIVIDER);
+
+        Slot firstInv = menu.slots.get(49);
+        Rect invRow =
+                Rect.of(x + RIGHT_COL_X, y + firstInv.y, imageWidth - RIGHT_COL_X - pad, font.lineHeight + Spacing.XXS);
+        WDraw.section(gui, font, invRow, Component.translatable("container.inventory"), PWPTheme.Text.MUTED, 1F);
+
+        // --- подсказка и легенда (низ панели)
+        int lastY = y + menu.slots.get(menu.slots.size() - 1).y + WTheme.ITEM_SIZE + Spacing.XS;
+        Rect hint = Rect.of(x + pad, lastY, imageWidth - 2 * pad, font.lineHeight + Spacing.XXS);
+        WDraw.text(gui, font, tr("hint"), hint, Align.START, PWPTheme.Text.CAPTION, false, 1F);
+        Rect legend = hint.translate(0, hint.h());
+        int lx = legend.x();
+        lx += swatch(gui, lx, legend, WTheme.KIT_RESUPPLY_VEIL, tr("legend_resupply"), PWPTheme.Colors.SUCCESS_LIGHT);
+        swatch(gui, lx + Spacing.SM, legend, WTheme.KIT_SAVE_NBT_VEIL, tr("legend_save_nbt"), PWPTheme.Colors.INFO);
+
+        layer.render(gui, mx, my, pt, width, height);
+    }
+
+    /** Цветной квадратик + подпись; возвращает занятую ширину. */
+    private int swatch(GuiGraphics gui, int x, Rect row, int veil, Component label, int color) {
+        int s = WTheme.KIT_LEGEND_SWATCH;
+        int sy = row.y() + (row.h() - s) / 2;
+        gui.fill(x, sy, x + s, sy + s, veil);
+        UIDraw.outline(gui, Rect.of(x, sy, s, s), color);
+        int tx = x + s + Spacing.XS;
+        int tw = WDraw.text(
+                gui, font, label, Rect.of(tx, row.y(), row.right() - tx, row.h()), Align.START, color, false, 1F);
+        return s + Spacing.XS + tw;
+    }
+
+    private void labelLeftOf(GuiGraphics gui, EditBox box, Component label) {
+        Rect f = fieldRect(box);
+        int w = font.width(label);
+        WDraw.text(
+                gui,
+                font,
+                label,
+                Rect.of(f.x() - Spacing.XS - w, f.y(), w, f.h()),
+                Align.START,
+                PWPTheme.Text.MUTED,
+                false,
+                1F);
+    }
+
+    /** Метка категории над слотом: 0-3 — фиксированные PR/SE/TH/SP, остальные — по ALT-маркеру. */
+    private void renderTag(GuiGraphics gui, int si) {
+        Slot s = menu.slots.get(si);
+        int sx = leftPos + s.x, sy = topPos + s.y;
+        int cat = tagCategory(si);
+        Component lbl = si < 4
+                ? Component.translatable("gui.pwpwarfare.kit_editor.slot." + si)
+                : Component.translatable("gui.pwpwarfare.kit_editor.tag." + ALT_CATS[cat].toLowerCase());
+        int color = TAG_COLORS[cat];
+        Rect r = Rect.of(sx - 1, sy - WTheme.SLOT_TAG_H, font.width(lbl) + Spacing.XS, WTheme.SLOT_TAG_H);
+        UIDraw.rect(gui, r, WTheme.SLOT_TAG_BG);
+        if (si >= 4) UIDraw.outline(gui, r, color);
+        else UIDraw.hline(gui, r.x(), r.right(), r.bottom() - 1, color);
+        UIDraw.text(gui, font, lbl, r.x() + Spacing.XXS, r.y(), color, false);
+    }
+
+    private int tagCategory(int si) {
+        if (si < 4) return si;
+        String alt = getAltCategory(si);
+        if (alt != null) {
+            for (int i = 0; i < ALT_CATS.length; i++) if (ALT_CATS[i].equals(alt)) return i;
+        }
+        // Без ALT-маркера: в хотбаре оружие считается основным, остальное — рюкзак
+        return si <= 8 && isWeaponSlot(si) ? 0 : BACKPACK;
+    }
 
     @Override
     protected void renderLabels(GuiGraphics gui, int mx, int my) {}
+
+    // ================================================================ действия
 
     private void saveKit() {
         menu.maxPerTeam = Parse.intOr(maxTeamBox.getValue(), menu.maxPerTeam);
@@ -236,35 +373,17 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
                     menu.slotSkins));
         }
         if (minecraft.player != null) {
-            minecraft.player.displayClientMessage(Component.literal("Кит сохранён!"), true);
+            minecraft.player.displayClientMessage(tr("saved"), true);
         }
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (layer.mouseClicked(mx, my, button)) return true;
         if (button == 0) {
-            int lx = leftPos + 6, ly = topPos + 61;
-            if (mx >= lx && mx <= lx + 12 && my >= ly && my <= ly + 12) {
-                menu.isLeaderOnly = !menu.isLeaderOnly;
-                return true;
-            }
-            int sx = leftPos + imageWidth - 56;
-            if (mx >= sx && mx <= sx + 50 && my >= ly && my <= ly + 12) {
-                keepContainerOpen = true;
-                Minecraft.getInstance().setScreen(new KitSkinSelectScreen(menu, this));
-                return true;
-            }
-            // Category label clicks on slots 4-8
-            for (int si = 4; si <= 8; si++) {
-                Slot s = menu.slots.get(si);
-                int slx = leftPos + s.x - 2, sly = topPos + s.y - 8;
-                if (mx >= slx && mx <= slx + 16 && my >= sly && my <= sly + 10) {
-                    cycleAltCategory(si);
-                    return true;
-                }
-            }
-            // Category label clicks on slots 41-48 (right panel)
-            for (int si = 41; si <= 48; si++) {
+            // Клик по метке категории над слотами 4-8 и 41-48 (правая панель) — следующая категория
+            for (int si = 4; si <= 48; si++) {
+                if (si == 9) si = 41;
                 if (si >= menu.slots.size()) break;
                 Slot s = menu.slots.get(si);
                 int slx = leftPos + s.x - 2, sly = topPos + s.y - 8;
@@ -286,6 +405,12 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
             }
         }
         return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        layer.mouseReleased(mx, my, button);
+        return super.mouseReleased(mx, my, button);
     }
 
     private String getAltCategory(int slot) {
@@ -313,13 +438,6 @@ public class KitEditorScreen extends AbstractContainerScreen<KitEditorMenu> {
         java.util.List<String> list = new java.util.ArrayList<>();
         list.add(ALT_PREFIX + ALT_CATS[idx]);
         menu.slotSkins.put(slot, list);
-    }
-
-    private String categoryLetter(String cat) {
-        for (int i = 0; i < ALT_CATS.length; i++) {
-            if (ALT_CATS[i].equals(cat)) return ALT_LABELS[i];
-        }
-        return "B";
     }
 
     private boolean isWeaponSlot(int slot) {
