@@ -17,6 +17,10 @@ public class CosmeticsMod {
     public CosmeticsMod() {
         SkinRegistry.initDefaults();
         initNetwork();
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) {
+            // тест-стенд UI (/pwpui): регистрирует экраны только при включённом стенде
+            com.pwp.cosmetics.gui.CosmeticsUiFixtures.register();
+        }
     }
 
     /** Версия протокола канала. 2 — экипировка по skinId (PacketCosmeticEquip) вместо SNBT от клиента. */

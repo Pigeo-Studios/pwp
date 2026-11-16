@@ -3,7 +3,6 @@
     "pwp_cosmetics.equip": "Equip",
     "pwp_cosmetics.unequip": "Unequip",
     "pwp_cosmetics.preview": "Preview",
-
     "pwp_cosmetics.slot.KNIFE": "Knife",
     "pwp_cosmetics.slot.PRIMARY": "Primary Weapon",
     "pwp_cosmetics.slot.SECONDARY": "Secondary Weapon",
@@ -13,13 +12,11 @@
     "pwp_cosmetics.slot.EFFECT": "Effect",
     "pwp_cosmetics.slot.VOICE": "Voice Pack",
     "pwp_cosmetics.slot.ANIMATION": "Emote",
-
     "pwp_cosmetics.rarity.COMMON": "Common",
     "pwp_cosmetics.rarity.RARE": "Rare",
     "pwp_cosmetics.rarity.EPIC": "Epic",
     "pwp_cosmetics.rarity.LEGENDARY": "Legendary",
     "pwp_cosmetics.rarity.MYTHIC": "Mythic",
-
     "pwp_cosmetics.equipped": "Equipped",
     "pwp_cosmetics.not_owned": "Not Owned",
     "pwp_cosmetics.select_role": "Select a role to customize:",
@@ -38,7 +35,6 @@
     "pwp_cosmetics.role.Pilot": "Pilot",
     "pwp_cosmetics.role.Mechanic": "Mechanic",
     "pwp_cosmetics.role.Scout": "Scout",
-
     "pwp_cosmetics.skin.knife_default": "Standard Knife",
     "pwp_cosmetics.skin.knife_dragon": "Dragon Fang",
     "pwp_cosmetics.skin.knife_ghost": "Ghost Blade",
@@ -46,18 +42,32 @@
     "pwp_cosmetics.skin.ak_default": "Standard AK",
     "pwp_cosmetics.skin.m4_default": "Standard M4",
     "pwp_cosmetics.skin.uniform_default": "Standard Uniform",
-
     "pwp_cosmetics.obtained_at": "Obtained: %s",
     "pwp_cosmetics.source.SHOP": "Purchased from Shop",
     "pwp_cosmetics.source.DONATE": "Donation Reward",
     "pwp_cosmetics.source.ACHIEVEMENT": "Achievement Reward",
     "pwp_cosmetics.source.SEASON": "Season Reward",
     "pwp_cosmetics.source.BATTLEPASS": "Battle Pass Reward",
-
     "pwp_cosmetics.tooltip.rarity": "Rarity: %s",
     "pwp_cosmetics.tooltip.slot": "Slot: %s",
     "pwp_cosmetics.tooltip.source": "Source: %s",
-
     "gui.pwp_cosmetics.skin_inventory.title": "Skin Inventory",
-    "gui.pwp_cosmetics.skin_inventory.empty": "No skins found"
+    "gui.pwp_cosmetics.skin_inventory.empty": "No skins found",
+    "pwp_cosmetics.slot.MELEE": "Melee",
+    "pwp_cosmetics.rarity.UNCOMMON": "Uncommon",
+    "pwp_cosmetics.filter.ALL": "ALL",
+    "pwp_cosmetics.filter.PRIMARY": "PRIMARY",
+    "pwp_cosmetics.filter.SECONDARY": "SECONDARY",
+    "pwp_cosmetics.filter.KNIFE": "KNIFE",
+    "pwp_cosmetics.filter.MELEE": "MELEE",
+    "pwp_cosmetics.filter.UNIFORM": "UNIFORM",
+    "pwp_cosmetics.action.equip": "Click to equip",
+    "pwp_cosmetics.action.unequip": "Equipped — click to unequip",
+    "pwp_cosmetics.action.locked": "Locked",
+    "pwp_cosmetics.status.equipping": "Equipping...",
+    "pwp_cosmetics.status.unequipping": "Unequipping...",
+    "pwp_cosmetics.status.not_owned": "Skin not purchased",
+    "pwp_cosmetics.status.done": "Done",
+    "pwp_cosmetics.hint.primary_multi": "You can pick several primary skins",
+    "pwp_cosmetics.empty_hint": "Skins appear after purchase or rewards"
 }

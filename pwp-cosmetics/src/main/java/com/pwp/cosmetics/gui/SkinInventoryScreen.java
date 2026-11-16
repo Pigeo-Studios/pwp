@@ -3,394 +3,352 @@ package com.pwp.cosmetics.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.api.security.PwpPermissions;
 import com.pwp.coreclient.PlayerData;
 import com.pwp.coreclient.PlayerData.CosmeticEntry;
+import com.pwp.coreclient.gui.components.PWPToastManager;
+import com.pwp.coreclient.gui.screens.PWPChrome;
+import com.pwp.coreclient.gui.screens.PWPRotatingBackground;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
 import com.pwp.coreclient.network.ClientResponseCache;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.coreclient.network.data.DataRequest;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.UILayer;
+import com.pwp.coreclient.ui.UIScrollArea;
+import com.pwp.coreclient.ui.UITabs;
+import com.pwp.coreclient.ui.UITooltip;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Fit;
+import com.pwp.coreclient.ui.layout.Flow;
+import com.pwp.coreclient.ui.layout.Grid;
+import com.pwp.coreclient.ui.layout.Rect;
 import com.pwp.cosmetics.CosmeticsMod;
 import com.pwp.cosmetics.SkinCatalog;
 import com.pwp.cosmetics.client.CosmeticClientState;
 import com.pwp.cosmetics.network.PacketCosmeticEquip;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+/**
+ * Инвентарь скинов (переписан на UI-ките): вкладки-фильтры по слоту, сетка плиток
+ * ({@link Grid#columnsFor}) в прокручиваемой области, у плитки — иконка предмета, полоса
+ * редкости, галочка «надето», замок «нет доступа». Клик — надеть/снять (прежний
+ * PacketCosmeticEquip; владение проверяет сервер), результат — тостом.
+ *
+ * <p>Данные идут через {@link Source}: в игре — {@link #NETWORK} (DataRequest "skins" +
+ * профиль из PlayerData), в тест-стенде UI — фикстура без сети ({@link #preview}).
+ */
 public class SkinInventoryScreen extends Screen {
 
-    private static final int ITEMS_PER_ROW = 7;
-    private static final int ITEM_SIZE = 26;
-    private static final int ITEM_GAP = 7;
-    private static final int START_Y = 54;
+    /** Источник данных и действий экрана. */
+    public interface Source {
+        /** Определения скинов (skinId, name, modelPath, slotType, rarity) или null — ещё нет. */
+        JsonArray skins();
 
-    private static Map<String, ItemStack> globalSkinItemCache = null;
-    private static List<CosmeticEntry> globalSkinEntries = null;
-    private static Map<String, String> globalSkinNameCache = null;
+        void requestSkins();
 
-    private List<CosmeticEntry> allCosmetics = new ArrayList<>();
-    private List<CosmeticEntry> filtered = new ArrayList<>();
-    private Map<String, ItemStack> skinItemCache = new HashMap<>();
-    private Map<String, String> skinNameCache = new HashMap<>();
-    private Set<String> ownedSkinIds = new HashSet<>();
-    private String currentFilter = "ALL";
-    private int scrollOffset = 0;
-    private int maxScroll = 0;
-    private String statusMsg = "";
-    /** Экипированные скины, ожидающие ответа с определениями скинов; null — не ждём. */
-    private Set<String> pendingEquipped = null;
+        Set<String> owned();
 
-    private long statusTime = 0;
+        Set<String> equipped();
 
-    private static final int[] RARITY_COLORS = {0xFF6A6D73, 0xFF3D6FA5, 0xFF7A4A8A, 0xFFC8812A, 0xFFA53D3D, 0xFFFFD700};
+        boolean admin();
+
+        /** Надеть (skinId) или снять (skinId пустой) скин слота. */
+        void equip(String slotType, String skinId);
+    }
+
+    /** Игра: прежние запросы и пакет экипировки. */
+    public static final Source NETWORK = new Source() {
+        @Override
+        public JsonArray skins() {
+            return ClientResponseCache.skinsData;
+        }
+
+        @Override
+        public void requestSkins() {
+            ClientResponseCache.skinsData = null;
+            PacketHandler.INSTANCE.sendToServer(new DataRequest("skins", ""));
+        }
+
+        private List<CosmeticEntry> profile() {
+            var player = Minecraft.getInstance().player;
+            if (player == null) return List.of();
+            PlayerData.CachedProfile p = PlayerData.get(player.getUUID());
+            return p != null ? p.getCosmetics() : List.of();
+        }
+
+        @Override
+        public Set<String> owned() {
+            Set<String> out = new HashSet<>();
+            for (CosmeticEntry ce : profile()) out.add(ce.skinId);
+            return out;
+        }
+
+        @Override
+        public Set<String> equipped() {
+            Set<String> out = new HashSet<>();
+            for (CosmeticEntry ce : profile()) if (ce.equipped) out.add(ce.skinId);
+            return out;
+        }
+
+        @Override
+        public boolean admin() {
+            return PwpPermissions.isAdmin(Minecraft.getInstance().player);
+        }
+
+        @Override
+        public void equip(String slotType, String skinId) {
+            CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(slotType, "ALL", skinId));
+        }
+    };
+
+    private static final String[] FILTERS = {"ALL", "PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
+
+    private record Skin(String id, String name, String slot, String rarity, ItemStack icon) {}
+
+    private final Source source;
+    private final UILayer layer = new UILayer();
+    private final UIScrollArea grid = new UIScrollArea();
+    private UITabs tabs;
+    private int filter;
+    private List<Skin> all = new ArrayList<>();
+    private Set<String> owned = new HashSet<>();
+    private Set<String> equipped = new HashSet<>();
+    private boolean waiting;
+    private Rect gridR = Rect.of(0, 0, 0, 0);
+    private Rect hintR = gridR;
 
     public SkinInventoryScreen() {
+        this(NETWORK);
+    }
+
+    private SkinInventoryScreen(Source source) {
         super(Component.translatable("gui.pwp_cosmetics.skin_inventory.title"));
+        this.source = source;
+    }
+
+    /** Тест-стенд UI: данные из фикстуры, ничего не уходит в сеть. */
+    public static SkinInventoryScreen preview(Source fixture) {
+        return new SkinInventoryScreen(fixture);
     }
 
     @Override
     protected void init() {
-        int cx = this.width / 2;
-        int btnY = 14;
-
-        addRenderableWidget(Button.builder(Component.literal("Все"), b -> setFilter("ALL"))
-                .bounds(cx - 170, btnY, 42, 22)
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("Основное"), b -> setFilter("PRIMARY"))
-                .bounds(cx - 124, btnY, 52, 22)
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("Вторичное"), b -> setFilter("SECONDARY"))
-                .bounds(cx - 68, btnY, 60, 22)
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("Нож"), b -> setFilter("KNIFE"))
-                .bounds(cx - 4, btnY, 45, 22)
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("Холодное"), b -> setFilter("MELEE"))
-                .bounds(cx + 45, btnY, 45, 22)
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("Униформа"), b -> setFilter("UNIFORM"))
-                .bounds(cx + 94, btnY, 52, 22)
-                .build());
-
         CosmeticClientState.setListener(this::onEquipResult);
-        loadCosmetics();
-    }
-
-    private void setFilter(String filter) {
-        this.currentFilter = filter;
-        this.scrollOffset = 0;
-        filterCosmetics();
-    }
-
-    private void loadCosmetics() {
-        globalSkinItemCache = null;
-        globalSkinEntries = null;
-        globalSkinNameCache = null;
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-
-        UUID uuid = mc.player.getUUID();
-        PlayerData.CachedProfile profile = PlayerData.get(uuid);
-        Set<String> equippedSkinIds = new HashSet<>();
-        ownedSkinIds.clear();
-        if (profile != null) {
-            for (CosmeticEntry ce : profile.getCosmetics()) {
-                ownedSkinIds.add(ce.skinId);
-                if (ce.equipped) equippedSkinIds.add(ce.skinId);
-            }
+        owned = source.owned();
+        equipped = source.equipped();
+        if (all.isEmpty() && !waiting) {
+            waiting = true;
+            source.requestSkins();
         }
-        loadSkinDefinitions(equippedSkinIds);
+        relayout();
     }
 
-    private boolean isAdmin() {
-        Minecraft mc = Minecraft.getInstance();
-        return PwpPermissions.isAdmin(mc.player);
-    }
+    private void relayout() {
+        layer.clear();
+        grid.clear();
+        var font = PWPTheme.Fonts.display();
+        Fit.Density d = PWPChrome.density(width, height);
+        int m = PWPChrome.margin(width);
+        int top = PWPChrome.topBarHeight(d) + (d == Fit.Density.COMPACT ? Spacing.XS : Spacing.SM);
+        int tabH = d.pick(Spacing.LOBBY_TAB_H, Spacing.LOBBY_TAB_H, Spacing.LOBBY_TAB_H_LARGE);
+        Rect area = Rect.of(m, top, width - 2 * m, height - top - PWPChrome.footerHeight(d) - Spacing.SM);
+        Rect[] col =
+                Flow.column(area, 0, Flow.Justify.START, tabH, Spacing.SM, Flow.flex(1), Spacing.XS, font.lineHeight);
+        List<Component> labels = new ArrayList<>();
+        for (String f : FILTERS) labels.add(Component.translatable("pwp_cosmetics.filter." + f));
+        tabs = new UITabs(0, 0, 0, labels, i -> {
+            filter = i;
+            relayout();
+        });
+        tabs.setBounds(col[0].align(Math.min(col[0].w(), tabs.preferredWidth()), tabH, Align.CENTER, Align.STRETCH));
+        tabs.select(filter, false);
+        layer.add(tabs);
+        gridR = col[2];
+        hintR = col[4];
+        grid.setBounds(gridR);
+        layer.add(grid);
 
-    private void loadSkinDefinitions(Set<String> equippedSkinIds) {
-        if (globalSkinItemCache != null && globalSkinEntries != null) {
-            skinItemCache = globalSkinItemCache;
-            skinNameCache = globalSkinNameCache;
-            allCosmetics = new ArrayList<>(globalSkinEntries);
-            for (CosmeticEntry ce : allCosmetics) {
-                ce.equipped = equippedSkinIds.contains(ce.skinId);
-            }
-            filterCosmetics();
-            return;
+        List<Skin> shown = filtered();
+        int tile = Spacing.SKIN_TILE;
+        int gap = Spacing.XS;
+        int cols = Grid.columnsFor(gridR.w(), tile, gap, Spacing.SKIN_MAX_COLS);
+        int gridW = cols * tile + (cols - 1) * gap;
+        int contentW = grid.contentWidth(Grid.height(shown.size(), cols, tile, gap));
+        Rect[] cells = Grid.cells(
+                Rect.of(Math.max(0, (contentW - gridW) / 2), 0, Math.min(gridW, contentW), 0),
+                shown.size(),
+                cols,
+                tile,
+                gap);
+        boolean admin = source.admin();
+        for (int i = 0; i < shown.size(); i++) {
+            Skin s = shown.get(i);
+            boolean access = admin || owned.contains(s.id());
+            SkinTile t = new SkinTile(s, equipped.contains(s.id()), access, () -> toggle(s));
+            t.setEnabled(access);
+            t.tooltip(tooltip(s, equipped.contains(s.id()), access));
+            grid.place(t, cells[i]);
         }
-        // Определения скинов запрашиваем через сервер (core-service доступен только ему)
-        pendingEquipped = equippedSkinIds;
-        ClientResponseCache.skinsData = null;
-        PacketHandler.INSTANCE.sendToServer(new DataRequest("skins", ""));
+    }
+
+    /** Надетые — первыми, затем купленные (как раньше). */
+    private List<Skin> filtered() {
+        List<Skin> out = new ArrayList<>();
+        for (Skin s : all) if (filter == 0 || s.slot().equals(FILTERS[filter])) out.add(s);
+        out.sort((a, b) -> {
+            int ea = equipped.contains(a.id()) ? 0 : 1, eb = equipped.contains(b.id()) ? 0 : 1;
+            if (ea != eb) return ea - eb;
+            int oa = owned.contains(a.id()) ? 0 : 1, ob = owned.contains(b.id()) ? 0 : 1;
+            return oa - ob;
+        });
+        return out;
+    }
+
+    private static UITooltip.Content tooltip(Skin s, boolean on, boolean access) {
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.translatable(
+                "pwp_cosmetics.tooltip.slot", Component.translatable("pwp_cosmetics.slot." + s.slot())));
+        lines.add(Component.translatable(
+                "pwp_cosmetics.tooltip.rarity", Component.translatable("pwp_cosmetics.rarity." + s.rarity())));
+        lines.add(Component.translatable(
+                on
+                        ? "pwp_cosmetics.action.unequip"
+                        : access ? "pwp_cosmetics.action.equip" : "pwp_cosmetics.action.locked"));
+        return new UITooltip.Content(Component.literal(s.name()), lines);
     }
 
     @Override
     public void tick() {
         super.tick();
-        JsonArray arr = ClientResponseCache.skinsData;
-        if (pendingEquipped != null && arr != null) {
-            applySkinDefinitions(arr, pendingEquipped);
-            pendingEquipped = null;
+        JsonArray arr = waiting ? source.skins() : null;
+        if (arr != null) {
+            waiting = false;
+            all = parse(arr);
+            relayout();
         }
     }
 
-    private void applySkinDefinitions(JsonArray arr, Set<String> equippedSkinIds) {
-        Map<String, ItemStack> cache = new HashMap<>();
-        Map<String, String> nameCache = new HashMap<>();
-        List<CosmeticEntry> allSkinEntries = new ArrayList<>();
+    private static List<Skin> parse(JsonArray arr) {
+        List<Skin> out = new ArrayList<>();
+        Map<String, ItemStack> icons = new HashMap<>();
         for (JsonElement e : arr) {
-            JsonObject obj = e.getAsJsonObject();
-            String skinId = obj.get("skinId").getAsString();
-            nameCache.put(skinId, obj.has("name") ? obj.get("name").getAsString() : skinId);
-            String modelPath = obj.has("modelPath") && !obj.get("modelPath").isJsonNull()
-                    ? obj.get("modelPath").getAsString()
+            JsonObject o = e.getAsJsonObject();
+            String id = o.get("skinId").getAsString();
+            String model = o.has("modelPath") && !o.get("modelPath").isJsonNull()
+                    ? o.get("modelPath").getAsString()
                     : "";
-            // Предмет здесь — только для иконки; выдаваемый предмет собирает сервер
-            ItemStack icon = SkinCatalog.buildItem(skinId, modelPath);
-            if (!icon.isEmpty()) cache.put(skinId, icon);
-            CosmeticEntry ce = new CosmeticEntry();
-            ce.itemUuid = skinId;
-            ce.skinId = skinId;
-            ce.slotType = obj.get("slotType").getAsString();
-            ce.rarity = obj.get("rarity").getAsString();
-            ce.source = "builtin";
-            ce.equipped = equippedSkinIds.contains(skinId);
-            allSkinEntries.add(ce);
+            // предмет — только иконка; выдаваемый предмет собирает сервер
+            ItemStack icon = icons.computeIfAbsent(id, k -> SkinCatalog.buildItem(k, model));
+            out.add(new Skin(
+                    id,
+                    o.has("name") ? o.get("name").getAsString() : id,
+                    o.has("slotType") ? o.get("slotType").getAsString() : "",
+                    o.has("rarity") ? o.get("rarity").getAsString().toUpperCase() : "COMMON",
+                    icon));
         }
-        globalSkinItemCache = cache;
-        globalSkinEntries = allSkinEntries;
-        globalSkinNameCache = nameCache;
-        skinItemCache = cache;
-        skinNameCache = nameCache;
-        allCosmetics = new ArrayList<>(allSkinEntries);
-        filterCosmetics();
+        return out;
     }
 
-    private void filterCosmetics() {
-        if (currentFilter.equals("ALL")) {
-            filtered = new ArrayList<>(allCosmetics);
+    private void toggle(Skin s) {
+        if (equipped.contains(s.id())) {
+            PWPToastManager.show(
+                    Component.translatable("pwp_cosmetics.status.unequipping").getString());
+            source.equip(s.slot(), "");
+        } else if (!owned.contains(s.id()) && !source.admin()) {
+            PWPToastManager.show(
+                    Component.translatable("pwp_cosmetics.status.not_owned").getString(),
+                    PWPToastManager.ToastType.ERROR);
         } else {
-            filtered = allCosmetics.stream()
-                    .filter(c -> c.slotType.equals(currentFilter))
-                    .collect(Collectors.toList());
-        }
-
-        filtered.sort((a, b) -> {
-            boolean aOwned = ownedSkinIds.contains(a.skinId);
-            boolean bOwned = ownedSkinIds.contains(b.skinId);
-            if (a.equipped && !b.equipped) return -1;
-            if (!a.equipped && b.equipped) return 1;
-            if (aOwned && !bOwned) return -1;
-            if (!aOwned && bOwned) return 1;
-            return 0;
-        });
-
-        int rows = (filtered.size() + ITEMS_PER_ROW - 1) / ITEMS_PER_ROW;
-        int visibleRows = (this.height - START_Y - 30) / (ITEM_SIZE + ITEM_GAP);
-        maxScroll = Math.max(0, rows - visibleRows);
-    }
-
-    @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-
-        int cx = this.width / 2;
-        int totalWidth = ITEMS_PER_ROW * (ITEM_SIZE + ITEM_GAP) - ITEM_GAP;
-        int startX = cx - totalWidth / 2;
-
-        gui.drawCenteredString(PWPTheme.Fonts.display(), this.title, cx, 38, PWPTheme.Colors.TEXT_ACCENT);
-        gui.fill(cx - totalWidth / 2 - 8, 46, cx + totalWidth / 2 + 8, 47, PWPTheme.Colors.ACCENT);
-
-        if (filtered.isEmpty()) {
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
-                    cx,
-                    this.height / 2,
-                    PWPTheme.Colors.TEXT_DIM);
-        } else {
-            RenderSystem.enableBlend();
-
-            int clipY = START_Y;
-            int clipH = this.height - START_Y - 32;
-            gui.enableScissor(startX - 4, clipY, startX + totalWidth + 4, clipY + clipH);
-
-            for (int i = scrollOffset * ITEMS_PER_ROW; i < filtered.size(); i++) {
-                int row = (i - scrollOffset * ITEMS_PER_ROW) / ITEMS_PER_ROW;
-                int col = (i - scrollOffset * ITEMS_PER_ROW) % ITEMS_PER_ROW;
-                int x = startX + col * (ITEM_SIZE + ITEM_GAP);
-                int y = START_Y + row * (ITEM_SIZE + ITEM_GAP);
-
-                if (y + ITEM_SIZE > clipY + clipH) break;
-
-                CosmeticEntry entry = filtered.get(i);
-                boolean canAccess = isAdmin() || ownedSkinIds.contains(entry.skinId);
-                int rarityColor = getRarityColor(entry.rarity);
-
-                gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, PWPTheme.Colors.SURFACE);
-
-                if (entry.equipped) {
-                    gui.renderOutline(x - 2, y - 2, ITEM_SIZE + 4, ITEM_SIZE + 4, PWPTheme.Colors.SUCCESS);
-                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, rarityColor);
-                    gui.drawString(
-                            PWPTheme.Fonts.display(),
-                            Component.literal("\u2714"),
-                            x + ITEM_SIZE - 10,
-                            y + 1,
-                            PWPTheme.Colors.SUCCESS,
-                            false);
-                } else if (canAccess) {
-                    gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, rarityColor);
-                } else {
-                    gui.renderOutline(x, y, ITEM_SIZE, ITEM_SIZE, 0xFF3A3D44);
-                    gui.fill(x, y, x + ITEM_SIZE, y + ITEM_SIZE, 0x8812151A);
-                }
-
-                ItemStack stack = skinItemCache.get(entry.skinId);
-                if (stack != null && !stack.isEmpty()) {
-                    if (!canAccess) RenderSystem.setShaderColor(0.5F, 0.5F, 0.5F, 0.6F);
-                    gui.renderItem(stack, x + 5, y + 5);
-                    if (!canAccess) RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                }
-
-                if (!canAccess) {
-                    gui.drawString(
-                            PWPTheme.Fonts.display(),
-                            Component.literal("\uD83D\uDD12"),
-                            x + 2,
-                            y + ITEM_SIZE - 10,
-                            0xFF7A7D84,
-                            false);
-                }
-
-                if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
-                    gui.renderOutline(x - 1, y - 1, ITEM_SIZE + 2, ITEM_SIZE + 2, PWPTheme.Colors.ACCENT);
-
-                    List<Component> tooltip = new ArrayList<>();
-                    String displayName = skinNameCache.getOrDefault(entry.skinId, entry.skinId);
-                    tooltip.add(Component.literal("\u00a7" + getRarityCode(entry.rarity) + displayName));
-                    tooltip.add(Component.literal("\u00a77" + entry.slotType + " \u00a78| \u00a77" + entry.rarity));
-                    if (entry.equipped) {
-                        tooltip.add(Component.literal("\u00a7a\u2714 Надето — нажмите чтобы снять"));
-                    } else if (canAccess) {
-                        tooltip.add(Component.literal("\u00a7eНажмите чтобы надеть"));
-                    } else {
-                        tooltip.add(Component.literal("\u00a78\uD83D\uDD12 Нет доступа"));
-                    }
-                    gui.renderComponentTooltip(PWPTheme.Fonts.display(), tooltip, mx, my);
-                }
-            }
-
-            gui.disableScissor();
-            RenderSystem.disableBlend();
-
-            // Scroll indicators
-            if (maxScroll > 0) {
-                if (scrollOffset > 0)
-                    gui.drawCenteredString(
-                            PWPTheme.Fonts.display(),
-                            Component.literal("\u25B2"),
-                            cx,
-                            START_Y - 2,
-                            PWPTheme.Colors.TEXT_DIM);
-                if (scrollOffset < maxScroll)
-                    gui.drawCenteredString(
-                            PWPTheme.Fonts.display(),
-                            Component.literal("\u25BC"),
-                            cx,
-                            this.height - 18,
-                            PWPTheme.Colors.TEXT_DIM);
-            }
-        }
-
-        if (currentFilter.equals("PRIMARY")) {
-            String hint = "\u00a77\u2714 Можно выбрать несколько основных скинов";
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    Component.literal(hint),
-                    cx,
-                    this.height - 30,
-                    PWPTheme.Colors.TEXT_SECONDARY);
-        }
-
-        if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    Component.literal(statusMsg),
-                    cx,
-                    this.height - 16,
-                    PWPTheme.Colors.TEXT_ACCENT);
-
-        super.render(gui, mx, my, pt);
-    }
-
-    @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (button == 0) {
-            int cx = this.width / 2;
-            int totalWidth = ITEMS_PER_ROW * (ITEM_SIZE + ITEM_GAP) - ITEM_GAP;
-            int startX = cx - totalWidth / 2;
-
-            for (int i = scrollOffset * ITEMS_PER_ROW; i < filtered.size(); i++) {
-                int row = (i - scrollOffset * ITEMS_PER_ROW) / ITEMS_PER_ROW;
-                int col = (i - scrollOffset * ITEMS_PER_ROW) % ITEMS_PER_ROW;
-                int x = startX + col * (ITEM_SIZE + ITEM_GAP);
-                int y = START_Y + row * (ITEM_SIZE + ITEM_GAP);
-
-                int clipEnd = START_Y + (this.height - START_Y - 32);
-                if (y + ITEM_SIZE > clipEnd) break;
-
-                if (mx >= x && mx <= x + ITEM_SIZE && my >= y && my <= y + ITEM_SIZE) {
-                    CosmeticEntry entry = filtered.get(i);
-                    if (isAdmin() || ownedSkinIds.contains(entry.skinId)) {
-                        toggleEquip(entry);
-                        return true;
-                    }
-                }
-            }
-        }
-        return super.mouseClicked(mx, my, button);
-    }
-
-    @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
-        if (delta > 0) scrollOffset = Math.max(0, scrollOffset - 1);
-        else if (delta < 0) scrollOffset = Math.min(maxScroll, scrollOffset + 1);
-        return true;
-    }
-
-    private void toggleEquip(CosmeticEntry entry) {
-        Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) return;
-        String role = "ALL";
-
-        if (entry.equipped) {
-            showStatus("§6Снятие...");
-            CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(entry.slotType, role, ""));
-        } else if (!ownedSkinIds.contains(entry.skinId) && !isAdmin()) {
-            // Экипировать можно только купленное — сервер всё равно проверит владение
-            showStatus("§cСкин не куплен");
-        } else {
-            showStatus("§6Экипировка...");
-            CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(entry.slotType, role, entry.skinId));
+            PWPToastManager.show(
+                    Component.translatable("pwp_cosmetics.status.equipping").getString());
+            source.equip(s.slot(), s.id());
         }
     }
 
     private void onEquipResult(CosmeticClientState.Result result) {
-        showStatus(result.success() ? "§a✔ Готово" : "§c" + result.message());
-        if (result.success()) loadCosmetics();
+        if (result.success()) {
+            PWPToastManager.show(
+                    Component.translatable("pwp_cosmetics.status.done").getString(), PWPToastManager.ToastType.SUCCESS);
+            owned = source.owned();
+            equipped = source.equipped();
+            relayout();
+        } else {
+            PWPToastManager.show(result.message(), PWPToastManager.ToastType.ERROR);
+        }
     }
 
-    private void showStatus(String msg) {
-        statusMsg = msg;
-        statusTime = System.currentTimeMillis();
+    static int rarityColor(String rarity) {
+        return switch (rarity == null ? "" : rarity) {
+            case "UNCOMMON", "RARE" -> Colors.RARITY_RARE;
+            case "EPIC" -> Colors.RARITY_EPIC;
+            case "LEGENDARY" -> Colors.RARITY_LEGENDARY;
+            case "MYTHIC" -> Colors.RARITY_MYTHIC;
+            default -> Colors.RARITY_COMMON;
+        };
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        if (Minecraft.getInstance().level != null) UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
+        else PWPRotatingBackground.render(g, 0, 0, width, height);
+        var font = PWPTheme.Fonts.display();
+        Fit.Density d = PWPChrome.density(width, height);
+        PWPChrome.topBar(g, font, width, d, 1F, this.title);
+        layer.render(g, mx, my, pt, width, height);
+        if (waiting) {
+            UIDraw.emptyState(g, font, gridR, UIIcon.INFO, Component.translatable("pwp_core.ui.loading"), null, 1F);
+        } else if (filtered().isEmpty()) {
+            UIDraw.emptyState(
+                    g,
+                    font,
+                    gridR,
+                    UIIcon.PROFILE,
+                    Component.translatable("gui.pwp_cosmetics.skin_inventory.empty"),
+                    Component.translatable("pwp_cosmetics.empty_hint"),
+                    1F);
+        }
+        if (FILTERS[filter].equals("PRIMARY")) {
+            Component hint =
+                    UIDraw.ellipsize(font, Component.translatable("pwp_cosmetics.hint.primary_multi"), hintR.w());
+            UIDraw.text(g, font, hint, hintR.centerX() - font.width(hint) / 2, hintR.y(), PWPTheme.Text.CAPTION, false);
+        }
+        PWPChrome.footer(g, font, width, height, d, Component.translatable("pwp_core.stats.hint"), null);
+        PWPToastManager.render(g);
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        if (layer.mouseClicked(mx, my, button)) return true;
+        return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        layer.mouseReleased(mx, my, button);
+        return super.mouseReleased(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        if (layer.mouseScrolled(mx, my, delta)) return true;
+        return super.mouseScrolled(mx, my, delta);
     }
 
     @Override
@@ -404,43 +362,64 @@ public class SkinInventoryScreen extends Screen {
         return false;
     }
 
-    private int getRarityColor(String rarity) {
-        if (rarity == null) return RARITY_COLORS[0];
-        switch (rarity.toUpperCase()) {
-            case "COMMON":
-                return RARITY_COLORS[0];
-            case "UNCOMMON":
-                return RARITY_COLORS[1];
-            case "RARE":
-                return RARITY_COLORS[2];
-            case "EPIC":
-                return RARITY_COLORS[3];
-            case "LEGENDARY":
-                return RARITY_COLORS[4];
-            case "MYTHIC":
-                return RARITY_COLORS[5];
-            default:
-                return RARITY_COLORS[0];
-        }
-    }
+    /** Плитка скина: состояния кнопки UI-кита + иконка предмета, полоса редкости, метки. */
+    private static final class SkinTile extends UIButton {
+        private final Skin skin;
+        private final boolean on;
+        private final boolean access;
 
-    private String getRarityCode(String rarity) {
-        if (rarity == null) return "7";
-        switch (rarity.toUpperCase()) {
-            case "COMMON":
-                return "7";
-            case "UNCOMMON":
-                return "b";
-            case "RARE":
-                return "9";
-            case "EPIC":
-                return "5";
-            case "LEGENDARY":
-                return "6";
-            case "MYTHIC":
-                return "c";
-            default:
-                return "7";
+        SkinTile(Skin skin, boolean on, boolean access, Runnable onPress) {
+            super(Component.empty(), onPress);
+            this.skin = skin;
+            this.on = on;
+            this.access = access;
+            style(Style.DARK);
+            selected(on);
+        }
+
+        @Override
+        protected void renderContent(GuiGraphics g, int textColor) {
+            Rect r = bounds();
+            int rarity = rarityColor(skin.rarity());
+            UIDraw.rect(
+                    g,
+                    r.inset(Spacing.HAIRLINE).bottomStrip(Spacing.ACCENT_BAR),
+                    UIDraw.fade(access ? rarity : Styles.Control.BORDER_DISABLED, opacity));
+            int ix = r.x() + (r.w() - Spacing.ICON_SIZE) / 2;
+            int iy = r.y() + (r.h() - Spacing.ICON_SIZE) / 2 + contentShift - 1;
+            if (!skin.icon().isEmpty()) {
+                if (!access) g.setColor(0.5F, 0.5F, 0.5F, 1F);
+                g.renderItem(skin.icon(), ix, iy);
+                if (!access) g.setColor(1F, 1F, 1F, 1F);
+            } else {
+                UIDraw.icon(
+                        g,
+                        UIIcon.PROFILE,
+                        ix,
+                        iy,
+                        Spacing.ICON_SIZE,
+                        UIDraw.fade(access ? rarity : Styles.Control.TEXT_DISABLED, opacity));
+            }
+            if (on) {
+                // галочка «надето» поверх иконки предмета (renderItem рисует на z ~150)
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 200);
+                UIDraw.rect(g, Rect.of(r.right() - 9, r.y() + 1, 8, 8), UIDraw.fade(Colors.SUCCESS, opacity));
+                UIDraw.text(
+                        g,
+                        font(),
+                        Component.literal("✔"),
+                        r.right() - 8,
+                        r.y() + 1,
+                        UIDraw.fade(0xFFFFFFFF, opacity),
+                        false);
+                g.pose().popPose();
+            } else if (!access) {
+                g.pose().pushPose();
+                g.pose().translate(0, 0, 200);
+                UIDraw.rect(g, r.inset(Spacing.HAIRLINE), UIDraw.fade(Styles.Control.BG_DISABLED, opacity));
+                g.pose().popPose();
+            }
         }
     }
 }

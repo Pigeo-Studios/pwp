@@ -303,6 +303,10 @@ public class PWPTheme {
         public static final int TOAST_MAX_W = 220;
 
         public static final int TOAST_TOP = 36;
+        /** Плитка скина (иконка предмета 16 + поля) и максимум колонок. */
+        public static final int SKIN_TILE = 28;
+
+        public static final int SKIN_MAX_COLS = 12;
 
         private Spacing() {}
     }
