@@ -1,266 +1,289 @@
 package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.pwp.coreclient.gui.components.RoundedRect;
+import com.pigeostudios.pwp.warfare.client.gui.ui.AnimMap;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 
+/**
+ * Снаряжение выбранного кита: слоты (СТВОЛ/ВТОРИЧКА/ГРАНАТЫ/СПЕЦ) плашкой с предметом,
+ * альтернативы раскрываются при наведении (или закреплены кликом), рюкзак — рядом иконок,
+ * внизу — описание роли. Поведение кликов прежнее: клик по плашке закрепляет/переключает
+ * раскрытие, клик по альтернативе — выбор (DeployData.setSelectedIndex).
+ *
+ * <p>Раскладка — одна функция {@link #layout} (зависит от позиции мыши: раскрытие по наведению),
+ * общая для рисования и клика.
+ */
+@OnlyIn(Dist.CLIENT)
 public class LoadoutPanel {
+    private record Alt(int index, Rect rect) {}
 
-    private static final long FADE_IN_MS = 120, FADE_OUT_MS = 180;
+    private record SlotRow(
+            DeployData.LoadoutSlot slot,
+            Rect label,
+            Rect bar,
+            Rect region,
+            List<Alt> alts,
+            boolean expanded,
+            boolean manual) {}
 
-    public void render(GuiGraphics gui, int x, int y, int w, int maxH, int mx, int my, String selectedKit) {
-        var f = PWPTheme.Fonts.display();
-        var kitO = DeployData.kits.stream()
-                .filter(k -> k.name().equals(selectedKit))
-                .findFirst();
-        if (kitO.isEmpty()) return;
-        var kit = kitO.get();
+    private record Layout(DeployData.KitRecord kit, Rect title, List<SlotRow> rows, Rect description) {}
 
-        int pad = 6, cy = y;
-        boolean avail = kit.available();
+    private final AnimMap expand = new AnimMap();
+    private final AnimMap hover = new AnimMap();
 
-        if (!avail) {
-            gui.drawString(f, "НЕДОСТУПНО", x + pad, cy, PWPTheme.Colors.DANGER, false);
-        } else {
-            gui.drawString(f, "СНАРЯЖЕНИЕ", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
-        }
-        cy += 10;
-        int headerBg = avail ? PWPTheme.Colors.SURFACE : 0x44FF0000;
-        int headerFg = avail ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.DANGER;
-        RoundedRect.fill(gui, x, cy, w, 20, 4, headerBg);
-        RoundedRect.border(gui, x, cy, w, 20, 4, 1, avail ? PWPTheme.Colors.BORDER : PWPTheme.Colors.DANGER);
-        gui.drawString(f, DeployData.getDisplayName(kit.name()), x + pad + 2, cy + 5, headerFg, false);
-        cy += 24;
+    private static Optional<DeployData.KitRecord> kit(String name) {
+        return DeployData.kits.stream().filter(k -> k.name().equals(name)).findFirst();
+    }
 
-        long now = System.currentTimeMillis();
+    static Component slotLabel(String label) {
+        return switch (label) {
+            case "PRIMARY", "SECONDARY", "THROWABLE", "SPECIAL", "BACKPACK" -> Component.translatable(
+                    "gui.pwpwarfare.deploy.slot." + label.toLowerCase());
+            default -> Component.literal(label);
+        };
+    }
 
+    private Layout layout(Rect area, String selectedKit, double mx, double my) {
+        var ko = kit(selectedKit);
+        if (ko.isEmpty()) return null;
+        DeployData.KitRecord kit = ko.get();
+        Rect title = area.top(WTheme.SLOT_BAR_H + Spacing.XXS);
+        int y = title.bottom() + Spacing.XS;
+        List<SlotRow> rows = new ArrayList<>();
         for (DeployData.LoadoutSlot slot : kit.loadout()) {
-            if (cy + 40 > y + maxH) break;
-
-            if (slot.label().equals("BACKPACK")) {
-                gui.drawString(f, "РЮКЗАК", x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
-                cy += 10;
-                int ix = x + pad;
-                for (var opt : slot.options()) {
-                    gui.renderFakeItem(opt.stack(), ix, cy);
-                    ix += 18;
-                    if (ix > x + w - 18) break;
-                }
-                cy += 20 + 2;
-                cy += 2;
-                continue;
-            }
-
-            int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
-            if (sel >= slot.options().size()) sel = slot.defaultIndex();
-            DeployData.LoadoutOption opt = slot.options().get(sel);
-            boolean hasAlt = slot.hasAlternatives();
-            int altTotalH = hasAlt ? slot.options().size() * 17 + 4 : 0;
-            boolean manual = DeployData.isSlotExpanded(kit.name(), slot.label());
-            boolean hover = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
-            boolean shouldExpand = manual || hover;
-
-            String key = kit.name() + ":" + slot.label();
-            if (shouldExpand) {
-                if (DeployData.animDir.getOrDefault(key, false) == false) {
-                    DeployData.animStart.put(key, now);
-                    DeployData.animDir.put(key, true);
-                }
-            } else {
-                if (DeployData.animDir.getOrDefault(key, true) == true && hasAlt) {
-                    DeployData.animStart.put(key, now);
-                    DeployData.animDir.put(key, false);
-                }
-            }
-
-            long start = DeployData.animStart.getOrDefault(key, now);
-            boolean expanding = DeployData.animDir.getOrDefault(key, true);
-            long elapsed = now - start;
-            long duration = expanding ? FADE_IN_MS : FADE_OUT_MS;
-            float alpha = expanding
-                    ? Math.min(1f, (float) elapsed / duration)
-                    : Math.max(0f, 1f - (float) elapsed / duration);
-            boolean showAlts = alpha > 0 && hasAlt;
-
-            String squadLabel =
-                    switch (slot.label()) {
-                        case "PRIMARY" -> "СТВОЛ";
-                        case "SECONDARY" -> "ВТОРИЧКА";
-                        case "THROWABLE" -> "ГРАНАТЫ";
-                        case "SPECIAL" -> "СПЕЦ";
-                        case "BACKPACK" -> "РЮКЗАК";
-                        default -> slot.label();
-                    };
-
-            gui.drawString(f, squadLabel, x + pad, cy, PWPTheme.Colors.TEXT_DIM, false);
-            cy += 10;
-
-            int barH = 20;
-            RoundedRect.fill(gui, x, cy, w, barH, 4, PWPTheme.Colors.SURFACE);
-            RoundedRect.border(gui, x, cy, w, barH, 4, 1, PWPTheme.Colors.BORDER);
-            gui.renderFakeItem(opt.stack(), x + pad, cy + 2);
-            gui.drawString(f, opt.name(), x + pad + 20, cy + 5, PWPTheme.Colors.TEXT_PRIMARY, false);
-
-            int count = opt.stack().getCount();
-            if (count > 0 && (slot.label().equals("PRIMARY") || slot.label().equals("SECONDARY"))) {
-                gui.drawString(f, "[" + count + "]", x + w - pad - 28, cy + 5, PWPTheme.Colors.TEXT_ACCENT, false);
-            }
-
-            if (hasAlt) {
-                String arr = expanding ? "\u25B2" : "\u25BC";
-                gui.drawString(
-                        f,
-                        arr,
-                        x + w - pad - 12,
-                        cy + 5,
-                        shouldExpand ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_DIM,
-                        false);
-            }
-            cy += barH + 2;
-
-            if (showAlts) {
-                gui.pose().pushPose();
-                RenderSystem.enableBlend();
-                RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
-
-                for (int ai = 0; ai < slot.options().size(); ai++) {
-                    DeployData.LoadoutOption alt = slot.options().get(ai);
-                    boolean altHover = mx >= x + pad && mx <= x + w && my >= cy && my <= cy + 16;
-                    boolean altSel = ai == sel;
-                    int abg = multiplyAlpha(altSel ? 0x44C8812A : (altHover ? 0x22FFFFFF : 0), alpha);
-                    int aborder = altSel ? multiplyAlpha(0x44C8812A, alpha) : 0;
-                    RoundedRect.fill(gui, x + 8, cy, w - 16, 16, 3, abg);
-                    if (altSel) RoundedRect.border(gui, x + 8, cy, w - 16, 16, 3, 1, aborder);
-                    gui.renderFakeItem(alt.stack(), x + 12, cy);
-                    int tc = multiplyAlpha(altSel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY, alpha);
-                    gui.drawString(f, alt.name(), x + 26, cy + 3, tc, false);
-                    cy += 17;
-                }
-
-                RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-                RenderSystem.disableBlend();
-                gui.pose().popPose();
-
-                cy += 2;
-            } else if (hasAlt && !expanding && elapsed > duration) {
-                // fully collapsed, no alt height added
-            } else if (hasAlt && expanding && elapsed > duration) {
-                cy += slot.options().size() * 17 + 2;
-            } else {
-                cy += 2;
-            }
-            cy += 2;
-        }
-
-        // Описание роли — внизу панели (на месте прежних захардкоженных статов), с переносом строк
-        if (cy + 24 < y + maxH) {
-            cy += 6;
-            gui.fill(x, cy, x + w, cy + 1, PWPTheme.Colors.BORDER);
-            cy += 4;
-            int maxW = w - pad - 6;
-            int maxLines = Math.max(1, (y + maxH - cy - 4) / 10);
-            List<String> lines = wrapText(f, kit.description(), maxW, maxLines);
-            for (String line : lines) {
-                gui.drawString(f, line, x + pad, cy, PWPTheme.Colors.TEXT_SECONDARY, false);
-                cy += 10;
-            }
-        }
-    }
-
-    // Перенос текста по словам: не длиннее maxW пикселей, не больше maxLines строк
-    // (последняя строка при обрезке заканчивается «…»)
-    private static List<String> wrapText(Font f, String text, int maxW, int maxLines) {
-        List<String> lines = new ArrayList<>();
-        if (text == null || text.isEmpty()) return lines;
-        String[] words = text.split("\\s+");
-        StringBuilder cur = new StringBuilder();
-        for (String w : words) {
-            String test = cur.length() == 0 ? w : cur + " " + w;
-            if (f.width(test) > maxW && cur.length() > 0) {
-                lines.add(cur.toString());
-                cur.setLength(0);
-                cur.append(w);
-            } else {
-                cur.setLength(0);
-                cur.append(test);
-            }
-            if (lines.size() >= maxLines) break;
-        }
-        if (cur.length() > 0 && lines.size() < maxLines) lines.add(cur.toString());
-        if (lines.size() > maxLines) lines = new ArrayList<>(lines.subList(0, maxLines));
-        if (lines.size() == maxLines && !lines.isEmpty()) {
-            String last = lines.get(maxLines - 1);
-            String trimmed = last.length() > 1 ? last.substring(0, last.length() - 1) : last;
-            lines.set(maxLines - 1, trimmed + "…");
-        }
-        return lines;
-    }
-
-    private static int multiplyAlpha(int color, float alpha) {
-        int a = (color >> 24) & 0xFF;
-        int r = (color >> 16) & 0xFF;
-        int g = (color >> 8) & 0xFF;
-        int b = color & 0xFF;
-        a = (int) (a * alpha);
-        return (a << 24) | (r << 16) | (g << 8) | b;
-    }
-
-    public boolean mouseClicked(double mx, double my, int btn, int x, int y, int w, int maxH, String selectedKit) {
-        if (btn != 0) return false;
-        var kitO = DeployData.kits.stream()
-                .filter(k -> k.name().equals(selectedKit))
-                .findFirst();
-        if (kitO.isEmpty()) return false;
-        var kit = kitO.get();
-
-        int pad = 6, cy = y;
-        cy += 10 + 24;
-
-        for (DeployData.LoadoutSlot slot : kit.loadout()) {
-            if (cy + 40 > y + maxH) break;
-            if (slot.label().equals("BACKPACK")) {
-                cy += 10 + 20 + 2 + 2;
-                continue;
-            }
-            boolean hasAlt = slot.hasAlternatives();
-            int altTotalH = hasAlt ? slot.options().size() * 17 + 4 : 0;
-            boolean manual = DeployData.isSlotExpanded(kit.name(), slot.label());
-            boolean hoverExpanded = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2 + altTotalH;
-            boolean expanded = manual ? manual : hoverExpanded;
-
-            boolean barHit = hasAlt && mx >= x && mx <= x + w && my >= cy && my <= cy + 32 + 2;
-
-            cy += 10;
-            cy += 20 + 2;
-
+            if (y + WTheme.SLOT_LABEL_H + WTheme.SLOT_BAR_H > area.bottom()) break;
+            Rect label = Rect.of(area.x(), y, area.w(), WTheme.SLOT_LABEL_H);
+            Rect bar = Rect.of(area.x(), label.bottom(), area.w(), WTheme.SLOT_BAR_H);
+            y = bar.bottom() + WTheme.SLOT_GAP;
+            boolean pack = slot.label().equals("BACKPACK");
+            boolean hasAlt = !pack && slot.hasAlternatives();
+            int altsH = hasAlt ? slot.options().size() * (WTheme.SLOT_ALT_H + 1) + Spacing.XXS : 0;
+            Rect region = Rect.of(area.x(), label.y(), area.w(), bar.bottom() - label.y() + altsH);
+            boolean manual = hasAlt && DeployData.isSlotExpanded(kit.name(), slot.label());
+            boolean expanded = hasAlt && (manual || region.contains(mx, my));
+            List<Alt> alts = new ArrayList<>();
             if (expanded) {
-                int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
-                if (sel >= slot.options().size()) sel = slot.defaultIndex();
-                for (int ai = 0; ai < slot.options().size(); ai++) {
-                    if (mx >= x + 8 && mx <= x + w && my >= cy && my <= cy + 16) {
-                        DeployData.setSelectedIndex(kit.name(), slot.label(), ai);
-                        if (!manual) DeployData.setSlotExpanded(kit.name(), slot.label(), true);
-                        return true;
-                    }
-                    cy += 17;
+                int ay = bar.bottom() + 1;
+                for (int i = 0; i < slot.options().size(); i++) {
+                    alts.add(new Alt(i, Rect.of(area.x() + Spacing.SM, ay, area.w() - Spacing.SM, WTheme.SLOT_ALT_H)));
+                    ay += WTheme.SLOT_ALT_H + 1;
                 }
-                cy += 2;
+                y = ay + Spacing.XXS + WTheme.SLOT_GAP;
             }
+            rows.add(new SlotRow(slot, label, bar, region, alts, expanded, manual));
+        }
+        Rect desc = Rect.of(area.x(), y + Spacing.XS, area.w(), Math.max(0, area.bottom() - y - Spacing.XS));
+        return new Layout(kit, title, rows, desc);
+    }
 
-            if (barHit) {
-                if (manual) {
-                    DeployData.toggleSlotExpanded(kit.name(), slot.label());
-                } else {
-                    DeployData.setSlotExpanded(kit.name(), slot.label(), true);
+    public void render(GuiGraphics g, Rect area, int mx, int my, String selectedKit, float o) {
+        Font font = Minecraft.getInstance().font;
+        Layout l = layout(area, selectedKit, mx, my);
+        if (l == null) {
+            WDraw.emptyState(
+                    g,
+                    font,
+                    area,
+                    WarfareIcon.BACKPACK,
+                    Component.translatable("gui.pwpwarfare.deploy.loadout.none"),
+                    Component.translatable("gui.pwpwarfare.deploy.loadout.none_hint"),
+                    o);
+            return;
+        }
+        DeployData.KitRecord kit = l.kit();
+        boolean avail = kit.available();
+        // шапка кита
+        Rect t = l.title();
+        WDraw.well(g, t, o);
+        UIDraw.accentBar(
+                g,
+                t.x(),
+                t.y(),
+                t.h(),
+                Spacing.ACCENT_BAR_SELECTED,
+                UIDraw.fade(avail ? Colors.ACCENT : WTheme.STATUS_BAD, o));
+        Component state = avail
+                ? Component.translatable("gui.pwpwarfare.deploy.loadout.title")
+                : Component.translatable("gui.pwpwarfare.deploy.loadout.unavailable");
+        int sw = WDraw.pillWidth(font, state);
+        boolean pill = t.w() > sw + Spacing.XXL * 2;
+        if (pill)
+            WDraw.pill(
+                    g,
+                    font,
+                    t.right() - sw - Spacing.XS,
+                    t.centerY() - WDraw.pillHeight(font) / 2,
+                    state,
+                    avail ? PWPTheme.Text.MUTED : WTheme.STATUS_BAD,
+                    o);
+        WDraw.text(
+                g,
+                font,
+                Component.literal(DeployData.getDisplayName(kit.name())),
+                t.inset(Spacing.SM, 0, pill ? sw + Spacing.SM * 2 : Spacing.XS, 0),
+                Align.START,
+                avail ? PWPTheme.Colors.TEXT_ACCENT : WTheme.STATUS_BAD,
+                true,
+                o);
+
+        for (SlotRow row : l.rows()) renderSlot(g, font, kit, row, mx, my, o);
+
+        Rect d = l.description();
+        if (d.h() > font.lineHeight * 2
+                && kit.description() != null
+                && !kit.description().isEmpty()) {
+            UIDraw.hline(g, d.x(), d.right(), d.y(), UIDraw.fade(PWPTheme.Styles.Glass.BORDER, o * 0.5F));
+            WDraw.paragraph(
+                    g,
+                    font,
+                    Component.literal(kit.description()),
+                    d.inset(Spacing.XXS, Spacing.XS, Spacing.XXS, 0),
+                    PWPTheme.Spacing.REASON_LINES_MAX,
+                    PWPTheme.Text.MUTED,
+                    o);
+        }
+    }
+
+    private void renderSlot(GuiGraphics g, Font font, DeployData.KitRecord kit, SlotRow row, int mx, int my, float o) {
+        DeployData.LoadoutSlot slot = row.slot();
+        String key = kit.name() + ":" + slot.label();
+        WDraw.text(
+                g,
+                font,
+                slotLabel(slot.label()),
+                row.label().inset(Spacing.XXS, 0, 0, 0),
+                Align.START,
+                PWPTheme.Text.CAPTION,
+                false,
+                o);
+        Rect bar = row.bar();
+        if (slot.label().equals("BACKPACK")) {
+            WDraw.well(g, bar, o);
+            int ix = bar.x() + Spacing.XXS;
+            int iy = bar.centerY() - WTheme.ITEM_SIZE / 2;
+            for (var opt : slot.options()) {
+                if (ix + WTheme.ITEM_SIZE > bar.right() - Spacing.XXS) break;
+                g.renderFakeItem(opt.stack(), ix, iy);
+                g.renderItemDecorations(font, opt.stack(), ix, iy);
+                ix += WTheme.ITEM_SIZE + Spacing.XXS;
+            }
+            return;
+        }
+        boolean hasAlt = slot.hasAlternatives();
+        int sel = selected(kit, slot);
+        DeployData.LoadoutOption opt = slot.options().get(sel);
+        float hv = hover.get(key, hasAlt && bar.contains(mx, my));
+        float ex = expand.get(key, row.expanded());
+        WDraw.tile(g, bar, hv, row.manual() ? 1F : ex * 0.5F, 1F, o);
+        int iy = bar.centerY() - WTheme.ITEM_SIZE / 2;
+        g.renderFakeItem(opt.stack(), bar.x() + Spacing.XS + Spacing.ACCENT_BAR, iy);
+        int right = bar.right() - Spacing.XS;
+        if (hasAlt) {
+            WarfareIcon arrow = row.expanded() ? WarfareIcon.MINUS : WarfareIcon.PLUS;
+            WDraw.icon(
+                    g,
+                    arrow,
+                    right - WTheme.ICON_SMALL,
+                    bar.centerY() - WTheme.ICON_SMALL / 2,
+                    WTheme.ICON_SMALL,
+                    UIDraw.fade(Colors.lerp(PWPTheme.Text.MUTED, Colors.ACCENT, Math.max(hv, ex)), o));
+            right -= WTheme.ICON_SMALL + Spacing.XS;
+        }
+        int count = opt.stack().getCount();
+        if (count > 0 && (slot.label().equals("PRIMARY") || slot.label().equals("SECONDARY"))) {
+            Component c = Component.literal("×" + count);
+            int cw = font.width(c);
+            UIDraw.text(
+                    g,
+                    font,
+                    c,
+                    right - cw,
+                    bar.centerY() - font.lineHeight / 2 + 1,
+                    UIDraw.fade(PWPTheme.Colors.TEXT_ACCENT, o),
+                    false);
+            right -= cw + Spacing.XS;
+        }
+        int tx = bar.x() + Spacing.XS + Spacing.ACCENT_BAR + WTheme.ITEM_SIZE + Spacing.XS;
+        WDraw.text(
+                g,
+                font,
+                Component.literal(opt.name()),
+                Rect.of(tx, bar.y(), right - tx, bar.h()),
+                Align.START,
+                PWPTheme.Text.BODY,
+                false,
+                o);
+
+        if (!row.alts().isEmpty()) {
+            float a = o * ex;
+            for (Alt alt : row.alts()) {
+                Rect r = alt.rect();
+                boolean isSel = alt.index() == sel;
+                float ah = hover.get(key + "#" + alt.index(), r.contains(mx, my));
+                WDraw.tile(g, r, ah, isSel ? 1F : 0F, 1F, a);
+                DeployData.LoadoutOption ao = slot.options().get(alt.index());
+                g.renderFakeItem(ao.stack(), r.x() + Spacing.XS, r.centerY() - WTheme.ITEM_SIZE / 2);
+                int atx = r.x() + Spacing.XS + WTheme.ITEM_SIZE + Spacing.XS;
+                WDraw.text(
+                        g,
+                        font,
+                        Component.literal(ao.name()),
+                        Rect.of(atx, r.y(), r.right() - atx - Spacing.XS, r.h()),
+                        Align.START,
+                        isSel ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Text.BODY,
+                        false,
+                        a);
+            }
+        }
+    }
+
+    private static int selected(DeployData.KitRecord kit, DeployData.LoadoutSlot slot) {
+        int sel = DeployData.getSelectedIndex(kit.name(), slot.label());
+        if (sel < 0 || sel >= slot.options().size()) sel = slot.defaultIndex();
+        return Math.max(0, Math.min(slot.options().size() - 1, sel));
+    }
+
+    public boolean mouseClicked(double mx, double my, int btn, Rect area, String selectedKit) {
+        if (btn != 0) return false;
+        Layout l = layout(area, selectedKit, mx, my);
+        if (l == null) return false;
+        String kitName = l.kit().name();
+        for (SlotRow row : l.rows()) {
+            String label = row.slot().label();
+            for (Alt alt : row.alts()) {
+                if (alt.rect().contains(mx, my)) {
+                    DeployData.setSelectedIndex(kitName, label, alt.index());
+                    if (!row.manual()) DeployData.setSlotExpanded(kitName, label, true);
+                    return true;
                 }
+            }
+            boolean hasAlt = !label.equals("BACKPACK") && row.slot().hasAlternatives();
+            Rect head = Rect.of(
+                    row.label().x(),
+                    row.label().y(),
+                    row.bar().w(),
+                    row.bar().bottom() - row.label().y());
+            if (hasAlt && head.contains(mx, my)) {
+                if (row.manual()) DeployData.toggleSlotExpanded(kitName, label);
+                else DeployData.setSlotExpanded(kitName, label, true);
                 return true;
             }
-
-            cy += 2;
         }
         return false;
     }

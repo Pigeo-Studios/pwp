@@ -46,6 +46,10 @@ public class ClientModEvents {
         // Ответы единой системы данных core-client → кэши warfare (ClientData)
         com.pwp.coreclient.network.data.ClientDataResponses.listen(
                 com.pigeostudios.pwp.warfare.network.ClientDataHandler::handleData);
+        // Тест-стенд UI (/pwpui): фикстуры экранов warfare — только в dev или с -Dpwp.uitest=true
+        if (com.pwp.coreclient.gui.devtest.UiGallery.enabled()) {
+            com.pigeostudios.pwp.warfare.client.gui.devtest.WarfareUiFixtures.registerAll();
+        }
         event.enqueueWork(() -> {
             MenuScreens.register((MenuType) ModMenuTypes.VEHICLE_SPAWNER_MENU.get(), VehicleSpawnerScreen::new);
             MenuScreens.register((MenuType) ModMenuTypes.KIT_EDITOR_MENU.get(), KitEditorScreen::new);

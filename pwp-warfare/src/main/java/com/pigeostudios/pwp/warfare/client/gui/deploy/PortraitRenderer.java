@@ -1,7 +1,10 @@
 package com.pigeostudios.pwp.warfare.client.gui.deploy;
 
-import com.pwp.coreclient.gui.components.RoundedRect;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -15,23 +18,16 @@ public class PortraitRenderer {
     private final ItemStack[] saved = new ItemStack[6];
     private boolean inSwap;
 
+    /**
+     * Портрет бойца с выбранным оружием и бронёй кита в области {@code area}: углублённая
+     * подложка с мягким градиентом «пола», модель следует за мышью.
+     */
     public void render(
-            GuiGraphics gui,
-            int x,
-            int y,
-            int w,
-            int h,
-            int mx,
-            int my,
-            String desc,
-            ItemStack weapon,
-            List<ItemStack> armorPieces) {
-        // Описание роли под портретом не рисуем (некуда — нет места), портрет занимает всю панель.
-        // Текст описания живёт в БД (единый источник) и доступен через API китов.
-        int panelH = h;
-
-        RoundedRect.fill(gui, x, y, w, panelH, 6, 0xFF0E1117);
-        RoundedRect.border(gui, x, y, w, panelH, 6, 1, PWPTheme.Colors.BORDER);
+            GuiGraphics gui, Rect area, int mx, int my, ItemStack weapon, List<ItemStack> armorPieces, float o) {
+        int x = area.x(), y = area.y(), w = area.w(), panelH = area.h();
+        WDraw.well(gui, area, o);
+        UIDraw.gradientV(gui, area.bottomStrip(panelH / 3), 0, UIDraw.fade(PWPTheme.Styles.Glass.HEADER_TOP, o));
+        UIDraw.frame(gui, area, UIDraw.fade(PWPTheme.Styles.Glass.FRAME_TINT, o));
 
         var p = Minecraft.getInstance().player;
         if (p != null) {
@@ -41,10 +37,12 @@ public class PortraitRenderer {
             try {
                 swap(p, weapon, armorPieces);
             } catch (Exception e) {
+                com.pwp.api.util.LogOnce.warn(
+                        PWP_LOG, "PortraitRenderer.swap", "PortraitRenderer: подмена экипировки", e);
                 restore(p);
             }
 
-            int sc = Math.min(120, Math.max(70, Math.min(w, panelH) / 3));
+            int sc = Math.min(WTheme.PORTRAIT_SCALE_MAX, Math.max(WTheme.PORTRAIT_SCALE_MIN, Math.min(w, panelH) / 3));
             int entityX = x + w / 2;
             int entityY = y + panelH / 2 + panelH / 6;
 

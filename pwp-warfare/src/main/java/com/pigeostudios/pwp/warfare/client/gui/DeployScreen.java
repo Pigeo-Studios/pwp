@@ -1,12 +1,20 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.PathCache;
-import com.pigeostudios.pwp.warfare.client.gui.deploy.*;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.LoadoutPanel;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.PortraitRenderer;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.RoleGrid;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.RulesPanel;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.SpawnPanel;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
+import com.pigeostudios.pwp.warfare.client.gui.ui.AnimMap;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
-import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketPlacePath;
@@ -21,17 +29,26 @@ import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.util.Parse;
-import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
-import com.pwp.coreclient.gui.components.PWPPanel;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import java.util.*;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Fit;
+import com.pwp.coreclient.ui.layout.Flow;
+import com.pwp.coreclient.ui.layout.Rect;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -41,153 +58,45 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
+/**
+ * Меню деплоя (как в Squad): три вкладки в верхней полосе — «Команды», «Деплой», «Правила».
+ *
+ * <p>Вкладка «Деплой»: слева отряды (список SquadUIHelper, создание отряда, чат), в центре сетка
+ * ролей и точки спавна, справа снаряжение + портрет, а после выбора точки — карта (та же, что в
+ * M-меню: маркеры, пути, выбор точки кликом). Внизу — выбранный кит, статус и кнопка деплоя с
+ * таймером. Вся геометрия — одна функция {@link #layout()} (рисование и клики используют её же),
+ * без магических координат; затемнение мира — UIBackdrop, панели — стекло.
+ *
+ * <p>Логика прежняя: те же пакеты (PacketSelectKit/PacketRespawnRequest/SquadPackets.Create/
+ * PacketSquadChat/PacketRequestCMD/маркеры и пути) с теми же аргументами в тех же случаях.
+ */
 public class DeployScreen extends Screen {
+    private static final int TAB_TEAMS = 0;
+    private static final int TAB_DEPLOY = 1;
+    private static final int TAB_RULES = 2;
+    private static final String[] TAB_KEYS = {"teams", "deploy", "rules"};
+    private static final WarfareIcon[] TAB_ICONS = {WarfareIcon.TEAM, WarfareIcon.DEPLOY, WarfareIcon.RULES};
+    private static final String[] CHAT_CHANNELS = {"ALL", "TEAM", "SQD"};
 
-    private record RuleCategory(String name, List<Rule> rules) {}
-
-    private record Rule(String name) {}
-
-    private static final List<RuleCategory> RULES = List.of(
-            new RuleCategory(
-                    "1. СЕРВЕР",
-                    List.of(
-                            new Rule("Сервер находится в Украине. Возможны отключения электроэнергии"),
-                            new Rule("Сервер автоматически запускается после восстановления"),
-                            new Rule("Администрация не несёт ответственности за потерю прогресса при сбоях"),
-                            new Rule("Незнание правил не освобождает от ответственности"),
-                            new Rule("Администрация вправе изменять правила без уведомления"),
-                            new Rule("Запрещено намеренно использовать тех. ограничения сервера для преимущества"))),
-            new RuleCategory(
-                    "2. ПОВЕДЕНИЕ",
-                    List.of(
-                            new Rule("Запрещены оскорбления, травля, буллинг, угрозы, провокации"),
-                            new Rule("Запрещён токсичный контент в голосовом и текстовом чате"),
-                            new Rule("Запрещён спам, флуд, засорение чата и голосовых каналов"),
-                            new Rule("Запрещена реклама сторонних ресурсов без разрешения"),
-                            new Rule("Запрещено выдавать себя за администрацию или других игроков"),
-                            new Rule("Запрещено намеренно мешать другим игрокам"),
-                            new Rule("Запрещено намеренно срывать матч или саботировать команду"),
-                            new Rule("Запрещено покидать матч для обхода наказания"),
-                            new Rule("Имя игрока не должно содержать оскорбления или рекламу"))),
-            new RuleCategory(
-                    "3. TEAMKILL И САБОТАЖ",
-                    List.of(
-                            new Rule("Намеренное убийство союзников запрещено"),
-                            new Rule("Teamkill 'в шутку' запрещён"),
-                            new Rule("Намеренное нанесение урона союзникам запрещено"),
-                            new Rule("Намеренное уничтожение союзной техники запрещено"),
-                            new Rule("Намеренное блокирование союзников и проходов запрещено"),
-                            new Rule("Запрещено строить ловушки для союзников"),
-                            new Rule("Запрещено уничтожать постройки своей команды без необходимости"),
-                            new Rule("Намеренные TK могут привести к бану"),
-                            new Rule("После 8 TK игрок переводится в спектатор до конца игры"))),
-            new RuleCategory(
-                    "4. ОТРЯДЫ",
-                    List.of(
-                            new Rule("Командир отряда обязан координировать отряд"),
-                            new Rule("Запрещено игнорировать приказы с целью саботажа"),
-                            new Rule("Запрещено покидать отряд для обхода ограничений"),
-                            new Rule("Запрещено занимать слот и мешать работе отряда"),
-                            new Rule("Запрещено создавать отряд для обхода системы"))),
-            new RuleCategory(
-                    "5. ТЕХНИКА",
-                    List.of(
-                            new Rule("Запрещено бросать исправную технику без причины"),
-                            new Rule("Запрещено намеренно уничтожать свою технику"),
-                            new Rule("Запрещено угонять занятую технику без разрешения"),
-                            new Rule("Запрещено занимать технику и удерживать без использования"),
-                            new Rule("Запрещено блокировать проходы союзной техникой"),
-                            new Rule("CAS и ударные вертолёты — только опытным пилотам"),
-                            new Rule("Запрещено уводить транспорт снабжения без задачи"),
-                            new Rule("Запрещено расходовать БК техники без необходимости"))),
-            new RuleCategory(
-                    "6. СНАРЯЖЕНИЕ И РЕСУРСЫ",
-                    List.of(
-                            new Rule("Запрещено брать экипировку с целью лишить других игроков"),
-                            new Rule("Запрещено расходовать командные ресурсы без необходимости"),
-                            new Rule("Запрещено занимать ограниченные роли в ущерб команде"),
-                            new Rule("Запрещено уничтожать или прятать командное снаряжение"))),
-            new RuleCategory(
-                    "7. СПАВН И ОБЪЕКТЫ КОМАНДЫ",
-                    List.of(
-                            new Rule("Запрещено блокировать дружественные точки спавна"),
-                            new Rule("Запрещено ставить блоки так, чтобы игроки не могли выйти со спавна"),
-                            new Rule("Запрещено создавать ловушки возле точек появления"),
-                            new Rule("Запрещено уничтожать объекты для работы спавна"),
-                            new Rule("Запрещено запирать союзников блоками"),
-                            new Rule("Запрещено изменять объекты карты для препятствия союзникам"))),
-            new RuleCategory(
-                    "8. AFK И ОТСУТСТВИЕ",
-                    List.of(
-                            new Rule("Запрещено бездействовать значительную часть матча"),
-                            new Rule("Запрещено использовать AFK для получения наград"),
-                            new Rule("Запрещено использовать макросы для имитации активности"))),
-            new RuleCategory(
-                    "9. ЧИТЫ, БАГИ И ЭКСПЛОЙТЫ",
-                    List.of(
-                            new Rule("Использование читов и сторонних средств запрещено"),
-                            new Rule("Запрещён багоюз"),
-                            new Rule("Запрещено использовать ошибки механик для преимущества"),
-                            new Rule("Запрещено распространять способы эксплуатации багов"),
-                            new Rule("Найденные баги необходимо сообщать администрации"),
-                            new Rule("Читы и серьёзный багоюз — перманентный бан"))),
-            new RuleCategory(
-                    "10. ОБХОД НАКАЗАНИЙ",
-                    List.of(
-                            new Rule("Запрещено обходить бан, мут или другие наказания"),
-                            new Rule("Запрещено использовать доп. аккаунты для обхода бана"),
-                            new Rule("Запрещено передавать аккаунт для обхода наказания"),
-                            new Rule("Запрещено создавать новые аккаунты после блокировки"))),
-            new RuleCategory(
-                    "11. ТЕХНИЧЕСКОЕ",
-                    List.of(
-                            new Rule("Для игры требуется официальный лаунчер PWP"),
-                            new Rule("Запрещено вмешиваться в работу лаунчера и защиты"),
-                            new Rule("Запрещено изменять клиентские файлы для обхода ограничений"),
-                            new Rule("По вопросам обращаться в тикеты"))),
-            new RuleCategory(
-                    "12. ПОЛЬЗОВАТЕЛЬСКИЙ КОНТЕНТ",
-                    List.of(
-                            new Rule("Администрация не отвечает за контент пользователей"),
-                            new Rule("Запрещено размещать незаконный контент"),
-                            new Rule("Запрещено размещать материалы, нарушающие правила Discord"),
-                            new Rule("Запрещённый контент может быть удалён без уведомления"),
-                            new Rule("Нарушитель может получить блокировку"))),
-            new RuleCategory(
-                    "13. НАКАЗАНИЯ",
-                    List.of(
-                            new Rule("Нарушения наказываются: предупреждение, мут, кик"),
-                            new Rule("Наказания: временная блокировка, перевод в спектатор"),
-                            new Rule("Наказания: временный бан, перманентный бан"),
-                            new Rule("Тяжесть определяется характером и повторяемостью нарушения"))));
-
-    private static final int TAB_H = 22, TOP_H = 34, BOT_H = 36;
-    private static final ResourceLocation TICKET_ICON =
-            new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
-
-    private int sqW() {
-        return width * 22 / 100;
-    }
-
-    private int roW() {
-        return width * 34 / 100;
-    }
-
-    private int loW() {
-        return width * 24 / 100;
-    }
-
-    private int poW() {
-        return width - sqW() - roW() - loW();
-    }
-
-    private int conT() {
-        return TOP_H + TAB_H;
-    }
-
-    private int conH() {
-        return height - conT() - BOT_H;
-    }
+    /** Вся геометрия экрана на текущий размер. */
+    private record Layout(
+            Rect top,
+            Rect[] tabs,
+            Rect bottom,
+            Rect content,
+            Rect squads,
+            Rect squadList,
+            Rect applyCmd,
+            Rect createRow,
+            Rect chat,
+            Rect roles,
+            Rect spawns,
+            Rect right,
+            Rect loadout,
+            Rect portrait,
+            Rect map,
+            Rect deployButton,
+            Rect timerBar) {}
 
     private final SquadMapRenderer rightMapRenderer = new SquadMapRenderer();
     private final SquadContextMenu mapCtx = new SquadContextMenu();
@@ -195,9 +104,13 @@ public class DeployScreen extends Screen {
     private final SpawnPanel spawns = new SpawnPanel();
     private final LoadoutPanel loadout = new LoadoutPanel();
     private final PortraitRenderer portrait = new PortraitRenderer();
+    private final TeamRoster roster = new TeamRoster();
+    private final RulesPanel rules = new RulesPanel();
     private final PWPContextMenu contextMenu = new PWPContextMenu();
+    private final AnimMap tabAnim = new AnimMap(PWPTheme.Animations.DURATION_NORMAL);
+    private final AnimMap hover = new AnimMap();
 
-    private PWPButton selectSpawnBtn, createSquadBtn, applyCmdBtn;
+    private UIButton selectSpawnBtn, createSquadBtn, applyCmdBtn;
     private EditBox squadInput, chatInput;
     private int mySquadId = -1;
     private int lastSquadCount;
@@ -206,13 +119,11 @@ public class DeployScreen extends Screen {
     String selectedSpawn = "";
     String selectedKit = "Rifleman";
     final Set<Integer> expandedSquads = new HashSet<>();
-    int activeTab = 1;
+    int activeTab = TAB_DEPLOY;
     private boolean kitsRequested;
     private long lastKitRefreshTime;
     private boolean mapNeedsInit;
-    private final Set<Integer> collapsedSections = new HashSet<>();
-    private int rulesScrollOffset;
-    private int rulesScrollMax;
+    private Rect lastMapRect;
 
     // Состояние рисования путей (та же логика, что и в M-меню)
     private boolean pathActive;
@@ -221,19 +132,35 @@ public class DeployScreen extends Screen {
     private int activeSquadKey = -1;
     private int pathCounter;
 
+    /** Тест-стенд UI: данные уже лежат в DeployData, пакеты не отправляются. */
+    private final boolean preview;
+
     public DeployScreen() {
-        super(Component.literal("ДЕПЛОЙ"));
+        this(false);
+    }
+
+    /**
+     * {@code preview = true} — экран для тест-стенда (devtest): данные заполняет фикстура в
+     * {@link DeployData}, ни один пакет на сервер не уходит, деплой ничего не делает.
+     */
+    public DeployScreen(boolean preview) {
+        super(Component.translatable("gui.pwpwarfare.deploy.title"));
+        this.preview = preview;
+        if (preview) {
+            mapNeedsInit = true;
+            return;
+        }
         populateData();
         if (ClientData.availableKits.isEmpty() && !kitsRequested) {
             kitsRequested = true;
-            PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+            send(new PacketRequestKitMenu());
         }
         mapNeedsInit = true;
     }
 
     public void populateData() {
         var p = Minecraft.getInstance().player;
-        if (p == null) return;
+        if (p == null || preview) return;
         DeployData.populate(ClientData.availableKits);
         BlockPos pp = p.blockPosition();
 
@@ -252,7 +179,8 @@ public class DeployScreen extends Screen {
         BlockPos main = mainSpawns.get(dim);
         if (main != null) {
             int d = (int) Math.sqrt(main.distSqr(pp));
-            DeployData.spawns.add(new DeployData.SpawnPoint("MAIN", "Основа", main, DeployData.SpawnStatus.SAFE, 0, d));
+            DeployData.spawns.add(new DeployData.SpawnPoint(
+                    "MAIN", tr("gui.pwpwarfare.deploy.spawn.main"), main, DeployData.SpawnStatus.SAFE, 0, d));
         }
         String pName = p.getScoreboardName();
         for (WarfareWorldData.Squad sq : ClientData.clientSquads) {
@@ -260,7 +188,8 @@ public class DeployScreen extends Screen {
                 boolean blocked = team.equals("BLUE") ? ClientData.blueRallyBlocked : ClientData.redRallyBlocked;
                 var st = blocked ? DeployData.SpawnStatus.BLOCKED : DeployData.SpawnStatus.SAFE;
                 int dr = (int) Math.sqrt(sq.rallyPos.distSqr(pp));
-                DeployData.spawns.add(new DeployData.SpawnPoint("RALLY", "Ралли", sq.rallyPos, st, 0, dr));
+                DeployData.spawns.add(new DeployData.SpawnPoint(
+                        "RALLY", tr("gui.pwpwarfare.deploy.spawn.rally"), sq.rallyPos, st, 0, dr));
                 break;
             }
         }
@@ -274,7 +203,8 @@ public class DeployScreen extends Screen {
                             ? DeployData.SpawnStatus.COOLDOWN
                             : DeployData.SpawnStatus.SAFE);
             int dh = (int) Math.sqrt(hub.pos.distSqr(pp));
-            DeployData.spawns.add(new DeployData.SpawnPoint(id, "FOB " + hi, hub.pos, st, hub.materials, dh));
+            DeployData.spawns.add(new DeployData.SpawnPoint(
+                    id, tr("gui.pwpwarfare.deploy.spawn.fob", hi), hub.pos, st, hub.materials, dh));
             hi++;
         }
 
@@ -299,7 +229,7 @@ public class DeployScreen extends Screen {
         String cur = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
         if (!pen.isEmpty()) selectedKit = pen;
         else if (!cur.isEmpty()) selectedKit = cur;
-        // Fallback: use isSelected from server data
+        // Фолбэк: isSelected из серверных данных
         if (selectedKit.equals("Rifleman")) {
             for (var dto : ClientData.availableKits) {
                 if (dto.isSelected) {
@@ -310,63 +240,176 @@ public class DeployScreen extends Screen {
         }
     }
 
+    /** Тест-стенд: открыть на вкладке (0 команды, 1 деплой, 2 правила) с выбранными китом/точкой. */
+    public DeployScreen previewState(int tab, String kit, String spawn) {
+        this.activeTab = Math.max(TAB_TEAMS, Math.min(TAB_RULES, tab));
+        if (kit != null) this.selectedKit = kit;
+        if (spawn != null) {
+            this.selectedSpawn = spawn;
+            rightMapRenderer.selectedSpawnId = spawn;
+        }
+        return this;
+    }
+
+    private void send(Object packet) {
+        if (!preview) PacketHandler.INSTANCE.sendToServer(packet);
+    }
+
+    private static String tr(String key, Object... args) {
+        return Component.translatable(key, args).getString();
+    }
+
     @Override
     protected void init() {
         clearWidgets();
-        selectSpawnBtn = addRenderableWidget(new PWPButton(
-                width - 152,
-                height - BOT_H + 6,
-                140,
-                24,
-                Component.literal("ВОЗРОДИТЬСЯ"),
-                b -> doDeploy(),
-                PWPButton.Style.ACCENT));
-        squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 90, 16, Component.literal("")));
-        squadInput.setMaxLength(12);
-        squadInput.setVisible(false);
-        createSquadBtn = addRenderableWidget(
-                new PWPButton(0, 0, 50, 18, Component.literal("Создать"), b -> createSquad(), PWPButton.Style.DARK));
-        createSquadBtn.visible = false;
-        applyCmdBtn = addRenderableWidget(new PWPButton(
-                0,
-                0,
-                100,
-                16,
-                Component.literal("Стать командиром"),
-                b -> {
-                    PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
-                    b.visible = false;
+        selectSpawnBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.button.respawn"), this::doDeploy)
+                .style(UIButton.Style.ACCENT)
+                .icon(UIIcon.PLAY);
+        createSquadBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.squad.create"), this::createSquad)
+                .style(UIButton.Style.DARK);
+        applyCmdBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.squad.apply_cmd"), () -> {
+                    send(new PacketRequestCMD());
+                    applyCmdBtn.setVisible(false);
                     Minecraft.getInstance()
                             .player
                             .displayClientMessage(
-                                    Component.literal("Запрос отправлен командирам взводов")
+                                    Component.translatable("gui.pwpwarfare.deploy.squad.apply_cmd_sent")
                                             .withStyle(ChatFormatting.GREEN),
                                     true);
-                },
-                PWPButton.Style.DARK));
-        applyCmdBtn.visible = false;
-        chatInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 140, 14, Component.literal("")));
+                })
+                .style(UIButton.Style.DARK);
+        applyCmdBtn.setVisible(false);
+        squadInput = addRenderableWidget(new EditBox(font, 0, 0, 90, WTheme.FIELD_H, Component.empty()));
+        squadInput.setMaxLength(12);
+        squadInput.setBordered(false);
+        squadInput.setHint(Component.translatable("gui.pwpwarfare.deploy.squad.name_hint"));
+        squadInput.setVisible(false);
+        chatInput = addRenderableWidget(new EditBox(font, 0, 0, 140, WTheme.FIELD_H, Component.empty()));
         chatInput.setMaxLength(256);
+        chatInput.setBordered(false);
+        chatInput.setHint(Component.translatable("gui.pwpwarfare.deploy.chat.hint"));
         chatInput.setVisible(true);
         mapNeedsInit = true;
+        updateDeployButton();
     }
 
-    private void initRightMap() {
-        int loadoutX = sqW() + roW();
-        int mapW = width - loadoutX;
-        int mapH = conH();
-        int sz = Math.min(mapW, mapH);
-        rightMapRenderer.init(loadoutX, conT(), sz, sz);
+    // ══════════════════ ЛЕЙАУТ ══════════════════
+
+    private Layout layout() {
+        Fit.Density d = Fit.Density.of(width, height);
+        Rect screen = Rect.screen(width, height);
+        int margin = Fit.fraction(width, WTheme.MARGIN_FRACTION, WTheme.MARGIN_MIN, WTheme.MARGIN_MAX);
+        int topH = d.pick(Spacing.TOP_BAR_H_COMPACT, Spacing.TOP_BAR_H, Spacing.TOP_BAR_H_LARGE);
+        int botH = d.pick(Spacing.MENU_PRIMARY_H_COMPACT, Spacing.MENU_PRIMARY_H, Spacing.MENU_PRIMARY_H_LARGE)
+                + 2 * Spacing.XS;
+        Rect top = screen.top(topH);
+        Rect bottom = screen.bottomStrip(botH);
+
+        // вкладки — по центру верхней полосы, ширина по подписи
+        int[] tw = new int[TAB_KEYS.length];
+        for (int i = 0; i < tw.length; i++) {
+            tw[i] = font.width(tabLabel(i)) + 2 * WTheme.TAB_PAD + WTheme.ICON_ROW + Spacing.XS;
+        }
+        int tabsW = Math.min(Flow.naturalLength(0, tw), Math.max(0, width - 2 * margin) * 3 / 5);
+        Rect[] tabs = Flow.row(top.centered(tabsW, topH), 0, Flow.Justify.START, tw);
+
+        Rect content = Rect.of(
+                margin, top.bottom() + WTheme.GAP, width - 2 * margin, bottom.y() - top.bottom() - 2 * WTheme.GAP);
+        Rect[] cols = Flow.row(
+                content,
+                WTheme.GAP,
+                Flow.Justify.START,
+                Flow.flex(Math.round(WTheme.DEPLOY_SQUADS_WEIGHT)),
+                Flow.flex(Math.round(WTheme.DEPLOY_CENTER_WEIGHT)),
+                Flow.flex(Math.round(WTheme.DEPLOY_RIGHT_WEIGHT)));
+        int headerH = WDraw.headerHeight(height);
+
+        // отряды: [кнопка «стать командиром»] список … [создать отряд] [чат]
+        Rect squads = cols[0];
+        Rect sqIn = squads.inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
+        int chatH = Math.max(WTheme.DEPLOY_CHAT_MIN_H, Math.round(sqIn.h() * WTheme.DEPLOY_CHAT_FRACTION));
+        boolean noSquad = mySquadId < 0;
+        int createH = noSquad ? WTheme.FIELD_H + Spacing.XS : 0;
+        Rect[] sq = Flow.column(sqIn, Spacing.XS, Flow.Justify.START, Flow.flex(1), createH, chatH);
+        Rect squadList = sq[0];
+        Rect applyCmd = Rect.of(
+                squadList.x(),
+                squadList.y() + Spacing.XXS,
+                Math.min(squadList.w(), Spacing.BUTTON_WIDTH),
+                WTheme.SMALL_BUTTON_H + Spacing.XXS);
+        Rect createRow = sq[1].withHeight(Math.min(sq[1].h(), WTheme.FIELD_H));
+        Rect chat = sq[2];
+
+        // центр: роли / точки спавна
+        Rect center = cols[1];
+        int rolesH = Math.round(center.h() * WTheme.DEPLOY_ROLES_FRACTION);
+        Rect[] cc = Flow.column(center, WTheme.GAP, Flow.Justify.START, rolesH, Flow.flex(1));
+
+        // справа: снаряжение + портрет, либо карта
+        Rect right = cols[2];
+        Rect[] lp = Flow.row(right, WTheme.GAP, Flow.Justify.START, Flow.flex(24), Flow.flex(20));
+        Rect mapArea = right.inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
+        int sz = Math.max(0, Math.min(mapArea.w(), mapArea.h()));
+        Rect map = mapArea.centered(sz, sz);
+
+        // низ: кнопка деплоя справа, под ней полоса таймера
+        int bw = Fit.fraction(
+                width,
+                WTheme.DEPLOY_BUTTON_FRACTION,
+                WTheme.DEPLOY_BUTTON_MIN_W,
+                Math.min(WTheme.DEPLOY_BUTTON_MAX_W, width / 2));
+        Rect btnArea = bottom.inset(margin, Spacing.XS, margin, Spacing.XS);
+        Rect deployButton = btnArea.rightStrip(bw);
+        Rect timerBar = Rect.of(deployButton.x(), deployButton.bottom() - WTheme.BAR_H, deployButton.w(), WTheme.BAR_H);
+
+        return new Layout(
+                top,
+                tabs,
+                bottom,
+                content,
+                squads,
+                squadList,
+                applyCmd,
+                createRow,
+                chat,
+                cc[0],
+                cc[1],
+                right,
+                lp[0],
+                lp[1],
+                map,
+                deployButton,
+                timerBar);
+    }
+
+    private Component tabLabel(int i) {
+        return Component.translatable("gui.pwpwarfare.deploy.tab." + TAB_KEYS[i]);
+    }
+
+    private void initRightMap(Rect map) {
+        rightMapRenderer.init(map.x(), map.y(), map.w(), map.h());
         // Вписываем всю карту в квадрат, чтобы деплой показывал ту же карту, что и M-меню
-        rightMapRenderer.fitScale = ClientData.mapSizeBlocks / (double) Math.max(1, sz);
+        rightMapRenderer.fitScale = ClientData.mapSizeBlocks / (double) Math.max(1, map.w());
         rightMapRenderer.centerOnPlayer();
+        lastMapRect = map;
         mapNeedsInit = false;
     }
 
     private void createSquad() {
         String n = squadInput.getValue().trim();
-        PacketHandler.INSTANCE.sendToServer(new SquadPackets.Create(n));
+        send(new SquadPackets.Create(n));
         squadInput.setValue("");
+    }
+
+    /** Секунд до возможности деплоя (как раньше: от общего времени смерти). */
+    private static int secondsLeft() {
+        long dt = ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
+        int el = (int) ((System.currentTimeMillis() - dt) / 1000);
+        return Math.max(0, DeployData.deployTimer - el);
+    }
+
+    private static String mmss(int s) {
+        return String.format("%02d:%02d", s / 60, s % 60);
     }
 
     @Override
@@ -384,392 +427,499 @@ public class DeployScreen extends Screen {
         if (now - lastKitRefreshTime > 10000L) {
             lastKitRefreshTime = now;
             if (!ClientData.availableKits.isEmpty()) {
-                PacketHandler.INSTANCE.sendToServer(new PacketRequestKitMenu());
+                send(new PacketRequestKitMenu());
             }
         }
+        updateDeployButton();
+    }
+
+    /** Подпись/доступность кнопки деплоя (как раньше: жив / ждать / выбрать точку / возродиться). */
+    private void updateDeployButton() {
         var p = Minecraft.getInstance().player;
-        if (p == null) return;
-        applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
+        if (p == null || selectSpawnBtn == null) return;
+        applyCmdBtn.setVisible(applyCmdVisible());
         boolean dead = p.isDeadOrDying() || ClientData.DOWNED_PLAYERS.contains(p.getId());
         if (!dead) {
-            selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("ЖИВ"));
+            selectSpawnBtn.setEnabled(false);
+            selectSpawnBtn.label(Component.translatable("gui.pwpwarfare.deploy.button.alive"));
             return;
         }
-        long dt = ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
-        int el = (int) ((System.currentTimeMillis() - dt) / 1000);
-        int s = Math.max(0, DeployData.deployTimer - el);
+        int s = secondsLeft();
         if (s > 0) {
-            selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("ЖДАТЬ " + String.format("%02d:%02d", s / 60, s % 60)));
+            selectSpawnBtn.setEnabled(false);
+            selectSpawnBtn.label(Component.translatable("gui.pwpwarfare.deploy.button.wait", mmss(s)));
         } else if (selectedSpawn.isEmpty()) {
-            selectSpawnBtn.active = false;
-            selectSpawnBtn.setMessage(Component.literal("ВЫБРАТЬ ТОЧКУ"));
+            selectSpawnBtn.setEnabled(false);
+            selectSpawnBtn.label(Component.translatable("gui.pwpwarfare.deploy.button.pick_spawn"));
         } else {
-            selectSpawnBtn.active = true;
-            selectSpawnBtn.setMessage(Component.literal("ВОЗРОДИТЬСЯ"));
+            selectSpawnBtn.setEnabled(true);
+            selectSpawnBtn.label(Component.translatable("gui.pwpwarfare.deploy.button.respawn"));
         }
     }
 
+    // ══════════════════ РИСОВАНИЕ ══════════════════
+
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        int lw = sqW(), cw = roW(), lx = loW(), pw = poW();
-        int loadoutX = lw + cw, portraitX = lw + cw + lx;
-        int conY = conT(), ch = conH();
-        var f = PWPTheme.Fonts.display();
+    public void render(GuiGraphics g, int mx, int my, float pt) {
         var lp = Minecraft.getInstance().player;
+        mySquadId = -1;
+        for (var sq : DeployData.squads) {
+            if (lp != null && sq.members().contains(lp.getScoreboardName())) {
+                mySquadId = sq.id();
+                break;
+            }
+        }
+        Layout l = layout();
+        float o = 1F;
 
-        // Background
-        gui.fill(0, 0, width, height, PWPTheme.Colors.BACKGROUND);
-        gui.fill(0, 0, width, TOP_H, 0xE60E1117);
+        UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
+        renderTopBar(g, l, mx, my, o);
+        UIBackdrop.bar(g, l.bottom(), false);
 
-        // Tabs
-        gui.fill(0, TOP_H, width, TOP_H + TAB_H, 0xFF15191E);
-        String[] tabs = {"КОМАНДЫ", "ДЕПЛОЙ", "ПРАВИЛА"};
-        int tabW = width / 3;
-        for (int i = 0; i < 3; i++) {
+        boolean deployTab = activeTab == TAB_DEPLOY;
+        if (activeTab == TAB_TEAMS) {
+            roster.render(g, l.content(), getPlayerTeam(), o);
+        } else if (activeTab == TAB_RULES) {
+            Rect c = WDraw.panel(
+                    g, font, l.content(), WDraw.headerHeight(height), WarfareIcon.RULES, tabLabel(TAB_RULES), null, o);
+            rules.render(g, c, mx, my, o);
+        } else {
+            renderSquadColumn(g, l, mx, my, o);
+            int headerH = WDraw.headerHeight(height);
+            Rect rc = WDraw.panel(
+                    g,
+                    font,
+                    l.roles(),
+                    headerH,
+                    WarfareIcon.PERSON,
+                    Component.translatable("gui.pwpwarfare.deploy.roles.title"),
+                    null,
+                    o);
+            roles.render(g, rc, mx, my, selectedKit, o);
+            Rect sc = WDraw.panel(
+                    g,
+                    font,
+                    l.spawns(),
+                    headerH,
+                    WarfareIcon.SPAWN_MAIN,
+                    Component.translatable("gui.pwpwarfare.deploy.spawn.title"),
+                    Component.literal(String.valueOf(DeployData.spawns.size())),
+                    o);
+            spawns.render(g, sc, mx, my, selectedSpawn, o);
+            renderRight(g, l, mx, my, pt, o);
+            renderBottom(g, l, mx, my, o);
+        }
+
+        // поля ввода и кнопки отрядов существуют только на вкладке деплоя
+        if (!deployTab) {
+            squadInput.setVisible(false);
+            chatInput.setVisible(false);
+        }
+        squadInput.render(g, mx, my, pt);
+        chatInput.render(g, mx, my, pt);
+        contextMenu.render(g, mx, my);
+    }
+
+    private void renderTopBar(GuiGraphics g, Layout l, int mx, int my, float o) {
+        Rect top = l.top();
+        UIBackdrop.bar(g, top, true);
+        int margin = l.content().x();
+        // вкладки
+        for (int i = 0; i < l.tabs().length; i++) {
+            Rect t = l.tabs()[i];
             boolean sel = i == activeTab;
-            if (sel) gui.fill(i * tabW, TOP_H, (i + 1) * tabW, TOP_H + TAB_H, 0xFF1E222A);
-            gui.drawCenteredString(
-                    f,
-                    tabs[i],
-                    i * tabW + tabW / 2,
-                    TOP_H + 6,
-                    sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_PRIMARY);
+            float h = hover.get("tab" + i, t.contains(mx, my) && !sel);
+            float s = tabAnim.get("tab" + i, sel);
+            if (h > 0.01F) UIDraw.rect(g, t, UIDraw.fade(WTheme.ROW_HOVER, o * h));
+            int color = Colors.lerp(PWPTheme.Text.MUTED, PWPTheme.Text.HEADING, Math.max(h, s));
+            color = Colors.lerp(color, PWPTheme.Colors.TEXT_ACCENT, s);
+            int is = WTheme.ICON_ROW;
+            Component label = UIDraw.ellipsize(font, tabLabel(i), t.w() - is - Spacing.XS - 2 * Spacing.XS);
+            int cw = is + Spacing.XS + font.width(label);
+            int cx = t.x() + (t.w() - cw) / 2;
+            WDraw.icon(g, TAB_ICONS[i], cx, t.centerY() - is / 2, is, UIDraw.fade(color, o));
+            UIDraw.text(
+                    g,
+                    font,
+                    label,
+                    cx + is + Spacing.XS,
+                    t.centerY() - font.lineHeight / 2 + 1,
+                    UIDraw.fade(color, o),
+                    true);
+            int uw = Math.round(t.w() * s);
+            if (uw > 0) {
+                UIDraw.accentBarH(
+                        g,
+                        t.centerX() - uw / 2,
+                        t.bottom() - WTheme.TAB_UNDERLINE,
+                        uw,
+                        WTheme.TAB_UNDERLINE,
+                        UIDraw.fade(Colors.ACCENT, o));
+            }
         }
-        gui.fill(0, TOP_H + TAB_H - 1, width, TOP_H + TAB_H, PWPTheme.Colors.BORDER);
-
-        // Bottom bar bg
-        gui.fill(0, height - BOT_H, width, height, 0xE60E1117);
-        gui.fill(0, height - BOT_H, width, height - BOT_H + 1, PWPTheme.Colors.BORDER_ACCENT);
-
-        // Column dividers (deploy layout only)
-        if (activeTab == 1) {
-            gui.fill(lw, conY, lw + 1, height - BOT_H, PWPTheme.Colors.BORDER);
-            gui.fill(lw + cw, conY, lw + cw + 1, height - BOT_H, PWPTheme.Colors.BORDER);
-            gui.fill(lw + cw + lx, conY, lw + cw + lx + 1, height - BOT_H, PWPTheme.Colors.BORDER);
+        int leftEnd = l.tabs().length > 0 ? l.tabs()[0].x() - Spacing.SM : top.centerX();
+        int rightStart = l.tabs().length > 0 ? l.tabs()[l.tabs().length - 1].right() + Spacing.SM : top.centerX();
+        // слева: карта
+        Rect left = Rect.of(margin, top.y(), Math.max(0, leftEnd - margin), top.h());
+        if (left.w() > WTheme.ICON_ROW + Spacing.LG) {
+            WDraw.icon(
+                    g,
+                    WarfareIcon.MAP,
+                    left.x(),
+                    left.centerY() - WTheme.ICON_ROW / 2,
+                    WTheme.ICON_ROW,
+                    UIDraw.fade(Colors.ACCENT, o));
+            WDraw.text(
+                    g,
+                    font,
+                    Component.literal(DeployData.mapName.toUpperCase()),
+                    left.inset(WTheme.ICON_ROW + Spacing.XS, 0, 0, 0),
+                    Align.START,
+                    PWPTheme.Text.HEADING,
+                    true,
+                    o);
         }
-
-        // Top bar
+        // справа: флаг, название команды, тикеты
+        Rect right = Rect.of(rightStart, top.y(), Math.max(0, width - margin - rightStart), top.h());
         String team = getPlayerTeam().toUpperCase();
         boolean isBlue = team.contains("BLUE");
         String faction = isBlue ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
         String customName = isBlue ? ClientData.customBlueName : ClientData.customRedName;
-        String tabTitle = activeTab == 0 ? "КОМАНДЫ" : (activeTab == 1 ? "ДЕПЛОЙ" : "ПРАВИЛА");
-        gui.drawString(f, DeployData.mapName, 8, 8, PWPTheme.Colors.TEXT_PRIMARY, false);
-        gui.drawCenteredString(f, tabTitle, width / 2, 8, PWPTheme.Colors.TEXT_ACCENT);
-        ResourceLocation flagTex = getFlagTexture(faction);
-        int teamColor = isBlue ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
-        int flagX = width - 130;
-        if (flagTex != null) {
-            RenderSystem.enableBlend();
-            gui.blit(flagTex, flagX, 4, 32, 18, 0, 0, 64, 36, 64, 36);
-        }
-        gui.drawString(f, customName, flagX + 36, 10, teamColor, false);
         int tickets = isBlue ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
-        gui.blit(TICKET_ICON, flagX + 36, 21, 10, 10, 0, 0, 16, 16, 16, 16);
-        gui.drawString(f, String.valueOf(tickets), flagX + 36 + 12, 22, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        if (activeTab == 0) {
-            PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);
-            renderTeamTab(gui, mx, my, conY, ch, f);
-        } else if (activeTab == 1) {
-            // ── LEFT: SQUADS (SquadUIHelper) ──
-            int sqX = 4, sqW2 = Math.min(lw - 8, SquadUIHelper.getSidebarWidth());
-            int sqY = conY, sqMaxH = ch - 110;
-
-            mySquadId = -1;
-            for (var sq : DeployData.squads) {
-                if (lp != null && sq.members().contains(lp.getScoreboardName())) {
-                    mySquadId = sq.id();
-                    break;
-                }
+        Component tk = Component.literal(String.valueOf(tickets));
+        int tkW = WTheme.ICON_ROW + Spacing.XXS + font.width(tk);
+        int x = right.right() - tkW;
+        if (right.w() >= tkW) {
+            WDraw.icon(
+                    g,
+                    WarfareIcon.TICKET,
+                    x,
+                    right.centerY() - WTheme.ICON_ROW / 2,
+                    WTheme.ICON_ROW,
+                    UIDraw.fade(PWPTheme.Colors.TEXT_ACCENT, o));
+            UIDraw.text(
+                    g,
+                    font,
+                    tk,
+                    x + WTheme.ICON_ROW + Spacing.XXS,
+                    right.centerY() - font.lineHeight / 2 + 1,
+                    UIDraw.fade(PWPTheme.Colors.TEXT_ACCENT, o),
+                    true);
+        }
+        int nameRight = x - Spacing.SM;
+        ResourceLocation fl = TeamRoster.flag(faction);
+        int teamColor = isBlue ? WTheme.TEAM_BLUE : WTheme.TEAM_RED;
+        int nameW = Math.min(
+                font.width(customName == null ? "" : customName),
+                Math.max(0, nameRight - right.x() - WTheme.FLAG_W - Spacing.XS));
+        int fx = nameRight - nameW - (fl != null ? WTheme.FLAG_W + Spacing.XS : 0);
+        if (fx >= right.x()) {
+            if (fl != null) {
+                TeamRoster.drawFlag(
+                        g, fl, Rect.of(fx, right.centerY() - WTheme.FLAG_H / 2, WTheme.FLAG_W, WTheme.FLAG_H));
             }
+            WDraw.text(
+                    g,
+                    font,
+                    Component.literal(customName == null ? "" : customName),
+                    Rect.of(nameRight - nameW, right.y(), nameW, right.h()),
+                    Align.START,
+                    teamColor,
+                    true,
+                    o);
+        }
+    }
 
-            applyCmdBtn.setX(sqX + 4);
-            applyCmdBtn.setY(sqY + 2);
-            applyCmdBtn.visible = SquadUIHelper.isApplyCmdVisible();
-
-            gui.enableScissor(sqX, sqY, sqX + sqW2, sqY + sqMaxH);
-            gui.pose().pushPose();
-            gui.pose().translate(0, sqY, 0);
-            SquadUIHelper.renderSquadList(gui, mx, my - sqY, expandedSquads, SquadUIHelper.isApplyCmdVisible());
-            gui.pose().popPose();
-            gui.disableScissor();
-
-            // Squad bottom: CREATE + CHAT
-            int bottomY = sqY + sqMaxH + 2;
-            gui.fill(sqX, bottomY - 1, sqX + sqW2, bottomY, PWPTheme.Colors.BORDER);
-            if (mySquadId < 0) {
-                gui.drawString(f, "СОЗДАТЬ ОТРЯД", sqX, bottomY + 2, PWPTheme.Colors.ACCENT, false);
-                squadInput.setX(sqX + 78);
-                squadInput.setWidth(80);
-                squadInput.setY(bottomY + 1);
-                squadInput.setVisible(true);
-                createSquadBtn.setX(sqX + 158);
-                createSquadBtn.setY(bottomY + 1);
-                createSquadBtn.visible = true;
-            } else {
-                squadInput.setVisible(false);
-                createSquadBtn.visible = false;
-            }
-
-            // ── LEFT CHAT ──
-            int chatTop = mySquadId < 0 ? bottomY + 18 : bottomY + 4;
-            int chatH = height - BOT_H - 4 - chatTop;
-            if (chatH > 20) {
-                RoundedRect.fill(gui, sqX, chatTop - 2, sqW2, chatH + 4, 4, 0xE60E1117);
-                RoundedRect.border(gui, sqX, chatTop - 2, sqW2, chatH + 4, 4, 1, PWPTheme.Colors.BORDER);
-                gui.drawString(f, "ЧАТ", sqX + 4, chatTop, PWPTheme.Colors.TEXT_DIM, false);
-
-                gui.enableScissor(sqX + 2, chatTop + 12, sqX + sqW2 - 2, chatTop + chatH - 18);
-                int mcy2 = chatTop + 14, cc2 = 0, maxMsgs = (chatH - 32) / 10;
-                for (int ci = 0; ci < ClientData.menuChatHistory.size() && cc2 < maxMsgs; ci++) {
-                    String t = ClientData.menuChatHistory.get(ci).getString();
-                    if (f.width(t) > sqW2 - 12) t = f.plainSubstrByWidth(t, sqW2 - 16) + "\u2026";
-                    gui.drawString(f, t, sqX + 4, mcy2, PWPTheme.Colors.TEXT_SECONDARY, false);
-                    mcy2 += 10;
-                    cc2++;
-                }
-                gui.disableScissor();
-
-                // Channel selector block + chat input
-                int chBoxW = f.width("SQD") + 8;
-                int chBoxCol = chatChannel.equals("ALL")
-                        ? PWPTheme.Colors.TEXT_DIM
-                        : (chatChannel.equals("TEAM") ? PWPTheme.Colors.INFO : PWPTheme.Colors.SUCCESS);
-                boolean chBoxHover = mx >= sqX + 4
-                        && mx <= sqX + 4 + chBoxW
-                        && my >= chatTop + chatH - 18
-                        && my <= chatTop + chatH - 2;
-                gui.fill(
-                        sqX + 4,
-                        chatTop + chatH - 17,
-                        sqX + 4 + chBoxW,
-                        chatTop + chatH - 3,
-                        chBoxHover ? 0x44FFFFFF : 0x2212151A);
-                gui.renderOutline(sqX + 4, chatTop + chatH - 17, chBoxW, 14, chBoxCol);
-                gui.drawString(f, chatChannel, sqX + 6, chatTop + chatH - 15, chBoxCol, false);
-
-                chatInput.setX(sqX + 6 + chBoxW);
-                chatInput.setY(chatTop + chatH - 16);
-                chatInput.setWidth(sqW2 - 10 - chBoxW);
-                chatInput.setVisible(true);
-            } else {
-                chatInput.setVisible(false);
-            }
-
-            // ── CENTER TOP: ROLES ──
-            int roleH = ch * 55 / 100;
-            roles.render(gui, lw + 4, conY + 4, cw - 8, roleH, mx, my, selectedKit);
-
-            // ── CENTER BOTTOM: SPAWNS ──
-            int spawnY = conY + 4 + roleH + 2, spawnH = ch - roleH - 6;
-            spawns.render(gui, lw + 4, spawnY, cw - 8, spawnH, mx, my, selectedSpawn);
-
-            // ── RIGHT: MAP or PORTRAIT ──
-            boolean showMap = !selectedSpawn.isEmpty();
-
-            if (showMap) {
-                if (mapNeedsInit) initRightMap();
-                rightMapRenderer.tickAnim();
-                rightMapRenderer.render(gui, mx, my, pt);
-                mapCtx.render(gui, mx, my);
-                String pos = "X=" + (lp != null ? lp.blockPosition().getX() : 0) + " Z="
-                        + (lp != null ? lp.blockPosition().getZ() : 0);
-                gui.drawString(f, pos, loadoutX + 4, conY + 2, PWPTheme.Colors.TEXT_ACCENT, false);
-                if (pathActive)
-                    gui.drawString(f, "LMB / Enter: place | ESC: cancel", loadoutX + 8, conY + 16, 0x44FF44, true);
-            } else {
-                loadout.render(gui, loadoutX + 4, conY + 4, lx - 8, ch - 4, mx, my, selectedKit);
-                String desc = DeployData.kits.stream()
-                        .filter(k -> k.name().equals(selectedKit))
-                        .map(DeployData.KitRecord::description)
-                        .findFirst()
-                        .orElse("");
-                ItemStack wpn = getSelectedWeapon();
-                List<ItemStack> arm = getSelectedArmor();
-                portrait.render(gui, portraitX, conY, pw, ch, mx, my, desc, wpn, arm);
-            }
-
-            // ── BOTTOM BAR ──
-            int bbY = height - BOT_H + 2;
-            gui.drawString(
-                    f, "\u265E " + DeployData.getDisplayName(selectedKit), 8, bbY + 10, PWPTheme.Colors.ACCENT, false);
-            long dt =
-                    ClientData.globalDeathTimestamp > 0 ? ClientData.globalDeathTimestamp : System.currentTimeMillis();
-            int el = (int) ((System.currentTimeMillis() - dt) / 1000);
-            int sec = Math.max(0, DeployData.deployTimer - el);
-            String ts = sec > 0 ? String.format("ОЖИДАНИЕ %02d:%02d", sec / 60, sec % 60) : "ГОТОВ";
-            gui.drawCenteredString(f, ts, width / 2, bbY + 10, PWPTheme.Colors.TEXT_PRIMARY);
-        } else if (activeTab == 2) {
-            PWPPanel.render(gui, 4, conY, width - 8, ch, PWPPanel.Variant.SURFACE_DIM);
-            renderRulesTab(gui, mx, my, conY, ch, f);
+    private void renderSquadColumn(GuiGraphics g, Layout l, int mx, int my, float o) {
+        WDraw.panel(
+                g,
+                font,
+                l.squads(),
+                WDraw.headerHeight(height),
+                WarfareIcon.SQUAD,
+                Component.translatable("gui.pwpwarfare.deploy.squads.title"),
+                Component.literal(String.valueOf(DeployData.squads.size())),
+                o);
+        Rect list = l.squadList();
+        boolean applyVisible = applyCmdVisible();
+        applyCmdBtn.setVisible(applyVisible);
+        // список отрядов рисует SquadUIHelper в своих координатах (x от 5, y от 0)
+        int dx = squadDx(list);
+        if (ClientData.clientSquads.isEmpty() || Minecraft.getInstance().level == null) {
+            WDraw.emptyState(
+                    g,
+                    font,
+                    list,
+                    WarfareIcon.SQUAD,
+                    Component.translatable("gui.pwpwarfare.deploy.squads.empty"),
+                    Component.translatable("gui.pwpwarfare.deploy.squads.empty_hint"),
+                    o);
+        } else {
+            g.enableScissor(list.x(), list.y(), list.right(), list.bottom());
+            g.pose().pushPose();
+            g.pose().translate(dx, list.y(), 0);
+            SquadUIHelper.renderSquadList(g, mx - dx, my - list.y(), expandedSquads, applyVisible);
+            g.pose().popPose();
+            g.disableScissor();
+        }
+        if (applyVisible) {
+            applyCmdBtn.setBounds(l.applyCmd());
+            applyCmdBtn.render(g, mx, my, 0F);
         }
 
-        // Hide squad/chat widgets on non-deploy tabs
-        if (activeTab != 1) {
+        // создание отряда (только без отряда)
+        if (mySquadId < 0 && l.createRow().h() > 0) {
+            Rect row = l.createRow();
+            int bw = Math.min(createSquadBtn.preferredWidth(), row.w() / 2);
+            Rect[] parts = Flow.row(row, Spacing.XS, Flow.Justify.START, Flow.flex(1), bw);
+            WDraw.field(g, parts[0], squadInput.isFocused(), o);
+            placeField(squadInput, parts[0]);
+            squadInput.setVisible(true);
+            createSquadBtn.setVisible(true);
+            createSquadBtn.setBounds(parts[1]);
+            createSquadBtn.render(g, mx, my, 0F);
+        } else {
             squadInput.setVisible(false);
-            createSquadBtn.visible = false;
+            createSquadBtn.setVisible(false);
+        }
+
+        // чат: история + [канал][поле]
+        Rect chat = l.chat();
+        if (chat.h() < WTheme.DEPLOY_CHAT_MIN_H / 2) {
             chatInput.setVisible(false);
-            applyCmdBtn.visible = false;
+            return;
         }
-
-        for (var w : renderables) w.render(gui, mx, my, pt);
-        contextMenu.render(gui, mx, my);
+        WDraw.well(g, chat, o);
+        Rect head = chat.top(font.lineHeight + Spacing.XS).inset(Spacing.XS, 0);
+        WDraw.icon(
+                g,
+                WarfareIcon.CHAT,
+                head.x(),
+                head.centerY() - WTheme.ICON_SMALL / 2,
+                WTheme.ICON_SMALL,
+                UIDraw.fade(PWPTheme.Text.CAPTION, o));
+        WDraw.text(
+                g,
+                font,
+                Component.translatable("gui.pwpwarfare.deploy.chat.title"),
+                head.inset(WTheme.ICON_SMALL + Spacing.XS, 0, 0, 0),
+                Align.START,
+                PWPTheme.Text.CAPTION,
+                false,
+                o);
+        Rect input = chat.bottomStrip(WTheme.FIELD_H).inset(Spacing.XXS, 0, Spacing.XXS, Spacing.XXS);
+        Rect channel = channelRect(input);
+        Rect field = Rect.of(
+                channel.right() + Spacing.XXS, input.y(), input.right() - channel.right() - Spacing.XXS, input.h());
+        Rect history = Rect.of(
+                chat.x() + Spacing.XS,
+                head.bottom(),
+                chat.w() - 2 * Spacing.XS,
+                input.y() - head.bottom() - Spacing.XXS);
+        g.enableScissor(history.x(), history.y(), history.right(), history.bottom());
+        int y = history.y();
+        for (int ci = 0; ci < ClientData.menuChatHistory.size(); ci++) {
+            if (y + font.lineHeight > history.bottom()) break;
+            Component msg = UIDraw.ellipsize(font, ClientData.menuChatHistory.get(ci), history.w());
+            UIDraw.text(g, font, msg, history.x(), y, UIDraw.fade(PWPTheme.Text.MUTED, o), false);
+            y += font.lineHeight + 1;
+        }
+        g.disableScissor();
+        // канал: ALL / TEAM / SQD — цвет по каналу, клик переключает
+        int chColor = channelColor();
+        float chH = hover.get("channel", channel.contains(mx, my));
+        UIDraw.rect(g, channel, UIDraw.fade(Colors.withAlpha(chColor, WTheme.PILL_ALPHA + Math.round(0x30 * chH)), o));
+        UIDraw.outline(g, channel, UIDraw.fade(chColor, o));
+        WDraw.text(g, font, channelLabel(), channel, Align.CENTER, chColor, false, o);
+        WDraw.field(g, field, chatInput.isFocused(), o);
+        placeField(chatInput, field);
+        chatInput.setVisible(true);
     }
 
-    // ══════════════════ TEAM TAB ══════════════════
-
-    private void renderTeamTab(GuiGraphics gui, int mx, int my, int conY, int ch, Font f) {
-        String myTeam = getPlayerTeam().toUpperCase();
-        List<MapPlayerInfo> allPlayers = new ArrayList<>(ClientData.mapPlayers.values());
-        List<MapPlayerInfo> allies = allPlayers.stream()
-                .filter(p -> p.team != null && p.team.equalsIgnoreCase(myTeam))
-                .collect(Collectors.toList());
-        List<MapPlayerInfo> enemies = allPlayers.stream()
-                .filter(p -> p.team != null && !p.team.equalsIgnoreCase(myTeam))
-                .collect(Collectors.toList());
-
-        int contentX = 8;
-        int contentW = width - 16;
-        int colW = (contentW - 24) / 2;
-
-        gui.enableScissor(contentX, conY, contentX + contentW, conY + ch);
-
-        int top = conY - rulesScrollOffset;
-        renderPlayerColumn(gui, allies, contentX, top, colW, true, f);
-        renderPlayerColumn(gui, enemies, contentX + colW + 24, top, colW, false, f);
-
-        int totalH = 36 + Math.max(allies.size(), enemies.size()) * 12;
-        rulesScrollMax = Math.max(0, totalH - ch);
-        rulesScrollOffset = Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset));
-
-        gui.disableScissor();
+    private static boolean applyCmdVisible() {
+        return Minecraft.getInstance().player != null && SquadUIHelper.isApplyCmdVisible();
     }
 
-    private void renderPlayerColumn(
-            GuiGraphics gui, List<MapPlayerInfo> players, int x, int y, int w, boolean isAlly, Font f) {
-        String faction = isAlly ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
-        String customName = isAlly ? ClientData.customBlueName : ClientData.customRedName;
-        int titleCol = isAlly ? PWPTheme.Colors.TEAM_BLUE : PWPTheme.Colors.TEAM_RED;
-
-        ResourceLocation fl = getFlagTexture(faction);
-        if (fl != null) {
-            RenderSystem.enableBlend();
-            gui.blit(fl, x + 4, y, 24, 14, 0, 0, 64, 36, 64, 36);
-        }
-        int textOff = fl != null ? 30 : 4;
-        gui.drawString(f, customName + " (" + players.size() + ")", x + textOff, y + 2, titleCol, false);
-        gui.fill(x + 4, y + 18, x + w - 4, y + 19, PWPTheme.Colors.BORDER);
-
-        int ly = y + 24;
-        String myName = Minecraft.getInstance().player.getScoreboardName();
-
-        for (MapPlayerInfo p : players) {
-            boolean isMe = p.name.equals(myName);
-            String sqName = getPlayerSquadName(p.name);
-            String display = sqName != null ? "[" + sqName + "] " + p.name : p.name;
-            int nameCol = isMe ? PWPTheme.Colors.TEXT_ACCENT : (isAlly ? 0xFFFFFF : 0xFFCCCCCC);
-
-            int maxW = w - 12;
-            if (f.width(display) > maxW) {
-                display = f.plainSubstrByWidth(display, maxW - 4) + "\u2026";
-            }
-            gui.drawString(f, display, x + 6, ly, nameCol, false);
-
-            boolean isLeader = false;
-            for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-                if (s.members.contains(p.name) && s.leader.equals(p.name)) {
-                    isLeader = true;
-                    break;
-                }
-            }
-            if (isLeader) {
-                gui.drawString(f, "\u25CF", x + w - 14, ly, PWPTheme.Colors.SUCCESS, false);
-            }
-            ly += 12;
-        }
+    private static int squadDx(Rect list) {
+        return list.x() - 5 + Spacing.XXS;
     }
 
-    private String getPlayerSquadName(String playerName) {
-        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-            if (s.members.contains(playerName)) return s.name;
+    private Rect channelRect(Rect input) {
+        int w = 0;
+        for (String c : CHAT_CHANNELS) {
+            w = Math.max(
+                    w, font.width(Component.translatable("gui.pwpwarfare.deploy.chat.channel." + c.toLowerCase())));
         }
-        return null;
+        return input.left(Math.min(input.w() / 2, w + 2 * Spacing.XS));
     }
 
-    // ══════════════════ RULES TAB ══════════════════
-
-    private void renderRulesTab(GuiGraphics gui, int mx, int my, int conY, int ch, Font f) {
-        int contentX = 8;
-        int contentW = width - 16;
-
-        int totalH = 0;
-        for (int i = 0; i < RULES.size(); i++) {
-            totalH += 20;
-            if (!collapsedSections.contains(i)) {
-                totalH += RULES.get(i).rules().size() * 14 + 6;
-            }
-        }
-        rulesScrollMax = Math.max(0, totalH - ch);
-        rulesScrollOffset = Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset));
-
-        gui.enableScissor(contentX, conY, contentX + contentW, conY + ch);
-        int y = conY - rulesScrollOffset;
-
-        for (int i = 0; i < RULES.size(); i++) {
-            if (y > conY + ch) break;
-            RuleCategory cat = RULES.get(i);
-            boolean collapsed = collapsedSections.contains(i);
-
-            if (y + 20 >= conY) {
-                String title = (collapsed ? "\u25B6 " : "\u25BC ") + cat.name();
-                gui.drawString(f, title, contentX + 4, y, PWPTheme.Colors.TEXT_ACCENT, false);
-                gui.fill(contentX + 4, y + 14, contentX + contentW - 4, y + 15, PWPTheme.Colors.BORDER);
-            }
-            y += 20;
-
-            if (!collapsed) {
-                for (Rule r : cat.rules()) {
-                    if (y > conY + ch) break;
-                    if (y + 14 >= conY) {
-                        String line = "\u2713 " + r.name();
-                        int maxW = contentW - 16;
-                        if (f.width(line) > maxW) {
-                            line = f.plainSubstrByWidth(line, maxW - 4) + "\u2026";
-                        }
-                        gui.drawString(f, line, contentX + 8, y, 0xFFCCCCCC, false);
-                    }
-                    y += 14;
-                }
-                y += 6;
-            }
-        }
-        gui.disableScissor();
+    private Component channelLabel() {
+        return Component.translatable("gui.pwpwarfare.deploy.chat.channel." + chatChannel.toLowerCase());
     }
 
-    private void handleRulesClick(double mx, double my) {
-        int contentX = 8;
-        int conY = conT();
-        int y = conY - rulesScrollOffset;
+    private int channelColor() {
+        return chatChannel.equals("ALL")
+                ? PWPTheme.Text.MUTED
+                : (chatChannel.equals("TEAM") ? PWPTheme.Colors.INFO : WTheme.STATUS_OK);
+    }
 
-        for (int i = 0; i < RULES.size(); i++) {
-            if (mx >= contentX + 4 && mx <= width - 8 && my >= y && my <= y + 18) {
-                if (collapsedSections.contains(i)) collapsedSections.remove(i);
-                else collapsedSections.add(i);
-                return;
+    /** EditBox без рамки внутри нарисованного поля: текст по вертикальному центру. */
+    private void placeField(EditBox box, Rect field) {
+        int ty = field.y() + (field.h() - font.lineHeight) / 2 + 1;
+        box.setX(field.x() + Spacing.XS);
+        box.setY(ty);
+        box.setWidth(Math.max(1, field.w() - 2 * Spacing.XS));
+        box.setHeight(Math.max(1, field.bottom() - ty));
+    }
+
+    private boolean showMap() {
+        return !selectedSpawn.isEmpty();
+    }
+
+    private void renderRight(GuiGraphics g, Layout l, int mx, int my, float pt, float o) {
+        int headerH = WDraw.headerHeight(height);
+        if (showMap() && (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null)) {
+            Rect c = WDraw.panel(
+                    g,
+                    font,
+                    l.right(),
+                    headerH,
+                    WarfareIcon.MAP,
+                    Component.translatable("gui.pwpwarfare.deploy.map.title"),
+                    null,
+                    o);
+            WDraw.emptyState(
+                    g, font, c, WarfareIcon.MAP, Component.translatable("gui.pwpwarfare.deploy.map.no_world"), null, o);
+        } else if (showMap()) {
+            var lp = Minecraft.getInstance().player;
+            Component pos =
+                    Component.literal("X " + (lp != null ? lp.blockPosition().getX() : 0) + "  Z "
+                            + (lp != null ? lp.blockPosition().getZ() : 0));
+            WDraw.panel(
+                    g,
+                    font,
+                    l.right(),
+                    headerH,
+                    WarfareIcon.MAP,
+                    Component.translatable("gui.pwpwarfare.deploy.map.title"),
+                    pos,
+                    o);
+            if (mapNeedsInit || !l.map().equals(lastMapRect)) initRightMap(l.map());
+            rightMapRenderer.tickAnim();
+            rightMapRenderer.render(g, mx, my, pt);
+            UIDraw.outline(g, l.map().outset(1), UIDraw.fade(PWPTheme.Styles.Glass.BORDER, o));
+            mapCtx.render(g, mx, my);
+            if (pathActive) {
+                Rect hint = l.map().top(font.lineHeight + Spacing.SM).inset(Spacing.XS, Spacing.XS, Spacing.XS, 0);
+                UIDraw.rect(g, hint.outset(Spacing.XXS), UIDraw.fade(PWPTheme.Styles.Tooltip.BG, o));
+                WDraw.text(
+                        g,
+                        font,
+                        Component.translatable("gui.pwpwarfare.deploy.map.path_hint"),
+                        hint,
+                        Align.CENTER,
+                        WTheme.STATUS_OK,
+                        true,
+                        o);
             }
-            y += 20;
-            if (!collapsedSections.contains(i)) {
-                y += RULES.get(i).rules().size() * 14 + 6;
-            }
+        } else {
+            Rect lc = WDraw.panel(
+                    g,
+                    font,
+                    l.loadout(),
+                    headerH,
+                    WarfareIcon.BACKPACK,
+                    Component.translatable("gui.pwpwarfare.deploy.loadout.panel"),
+                    null,
+                    o);
+            loadout.render(g, lc, mx, my, selectedKit, o);
+            UIDraw.glass(g, l.portrait(), o, false);
+            portrait.render(g, l.portrait().inset(Spacing.XS), mx, my, getSelectedWeapon(), getSelectedArmor(), o);
         }
     }
 
-    private static ResourceLocation getFlagTexture(String faction) {
-        if (faction == null || faction.equalsIgnoreCase("none")) return null;
-        return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
+    private void renderBottom(GuiGraphics g, Layout l, int mx, int my, float o) {
+        Rect bar = l.bottom();
+        int margin = l.content().x();
+        // слева: выбранный кит (иконка категории + имя), под ним — выбранная точка
+        var kit = DeployData.kits.stream()
+                .filter(k -> k.name().equals(selectedKit))
+                .findFirst();
+        UIIcon ci = kit.map(k -> UIIcon.forRoleCategory(k.category())).orElse(null);
+        int leftW = Math.max(0, l.deployButton().x() - margin - Spacing.MD);
+        Rect left = Rect.of(margin, bar.y() + Spacing.XS, leftW / 2, bar.h() - 2 * Spacing.XS);
+        int is = Spacing.ICON_SIZE;
+        int tx = left.x();
+        if (ci != null && left.w() > is * 3) {
+            UIDraw.icon(g, ci, tx, left.centerY() - is / 2, is, UIDraw.fade(ci.roleColor(), o));
+            tx += is + Spacing.SM;
+        }
+        Rect[] lines = Flow.column(
+                Rect.of(tx, left.y(), left.right() - tx, left.h()),
+                0,
+                Flow.Justify.CENTER,
+                font.lineHeight + 1,
+                font.lineHeight + 1);
+        WDraw.text(
+                g,
+                font,
+                Component.literal(DeployData.getDisplayName(selectedKit)),
+                lines[0],
+                Align.START,
+                PWPTheme.Colors.TEXT_ACCENT,
+                true,
+                o);
+        String spawnName = DeployData.spawns.stream()
+                .filter(s -> s.id().equals(selectedSpawn))
+                .map(DeployData.SpawnPoint::name)
+                .findFirst()
+                .orElse(null);
+        WDraw.text(
+                g,
+                font,
+                spawnName != null
+                        ? Component.translatable("gui.pwpwarfare.deploy.bottom.spawn", spawnName)
+                        : Component.translatable("gui.pwpwarfare.deploy.bottom.no_spawn"),
+                lines[1],
+                Align.START,
+                PWPTheme.Text.MUTED,
+                false,
+                o);
+
+        // центр: статус таймера
+        int sec = secondsLeft();
+        Component status = sec > 0
+                ? Component.translatable("gui.pwpwarfare.deploy.bottom.waiting", mmss(sec))
+                : Component.translatable("gui.pwpwarfare.deploy.bottom.ready");
+        Rect mid =
+                Rect.of(left.right(), bar.y(), Math.max(0, l.deployButton().x() - left.right() - Spacing.SM), bar.h());
+        if (mid.w() > WTheme.ICON_ROW * 3) {
+            int sw = Math.min(font.width(status), mid.w() - WTheme.ICON_ROW - Spacing.XS);
+            int sx = mid.centerX() - (sw + WTheme.ICON_ROW + Spacing.XS) / 2;
+            int color = sec > 0 ? PWPTheme.Text.BODY : WTheme.STATUS_OK;
+            WDraw.icon(
+                    g,
+                    WarfareIcon.CLOCK,
+                    sx,
+                    mid.centerY() - WTheme.ICON_ROW / 2,
+                    WTheme.ICON_ROW,
+                    UIDraw.fade(color, o));
+            WDraw.text(
+                    g,
+                    font,
+                    status,
+                    Rect.of(sx + WTheme.ICON_ROW + Spacing.XS, mid.y(), sw, mid.h()),
+                    Align.START,
+                    color,
+                    true,
+                    o);
+        }
+
+        // справа: кнопка деплоя + полоса таймера (заполняется к готовности)
+        selectSpawnBtn.setBounds(l.deployButton());
+        selectSpawnBtn.render(g, mx, my, 0F);
+        float frac = DeployData.deployTimer > 0 ? 1F - sec / (float) DeployData.deployTimer : 1F;
+        WDraw.progress(g, l.timerBar(), frac, WTheme.TIMER_TRACK, sec > 0 ? WTheme.TIMER_FILL : WTheme.STATUS_OK, o);
     }
 
     private String getPlayerTeam() {
@@ -777,7 +927,7 @@ public class DeployScreen extends Screen {
         return p != null && p.getTeam() != null ? p.getTeam().getName() : "NEUTRAL";
     }
 
-    // ══════════════════ ITEMS ══════════════════
+    // ══════════════════ ПРЕДМЕТЫ ══════════════════
 
     private ItemStack getSelectedWeapon() {
         var ko = DeployData.kits.stream()
@@ -801,7 +951,7 @@ public class DeployScreen extends Screen {
         return ko.map(DeployData.KitRecord::armor).orElse(List.of());
     }
 
-    // ══════════════════ MOUSE ══════════════════
+    // ══════════════════ МЫШЬ ══════════════════
 
     private static boolean isPlayerCMD(LocalPlayer p) {
         String name = p.getScoreboardName();
@@ -837,67 +987,62 @@ public class DeployScreen extends Screen {
             contextMenu.mouseClicked(mx, my, btn);
             return true;
         }
+        Layout l = layout();
+        if (activeTab == TAB_DEPLOY) {
+            if (selectSpawnBtn.isVisible() && selectSpawnBtn.mouseClicked(mx, my, btn)) return true;
+            if (applyCmdBtn.isVisible() && applyCmdBtn.mouseClicked(mx, my, btn)) return true;
+            if (createSquadBtn.isVisible() && createSquadBtn.mouseClicked(mx, my, btn)) return true;
+        }
         if (super.mouseClicked(mx, my, btn)) return true;
 
-        int lw = sqW(), cw = roW(), conY = conT(), ch = conH();
-
-        // Tabs
-        if (my >= TOP_H && my < TOP_H + TAB_H) {
-            int t = (int) (mx / (width / 3));
-            if (t >= 0 && t < 3) {
-                activeTab = t;
+        // вкладки
+        for (int i = 0; i < l.tabs().length; i++) {
+            if (l.tabs()[i].contains(mx, my)) {
+                activeTab = i;
                 return true;
             }
         }
 
-        if (activeTab == 2) {
-            handleRulesClick(mx, my);
+        if (activeTab == TAB_RULES) {
+            Rect c = l.content().inset(Spacing.XS, WDraw.headerHeight(height) + Spacing.XS, Spacing.XS, Spacing.XS);
+            rules.mouseClicked(mx, my, btn, c);
             return true;
         }
 
-        if (activeTab == 1) {
-            // ── SQUADS (via SquadUIHelper) ──
-            int sqX = 4, sqW2 = Math.min(lw - 8, SquadUIHelper.getSidebarWidth());
-            int sqY = conY, sqMaxH = ch - 110;
-            int bottomY = sqY + sqMaxH + 2;
-
-            if (btn == 0 && mx < lw) {
-                if (mx < sqX + sqW2 && my > sqY && my < bottomY - 2) {
+        if (activeTab == TAB_DEPLOY) {
+            // ── ОТРЯДЫ (SquadUIHelper) ──
+            if (btn == 0 && l.squads().contains(mx, my)) {
+                Rect list = l.squadList();
+                if (list.contains(mx, my) && !preview && Minecraft.getInstance().level != null) {
+                    int dx = squadDx(list);
                     SquadUIHelper.handleSquadClick(
-                            mx, my - sqY, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
+                            mx - dx, my - list.y(), expandedSquads, contextMenu, applyCmdVisible());
                     if (!contextMenu.isVisible()) return true;
                 }
-                // Chat channel selector click (block next to input)
-                int chTop2 = mySquadId < 0 ? bottomY + 18 : bottomY + 4;
-                int chH2 = height - BOT_H - 4 - chTop2;
-                if (chH2 > 20) {
-                    int chBoxW2 = PWPTheme.Fonts.display().width("SQD") + 8;
-                    if (mx >= sqX + 4
-                            && mx <= sqX + 4 + chBoxW2
-                            && my >= chTop2 + chH2 - 18
-                            && my <= chTop2 + chH2 - 3) {
-                        String[] chOpts = {"ALL", "TEAM", "SQD"};
-                        int chIdx = java.util.Arrays.asList(chOpts).indexOf(chatChannel);
-                        chatChannel = chOpts[(chIdx + 1) % 3];
-                        return true;
-                    }
+                // переключатель канала чата
+                Rect input = l.chat().bottomStrip(WTheme.FIELD_H).inset(Spacing.XXS, 0, Spacing.XXS, Spacing.XXS);
+                if (channelRect(input).contains(mx, my)) {
+                    int chIdx = java.util.Arrays.asList(CHAT_CHANNELS).indexOf(chatChannel);
+                    chatChannel = CHAT_CHANNELS[(chIdx + 1) % CHAT_CHANNELS.length];
+                    return true;
                 }
             }
 
-            // ── ROLES ──
-            int roleH = ch * 55 / 100;
-            String kit = roles.mouseClicked(mx, my, btn, lw + 4, conY + 4, cw - 8, roleH);
+            int headerH = WDraw.headerHeight(height);
+            // ── РОЛИ ──
+            String kit = roles.mouseClicked(
+                    mx, my, btn, l.roles().inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS));
             if (kit != null) {
                 selectedKit = kit;
-                PacketHandler.INSTANCE.sendToServer(new PacketSelectKit(kit, DeployData.getSlotSelections(kit)));
+                send(new PacketSelectKit(kit, DeployData.getSlotSelections(kit)));
                 selectedSpawn = "";
                 rightMapRenderer.selectedSpawnId = "";
                 return true;
             }
 
-            // ── SPAWNS ──
-            int spawnY = conY + 4 + roleH + 2, spawnH = ch - roleH - 6;
-            String sp = spawns.mouseClicked(mx, my, btn, lw + 4, spawnY, cw - 8, spawnH);
+            // ── ТОЧКИ СПАВНА ──
+            String sp = spawns.mouseClicked(
+                    mx, my, btn, l.spawns().inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS));
             if (sp != null) {
                 selectedSpawn = sp;
                 rightMapRenderer.selectedSpawnId = sp;
@@ -905,88 +1050,89 @@ public class DeployScreen extends Screen {
                 return true;
             }
 
-            // ── RIGHT: LOADOUT (only when no spawn selected; map shows instead) ──
-            if (selectedSpawn.isEmpty()) {
-                int lx = loW(), loadoutX = lw + cw;
-                if (loadout.mouseClicked(mx, my, btn, loadoutX + 4, conY + 4, lx - 8, ch - 4, selectedKit)) return true;
+            // ── СПРАВА: снаряжение (пока точка не выбрана) ──
+            if (!showMap()) {
+                Rect lc = l.loadout().inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
+                return loadout.mouseClicked(mx, my, btn, lc, selectedKit);
             }
 
-            // ── RIGHT MAP ──
-            int rx = lw + cw, rw = width - rx;
-            if (mx >= rx && mx <= rx + rw && my >= conY && my <= conY + ch) {
-                int wx = toWorldX(mx), wz = toWorldZ(my);
+            // ── КАРТА ──
+            if (l.right().contains(mx, my) && Minecraft.getInstance().level != null) return mapClicked(mx, my, btn);
+        }
+        return false;
+    }
 
-                // Режим рисования пути: ЛКМ добавляет точку (как в M-меню)
-                if (pathActive && btn == 0) {
-                    if (rightMapRenderer.previewStart != null && rightMapRenderer.previewEnd != null) {
-                        if (activeSquadKey >= 0) {
-                            var sq = rightMapRenderer.pathGroupsSquad().get(activeSquadKey);
-                            if (sq != null) sq.add(new PathPoint(wx, wz));
-                        } else if (activeGroups != null && !activeGroups.isEmpty()) {
-                            activeGroups.get(activeGroups.size() - 1).add(new PathPoint(wx, wz));
-                        }
-                    }
-                    rightMapRenderer.previewStart = null;
-                    rightMapRenderer.previewEnd = null;
-                    pathActive = false;
-                    activeSquadId = -1;
-                    activeSquadKey = -1;
-                    return true;
-                }
+    private boolean mapClicked(double mx, double my, int btn) {
+        int wx = toWorldX(mx), wz = toWorldZ(my);
 
-                if (btn == 1) {
-                    if (mapCtx.visible) return mapCtx.mouseClicked(mx, my, btn);
-                    LocalPlayer p = Minecraft.getInstance().player;
-                    BiConsumer<String, String> pathCb = (cat, icon) -> {
-                        int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
-                        if ("cmd_squads".equals(cat)) {
-                            int squadId = Parse.intOr(icon, Integer.MIN_VALUE);
-                            if (squadId != Integer.MIN_VALUE) startSquadPath(wx2, wz2, squadId);
-                            mapCtx.close();
-                        } else if ("arrow".equals(icon) || "player_self".equals(icon)) {
-                            if ("team".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroups());
-                            else if ("enemy".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroupsRed());
-                            else startPath(wx2, wz2, rightMapRenderer.pathGroupsYellow());
-                            mapCtx.close();
-                        } else place(cat, icon, wx2, wz2);
-                    };
-                    if (p != null) {
-                        MapMarker hit = rightMapRenderer.hitMarker(
-                                (int) mx, (int) my, rightMapRenderer.getCenterX(p), rightMapRenderer.getCenterZ(p));
-                        if (hit != null) {
-                            Runnable del = () -> PacketHandler.INSTANCE.sendToServer(new PacketRemoveMarker(hit.id));
-                            boolean cmd2 = p != null && isPlayerCMD(p);
-                            mapCtx.open((int) mx, (int) my, cmd2, pathCb, del);
-                            return true;
-                        }
-                    }
-                    if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
-                    boolean cmd = p != null && isPlayerCMD(p);
-                    mapCtx.open((int) mx, (int) my, cmd, pathCb);
-                    return true;
-                }
-                if (!selectedSpawn.isEmpty() && btn == 0) {
-                    String sid = getSpawnAtMap(mx, my);
-                    if (sid != null) {
-                        selectedSpawn = sid;
-                        rightMapRenderer.selectedSpawnId = sid;
-                        return true;
-                    }
-                    rightMapRenderer.mouseClicked(mx, my, btn);
-                    return true;
+        // Режим рисования пути: ЛКМ добавляет точку (как в M-меню)
+        if (pathActive && btn == 0) {
+            if (rightMapRenderer.previewStart != null && rightMapRenderer.previewEnd != null) {
+                if (activeSquadKey >= 0) {
+                    var sq = rightMapRenderer.pathGroupsSquad().get(activeSquadKey);
+                    if (sq != null) sq.add(new PathPoint(wx, wz));
+                } else if (activeGroups != null && !activeGroups.isEmpty()) {
+                    activeGroups.get(activeGroups.size() - 1).add(new PathPoint(wx, wz));
                 }
             }
+            rightMapRenderer.previewStart = null;
+            rightMapRenderer.previewEnd = null;
+            pathActive = false;
+            activeSquadId = -1;
+            activeSquadKey = -1;
+            return true;
         }
 
+        if (btn == 1) {
+            LocalPlayer p = Minecraft.getInstance().player;
+            BiConsumer<String, String> pathCb = (cat, icon) -> {
+                int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
+                if ("cmd_squads".equals(cat)) {
+                    int squadId = Parse.intOr(icon, Integer.MIN_VALUE);
+                    if (squadId != Integer.MIN_VALUE) startSquadPath(wx2, wz2, squadId);
+                    mapCtx.close();
+                } else if ("arrow".equals(icon) || "player_self".equals(icon)) {
+                    if ("team".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroups());
+                    else if ("enemy".equals(cat)) startPath(wx2, wz2, rightMapRenderer.pathGroupsRed());
+                    else startPath(wx2, wz2, rightMapRenderer.pathGroupsYellow());
+                    mapCtx.close();
+                } else place(cat, icon, wx2, wz2);
+            };
+            if (p != null) {
+                MapMarker hit = rightMapRenderer.hitMarker(
+                        (int) mx, (int) my, rightMapRenderer.getCenterX(p), rightMapRenderer.getCenterZ(p));
+                if (hit != null) {
+                    Runnable del = () -> send(new PacketRemoveMarker(hit.id));
+                    mapCtx.open((int) mx, (int) my, isPlayerCMD(p), pathCb, del);
+                    return true;
+                }
+            }
+            if (p != null && !SquadUIHelper.isSquadLeaderOrFTL(p)) return true;
+            boolean cmd = p != null && isPlayerCMD(p);
+            mapCtx.open((int) mx, (int) my, cmd, pathCb);
+            return true;
+        }
+        if (btn == 0) {
+            String sid = getSpawnAtMap(mx, my);
+            if (sid != null) {
+                selectedSpawn = sid;
+                rightMapRenderer.selectedSpawnId = sid;
+                return true;
+            }
+            rightMapRenderer.mouseClicked(mx, my, btn);
+            return true;
+        }
         return false;
     }
 
     @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        if (activeTab == 1) {
-            int rx = sqW() + roW();
-            if (!mapCtx.visible && !pathActive && !selectedSpawn.isEmpty() && mx >= rx)
-                rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
+        if (activeTab == TAB_DEPLOY
+                && !mapCtx.visible
+                && !pathActive
+                && showMap()
+                && layout().right().contains(mx, my)) {
+            rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
         }
         return super.mouseDragged(mx, my, btn, dx, dy);
     }
@@ -1000,26 +1146,35 @@ public class DeployScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mx, double my, int btn) {
-        if (activeTab == 1) {
-            int rx = sqW() + roW();
-            if (!selectedSpawn.isEmpty() && mx >= rx) rightMapRenderer.mouseReleased(btn);
+        selectSpawnBtn.mouseReleased(mx, my, btn);
+        applyCmdBtn.mouseReleased(mx, my, btn);
+        createSquadBtn.mouseReleased(mx, my, btn);
+        if (activeTab == TAB_DEPLOY && showMap() && layout().right().contains(mx, my)) {
+            rightMapRenderer.mouseReleased(btn);
         }
         return super.mouseReleased(mx, my, btn);
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        if (activeTab == 0 || activeTab == 2) {
-            rulesScrollOffset = (int) Math.max(0, Math.min(rulesScrollMax, rulesScrollOffset - delta * 16));
+        if (activeTab == TAB_TEAMS) {
+            roster.scroll(delta);
             return true;
         }
-        int lw = sqW(), cw = roW(), rx = lw + cw;
-        int scroll = -(int) (delta * 20);
-        if (mx >= lw && mx < rx) {
-            roles.scrollOff += scroll;
+        if (activeTab == TAB_RULES) {
+            rules.scroll(delta);
             return true;
         }
-        if (!mapCtx.visible && !selectedSpawn.isEmpty() && mx >= rx) {
+        Layout l = layout();
+        if (l.roles().contains(mx, my)) {
+            roles.scroll(delta);
+            return true;
+        }
+        if (l.spawns().contains(mx, my)) {
+            spawns.scroll(delta);
+            return true;
+        }
+        if (!mapCtx.visible && showMap() && l.right().contains(mx, my)) {
             rightMapRenderer.mouseScrolled(mx, my, delta);
             return true;
         }
@@ -1051,7 +1206,7 @@ public class DeployScreen extends Screen {
                 return true;
             }
         }
-        if (key == 257 && mySquadId < 0 && createSquadBtn.visible && squadInput.isFocused()) {
+        if (key == 257 && mySquadId < 0 && createSquadBtn.isVisible() && squadInput.isFocused()) {
             createSquad();
             return true;
         }
@@ -1059,7 +1214,7 @@ public class DeployScreen extends Screen {
             String msg = chatInput.getValue().trim();
             if (!msg.isEmpty()) {
                 int mode = chatChannel.equals("TEAM") ? 1 : (chatChannel.equals("SQD") ? 2 : 0);
-                PacketHandler.INSTANCE.sendToServer(new PacketSquadChat(msg, mode));
+                send(new PacketSquadChat(msg, mode));
                 chatInput.setValue("");
             }
             chatInput.setFocused(false);
@@ -1108,7 +1263,7 @@ public class DeployScreen extends Screen {
         String type = "squad";
         if ("enemy".equals(cat)) type = "enemy";
         else if ("cmd_top".equals(cat)) type = icon.endsWith("_m") ? "team" : "squad";
-        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMarker(type, cat, cleanIcon, new BlockPos(wx, 64, wz)));
+        send(new PacketPlaceMarker(type, cat, cleanIcon, new BlockPos(wx, 64, wz)));
     }
 
     private void startPath(int wx, int wz, List<List<PathPoint>> groups) {
@@ -1146,9 +1301,11 @@ public class DeployScreen extends Screen {
                     Minecraft.getInstance()
                             .player
                             .displayClientMessage(
-                                    Component.literal(
-                                            "Путь: " + (int) segLen + "м (мин " + (int) SquadMapRenderer.PATH_MIN_LENGTH
-                                                    + "м, макс " + (int) SquadMapRenderer.PATH_MAX_LENGTH + "м)"),
+                                    Component.translatable(
+                                            "gui.pwpwarfare.deploy.map.path_length",
+                                            (int) segLen,
+                                            (int) SquadMapRenderer.PATH_MIN_LENGTH,
+                                            (int) SquadMapRenderer.PATH_MAX_LENGTH),
                                     true);
                 rightMapRenderer.previewStart = null;
                 rightMapRenderer.previewEnd = null;
@@ -1202,7 +1359,7 @@ public class DeployScreen extends Screen {
             LocalPlayer p = Minecraft.getInstance().player;
             String team = p != null && p.getTeam() != null ? p.getTeam().getName() : "";
             java.util.UUID pathId = java.util.UUID.randomUUID();
-            PacketHandler.INSTANCE.sendToServer(new PacketPlacePath(pathId, team, pathType, squadNum, finalPoints));
+            send(new PacketPlacePath(pathId, team, pathType, squadNum, finalPoints));
         }
         rightMapRenderer.previewStart = null;
         rightMapRenderer.previewEnd = null;
@@ -1211,10 +1368,9 @@ public class DeployScreen extends Screen {
     }
 
     private void doDeploy() {
-        if (selectedSpawn.isEmpty()) return;
-        PacketHandler.INSTANCE.sendToServer(
-                new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
-        PacketHandler.INSTANCE.sendToServer(new PacketRespawnRequest(selectedSpawn));
+        if (selectedSpawn.isEmpty() || preview) return;
+        send(new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
+        send(new PacketRespawnRequest(selectedSpawn));
         Minecraft.getInstance().player.respawn();
         ClientData.deployRequested = true;
         ClientData.awaitingRespawn = true;

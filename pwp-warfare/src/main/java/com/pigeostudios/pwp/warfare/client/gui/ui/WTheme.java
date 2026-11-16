@@ -1,0 +1,120 @@
+package com.pigeostudios.pwp.warfare.client.gui.ui;
+
+import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
+/**
+ * Токены игрового UI pwp-warfare. Это РАСШИРЕНИЕ {@link PWPTheme} (базовые цвета/отступы — оттуда):
+ * здесь только то, что специфично для экранов матча (деплой, тактическая карта, радиалки,
+ * редакторы). Сам PWPTheme не трогаем — его параллельно меняет владелец pwp-core-client.
+ */
+@OnlyIn(Dist.CLIENT)
+public final class WTheme {
+    private WTheme() {}
+
+    // ------------------------------------------------------------ текстуры
+    public static final ResourceLocation ICONS = new ResourceLocation("pwpwarfare", "textures/gui/ui/icons.png");
+    public static final int ICONS_W = 128;
+    public static final int ICONS_H = 64;
+    public static final int ICON_CELL = 16;
+
+    // ------------------------------------------------------------ общие размеры
+    /** Внешнее поле экрана (доля ширины, с пределами). */
+    public static final float MARGIN_FRACTION = 0.012F;
+
+    public static final int MARGIN_MIN = Spacing.XS;
+    public static final int MARGIN_MAX = Spacing.LG;
+    /** Зазор между колонками/панелями. */
+    public static final int GAP = Spacing.XS;
+    /** Строка списка (игрок, правило), высота поля ввода, малая кнопка. */
+    public static final int ROW_H = 12;
+
+    public static final int FIELD_H = 14;
+    public static final int SMALL_BUTTON_H = 14;
+    /** Иконка в строке/ячейке (кратно 16 — чётко только 16; 8/12 допустимы для мелких меток). */
+    public static final int ICON_SMALL = 8;
+
+    public static final int ICON_ROW = 12;
+    /** Вкладки верхней полосы: поле слева/справа от подписи и толщина подчёркивания. */
+    public static final int TAB_PAD = Spacing.MD;
+
+    public static final int TAB_UNDERLINE = 2;
+    /** Тонкая полоса прогресса (таймер деплоя, припасы). */
+    public static final int BAR_H = 2;
+    /** Ширина полосы прокрутки. */
+    public static final int SCROLLBAR_W = 2;
+    /** Шаг прокрутки колесом, px. */
+    public static final int SCROLL_STEP = 18;
+    /** Пустое состояние: максимум строк пояснения. */
+    public static final int EMPTY_HINT_LINES = 3;
+
+    // ------------------------------------------------------------ деплой
+    public static final float DEPLOY_SQUADS_WEIGHT = 22;
+    public static final float DEPLOY_CENTER_WEIGHT = 34;
+    public static final float DEPLOY_RIGHT_WEIGHT = 44;
+    /** Доля центральной колонки под сетку ролей (остальное — точки спавна). */
+    public static final float DEPLOY_ROLES_FRACTION = 0.56F;
+    /** Нижняя часть колонки отрядов: строка «создать отряд» + чат. */
+    public static final int DEPLOY_CHAT_MIN_H = 48;
+
+    public static final float DEPLOY_CHAT_FRACTION = 0.34F;
+    public static final int ROLE_CELL_MIN = 30;
+    public static final int ROLE_CELL_MAX = 46;
+    public static final int ROLE_COLS_MAX = 6;
+    public static final int SPAWN_CARD_H = 30;
+    public static final int SPAWN_CARD_H_LARGE = 36;
+    /** Строки снаряжения: подпись слота, плашка предмета, альтернатива. */
+    public static final int SLOT_LABEL_H = 10;
+
+    public static final int SLOT_BAR_H = 20;
+    public static final int SLOT_ALT_H = 16;
+    public static final int SLOT_GAP = 3;
+    public static final int ITEM_SIZE = 16;
+    /** Кнопка деплоя: ширина (доля и пределы). */
+    public static final float DEPLOY_BUTTON_FRACTION = 0.2F;
+
+    public static final int DEPLOY_BUTTON_MIN_W = 96;
+    public static final int DEPLOY_BUTTON_MAX_W = 180;
+    /** Флаг фракции 64x36 в шапке. */
+    public static final int FLAG_W = 24;
+
+    public static final int FLAG_H = 14;
+    /** Портрет: масштаб модели игрока (доля меньшей стороны и пределы). */
+    public static final int PORTRAIT_SCALE_MIN = 40;
+
+    public static final int PORTRAIT_SCALE_MAX = 120;
+
+    // ------------------------------------------------------------ цвета
+    public static final int STATUS_OK = Colors.SUCCESS_LIGHT;
+    public static final int STATUS_WARN = Colors.WARNING;
+    public static final int STATUS_BAD = PWPTheme.Text.DANGER;
+    public static final int TEAM_BLUE = Colors.TEAM_BLUE;
+    public static final int TEAM_RED = Colors.TEAM_RED;
+    /** Подложка «ячейки-слота» (иконка в квадрате, поле ввода). */
+    public static final int WELL = 0x80050709;
+
+    public static final int WELL_BORDER = 0x26FFFFFF;
+    /** Затемнение недоступного элемента поверх него. */
+    public static final int DISABLED_VEIL = 0x66000000;
+    /** Подложка «пилюли» статуса (цвет статуса с этой альфой). */
+    public static final int PILL_ALPHA = 0x33;
+    /** Ряд-«зебра» в списках. */
+    public static final int ROW_STRIPE = 0x0AFFFFFF;
+
+    public static final int ROW_HOVER = 0x14FFFFFF;
+    public static final int SCROLL_TRACK = 0x1AFFFFFF;
+    public static final int SCROLL_THUMB = Colors.ACCENT_DIM;
+    /** Цвет «чужой» (вражеской) строки игрока. */
+    public static final int ENEMY_TEXT = 0xFFD2A0A0;
+
+    public static final int ALLY_TEXT = Styles.Control.TEXT;
+    /** Полоса таймера деплоя. */
+    public static final int TIMER_TRACK = Styles.Loader.TRACK;
+
+    public static final int TIMER_FILL = Colors.ACCENT;
+}
