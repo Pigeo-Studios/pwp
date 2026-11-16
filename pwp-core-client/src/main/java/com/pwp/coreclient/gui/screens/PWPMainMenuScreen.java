@@ -62,7 +62,8 @@ public class PWPMainMenuScreen extends Screen {
                     if (connecting) return;
                     connecting = true;
                     Minecraft.getInstance().setScreen(new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
-                    ClientConnectHandler.connect(serverHost(), 25565);
+                    var addr = net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(serverHost());
+                    ClientConnectHandler.connect(addr.getHost(), addr.getPort());
                 },
                 PWPButton.Style.ACCENT));
 
@@ -105,6 +106,10 @@ public class PWPMainMenuScreen extends Screen {
         }
     }
 
+    /**
+     * Адрес кнопки «Играть»: прод по умолчанию, для тест-стенда — JVM-флаг
+     * {@code -Dpwp.serverHost=127.0.0.1} (можно с портом: {@code host:port}).
+     */
     private static String serverHost() {
         return System.getProperty("pwp.serverHost", "pigeo.asuscomm.com");
     }

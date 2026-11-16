@@ -136,32 +136,35 @@ public class PWPTheme {
         public static final net.minecraft.resources.ResourceLocation DISPLAY_ID =
                 new net.minecraft.resources.ResourceLocation("pwp_core_client", "display");
 
-        private static java.lang.reflect.Field fmField;
-        private static java.lang.reflect.Method getFontSetMethod;
+        /** Для какого mc.font построен кэш (mc.font пересоздаётся при перезагрузке ресурсов). */
+        private static net.minecraft.client.gui.Font cachedBase;
 
+        private static net.minecraft.client.gui.Font cachedDisplay;
+        private static boolean failed;
+
+        /**
+         * Шрифт display: тот же провайдер глифов, что у mc.font, но шрифт по умолчанию
+         * подменён на {@link #DISPLAY_ID}. Вызывается покадрово — объект кэшируется,
+         * при ошибке один раз пишем warn и дальше молча отдаём mc.font.
+         */
         public static net.minecraft.client.gui.Font display() {
             var mc = net.minecraft.client.Minecraft.getInstance();
+            var base = mc.font;
+            if (failed || base == null) return base;
+            if (base == cachedBase && cachedDisplay != null) return cachedDisplay;
             try {
-                if (fmField == null) {
-                    fmField = net.minecraft.client.Minecraft.class.getDeclaredField("fontManager");
-                    fmField.setAccessible(true);
-                }
-                Object fm = fmField.get(mc);
-                if (fm != null) {
-                    if (getFontSetMethod == null) {
-                        getFontSetMethod =
-                                fm.getClass().getMethod("getFontSet", net.minecraft.resources.ResourceLocation.class);
-                    }
-                    Object fontSet = getFontSetMethod.invoke(fm, DISPLAY_ID);
-                    if (fontSet != null) {
-                        return new net.minecraft.client.gui.Font(
-                                (loc) -> (net.minecraft.client.gui.font.FontSet) fontSet, false);
-                    }
-                }
-            } catch (Exception e) {
-                PWP_LOG.warn("PWPTheme.display: исключение (fallback)", e);
+                var fonts = ((com.pwp.coreclient.mixin.FontAccessor) base).pwpGetFonts();
+                cachedDisplay = new net.minecraft.client.gui.Font(
+                        loc -> fonts.apply(
+                                net.minecraft.network.chat.Style.DEFAULT_FONT.equals(loc) ? DISPLAY_ID : loc),
+                        false);
+                cachedBase = base;
+                return cachedDisplay;
+            } catch (RuntimeException e) {
+                failed = true;
+                PWP_LOG.warn("PWPTheme.display: шрифт display недоступен, используется mc.font", e);
+                return base;
             }
-            return mc.font;
         }
 
         private Fonts() {}
