@@ -173,5 +173,12 @@
     "pwp_core.faction.insurgency": "Повстанцы",
     "pwp_core.faction.pmc": "ЧВК",
     "pwp_core.mode.aas": "Наступление",
-    "pwp_core.mode.invasion": "Вторжение"
+    "pwp_core.mode.invasion": "Вторжение",
+    "pwp_core.uitest.title": "ГАЛЕРЕЯ UI",
+    "pwp_core.uitest.count": "Экранов: %s",
+    "pwp_core.uitest.long_strings": "ДЛИННЫЕ СТРОКИ",
+    "pwp_core.uitest.empty_data": "ПУСТЫЕ ДАННЫЕ",
+    "pwp_core.uitest.none": "Экраны не зарегистрированы",
+    "pwp_core.uitest.hint": "/pwpui open <id> · /pwpui next · /pwpui list",
+    "pwp_core.uitest.unknown": "Неизвестный экран UI: %s"
 }

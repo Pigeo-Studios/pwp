@@ -173,5 +173,12 @@
     "pwp_core.faction.insurgency": "Insurgency",
     "pwp_core.faction.pmc": "PMC",
     "pwp_core.mode.aas": "Advance and Secure",
-    "pwp_core.mode.invasion": "Invasion"
+    "pwp_core.mode.invasion": "Invasion",
+    "pwp_core.uitest.title": "UI GALLERY",
+    "pwp_core.uitest.count": "Screens: %s",
+    "pwp_core.uitest.long_strings": "LONG STRINGS",
+    "pwp_core.uitest.empty_data": "EMPTY DATA",
+    "pwp_core.uitest.none": "No screens registered",
+    "pwp_core.uitest.hint": "/pwpui open <id> · /pwpui next · /pwpui list",
+    "pwp_core.uitest.unknown": "Unknown UI screen: %s"
 }

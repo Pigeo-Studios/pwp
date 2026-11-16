@@ -144,6 +144,20 @@ public class PWPMainMenuScreen extends Screen {
             layer.add(b);
         }
 
+        // --- тест-стенд UI (только dev / -Dpwp.uitest=true): кнопка галереи снизу справа ---
+        if (com.pwp.coreclient.gui.devtest.UiGallery.enabled()) {
+            UIButton gallery = new UIButton(
+                            Component.translatable("pwp_core.uitest.title"),
+                            com.pwp.coreclient.gui.devtest.UiGallery::openGallery)
+                    .style(UIButton.Style.GHOST)
+                    .icon(UIIcon.INFO);
+            int gw = Math.min(gallery.preferredWidth(), width / 3);
+            int gh = PWPLoadingView.buttonHeight(d);
+            gallery.setBounds(Rect.of(width - m - gw, height - footerH - Spacing.XS - gh, gw, gh));
+            layer.add(gallery);
+            com.pwp.coreclient.gui.devtest.UiGallery.autoOpenOnce();
+        }
+
         // --- переключатель записи ReplayMod: сверху справа ---
         replayToggle = null;
         if (replayModAvailable) {

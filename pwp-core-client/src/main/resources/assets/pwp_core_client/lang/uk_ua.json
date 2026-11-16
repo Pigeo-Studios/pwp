@@ -173,5 +173,12 @@
     "pwp_core.faction.insurgency": "Повстанці",
     "pwp_core.faction.pmc": "ПВК",
     "pwp_core.mode.aas": "Наступ",
-    "pwp_core.mode.invasion": "Вторгнення"
+    "pwp_core.mode.invasion": "Вторгнення",
+    "pwp_core.uitest.title": "ГАЛЕРЕЯ UI",
+    "pwp_core.uitest.count": "Екранів: %s",
+    "pwp_core.uitest.long_strings": "ДОВГІ РЯДКИ",
+    "pwp_core.uitest.empty_data": "ПОРОЖНІ ДАНІ",
+    "pwp_core.uitest.none": "Екрани не зареєстровані",
+    "pwp_core.uitest.hint": "/pwpui open <id> · /pwpui next · /pwpui list",
+    "pwp_core.uitest.unknown": "Невідомий екран UI: %s"
 }

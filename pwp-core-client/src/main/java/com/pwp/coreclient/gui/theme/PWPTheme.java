@@ -297,6 +297,8 @@ public class PWPTheme {
         public static final int VOTE_BAR_H = 4;
         /** Карточки экрана выбора (PWPSelectionScreen): зазор и поле. */
         public static final int SELECTION_MAX_COLS = 6;
+        /** Кнопка экрана в галерее тест-стенда UI. */
+        public static final int GALLERY_ITEM_MIN_W = 150;
 
         private Spacing() {}
     }
