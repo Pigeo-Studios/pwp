@@ -1,6 +1,13 @@
 package com.pigeostudios.pwp.warfare.client.gui.devtest;
 
+import com.pigeostudios.pwp.warfare.client.gui.DefenseRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
+import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.SquadMarkerRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.StaticGunRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.TacticalMapRadialScreen;
+import com.pigeostudios.pwp.warfare.client.gui.WallRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pwp.coreclient.gui.devtest.UiGallery;
 import java.util.ArrayList;
@@ -38,6 +45,13 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.deploy.spawn_selected", () -> deploy(1, true));
         UiGallery.register("warfare.deploy.teams", () -> deploy(0, false));
         UiGallery.register("warfare.deploy.rules", () -> deploy(2, false));
+        UiGallery.register("warfare.radial.radio", () -> new RadioRadialScreen().asPreview());
+        UiGallery.register("warfare.radial.defense", () -> new DefenseRadialScreen(null).asPreview());
+        UiGallery.register("warfare.radial.walls", () -> new WallRadialScreen(null).asPreview());
+        UiGallery.register("warfare.radial.static_guns", () -> new StaticGunRadialScreen(null).asPreview());
+        UiGallery.register("warfare.radial.hub", () -> new HubRadialScreen(BlockPos.ZERO).asPreview());
+        UiGallery.register("warfare.radial.markers", () -> new SquadMarkerRadialScreen(0, 0, null).asPreview());
+        UiGallery.register("warfare.radial.tactical", () -> new TacticalMapRadialScreen(0, 0, null).asPreview());
     }
 
     // ------------------------------------------------------------ деплой

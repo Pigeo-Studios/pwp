@@ -117,4 +117,36 @@ public final class WTheme {
     public static final int TIMER_TRACK = Styles.Loader.TRACK;
 
     public static final int TIMER_FILL = Colors.ACCENT;
+
+    // ------------------------------------------------------------ радиалки
+    /** Внешний радиус: доля меньшей стороны экрана с пределами. */
+    public static final float RADIAL_OUTER_FRACTION = 0.3F;
+
+    public static final int RADIAL_OUTER_MIN = 64;
+    public static final int RADIAL_OUTER_MAX = 150;
+    /** Внутренний радиус = внешний × доля. */
+    public static final float RADIAL_INNER_RATIO = 0.38F;
+    /** Мёртвая зона в центре (px), как у прежних радиалок. */
+    public static final int RADIAL_DEADZONE = 10;
+    /** Зазор между секторами (градусы), рост наведённого сектора, толщина акцентной кромки. */
+    public static final double RADIAL_GAP_DEG = 1.5;
+
+    public static final int RADIAL_GROW = 4;
+    public static final int RADIAL_EDGE = 2;
+    public static final int RADIAL_CENTER_INSET = 3;
+    /** Ширина кольца, с которой иконки пунктов рисуются 24px. */
+    public static final int RADIAL_BIG_ICON_MIN = 52;
+
+    public static final int RADIAL_SCRIM_TOP = 0x5005070A;
+    public static final int RADIAL_SCRIM_BOTTOM = 0x8005070A;
+    public static final int RADIAL_RING_SHADOW = 0x66000000;
+    /** Цвета категорий тактических маркеров/приказов. */
+    public static final int MARKER_TEAM = Colors.SUCCESS_LIGHT;
+
+    public static final int MARKER_ENEMY = PWPTheme.Text.DANGER;
+    public static final int MARKER_SQUAD = 0xFFE8D25A;
+    public static final int ORDER_MOVE = Colors.SUCCESS_LIGHT;
+    public static final int ORDER_ATTACK = Colors.ACCENT;
+    public static final int ORDER_DEFEND = 0xFF6F9BD8;
+    public static final int ORDER_BUILD = 0xFFD86F9B;
 }
