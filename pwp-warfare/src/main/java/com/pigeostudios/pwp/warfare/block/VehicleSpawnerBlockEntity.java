@@ -271,7 +271,10 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                             worldData.setDirty();
                             PacketHandler.sendToAllClients((ServerLevel) this.level, worldData);
                             entity.getCapability(ForgeCapabilities.ITEM_HANDLER).ifPresent(handler -> {
-                                for (int i = 0; i < 32; i++) {
+                                // Не больше слотов, чем у самой техники: у части машин 9 слотов,
+                                // запись в слот 9+ — ArrayIndexOutOfBounds и краш сервера (16.11.2026).
+                                int slots = Math.min(32, handler.getSlots());
+                                for (int i = 0; i < slots; i++) {
                                     ItemStack contentStack = this.inventory.getStackInSlot(i + 1);
                                     if (!contentStack.isEmpty()
                                             && handler instanceof IItemHandlerModifiable modifiable) {
