@@ -107,7 +107,8 @@ public final class UILayer {
         if (contextMenu.isVisible() && contextMenu.mouseClicked(mx, my, button)) return true;
         for (int i = widgets.size() - 1; i >= 0; i--) {
             UIWidget w = widgets.get(i);
-            if (w.isVisible() && w.mouseClicked(mx, my, button)) return true;
+            // невидимые и ещё не проявившиеся (opacity 0) виджеты кликов не получают
+            if (w.isVisible() && w.opacity() > 0F && w.mouseClicked(mx, my, button)) return true;
         }
         return false;
     }

@@ -1,9 +1,9 @@
 package com.pwp.coreclient.mixin;
 
+import com.pwp.coreclient.gui.screens.PWPLoadingView;
 import com.pwp.coreclient.gui.screens.PWPRotatingBackground;
-import com.pwp.coreclient.gui.screens.PWPTipsWidget;
-import com.pwp.coreclient.gui.screens.PWPUtils;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIIcon;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
@@ -19,13 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class LevelLoadingScreenMixin {
 
     @Unique
-    private long pwp_openTime;
-
-    @Unique
-    private PWPTipsWidget pwp_tips;
-
-    @Unique
-    private int pwp_lastWidth;
+    private PWPLoadingView pwp_view;
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void pwp_customRender(GuiGraphics gui, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
@@ -34,50 +28,17 @@ public class LevelLoadingScreenMixin {
         Minecraft mc = Minecraft.getInstance();
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        var font = PWPTheme.Fonts.display();
 
         PWPRotatingBackground.render(gui, 0, 0, w, h);
-
-        if (pwp_openTime == 0) {
-            pwp_openTime = System.currentTimeMillis();
-        }
-        if (pwp_tips == null || w != pwp_lastWidth) {
-            pwp_lastWidth = w;
-            pwp_tips = new PWPTipsWidget((int) (w * 0.6f));
-        }
-
-        long elapsed = System.currentTimeMillis() - pwp_openTime;
-        int cx = w / 2;
-        int cy = h / 2;
-
-        var pose = gui.pose();
-
-        // PWP Logo
-        pose.pushPose();
-        pose.translate(cx, (int) (h * 0.12f), 0);
-        pose.scale(1.6f, 1.6f, 1f);
-        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
-        pose.popPose();
-
-        // Content box
-        int boxW = Math.min(280, w - 40);
-        int boxH = 54;
-        int boxY = cy - 38;
-        PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
-
-        String loadText = "Загрузка мира...";
-        gui.drawString(
-                font,
-                Component.literal(loadText),
-                cx - font.width(loadText) / 2,
-                cy - 30,
-                PWPTheme.Colors.TEXT_PRIMARY,
-                false);
-        PWPUtils.renderSpinner(gui, cx, cy + 4, elapsed);
-
-        // Tips
-        if (pwp_tips != null) {
-            pwp_tips.render(gui, cx, cy + 32);
-        }
+        if (pwp_view == null) pwp_view = new PWPLoadingView();
+        pwp_view.render(
+                gui,
+                PWPTheme.Fonts.display(),
+                w,
+                h,
+                UIIcon.INFO,
+                Component.translatable("pwp_core.loading.loading_world"),
+                -1F,
+                null);
     }
 }

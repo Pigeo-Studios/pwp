@@ -1,9 +1,17 @@
 package com.pwp.coreclient.gui.screens;
 
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Fit;
 import java.util.Random;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Фон меню/загрузки: случайная картинка из набора с кроссфейдом раз в 1–5 мин. Картинка
+ * вписывается режимом «cover» (без искажения пропорций на 4:3/16:9/21:9), поверх —
+ * атмосферный слой {@link UIBackdrop#overlay}.
+ */
 public class PWPRotatingBackground {
 
     private static final ResourceLocation[] BG_TEXTURES = {
@@ -11,6 +19,10 @@ public class PWPRotatingBackground {
         new ResourceLocation("pwp_core_client", "textures/gui/bg/bg_1.png"),
         new ResourceLocation("pwp_core_client", "textures/gui/bg/bg_2.png")
     };
+    /** Размер файлов bg_*.png (все одного размера). */
+    private static final int BG_W = 1672;
+
+    private static final int BG_H = 941;
 
     private static final long TRANSITION_DURATION = 1000;
     private static final long MIN_INTERVAL = 60000;
@@ -28,7 +40,18 @@ public class PWPRotatingBackground {
         return MIN_INTERVAL + RANDOM.nextLong(MAX_INTERVAL - MIN_INTERVAL + 1);
     }
 
+    /** Картинка + стандартный атмосферный слой (без боковой тени). */
     public static void render(GuiGraphics gui, int x, int y, int w, int h) {
+        render(gui, x, y, w, h, UIBackdrop.Shade.NONE);
+    }
+
+    public static void render(GuiGraphics gui, int x, int y, int w, int h, UIBackdrop.Shade shade) {
+        renderImage(gui, x, y, w, h);
+        UIBackdrop.overlay(gui, w, h, shade);
+    }
+
+    /** Только картинка (cover), с кроссфейдом смены. */
+    public static void renderImage(GuiGraphics gui, int x, int y, int w, int h) {
         long now = System.currentTimeMillis();
         long elapsed = now - switchStartTime;
 
@@ -40,18 +63,12 @@ public class PWPRotatingBackground {
             } while (nextIndex == currentIndex);
         }
 
+        int[] src = Fit.cover(BG_W, BG_H, w, h);
         if (transitioning) {
             long transitionElapsed = now - switchStartTime;
             float progress = Math.min(transitionElapsed / (float) TRANSITION_DURATION, 1.0f);
-
-            gui.setColor(1, 1, 1, 1.0f - progress);
-            gui.blit(BG_TEXTURES[currentIndex], x, y, 0, 0, w, h, w, h);
-
-            gui.setColor(1, 1, 1, progress);
-            gui.blit(BG_TEXTURES[nextIndex], x, y, 0, 0, w, h, w, h);
-
-            gui.setColor(1, 1, 1, 1);
-
+            blitCover(gui, BG_TEXTURES[currentIndex], x, y, w, h, src, 0xFFFFFFFF);
+            blitCover(gui, BG_TEXTURES[nextIndex], x, y, w, h, src, UIDraw.fade(0xFFFFFFFF, progress));
             if (progress >= 1.0f) {
                 currentIndex = nextIndex;
                 nextIndex = -1;
@@ -60,11 +77,13 @@ public class PWPRotatingBackground {
                 nextSwitchDelay = getRandomDelay();
             }
         } else {
-            gui.blit(BG_TEXTURES[currentIndex], x, y, 0, 0, w, h, w, h);
+            blitCover(gui, BG_TEXTURES[currentIndex], x, y, w, h, src, 0xFFFFFFFF);
         }
+    }
 
-        // Dark gradient overlay for readability
-        int gradientStart = h * 2 / 3;
-        gui.fillGradient(0, gradientStart, w, h, 0x00000000, 0xAA000000);
+    private static void blitCover(
+            GuiGraphics gui, ResourceLocation tex, int x, int y, int w, int h, int[] src, int tint) {
+        UIDraw.blitTinted(
+                gui, tint, () -> gui.blit(tex, x, y, w, h, (float) src[0], (float) src[1], src[2], src[3], BG_W, BG_H));
     }
 }

@@ -201,7 +201,7 @@ public class PWPTheme {
         /** Сдвиг контента нажатой кнопки вниз. */
         public static final int PRESS_SHIFT = 1;
         /** Высота шапки стеклянной панели (COMPACT / обычная). */
-        public static final int PANEL_HEADER_COMPACT = 16;
+        public static final int PANEL_HEADER_COMPACT = 18;
 
         public static final int PANEL_HEADER = 20;
         /** Поле экрана: доля ширины, пределы. */
@@ -241,6 +241,21 @@ public class PWPTheme {
         public static final int SHADOW_SPREAD = 8;
 
         public static final int SHADOW_DROP = 3;
+        /** Верхняя полоса экрана с логотипом (COMPACT / NORMAL / LARGE). */
+        public static final int TOP_BAR_H_COMPACT = 18;
+
+        public static final int TOP_BAR_H = 24;
+        public static final int TOP_BAR_H_LARGE = 28;
+        /** Нижняя полоса экрана (статус/подписи). */
+        public static final int FOOTER_H_COMPACT = 14;
+
+        public static final int FOOTER_H = 18;
+        /** Строк совета на экране загрузки (COMPACT / прочие). */
+        public static final int TIP_LINES_COMPACT = 2;
+
+        public static final int TIP_LINES = 3;
+        /** Максимум строк причины дисконнекта. */
+        public static final int REASON_LINES_MAX = 8;
 
         private Spacing() {}
     }

@@ -1,10 +1,11 @@
 package com.pwp.coreclient.mixin;
 
 import com.pwp.coreclient.gui.components.PWPButton;
+import com.pwp.coreclient.gui.screens.PWPLoadingView;
 import com.pwp.coreclient.gui.screens.PWPRotatingBackground;
-import com.pwp.coreclient.gui.screens.PWPTipsWidget;
-import com.pwp.coreclient.gui.screens.PWPUtils;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ConnectScreen;
@@ -19,38 +20,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ConnectScreenMixin {
 
     @Unique
-    private long pwp_openTime;
-
-    @Unique
-    private PWPTipsWidget pwp_tips;
-
-    @Unique
-    private int pwp_lastW;
+    private PWPLoadingView pwp_view;
 
     @Unique
     private PWPButton pwp_cancelButton;
 
     @Inject(method = "init", at = @At("TAIL"))
     private void pwp_addCancelButton(CallbackInfo ci) {
-        Minecraft mc = Minecraft.getInstance();
-        int w = mc.getWindow().getGuiScaledWidth();
-        int h = mc.getWindow().getGuiScaledHeight();
-        int boxY = h / 2 - 38;
-
         if (pwp_cancelButton == null) {
             pwp_cancelButton = new PWPButton(
                     0,
                     0,
-                    200,
-                    20,
-                    Component.literal("Отмена"),
+                    PWPTheme.Spacing.BUTTON_WIDTH,
+                    PWPTheme.Spacing.BUTTON_HEIGHT,
+                    Component.translatable("pwp_core.ui.cancel"),
                     btn -> Minecraft.getInstance().setScreen(((ConnectScreenAccessor) (Object) this).pwpGetParent()),
                     PWPButton.Style.GHOST);
             // Регистрация через addRenderableWidget: рефмап-запись для
             // @Invoker вписывается в build.gradle (compileJava.doLast).
             ((ScreenInvoker) (Object) this).pwpInvokeAddRenderableWidget(pwp_cancelButton);
         }
-        pwp_cancelButton.setPosition(w / 2 - 100, boxY + 54 + 40);
+        // позиция — из раскладки PWPLoadingView, пересчитывается в render
     }
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
@@ -60,51 +50,21 @@ public class ConnectScreenMixin {
         Minecraft mc = Minecraft.getInstance();
         int w = mc.getWindow().getGuiScaledWidth();
         int h = mc.getWindow().getGuiScaledHeight();
-        int cx = w / 2;
         var font = PWPTheme.Fonts.display();
 
         PWPRotatingBackground.render(gui, 0, 0, w, h);
+        if (pwp_view == null) pwp_view = new PWPLoadingView();
 
-        if (pwp_openTime == 0) pwp_openTime = System.currentTimeMillis();
-        if (pwp_tips == null || w != pwp_lastW) {
-            pwp_lastW = w;
-            pwp_tips = new PWPTipsWidget((int) (w * 0.6f));
-        }
+        Component cancel = Component.translatable("pwp_core.ui.cancel");
+        PWPLoadingView.Layout lay = pwp_view.render(
+                gui, font, w, h, UIIcon.SERVER, Component.translatable("pwp_core.loading.connecting"), -1F, cancel);
 
-        long elapsed = System.currentTimeMillis() - pwp_openTime;
-
-        var pose = gui.pose();
-
-        // PWP Logo
-        pose.pushPose();
-        pose.translate(cx, (int) (h * 0.12f), 0);
-        pose.scale(1.6f, 1.6f, 1f);
-        gui.drawString(font, Component.literal("PWP"), -font.width("PWP") / 2, 0, PWPTheme.Colors.ACCENT, false);
-        pose.popPose();
-
-        // Content box: status + spinner
-        int boxW = Math.min(280, w - 40);
-        int boxH = 54;
-        int boxY = h / 2 - 38;
-        PWPUtils.renderBox(gui, cx, boxY, boxW, boxH);
-
-        String connectText = "Подключение к серверу...";
-        gui.drawString(
-                font,
-                Component.literal(connectText),
-                cx - font.width(connectText) / 2,
-                h / 2 - 30,
-                PWPTheme.Colors.TEXT_PRIMARY,
-                false);
-        PWPUtils.renderSpinner(gui, cx, h / 2 + 4, elapsed);
-
-        // Tips
-        if (pwp_tips != null) {
-            pwp_tips.render(gui, cx, h / 2 + 32);
-        }
-
-        // Cancel button
         if (pwp_cancelButton != null) {
+            Rect b = lay.button();
+            pwp_cancelButton.setX(b.x());
+            pwp_cancelButton.setY(b.y());
+            pwp_cancelButton.setWidth(b.w());
+            pwp_cancelButton.setHeight(b.h());
             pwp_cancelButton.render(gui, mx, my, pt);
         }
     }
