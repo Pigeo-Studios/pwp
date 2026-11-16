@@ -3,41 +3,47 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
-import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
+import com.pigeostudios.pwp.warfare.client.gui.ui.CardGridScreen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-public class FactionVehicleSelectScreen extends Screen {
-    private static final int CARD_W = 130;
-    private static final int CARD_H = 50;
-    private static final int GAP = 10;
-
+/**
+ * Админ: выбор фракции для пулов техники. Список — DataRequest «factions» (пустой ответ —
+ * фолбэк ukraine/russia/usa, как раньше); карточка — флаг + название, клик —
+ * {@link FactionVehicleListScreen}.
+ */
+public class FactionVehicleSelectScreen extends CardGridScreen {
     private List<String> factions = new ArrayList<>();
     private boolean loading = true;
     private boolean requested;
-    private int cols;
-    private int panelW;
-    private int panelH;
+    private boolean preview;
 
     public FactionVehicleSelectScreen() {
         super(Component.translatable("gui.pwpwarfare.faction_vehicle_select.title"));
     }
 
+    /** Тест-стенд UI: список фракций из фикстуры, без запроса на сервер. */
+    public static FactionVehicleSelectScreen preview(List<String> factions) {
+        FactionVehicleSelectScreen s = new FactionVehicleSelectScreen();
+        s.preview = true;
+        s.factions = new ArrayList<>(factions);
+        s.loading = false;
+        return s;
+    }
+
     @Override
     protected void init() {
-        cols = Math.max(1, Math.min(4, (width - 40) / (CARD_W + GAP)));
-        panelW = cols * CARD_W + (cols - 1) * GAP + 20;
-        panelW = Math.min(panelW, width - 20);
-
-        ClientData.factionsData = null;
-        requested = true;
-        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("factions", ""));
+        super.init();
+        if (!preview && !requested && loading) {
+            ClientData.factionsData = null;
+            requested = true;
+            com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("factions", ""));
+        }
     }
 
     @Override
@@ -48,9 +54,7 @@ public class FactionVehicleSelectScreen extends Screen {
             JsonArray arr = ClientData.factionsData;
             ClientData.factionsData = null;
             List<String> loaded = new ArrayList<>();
-            for (JsonElement e : arr) {
-                loaded.add(e.getAsString());
-            }
+            for (JsonElement e : arr) loaded.add(e.getAsString());
             if (loaded.isEmpty()) {
                 loaded.add("ukraine");
                 loaded.add("russia");
@@ -58,59 +62,38 @@ public class FactionVehicleSelectScreen extends Screen {
             }
             factions = loaded;
             loading = false;
-            recreateWidgets();
-        }
-    }
-
-    private void recreateWidgets() {
-        clearWidgets();
-        int cx = (width - panelW) / 2;
-        int py = 10 + 34;
-
-        for (int i = 0; i < factions.size(); i++) {
-            String faction = factions.get(i);
-            int r = i / cols;
-            int c = i % cols;
-            int bx = cx + 10 + c * (CARD_W + GAP);
-            int by = py + r * (CARD_H + GAP);
-
-            addRenderableWidget(new PWPButton(
-                    bx,
-                    by,
-                    CARD_W,
-                    CARD_H,
-                    Component.literal(faction.toUpperCase()),
-                    b -> minecraft.setScreen(new FactionVehicleListScreen(faction)),
-                    PWPButton.Style.PRIMARY));
         }
     }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-
-        int cx = (width - panelW) / 2;
-        int py = 10;
-
-        PWPPanel.render(gui, cx, py, panelW, panelH);
-        gui.drawCenteredString(
-                PWPTheme.Fonts.display(), title.getString(), width / 2, py + 10, PWPTheme.Colors.TEXT_ACCENT);
-        gui.fill(cx + 10, py + 22, cx + panelW - 10, py + 23, PWPTheme.Colors.ACCENT);
-
-        if (loading) {
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    Component.translatable("gui.pwpwarfare.faction_select.loading"),
-                    width / 2,
-                    height / 2,
-                    PWPTheme.Colors.TEXT_DIM);
-        }
-
-        super.render(gui, mx, my, pt);
+    protected boolean loading() {
+        return loading;
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double delta) {
-        return super.mouseScrolled(mx, my, delta);
+    protected WarfareIcon titleIcon() {
+        return WarfareIcon.TEAM;
+    }
+
+    @Override
+    protected List<Card> cards() {
+        List<Card> out = new ArrayList<>();
+        for (String faction : factions) {
+            Card c = Card.of(faction, Component.literal(faction.toUpperCase()), () -> {
+                        if (!preview) Minecraft.getInstance().setScreen(new FactionVehicleListScreen(faction));
+                    })
+                    .subtitle(Component.translatable("gui.pwpwarfare.faction_vehicle_select.hint"))
+                    .icon(WarfareIcon.TEAM);
+            var flag = TeamRoster.flag(faction);
+            if (flag != null
+                    && Minecraft.getInstance()
+                            .getResourceManager()
+                            .getResource(flag)
+                            .isPresent()) {
+                c = c.image(flag, 64F / 36F);
+            }
+            out.add(c);
+        }
+        return out;
     }
 }

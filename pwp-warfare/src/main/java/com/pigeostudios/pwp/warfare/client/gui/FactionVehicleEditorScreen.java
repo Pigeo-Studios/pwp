@@ -3,37 +3,46 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.gui.admin.AdminFormScreen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSaveFactionVehicle;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.util.Parse;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.network.data.DataRequest;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 
-public class FactionVehicleEditorScreen extends Screen {
+/**
+ * Админ: машина пула фракции. Форма на {@link AdminFormScreen}: «Машина» (имя, отображаемое
+ * имя, ID сущности, категория), «Спавн» (yaw, респавн/первый спавн, с), «Инвентарь» —
+ * слот модификатора + 32 слота машины и инвентарь игрока (ЛКМ — взять/положить, ПКМ — по
+ * одному/половину, как раньше). Загрузка — DataRequest «factionVehicle», сохранение —
+ * {@link PacketSaveFactionVehicle} с прежними аргументами.
+ */
+public class FactionVehicleEditorScreen extends AdminFormScreen {
     private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(FactionVehicleEditorScreen.class);
+    private static final int SLOT = 18;
+    private static final int VEH_COLS = 8;
+    private static final int VEH_ROWS = 4;
+    private static final int INV_COLS = 9;
+
     private final String faction;
     private final String editVehicleName;
-    private boolean loading = true;
+    private final boolean isNew;
+    private boolean loading;
     private boolean requested;
-    private boolean isNew = true;
-
-    private EditBox vehicleNameField;
-    private EditBox displayNameField;
-    private EditBox vehicleIdField;
-    private EditBox yawField;
-    private EditBox respawnTimeField;
-    private EditBox initialTimeField;
-    private EditBox categoryField;
 
     private String vehicleName = "";
     private String displayName = "";
@@ -42,238 +51,161 @@ public class FactionVehicleEditorScreen extends Screen {
     private int respawnTime = 60;
     private int initialTime = 60;
     private String category = "";
-    private ItemStack[] vehicleInv = new ItemStack[33];
-    private Inventory playerInv;
+    private final ItemStack[] vehicleInv = new ItemStack[33];
+    private final Inventory playerInv;
+    /** Курсор, если игрока нет (тест-стенд вне мира). */
+    private ItemStack localCursor = ItemStack.EMPTY;
 
-    private static final int SLOT = 18;
-    private static final int MOD_W = 22;
-    private static final int VEH_COLS = 8;
-    private static final int VEH_ROWS = 4;
-    private static final int INV_COLS = 9;
-    private static final int INV_ROWS = 3;
-
-    private int panelW = 446;
-    private int panelH;
-
-    private int cx;
-    private int modX, modY;
-    private int vInvX, vInvY;
-    private int pInvX, pInvY;
-    private int hotY;
+    private EditBox nameBox, displayBox, idBox, categoryBox, yawBox, respawnBox, initialBox;
+    private Rect modR = Rect.of(0, 0, 0, 0);
+    private Rect vehR = modR;
+    private Rect invR = modR;
 
     public FactionVehicleEditorScreen(String faction, String vehicleName) {
         super(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.title", faction.toUpperCase()));
         this.faction = faction;
         this.editVehicleName = vehicleName;
-        this.isNew = (vehicleName == null || vehicleName.isEmpty());
-        for (int i = 0; i < 33; i++) vehicleInv[i] = ItemStack.EMPTY;
-        this.playerInv = Minecraft.getInstance().player != null
-                ? Minecraft.getInstance().player.getInventory()
-                : null;
+        this.isNew = vehicleName == null || vehicleName.isEmpty();
+        java.util.Arrays.fill(vehicleInv, ItemStack.EMPTY);
+        var p = Minecraft.getInstance().player;
+        this.playerInv = p != null ? p.getInventory() : null;
+        if (!isNew) {
+            loading = true;
+            this.vehicleName = vehicleName;
+        }
+    }
+
+    /** Тест-стенд UI: значения из фикстуры, без запроса и сохранения. */
+    public static FactionVehicleEditorScreen preview(
+            String faction, String name, String id, String cat, ItemStack... inv) {
+        FactionVehicleEditorScreen s = new FactionVehicleEditorScreen(faction, null);
+        s.asPreview();
+        s.vehicleName = name;
+        s.displayName = name.toUpperCase();
+        s.vehicleId = id;
+        s.category = cat;
+        for (int i = 0; i < inv.length && i < 33; i++) s.vehicleInv[i] = inv[i];
+        return s;
     }
 
     @Override
-    protected void init() {
-        cx = (width - panelW) / 2;
-        int fieldLeft = cx + 12;
-        int fieldWide = 160;
-        int rightX = cx + panelW - 120;
-        int labelGap = 10;
-
-        modX = cx + 12;
-        modY = 108;
-        vInvX = cx + 40;
-        vInvY = 108;
-        int pX = cx + 12;
-        pInvX = pX;
-        pInvY = 192;
-        hotY = pInvY + INV_ROWS * SLOT + 4;
-        panelH = hotY + SLOT + 34;
-
-        vehicleNameField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 50, 28, 120, 16, Component.literal(""));
-        vehicleNameField.setMaxLength(64);
-        vehicleNameField.setValue(vehicleName);
-        vehicleNameField.setResponder(val -> vehicleName = val);
-        addRenderableWidget(vehicleNameField);
-
-        displayNameField =
-                new EditBox(PWPTheme.Fonts.display(), fieldLeft + 220, 28, fieldWide, 16, Component.literal(""));
-        displayNameField.setMaxLength(128);
-        displayNameField.setValue(displayName);
-        displayNameField.setResponder(val -> displayName = val);
-        addRenderableWidget(displayNameField);
-
-        vehicleIdField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 65, 50, 180, 16, Component.literal(""));
-        vehicleIdField.setMaxLength(64);
-        vehicleIdField.setValue(vehicleId);
-        vehicleIdField.setResponder(val -> vehicleId = val);
-        addRenderableWidget(vehicleIdField);
-
-        yawField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 290, 50, 42, 16, Component.literal(""));
-        yawField.setValue(String.valueOf((int) yaw));
-        yawField.setFilter(s -> s.matches("-?\\d*"));
-        yawField.setResponder(val -> yaw = Parse.floatOr(val, yaw));
-        addRenderableWidget(yawField);
-
-        addRenderableWidget(new PWPButton(
-                fieldLeft + 334,
-                50,
-                16,
-                16,
-                Component.literal("\u21BA"),
-                b -> adjustYaw(-45.0F),
-                PWPButton.Style.PRIMARY));
-        addRenderableWidget(new PWPButton(
-                fieldLeft + 352,
-                50,
-                16,
-                16,
-                Component.literal("\u21BB"),
-                b -> adjustYaw(45.0F),
-                PWPButton.Style.PRIMARY));
-
-        addRenderableWidget(new PWPButton(
-                fieldLeft + 62,
-                74,
-                16,
-                16,
-                Component.literal("-"),
-                b -> adjustTimer(false, -5),
-                PWPButton.Style.PRIMARY));
-        respawnTimeField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 80, 74, 50, 16, Component.literal(""));
-        respawnTimeField.setValue(String.valueOf(respawnTime));
-        respawnTimeField.setResponder(val -> respawnTime = Math.max(0, Parse.intOr(val, respawnTime)));
-        addRenderableWidget(respawnTimeField);
-        addRenderableWidget(new PWPButton(
-                fieldLeft + 132,
-                74,
-                16,
-                16,
-                Component.literal("+"),
-                b -> adjustTimer(false, 5),
-                PWPButton.Style.PRIMARY));
-
-        addRenderableWidget(new PWPButton(
-                fieldLeft + 202,
-                74,
-                16,
-                16,
-                Component.literal("-"),
-                b -> adjustTimer(true, -5),
-                PWPButton.Style.PRIMARY));
-        initialTimeField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 220, 74, 50, 16, Component.literal(""));
-        initialTimeField.setValue(String.valueOf(initialTime));
-        initialTimeField.setResponder(val -> initialTime = Math.max(0, Parse.intOr(val, initialTime)));
-        addRenderableWidget(initialTimeField);
-        addRenderableWidget(new PWPButton(
-                fieldLeft + 272,
-                74,
-                16,
-                16,
-                Component.literal("+"),
-                b -> adjustTimer(true, 5),
-                PWPButton.Style.PRIMARY));
-
-        categoryField = new EditBox(PWPTheme.Fonts.display(), fieldLeft + 296, 74, 86, 16, Component.literal(""));
-        categoryField.setMaxLength(32);
-        categoryField.setValue(category);
-        categoryField.setResponder(val -> category = val.trim().toUpperCase());
-        addRenderableWidget(categoryField);
-
-        addRenderableWidget(new PWPButton(
-                cx + panelW - 120,
-                panelH - 28,
-                100,
-                20,
-                Component.translatable("gui.pwpwarfare.faction_vehicle_editor.save"),
-                b -> saveVehicle(),
-                PWPButton.Style.ACCENT));
-
-        addRenderableWidget(new PWPButton(
-                cx + 12,
-                panelH - 28,
-                100,
-                20,
-                Component.literal("< "
-                        + Component.translatable("gui.pwpwarfare.faction_vehicle_editor.back")
-                                .getString()),
-                b -> minecraft.setScreen(new FactionVehicleListScreen(faction)),
-                PWPButton.Style.PRIMARY));
-
-        if (!isNew) loadVehicle();
-        else loading = false;
+    protected WarfareIcon titleIcon() {
+        return WarfareIcon.CRATE;
     }
 
-    private void loadVehicle() {
-        loading = true;
-        requested = true;
-        ClientData.factionVehicleDetail = null;
-        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest(
-                "factionVehicle", "{\"faction\":\"" + faction + "\",\"vehicle\":\"" + editVehicleName + "\"}"));
+    @Override
+    protected Component badge() {
+        return loading ? Component.translatable("gui.pwpwarfare.grid.loading") : null;
+    }
+
+    @Override
+    protected boolean twoColumns() {
+        return true;
+    }
+
+    @Override
+    protected void build() {
+        if (loading && !requested && !preview) {
+            requested = true;
+            ClientData.factionVehicleDetail = null;
+            com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest(
+                    "factionVehicle", "{\"faction\":\"" + faction + "\",\"vehicle\":\"" + editVehicleName + "\"}"));
+        }
+        section(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.section.vehicle"));
+        nameBox = text(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.name"), vehicleName, 64);
+        nameBox.setResponder(v -> vehicleName = v);
+        displayBox =
+                text(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.display_name"), displayName, 64);
+        displayBox.setResponder(v -> displayName = v);
+        idBox = text(Component.translatable("gui.pwpwarfare.vehicle_spawner.vehicle_id"), vehicleId, 128);
+        idBox.setResponder(v -> vehicleId = v);
+        categoryBox = text(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.category"), category, 32);
+        categoryBox.setResponder(v -> category = v);
+
+        section(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.section.spawn"));
+        yawBox = number(Component.translatable("gui.pwpwarfare.vehicle_spawner.yaw"), (int) yaw, true);
+        yawBox.setResponder(v -> {
+            float f = Parse.floatOr(v, Float.NaN);
+            if (!Float.isNaN(f)) yaw = ((f % 360F) + 360F) % 360F;
+        });
+        respawnBox = number(Component.translatable("gui.pwpwarfare.vehicle_spawner.respawn_time"), respawnTime, false);
+        respawnBox.setResponder(v -> respawnTime = Math.max(0, Parse.intOr(v, respawnTime)));
+        initialBox = number(Component.translatable("gui.pwpwarfare.vehicle_spawner.initial_time"), initialTime, false);
+        initialBox.setResponder(v -> initialTime = Math.max(0, Parse.intOr(v, initialTime)));
+
+        section(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.section.inventory"));
+        custom(VEH_ROWS * SLOT + Spacing.XS, this::renderVehicleInv);
+        custom(4 * SLOT + Spacing.SM, this::renderPlayerInv);
+
+        action(
+                Component.translatable("gui.pwpwarfare.faction_vehicle_editor.back"),
+                UIButton.Style.GHOST,
+                UIIcon.BACK,
+                this::back);
+        action(
+                Component.translatable("gui.pwpwarfare.faction_vehicle_editor.save"),
+                UIButton.Style.ACCENT,
+                UIIcon.CHECK,
+                this::saveVehicle);
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (requested && ClientData.factionVehicleDetail != null) {
-            requested = false;
-            JsonObject data = ClientData.factionVehicleDetail;
-            ClientData.factionVehicleDetail = null;
-            if (data.has("vehicleName")) vehicleName = data.get("vehicleName").getAsString();
-            if (data.has("displayName")) displayName = data.get("displayName").getAsString();
-            if (data.has("vehicleId")) vehicleId = data.get("vehicleId").getAsString();
-            if (data.has("yaw")) yaw = data.get("yaw").getAsFloat();
-            if (data.has("respawnTime")) respawnTime = data.get("respawnTime").getAsInt();
-            if (data.has("initialTime")) initialTime = data.get("initialTime").getAsInt();
-            if (data.has("category")) category = data.get("category").getAsString();
+        if (!requested || ClientData.factionVehicleDetail == null) return;
+        requested = false;
+        JsonObject data = ClientData.factionVehicleDetail;
+        ClientData.factionVehicleDetail = null;
+        if (data.has("vehicleName")) vehicleName = data.get("vehicleName").getAsString();
+        if (data.has("displayName")) displayName = data.get("displayName").getAsString();
+        if (data.has("vehicleId")) vehicleId = data.get("vehicleId").getAsString();
+        if (data.has("yaw")) yaw = data.get("yaw").getAsFloat();
+        if (data.has("respawnTime")) respawnTime = data.get("respawnTime").getAsInt();
+        if (data.has("initialTime")) initialTime = data.get("initialTime").getAsInt();
+        if (data.has("category")) category = data.get("category").getAsString();
+        if (data.has("inventory")) readInventory(data.getAsJsonArray("inventory"));
+        loading = false;
+        nameBox.setValue(vehicleName);
+        displayBox.setValue(displayName);
+        idBox.setValue(vehicleId);
+        categoryBox.setValue(category);
+        yawBox.setValue(String.valueOf((int) yaw));
+        respawnBox.setValue(String.valueOf(respawnTime));
+        initialBox.setValue(String.valueOf(initialTime));
+    }
 
-            if (data.has("inventory")) {
-                try {
-                    JsonArray arr = data.getAsJsonArray("inventory");
-                    for (int i = 0; i < arr.size(); i++) {
-                        JsonObject itemJson = arr.get(i).getAsJsonObject();
-                        int slot = itemJson.get("slot").getAsInt();
-                        if (slot >= 0 && slot < 32 && itemJson.has("item")) {
-                            JsonObject itemData = itemJson.getAsJsonObject("item");
-                            String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
-                            int count = itemData.has("Count")
-                                    ? itemData.get("Count").getAsInt()
-                                    : 1;
-                            if (!id.isEmpty() && !id.equals("minecraft:air")) {
-                                var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
-                                        new net.minecraft.resources.ResourceLocation(id));
-                                if (item != null && item != net.minecraft.world.item.Items.AIR) {
-                                    ItemStack stack = new ItemStack(item, count);
-                                    if (itemData.has("tag")
-                                            && itemData.get("tag").isJsonObject()) {
-                                        var tag = WarfareWorldData.KitInfo.jsonToCompound(
-                                                itemData.getAsJsonObject("tag"));
-                                        if (!tag.isEmpty()) stack.setTag(tag);
-                                    }
-                                    vehicleInv[slot] = stack;
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {
-                    PWP_LOG.warn("FactionVehicleEditorScreen.tick: исключение", ignored);
+    private void readInventory(JsonArray arr) {
+        try {
+            for (int i = 0; i < arr.size(); i++) {
+                JsonObject itemJson = arr.get(i).getAsJsonObject();
+                int slot = itemJson.get("slot").getAsInt();
+                if (slot < 0 || slot >= 32 || !itemJson.has("item")) continue;
+                JsonObject itemData = itemJson.getAsJsonObject("item");
+                String id = itemData.has("id") ? itemData.get("id").getAsString() : "";
+                int count = itemData.has("Count") ? itemData.get("Count").getAsInt() : 1;
+                if (id.isEmpty() || id.equals("minecraft:air")) continue;
+                var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
+                        new net.minecraft.resources.ResourceLocation(id));
+                if (item == null || item == net.minecraft.world.item.Items.AIR) continue;
+                ItemStack stack = new ItemStack(item, count);
+                if (itemData.has("tag") && itemData.get("tag").isJsonObject()) {
+                    var tag = WarfareWorldData.KitInfo.jsonToCompound(itemData.getAsJsonObject("tag"));
+                    if (!tag.isEmpty()) stack.setTag(tag);
                 }
+                vehicleInv[slot] = stack;
             }
-
-            vehicleNameField.setValue(vehicleName);
-            displayNameField.setValue(displayName);
-            vehicleIdField.setValue(vehicleId);
-            yawField.setValue(String.valueOf((int) yaw));
-            respawnTimeField.setValue(String.valueOf(respawnTime));
-            initialTimeField.setValue(String.valueOf(initialTime));
-            categoryField.setValue(category);
-            loading = false;
+        } catch (RuntimeException e) {
+            PWP_LOG.warn("FactionVehicleEditorScreen: инвентарь машины не прочитан", e);
         }
     }
 
     private void saveVehicle() {
         if (vehicleName.trim().isEmpty()) {
-            minecraft.player.displayClientMessage(Component.literal("Название техники не может быть пустым!"), true);
+            status(Component.translatable("gui.pwpwarfare.faction_vehicle_editor.need_name"), true);
+            return;
+        }
+        if (preview) {
+            status(Component.translatable("gui.pwpwarfare.admin.preview_skip"), false);
             return;
         }
         PacketHandler.INSTANCE.sendToServer(new PacketSaveFactionVehicle(
@@ -286,158 +218,98 @@ public class FactionVehicleEditorScreen extends Screen {
                 initialTime,
                 category,
                 vehicleInv));
-        minecraft.setScreen(new FactionVehicleListScreen(faction));
+        Minecraft.getInstance().setScreen(new FactionVehicleListScreen(faction));
     }
 
-    private void adjustTimer(boolean isInitial, int change) {
-        if (isInitial) {
-            initialTime = Math.max(0, initialTime + change);
-            initialTimeField.setValue(String.valueOf(initialTime));
-        } else {
-            respawnTime = Math.max(0, respawnTime + change);
-            respawnTimeField.setValue(String.valueOf(respawnTime));
+    private void back() {
+        if (preview) return;
+        setCursor(ItemStack.EMPTY);
+        Minecraft.getInstance().setScreen(new FactionVehicleListScreen(faction));
+    }
+
+    // ================================================================ инвентари
+
+    private void renderVehicleInv(GuiGraphics g, Rect r) {
+        modR = Rect.of(r.x(), r.y(), SLOT + Spacing.XS, SLOT + Spacing.XS);
+        vehR = Rect.of(modR.right() + Spacing.SM, r.y(), VEH_COLS * SLOT, VEH_ROWS * SLOT);
+        WDraw.well(g, modR, 1F);
+        UIDraw.outline(g, modR, PWPTheme.Colors.INFO);
+        drawItem(g, modR.x() + 3, modR.y() + 3, vehicleInv[0]);
+        UIDraw.text(
+                g,
+                font,
+                Component.translatable("gui.pwpwarfare.faction_vehicle_editor.mod"),
+                modR.x(),
+                modR.bottom() + Spacing.XXS,
+                PWPTheme.Text.CAPTION,
+                false);
+        for (int i = 0; i < VEH_COLS * VEH_ROWS; i++) {
+            Rect s = Rect.of(vehR.x() + (i % VEH_COLS) * SLOT, vehR.y() + (i / VEH_COLS) * SLOT, SLOT, SLOT);
+            WDraw.well(g, s, 1F);
+            drawItem(g, s.x() + 1, s.y() + 1, vehicleInv[1 + i]);
         }
     }
 
-    private void adjustYaw(float amount) {
-        yaw = (yaw + amount) % 360.0F;
-        if (yaw < 0) yaw += 360.0F;
-        yawField.setValue(String.valueOf((int) yaw));
+    private void renderPlayerInv(GuiGraphics g, Rect r) {
+        invR = Rect.of(r.x(), r.y() + Spacing.XS, INV_COLS * SLOT, 4 * SLOT + Spacing.XS);
+        for (int i = 0; i < 36; i++) {
+            Rect s = playerSlotRect(i);
+            WDraw.well(g, s, 1F);
+            if (playerInv != null) drawItem(g, s.x() + 1, s.y() + 1, playerInv.getItem(i));
+        }
     }
 
-    // --- Drawing ---
+    /** Слот игрока: 9..35 — три ряда сверху, 0..8 — хотбар снизу с зазором. */
+    private Rect playerSlotRect(int slot) {
+        if (slot < 9) return Rect.of(invR.x() + slot * SLOT, invR.y() + 3 * SLOT + Spacing.XS, SLOT, SLOT);
+        int i = slot - 9;
+        return Rect.of(invR.x() + (i % INV_COLS) * SLOT, invR.y() + (i / INV_COLS) * SLOT, SLOT, SLOT);
+    }
+
+    private void drawItem(GuiGraphics g, int x, int y, ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return;
+        g.renderItem(stack, x, y);
+        g.renderItemDecorations(font, stack, x, y);
+    }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-
-        PWPPanel.render(gui, cx, 8, panelW, panelH);
-        gui.drawCenteredString(PWPTheme.Fonts.display(), title.getString(), width / 2, 12, PWPTheme.Colors.TEXT_ACCENT);
-
-        if (loading) {
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    Component.translatable("gui.pwpwarfare.faction_select.loading"),
-                    width / 2,
-                    height / 2,
-                    PWPTheme.Colors.TEXT_DIM);
-            super.render(gui, mx, my, pt);
-            return;
-        }
-
-        int fl = cx + 12;
-        gui.drawString(PWPTheme.Fonts.display(), "Name ID:", fl, 32, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Display:", fl + 170, 32, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Vehicle ID:", fl, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Yaw:", fl + 260, 54, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Respawn:", fl, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Initial:", fl + 152, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Category:", fl + 296, 78, PWPTheme.Colors.TEXT_SECONDARY, false);
-
-        gui.drawString(PWPTheme.Fonts.display(), "Modifier", modX, modY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Items (32)", vInvX, vInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        // modifier slot (slot 0)
-        gui.fill(modX - 2, modY - 2, modX + MOD_W + 2, modY + MOD_W + 2, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.renderOutline(modX - 2, modY - 2, MOD_W + 4, MOD_W + 4, PWPTheme.Colors.BORDER);
-        drawSlot(gui, modX, modY, vehicleInv[0]);
-
-        // vehicle inventory slots (1-32)
-        int vw = VEH_COLS * SLOT + 4;
-        int vh = VEH_ROWS * SLOT + 4;
-        gui.fill(vInvX - 2, vInvY - 2, vInvX + vw, vInvY + vh, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.renderOutline(vInvX - 2, vInvY - 2, vw + 2, vh + 2, PWPTheme.Colors.BORDER);
-        for (int r = 0; r < VEH_ROWS; r++) {
-            for (int c = 0; c < VEH_COLS; c++) {
-                int idx = 1 + r * VEH_COLS + c;
-                int sx = vInvX + c * SLOT;
-                int sy = vInvY + r * SLOT;
-                drawSlot(gui, sx, sy, vehicleInv[idx]);
-            }
-        }
-
-        // player inventory
-        gui.drawString(
-                PWPTheme.Fonts.display(), "Player Inventory", cx + 12, pInvY - 10, PWPTheme.Colors.TEXT_ACCENT, false);
-        int pw = INV_COLS * SLOT + 4;
-        int ph = INV_ROWS * SLOT + 4;
-        gui.fill(pInvX - 2, pInvY - 2, pInvX + pw, pInvY + ph, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.renderOutline(pInvX - 2, pInvY - 2, pw + 2, ph + 2, PWPTheme.Colors.BORDER);
-        if (playerInv != null) {
-            for (int r = 0; r < INV_ROWS; r++) {
-                for (int c = 0; c < INV_COLS; c++) {
-                    int idx = 9 + r * INV_COLS + c;
-                    int sx = pInvX + c * SLOT;
-                    int sy = pInvY + r * SLOT;
-                    drawSlot(gui, sx, sy, playerInv.getItem(idx));
-                }
-            }
-        }
-
-        // hotbar
-        gui.fill(pInvX - 2, hotY - 2, pInvX + INV_COLS * SLOT + 2, hotY + SLOT + 2, PWPTheme.Colors.SURFACE_LIGHT);
-        gui.renderOutline(pInvX - 2, hotY - 2, INV_COLS * SLOT + 4, SLOT + 4, PWPTheme.Colors.BORDER);
-        if (playerInv != null) {
-            for (int c = 0; c < INV_COLS; c++) {
-                int sx = pInvX + c * SLOT;
-                drawSlot(gui, sx, hotY, playerInv.getItem(c));
-            }
-        }
-
-        super.render(gui, mx, my, pt);
-    }
-
-    private void drawSlot(GuiGraphics gui, int x, int y, ItemStack stack) {
-        gui.fill(x, y, x + SLOT - 2, y + SLOT - 2, PWPTheme.Styles.Panel.BG);
-        if (!stack.isEmpty()) {
-            gui.renderItem(stack, x, y);
-            gui.renderItemDecorations(PWPTheme.Fonts.display(), stack, x, y);
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        super.render(g, mx, my, pt);
+        ItemStack carried = getCursor();
+        if (!carried.isEmpty()) {
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 300);
+            drawItem(g, mx - 8, my - 8, carried);
+            g.pose().popPose();
         }
     }
-
-    // --- Mouse input ---
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        if (loading) return super.mouseClicked(mx, my, button);
-        if (button != 0 && button != 1) return super.mouseClicked(mx, my, button);
-
-        // modifier slot (slot 0)
-        if (mx >= modX && mx < modX + MOD_W && my >= modY && my < modY + MOD_W) {
+        if (loading || (button != 0 && button != 1)) return super.mouseClicked(mx, my, button);
+        if (modR.contains(mx, my)) {
             handleVehicleSlot(0, button);
             return true;
         }
-
-        // vehicle inventory slots (1-32)
-        int col = (int) ((mx - vInvX) / SLOT);
-        int row = (int) ((my - vInvY) / SLOT);
-        if (col >= 0 && col < VEH_COLS && row >= 0 && row < VEH_ROWS) {
+        if (vehR.contains(mx, my)) {
+            int col = (int) ((mx - vehR.x()) / SLOT), row = (int) ((my - vehR.y()) / SLOT);
             handleVehicleSlot(1 + row * VEH_COLS + col, button);
             return true;
         }
-
-        // player main inventory slots
-        col = (int) ((mx - pInvX) / SLOT);
-        row = (int) ((my - pInvY) / SLOT);
-        if (col >= 0 && col < INV_COLS && row >= 0 && row < INV_ROWS && playerInv != null) {
-            handlePlayerSlot(9 + row * INV_COLS + col, button);
-            return true;
+        if (playerInv != null && invR.contains(mx, my)) {
+            for (int i = 0; i < 36; i++) {
+                if (playerSlotRect(i).contains(mx, my)) {
+                    handlePlayerSlot(i, button);
+                    return true;
+                }
+            }
         }
-
-        // player hotbar slots
-        col = (int) ((mx - pInvX) / SLOT);
-        if (col >= 0 && col < INV_COLS && my >= hotY && my < hotY + SLOT && playerInv != null) {
-            handlePlayerSlot(col, button);
-            return true;
-        }
-
         return super.mouseClicked(mx, my, button);
     }
 
     private void handleVehicleSlot(int slot, int button) {
         ItemStack cursor = getCursor();
         ItemStack stack = vehicleInv[slot];
-
         if (button == 0) {
             if (!cursor.isEmpty()) {
                 vehicleInv[slot] = cursor.copy();
@@ -446,34 +318,32 @@ public class FactionVehicleEditorScreen extends Screen {
                 setCursor(stack.copy());
                 vehicleInv[slot] = ItemStack.EMPTY;
             }
-        } else {
-            if (!cursor.isEmpty()) {
-                ItemStack one = cursor.copy();
-                one.setCount(1);
-                if (stack.isEmpty()) {
-                    vehicleInv[slot] = one;
-                    cursor.shrink(1);
-                    setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
-                } else if (ItemStack.isSameItemSameTags(stack, one) && stack.getCount() < stack.getMaxStackSize()) {
-                    stack.grow(1);
-                    cursor.shrink(1);
-                    setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
-                }
-            } else if (!stack.isEmpty()) {
-                int take = (stack.getCount() + 1) / 2;
-                ItemStack half = stack.copy();
-                half.setCount(take);
-                stack.shrink(take);
-                if (stack.getCount() <= 0) vehicleInv[slot] = ItemStack.EMPTY;
-                setCursor(half);
+        } else if (!cursor.isEmpty()) {
+            ItemStack one = cursor.copy();
+            one.setCount(1);
+            if (stack.isEmpty()) {
+                vehicleInv[slot] = one;
+                cursor.shrink(1);
+                setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
+            } else if (ItemStack.isSameItemSameTags(stack, one) && stack.getCount() < stack.getMaxStackSize()) {
+                stack.grow(1);
+                cursor.shrink(1);
+                setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
             }
+        } else if (!stack.isEmpty()) {
+            int take = (stack.getCount() + 1) / 2;
+            ItemStack half = stack.copy();
+            half.setCount(take);
+            stack.shrink(take);
+            if (stack.getCount() <= 0) vehicleInv[slot] = ItemStack.EMPTY;
+            setCursor(half);
         }
     }
 
     private void handlePlayerSlot(int slot, int button) {
+        if (preview) return; // тест-стенд: настоящий инвентарь игрока не трогаем
         ItemStack cursor = getCursor();
         ItemStack stack = playerInv.getItem(slot);
-
         if (button == 0) {
             if (!cursor.isEmpty()) {
                 playerInv.setItem(slot, cursor.copy());
@@ -482,36 +352,37 @@ public class FactionVehicleEditorScreen extends Screen {
                 setCursor(stack.copy());
                 playerInv.setItem(slot, ItemStack.EMPTY);
             }
-        } else {
-            if (!cursor.isEmpty()) {
-                ItemStack one = cursor.copy();
-                one.setCount(1);
-                if (stack.isEmpty()) {
-                    playerInv.setItem(slot, one);
-                    cursor.shrink(1);
-                    setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
-                } else if (ItemStack.isSameItemSameTags(stack, one) && stack.getCount() < stack.getMaxStackSize()) {
-                    stack.grow(1);
-                    cursor.shrink(1);
-                    setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
-                }
-            } else if (!stack.isEmpty()) {
-                int take = (stack.getCount() + 1) / 2;
-                ItemStack half = stack.copy();
-                half.setCount(take);
-                stack.shrink(take);
-                if (stack.getCount() <= 0) playerInv.setItem(slot, ItemStack.EMPTY);
-                setCursor(half);
+        } else if (!cursor.isEmpty()) {
+            ItemStack one = cursor.copy();
+            one.setCount(1);
+            if (stack.isEmpty()) {
+                playerInv.setItem(slot, one);
+                cursor.shrink(1);
+                setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
+            } else if (ItemStack.isSameItemSameTags(stack, one) && stack.getCount() < stack.getMaxStackSize()) {
+                stack.grow(1);
+                cursor.shrink(1);
+                setCursor(cursor.getCount() <= 0 ? ItemStack.EMPTY : cursor);
             }
+        } else if (!stack.isEmpty()) {
+            int take = (stack.getCount() + 1) / 2;
+            ItemStack half = stack.copy();
+            half.setCount(take);
+            stack.shrink(take);
+            if (stack.getCount() <= 0) playerInv.setItem(slot, ItemStack.EMPTY);
+            setCursor(half);
         }
     }
 
     private ItemStack getCursor() {
-        return minecraft.player.containerMenu.getCarried();
+        var p = Minecraft.getInstance().player;
+        return p != null ? p.containerMenu.getCarried() : localCursor;
     }
 
     private void setCursor(ItemStack stack) {
-        minecraft.player.containerMenu.setCarried(stack);
+        var p = Minecraft.getInstance().player;
+        if (p != null) p.containerMenu.setCarried(stack);
+        else localCursor = stack;
     }
 
     @Override

@@ -49,6 +49,7 @@ public class ClientModEvents {
         // Тест-стенд UI (/pwpui): фикстуры экранов warfare — только в dev или с -Dpwp.uitest=true
         if (com.pwp.coreclient.gui.devtest.UiGallery.enabled()) {
             com.pigeostudios.pwp.warfare.client.gui.devtest.WarfareUiFixtures.registerAll();
+            com.pigeostudios.pwp.warfare.client.gui.devtest.WarfareAdminFixtures.registerAll();
         }
         event.enqueueWork(() -> {
             MenuScreens.register((MenuType) ModMenuTypes.VEHICLE_SPAWNER_MENU.get(), VehicleSpawnerScreen::new);

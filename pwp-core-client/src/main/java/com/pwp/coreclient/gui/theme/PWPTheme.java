@@ -307,6 +307,16 @@ public class PWPTheme {
         public static final int SKIN_TILE = 28;
 
         public static final int SKIN_MAX_COLS = 12;
+        /** Админ-формы (pwp-warfare AdminFormScreen): строка, секция, колонки, подписи, кнопки. */
+        public static final int FORM_ROW_H = 18;
+
+        public static final int FORM_SECTION_H = 16;
+        public static final int FORM_TOGGLE_W = 64;
+        public static final int FORM_COL_MIN_W = 220;
+        public static final int FORM_MAX_W = 380;
+        public static final int FORM_MAX_W_TWO = 620;
+        public static final float FORM_LABEL_FRACTION = 0.45F;
+        public static final int FORM_ACTION_MAX_W = 140;
 
         private Spacing() {}
     }

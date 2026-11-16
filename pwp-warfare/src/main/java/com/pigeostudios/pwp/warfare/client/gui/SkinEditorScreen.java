@@ -1,13 +1,25 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pwp.coreclient.gui.components.PWPButton;
+import com.pigeostudios.pwp.warfare.client.gui.admin.AdminFormScreen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
 import com.pwp.coreclient.network.AdminActions;
 import com.pwp.coreclient.network.data.AdminAction;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.layout.Rect;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
@@ -15,40 +27,56 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.registries.ForgeRegistries;
 
-public class SkinEditorScreen extends Screen {
+/**
+ * Админ: добавление/редактирование скина. Форма на {@link AdminFormScreen}: название, слот,
+ * редкость (выбор по кругу), тег оружия; превью предмета; сетка инвентаря 9x4 — клик по
+ * предмету берёт его как модель (SNBT) и угадывает слот/тег, как раньше. Сохранение/удаление —
+ * {@link AdminActions#saveSkin}/{@link AdminActions#deleteSkin} с теми же аргументами.
+ */
+public class SkinEditorScreen extends AdminFormScreen {
     private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(SkinEditorScreen.class);
+    private static final String[] SLOT_TYPES = {"PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
+    private static final String[] RARITIES = {"COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"};
+    private static final int[] RARITY_COLORS = {
+        Colors.RARITY_COMMON,
+        Colors.RARITY_RARE,
+        Colors.RARITY_EPIC,
+        Colors.RARITY_LEGENDARY,
+        Colors.RARITY_MYTHIC,
+        0xFFFFD700
+    };
+    private static final int INV_COLS = 9;
+    private static final int INV_ROWS = 4;
+    private static final int SLOT = 18;
 
     private final SkinListScreen parent;
     private EditBox nameBox;
+    private UIButton slotButton;
     private String slotType = "PRIMARY";
     private String weaponTag = "any";
     private String rarity = "COMMON";
     private ItemStack previewItem = ItemStack.EMPTY;
     private String previewRegistryName = "";
     private String previewItemName = "";
-    private String statusMsg = "";
-    private long statusTime = 0;
     private int previewSlotIndex = -1;
+    private String editSkinId;
+    private String pendingEditName;
+    private String pendingEditRegistryName;
+    private String nameValue = "";
+    /** Источник предметов сетки (в игре — инвентарь игрока; в тест-стенде — фикстура). */
+    private Supplier<List<ItemStack>> items = () -> {
+        var p = Minecraft.getInstance().player;
+        return p != null ? p.getInventory().items : List.of();
+    };
 
-    private String editSkinId = null;
-    private String titleText = "Add Skin";
-    private String pendingEditName = null;
-    private String pendingEditRegistryName = null;
-
-    private static final String[] SLOT_TYPES = {"PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
-    private static final String[] RARITIES = {"COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"};
-    private static final int[] RARITY_COLORS = {0xFF6A6D73, 0xFF3D6FA5, 0xFF7A4A8A, 0xFFC8812A, 0xFFA53D3D, 0xFFFFD700};
-    private static final int INV_COLS = 9;
-    private static final int INV_ROWS = 4;
-    private static final int SLOT_SIZE = 18;
+    private Rect gridR = Rect.of(0, 0, 0, 0);
 
     public SkinEditorScreen(SkinListScreen parent) {
-        super(Component.literal("Add Skin"));
+        super(Component.translatable("gui.pwpwarfare.skin_editor.add"));
         this.parent = parent;
     }
 
     public void editExisting(String skinId, String name, String st, String wt, String r, String registryName) {
-        titleText = "Edit Skin";
         editSkinId = skinId;
         slotType = st;
         weaponTag = wt;
@@ -57,168 +85,145 @@ public class SkinEditorScreen extends Screen {
         pendingEditRegistryName = registryName;
     }
 
-    @Override
-    protected void init() {
-        int cx = this.width / 2;
+    /** Тест-стенд UI: предметы из фикстуры; сохранение/удаление не отправляются. */
+    public SkinEditorScreen previewItems(List<ItemStack> fixture) {
+        this.items = () -> fixture;
+        asPreview();
+        return this;
+    }
 
-        nameBox = new EditBox(PWPTheme.Fonts.display(), cx - 70, 30, 140, 16, Component.empty());
-        nameBox.setHint(Component.literal("e.g. Dragon Fang"));
+    @Override
+    public Component getTitle() {
+        return Component.translatable(
+                editSkinId != null ? "gui.pwpwarfare.skin_editor.edit" : "gui.pwpwarfare.skin_editor.add");
+    }
+
+    @Override
+    protected WarfareIcon titleIcon() {
+        return WarfareIcon.STAR;
+    }
+
+    @Override
+    protected void build() {
         if (pendingEditName != null) {
-            nameBox.setValue(pendingEditName);
+            nameValue = pendingEditName;
             if (pendingEditRegistryName != null && pendingEditRegistryName.startsWith("{")) {
                 previewRegistryName = pendingEditRegistryName;
                 try {
-                    CompoundTag loaded = TagParser.parseTag(pendingEditRegistryName);
-                    previewItem = ItemStack.of(loaded);
+                    previewItem = ItemStack.of(TagParser.parseTag(pendingEditRegistryName));
                     ResourceLocation rl = ForgeRegistries.ITEMS.getKey(previewItem.getItem());
                     previewItemName = rl != null ? rl.toString() : "unknown";
-                } catch (Exception ignored) {
-                    PWP_LOG.warn("SkinEditorScreen.init: исключение", ignored);
+                } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                    PWP_LOG.warn("SkinEditorScreen: некорректный SNBT модели {}", editSkinId, e);
                 }
             }
+            pendingEditName = null;
         }
-        addRenderableWidget(nameBox);
+        section(Component.translatable("gui.pwpwarfare.skin_editor.section.info"));
+        nameBox = text(Component.translatable("gui.pwpwarfare.skin_editor.name"), nameValue, 64);
+        nameBox.setHint(Component.translatable("gui.pwpwarfare.skin_editor.name_hint"));
+        nameBox.setResponder(v -> nameValue = v);
+        slotButton = cycle(
+                Component.translatable("gui.pwpwarfare.skin_editor.slot_type"),
+                labels(SLOT_TYPES, "pwp_cosmetics.slot."),
+                Math.max(0, Arrays.asList(SLOT_TYPES).indexOf(slotType)),
+                i -> slotType = SLOT_TYPES[i]);
+        cycle(
+                Component.translatable("gui.pwpwarfare.skin_editor.rarity"),
+                labels(RARITIES, "pwp_cosmetics.rarity."),
+                Math.max(0, Arrays.asList(RARITIES).indexOf(rarity)),
+                i -> rarity = RARITIES[i]);
+        info(Component.translatable("gui.pwpwarfare.skin_editor.weapon_tag"), () -> Component.literal(weaponTag));
 
-        for (int i = 0; i < SLOT_TYPES.length; i++) {
-            int bx = cx - 160 + i * 64;
-            final int fi = i;
-            addRenderableWidget(new PWPButton(
-                    bx,
-                    56,
-                    60,
-                    18,
-                    Component.literal(SLOT_TYPES[i]),
-                    b -> {
-                        slotType = SLOT_TYPES[fi];
-                        rebuildButtons();
-                    },
-                    PWPButton.Style.PRIMARY));
-        }
+        section(Component.translatable("gui.pwpwarfare.skin_editor.model_path"));
+        custom(SLOT + 2 * Spacing.XS, this::renderPreview);
+        custom(INV_ROWS * (SLOT + 2) + Spacing.XS, this::renderGrid);
 
-        for (int i = 0; i < RARITIES.length; i++) {
-            int bx = cx - 170 + i * 57;
-            final int fi = i;
-            addRenderableWidget(new PWPButton(
-                    bx,
-                    78,
-                    53,
-                    16,
-                    Component.literal(RARITIES[i].substring(0, 3)),
-                    b -> {
-                        rarity = RARITIES[fi];
-                        rebuildButtons();
-                    },
-                    PWPButton.Style.PRIMARY));
-        }
-
-        addRenderableWidget(
-                new PWPButton(cx - 60, 230, 50, 20, Component.literal("Save"), b -> save(), PWPButton.Style.ACCENT));
-        PWPButton delBtn =
-                new PWPButton(cx - 5, 230, 50, 20, Component.literal("Delete"), b -> delete(), PWPButton.Style.DANGER);
-        delBtn.active = editSkinId != null;
-        addRenderableWidget(delBtn);
-        addRenderableWidget(
-                new PWPButton(cx + 50, 230, 50, 20, Component.literal("Back"), b -> close(), PWPButton.Style.PRIMARY));
-
-        rebuildButtons();
+        action(
+                Component.translatable("gui.pwpwarfare.skin_editor.cancel"),
+                UIButton.Style.GHOST,
+                UIIcon.BACK,
+                this::close);
+        UIButton del = action(
+                Component.translatable("gui.pwpwarfare.admin.delete"),
+                UIButton.Style.DANGER,
+                UIIcon.CLOSE,
+                this::delete);
+        del.setEnabled(editSkinId != null);
+        action(
+                Component.translatable("gui.pwpwarfare.skin_editor.save"),
+                UIButton.Style.ACCENT,
+                UIIcon.CHECK,
+                this::save);
     }
 
-    private void rebuildButtons() {
-        int idx = 0;
-        for (Object w : renderables) {
-            if (w instanceof PWPButton btn) {
-                if (idx < SLOT_TYPES.length) {
-                    boolean sel = slotType.equals(SLOT_TYPES[idx]);
-                    btn.setMessage(Component.literal(sel ? "\u25b6 " + SLOT_TYPES[idx] : "   " + SLOT_TYPES[idx]));
-                } else if (idx - SLOT_TYPES.length < RARITIES.length) {
-                    int ri = idx - SLOT_TYPES.length;
-                    boolean sel = rarity.equals(RARITIES[ri]);
-                    btn.setMessage(Component.literal(
-                            sel ? "\u25b6" + RARITIES[ri].substring(0, 3) : " " + RARITIES[ri].substring(0, 3)));
-                }
-                idx++;
-            }
-        }
+    private static List<Component> labels(String[] ids, String prefix) {
+        List<Component> out = new ArrayList<>();
+        for (String id : ids) out.add(Component.translatable(prefix + id));
+        return out;
     }
 
-    @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-        int cx = this.width / 2;
-
-        gui.drawCenteredString(PWPTheme.Fonts.display(), titleText, cx, 8, 0xFFC8CBCE);
-        gui.drawString(PWPTheme.Fonts.display(), "Name:", cx - 120, 33, 0xFF7A7D84, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Type:", cx - 120, 59, 0xFF7A7D84, false);
-        gui.drawString(PWPTheme.Fonts.display(), "Rarity:", cx - 120, 81, 0xFF7A7D84, false);
-
-        int pX = cx - 120, pY = 102;
-        gui.drawString(PWPTheme.Fonts.display(), "Preview:", pX, pY, 0xFF7A7D84, false);
-        gui.fill(pX, pY + 10, pX + 50, pY + 60, 0xCC12151A);
+    private void renderPreview(GuiGraphics g, Rect r) {
+        Rect slot = Rect.of(r.x(), r.y() + Spacing.XS, SLOT, SLOT);
+        int ri = Math.max(0, Arrays.asList(RARITIES).indexOf(rarity));
+        WDraw.well(g, slot, 1F);
+        UIDraw.rect(g, slot.inset(1).bottomStrip(Spacing.ACCENT_BAR), RARITY_COLORS[ri]);
+        Rect text = r.rightOf(SLOT, Spacing.SM);
         if (!previewItem.isEmpty()) {
-            gui.renderItem(previewItem, pX + 9, pY + 14);
-            gui.renderItemDecorations(PWPTheme.Fonts.display(), previewItem, pX + 9, pY + 14);
-            gui.drawString(
-                    PWPTheme.Fonts.display(),
-                    previewItemName.length() > 28 ? previewItemName.substring(0, 25) + "..." : previewItemName,
-                    pX + 56,
-                    pY + 14,
-                    0xFF3D6FA5,
+            g.renderItem(previewItem, slot.x() + 1, slot.y() + 1);
+            UIDraw.text(
+                    g,
+                    font,
+                    UIDraw.ellipsize(font, Component.literal(previewItemName), text.w()),
+                    text.x(),
+                    text.y() + (text.h() - font.lineHeight) / 2 + 1,
+                    PWPTheme.Colors.INFO,
                     false);
-            gui.drawString(PWPTheme.Fonts.display(), "Slot: " + slotType, pX + 56, pY + 26, 0xFFC8812A, false);
-            int rColor = RARITY_COLORS[java.util.Arrays.asList(RARITIES).indexOf(rarity)];
-            gui.drawString(PWPTheme.Fonts.display(), rarity, pX + 56, pY + 38, rColor, false);
         } else {
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "?", pX + 25, pY + 30, 0xFF4A4D54);
+            UIDraw.text(
+                    g,
+                    font,
+                    UIDraw.ellipsize(font, Component.translatable("gui.pwpwarfare.skin_editor.pick_item"), text.w()),
+                    text.x(),
+                    text.y() + (text.h() - font.lineHeight) / 2 + 1,
+                    PWPTheme.Text.CAPTION,
+                    false);
         }
-
-        int invY = 166;
-        gui.drawString(PWPTheme.Fonts.display(), "Click an item to preview:", cx - 120, invY - 12, 0xFF4A4D54, false);
-        int gridW = INV_COLS * (SLOT_SIZE + 2);
-        int invSX = (this.width - gridW) / 2;
-
-        if (mc.player != null) {
-            for (int i = 0; i < 36; i++) {
-                int col = i % INV_COLS, row = i / INV_COLS;
-                int ix = invSX + col * (SLOT_SIZE + 2);
-                int iy = invY + row * (SLOT_SIZE + 2);
-                ItemStack stack = mc.player.getInventory().items.get(i);
-                boolean isSelected = i == previewSlotIndex;
-                gui.fill(ix, iy, ix + SLOT_SIZE, iy + SLOT_SIZE, isSelected ? 0x44C8812A : 0x2212151A);
-                if (isSelected) gui.renderOutline(ix, iy, SLOT_SIZE, SLOT_SIZE, 0xFFC8812A);
-                if (!stack.isEmpty()) {
-                    gui.renderItem(stack, ix + 1, iy + 1);
-                    if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
-                        gui.renderTooltip(PWPTheme.Fonts.display(), stack, mx, my);
-                    }
-                }
-            }
-        }
-
-        if (System.currentTimeMillis() - statusTime < 3000 && !statusMsg.isEmpty())
-            gui.drawCenteredString(PWPTheme.Fonts.display(), statusMsg, cx, this.height - 30, 0xFFC8812A);
-
-        super.render(gui, mx, my, pt);
     }
 
-    private final Minecraft mc = Minecraft.getInstance();
+    private void renderGrid(GuiGraphics g, Rect r) {
+        int gw = INV_COLS * (SLOT + 2) - 2;
+        gridR = Rect.of(r.x() + Math.max(0, (r.w() - gw) / 2), r.y(), Math.min(gw, r.w()), INV_ROWS * (SLOT + 2) - 2);
+        List<ItemStack> inv = items.get();
+        for (int i = 0; i < INV_COLS * INV_ROWS; i++) {
+            Rect s = slotRect(i);
+            boolean sel = i == previewSlotIndex;
+            WDraw.well(g, s, 1F);
+            if (sel) {
+                UIDraw.rect(g, s.inset(1), Styles.Control.BG_SELECTED);
+                UIDraw.outline(g, s, Colors.ACCENT);
+            }
+            ItemStack st = i < inv.size() ? inv.get(i) : ItemStack.EMPTY;
+            if (!st.isEmpty()) g.renderItem(st, s.x() + 1, s.y() + 1);
+        }
+    }
+
+    private Rect slotRect(int i) {
+        return Rect.of(gridR.x() + (i % INV_COLS) * (SLOT + 2), gridR.y() + (i / INV_COLS) * (SLOT + 2), SLOT, SLOT);
+    }
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
-        int gridW = INV_COLS * (SLOT_SIZE + 2);
-        int invSX = (this.width - gridW) / 2;
-        if (mc.player != null) {
-            for (int i = 0; i < 36; i++) {
-                int col = i % INV_COLS, row = i / INV_COLS;
-                int ix = invSX + col * (SLOT_SIZE + 2);
-                int iy = 166 + row * (SLOT_SIZE + 2);
-                if (mx >= ix && mx <= ix + SLOT_SIZE && my >= iy && my <= iy + SLOT_SIZE) {
-                    ItemStack stack = mc.player.getInventory().items.get(i);
-                    if (!stack.isEmpty()) {
-                        setPreviewItem(stack);
-                        previewSlotIndex = i;
-                    }
-                    return true;
+        if (btn == 0 && gridR.contains(mx, my)) {
+            List<ItemStack> inv = items.get();
+            for (int i = 0; i < INV_COLS * INV_ROWS; i++) {
+                if (!slotRect(i).contains(mx, my)) continue;
+                ItemStack st = i < inv.size() ? inv.get(i) : ItemStack.EMPTY;
+                if (!st.isEmpty()) {
+                    setPreviewItem(st);
+                    previewSlotIndex = i;
                 }
+                return true;
             }
         }
         return super.mouseClicked(mx, my, btn);
@@ -250,69 +255,62 @@ public class SkinEditorScreen extends Screen {
             else if (id.contains("rifle") || id.contains("carbine")) weaponTag = "rifle";
             else weaponTag = "any";
         }
-        rebuildButtons();
+        if (slotButton != null) slotButton.label(Component.translatable("pwp_cosmetics.slot." + slotType));
     }
 
     private void save() {
         String name = nameBox.getValue().trim();
         if (name.isEmpty()) {
-            showMsg("§eEnter a name!");
+            status(Component.translatable("gui.pwpwarfare.skin_editor.need_name"), true);
             return;
         }
         if (previewItem.isEmpty()) {
-            showMsg("§eClick an item in the grid!");
+            status(Component.translatable("gui.pwpwarfare.skin_editor.need_item"), true);
             return;
         }
-
-        final String saveSkinId = editSkinId != null
+        String saveSkinId = editSkinId != null
                 ? editSkinId
-                : String.valueOf(Math.abs(previewRegistryName.hashCode())) + "_"
+                : Math.abs(previewRegistryName.hashCode()) + "_"
                         + name.toLowerCase()
                                 .replaceAll("[^a-z0-9_]", "_")
                                 .replaceAll("_+", "_")
                                 .replaceAll("^_|_$", "");
-        final String saveName = name;
-        final String saveSlot = slotType;
-        final String saveWeapon = weaponTag;
-        final String saveRarity = rarity;
-        final String saveRegistry = previewRegistryName;
-
-        showMsg("§eSaving...");
+        if (preview) {
+            status(Component.translatable("gui.pwpwarfare.admin.preview_skip"), false);
+            return;
+        }
+        status(Component.translatable("gui.pwpwarfare.admin.saving"), false);
         AdminActions.saveSkin(
-                new AdminAction.SaveSkin(saveSkinId, saveName, "", saveSlot, saveWeapon, saveRarity, saveRegistry),
-                r -> {
-                    if (r.success()) {
-                        showMsg("§aSaved!");
-                        close();
-                    } else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+                new AdminAction.SaveSkin(saveSkinId, name, "", slotType, weaponTag, rarity, previewRegistryName), r -> {
+                    if (r.success()) close();
+                    else status(error(r.error()), true);
                 });
     }
 
     private void delete() {
         if (editSkinId == null) {
-            showMsg("§eSave first!");
+            status(Component.translatable("gui.pwpwarfare.skin_editor.save_first"), true);
             return;
         }
-        showMsg("§eDeleting...");
+        if (preview) {
+            status(Component.translatable("gui.pwpwarfare.admin.preview_skip"), false);
+            return;
+        }
+        status(Component.translatable("gui.pwpwarfare.admin.deleting"), false);
         AdminActions.deleteSkin(editSkinId, r -> {
-            if (r.success()) {
-                showMsg("§aDeleted!");
-                close();
-            } else showMsg("§c" + (r.error().isEmpty() ? "API error" : r.error()));
+            if (r.success()) close();
+            else status(error(r.error()), true);
         });
     }
 
-    private void showMsg(String msg) {
-        statusMsg = msg;
-        statusTime = System.currentTimeMillis();
+    private static Component error(String e) {
+        return e == null || e.isEmpty()
+                ? Component.translatable("gui.pwpwarfare.admin.api_error")
+                : Component.literal(e);
     }
 
     private void close() {
-        mc.setScreen(new SkinListScreen());
-    }
-
-    @Override
-    public boolean isPauseScreen() {
-        return false;
+        if (preview) return;
+        Minecraft.getInstance().setScreen(new SkinListScreen());
     }
 }
