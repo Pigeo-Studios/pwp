@@ -1,11 +1,20 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.pigeostudios.pwp.warfare.client.gui.ui.AnimMap;
+import com.pigeostudios.pwp.warfare.client.gui.ui.Scroll;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMapMarker;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Fit;
+import com.pwp.coreclient.ui.layout.Grid;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -14,24 +23,19 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Сетка тактических маркеров (команда/враг): карточка = иконка маркера + подпись, клик ставит
+ * маркер ({@link PacketPlaceMapMarker}, как раньше) и возвращает на предыдущий экран. Сетка —
+ * Grid по ширине панели, прокрутка колесом.
+ */
 public class MapMarkerGridScreen extends Screen {
     private final int worldX;
     private final int worldZ;
     private final Map<String, ResourceLocation> markers;
     private final List<String> markerTypes = new ArrayList<>();
     private final Screen previousScreen;
-    private static final int CARD_W = 90;
-    private static final int CARD_H = 82;
-    private static final int GAP = 8;
-
-    private int cols;
-    private int panelW;
-    private int panelH;
-    private int contentH;
-    private int scrollOff;
-    private int maxScroll;
-    private int cx;
-    private final List<PWPButton> markerButtons = new ArrayList<>();
+    private final Scroll scroll = new Scroll();
+    private final AnimMap hover = new AnimMap();
 
     public MapMarkerGridScreen(
             int x, int z, String titleKey, Map<String, ResourceLocation> markers, Screen previousScreen) {
@@ -43,122 +47,106 @@ public class MapMarkerGridScreen extends Screen {
         this.previousScreen = previousScreen;
     }
 
-    @Override
-    protected void init() {
-        cols = Math.max(1, Math.min(4, (width - 40) / (CARD_W + GAP)));
-        cols = Math.min(cols, markerTypes.size());
-        panelW = cols * CARD_W + (cols - 1) * GAP + 16;
-        panelW = Math.min(panelW, width - 20);
-        cx = (width - panelW) / 2;
-
-        int rows = (markerTypes.size() + cols - 1) / cols;
-        contentH = rows * CARD_H + (rows - 1) * GAP;
-        panelH = Math.min(height - 50, contentH + 50);
-        maxScroll = Math.max(0, contentH + 50 - panelH);
-        if (maxScroll == 0) scrollOff = 0;
-        if (scrollOff > maxScroll) scrollOff = maxScroll;
-
-        markerButtons.clear();
-        for (int i = 0; i < markerTypes.size(); i++) {
-            String type = markerTypes.get(i);
-            PWPButton btn = new PWPButton(
-                    0,
-                    0,
-                    0,
-                    0,
-                    Component.translatable(
-                            "pwpwarfare.marker." + type.toLowerCase().replace(" ", "_")),
-                    b -> {
-                        PacketHandler.INSTANCE.sendToServer(new PacketPlaceMapMarker(worldX, worldZ, type));
-                        minecraft.setScreen(previousScreen);
-                    },
-                    PWPButton.Style.PRIMARY);
-            addRenderableWidget(btn);
-            markerButtons.add(btn);
-        }
-        repositionButtons();
+    private static Component name(String type) {
+        return Component.translatable("pwpwarfare.marker." + type.toLowerCase().replace(" ", "_"));
     }
 
-    private void repositionButtons() {
-        int baseY = 46 - scrollOff;
-        for (int i = 0; i < markerTypes.size(); i++) {
-            int r = i / cols;
-            int c = i % cols;
-            int bx = cx + 8 + c * (CARD_W + GAP);
-            int by = baseY + r * (CARD_H + GAP);
+    private Rect panel() {
+        int w = Fit.fraction(
+                width,
+                WTheme.MARKER_PANEL_FRACTION,
+                Math.min(width - 2 * Spacing.SM, WTheme.MARKER_PANEL_MIN_W),
+                WTheme.MARKER_PANEL_MAX_W);
+        int h = Math.max(0, height - 2 * Spacing.LG);
+        return Rect.of((width - w) / 2, Spacing.LG, w, h);
+    }
 
-            markerButtons.get(i).setX(bx + 5);
-            markerButtons.get(i).setY(by + 52);
-            markerButtons.get(i).setWidth(CARD_W - 10);
-            markerButtons.get(i).setHeight(18);
-        }
+    private Rect content(Rect panel) {
+        return panel.inset(Spacing.SM, WDraw.headerHeight(height) + Spacing.SM, Spacing.SM, Spacing.SM);
+    }
+
+    private Rect[] cells(Rect c) {
+        int cols = Grid.columnsFor(
+                c.w() - WTheme.SCROLLBAR_W, WTheme.MARKER_CARD_MIN_W, Spacing.XS, WTheme.MARKER_COLS_MAX);
+        Rect grid = Rect.of(c.x(), c.y() - scroll.offset(), c.w() - WTheme.SCROLLBAR_W - Spacing.XS, 0);
+        return Grid.cells(grid, markerTypes.size(), cols, WTheme.MARKER_CARD_H, Spacing.XS);
     }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
-
-        int py = 10;
-        PWPPanel.render(gui, cx, py, panelW, panelH);
-
-        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, py + 4, PWPTheme.Colors.TEXT_PRIMARY);
-        gui.fill(cx + 4, py + 14, cx + panelW - 4, py + 15, PWPTheme.Colors.ACCENT);
-
-        int clipY = py + 16;
-        int clipH = panelH - 16;
-        gui.enableScissor(cx, clipY, cx + panelW, clipY + clipH);
-
-        int baseY = 46 - scrollOff;
-        for (int i = 0; i < markerTypes.size(); i++) {
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
+        Rect p = panel();
+        Rect c = WDraw.panel(
+                g,
+                font,
+                p,
+                WDraw.headerHeight(height),
+                WarfareIcon.MARKER,
+                title,
+                Component.literal(String.valueOf(markerTypes.size())),
+                1F);
+        if (markerTypes.isEmpty()) {
+            WDraw.emptyState(
+                    g, font, c, WarfareIcon.MARKER, Component.translatable("gui.pwpwarfare.map.no_markers"), null, 1F);
+            return;
+        }
+        Rect[] cells = cells(c);
+        int contentH = cells.length == 0 ? 0 : cells[cells.length - 1].bottom() + scroll.offset() - c.y();
+        scroll.clamp(contentH, c.h());
+        g.enableScissor(c.x(), c.y(), c.right(), c.bottom());
+        for (int i = 0; i < cells.length; i++) {
+            Rect r = cells[i];
+            if (r.bottom() < c.y() || r.y() > c.bottom()) continue;
             String type = markerTypes.get(i);
+            float h = hover.get(type, c.contains(mx, my) && r.contains(mx, my));
+            WDraw.tile(g, r, h, 0F, 1F, 1F);
+            int is = Spacing.ICON_SIZE_LG;
+            int ix = r.centerX() - is / 2;
+            int iy = r.y() + Spacing.XS;
             ResourceLocation icon = markers.get(type);
-            int r = i / cols;
-            int c = i % cols;
-            int bx = cx + 8 + c * (CARD_W + GAP);
-            int by = baseY + r * (CARD_H + GAP);
-
-            gui.fill(bx, by, bx + CARD_W, by + CARD_H, PWPTheme.Colors.SURFACE_LIGHT);
-            gui.renderOutline(bx, by, CARD_W, CARD_H, PWPTheme.Colors.BORDER);
-
-            RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-            int iconX = bx + (CARD_W - 32) / 2;
-            int iconY = by + 6;
-            gui.blit(icon, iconX, iconY, 0.0F, 0.0F, 32, 32, 32, 32);
-
-            Component name = Component.translatable(
-                    "pwpwarfare.marker." + type.toLowerCase().replace(" ", "_"));
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(), name, bx + CARD_W / 2, by + 42, PWPTheme.Colors.TEXT_SECONDARY);
+            UIDraw.blitTinted(g, 0xFFFFFFFF, () -> g.blit(icon, ix, iy, 0F, 0F, is, is, is, is));
+            Rect label = Rect.of(
+                    r.x() + Spacing.XXS,
+                    iy + is + Spacing.XXS,
+                    r.w() - 2 * Spacing.XXS,
+                    r.bottom() - iy - is - Spacing.XXS);
+            WDraw.text(
+                    g,
+                    font,
+                    name(type),
+                    label,
+                    Align.CENTER,
+                    PWPTheme.Colors.lerp(PWPTheme.Text.MUTED, PWPTheme.Text.HEADING, h),
+                    false,
+                    1F);
         }
+        g.disableScissor();
+        WDraw.scrollbar(g, c, contentH, scroll.offset(), 1F);
+    }
 
-        super.render(gui, mx, my, pt);
-        gui.disableScissor();
-
-        if (maxScroll > 0) {
-            if (scrollOff > 0)
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(),
-                        Component.literal("\u25B2"),
-                        width / 2,
-                        py + 2,
-                        PWPTheme.Colors.TEXT_DIM);
-            if (scrollOff < maxScroll)
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(),
-                        Component.literal("\u25BC"),
-                        width / 2,
-                        py + panelH - 4,
-                        PWPTheme.Colors.TEXT_DIM);
+    @Override
+    public boolean mouseClicked(double mx, double my, int btn) {
+        if (btn == 0) {
+            Rect c = content(panel());
+            if (c.contains(mx, my)) {
+                Rect[] cells = cells(c);
+                for (int i = 0; i < cells.length; i++) {
+                    if (cells[i].contains(mx, my)) {
+                        PacketHandler.INSTANCE.sendToServer(
+                                new PacketPlaceMapMarker(worldX, worldZ, markerTypes.get(i)));
+                        minecraft.setScreen(previousScreen);
+                        return true;
+                    }
+                }
+            }
         }
+        return super.mouseClicked(mx, my, btn);
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        if (maxScroll > 0 && mx >= cx && mx <= cx + panelW) {
-            int prev = scrollOff;
-            scrollOff = (int) Math.max(0, Math.min(maxScroll, scrollOff - delta * 20));
-            if (prev != scrollOff) repositionButtons();
+        if (panel().contains(mx, my)) {
+            scroll.wheel(delta);
             return true;
         }
         return super.mouseScrolled(mx, my, delta);

@@ -350,5 +350,14 @@
     "gui.pwpwarfare.radial.cost": "%s mats",
     "gui.pwpwarfare.radial.cooldown": "%s s",
     "gui.pwpwarfare.radial.materials": "Materials: %s",
-    "gui.pwpwarfare.radial.materials_of": "Materials: %s / %s"
+    "gui.pwpwarfare.radial.materials_of": "Materials: %s / %s",
+    "gui.pwpwarfare.map.no_data": "No match map data",
+    "gui.pwpwarfare.map.zoom": "Zoom %s",
+    "gui.pwpwarfare.map.scale": "%s m",
+    "gui.pwpwarfare.map.north": "N",
+    "gui.pwpwarfare.map.title": "Map",
+    "gui.pwpwarfare.map.vehicles": "Vehicles",
+    "gui.pwpwarfare.map.no_vehicles": "No vehicle spawners",
+    "gui.pwpwarfare.map.controls": "LMB drag: pan · Wheel: zoom · RMB: markers",
+    "gui.pwpwarfare.map.no_markers": "No markers"
 }

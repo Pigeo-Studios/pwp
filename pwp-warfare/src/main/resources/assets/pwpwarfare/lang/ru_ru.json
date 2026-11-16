@@ -350,5 +350,14 @@
     "gui.pwpwarfare.radial.cost": "%s мат.",
     "gui.pwpwarfare.radial.cooldown": "%s с",
     "gui.pwpwarfare.radial.materials": "Материалы: %s",
-    "gui.pwpwarfare.radial.materials_of": "Материалы: %s / %s"
+    "gui.pwpwarfare.radial.materials_of": "Материалы: %s / %s",
+    "gui.pwpwarfare.map.no_data": "Нет данных карты матча",
+    "gui.pwpwarfare.map.zoom": "Зум %s",
+    "gui.pwpwarfare.map.scale": "%s м",
+    "gui.pwpwarfare.map.north": "С",
+    "gui.pwpwarfare.map.title": "Карта",
+    "gui.pwpwarfare.map.vehicles": "Техника",
+    "gui.pwpwarfare.map.no_vehicles": "Нет спавнеров техники",
+    "gui.pwpwarfare.map.controls": "ЛКМ: сдвиг · Колесо: зум · ПКМ: маркеры",
+    "gui.pwpwarfare.map.no_markers": "Нет маркеров"
 }

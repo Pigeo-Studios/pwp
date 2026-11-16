@@ -10,11 +10,15 @@ import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.ModKeyBindings;
+import com.pigeostudios.pwp.warfare.client.gui.map.MapHud;
+import com.pigeostudios.pwp.warfare.client.gui.map.MapLayers;
+import com.pigeostudios.pwp.warfare.client.gui.map.MapView;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -137,22 +141,34 @@ public class SquadMapRenderer {
         return mx >= mapX && mx <= mapX + mapWidth && my >= mapY && my <= mapY + mapHeight;
     }
 
+    /** Проекция текущего кадра (общая для всех слоёв). */
+    public MapView view(LocalPlayer p) {
+        double bpp = effectiveScale();
+        if (bpp <= 0) bpp = 1.0;
+        return new MapView(Rect.of(mapX, mapY, mapWidth, mapHeight), p.getX() + panX, p.getZ() + panZ, bpp);
+    }
+
+    /**
+     * Карта по слоям (порядок фиксирован, каждый слой — один раз): подложка → текстура → сетка →
+     * маска вне зоны и линия границы → подписи квадратов → постройки/техника/игроки/маркеры/пути →
+     * HUD (рамка, координаты, масштаб, компас).
+     */
     public void render(GuiGraphics g, int mx, int my, float pt) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
-        double bpp = effectiveScale();
-        if (bpp <= 0) bpp = 1.0;
-        double cx = p.getX() + panX;
-        double cz = p.getZ() + panZ;
+        MapView v = view(p);
+        double bpp = v.bpp();
+        double cx = v.centerX();
+        double cz = v.centerZ();
+        var font = Minecraft.getInstance().font;
 
-        renderTopBar(g, mx, my, cx, cz);
-        drawFrame(g);
-        g.fill(mapX, mapY, mapX + mapWidth, mapY + mapHeight, 0xFF1A1E1A);
         g.enableScissor(mapX, mapY, mapX + mapWidth, mapY + mapHeight);
+        MapLayers.background(g, v);
+        MapLayers.tiles(g, v);
+        MapLayers.grid(g, v);
+        MapLayers.bounds(g, v, System.currentTimeMillis());
+        MapLayers.labels(g, font, v);
 
-        renderMapTexture(g, cx, cz, bpp);
-        drawGrid(g, cx, cz);
-        drawLabels(g, cx, cz);
         renderLatticeLines(g, cx, cz, bpp);
         renderOverlays(g, cx, cz, bpp);
         renderMainBases(g, cx, cz, bpp);
@@ -168,135 +184,17 @@ public class SquadMapRenderer {
         drawPath(g, cx, cz);
         drawPreview(g, cx, cz);
 
+        MapLayers.noMap(g, font, v);
+        MapHud.frame(g, v);
+        MapHud.readout(g, font, v, mx, my);
+        MapHud.scaleBar(g, font, v);
+        MapHud.compass(g, font, v);
         g.disableScissor();
-    }
-
-    private void renderMapTexture(GuiGraphics g, double cx, double cz, double bpp) {
-        ResourceLocation tex = getCurrentMapTexture();
-        int s = ClientData.mapSizeBlocks;
-        float drawX = (float) (mapX + mapWidth / 2.0 + (ClientData.mapCenterX - s / 2.0 - cx) / bpp);
-        float drawY = (float) (mapY + mapHeight / 2.0 + (ClientData.mapCenterZ - s / 2.0 - cz) / bpp);
-        int texSize = (int) (s / bpp);
-        setFilter(tex, true);
-        RenderSystem.setShaderTexture(0, tex);
-        RenderSystem.setShaderColor(1, 1, 1, 1);
-        g.blit(tex, (int) drawX, (int) drawY, texSize, texSize, 0, 0, 1024, 1024, 1024, 1024);
-        setFilter(tex, false);
-    }
-
-    private ResourceLocation getCurrentMapTexture() {
-        String img = ClientData.currentMapImage;
-        if (img == null || img.isEmpty()) img = "map1";
-        return MAP_ICONS_CACHE.computeIfAbsent(
-                img, k -> new ResourceLocation("pwpwarfare", "textures/gui/maps/" + k + ".png"));
     }
 
     private void setFilter(ResourceLocation tex, boolean smooth) {
         var t = Minecraft.getInstance().getTextureManager().getTexture(tex);
         if (t != null) t.setFilter(smooth, false);
-    }
-
-    private void renderTopBar(GuiGraphics g, int mx, int my, double cx, double cz) {
-        var f = Minecraft.getInstance().font;
-        String kp = "--";
-        if (inMap(mx, my)) {
-            double wx = cx + (mx - (mapX + mapWidth / 2.0)) * effectiveScale();
-            double wz = cz + (my - (mapY + mapHeight / 2.0)) * effectiveScale();
-            kp = getKP(wx, wz);
-        }
-        String zt = String.format("Z:%.1f", effectiveScale());
-        String text = kp + "  " + zt;
-        int tw = f.width(text) + 8;
-        int th = 14;
-        g.fill(mapX + 2, mapY + 2, mapX + 2 + tw, mapY + 2 + th, 0xAA06080A);
-        g.drawString(f, text, mapX + 4, mapY + 4, 0xFFFFFF, false);
-    }
-
-    private void drawFrame(GuiGraphics g) {
-        int c = 0xFF555555;
-        g.hLine(mapX - 1, mapX + mapWidth, mapY - 1, c);
-        g.hLine(mapX - 1, mapX + mapWidth, mapY + mapHeight, c);
-        g.vLine(mapX - 1, mapY - 1, mapY + mapHeight, c);
-        g.vLine(mapX + mapWidth, mapY - 1, mapY + mapHeight, c);
-    }
-
-    private void drawGrid(GuiGraphics g, double cx, double cz) {
-        double halfX = mapWidth / 2.0 * effectiveScale();
-        double halfZ = mapHeight / 2.0 * effectiveScale();
-        long xS = (long) (cx - halfX) - 1200;
-        long xE = (long) (cx + halfX) + 1200;
-        long zS = (long) (cz - halfZ) - 1200;
-        long zE = (long) (cz + halfZ) + 1200;
-        long gOriginX = Math.floorDiv((long) (ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        long gOriginZ = Math.floorDiv((long) (ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        gridLines(g, 300, 2, 0x30FFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
-        if (effectiveScale() <= 2.2) {
-            int a100 = (int) (24 * Math.min(1, Math.max(0, (2.2 - effectiveScale()) / 0.4)));
-            gridLines(g, 100, 1, (a100 << 24) | 0xFFFFFF, xS, xE, zS, zE, cx, cz, gOriginX, gOriginZ);
-        }
-    }
-
-    private void gridLines(
-            GuiGraphics g,
-            long step,
-            int w,
-            int col,
-            long xS,
-            long xE,
-            long zS,
-            long zE,
-            double cx,
-            double cz,
-            long gOriginX,
-            long gOriginZ) {
-        long s = Math.floorDiv(xS - gOriginX, step) * step + gOriginX;
-        for (long v = s; v < xE; v += step) {
-            int sx = toScreenX(v, cx);
-            if (sx >= mapX && sx <= mapX + mapWidth) g.fill(sx, mapY, sx + w, mapY + mapHeight, col);
-        }
-        s = Math.floorDiv(zS - gOriginZ, step) * step + gOriginZ;
-        for (long v = s; v < zE; v += step) {
-            int sy = toScreenZ(v, cz);
-            if (sy >= mapY && sy <= mapY + mapHeight) g.fill(mapX, sy, mapX + mapWidth, sy + w, col);
-        }
-    }
-
-    private void drawLabels(GuiGraphics g, double cx, double cz) {
-        drawTopLabels(g, cx, cz);
-        drawLeftLabels(g, cx, cz);
-    }
-
-    private void drawTopLabels(GuiGraphics g, double cx, double cz) {
-        var f = Minecraft.getInstance().font;
-        long gOriginX = Math.floorDiv((long) (ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        double halfX = mapWidth / 2.0 * effectiveScale();
-        long s = Math.floorDiv((long) (cx - halfX) - gOriginX, 300L);
-        long e = Math.floorDiv((long) (cx + halfX) - gOriginX, 300L);
-        for (long i = s; i <= e; i++) {
-            int px = toScreenX(gOriginX + i * 300L + 150, cx);
-            if (px < mapX + 10 || px > mapX + mapWidth - 10) continue;
-            String t = toAlpha(i);
-            if ("?".equals(t)) continue;
-            int bw = f.width(t) + 6;
-            g.fill(px - bw / 2, mapY + 1, px + bw / 2, mapY + 13, 0xCC000000);
-            g.drawString(f, t, px - f.width(t) / 2, mapY + 3, 0xCCFFFFFF, false);
-        }
-    }
-
-    private void drawLeftLabels(GuiGraphics g, double cx, double cz) {
-        var f = Minecraft.getInstance().font;
-        long gOriginZ = Math.floorDiv((long) (ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        double halfZ = mapHeight / 2.0 * effectiveScale();
-        long s = Math.floorDiv((long) (cz - halfZ) - gOriginZ, 300L);
-        long e = Math.floorDiv((long) (cz + halfZ) - gOriginZ, 300L);
-        for (long i = s; i <= e; i++) {
-            int py = toScreenZ(gOriginZ + i * 300L + 150, cz);
-            if (py < mapY + 10 || py > mapY + mapHeight - 10) continue;
-            String t = String.valueOf(i + 1);
-            int bw = f.width(t) + 6;
-            g.fill(mapX + 2, py - 6, mapX + 2 + bw, py + 6, 0xCC000000);
-            g.drawString(f, t, mapX + 5, py - 4, 0xCCFFFFFF, false);
-        }
     }
 
     private void renderLatticeLines(GuiGraphics g, double cx, double cz, double bpp) {
@@ -1605,50 +1503,12 @@ public class SquadMapRenderer {
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
-    private void drawCompassRose(GuiGraphics g) {
-        int cx = mapX + mapWidth - 70, cy = mapY + mapHeight - 66;
-        g.blit(ICON_COMPASS, cx, cy, 0, 0, 64, 64, 64, 64);
-    }
-
-    private void drawCompass(GuiGraphics g, double cx, double cz) {
-        int y = mapY + mapHeight + 4, mid = mapX + mapWidth / 2;
-        var p = Minecraft.getInstance().player;
-        if (p == null) return;
-        g.fill(mapX, y, mapX + mapWidth, y + 16, 0xCC06080A);
-        long now = Minecraft.getInstance().level != null
-                ? Minecraft.getInstance().level.getGameTime()
-                : 0;
-        for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
-            double dx = m.pos.getX() + 0.5 - p.getX(), dz = m.pos.getZ() + 0.5 - p.getZ();
-            double bearing = Math.toDegrees(Math.atan2(dx, dz));
-            double rel = (bearing - p.getYRot() + 540) % 360 - 180;
-            if (rel < -90 || rel > 90) continue;
-            int cx2 = mid + (int) (rel / 90.0 * (mapWidth / 2.0));
-            float alpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
-            RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, alpha);
-            g.blit(icon(m.iconType, m.team), cx2 - 5, y + 3, 0, 0, 10, 10, 10, 10);
-            RenderSystem.setShaderColor(1, 1, 1, 1);
-        }
-    }
-
     public static String toAlpha(long n) {
-        if (n < 0) return "?";
-        var sb = new StringBuilder();
-        while (true) {
-            sb.insert(0, (char) ('A' + (int) (n % 26)));
-            if (n < 26) break;
-            n = n / 26 - 1;
-        }
-        return sb.toString();
+        return MapView.column(n);
     }
 
     public static String getKP(double wx, double wz) {
-        long gOriginX = Math.floorDiv((long) (ClientData.mapCenterX - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        long gOriginZ = Math.floorDiv((long) (ClientData.mapCenterZ - ClientData.mapSizeBlocks / 2.0), 300L) * 300L;
-        long col = Math.floorDiv((long) wx - gOriginX, 300L);
-        long row = Math.floorDiv((long) wz - gOriginZ, 300L) + 1;
-        return toAlpha(col) + row;
+        return MapView.kp(wx, wz);
     }
 
     public static String distStr(double m) {

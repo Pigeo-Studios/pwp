@@ -149,4 +149,57 @@ public final class WTheme {
     public static final int ORDER_ATTACK = Colors.ACCENT;
     public static final int ORDER_DEFEND = 0xFF6F9BD8;
     public static final int ORDER_BUILD = 0xFFD86F9B;
+
+    // ------------------------------------------------------------ тактическая карта
+    public static final int MAP_BG = 0xFF101411;
+    public static final int MAP_BG_NOISE = 0x40FFFFFF;
+    /** Сетка: квадраты 300 (сплошные) и 100 (пунктир, появляется при приближении). */
+    public static final int MAP_GRID_MAJOR = 0x38FFFFFF;
+
+    public static final int MAP_GRID_MINOR = 0x1CFFFFFF;
+    public static final double MAP_SUBGRID_MAX_BPP = 2.2;
+    public static final double MAP_SUBGRID_FADE = 0.4;
+    public static final int MAP_DASH = 2;
+    /** Вне играбельной зоны: маска, цвет у самого края, ширина градиентной полосы. */
+    public static final int MAP_OUT_MASK = 0xC8050608;
+
+    public static final int MAP_OUT_EDGE = 0x5A050608;
+    public static final int MAP_EDGE_BAND = 14;
+    /** Линия границы зоны: свечение, линия, бегущий пунктир (длина штриха и период шага). */
+    public static final int MAP_BORDER_GLOW = 0x55C8812A;
+
+    public static final int MAP_BORDER_LINE = 0xCCC8812A;
+    public static final int MAP_BORDER_DASH_COLOR = 0xFFF0C070;
+    public static final int MAP_BORDER_DASH = 6;
+    public static final long MAP_BORDER_DASH_MS = 120L;
+    /** Подписи сетки и плашки HUD карты. */
+    public static final int MAP_LABEL_BG = 0xB0060809;
+
+    public static final int MAP_LABEL_BORDER = 0x26FFFFFF;
+    public static final int MAP_LABEL_TEXT = 0xFFE2E4E6;
+    /** Место под колонку подписей строк слева (плашка координат не наезжает). */
+    public static final int MAP_LABEL_COL_W = 18;
+    /** Шкала масштаба: целевой диапазон длины, px. */
+    public static final int MAP_SCALE_MIN_PX = 24;
+
+    public static final int MAP_SCALE_MAX_PX = 110;
+    /** Внутренняя тень по верхнему/нижнему краю карты. */
+    public static final int MAP_INNER_SHADE = 18;
+
+    public static final int MAP_INNER_SHADE_COLOR = 0x50000000;
+    /** Экран карты (M): ширины боковых панелей (доля и пределы). */
+    public static final float MAP_LEFT_FRACTION = 0.2F;
+
+    public static final float MAP_RIGHT_FRACTION = 0.17F;
+    public static final int MAP_SIDE_MIN_W = 96;
+    public static final int MAP_LEFT_MAX_W = 220;
+    public static final int MAP_RIGHT_MAX_W = 190;
+    /** Сетка тактических маркеров. */
+    public static final float MARKER_PANEL_FRACTION = 0.6F;
+
+    public static final int MARKER_PANEL_MIN_W = 200;
+    public static final int MARKER_PANEL_MAX_W = 460;
+    public static final int MARKER_CARD_MIN_W = 72;
+    public static final int MARKER_CARD_H = 56;
+    public static final int MARKER_COLS_MAX = 5;
 }

@@ -1,8 +1,11 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketPlaceMarker;
 import com.pigeostudios.pwp.warfare.network.PacketPlacePath;
@@ -15,6 +18,13 @@ import com.pwp.api.util.Parse;
 import com.pwp.coreclient.gui.components.PWPButton;
 import com.pwp.coreclient.gui.components.PWPContextMenu;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.ui.UIBackdrop;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Fit;
+import com.pwp.coreclient.ui.layout.Flow;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,10 +41,8 @@ import net.minecraft.resources.ResourceLocation;
 
 public class SquadMapScreen extends Screen {
 
-    private static final int LEFT_PANEL_W = 180;
-    private static final int RIGHT_PANEL_W = 155;
-    private static final int TOP_BAR_H = 32;
-    private static final int BOTTOM_BAR_H = 18;
+    /** Геометрия экрана: панели и область карты (одна функция для рисования и кликов). */
+    private record Layout(Rect top, Rect bottom, Rect left, Rect squadList, Rect createRow, Rect right, Rect map) {}
 
     private final SquadMapRenderer map = new SquadMapRenderer();
     private final SquadContextMenu ctx = new SquadContextMenu();
@@ -60,23 +68,24 @@ public class SquadMapScreen extends Screen {
     }
 
     public SquadMapScreen(Screen parent) {
-        super(Component.literal("Map"));
+        super(Component.translatable("gui.pwpwarfare.map.title"));
         this.parent = parent;
     }
 
     @Override
     protected void init() {
         super.init();
-        int availW = width - LEFT_PANEL_W - RIGHT_PANEL_W;
-        int availH = height - TOP_BAR_H - BOTTOM_BAR_H;
-        mMapW = availW - 4;
-        mMapH = availH - 4;
-        mX = LEFT_PANEL_W + 2;
-        mY = TOP_BAR_H + 2;
+        Rect mapRect = layout().map();
+        mX = mapRect.x();
+        mY = mapRect.y();
+        mMapW = mapRect.w();
+        mMapH = mapRect.h();
         map.init(mX, mY, mMapW, mMapH);
 
-        squadInput = addRenderableWidget(new EditBox(PWPTheme.Fonts.display(), 0, 0, 90, 16, Component.literal("")));
+        squadInput = addRenderableWidget(new EditBox(font, 0, 0, 90, WTheme.FIELD_H, Component.empty()));
         squadInput.setMaxLength(12);
+        squadInput.setBordered(false);
+        squadInput.setHint(Component.translatable("gui.pwpwarfare.deploy.squad.name_hint"));
         squadInput.setVisible(false);
 
         createSquadBtn = addRenderableWidget(new PWPButton(
@@ -84,7 +93,7 @@ public class SquadMapScreen extends Screen {
                 0,
                 50,
                 18,
-                Component.literal("Создать"),
+                Component.translatable("gui.pwpwarfare.deploy.squad.create"),
                 b -> {
                     String n = squadInput.getValue().trim();
                     if (!n.isEmpty()) {
@@ -98,16 +107,16 @@ public class SquadMapScreen extends Screen {
         applyCmdBtn = addRenderableWidget(new PWPButton(
                 4,
                 2,
-                LEFT_PANEL_W - 8,
+                Spacing.BUTTON_WIDTH,
                 16,
-                Component.literal("Стать командиром"),
+                Component.translatable("gui.pwpwarfare.deploy.squad.apply_cmd"),
                 b -> {
                     PacketHandler.INSTANCE.sendToServer(new PacketRequestCMD());
                     b.visible = false;
                     Minecraft.getInstance()
                             .player
                             .displayClientMessage(
-                                    Component.literal("Запрос отправлен командирам взводов")
+                                    Component.translatable("gui.pwpwarfare.deploy.squad.apply_cmd_sent")
                                             .withStyle(ChatFormatting.GREEN),
                                     true);
                 },
@@ -130,59 +139,103 @@ public class SquadMapScreen extends Screen {
                 }
             }
         }
-        // Position EditBox in the left panel
-        if (squadInput != null && !SquadUIHelper.isPlayerInSquad()) {
-            int listTop = applyCmdBtn != null && applyCmdBtn.visible ? 20 : 2;
-            int by = height - 52;
-            squadInput.setX(4);
-            squadInput.setWidth(110);
-            squadInput.setY(by + 12);
-            squadInput.setVisible(true);
-            createSquadBtn.setX(120);
-            createSquadBtn.setY(by + 11);
-            createSquadBtn.visible = true;
-        } else if (squadInput != null) {
-            squadInput.setVisible(false);
-            createSquadBtn.visible = false;
-        }
     }
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float pt) {
-        g.fill(0, 0, width, height, 0xCC06080A);
-        renderLeftPanel(g, mx, my);
-        renderTopBar(g, mx, my);
+        Layout l = layout();
+        UIBackdrop.overlay(g, width, height, UIBackdrop.Shade.NONE);
+        renderTopBar(g, l);
+        renderLeftPanel(g, l, mx, my);
         map.tickAnim();
         map.render(g, mx, my, pt);
-        renderRightPanel(g, mx, my);
-        renderBottomBar(g);
+        renderRightPanel(g, l, mx, my);
+        renderBottomBar(g, l);
         if (ctx.visible) ctx.render(g, mx, my);
         if (contextMenu.isVisible()) contextMenu.render(g, mx, my);
-        if (pathActive) g.drawString(font, "LMB / Enter: place | ESC: cancel", 10, height - 14, 0x44FF44, true);
+        if (pathActive) {
+            Rect hint =
+                    l.map().bottomStrip(font.lineHeight + Spacing.SM).inset(Spacing.XXL, 0, Spacing.XXL, Spacing.XS);
+            UIDraw.rect(g, hint, PWPTheme.Styles.Tooltip.BG);
+            WDraw.text(
+                    g,
+                    font,
+                    Component.translatable("gui.pwpwarfare.deploy.map.path_hint"),
+                    hint,
+                    Align.CENTER,
+                    WTheme.STATUS_OK,
+                    true,
+                    1F);
+        }
         super.render(g, mx, my, pt);
     }
 
-    private void renderLeftPanel(GuiGraphics g, int mx, int my) {
-        g.fill(0, 0, LEFT_PANEL_W, height, 0xCC0A0C10);
-        g.vLine(LEFT_PANEL_W - 1, 0, height, 0xFF444444);
+    private Layout layout() {
+        Fit.Density d = Fit.Density.of(width, height);
+        int margin = Fit.fraction(width, WTheme.MARGIN_FRACTION, WTheme.MARGIN_MIN, WTheme.MARGIN_MAX);
+        int topH = d.pick(Spacing.TOP_BAR_H_COMPACT, Spacing.TOP_BAR_H, Spacing.TOP_BAR_H_LARGE);
+        int botH = d.pick(Spacing.FOOTER_H_COMPACT, Spacing.FOOTER_H, Spacing.FOOTER_H);
+        Rect screen = Rect.screen(width, height);
+        Rect top = screen.top(topH);
+        Rect bottom = screen.bottomStrip(botH);
+        Rect body = Rect.of(
+                margin, top.bottom() + WTheme.GAP, width - 2 * margin, bottom.y() - top.bottom() - 2 * WTheme.GAP);
+        int leftW = Fit.fraction(width, WTheme.MAP_LEFT_FRACTION, WTheme.MAP_SIDE_MIN_W, WTheme.MAP_LEFT_MAX_W);
+        int rightW = Fit.fraction(width, WTheme.MAP_RIGHT_FRACTION, WTheme.MAP_SIDE_MIN_W, WTheme.MAP_RIGHT_MAX_W);
+        Rect[] cols = Flow.row(body, WTheme.GAP, Flow.Justify.START, leftW, Flow.flex(1), rightW);
+        int headerH = WDraw.headerHeight(height);
+        Rect leftIn = cols[0].inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
+        boolean create = Minecraft.getInstance().player != null && !SquadUIHelper.isPlayerInSquad();
+        Rect[] lc = Flow.column(leftIn, Spacing.XS, Flow.Justify.START, Flow.flex(1), create ? WTheme.FIELD_H : 0);
+        // карта — квадрат по центру средней колонки
+        int sz = Math.max(0, Math.min(cols[1].w(), cols[1].h()));
+        Rect mapRect = cols[1].centered(sz, sz);
+        return new Layout(top, bottom, cols[0], lc[0], lc[1], cols[2], mapRect);
+    }
 
-        int listTop = 2;
-        if (applyCmdBtn != null && applyCmdBtn.visible) listTop = 20;
-        int listBottom = height - 55;
+    private static int squadDx(Rect list) {
+        return list.x() - 5 + Spacing.XXS;
+    }
 
-        g.enableScissor(0, listTop, LEFT_PANEL_W, listBottom);
-        SquadUIHelper.renderSquadList(g, mx, my, expandedSquads, SquadUIHelper.isApplyCmdVisible());
+    private void renderLeftPanel(GuiGraphics g, Layout l, int mx, int my) {
+        WDraw.panel(
+                g,
+                font,
+                l.left(),
+                WDraw.headerHeight(height),
+                WarfareIcon.SQUAD,
+                Component.translatable("gui.pwpwarfare.deploy.squads.title"),
+                Component.literal(String.valueOf(ClientData.clientSquads.size())),
+                1F);
+        Rect list = l.squadList();
+        boolean applyVisible = SquadUIHelper.isApplyCmdVisible();
+        if (applyCmdBtn != null) {
+            applyCmdBtn.setX(list.x());
+            applyCmdBtn.setY(list.y() + Spacing.XXS);
+            applyCmdBtn.setWidth(Math.min(list.w(), Spacing.BUTTON_WIDTH + Spacing.XXL));
+        }
+        int dx = squadDx(list);
+        g.enableScissor(list.x(), list.y(), list.right(), list.bottom());
+        g.pose().pushPose();
+        g.pose().translate(dx, list.y(), 0);
+        SquadUIHelper.renderSquadList(g, mx - dx, my - list.y(), expandedSquads, applyVisible);
+        g.pose().popPose();
         g.disableScissor();
 
-        if (!SquadUIHelper.isPlayerInSquad()) {
-            int by = height - 52;
-            g.drawString(font, Component.literal("СОЗДАТЬ ОТРЯД"), 4, by, PWPTheme.Colors.ACCENT, false);
-            squadInput.setX(4);
-            squadInput.setWidth(110);
-            squadInput.setY(by + 12);
+        Rect row = l.createRow();
+        if (row.h() > 0) {
+            int bw = Math.min(createSquadBtn.getWidth(), row.w() / 2);
+            Rect[] parts = Flow.row(row, Spacing.XS, Flow.Justify.START, Flow.flex(1), bw);
+            WDraw.field(g, parts[0], squadInput.isFocused(), 1F);
+            int ty = parts[0].y() + (parts[0].h() - font.lineHeight) / 2 + 1;
+            squadInput.setX(parts[0].x() + Spacing.XS);
+            squadInput.setY(ty);
+            squadInput.setWidth(Math.max(1, parts[0].w() - 2 * Spacing.XS));
             squadInput.setVisible(true);
-            createSquadBtn.setX(120);
-            createSquadBtn.setY(by + 11);
+            createSquadBtn.setX(parts[1].x());
+            createSquadBtn.setY(parts[1].y());
+            createSquadBtn.setWidth(parts[1].w());
+            createSquadBtn.setHeight(parts[1].h());
             createSquadBtn.visible = true;
         } else {
             squadInput.setVisible(false);
@@ -190,70 +243,103 @@ public class SquadMapScreen extends Screen {
         }
     }
 
-    private void renderTopBar(GuiGraphics g, int mx, int my) {
-        int barX = LEFT_PANEL_W;
-        int barW = width - LEFT_PANEL_W - RIGHT_PANEL_W;
-        g.fill(barX, 0, barX + barW, TOP_BAR_H, 0xCC0A0C10);
-        g.hLine(barX, barX + barW - 1, TOP_BAR_H - 1, 0xFF444444);
-
+    private void renderTopBar(GuiGraphics g, Layout l) {
+        Rect top = l.top();
+        UIBackdrop.bar(g, top, true);
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
-
-        String kp = SquadMapRenderer.getKP(p.getX(), p.getZ());
-        g.drawString(font, kp, barX + 6, TOP_BAR_H / 2 - 4, 0xFFAAAAAA, false);
-
+        Rect inner = top.inset(l.left().x(), 0, l.left().x(), 0);
+        // слева: квадрат игрока
+        WDraw.icon(
+                g,
+                WarfareIcon.TARGET,
+                inner.x(),
+                inner.centerY() - WTheme.ICON_ROW / 2,
+                WTheme.ICON_ROW,
+                PWPTheme.Colors.ACCENT);
+        WDraw.text(
+                g,
+                font,
+                Component.literal(SquadMapRenderer.getKP(p.getX(), p.getZ())),
+                inner.inset(WTheme.ICON_ROW + Spacing.XS, 0, inner.w() / 2, 0),
+                Align.START,
+                PWPTheme.Text.HEADING,
+                true,
+                1F);
+        // центр: флаг, тикеты, время матча
         String team = SquadUIHelper.getPlayerTeam().toUpperCase();
-        int tickets = team.contains("BLUE") ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
-        String faction = team.contains("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
-        ResourceLocation flagTex = faction != null && !faction.equalsIgnoreCase("none")
-                ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png")
-                : null;
-
-        int flagW = 22, flagH = 13;
-        String ticketStr = String.valueOf(tickets);
-        int ticketW = font.width(ticketStr);
-        int ctrX = barX + barW / 2 - (flagW + 6 + 12 + 6 + ticketW + 20 + font.width("00:00")) / 2;
-
-        if (flagTex != null) g.blit(flagTex, ctrX, TOP_BAR_H / 2 - flagH / 2, flagW, flagH, 0, 0, 64, 36, 64, 36);
-        RenderSystem.enableBlend();
-        g.blit(TICKET_ICON, ctrX + flagW + 6, TOP_BAR_H / 2 - 6, 12, 12, 0, 0, 16, 16, 16, 16);
-        g.drawString(font, ticketStr, ctrX + flagW + 6 + 12 + 6, TOP_BAR_H / 2 - 4, 0xFFFFFF, true);
-
+        boolean blue = team.contains("BLUE");
+        int tickets = blue ? ClientData.BLUE_TICKETS : ClientData.RED_TICKETS;
+        ResourceLocation flag = TeamRoster.flag(blue ? ClientData.BLUE_FACTION : ClientData.RED_FACTION);
         long elapsed =
                 ClientData.matchStartTime > 0 ? (System.currentTimeMillis() - ClientData.matchStartTime) / 1000 : 0;
-        int mins = (int) (elapsed / 60);
-        int secs = (int) (elapsed % 60);
-        String timer = String.format("%d:%02d", mins, secs);
-        g.drawString(font, timer, ctrX + flagW + 6 + 12 + 6 + ticketW + 20, TOP_BAR_H / 2 - 4, 0xFFCCCCCC, false);
+        Component tk = Component.literal(String.valueOf(tickets));
+        Component timer = Component.literal(String.format("%d:%02d", elapsed / 60, elapsed % 60));
+        int fw = flag != null ? WTheme.FLAG_W + Spacing.SM : 0;
+        int total = fw
+                + WTheme.ICON_ROW
+                + Spacing.XXS
+                + font.width(tk)
+                + Spacing.LG
+                + WTheme.ICON_ROW
+                + Spacing.XXS
+                + font.width(timer);
+        int x = top.centerX() - total / 2;
+        int cy = top.centerY();
+        if (flag != null) {
+            TeamRoster.drawFlag(g, flag, Rect.of(x, cy - WTheme.FLAG_H / 2, WTheme.FLAG_W, WTheme.FLAG_H));
+            x += fw;
+        }
+        WDraw.icon(g, WarfareIcon.TICKET, x, cy - WTheme.ICON_ROW / 2, WTheme.ICON_ROW, PWPTheme.Colors.TEXT_ACCENT);
+        x += WTheme.ICON_ROW + Spacing.XXS;
+        UIDraw.text(g, font, tk, x, cy - font.lineHeight / 2 + 1, blue ? WTheme.TEAM_BLUE : WTheme.TEAM_RED, true);
+        x += font.width(tk) + Spacing.LG;
+        WDraw.icon(g, WarfareIcon.CLOCK, x, cy - WTheme.ICON_ROW / 2, WTheme.ICON_ROW, PWPTheme.Text.MUTED);
+        x += WTheme.ICON_ROW + Spacing.XXS;
+        UIDraw.text(g, font, timer, x, cy - font.lineHeight / 2 + 1, PWPTheme.Text.BODY, true);
     }
 
-    private void renderRightPanel(GuiGraphics g, int mx, int my) {
-        int rightX = width - RIGHT_PANEL_W;
-        g.fill(rightX, TOP_BAR_H, width, height - BOTTOM_BAR_H, 0xCC0A0C10);
-        g.vLine(rightX, TOP_BAR_H, height - BOTTOM_BAR_H, 0xFF444444);
-        map.renderVehicleLegend(g, rightX + 4, TOP_BAR_H + 2, RIGHT_PANEL_W - 8, mx, my);
+    private void renderRightPanel(GuiGraphics g, Layout l, int mx, int my) {
+        Rect c = WDraw.panel(
+                g,
+                font,
+                l.right(),
+                WDraw.headerHeight(height),
+                WarfareIcon.VEHICLE,
+                Component.translatable("gui.pwpwarfare.map.vehicles"),
+                null,
+                1F);
+        if (ClientData.clientSpawners == null || ClientData.clientSpawners.isEmpty()) {
+            WDraw.emptyState(
+                    g,
+                    font,
+                    c,
+                    WarfareIcon.VEHICLE,
+                    Component.translatable("gui.pwpwarfare.map.no_vehicles"),
+                    null,
+                    1F);
+            return;
+        }
+        g.enableScissor(c.x(), c.y(), c.right(), c.bottom());
+        map.renderVehicleLegend(g, c.x(), c.y() - Spacing.XS - font.lineHeight - Spacing.XXS, c.w(), mx, my);
+        g.disableScissor();
     }
 
-    private void renderBottomBar(GuiGraphics g) {
-        int barX = LEFT_PANEL_W;
-        int barY = height - BOTTOM_BAR_H;
-        int barW = width - LEFT_PANEL_W - RIGHT_PANEL_W;
-        g.fill(barX, barY, barX + barW, height, 0xCC0A0C10);
-        g.hLine(barX, barX + barW - 1, barY, 0xFF444444);
-
-        double bpp = ClientData.mapScale;
-        int scaleDist = bpp < 1 ? 300 : bpp < 2.5 ? 200 : 100;
-        int scalePx = (int) (scaleDist / bpp);
-        int scY = barY + 4;
-        int scX = barX + 10;
-        g.fill(scX, scY, scX + scalePx, scY + 2, 0xFFFFFFFF);
-        g.fill(scX, scY, scX + 1, scY + 6, 0xFFFFFFFF);
-        g.fill(scX + scalePx, scY, scX + scalePx + 1, scY + 6, 0xFFFFFFFF);
-        String scaleTxt = scaleDist + "m";
-        g.drawString(font, scaleTxt, scX + scalePx / 2 - font.width(scaleTxt) / 2, scY + 4, 0xFFCCCCCC, false);
-
-        String mapInfo = ClientData.currentMapImage + " | " + ClientData.gameMode.toUpperCase();
-        g.drawString(font, mapInfo, barX + barW - font.width(mapInfo) - 10, scY, 0xFF888888, false);
+    private void renderBottomBar(GuiGraphics g, Layout l) {
+        Rect bar = l.bottom();
+        UIBackdrop.bar(g, bar, false);
+        String mapInfo = ClientData.currentMapImage + "  ·  " + ClientData.gameMode.toUpperCase();
+        Rect inner = bar.inset(l.left().x(), 0, l.left().x(), 0);
+        WDraw.text(g, font, Component.literal(mapInfo), inner, Align.END, PWPTheme.Text.MUTED, false, 1F);
+        WDraw.text(
+                g,
+                font,
+                Component.translatable("gui.pwpwarfare.map.controls"),
+                inner.withWidth(inner.w() / 2),
+                Align.START,
+                PWPTheme.Text.CAPTION,
+                false,
+                1F);
     }
 
     @Override
@@ -271,9 +357,15 @@ public class SquadMapScreen extends Screen {
             return true;
         }
 
-        if (btn == 0 && mx < LEFT_PANEL_W) {
+        Layout l = layout();
+        if (btn == 0 && l.left().contains(mx, my)) {
             if (super.mouseClicked(mx, my, btn)) return true;
-            SquadUIHelper.handleSquadClick(mx, my, expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
+            Rect list = l.squadList();
+            if (list.contains(mx, my)) {
+                int dx = squadDx(list);
+                SquadUIHelper.handleSquadClick(
+                        mx - dx, my - list.y(), expandedSquads, contextMenu, SquadUIHelper.isApplyCmdVisible());
+            }
             return true;
         }
 
@@ -392,9 +484,11 @@ public class SquadMapScreen extends Screen {
                         Minecraft.getInstance()
                                 .player
                                 .displayClientMessage(
-                                        Component.literal("Путь: " + (int) segLen + "м (мин "
-                                                + (int) SquadMapRenderer.PATH_MIN_LENGTH + "м, макс "
-                                                + (int) SquadMapRenderer.PATH_MAX_LENGTH + "м)"),
+                                        Component.translatable(
+                                                "gui.pwpwarfare.deploy.map.path_length",
+                                                (int) segLen,
+                                                (int) SquadMapRenderer.PATH_MIN_LENGTH,
+                                                (int) SquadMapRenderer.PATH_MAX_LENGTH),
                                         true);
                     map.previewStart = null;
                     map.previewEnd = null;
