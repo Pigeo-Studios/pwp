@@ -1,12 +1,27 @@
 package com.pwp.coreclient.gui.components;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIMath;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.List;
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
+/**
+ * Легаси-контекстное меню (API прежний) в стиле UI-кита: стеклянная плашка, пункт под курсором —
+ * подсветка + акцентная полоса. Ширина — по самому длинному пункту (не меньше 110), меню
+ * не выходит за край экрана. Новые экраны — {@link com.pwp.coreclient.ui.UIContextMenu}.
+ */
 public class PWPContextMenu {
+
+    private static final int ROW_H = 14;
+    private static final int PAD = 3;
+    private static final int MIN_W = 110;
 
     private int x, y, w, h;
     private List<String> options;
@@ -18,12 +33,17 @@ public class PWPContextMenu {
     }
 
     public void show(int mx, int my, List<String> options, Consumer<Integer> onClick) {
-        this.x = mx;
-        this.y = my;
         this.options = options;
         this.onClick = onClick;
-        this.w = 110;
-        this.h = options.size() * 14 + 6;
+        var font = PWPTheme.Fonts.display();
+        int maxText = 0;
+        for (String o : options) maxText = Math.max(maxText, font.width(o));
+        var win = Minecraft.getInstance().getWindow();
+        int sw = win.getGuiScaledWidth(), sh = win.getGuiScaledHeight();
+        this.w = Math.min(Math.max(MIN_W, maxText + 2 * Spacing.SM + Spacing.ACCENT_BAR), sw - 2 * Spacing.XS);
+        this.h = options.size() * ROW_H + 2 * PAD;
+        this.x = UIMath.keepInside(mx, w, sw, Spacing.XS);
+        this.y = UIMath.keepInside(my, h, sh, Spacing.XS);
         this.visible = true;
     }
 
@@ -38,7 +58,7 @@ public class PWPContextMenu {
     public boolean mouseClicked(double mx, double my, int button) {
         if (!visible || button != 0) return false;
         if (mx >= x && mx <= x + w && my >= y && my <= y + h) {
-            int idx = (int) ((my - y - 3) / 14);
+            int idx = (int) ((my - y - PAD) / ROW_H);
             if (idx >= 0 && idx < options.size() && onClick != null) {
                 onClick.accept(idx);
             }
@@ -51,19 +71,20 @@ public class PWPContextMenu {
 
     public void render(GuiGraphics gui, int mx, int my) {
         if (!visible || options == null) return;
-
-        gui.fill(x, y, x + w, y + h, 0xCC0E1117);
-        RoundedRect.border(gui, x, y, w, h, PWPTheme.Spacing.RADIUS_SMALL, 1, PWPTheme.Colors.BORDER_LIGHT);
-
+        Rect r = Rect.of(x, y, w, h);
+        UIDraw.glass(gui, r, 1F, true);
         var font = PWPTheme.Fonts.display();
         for (int i = 0; i < options.size(); i++) {
-            int iy = y + 3 + i * 14;
-            boolean hover = mx >= x && mx <= x + w && my >= iy && my <= iy + 12;
+            Rect row = Rect.of(x + 1, y + PAD + i * ROW_H, w - 2, ROW_H);
+            boolean hover = row.contains(mx, my);
             if (hover) {
-                gui.fill(x + 1, iy, x + w - 1, iy + 12, PWPTheme.Colors.SURFACE_LIGHT);
+                UIDraw.rect(gui, row, Styles.Control.BG_HOVER);
+                UIDraw.accentBar(gui, row.x(), row.y(), row.h(), Spacing.ACCENT_BAR, Styles.Control.ACCENT_BAR);
             }
-            int color = hover ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_SECONDARY;
-            gui.drawString(font, Component.literal(options.get(i)), x + 6, iy + 2, color, false);
+            int color = hover ? Styles.Control.TEXT_HOVER : Styles.Control.TEXT;
+            Component label = UIDraw.ellipsize(font, Component.literal(options.get(i)), row.w() - 2 * Spacing.SM);
+            UIDraw.text(
+                    gui, font, label, row.x() + Spacing.SM, row.y() + (ROW_H - font.lineHeight) / 2 + 1, color, false);
         }
     }
 }

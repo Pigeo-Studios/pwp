@@ -1,6 +1,5 @@
 package com.pwp.coreclient.gui.components;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -41,101 +40,88 @@ public class PWPMatchCard {
             ResourceLocation preview,
             boolean isCurrent,
             boolean hovered) {
-        int r = PWPTheme.Spacing.RADIUS_MEDIUM;
-        int bg = isCurrent ? 0xFF1A180E : (hovered ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
-        int border =
+        // Тактический стиль UI-кита: стеклянная карточка, полоса статуса слева, превью карты,
+        // строки с обрезкой «…» по ширине. Подписи статуса — ключи pwp_core.lobby.status.*.
+        var r = com.pwp.coreclient.ui.layout.Rect.of(x, y, w, h);
+        int statusColor =
                 switch (status) {
-                    case PLAYING -> PWPTheme.Colors.SUCCESS;
+                    case PLAYING -> PWPTheme.Colors.SUCCESS_LIGHT;
                     case STARTING, VOTING -> PWPTheme.Colors.WARNING;
                     case FULL, CLOSED -> PWPTheme.Colors.DANGER;
-                    case MAINTENANCE -> PWPTheme.Colors.INFO;
-                    default -> hovered ? PWPTheme.Colors.BORDER_FOCUS : PWPTheme.Colors.BORDER;
+                    case MAINTENANCE, RECONNECT -> PWPTheme.Colors.INFO;
+                    default -> PWPTheme.Colors.TEXT_SECONDARY;
                 };
-
-        if (isCurrent) {
-            RoundedRect.glow(gui, x, y, w, h, r, 2, PWPTheme.Shadows.ACCENT_GLOW_SMALL);
-        }
-
-        RoundedRect.fill(gui, x, y, w, h, r, bg);
-        RoundedRect.border(gui, x, y, w, h, r, 1, border);
+        PWPCard.render(
+                gui,
+                x,
+                y,
+                w,
+                h,
+                isCurrent ? PWPCard.State.SELECTED : hovered ? PWPCard.State.HOVER : PWPCard.State.DEFAULT);
+        com.pwp.coreclient.ui.UIDraw.accentBar(gui, x, y, h, PWPTheme.Spacing.ACCENT_BAR, statusColor);
 
         var font = PWPTheme.Fonts.display();
-        int imgSize = 48;
-        int imgX = x + 8;
-        int imgY = y + (h - imgSize) / 2;
-        gui.fill(imgX, imgY, imgX + imgSize, imgY + imgSize, 0xFF000000);
+        int pad = PWPTheme.Spacing.SM;
+        int imgSize = Math.max(0, Math.min(48, h - 2 * pad));
+        var img = com.pwp.coreclient.ui.layout.Rect.of(
+                x + pad + PWPTheme.Spacing.ACCENT_BAR, y + (h - imgSize) / 2, imgSize, imgSize);
+        com.pwp.coreclient.ui.UIDraw.rect(gui, img, PWPTheme.Styles.Control.BG_PRESSED);
+        if (preview != null) com.pwp.coreclient.ui.UIDraw.image(gui, preview, img.inset(1), 0xFFFFFFFF);
+        com.pwp.coreclient.ui.UIDraw.outline(gui, img, PWPTheme.Styles.Control.BORDER);
 
-        if (preview != null) {
-            RenderSystem.setShaderColor(1, 1, 1, 1);
-            gui.blit(preview, imgX + 1, imgY + 1, 0, 0, imgSize - 2, imgSize - 2, imgSize - 2, imgSize - 2);
+        int textX = img.right() + pad;
+        int textW = Math.max(0, x + w - textX - pad);
+        int ly = y + pad - 2;
+        int step = font.lineHeight + PWPTheme.Spacing.XXS;
+        com.pwp.coreclient.ui.UIDraw.text(
+                gui,
+                font,
+                com.pwp.coreclient.ui.UIDraw.ellipsize(font, Component.literal(title), textW),
+                textX,
+                ly,
+                PWPTheme.Text.HEADING,
+                true);
+        ly += step;
+        String meta = mode + "  ·  " + duration + "  ·  " + currentPlayers + "/" + maxPlayers;
+        com.pwp.coreclient.ui.UIDraw.text(
+                gui,
+                font,
+                com.pwp.coreclient.ui.UIDraw.ellipsize(font, Component.literal(meta), textW),
+                textX,
+                ly,
+                PWPTheme.Text.MUTED,
+                false);
+        ly += step;
+        Component sides = Component.literal(blueFaction)
+                .withStyle(s -> s.withColor(PWPTheme.Colors.TEAM_BLUE & 0xFFFFFF))
+                .append(Component.literal(" vs ")
+                        .withStyle(s -> s.withColor(PWPTheme.Colors.TEXT_SECONDARY & 0xFFFFFF)))
+                .append(Component.literal(redFaction).withStyle(s -> s.withColor(PWPTheme.Colors.TEAM_RED & 0xFFFFFF)));
+        com.pwp.coreclient.ui.UIDraw.text(
+                gui,
+                font,
+                com.pwp.coreclient.ui.UIDraw.ellipsize(font, sides, textW),
+                textX,
+                ly,
+                PWPTheme.Text.MUTED,
+                false);
+        ly += step;
+        if ((status == Status.PLAYING || status == Status.FINISHED) && ly + font.lineHeight <= y + h - pad) {
+            com.pwp.coreclient.ui.UIDraw.text(
+                    gui,
+                    font,
+                    Component.literal(blueTickets + " : " + redTickets),
+                    textX,
+                    ly,
+                    PWPTheme.Text.MUTED,
+                    false);
         }
-
-        int textX = imgX + imgSize + 12;
-        int textMaxW = x + w - textX - 8;
-        int ly = y + 6;
-
-        gui.drawString(font, Component.literal(title), textX, ly, 0xFFFFFF, false);
-        ly += 11;
-
-        String meta = mode + "  |  " + duration + "  |  " + currentPlayers + "/" + maxPlayers;
-        gui.drawString(font, Component.literal(meta), textX, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
-        ly += 11;
-
-        String fStr = "\u00a79" + blueFaction + " \u00a77vs \u00a7c" + redFaction;
-        if (font.width(fStr) > textMaxW) {
-            fStr = font.plainSubstrByWidth(fStr, textMaxW - 4) + "...";
-        }
-        gui.drawString(font, Component.literal(fStr), textX, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
-        ly += 11;
-
-        String tStr = "\u00a79" + blueTickets + " \u00a77| \u00a7c" + redTickets;
-        if (status == Status.PLAYING || status == Status.FINISHED) {
-            gui.drawString(font, Component.literal(tStr), textX, ly, PWPTheme.Colors.TEXT_SECONDARY, false);
-        }
-
-        String actionText;
-        int actionColor;
-        switch (status) {
-            case PLAYING -> {
-                actionText = "\u25B6 Войти";
-                actionColor = PWPTheme.Colors.TEXT_ACCENT;
-            }
-            case STARTING -> {
-                actionText = "\u23F3 Запуск...";
-                actionColor = PWPTheme.Colors.TEXT_DIM;
-            }
-            case FULL -> {
-                actionText = "\u2716 ПОЛНЫЙ";
-                actionColor = PWPTheme.Colors.DANGER;
-            }
-            case CLOSED -> {
-                actionText = "\u2716 Закрыт";
-                actionColor = PWPTheme.Colors.DANGER;
-            }
-            case MAINTENANCE -> {
-                actionText = "\u2699 Обслуживание";
-                actionColor = PWPTheme.Colors.INFO;
-            }
-            case RECONNECT -> {
-                actionText = "\u21BA Переподключение...";
-                actionColor = PWPTheme.Colors.INFO;
-            }
-            case VOTING -> {
-                actionText = "\u2714 Голосование";
-                actionColor = PWPTheme.Colors.WARNING;
-            }
-            case WAITING -> {
-                actionText = "\u23F3 Ожидание...";
-                actionColor = PWPTheme.Colors.TEXT_DIM;
-            }
-            default -> {
-                actionText = "";
-                actionColor = PWPTheme.Colors.TEXT_DIM;
-            }
-        }
-
-        if (!actionText.isEmpty()) {
-            gui.drawString(font, actionText, textX, y + h - 13, actionColor, false);
+        Component action =
+                Component.translatable("pwp_core.lobby.status." + status.name().toLowerCase());
+        int aw = font.width(action);
+        if (aw < textW / 2) {
+            com.pwp.coreclient.ui.UIDraw.text(
+                    gui, font, action, x + w - pad - aw, y + h - pad - font.lineHeight + 1, statusColor, false);
         }
     }
 

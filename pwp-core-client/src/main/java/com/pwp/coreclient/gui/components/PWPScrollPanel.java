@@ -134,18 +134,22 @@ public class PWPScrollPanel {
         return false;
     }
 
+    /** Скроллбар в стиле UI-кита: тонкий трек и акцентный ползунок с хайлайтом. */
     public void renderScrollbar(GuiGraphics gui) {
         if (scrollMax <= 0) return;
         int sbX = x + width - SCROLLBAR_WIDTH - SCROLLBAR_MARGIN;
         int sbY = y + SCROLLBAR_MARGIN;
         int sbH = viewportHeight - SCROLLBAR_MARGIN * 2;
-
-        gui.fill(sbX, sbY, sbX + SCROLLBAR_WIDTH, sbY + sbH, PWPTheme.Colors.SURFACE_DIM);
-
+        com.pwp.coreclient.ui.UIDraw.rect(
+                gui,
+                com.pwp.coreclient.ui.layout.Rect.of(sbX, sbY, SCROLLBAR_WIDTH, sbH),
+                PWPTheme.Styles.Loader.TRACK);
         int thumbH = getThumbHeight(sbH);
         int thumbY = sbY + (int) ((scrollOffset / scrollMax) * (sbH - thumbH));
-        gui.fill(sbX, thumbY, sbX + SCROLLBAR_WIDTH, thumbY + thumbH, PWPTheme.Colors.ACCENT);
-        gui.fill(sbX, thumbY, sbX + SCROLLBAR_WIDTH - 1, thumbY + thumbH - 1, PWPTheme.Colors.ACCENT_SOFT);
+        int color = dragging ? PWPTheme.Styles.ScrollBar.THUMB_HOVER : PWPTheme.Styles.ScrollBar.THUMB;
+        com.pwp.coreclient.ui.UIDraw.rect(
+                gui, com.pwp.coreclient.ui.layout.Rect.of(sbX, thumbY, SCROLLBAR_WIDTH, thumbH), color);
+        com.pwp.coreclient.ui.UIDraw.hline(gui, sbX, sbX + SCROLLBAR_WIDTH, thumbY, PWPTheme.Styles.Glass.HIGHLIGHT);
     }
 
     private int getThumbHeight(int trackHeight) {

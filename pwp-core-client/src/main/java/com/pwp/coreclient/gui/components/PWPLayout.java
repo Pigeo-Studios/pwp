@@ -2,10 +2,20 @@ package com.pwp.coreclient.gui.components;
 
 import com.pwp.coreclient.gui.theme.PWPIcons;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Fit;
+import com.pwp.coreclient.ui.layout.Grid;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
 
+/**
+ * Легаси-хелперы раскладки (API прежний). Расчёты — через pwp-logic ({@link Fit}, {@link Grid}),
+ * шапка/подвал/разделитель — в тактическом стиле UI-кита (заголовок с тенью и акцентным
+ * подчёркиванием по ширине текста, обрезка «…» по ширине экрана). Новые экраны —
+ * {@code ui.layout.Rect/Flow/Grid} и {@code PWPChrome}.
+ */
 public class PWPLayout {
 
     public static final float CONTENT_WIDTH_RATIO = 0.7F;
@@ -18,12 +28,14 @@ public class PWPLayout {
         return (screenWidth - elementWidth) / 2;
     }
 
+    /** Ширина контента: 70% экрана в [260, 640], но не шире самого экрана с полями. */
     public static int contentWidth(int screenWidth) {
-        return Mth.clamp((int) (screenWidth * CONTENT_WIDTH_RATIO), CONTENT_MIN, CONTENT_MAX);
+        return Fit.fraction(
+                screenWidth, CONTENT_WIDTH_RATIO, CONTENT_MIN, Math.min(CONTENT_MAX, screenWidth - 2 * Spacing.MD));
     }
 
     public static int gridColumns(int contentWidth, int gap, int cardWidth) {
-        return Math.max(1, (contentWidth + gap) / (cardWidth + gap));
+        return Grid.columnsFor(contentWidth, cardWidth, gap, Integer.MAX_VALUE);
     }
 
     public static void renderHeader(GuiGraphics gui, String title, int screenWidth) {
@@ -36,28 +48,28 @@ public class PWPLayout {
 
     public static void renderHeader(GuiGraphics gui, String title, int icon, int screenWidth, int topPadding) {
         var font = PWPTheme.Fonts.display();
-        int cx = screenWidth / 2;
-        int y = topPadding;
-
-        if (icon >= 0) {
-            PWPIcons.render(gui, icon, cx - font.width(title) / 2 - 20, y + 2);
-        }
-
-        gui.drawString(
-                font, Component.literal(title), cx - font.width(title) / 2, y, PWPTheme.Colors.TEXT_ACCENT, false);
-
-        int lineW = Math.min(120, font.width(title) + 40);
-        gui.fill(cx - lineW / 2, y + 14, cx + lineW / 2, y + 15, PWPTheme.Colors.ACCENT);
+        int iconW = icon >= 0 ? Spacing.ICON_SIZE + Spacing.XS : 0;
+        Component t = UIDraw.ellipsize(font, Component.literal(title), screenWidth - 2 * Spacing.MD - iconW);
+        int tw = font.width(t);
+        int x = (screenWidth - tw - iconW) / 2;
+        if (icon >= 0) PWPIcons.render(gui, icon, x, topPadding - 4);
+        UIDraw.text(gui, font, t, x + iconW, topPadding, PWPTheme.Text.HEADING, true);
+        UIDraw.accentBarH(
+                gui,
+                x + iconW,
+                topPadding + font.lineHeight + Spacing.XXS,
+                tw,
+                Spacing.ACCENT_BAR,
+                Styles.Control.ACCENT_BAR);
     }
 
     public static void renderFooter(GuiGraphics gui, String text, int screenWidth, int screenHeight) {
         var font = PWPTheme.Fonts.display();
-        int color = PWPTheme.Colors.TEXT_DIM;
-        gui.drawString(
-                font, Component.literal(text), screenWidth / 2 - font.width(text) / 2, screenHeight - 12, color, false);
+        Component t = UIDraw.ellipsize(font, Component.literal(text), screenWidth - 2 * Spacing.MD);
+        UIDraw.text(gui, font, t, screenWidth / 2 - font.width(t) / 2, screenHeight - 12, PWPTheme.Text.CAPTION, false);
     }
 
     public static void renderDivider(GuiGraphics gui, int x, int y, int width) {
-        gui.fill(x, y, x + width, y + 1, PWPTheme.Colors.BORDER);
+        UIDraw.hline(gui, x, x + width, y, Styles.Glass.HEADER_DIVIDER);
     }
 }

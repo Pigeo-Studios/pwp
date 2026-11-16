@@ -1,8 +1,18 @@
 package com.pwp.coreclient.gui.components;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Animations;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIMath;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.client.gui.GuiGraphics;
 
+/**
+ * Легаси-полоса прогресса (API прежний) в стиле индикатора загрузки UI-кита: трек + заливка
+ * с хайлайтом; {@link #renderPulse} — бегущий туда-обратно блок. Новые экраны —
+ * {@link com.pwp.coreclient.ui.UIProgressBar}.
+ */
 public class PWPProgressBar {
 
     private float currentProgress;
@@ -36,24 +46,20 @@ public class PWPProgressBar {
                 currentProgress = targetProgress;
             }
         }
-
-        gui.fill(x, y, x + w, y + h, PWPTheme.Styles.Progress.BG);
+        Rect r = Rect.of(x, y, w, h);
+        UIDraw.rect(gui, r, Styles.Loader.TRACK);
         if (currentProgress > 0.01F) {
-            int fillW = Math.max(2, (int) (w * currentProgress));
-            gui.fill(x, y, x + fillW, y + h, fillColor);
+            Rect fill = r.withWidth(Math.max(2, Math.round(w * currentProgress)));
+            UIDraw.rect(gui, fill, fillColor);
+            if (h > 2) UIDraw.hline(gui, fill.x(), fill.right(), fill.y(), Styles.Glass.HIGHLIGHT);
         }
     }
 
     public static void renderPulse(GuiGraphics gui, int x, int y, int w, int h, long ageMs) {
-        gui.fill(x, y, x + w, y + h, PWPTheme.Styles.Progress.BG);
-
-        long periodMs = 1600;
-        long phase = ageMs % periodMs;
-        float t = (float) phase / periodMs;
-        if (t > 0.5F) t = 1.0F - t;
-
-        int blockWidth = Math.max(w / 5, 20);
-        int blockX = x + (int) ((w - blockWidth) * t * 2.0F);
-        gui.fill(blockX, y, blockX + blockWidth, y + h, PWPTheme.Colors.ACCENT);
+        Rect r = Rect.of(x, y, w, h);
+        UIDraw.rect(gui, r, Styles.Loader.TRACK);
+        int block = Math.max(w / PWPTheme.Spacing.LOADER_BLOCK_DIV, PWPTheme.Spacing.LG);
+        int bx = x + Math.round((w - block) * UIMath.pingPong(ageMs, Animations.LOADER_PERIOD));
+        UIDraw.rect(gui, Rect.of(bx, y, Math.min(block, w), h), Styles.Loader.FILL);
     }
 }

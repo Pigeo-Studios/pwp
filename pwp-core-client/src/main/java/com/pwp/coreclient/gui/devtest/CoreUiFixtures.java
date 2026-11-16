@@ -83,6 +83,7 @@ public final class CoreUiFixtures {
         UiGallery.register("core.lobby.leaders", () -> lobby(idle(), LobbyTab.LIDERY));
         UiGallery.register("core.lobby.profile", () -> lobby(idle(), LobbyTab.PROFIL));
         UiGallery.register("core.selection", CoreUiFixtures::selection);
+        UiGallery.register("core.components", ComponentsDemoScreen::new);
         UiGallery.register(
                 "core.stats.mine",
                 () -> com.pwp.coreclient.gui.StatsScreen.preview(

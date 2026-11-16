@@ -1,8 +1,16 @@
 package com.pwp.coreclient.gui.components;
 
-import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.client.gui.GuiGraphics;
 
+/**
+ * Легаси-фон карточки (API прежний: render/isHovered/getState) в тактическом стиле UI-кита:
+ * полупрозрачная заливка + блик + 1px обводка, у выбранной — акцентная полоса слева, у
+ * наведённой — тень. Новые экраны — {@link com.pwp.coreclient.ui.UICard}.
+ */
 public class PWPCard {
 
     public enum State {
@@ -15,37 +23,35 @@ public class PWPCard {
     private PWPCard() {}
 
     public static void render(GuiGraphics gui, int x, int y, int w, int h, State state) {
-        int bg, borderColor;
-
+        Rect r = Rect.of(x, y, w, h);
+        int bg, border;
         switch (state) {
-            case SELECTED:
-                bg = PWPTheme.Styles.Card.BG_SELECTED;
-                borderColor = PWPTheme.Styles.Card.BORDER_SELECTED;
-                break;
-            case HOVER:
-                bg = PWPTheme.Styles.Card.BG_HOVER;
-                borderColor = PWPTheme.Styles.Card.BORDER_HOVER;
-                break;
-            case DISABLED:
-                bg = PWPTheme.Colors.SURFACE_DIM;
-                borderColor = PWPTheme.Colors.BORDER;
-                break;
-            default:
-                bg = PWPTheme.Styles.Card.BG;
-                borderColor = PWPTheme.Styles.Card.BORDER;
-                break;
+            case SELECTED -> {
+                bg = Styles.Control.BG_SELECTED;
+                border = Styles.Control.BORDER_SELECTED;
+            }
+            case HOVER -> {
+                bg = Styles.Control.BG_HOVER;
+                border = Styles.Control.BORDER_HOVER;
+            }
+            case DISABLED -> {
+                bg = Styles.Control.BG_DISABLED;
+                border = Styles.Control.BORDER_DISABLED;
+            }
+            default -> {
+                bg = Styles.Control.BG;
+                border = Styles.Control.BORDER;
+            }
         }
-
-        int r = PWPTheme.Spacing.RADIUS_MEDIUM;
-
-        if (state == State.HOVER) {
-            RoundedRect.fill(gui, x, y + 2, w, h, r, PWPTheme.Styles.Card.SHADOW);
-        } else if (state == State.SELECTED) {
-            RoundedRect.glow(gui, x, y, w, h, r, 2, PWPTheme.Styles.Card.GLOW_SELECTED);
+        if (state == State.HOVER || state == State.SELECTED) UIDraw.shadow(gui, r, 0.6F);
+        UIDraw.rect(gui, r, bg);
+        if (state != State.DISABLED) UIDraw.gradientV(gui, r, Styles.Control.SHEEN_TOP, Styles.Control.SHEEN_BOTTOM);
+        UIDraw.outline(gui, r, border);
+        if (state == State.SELECTED) {
+            UIDraw.accentBar(gui, x, y, h, Spacing.ACCENT_BAR_SELECTED, Styles.Control.ACCENT_BAR);
+        } else if (state == State.HOVER) {
+            UIDraw.accentBar(gui, x, y, h, Spacing.ACCENT_BAR, Styles.Control.ACCENT_BAR);
         }
-
-        RoundedRect.fill(gui, x, y, w, h, r, bg);
-        RoundedRect.border(gui, x, y, w, h, r, 1, borderColor);
     }
 
     public static boolean isHovered(int x, int y, int w, int h, int mouseX, int mouseY) {
