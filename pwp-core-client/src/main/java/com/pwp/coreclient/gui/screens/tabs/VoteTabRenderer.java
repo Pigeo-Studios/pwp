@@ -1,20 +1,46 @@
 package com.pwp.coreclient.gui.screens.tabs;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.pwp.coreclient.gui.components.PWPCard;
-import com.pwp.coreclient.gui.components.PWPProgressBar;
-import com.pwp.coreclient.gui.components.RoundedRect;
+import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Animations;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
 import com.pwp.coreclient.network.LobbyStatePacket;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UICard;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.UILayer;
+import com.pwp.coreclient.ui.UIMath;
+import com.pwp.coreclient.ui.UIProgressBar;
+import com.pwp.coreclient.ui.UIScrollArea;
+import com.pwp.coreclient.ui.UITooltip;
+import com.pwp.coreclient.ui.layout.Align;
+import com.pwp.coreclient.ui.layout.Flow;
+import com.pwp.coreclient.ui.layout.Grid;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-public class VoteTabRenderer {
-    private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(VoteTabRenderer.class);
+/**
+ * Вкладка «Голосование». Фазы приходят ТОЛЬКО от сервера (LobbyStatePacket.phase):
+ * карта / режим / фракции — карточки {@link UICard} в адаптивной сетке ({@link Grid#columnsFor}),
+ * ожидание, итоги (поля result* пакета), идёт матч. Сверху — заголовок, таймер в колонке
+ * фиксированной ширины, «проголосовало X из Y» с полосой {@link UIProgressBar}, лидер.
+ *
+ * <p>Клик по карточке — выбор (selected + акцентная полоса), кнопка «Голосовать» отправляет
+ * прежние команды ({@code votemap / votemode / votefaction / pwp}) через {@link LobbyBackend}.
+ * Голос игрока (галочка у счётчика) — из пакета (myMapVote...), после клика — сразу локально,
+ * следующий пакет подтверждает.
+ */
+public class VoteTabRenderer implements LobbyTabView {
 
     private enum Phase {
         IDLE,
@@ -25,981 +51,667 @@ public class VoteTabRenderer {
         MATCH
     }
 
-    private static class Option {
-        String id, name, desc, f1, f2, worldPath;
-        int votes, color;
-        int remainingSec;
-        PWPProgressBar bar;
-        ResourceLocation icon;
-        java.util.List<ResourceLocation> teamFlags;
+    /** Блокировка «Нового голосования» сразу после показа итогов (мс). */
+    private static final long FINISHED_LOCK_MS = 600;
 
-        Option(String id, String name, String desc, String f1, String f2, int votes, int color) {
-            this(id, name, desc, f1, f2, votes, color, null, null, null);
-        }
+    private static final ResourceLocation MODE_AAS =
+            new ResourceLocation("pwp_core_client", "textures/gui/modes/aas.png");
+    private static final ResourceLocation MODE_INVASION =
+            new ResourceLocation("pwp_core_client", "textures/gui/modes/invasion.png");
 
-        Option(String id, String name, String desc, String f1, String f2, int votes, int color, ResourceLocation icon) {
-            this(id, name, desc, f1, f2, votes, color, icon, null, null);
-        }
-
-        Option(
-                String id,
-                String name,
-                String desc,
-                String f1,
-                String f2,
-                int votes,
-                int color,
-                ResourceLocation icon,
-                String worldPath,
-                java.util.List<ResourceLocation> teamFlags) {
-            this.id = id;
-            this.name = name;
-            this.desc = desc;
-            this.f1 = f1;
-            this.f2 = f2;
-            this.votes = votes;
-            this.color = color;
-            this.icon = icon;
-            this.worldPath = worldPath;
-            this.teamFlags = teamFlags;
-            this.bar = new PWPProgressBar();
-        }
-    }
-
-    private Phase currentPhase = Phase.IDLE;
-    private boolean transitioning;
-    private long transitionTime;
-    private Phase transitionFrom, transitionTo;
-    private long finishedAnimStart;
-    private boolean finishedBusy;
-    private long finishedEnterTime;
-
-    private final List<Option> mapOpts = new ArrayList<>();
-    private final List<Option> modeOpts = new ArrayList<>();
-    private final List<Option> factOpts = new ArrayList<>();
-
-    private int selMap = -1, selMode = -1, selFact1 = -1, selFact2 = -1;
-    private int votMap = -1, votMode = -1, votFact1 = -1, votFact2 = -1;
-    private int hoveredCard = -1;
-    private int voteDurationSec = 0;
-    private int screenWidth;
-    private int voteButtonY;
-    private int tooltipTarget = -1;
-    private long tooltipHoverStart;
-    private int tooltipMouseX, tooltipMouseY;
+    private LobbyBackend backend = LobbyBackend.NETWORK;
+    private LobbyStatePacket st;
+    private Phase phase = Phase.IDLE;
+    private long phaseEnter = System.currentTimeMillis();
     private int lastPacketPhase = -1;
 
-    // Режим для подписей команд (приходит от сервера)
-    private String mode = "aas";
-    // Инфо матча для экрана "матч запускается/идёт"
-    private boolean matchStarting;
-    private String matchMapDisplay = "", matchModeDisplay = "", matchBlueFaction = "", matchRedFaction = "";
-    private int matchBlueTickets, matchRedTickets;
+    private int selMap = -1, selMode = -1, selF1 = -1, selF2 = -1;
+    private int votMap = -1, votMode = -1, votF1 = -1, votF2 = -1;
 
-    public VoteTabRenderer() {}
+    private final UILayer layer = new UILayer();
+    private final UIScrollArea grid = new UIScrollArea();
+    private final List<UICard> cards = new ArrayList<>();
+    private final UIProgressBar turnout = new UIProgressBar(0, 0, 0, 0);
+    private UIButton voteButton;
+    private UIButton newVoteButton;
 
-    /**
-     * Единственный источник истины — сервер. Применяет состояние из пакета,
-     * который приходит каждую секунду + при любом изменении.
-     */
+    private Rect area = Rect.of(0, 0, 0, 0);
+    private Rect titleR = area, infoR = area, bodyR = area;
+    private final Rect[] teamLabelR = {area, area};
+    private Phase builtPhase;
+    private int builtCount = -1;
+
+    public void setBackend(LobbyBackend backend) {
+        this.backend = backend;
+    }
+
+    // ================================================================ состояние
+
+    /** Единственный источник истины — сервер (пакет раз в секунду + при изменениях). */
     public void applyState(LobbyStatePacket pkt) {
-        voteDurationSec = pkt.remainingSeconds;
-        if (pkt.mode != null) mode = pkt.mode;
-
-        // Визуальный выбор сбрасываем только при смене фазы голосования,
-        // иначе секундная синхронизация затирает выделение карточки
+        st = pkt;
         boolean phaseChanged = pkt.phase != lastPacketPhase;
         lastPacketPhase = pkt.phase;
         if (phaseChanged) {
-            selMap = -1;
-            selMode = -1;
-            selFact1 = -1;
-            selFact2 = -1;
-            votMap = -1;
-            votMode = -1;
-            votFact1 = -1;
-            votFact2 = -1;
+            // выбор сбрасывается только при смене фазы — иначе секундная синхронизация затирает выделение
+            selMap = selMode = selF1 = selF2 = -1;
         }
+        votMap = pkt.myMapVote;
+        votMode = pkt.myModeVote;
+        votF1 = pkt.myFaction1;
+        votF2 = pkt.myFaction2;
+        Phase next =
+                switch (pkt.phase) {
+                    case LobbyStatePacket.PHASE_MAP_VOTE -> Phase.MAP;
+                    case LobbyStatePacket.PHASE_MODE_VOTE -> Phase.MODE;
+                    case LobbyStatePacket.PHASE_FACTION_VOTE -> Phase.FACTION;
+                    case LobbyStatePacket.PHASE_MATCH_STARTING, LobbyStatePacket.PHASE_MATCH_PLAYING -> Phase.MATCH;
+                    default -> pkt.hasResults() ? Phase.FINISHED : Phase.IDLE;
+                };
+        if (next != phase) {
+            phase = next;
+            phaseEnter = System.currentTimeMillis();
+        }
+        if (phase != builtPhase || optionCount() != builtCount) rebuild();
+        else update();
+    }
 
-        switch (pkt.phase) {
-            case LobbyStatePacket.PHASE_MAP_VOTE -> {
-                rebuildMaps(pkt);
-                votMap = pkt.myMapVote;
-                setPhase(Phase.MAP);
+    private int optionCount() {
+        if (st == null) return 0;
+        return switch (phase) {
+            case MAP -> len(st.mapNames);
+            case MODE -> len(st.modeNames);
+            case FACTION -> 6;
+            default -> 0;
+        };
+    }
+
+    private static int len(Object[] a) {
+        return a == null ? 0 : a.length;
+    }
+
+    private static String at(String[] a, int i) {
+        return a != null && i >= 0 && i < a.length ? a[i] : null;
+    }
+
+    private static int at(int[] a, int i) {
+        return a != null && i >= 0 && i < a.length ? a[i] : 0;
+    }
+
+    // ================================================================ раскладка
+
+    @Override
+    public void layout(Rect area) {
+        this.area = area;
+        rebuild();
+    }
+
+    @Override
+    public void onShow() {
+        phaseEnter = System.currentTimeMillis();
+    }
+
+    private boolean compact() {
+        return area.h() < Spacing.LOBBY_COMPACT_H;
+    }
+
+    private int buttonHeight() {
+        return compact() ? Spacing.MENU_BUTTON_H_COMPACT : Spacing.BUTTON_HEIGHT;
+    }
+
+    private void rebuild() {
+        builtPhase = phase;
+        builtCount = optionCount();
+        layer.clear();
+        grid.clear();
+        cards.clear();
+        Font font = font();
+        int lh = font.lineHeight;
+        int btnH = buttonHeight();
+        boolean voting = phase == Phase.MAP || phase == Phase.MODE || phase == Phase.FACTION;
+
+        if (voting) {
+            int labels = phase == Phase.FACTION ? lh + Spacing.XS : 0;
+            Rect[] col = Flow.column(
+                    area,
+                    0,
+                    Flow.Justify.START,
+                    lh,
+                    Spacing.XS,
+                    lh,
+                    Spacing.XXS,
+                    Spacing.VOTE_BAR_H,
+                    Spacing.SM,
+                    labels,
+                    Flow.flex(1),
+                    Spacing.SM,
+                    btnH);
+            titleR = col[0];
+            infoR = col[2];
+            turnout.setBounds(col[4]);
+            Rect labelsR = col[6];
+            bodyR = col[7];
+            layer.add(turnout);
+            grid.setBounds(bodyR);
+            layer.add(grid);
+            voteButton = new UIButton(Component.translatable("pwp_core.lobby.vote.submit"), this::vote)
+                    .style(UIButton.Style.ACCENT)
+                    .icon(UIIcon.CHECK);
+            int bw = Math.min(col[9].w(), Math.max(Spacing.BUTTON_WIDTH + Spacing.XXL, voteButton.preferredWidth()));
+            voteButton.setBounds(col[9].align(bw, btnH, Align.CENTER, Align.STRETCH));
+            layer.add(voteButton);
+            if (phase == Phase.FACTION) buildFactions(labelsR);
+            else buildOptions();
+        } else {
+            Rect[] col = Flow.column(area, 0, Flow.Justify.START, lh, Spacing.SM, Flow.flex(1), Spacing.SM, btnH);
+            titleR = col[0];
+            infoR = Rect.of(area.x(), titleR.y(), 0, 0);
+            bodyR = phase == Phase.FINISHED
+                    ? col[2]
+                    : Rect.of(area.x(), col[2].y(), area.w(), area.bottom() - col[2].y());
+            if (phase == Phase.FINISHED) {
+                newVoteButton = new UIButton(
+                                Component.translatable("pwp_core.lobby.vote.new"), () -> backend.sendCommand("pwp"))
+                        .style(UIButton.Style.ACCENT);
+                int bw = Math.min(
+                        col[4].w(), Math.max(Spacing.BUTTON_WIDTH + Spacing.XXL, newVoteButton.preferredWidth()));
+                newVoteButton.setBounds(col[4].align(bw, btnH, Align.CENTER, Align.STRETCH));
+                layer.add(newVoteButton);
             }
-            case LobbyStatePacket.PHASE_MODE_VOTE -> {
-                rebuildModes(pkt);
-                votMode = pkt.myModeVote;
-                setPhase(Phase.MODE);
-            }
-            case LobbyStatePacket.PHASE_FACTION_VOTE -> {
-                rebuildFactions(pkt);
-                votFact1 = pkt.myFaction1;
-                votFact2 = pkt.myFaction2;
-                setPhase(Phase.FACTION);
-            }
-            case LobbyStatePacket.PHASE_MATCH_STARTING, LobbyStatePacket.PHASE_MATCH_PLAYING -> {
-                matchStarting = pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING;
-                matchMapDisplay = pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "";
-                matchModeDisplay = pkt.matchModeDisplay != null ? pkt.matchModeDisplay : "";
-                matchBlueFaction = pkt.matchBlueFaction != null ? pkt.matchBlueFaction : "";
-                matchRedFaction = pkt.matchRedFaction != null ? pkt.matchRedFaction : "";
-                matchBlueTickets = pkt.matchBlueTickets;
-                matchRedTickets = pkt.matchRedTickets;
-                setPhase(Phase.MATCH);
-            }
-            default -> {
-                // IDLE: показываем результаты последнего голосования, если они есть
-                if (pkt.hasResults()) setPhase(Phase.FINISHED);
-                else setPhase(Phase.IDLE);
-            }
+        }
+        update();
+    }
+
+    /** Карточки карт/режимов: сетка по ширине, карточки не шире VOTE_CARD_MAX_W, по центру. */
+    private void buildOptions() {
+        int n = optionCount();
+        if (n == 0) return;
+        int gap = Spacing.GRID_GAP;
+        int cardH = compact() ? Spacing.VOTE_CARD_H : Spacing.VOTE_CARD_H_LARGE;
+        int cols = Math.min(n, Grid.columnsFor(bodyR.w(), Spacing.VOTE_CARD_MIN_W, gap, Spacing.VOTE_CARD_MAX_COLS));
+        int contentW = grid.contentWidth(Grid.height(n, cols, cardH, gap));
+        int gridW = Math.min(contentW, cols * Spacing.VOTE_CARD_MAX_W + (cols - 1) * gap);
+        Rect inner = Rect.of((contentW - gridW) / 2, 0, gridW, Grid.height(n, cols, cardH, gap));
+        Rect[] cells = Grid.cells(inner, n, cols, cardH, gap);
+        int badgeW = font().width("999");
+        for (int i = 0; i < n; i++) {
+            final int idx = i;
+            UICard c = new UICard(Component.empty(), () -> select(idx)).badgeWidth(badgeW);
+            cards.add(grid.place(c, cells[i]));
         }
     }
 
-    /** Переиспользовать прогресс-бары прошлого списка — анимация продолжается, а не стартует с нуля. */
-    private static void reuseBars(List<Option> prev, List<Option> cur) {
-        int n = Math.min(prev.size(), cur.size());
-        for (int i = 0; i < n; i++) cur.get(i).bar = prev.get(i).bar;
-    }
-
-    private void rebuildMaps(LobbyStatePacket pkt) {
-        List<Option> prev = new ArrayList<>(mapOpts);
-        mapOpts.clear();
-        int len = pkt.mapNames != null ? pkt.mapNames.length : 0;
-        for (int i = 0; i < len; i++) {
-            mapOpts.add(new Option(
-                    pkt.mapNames[i],
-                    i < pkt.mapDisplayNames.length ? pkt.mapDisplayNames[i] : pkt.mapNames[i],
-                    i < pkt.mapDescriptions.length ? pkt.mapDescriptions[i] : null,
-                    i < pkt.blueFactions.length ? pkt.blueFactions[i] : null,
-                    i < pkt.redFactions.length ? pkt.redFactions[i] : null,
-                    i < pkt.voteCounts.length ? pkt.voteCounts[i] : 0,
-                    0xFF8B6B3D + i * 0x112233,
-                    null,
-                    i < pkt.worldPaths.length ? pkt.worldPaths[i] : null,
-                    null));
-        }
-        reuseBars(prev, mapOpts);
-        if (selMap >= mapOpts.size()) selMap = -1;
-        recalc(mapOpts);
-    }
-
-    private void rebuildModes(LobbyStatePacket pkt) {
-        List<Option> prev = new ArrayList<>(modeOpts);
-        modeOpts.clear();
-        int len = pkt.modeNames != null ? pkt.modeNames.length : 0;
-        for (int i = 0; i < len; i++) {
-            modeOpts.add(new Option(
-                    pkt.modeNames[i],
-                    i < pkt.modeDisplayNames.length ? pkt.modeDisplayNames[i] : pkt.modeNames[i],
-                    i < pkt.modeDescriptions.length ? pkt.modeDescriptions[i] : null,
-                    null,
-                    null,
-                    i < pkt.modeVoteCounts.length ? pkt.modeVoteCounts[i] : 0,
-                    i == 0 ? 0xFFC8812A : 0xFF3D6FA5));
-        }
-        reuseBars(prev, modeOpts);
-        if (selMode >= modeOpts.size()) selMode = -1;
-        recalc(modeOpts);
-    }
-
-    private void rebuildFactions(LobbyStatePacket pkt) {
-        List<Option> prev = new ArrayList<>(factOpts);
-        factOpts.clear();
-        java.util.Map<String, String> fnames = new java.util.HashMap<>();
-        fnames.put("usa", "США");
-        fnames.put("ukraine", "Украина");
-        fnames.put("nato", "НАТО");
-        fnames.put("russia", "Россия");
-        fnames.put("insurgency", "Insurgency");
-        fnames.put("pmc", "ЧВК");
-        int len1 = pkt.team1Factions != null ? pkt.team1Factions.length : 0;
-        for (int i = 0; i < 3; i++) {
-            String n = i < len1 ? pkt.team1Factions[i] : "";
-            int v = i < pkt.team1Votes.length ? pkt.team1Votes[i] : 0;
-            String dn = fnames.getOrDefault(n, n.isEmpty() ? "-" : n.toUpperCase());
-            factOpts.add(new Option(n, dn, null, null, null, v, 0xFF3D6FA5, flag(n)));
-        }
-        int len2 = pkt.team2Factions != null ? pkt.team2Factions.length : 0;
-        for (int i = 0; i < 3; i++) {
-            String n = i < len2 ? pkt.team2Factions[i] : "";
-            int v = i < pkt.team2Votes.length ? pkt.team2Votes[i] : 0;
-            String dn = fnames.getOrDefault(n, n.isEmpty() ? "-" : n.toUpperCase());
-            factOpts.add(new Option(n, dn, null, null, null, v, 0xFFA53D3D, flag(n)));
-        }
-        reuseBars(prev, factOpts);
-        if (selFact1 >= 3) selFact1 = -1;
-        if (selFact2 >= 3) selFact2 = -1;
-        factionPerTeamBars();
-    }
-
-    /** Переход между фазами — только по данным от сервера. */
-    private void setPhase(Phase to) {
-        if (transitioning) {
-            transitioning = false;
-            currentPhase = transitionTo;
-        }
-        if (to == Phase.FINISHED && currentPhase != Phase.FINISHED) {
-            finishedEnterTime = System.currentTimeMillis();
-        }
-        if (to != currentPhase) xition(to);
-        else currentPhase = to;
-    }
-
-    private void factionPerTeamBars() {
-        for (int col = 0; col < 2; col++) {
-            int start = col * 3, teamTotal = 0;
-            for (int r = 0; r < 3; r++) teamTotal += factOpts.get(start + r).votes;
+    /** Две колонки команд по 3 карточки фракций. */
+    private void buildFactions(Rect labelsR) {
+        int gap = Spacing.MD;
+        int cardH = Spacing.FACTION_CARD_H;
+        int colH = 3 * cardH + 2 * Spacing.XS;
+        int contentW = grid.contentWidth(colH);
+        int colW = Math.min((contentW - gap) / 2, Spacing.FACTION_COL_MAX_W);
+        Rect[] cols = Flow.row(Rect.of(0, 0, contentW, colH), gap, Flow.Justify.CENTER, colW, colW);
+        int badgeW = font().width("999");
+        for (int team = 0; team < 2; team++) {
+            teamLabelR[team] = Rect.of(bodyR.x() + cols[team].x(), labelsR.y(), cols[team].w(), font().lineHeight);
+            Rect[] rows = Flow.column(cols[team], Spacing.XS, Flow.Justify.START, cardH, cardH, cardH);
             for (int r = 0; r < 3; r++) {
-                float prog = teamTotal > 0 ? (float) factOpts.get(start + r).votes / teamTotal : 0;
-                factOpts.get(start + r).bar.setProgress(prog);
+                final int t = team, row = r;
+                UICard c = new UICard(Component.empty(), () -> selectFaction(t, row)).badgeWidth(badgeW);
+                cards.add(grid.place(c, rows[r]));
             }
         }
     }
 
-    private static ResourceLocation flag(String n) {
-        return n != null && !n.isEmpty()
-                ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + n + ".png")
-                : null;
-    }
-
-    private static void recalc(List<Option> o) {
-        int t = 0;
-        for (Option x : o) t += x.votes;
-        for (Option x : o) x.bar.setProgress(t > 0 ? (float) x.votes / t : 0);
-    }
-
-    private static ResourceLocation getMapPreview(String worldPath) {
-        if (worldPath == null || worldPath.isEmpty()) return null;
-        return com.pwp.coreclient.gui.screens.PWPLobbyScreen.getTexture("preview", worldPath, "vote_");
-    }
-
-    public void render(GuiGraphics g, int sw, int sh, int mx, int my) {
-        screenWidth = sw;
-        long now = System.currentTimeMillis();
-        if (transitioning) {
-            long e = now - transitionTime;
-            float t = Math.min(e / 500f, 1), ez = eoc(t);
-            if (transitionTo == Phase.FINISHED) {
-                // FACTION -> FINISHED: dark overlay fade in/out, then cards slide up
-                int ovAlpha = (int) (Math.min(1, t * 2) * 0xCC);
-                g.fill(0, 70, sw, sh - 16, (ovAlpha << 24) | 0x06080A);
-                if (t > 0.3f) {
-                    float cardT = Math.min((t - 0.3f) / 0.7f, 1);
-                    RenderSystem.setShaderColor(1, 1, 1, cardT);
-                    renderPhase(g, sw, sh, mx, my, transitionTo, now);
-                    RenderSystem.setShaderColor(1, 1, 1, 1);
-                }
-            } else {
-                RenderSystem.setShaderColor(1, 1, 1, 1 - ez);
-                renderPhase(g, sw, sh, mx, my, transitionFrom, now);
-                RenderSystem.setShaderColor(1, 1, 1, ez);
-                renderPhase(g, sw, sh, mx, my, transitionTo, now);
-                RenderSystem.setShaderColor(1, 1, 1, 1);
-            }
-            if (t >= 1) {
-                transitioning = false;
-                currentPhase = transitionTo;
-            }
-        } else {
-            renderPhase(g, sw, sh, mx, my, currentPhase, now);
-            renderAfter(g, sw, sh, mx, my, now);
+    /** Обновить содержимое карточек и кнопок без пересоздания (анимации hover/selected живут). */
+    private void update() {
+        if (st == null) return;
+        int online = Math.max(0, st.onlinePlayers);
+        turnout.progress(online > 0 ? Math.min(1F, st.totalVotes / (float) online) : 0F, true);
+        switch (phase) {
+            case MAP -> updateMaps();
+            case MODE -> updateModes();
+            case FACTION -> updateFactions();
+            default -> {}
+        }
+        if (voteButton != null) {
+            boolean canVote = canVote();
+            boolean voted =
+                    switch (phase) {
+                        case MAP -> votMap >= 0;
+                        case MODE -> votMode >= 0;
+                        case FACTION -> votF1 >= 0 || votF2 >= 0;
+                        default -> false;
+                    };
+            voteButton.label(
+                    Component.translatable(voted ? "pwp_core.lobby.vote.change" : "pwp_core.lobby.vote.submit"));
+            voteButton.setEnabled(canVote);
         }
     }
 
-    private void renderAfter(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
-        // Track tooltip
-        int prevTarget = tooltipTarget;
-        tooltipTarget = -1;
-        if (currentPhase == Phase.MAP || currentPhase == Phase.MODE) {
-            if (hoveredCard >= 0) {
-                List<Option> opts = currentPhase == Phase.MAP ? mapOpts : modeOpts;
-                if (hoveredCard < opts.size()
-                        && opts.get(hoveredCard).desc != null
-                        && !opts.get(hoveredCard).desc.isEmpty()) {
-                    tooltipTarget = hoveredCard;
-                }
-            }
+    private void updateMaps() {
+        int total = 0;
+        for (int i = 0; i < cards.size(); i++) total += at(st.voteCounts, i);
+        for (int i = 0; i < cards.size(); i++) {
+            UICard c = cards.get(i);
+            String name = at(st.mapDisplayNames, i);
+            if (name == null) name = at(st.mapNames, i);
+            int votes = at(st.voteCounts, i);
+            String blue = at(st.blueFactions, i), red = at(st.redFactions, i);
+            String desc = at(st.mapDescriptions, i);
+            Component sub = blue != null && !blue.isBlank()
+                    ? Component.translatable("pwp_core.lobby.versus", LobbyText.faction(blue), LobbyText.faction(red))
+                    : Component.literal(desc != null ? desc : "");
+            c.label(Component.literal(name != null ? name : "—"));
+            c.subtitle(sub)
+                    .badge(Component.literal(String.valueOf(votes)))
+                    .marked(i == votMap)
+                    .share(total > 0 ? votes / (float) total : 0F, Styles.Loader.FILL);
+            c.selected(i == selMap);
+            ResourceLocation preview = PWPLobbyScreen.getTexture("preview", at(st.worldPaths, i), "vote_");
+            c.image(preview, 1, 1);
+            c.tooltip(tooltip(name, desc, at(st.maxPlayers, i)));
         }
-        String tooltipText = null;
-        if (tooltipTarget >= 0) {
-            if (tooltipTarget != prevTarget) tooltipHoverStart = now;
-            if (now - tooltipHoverStart > 1500) {
-                List<Option> opts = currentPhase == Phase.MAP ? mapOpts : modeOpts;
-                if (tooltipTarget < opts.size()) tooltipText = opts.get(tooltipTarget).desc;
-            }
-        } else {
-            tooltipHoverStart = now;
-        }
-
-        if (tooltipText != null) renderTooltip(g, tooltipText, mx, my, sw, sh, now);
     }
 
-    private void renderTooltip(GuiGraphics g, String text, int mx, int my, int sw, int sh, long now) {
-        long elapsed = now - tooltipHoverStart - 1500;
-        float t = Math.min(elapsed / 400f, 1);
-        float alpha = Math.max(0, Math.min(1, eoc2(t)));
-        if (alpha < 0.01f) return;
+    private void updateModes() {
+        int total = 0;
+        for (int i = 0; i < cards.size(); i++) total += at(st.modeVoteCounts, i);
+        for (int i = 0; i < cards.size(); i++) {
+            UICard c = cards.get(i);
+            String id = at(st.modeNames, i);
+            String name = at(st.modeDisplayNames, i);
+            if (name == null) name = id;
+            String desc = at(st.modeDescriptions, i);
+            int votes = at(st.modeVoteCounts, i);
+            c.label(Component.literal(name != null ? name : "—"));
+            c.subtitle(Component.literal(desc != null ? desc : ""))
+                    .badge(Component.literal(String.valueOf(votes)))
+                    .marked(i == votMode)
+                    .share(total > 0 ? votes / (float) total : 0F, Styles.Loader.FILL);
+            c.selected(i == selMode);
+            ResourceLocation img =
+                    "invasion".equalsIgnoreCase(id) ? MODE_INVASION : "aas".equalsIgnoreCase(id) ? MODE_AAS : null;
+            c.image(img, 1, 1);
+            c.tooltip(tooltip(name, desc, 0));
+        }
+    }
 
-        var f = PWPTheme.Fonts.display();
-        int maxW = 280;
-        java.util.List<String> lines = new java.util.ArrayList<>();
-        String[] words = text.split(" ");
-        StringBuilder cur = new StringBuilder();
-        for (String w : words) {
-            String test = cur.length() == 0 ? w : cur + " " + w;
-            if (f.width(test) > maxW && cur.length() > 0) {
-                lines.add(cur.toString());
-                cur = new StringBuilder(w);
-            } else {
-                if (cur.length() > 0) cur.append(" ");
-                cur.append(w);
+    private void updateFactions() {
+        for (int team = 0; team < 2; team++) {
+            String[] ids = team == 0 ? st.team1Factions : st.team2Factions;
+            int[] votes = team == 0 ? st.team1Votes : st.team2Votes;
+            int total = 0;
+            for (int r = 0; r < 3; r++) total += at(votes, r);
+            int sel = team == 0 ? selF1 : selF2;
+            int vot = team == 0 ? votF1 : votF2;
+            int color = team == 0 ? Colors.TEAM_BLUE : Colors.TEAM_RED;
+            for (int r = 0; r < 3; r++) {
+                UICard c = cards.get(team * 3 + r);
+                String id = at(ids, r);
+                boolean present = id != null && !id.isBlank();
+                int v = at(votes, r);
+                c.label(LobbyText.faction(id));
+                c.badge(Component.literal(String.valueOf(v)))
+                        .marked(r == vot)
+                        .share(total > 0 ? v / (float) total : 0F, color)
+                        .image(present ? LobbyText.flag(id) : null, LobbyText.FLAG_W, LobbyText.FLAG_H);
+                c.selected(r == sel);
+                c.setEnabled(present);
             }
         }
-        if (cur.length() > 0) lines.add(cur.toString());
+    }
 
-        int lineH = 12;
-        int tw = 0;
-        for (String ln : lines) {
-            int lw = f.width(ln);
-            if (lw > tw) tw = lw;
+    private static UITooltip.Content tooltip(String name, String desc, int maxPlayers) {
+        List<Component> lines = new ArrayList<>();
+        if (desc != null && !desc.isBlank()) lines.add(Component.literal(desc));
+        if (maxPlayers > 0) lines.add(Component.translatable("pwp_core.lobby.vote.max_players", maxPlayers));
+        return new UITooltip.Content(Component.literal(name != null ? name : "—"), lines);
+    }
+
+    // ================================================================ действия
+
+    private void select(int idx) {
+        if (phase == Phase.MAP) selMap = idx;
+        else if (phase == Phase.MODE) selMode = idx;
+        update();
+    }
+
+    private void selectFaction(int team, int row) {
+        if (team == 0) selF1 = row;
+        else selF2 = row;
+        update();
+    }
+
+    /** Правила те же, что раньше: голос только при новом выборе; фракции — обе стороны. */
+    private boolean canVote() {
+        if (st == null) return false;
+        return switch (phase) {
+            case MAP -> selMap >= 0 && selMap != votMap && notBlank(at(st.mapNames, selMap));
+            case MODE -> selMode >= 0 && selMode != votMode && notBlank(at(st.modeNames, selMode));
+            case FACTION -> selF1 >= 0
+                    && selF2 >= 0
+                    && !(selF1 == votF1 && selF2 == votF2)
+                    && notBlank(at(st.team1Factions, selF1))
+                    && notBlank(at(st.team2Factions, selF2));
+            default -> false;
+        };
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private void vote() {
+        if (!canVote()) return;
+        switch (phase) {
+            case MAP -> {
+                backend.sendCommand("votemap " + at(st.mapNames, selMap));
+                votMap = selMap;
+            }
+            case MODE -> {
+                backend.sendCommand("votemode " + at(st.modeNames, selMode));
+                votMode = selMode;
+            }
+            case FACTION -> {
+                backend.sendCommand("votefaction " + at(st.team1Factions, selF1) + " " + at(st.team2Factions, selF2));
+                votF1 = selF1;
+                votF2 = selF2;
+            }
+            default -> {}
         }
-        int th = lines.size() * lineH + 12;
-        int pad = 8;
-        tw = Math.min(tw + pad * 2, sw - 20);
+        update();
+    }
 
-        int tx = mx + 12, ty = my - th - 8;
-        if (tx + tw > sw - 8) tx = sw - 8 - tw;
-        if (ty < 8) ty = my + 12;
+    // ================================================================ рисование
 
-        int bg = PWPTheme.Colors.multiplyAlpha(0xCC0E1117, alpha);
-        int bd = PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BORDER_LIGHT, alpha);
-        RoundedRect.fill(g, tx, ty, tw, th, 4, bg);
-        RoundedRect.border(g, tx, ty, tw, th, 4, 1, bd);
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        Font font = font();
+        long elapsed = System.currentTimeMillis() - phaseEnter;
+        float fade = UIMath.stagger(elapsed, 0, 0, 0, Animations.ENTER);
 
-        int tc = PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.TEXT_PRIMARY, alpha);
-        int ly = ty + 6;
-        for (String ln : lines) {
-            g.drawString(f, Component.literal(ln), tx + pad, ly, tc, false);
-            ly += lineH;
+        for (int i = 0; i < cards.size(); i++) {
+            float p = UIMath.stagger(elapsed, i, 0, Animations.STAGGER_FAST, Animations.ENTER);
+            cards.get(i).setAppearance(p, 0, Math.round((1F - p) * Animations.ENTER_SLIDE));
         }
-    }
-
-    private static float eoc2(float t) {
-        return t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    }
-
-    private static float eoc(float t) {
-        float f = 1 - t;
-        return 1 - f * f * f;
-    }
-
-    private static String suffix(int v) {
-        if (v % 10 == 1 && v % 100 != 11) return "";
-        if (v % 10 >= 2 && v % 10 <= 4 && (v % 100 < 10 || v % 100 >= 20)) return "а";
-        return "ов";
-    }
-
-    private void xition(Phase to) {
-        transitionFrom = currentPhase;
-        transitionTo = to;
-        transitioning = true;
-        transitionTime = System.currentTimeMillis();
-        if (to == Phase.FINISHED) finishedAnimStart = transitionTime;
-    }
-
-    private void renderPhase(GuiGraphics g, int sw, int sh, int mx, int my, Phase p, long now) {
-        switch (p) {
-            case IDLE -> idle(g, sw, sh, mx, my, now);
-            case MAP -> voteGrid(g, sw, sh, mx, my, now, "ГОЛОСОВАНИЕ ЗА КАРТУ", mapOpts, selMap, true);
-            case MODE -> voteGrid(g, sw, sh, mx, my, now, "ГОЛОСОВАНИЕ ЗА РЕЖИМ", modeOpts, selMode, false);
-            case FACTION -> factionGrid(g, sw, sh, mx, my, now);
-            case FINISHED -> finished(g, sw, sh, now);
-            case MATCH -> matchInfo(g, sw, sh);
+        if (newVoteButton != null) {
+            newVoteButton.setEnabled(elapsed >= FINISHED_LOCK_MS);
+            newVoteButton.setAppearance(fade, 0, 0);
         }
-    }
 
-    private void matchInfo(GuiGraphics g, int sw, int sh) {
-        var f = PWPTheme.Fonts.display();
-        String title = matchStarting ? "МАТЧ ЗАПУСКАЕТСЯ" : "МАТЧ ИДЁТ";
-        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw / 2 - 80, 96, sw / 2 + 80, 97, PWPTheme.Colors.ACCENT);
-
-        String map = matchMapDisplay.isEmpty() ? "-" : matchMapDisplay;
-        g.drawString(
-                f, Component.literal("Карта: " + map), sw / 2 - f.width("Карта: " + map) / 2, 130, 0xFFFFFF, false);
-
-        String modeTxt = matchModeDisplay.isEmpty() ? "" : "Режим: " + matchModeDisplay;
-        if (!modeTxt.isEmpty())
-            g.drawString(
-                    f,
-                    Component.literal(modeTxt),
-                    sw / 2 - f.width(modeTxt) / 2,
-                    152,
-                    PWPTheme.Colors.TEXT_SECONDARY,
-                    false);
-
-        String factions = matchBlueFaction.isEmpty()
-                ? ""
-                : matchBlueFaction.toUpperCase() + " vs " + matchRedFaction.toUpperCase();
-        if (!factions.isEmpty()) {
-            g.drawString(
-                    f,
-                    Component.literal(factions),
-                    sw / 2 - f.width(factions) / 2,
-                    176,
-                    PWPTheme.Colors.TEXT_PRIMARY,
-                    false);
-            String t = matchBlueTickets + " : " + matchRedTickets;
-            g.drawString(f, Component.literal(t), sw / 2 - f.width(t) / 2, 192, PWPTheme.Colors.TEXT_DIM, false);
+        switch (phase) {
+            case MAP, MODE, FACTION -> renderVoteHeader(g, font, fade);
+            case IDLE -> renderIdle(g, font, fade);
+            case FINISHED -> renderFinished(g, font, elapsed, fade);
+            case MATCH -> renderMatch(g, font, fade);
         }
-        String h = matchStarting ? "Сервер матча готовится..." : "Откройте вкладку ИГРА для подключения";
-        g.drawString(f, Component.literal(h), sw / 2 - f.width(h) / 2, 230, PWPTheme.Colors.TEXT_DIM, false);
-    }
-
-    private void idle(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
-        var f = PWPTheme.Fonts.display();
-        g.drawString(
-                f,
-                Component.literal("ГОЛОСОВАНИЕ"),
-                sw / 2 - f.width("ГОЛОСОВАНИЕ") / 2,
-                82,
-                PWPTheme.Colors.TEXT_ACCENT,
-                false);
-        g.fill(sw / 2 - 60, 96, sw / 2 + 60, 97, PWPTheme.Colors.ACCENT);
-        String s = "ОЖИДАНИЕ ГОЛОСОВАНИЯ";
-        g.drawString(f, Component.literal(s), sw / 2 - f.width(s) / 2, 130, PWPTheme.Colors.TEXT_SECONDARY, false);
-        String h = "Голосование начнётся автоматически";
-        g.drawString(f, Component.literal(h), sw / 2 - f.width(h) / 2, 150, PWPTheme.Colors.TEXT_DIM, false);
-    }
-
-    private void voteGrid(
-            GuiGraphics g,
-            int sw,
-            int sh,
-            int mx,
-            int my,
-            long now,
-            String title,
-            List<Option> opts,
-            int sel,
-            boolean factions) {
-        var f = PWPTheme.Fonts.display();
-        int rem = Math.max(0, voteDurationSec);
-        // Store remaining for faction vote timer reference
-        for (Option o : opts) o.remainingSec = rem;
-        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw / 2 - f.width(title) / 2 - 4, 94, sw / 2 + f.width(title) / 2 + 4, 95, PWPTheme.Colors.ACCENT);
-        String tmr = String.format("Осталось: %d:%02d", rem / 60, rem % 60);
-        g.drawString(f, Component.literal(tmr), sw / 2 - f.width(tmr) / 2, 104, PWPTheme.Colors.TEXT_SECONDARY, false);
-        int cw = 200, ch = 130, gap = 12, cols = 2;
-        int rows = (opts.size() + cols - 1) / cols,
-                gw = cols * cw + (cols - 1) * gap,
-                gh = rows * ch + (rows - 1) * gap,
-                gx = (sw - gw) / 2,
-                gy = 118;
-        hoveredCard = -1;
-        for (int i = 0; i < opts.size(); i++) {
-            int col = i % cols, row = i / cols, cx = gx + col * (cw + gap), cy = gy + row * (ch + gap);
-            boolean hv = mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch;
-            if (hv) hoveredCard = i;
-            renderCard(g, cx, cy, cw, ch, opts.get(i), i == sel, hv, now, factions);
-        }
-        int voted = title.contains("КАРТУ") ? votMap : (title.contains("РЕЖИМ") ? votMode : -1);
-        boolean canVote = sel >= 0 && sel != voted;
-        int by = gy + gh + 14, bw = 180, bh = 28, bx = (sw - bw) / 2;
-        voteButtonY = by;
-        boolean bhv = mx >= bx && mx <= bx + bw && my >= by && my <= by + bh;
-        String bt = voted >= 0 ? "ИЗМЕНИТЬ ГОЛОС" : "ГОЛОСОВАТЬ";
-        RoundedRect.fill(
+        if (phase == Phase.FACTION) renderTeamLabels(g, font, fade);
+        layer.render(
                 g,
-                bx,
-                by,
-                bw,
-                bh,
-                3,
-                canVote ? (bhv ? PWPTheme.Colors.ACCENT_SOFT : PWPTheme.Colors.ACCENT) : PWPTheme.Colors.SURFACE_DIM);
-        RoundedRect.border(g, bx, by, bw, bh, 3, 1, canVote ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-        g.drawString(
-                f,
-                Component.literal(bt),
-                bx + bw / 2 - f.width(bt) / 2,
-                by + 8,
-                canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM,
-                false);
-    }
-
-    private void factionGrid(GuiGraphics g, int sw, int sh, int mx, int my, long now) {
-        var f = PWPTheme.Fonts.display();
-        int rem = Math.max(0, voteDurationSec);
-        String title = "ВЫБОР СТОРОНЫ";
-        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 80, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw / 2 - f.width(title) / 2 - 4, 94, sw / 2 + f.width(title) / 2 + 4, 95, PWPTheme.Colors.ACCENT);
-        String tmr = String.format("Осталось: %d:%02d", rem / 60, rem % 60);
-        g.drawString(f, Component.literal(tmr), sw / 2 - f.width(tmr) / 2, 104, PWPTheme.Colors.TEXT_SECONDARY, false);
-
-        int cw = 155, ch = 80, gap = 10;
-        int gw = 2 * cw + gap, gx = (sw - gw) / 2, gy = 118;
-        int cardGap = 4;
-        int colH = 3 * (ch + cardGap) - cardGap;
-
-        // Center divider
-        g.fill(sw / 2 - 1, gy - 12, sw / 2 + 1, gy + colH, PWPTheme.Colors.BORDER);
-
-        // Team labels
-        String t1 = "КОМАНДА 1", t2 = "КОМАНДА 2";
-        boolean isInv = "invasion".equalsIgnoreCase(mode);
-        if (isInv) {
-            t1 = "АТАКУЕТ";
-            t2 = "ОБОРОНЯЕТСЯ";
-        }
-        g.drawString(f, Component.literal(t1), gx + cw / 2 - f.width(t1) / 2, gy - 12, 0xFF3D6FA5, false);
-        g.drawString(f, Component.literal(t2), gx + cw + gap + cw / 2 - f.width(t2) / 2, gy - 12, 0xFFA53D3D, false);
-
-        factionPerTeamBars();
-
-        // Cards: 3 per column
-        hoveredCard = -1;
-        int cardY = gy + 2;
-        for (int i = 0; i < factOpts.size(); i++) {
-            int col = i / 3, row = i % 3;
-            int cx = gx + col * (cw + gap);
-            int cy = cardY + row * (ch + cardGap);
-            boolean hv = mx >= cx && mx <= cx + cw && my >= cy && my <= cy + ch;
-            if (hv) hoveredCard = i;
-            boolean sel = (col == 0) ? (row == selFact1) : (row == selFact2);
-            renderFactionCard(g, cx, cy, cw, ch, factOpts.get(i), sel, hv, now);
-        }
-
-        // Vote button
-        boolean canVote = (selFact1 >= 0 || votFact1 >= 0)
-                && (selFact2 >= 0 || votFact2 >= 0)
-                && (selFact1 != votFact1 || selFact2 != votFact2);
-        int by = cardY + colH + 10;
-        voteButtonY = by;
-        int bw = 180, bh = 26, bx = (sw - bw) / 2;
-        boolean bhv = mx >= bx && mx <= bx + bw && my >= by && my <= by + bh;
-        boolean voted = votFact1 >= 0 && votFact2 >= 0;
-        String bt = voted ? "ИЗМЕНИТЬ ВЫБОР" : "ПРОГОЛОСОВАТЬ";
-        RoundedRect.fill(
-                g,
-                bx,
-                by,
-                bw,
-                bh,
-                3,
-                canVote ? (bhv ? PWPTheme.Colors.ACCENT_SOFT : PWPTheme.Colors.ACCENT) : PWPTheme.Colors.SURFACE_DIM);
-        RoundedRect.border(g, bx, by, bw, bh, 3, 1, canVote ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.BORDER);
-        g.drawString(
-                f,
-                Component.literal(bt),
-                bx + bw / 2 - f.width(bt) / 2,
-                by + 7,
-                canVote ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_DIM,
-                false);
-    }
-
-    private void renderFactionCard(
-            GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now) {
-        var f = PWPTheme.Fonts.display();
-        PWPCard.State st = sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT);
-        PWPCard.render(g, x, y, w, h, st);
-        if (sel)
-            RoundedRect.glow(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, 2, PWPTheme.Shadows.ACCENT_GLOW_MEDIUM);
-
-        int cy = y + 6;
-        if (o.icon != null) {
-            RenderSystem.setShaderColor(1, 1, 1, 1);
-            g.blit(o.icon, x + w / 2 - 20, cy, 0, 0, 40, 23, 40, 23);
-            cy += 28;
-        } else {
-            g.fill(x + 6, cy, x + w - 6, cy + 22, o.color);
-            cy += 26;
-        }
-
-        String n = o.name;
-        if (f.width(n) > w - 12) n = f.plainSubstrByWidth(n, w - 16) + "...";
-        g.drawString(f, Component.literal(n), x + w / 2 - f.width(n) / 2, cy, 0xFFFFFF, false);
-        cy += 11;
-
-        o.bar.render(g, x + 8, cy, w - 16, 5, now, sel ? PWPTheme.Colors.ACCENT : o.color);
-        cy += 8;
-        String vs = o.votes + " голос" + suffix(o.votes);
-        g.drawString(f, Component.literal(vs), x + w / 2 - f.width(vs) / 2, cy, PWPTheme.Colors.TEXT_DIM, false);
-    }
-
-    private void renderCard(
-            GuiGraphics g, int x, int y, int w, int h, Option o, boolean sel, boolean hv, long now, boolean showF) {
-        var f = PWPTheme.Fonts.display();
-        PWPCard.render(
-                g, x, y, w, h, sel ? PWPCard.State.SELECTED : (hv ? PWPCard.State.HOVER : PWPCard.State.DEFAULT));
-        int px = x + 8, py = y + 8, pw = w - 16, ph = h / 3;
-        ResourceLocation preview = getMapPreview(o.worldPath);
-        if (preview != null) {
-            g.fill(px, py, px + pw, py + ph, 0xFF000000);
-            int rw = pw - 2, rh = ph - 2;
-            g.blit(preview, px + 1, py + 1, 0, 0, rw, rh, rw, rh);
-        } else {
-            g.fill(px, py, px + pw, py + ph, 0xFF000000);
-            g.fill(
-                    px + 1,
-                    py + 1,
-                    px + pw - 1,
-                    py + ph - 1,
-                    sel ? PWPTheme.Colors.lerp(o.color, PWPTheme.Colors.ACCENT, 0.3f) : o.color);
-        }
-        String t = o.name;
-        if (f.width(t) > pw - 8) t = f.plainSubstrByWidth(t, pw - 12) + "...";
-        g.drawString(f, Component.literal(t), px + 6, py + ph / 2 - 4, 0xFFFFFFFF, false);
-        int ly = py + ph + 6;
-
-        if (o.desc != null && !o.desc.isEmpty()) {
-            int maxW = w - 24;
-            String d = o.desc;
-            if (f.width(d) > maxW) {
-                int splitIdx = 0;
-                for (int j = 1; j < d.length(); j++) {
-                    if (f.width(d.substring(0, j)) > maxW) {
-                        splitIdx = j - 1;
-                        break;
-                    }
-                }
-                if (splitIdx > 5) {
-                    String l1 = d.substring(0, splitIdx);
-                    String l2 = d.substring(splitIdx).trim();
-                    if (f.width(l2) > maxW) l2 = f.plainSubstrByWidth(l2, maxW - 4) + "...";
-                    g.drawString(f, Component.literal(l1), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
-                    ly += 10;
-                    g.drawString(f, Component.literal(l2), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
-                    ly += 11;
-                } else {
-                    g.drawString(
-                            f,
-                            Component.literal(f.plainSubstrByWidth(d, maxW - 4) + "..."),
-                            x + 10,
-                            ly,
-                            PWPTheme.Colors.TEXT_DIM,
-                            false);
-                    ly += 11;
-                }
-            } else {
-                g.drawString(f, Component.literal(d), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
-                ly += 11;
+                mx,
+                my,
+                pt,
+                Minecraft.getInstance().getWindow().getGuiScaledWidth(),
+                Minecraft.getInstance().getWindow().getGuiScaledHeight());
+        if (phase == Phase.MAP || phase == Phase.MODE) {
+            if (cards.isEmpty()) {
+                UIDraw.emptyState(
+                        g,
+                        font,
+                        bodyR,
+                        UIIcon.INFO,
+                        Component.translatable("pwp_core.lobby.vote.no_options"),
+                        null,
+                        fade);
             }
         }
-        int bw = w - 20, bx = x + 10;
-        o.bar.render(g, bx, ly, bw, 6, now, sel ? PWPTheme.Colors.ACCENT : PWPTheme.Colors.TEXT_ACCENT);
-        ly += 10;
-        String vs = o.votes + " голос" + suffix(o.votes);
-        g.drawString(f, Component.literal(vs), x + 10, ly, PWPTheme.Colors.TEXT_DIM, false);
     }
 
-    private void finished(GuiGraphics g, int sw, int sh, long now) {
-        var f = PWPTheme.Fonts.display();
-        String title = "ГОЛОСОВАНИЕ ЗАВЕРШЕНО";
-        g.drawString(f, Component.literal(title), sw / 2 - f.width(title) / 2, 82, PWPTheme.Colors.TEXT_ACCENT, false);
-        g.fill(sw / 2 - 80, 96, sw / 2 + 80, 97, PWPTheme.Colors.ACCENT);
+    private Component phaseTitle() {
+        return Component.translatable(
+                switch (phase) {
+                    case MAP -> "pwp_core.lobby.vote.title_map";
+                    case MODE -> "pwp_core.lobby.vote.title_mode";
+                    case FACTION -> "pwp_core.lobby.vote.title_faction";
+                    case FINISHED -> "pwp_core.lobby.vote.title_finished";
+                    case MATCH -> st != null && st.phase == LobbyStatePacket.PHASE_MATCH_STARTING
+                            ? "pwp_core.lobby.match.starting"
+                            : "pwp_core.lobby.match.playing";
+                    default -> "pwp_core.lobby.vote.title";
+                });
+    }
 
-        Option wMap = mapOpts.stream()
-                .max((a, b) -> Integer.compare(a.votes, b.votes))
-                .orElse(null);
-        Option wMode = modeOpts.stream()
-                .max((a, b) -> Integer.compare(a.votes, b.votes))
-                .orElse(null);
-        // factOpts может быть пустым/неполным, если фаза faction-vote не приходила
-        // в этой сессии (заход в лобби уже на экране результатов) — subList упал бы.
-        Option wF1 = null, wF2 = null;
-        if (factOpts.size() >= 6) {
-            wF1 = factOpts.subList(0, 3).stream()
-                    .max((a, b) -> Integer.compare(a.votes, b.votes))
-                    .orElse(null);
-            wF2 = factOpts.subList(3, 6).stream()
-                    .max((a, b) -> Integer.compare(a.votes, b.votes))
-                    .orElse(null);
-        } else if (!factOpts.isEmpty()) {
-            wF1 = factOpts.stream()
-                    .max((a, b) -> Integer.compare(a.votes, b.votes))
-                    .orElse(null);
+    /** Заголовок + таймер (фиксированная колонка «00:00») + явка и лидер. */
+    private void renderVoteHeader(GuiGraphics g, Font font, float fade) {
+        int timerW = font.width("00:00");
+        String clock = LobbyText.clock(st != null ? st.remainingSeconds : 0);
+        boolean urgent = st != null && st.remainingSeconds <= 10;
+        int tx = titleR.right() - timerW + (timerW - font.width(clock));
+        UIDraw.text(
+                g,
+                font,
+                Component.literal(clock),
+                tx,
+                titleR.y(),
+                UIDraw.fade(urgent ? PWPTheme.Text.DANGER : PWPTheme.Text.ACCENT, fade),
+                true);
+        Component left = Component.translatable("pwp_core.lobby.vote.remaining");
+        int lw = font.width(left);
+        int titleRight = titleR.right() - timerW - Spacing.SM;
+        if (titleR.w() - timerW > lw + Spacing.XXL * 3) {
+            UIDraw.text(g, font, left, titleRight - lw, titleR.y(), UIDraw.fade(PWPTheme.Text.CAPTION, fade), false);
+            titleRight -= lw + Spacing.SM;
         }
+        UIDraw.sectionTitle(
+                g, font, titleR.withWidth(titleRight - titleR.x()), phaseTitle(), PWPTheme.Text.HEADING, fade);
 
-        long animStart = finishedAnimStart;
-        int cardW = 190, cardH = 160, gap = 16;
-        int totalW = 3 * cardW + 2 * gap;
-        int startX = (sw - totalW) / 2;
-        int baseY = 130;
-
-        // Card 1: Map (stagger 0ms)
-        String w1 = wMap != null ? wMap.name : "-";
-        String v1 = wMap != null ? wMap.votes + " голос" + suffix(wMap.votes) : "0";
-        drawWinnerCard(
+        if (st == null) return;
+        Component votes = Component.translatable("pwp_core.lobby.vote.turnout", st.totalVotes, st.onlinePlayers);
+        int vw = Math.min(font.width(votes), infoR.w() / 2);
+        UIDraw.text(
                 g,
-                startX,
-                baseY,
-                cardW,
-                cardH,
-                "КАРТА",
-                w1,
-                v1,
-                wMap != null ? wMap.color : 0xFF666666,
-                now,
-                animStart,
-                0);
-
-        // Card 2: Mode (stagger 200ms)
-        String w2 = wMode != null ? wMode.name : "-";
-        String v2 = wMode != null ? wMode.votes + " голос" + suffix(wMode.votes) : "0";
-        drawWinnerCard(
-                g,
-                startX + cardW + gap,
-                baseY,
-                cardW,
-                cardH,
-                "РЕЖИМ",
-                w2,
-                v2,
-                wMode != null ? wMode.color : 0xFF666666,
-                now,
-                animStart,
-                200);
-
-        // Card 3: Sides (stagger 400ms) — split card with two flags
-        drawWinnerSplitCard(
-                g, startX + 2 * (cardW + gap), baseY, cardW, cardH, "СТОРОНЫ", wF1, wF2, now, animStart, 400);
-
-        // New vote button
-        int btnY = baseY + cardH + 30;
-        int bw = 180, bh = 28, bx = (sw - bw) / 2;
-        RoundedRect.fill(g, bx, btnY, bw, bh, 3, PWPTheme.Colors.ACCENT);
-        RoundedRect.border(g, bx, btnY, bw, bh, 3, 1, PWPTheme.Colors.ACCENT);
-        g.drawString(
-                f,
-                Component.literal("НОВОЕ ГОЛОСОВАНИЕ"),
-                bx + bw / 2 - f.width("НОВОЕ ГОЛОСОВАНИЕ") / 2,
-                btnY + 8,
-                0xFF0A0C0E,
+                font,
+                UIDraw.ellipsize(font, votes, vw),
+                infoR.x(),
+                infoR.y(),
+                UIDraw.fade(PWPTheme.Text.MUTED, fade),
                 false);
-
-        // Update mouseClicked target Y for this button
-        voteButtonY = btnY;
-    }
-
-    private void drawWinnerCard(
-            GuiGraphics g,
-            int x,
-            int baseY,
-            int w,
-            int h,
-            String label,
-            String name,
-            String votes,
-            int color,
-            long now,
-            long animStart,
-            int delayMs) {
-        long elapsed = now - animStart - delayMs;
-        if (elapsed < 0) return;
-        float t = Math.min(elapsed / 600f, 1);
-        float eased = eoc(t);
-        int y = baseY + (int) (50 * (1 - eased));
-        int alpha = Math.min(255, (int) (255 * eased));
-        if (alpha < 5) return;
-
-        var f = PWPTheme.Fonts.display();
-        int aColor = PWPTheme.Colors.withAlpha(0xFF12151A, alpha);
-        int bColor = PWPTheme.Colors.withAlpha(PWPTheme.Colors.ACCENT, alpha);
-
-        RoundedRect.fill(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, aColor);
-        RoundedRect.border(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, 1, bColor);
-
-        // Preview color block
-        int pColor = PWPTheme.Colors.withAlpha(color, alpha);
-        g.fill(x + 10, y + 10, x + w - 10, y + 50, pColor);
-
-        // Label
-        int lc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_ACCENT, alpha);
-        g.drawString(f, Component.literal(label), x + w / 2 - f.width(label) / 2, y + 58, lc, false);
-
-        // Name
-        String n = name;
-        if (f.width(n) > w - 16) n = f.plainSubstrByWidth(n, w - 20) + "...";
-        int nc = PWPTheme.Colors.withAlpha(0xFFFFFF, alpha);
-        g.drawString(f, Component.literal(n), x + w / 2 - f.width(n) / 2, y + 74, nc, false);
-
-        // Votes
-        int vc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_DIM, alpha);
-        g.drawString(f, Component.literal(votes), x + w / 2 - f.width(votes) / 2, y + 92, vc, false);
-    }
-
-    private void drawWinnerSplitCard(
-            GuiGraphics g,
-            int x,
-            int baseY,
-            int w,
-            int h,
-            String label,
-            Option wF1,
-            Option wF2,
-            long now,
-            long animStart,
-            int delayMs) {
-        long elapsed = now - animStart - delayMs;
-        if (elapsed < 0) return;
-        float t = Math.min(elapsed / 600f, 1);
-        float eased = eoc(t);
-        int y = baseY + (int) (50 * (1 - eased));
-        int alpha = Math.min(255, (int) (255 * eased));
-        if (alpha < 5) return;
-
-        var f = PWPTheme.Fonts.display();
-        int aColor = PWPTheme.Colors.withAlpha(0xFF12151A, alpha);
-        int bColor = PWPTheme.Colors.withAlpha(PWPTheme.Colors.ACCENT, alpha);
-        int halfW = w / 2;
-
-        RoundedRect.fill(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, aColor);
-        RoundedRect.border(g, x, y, w, h, PWPTheme.Spacing.RADIUS_MEDIUM, 1, bColor);
-
-        // Label at top
-        int lc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_ACCENT, alpha);
-        g.drawString(f, Component.literal(label), x + w / 2 - f.width(label) / 2, y + 6, lc, false);
-
-        // Divider line
-        int divX = x + halfW;
-        g.fill(divX - 1, y + 18, divX + 1, y + h - 6, PWPTheme.Colors.BORDER);
-
-        // Left faction (Team 1)
-        int ly = y + 22;
-        if (wF1 != null && wF1.icon != null) {
-            RenderSystem.setShaderColor(1, 1, 1, alpha / 255f);
-            g.blit(wF1.icon, x + halfW / 2 - 20, ly, 0, 0, 40, 23, 40, 23);
-            ly += 27;
-        }
-        if (wF1 != null) {
-            int nc = PWPTheme.Colors.withAlpha(0xFFFFFF, alpha);
-            g.drawString(f, Component.literal(wF1.name), x + halfW / 2 - f.width(wF1.name) / 2, ly, nc, false);
-            ly += 12;
-            int vc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_DIM, alpha);
-            g.drawString(
-                    f,
-                    Component.literal(wF1.votes + " голос" + suffix(wF1.votes)),
-                    x + halfW / 2 - f.width(wF1.votes + " голос" + suffix(wF1.votes)) / 2,
-                    ly,
-                    vc,
+        if (notBlank(st.leadingName)) {
+            Component lead = Component.translatable("pwp_core.lobby.vote.leading", st.leadingName);
+            Component shown = UIDraw.ellipsize(font, lead, infoR.w() - vw - Spacing.LG);
+            UIDraw.text(
+                    g,
+                    font,
+                    shown,
+                    infoR.right() - font.width(shown),
+                    infoR.y(),
+                    UIDraw.fade(PWPTheme.Text.MUTED, fade),
                     false);
         }
-        String t1n = "КОМАНДА 1";
-        int tc1 = PWPTheme.Colors.withAlpha(0xFF3D6FA5, alpha);
-        g.drawString(f, Component.literal(t1n), x + halfW / 2 - f.width(t1n) / 2, y + h - 14, tc1, false);
-
-        // Right faction (Team 2)
-        int rx = x + halfW;
-        ly = y + 22;
-        if (wF2 != null && wF2.icon != null) {
-            RenderSystem.setShaderColor(1, 1, 1, alpha / 255f);
-            g.blit(wF2.icon, rx + halfW / 2 - 20, ly, 0, 0, 40, 23, 40, 23);
-            ly += 27;
-        }
-        if (wF2 != null) {
-            int nc = PWPTheme.Colors.withAlpha(0xFFFFFF, alpha);
-            g.drawString(f, Component.literal(wF2.name), rx + halfW / 2 - f.width(wF2.name) / 2, ly, nc, false);
-            ly += 12;
-            int vc = PWPTheme.Colors.withAlpha(PWPTheme.Colors.TEXT_DIM, alpha);
-            g.drawString(
-                    f,
-                    Component.literal(wF2.votes + " голос" + suffix(wF2.votes)),
-                    rx + halfW / 2 - f.width(wF2.votes + " голос" + suffix(wF2.votes)) / 2,
-                    ly,
-                    vc,
-                    false);
-        }
-        String t2n = "КОМАНДА 2";
-        int tc2 = PWPTheme.Colors.withAlpha(0xFFA53D3D, alpha);
-        g.drawString(f, Component.literal(t2n), rx + halfW / 2 - f.width(t2n) / 2, y + h - 14, tc2, false);
-
-        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
-    public boolean mouseClicked(double mx, double my) {
-        long now = System.currentTimeMillis();
-        if (transitioning) return false;
-
-        // Card clicks
-        if (hoveredCard >= 0) {
-            switch (currentPhase) {
-                case MAP -> selMap = hoveredCard;
-                case MODE -> selMode = hoveredCard;
-                case FACTION -> {
-                    int col = hoveredCard / 3, row = hoveredCard % 3;
-                    if (col == 0) selFact1 = row;
-                    else selFact2 = row;
-                }
-            }
-            return true;
+    private void renderTeamLabels(GuiGraphics g, Font font, float fade) {
+        boolean inv = st != null && "invasion".equalsIgnoreCase(st.mode);
+        String[] keys = inv
+                ? new String[] {"pwp_core.lobby.team.attack", "pwp_core.lobby.team.defend"}
+                : new String[] {"pwp_core.lobby.team.one", "pwp_core.lobby.team.two"};
+        int[] colors = {Colors.TEAM_BLUE, Colors.TEAM_RED};
+        for (int t = 0; t < 2; t++) {
+            Rect r = teamLabelR[t];
+            UIDraw.accentBarH(g, r.x(), r.bottom() + 1, r.w(), Spacing.HAIRLINE, UIDraw.fade(colors[t], fade));
+            Component label = UIDraw.ellipsize(font, Component.translatable(keys[t]), r.w());
+            UIDraw.text(g, font, label, r.x(), r.y(), UIDraw.fade(colors[t], fade), true);
         }
+    }
 
-        // Vote button
-        if (currentPhase == Phase.MAP || currentPhase == Phase.MODE || currentPhase == Phase.FACTION) {
-            int bw = 180, bh = 28, bx = (screenWidth - bw) / 2;
-            int by = voteButtonY;
-            if (mx >= bx && mx <= bx + bw && my >= by && my <= by + bh) {
-                if (currentPhase == Phase.FACTION) {
-                    if ((selFact1 < 0 && votFact1 < 0) || (selFact2 < 0 && votFact2 < 0)) return false;
-                    if (selFact1 == votFact1 && selFact2 == votFact2) return false;
-                    String blueId = selFact1 >= 0 ? factOpts.get(selFact1).id : "";
-                    String redId = selFact2 >= 0 ? factOpts.get(3 + selFact2).id : "";
-                    if (blueId.isEmpty() || redId.isEmpty()) return false;
-                    try {
-                        var conn = Minecraft.getInstance().player.connection;
-                        if (conn != null) conn.sendCommand("votefaction " + blueId + " " + redId);
-                    } catch (Exception ignored) {
-                        PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored);
-                    }
-                    votFact1 = selFact1;
-                    votFact2 = selFact2;
-                    factionPerTeamBars();
-                    return true;
-                } else {
-                    int sel = currentPhase == Phase.MAP ? selMap : selMode;
-                    int vot = currentPhase == Phase.MAP ? votMap : votMode;
-                    if (sel >= 0 && sel != vot) {
-                        List<Option> opts = currentPhase == Phase.MAP ? mapOpts : modeOpts;
-                        String cmdId = opts.get(sel).id;
-                        if (cmdId == null || cmdId.isEmpty()) return false;
-                        String cmd = currentPhase == Phase.MAP ? "votemap " : "votemode ";
-                        try {
-                            var conn = Minecraft.getInstance().player.connection;
-                            if (conn != null) conn.sendCommand(cmd + cmdId);
-                        } catch (Exception ignored) {
-                            PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored);
-                        }
-                        if (currentPhase == Phase.MAP) {
-                            votMap = sel;
-                            recalc(mapOpts);
-                        } else {
-                            votMode = sel;
-                            recalc(modeOpts);
-                        }
-                        return true;
-                    }
-                }
+    private void renderIdle(GuiGraphics g, Font font, float fade) {
+        UIDraw.sectionTitle(g, font, titleR, phaseTitle(), PWPTheme.Text.HEADING, fade);
+        Component hint = st != null && !st.canStartNewMatch && notBlank(st.policyReason)
+                ? Component.literal(st.policyReason)
+                : Component.translatable("pwp_core.lobby.vote.idle_hint");
+        UIDraw.emptyState(g, font, bodyR, UIIcon.INFO, Component.translatable("pwp_core.lobby.vote.idle"), hint, fade);
+    }
+
+    /** Итоги: три плитки (карта / режим / стороны) из полей result* пакета. */
+    private void renderFinished(GuiGraphics g, Font font, long elapsed, float fade) {
+        UIDraw.sectionTitle(g, font, titleR, phaseTitle(), PWPTheme.Text.HEADING, fade);
+        if (st == null) return;
+        int gap = Spacing.GRID_GAP;
+        int tileH = Spacing.RESULT_CARD_H;
+        int cols = Grid.columnsFor(bodyR.w(), Spacing.RESULT_CARD_MIN_W, gap, 3);
+        int rows = (3 + cols - 1) / cols;
+        int gridW = Math.min(bodyR.w(), cols * Spacing.RESULT_CARD_MAX_W + (cols - 1) * gap);
+        int gh = Grid.height(3, cols, tileH, gap);
+        Rect inner = bodyR.align(gridW, Math.min(gh, bodyR.h()), Align.CENTER, Align.CENTER);
+        // если три плитки не влезают по высоте — ужимаем высоту плитки, не вылезая за область
+        int fitH = rows > 0 ? (inner.h() - (rows - 1) * gap) / rows : tileH;
+        Rect[] cells = Grid.cells(inner, 3, cols, Math.min(tileH, fitH), gap);
+        Component sides = Component.translatable(
+                "pwp_core.lobby.versus", LobbyText.faction(st.resultF1), LobbyText.faction(st.resultF2));
+        renderResult(
+                g,
+                font,
+                cells[0],
+                "pwp_core.lobby.result.map",
+                text(st.resultMap),
+                Component.translatable("pwp_core.lobby.result.votes", st.resultMapVotes),
+                stagger(elapsed, 0));
+        renderResult(
+                g,
+                font,
+                cells[1],
+                "pwp_core.lobby.result.mode",
+                modeName(st.resultMode),
+                Component.translatable("pwp_core.lobby.result.votes", st.resultModeVotes),
+                stagger(elapsed, 1));
+        renderResult(
+                g,
+                font,
+                cells[2],
+                "pwp_core.lobby.result.sides",
+                sides,
+                Component.literal(st.resultF1Votes + " : " + st.resultF2Votes),
+                stagger(elapsed, 2));
+    }
+
+    private static float stagger(long elapsed, int i) {
+        return UIMath.stagger(elapsed, i, 0, Animations.STAGGER_SLOW * 2, Animations.ENTER);
+    }
+
+    private static Component text(String s) {
+        return Component.literal(notBlank(s) ? s : "—");
+    }
+
+    private static Component modeName(String id) {
+        if (!notBlank(id)) return Component.literal("—");
+        String key = "pwp_core.mode." + id.toLowerCase();
+        return I18n.exists(key) ? Component.translatable(key) : Component.literal(id);
+    }
+
+    private void renderResult(
+            GuiGraphics g, Font font, Rect r, String captionKey, Component value, Component votes, float o) {
+        if (o <= 0F || r.h() <= 0) return;
+        Rect tile = r.translate(0, Math.round((1F - o) * Animations.ENTER_SLIDE));
+        UIDraw.glass(g, tile, o, false);
+        UIDraw.accentBar(
+                g, tile.x(), tile.y(), tile.h(), Spacing.ACCENT_BAR, UIDraw.fade(Styles.Control.ACCENT_BAR, o));
+        Rect in = tile.inset(Spacing.SM + Spacing.ACCENT_BAR, Spacing.XS, Spacing.SM, Spacing.XS);
+        int lh = font.lineHeight;
+        Rect[] rows = Flow.column(in, Spacing.XXS, Flow.Justify.CENTER, lh, lh, lh);
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, Component.translatable(captionKey), in.w()),
+                in.x(),
+                rows[0].y(),
+                UIDraw.fade(PWPTheme.Text.ACCENT, o),
+                false);
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, value, in.w()),
+                in.x(),
+                rows[1].y(),
+                UIDraw.fade(PWPTheme.Text.HEADING, o),
+                true);
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, votes, in.w()),
+                in.x(),
+                rows[2].y(),
+                UIDraw.fade(PWPTheme.Text.MUTED, o),
+                false);
+    }
+
+    /** Идёт/запускается матч: панель с картой, режимом, сторонами и тикетами. */
+    private void renderMatch(GuiGraphics g, Font font, float fade) {
+        UIDraw.sectionTitle(g, font, titleR, phaseTitle(), PWPTheme.Text.HEADING, fade);
+        if (st == null) return;
+        boolean starting = st.phase == LobbyStatePacket.PHASE_MATCH_STARTING;
+        int lh = font.lineHeight + Spacing.XS;
+        List<Component[]> rows = new ArrayList<>();
+        rows.add(new Component[] {Component.translatable("pwp_core.lobby.match.map"), text(st.matchMapDisplay)});
+        if (notBlank(st.matchModeDisplay)) {
+            rows.add(new Component[] {Component.translatable("pwp_core.lobby.match.mode"), text(st.matchModeDisplay)});
+        }
+        if (notBlank(st.matchBlueFaction)) {
+            rows.add(new Component[] {
+                Component.translatable("pwp_core.lobby.match.sides"),
+                Component.translatable(
+                        "pwp_core.lobby.versus",
+                        LobbyText.faction(st.matchBlueFaction),
+                        LobbyText.faction(st.matchRedFaction))
+            });
+            if (!starting) {
+                rows.add(new Component[] {
+                    Component.translatable("pwp_core.lobby.match.tickets"),
+                    Component.literal(st.matchBlueTickets + " : " + st.matchRedTickets)
+                });
             }
         }
-
-        // FINISHED -> new vote button (block during slide-up animation)
-        if (currentPhase == Phase.FINISHED) {
-            if (now - finishedEnterTime < 600) return false;
-            int bw = 180, bh = 28, bx = (screenWidth - bw) / 2;
-            if (mx >= bx && mx <= bx + bw && my >= voteButtonY && my <= voteButtonY + bh) {
-                // Запросить актуальное состояние (новое голосование начнётся автоматически)
-                try {
-                    var conn = Minecraft.getInstance().player.connection;
-                    if (conn != null) conn.sendCommand("pwp");
-                } catch (Exception ignored) {
-                    PWP_LOG.warn("VoteTabRenderer.mouseClicked: исключение", ignored);
-                }
-                return true;
-            }
+        Component hint = Component.translatable(
+                starting ? "pwp_core.lobby.match.hint_starting" : "pwp_core.lobby.match.hint_playing");
+        int pad = Spacing.SM;
+        int pw = Math.min(bodyR.w(), Spacing.INFO_PANEL_MAX_W);
+        var hintLines = UIDraw.wrap(font, hint, pw - 2 * pad, 2);
+        int ph = 2 * pad + rows.size() * lh + Spacing.XS + UIDraw.linesHeight(font, hintLines.size());
+        Rect panel = bodyR.align(pw, Math.min(ph, bodyR.h()), Align.CENTER, Align.START);
+        UIDraw.glass(g, panel, fade, false);
+        Rect in = panel.inset(pad);
+        int y = in.y();
+        for (Component[] row : rows) {
+            if (y + font.lineHeight > in.bottom()) break;
+            UIDraw.keyValue(g, font, Rect.of(in.x(), y, in.w(), font.lineHeight), row[0], row[1], fade);
+            y += lh;
         }
+        UIDraw.lines(
+                g,
+                font,
+                hintLines,
+                Rect.of(in.x(), y + Spacing.XS, in.w(), in.bottom() - y),
+                false,
+                UIDraw.fade(PWPTheme.Text.CAPTION, fade),
+                false);
+    }
 
-        return false;
+    // ================================================================ ввод
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        return layer.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        return layer.mouseReleased(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        return layer.mouseScrolled(mx, my, delta);
+    }
+
+    private static Font font() {
+        return PWPTheme.Fonts.display();
     }
 }

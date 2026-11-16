@@ -60,6 +60,11 @@ public final class PWPChrome {
      * прямоугольник полосы — контент экрана начинается под ним.
      */
     public static Rect topBar(GuiGraphics g, Font font, int w, Fit.Density d, float opacity) {
+        return topBar(g, font, w, d, opacity, null);
+    }
+
+    /** Верхняя полоса с текстом справа (например «ОНЛАЙН: 12»); подзаголовок его не перекрывает. */
+    public static Rect topBar(GuiGraphics g, Font font, int w, Fit.Density d, float opacity, Component right) {
         Rect bar = Rect.of(0, 0, w, topBarHeight(d));
         UIBackdrop.bar(g, bar, true);
         int scale = d == Fit.Density.COMPACT ? 1 : 2;
@@ -70,15 +75,16 @@ public final class PWPChrome {
         int sx = m + logoWidth(font, scale) + Spacing.SM;
         UIDraw.vline(g, sx, bar.y() + Spacing.XS, bar.bottom() - Spacing.XS, PWPTheme.Styles.Backdrop.BAR_LINE);
         sx += Spacing.SM;
-        Component sub = UIDraw.ellipsize(font, Component.translatable("pwp_core.main_menu.subtitle"), w - m - sx);
-        UIDraw.text(
-                g,
-                font,
-                sub,
-                sx,
-                bar.y() + (bar.h() - font.lineHeight) / 2 + 1,
-                UIDraw.fade(PWPTheme.Text.CAPTION, opacity),
-                false);
+        int ty = bar.y() + (bar.h() - font.lineHeight) / 2 + 1;
+        int rightEdge = w - m;
+        if (right != null) {
+            Component r = UIDraw.ellipsize(font, right, Math.max(0, (w - 2 * m) / 3));
+            int rw = font.width(r);
+            UIDraw.text(g, font, r, rightEdge - rw, ty, UIDraw.fade(PWPTheme.Text.MUTED, opacity), false);
+            rightEdge -= rw + Spacing.LG;
+        }
+        Component sub = UIDraw.ellipsize(font, Component.translatable("pwp_core.main_menu.subtitle"), rightEdge - sx);
+        UIDraw.text(g, font, sub, sx, ty, UIDraw.fade(PWPTheme.Text.CAPTION, opacity), false);
         return bar;
     }
 

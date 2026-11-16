@@ -3,32 +3,50 @@ package com.pwp.coreclient.gui.screens.tabs;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.pwp.coreclient.gui.components.PWPScrollPanel;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Animations;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
+import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
 import com.pwp.coreclient.network.ClientResponseCache;
-import com.pwp.coreclient.network.PacketHandler;
-import com.pwp.coreclient.network.data.DataRequest;
-import java.util.*;
+import com.pwp.coreclient.ui.UIButton;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.UILayer;
+import com.pwp.coreclient.ui.UIMath;
+import com.pwp.coreclient.ui.UIScrollList;
+import com.pwp.coreclient.ui.layout.Flow;
+import com.pwp.coreclient.ui.layout.Rect;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Supplier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 
-public class LeaderTabRenderer {
+/**
+ * Вкладка «Лидеры»: карточка лидера (кроме тесных экранов), переключатель категории
+ * (кнопки-«пилюли», если влезают в строку, иначе «‹ КАТЕГОРИЯ ›»), таблица с прокруткой.
+ * Колонки фиксированной ширины (#, значение, K/D, Win%) + гибкое имя; на узком экране
+ * K/D и Win% скрываются. Своя строка подсвечена. Данные — ответ DataRequest "leaderboard".
+ */
+public class LeaderTabRenderer implements LobbyTabView {
 
     public enum State {
         LOADING,
         LOADED
     }
 
-    private static final String[] CATS = {
-        "SCORE", "УБИЙСТВА", "K/D", "ПОБЕДЫ", "WINRATE", "ЗАХВАТЫ", "УРОН", "ЛЕЧЕНИЕ", "НАИГРАНО"
+    private static final String[] CAT_KEYS = {
+        "score", "kills", "kd", "wins", "winrate", "captures", "damage", "healing", "playtime"
     };
-    private static final int CAT_PADDING = 14;
 
-    private static class Entry implements Comparable<Entry> {
-        String name, uuid;
-        int kills, deaths, wins, losses, captures, revives, vehicleKills;
-        int damage, healing, score, playtimeSec, kd100, wr100;
+    static final class Entry implements Comparable<Entry> {
+        final String name, uuid;
+        final int kills, deaths, wins, losses, captures, revives, vehicleKills;
+        final int damage, healing, score, playtimeSec, kd100, wr100;
         int catVal;
 
         Entry(JsonObject json) {
@@ -36,63 +54,91 @@ public class LeaderTabRenderer {
             JsonObject s = json.has("stats") ? json.getAsJsonObject("stats") : json;
             name = p.has("nickname") ? p.get("nickname").getAsString() : "—";
             uuid = p.has("uuid") ? p.get("uuid").getAsString() : "";
-            kills = getInt(s, "kills", 0);
-            deaths = getInt(s, "deaths", 0);
-            wins = getInt(s, "wins", 0);
-            losses = getInt(s, "losses", 0);
-            captures = getInt(s, "captures", 0);
-            revives = getInt(s, "revives", 0);
-            vehicleKills = getInt(s, "vehicleKills", 0);
-            damage = getInt(s, "damageDealt", 0);
-            healing = getInt(s, "healingDone", 0);
-            playtimeSec = getInt(s, "playtimeSeconds", 0);
+            kills = getInt(s, "kills");
+            deaths = getInt(s, "deaths");
+            wins = getInt(s, "wins");
+            losses = getInt(s, "losses");
+            captures = getInt(s, "captures");
+            revives = getInt(s, "revives");
+            vehicleKills = getInt(s, "vehicleKills");
+            damage = getInt(s, "damageDealt");
+            healing = getInt(s, "healingDone");
+            playtimeSec = getInt(s, "playtimeSeconds");
             score = kills * 100 + vehicleKills * 150 + captures * 200 + revives * 75 + healing;
             kd100 = deaths > 0 ? (int) (kills * 1000f / deaths) : (kills * 1000);
             wr100 = (wins + losses) > 0 ? (int) (wins * 10000f / (wins + losses)) : 0;
         }
 
+        @Override
         public int compareTo(Entry o) {
             return Integer.compare(o.catVal, this.catVal);
         }
 
-        private static int getInt(JsonObject o, String k, int def) {
-            return o.has(k) ? o.get(k).getAsInt() : def;
+        private static int getInt(JsonObject o, String k) {
+            return o.has(k) ? o.get(k).getAsInt() : 0;
+        }
+
+        String kd() {
+            return String.format("%.2f", deaths > 0 ? kills / (double) deaths : (double) kills);
+        }
+
+        String winrate() {
+            return (wins + losses) > 0 ? String.format("%.0f%%", wins * 100f / (wins + losses)) : "0%";
         }
     }
+
+    private LobbyBackend backend = LobbyBackend.NETWORK;
+    /** Источник ответа: в игре — кэш ответа сервера; в тест-стенде — фикстура. */
+    private Supplier<JsonObject> source = () -> ClientResponseCache.leaderboardData;
+
+    private Runnable consumeSource = () -> ClientResponseCache.leaderboardData = null;
 
     private State state = State.LOADING;
     private final List<Entry> entries = new ArrayList<>();
     private int sortCat = 0;
-    private int hoveredPill = -1, hoveredRow = -1;
-    private static final int ROW_H = 16;
+    private long shownAt = System.currentTimeMillis();
 
-    private final PWPScrollPanel scrollPanel = new PWPScrollPanel(20, 100, 200, 200);
-    private int pillY;
+    private final UILayer layer = new UILayer();
+    private final List<UIButton> pills = new ArrayList<>();
+    private UIButton catLabel;
+    private final UIScrollList<Entry> table = new UIScrollList<>(0, 0, 0, 0, Spacing.LEADER_ROW_H, this::renderRow);
+    private Rect area = Rect.of(0, 0, 0, 0);
+    private Rect topR = area, headerR = area, bodyR = area;
+    private boolean wideColumns;
+
+    public void setBackend(LobbyBackend backend) {
+        this.backend = backend;
+    }
+
+    /** Тест-стенд: данные из фикстуры (null — «пусто»), без запросов на сервер. */
+    public void setPreviewSource(Supplier<JsonObject> source) {
+        this.source = source;
+        this.consumeSource = () -> {};
+    }
 
     public void requestData(String orderBy, int page) {
         state = State.LOADING;
         entries.clear();
-        PacketHandler.INSTANCE.sendToServer(new DataRequest(
-                "leaderboard", "{\"orderBy\":\"" + orderBy + "\",\"page\":" + page + ",\"limit\":100}"));
+        table.setItems(entries);
+        backend.requestLeaderboard(orderBy, page);
     }
 
     public void tick() {
         if (state != State.LOADING) return;
-        JsonObject data = ClientResponseCache.leaderboardData;
+        JsonObject data = source.get();
         if (data == null) return;
-        JsonArray players = data.getAsJsonArray("players");
+        JsonArray players = data.has("players") ? data.getAsJsonArray("players") : new JsonArray();
         entries.clear();
         for (JsonElement e : players) entries.add(new Entry(e.getAsJsonObject()));
-        sortBy(0);
         state = State.LOADED;
-        ClientResponseCache.leaderboardData = null;
+        consumeSource.run();
+        sortBy(sortCat);
     }
 
     private void sortBy(int cat) {
         sortCat = cat;
         for (Entry e : entries) {
             e.catVal = switch (cat) {
-                case 0 -> e.score;
                 case 1 -> e.kills;
                 case 2 -> e.kd100;
                 case 3 -> e.wins;
@@ -105,227 +151,270 @@ public class LeaderTabRenderer {
             };
         }
         Collections.sort(entries);
-        scrollPanel.setScrollOffset(0);
+        table.setItems(entries);
+        for (int i = 0; i < pills.size(); i++) pills.get(i).selected(i == cat);
+        if (catLabel != null) catLabel.label(catName(cat));
     }
 
-    public void render(GuiGraphics g, int sw, int sh, int mx, int my) {
-        var font = PWPTheme.Fonts.display();
-        int titleY = 78;
+    private static Component catName(int cat) {
+        return Component.translatable("pwp_core.lobby.leaders.cat." + CAT_KEYS[cat]);
+    }
 
+    // ================================================================ раскладка
+
+    @Override
+    public void layout(Rect area) {
+        this.area = area;
+        rebuild();
+    }
+
+    @Override
+    public void onShow() {
+        shownAt = System.currentTimeMillis();
+    }
+
+    private void rebuild() {
+        layer.clear();
+        pills.clear();
+        catLabel = null;
+        Font font = PWPTheme.Fonts.display();
+        boolean compact = area.h() < Spacing.LOBBY_COMPACT_H;
+        int topH = compact ? 0 : Spacing.LEADER_TOP_H;
+        int pillH = Spacing.LEADER_PILL_H;
+        Rect[] col = Flow.column(
+                area,
+                0,
+                Flow.Justify.START,
+                topH,
+                compact ? 0 : Spacing.SM,
+                pillH,
+                Spacing.SM,
+                font.lineHeight,
+                Spacing.XXS,
+                Flow.flex(1));
+        topR = col[0];
+        Rect pillRow = col[2];
+        headerR = col[4];
+        bodyR = col[6];
+
+        // пилюли в одну строку, если влезают; иначе «‹ категория ›»
+        int[] widths = new int[CAT_KEYS.length];
+        for (int i = 0; i < CAT_KEYS.length; i++) widths[i] = font.width(catName(i)) + 2 * Spacing.SM;
+        if (Flow.naturalLength(Spacing.XXS, widths) <= pillRow.w()) {
+            Rect[] cells = Flow.row(pillRow, Spacing.XXS, Flow.Justify.CENTER, widths);
+            for (int i = 0; i < CAT_KEYS.length; i++) {
+                final int cat = i;
+                UIButton b = new UIButton(catName(i), () -> sortBy(cat))
+                        .style(UIButton.Style.GHOST)
+                        .selected(i == sortCat);
+                b.setBounds(cells[i]);
+                pills.add(layer.add(b));
+            }
+        } else {
+            int arrow = pillH + Spacing.XS;
+            Rect[] cells = Flow.row(pillRow, Spacing.XXS, Flow.Justify.START, arrow, Flow.flex(1), arrow);
+            UIButton prev = new UIButton(
+                            Component.literal("‹"), () -> sortBy((sortCat + CAT_KEYS.length - 1) % CAT_KEYS.length))
+                    .style(UIButton.Style.DARK);
+            UIButton next = new UIButton(Component.literal("›"), () -> sortBy((sortCat + 1) % CAT_KEYS.length))
+                    .style(UIButton.Style.DARK);
+            catLabel = new UIButton(catName(sortCat), () -> sortBy((sortCat + 1) % CAT_KEYS.length))
+                    .style(UIButton.Style.GHOST)
+                    .selected(true);
+            prev.setBounds(cells[0]);
+            catLabel.setBounds(cells[1]);
+            next.setBounds(cells[2]);
+            layer.add(prev);
+            layer.add(catLabel);
+            layer.add(next);
+        }
+        table.setBounds(bodyR);
+        layer.add(table);
+        wideColumns = bodyR.w() >= Spacing.LEADER_WIDE_MIN_W;
+    }
+
+    /** Колонки строки: #, имя (гибкое), значение, [K/D, Win%]. */
+    private Rect[] columns(Rect row) {
+        Font font = PWPTheme.Fonts.display();
+        int rank = font.width("000") + Spacing.SM;
+        int val = font.width("00 000 000");
+        int small = font.width("00.00") + Spacing.SM;
+        Rect in = row.inset(Spacing.XS, 0);
+        return wideColumns
+                ? Flow.row(in, Spacing.SM, Flow.Justify.START, rank, Flow.flex(1), val, small, small)
+                : Flow.row(in, Spacing.SM, Flow.Justify.START, rank, Flow.flex(1), val);
+    }
+
+    // ================================================================ рисование
+
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        Font font = PWPTheme.Fonts.display();
+        float fade = UIMath.stagger(System.currentTimeMillis() - shownAt, 0, 0, 0, Animations.ENTER);
         if (state == State.LOADING) {
-            g.drawString(
-                    font,
-                    Component.literal("ЛИДЕРЫ"),
-                    sw / 2 - font.width("ЛИДЕРЫ") / 2,
-                    titleY,
-                    PWPTheme.Colors.TEXT_ACCENT,
-                    false);
-            g.fill(sw / 2 - 35, titleY + 14, sw / 2 + 35, titleY + 15, PWPTheme.Colors.ACCENT);
-            String msg = "Загрузка...";
-            g.drawString(
-                    font,
-                    Component.literal(msg),
-                    sw / 2 - font.width(msg) / 2,
-                    sh / 2,
-                    PWPTheme.Colors.TEXT_DIM,
-                    false);
+            UIDraw.emptyState(g, font, area, UIIcon.INFO, Component.translatable("pwp_core.ui.loading"), null, fade);
             return;
         }
-
         if (entries.isEmpty()) {
-            g.drawString(
+            UIDraw.emptyState(
+                    g,
                     font,
-                    Component.literal("ЛИДЕРЫ"),
-                    sw / 2 - font.width("ЛИДЕРЫ") / 2,
-                    titleY,
-                    PWPTheme.Colors.TEXT_ACCENT,
-                    false);
-            g.fill(sw / 2 - 35, titleY + 14, sw / 2 + 35, titleY + 15, PWPTheme.Colors.ACCENT);
-            String msg = "Нет данных";
-            g.drawString(
-                    font,
-                    Component.literal(msg),
-                    sw / 2 - font.width(msg) / 2,
-                    sh / 2,
-                    PWPTheme.Colors.TEXT_DIM,
-                    false);
+                    area,
+                    UIIcon.PROFILE,
+                    Component.translatable("pwp_core.lobby.leaders.empty"),
+                    Component.translatable("pwp_core.lobby.leaders.empty_hint"),
+                    fade);
             return;
         }
-
-        String title = "ЛИДЕРЫ";
-        g.drawString(
-                font,
-                Component.literal(title),
-                sw / 2 - font.width(title) / 2,
-                titleY,
-                PWPTheme.Colors.TEXT_ACCENT,
-                false);
-        g.fill(sw / 2 - 35, titleY + 14, sw / 2 + 35, titleY + 15, PWPTheme.Colors.ACCENT);
-
-        Entry top = entries.get(0);
-        int cardX = 50, cardW = sw - 100, cardY = titleY + 26, cardH = 82;
-        RoundedRect.fill(g, cardX, cardY, cardW, cardH, 6, 0xFF1A180E);
-        RoundedRect.border(g, cardX, cardY, cardW, cardH, 6, 2, PWPTheme.Colors.ACCENT);
-        RoundedRect.glow(g, cardX, cardY, cardW, cardH, 6, 3, PWPTheme.Shadows.ACCENT_GLOW_MEDIUM);
-
-        String star = "★ TOP SCORE ★";
-        g.drawString(
-                font,
-                Component.literal(star),
-                sw / 2 - font.width(star) / 2,
-                cardY + 8,
-                PWPTheme.Colors.TEXT_ACCENT,
-                false);
-        String topName = top.name;
-        g.drawString(font, Component.literal(topName), sw / 2 - font.width(topName) / 2, cardY + 24, 0xFFFFFF, false);
-        String scoreStr = String.format("%,d", top.score) + " очков";
-        g.drawString(
-                font,
-                Component.literal(scoreStr),
-                sw / 2 - font.width(scoreStr) / 2,
-                cardY + 40,
-                PWPTheme.Colors.TEXT_ACCENT,
-                false);
-        String detail = "Убийств: " + top.kills + "  |  Побед: " + top.wins + "  |  WinRate: "
-                + (top.wins + top.losses > 0
-                        ? String.format("%.0f%%", top.wins * 100f / (top.wins + top.losses))
-                        : "0%");
-        g.drawString(
-                font,
-                Component.literal(detail),
-                sw / 2 - font.width(detail) / 2,
-                cardY + 58,
-                PWPTheme.Colors.TEXT_SECONDARY,
-                false);
-
-        int pillY = cardY + cardH + 10;
-        this.pillY = pillY;
-        int px = (sw - totalPillWidth(font)) / 2;
-        hoveredPill = -1;
-        for (int i = 0; i < CATS.length; i++) {
-            int pw = font.width(CATS[i]) + CAT_PADDING * 2;
-            boolean hovered = mx >= px && mx <= px + pw && my >= pillY && my <= pillY + 18;
-            if (hovered) hoveredPill = i;
-            boolean active = sortCat == i;
-            int pillBg = active
-                    ? PWPTheme.Colors.ACCENT
-                    : (hovered ? PWPTheme.Colors.SURFACE_LIGHT : PWPTheme.Colors.SURFACE);
-            RoundedRect.fill(g, px, pillY, pw, 18, 9, pillBg);
-            if (active) RoundedRect.border(g, px, pillY, pw, 18, 9, 1, PWPTheme.Colors.ACCENT);
-            g.drawString(
-                    font,
-                    Component.literal(CATS[i]),
-                    px + CAT_PADDING,
-                    pillY + 4,
-                    active ? 0xFF0A0C0E : PWPTheme.Colors.TEXT_SECONDARY,
-                    false);
-            px += pw + 4;
-        }
-
-        int tblY = pillY + 24, tblX = 40, tblW = sw - 80;
-        int hcol = PWPTheme.Colors.TEXT_ACCENT;
-        g.drawString(font, "#", tblX + 4, tblY, hcol, false);
-        g.drawString(font, "Игрок", tblX + 30, tblY, hcol, false);
-        g.drawString(font, CATS[sortCat], tblX + 200, tblY, hcol, false);
-        g.drawString(font, "K/D", tblX + 320, tblY, hcol, false);
-        g.drawString(font, "Win%", tblX + 380, tblY, hcol, false);
-        g.fill(tblX, tblY + 14, tblX + tblW, tblY + 15, PWPTheme.Colors.BORDER);
-
-        int bodyY = tblY + 18, bodyH = sh - bodyY - 16;
-        scrollPanel.setBounds(tblX, bodyY, tblW, bodyH);
-        scrollPanel.setContentHeight(entries.size() * ROW_H);
-        scrollPanel.enableScissor(g);
-        double scrollOff = scrollPanel.getScrollOffset();
-        int soff = -(int) scrollOff;
-        hoveredRow = -1;
-
-        for (int i = 0; i < entries.size(); i++) {
-            int ry = bodyY + i * ROW_H + soff;
-            if (ry + ROW_H < bodyY || ry > bodyY + bodyH) continue;
-            Entry e = entries.get(i);
-            boolean me = false; // подсветка будет через UUID
-            boolean hr = mx >= tblX && mx <= tblX + tblW && my >= ry && my <= ry + ROW_H;
-            if (hr) hoveredRow = i;
-            if (me) {
-                RoundedRect.fill(g, tblX, ry, tblW, ROW_H, 3, PWPTheme.Colors.withAlpha(PWPTheme.Colors.ACCENT, 25));
-                RoundedRect.border(
-                        g, tblX, ry, tblW, ROW_H, 3, 1, PWPTheme.Colors.withAlpha(PWPTheme.Colors.ACCENT, 50));
-            } else if (i % 2 == 0) g.fill(tblX, ry, tblX + tblW, ry + ROW_H, 0x08000000);
-            int rank = i + 1;
-            int rc = rank == 1
-                    ? 0xFFFFD700
-                    : (rank == 2 ? 0xFFC0C0C0 : (rank == 3 ? 0xFFCD7F32 : PWPTheme.Colors.TEXT_SECONDARY));
-            g.drawString(font, Component.literal(String.valueOf(rank)), tblX + 4, ry + 2, rc, false);
-            String n = e.name;
-            if (font.width(n) > 160) n = font.plainSubstrByWidth(n, 158) + ".";
-            g.drawString(
-                    font,
-                    Component.literal(n),
-                    tblX + 30,
-                    ry + 2,
-                    me ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Colors.TEXT_PRIMARY,
-                    false);
-            String val = formatCatValue(sortCat, e);
-            if (font.width(val) > 100) val = font.plainSubstrByWidth(val, 98);
-            g.drawString(font, Component.literal(val), tblX + 200, ry + 2, PWPTheme.Colors.TEXT_PRIMARY, false);
-            String kdStr = String.format("%.2f", e.deaths > 0 ? e.kills / (double) e.deaths : (double) e.kills);
-            g.drawString(font, Component.literal(kdStr), tblX + 320, ry + 2, PWPTheme.Colors.TEXT_SECONDARY, false);
-            String wrStr =
-                    (e.wins + e.losses) > 0 ? String.format("%.0f%%", e.wins * 100f / (e.wins + e.losses)) : "0%";
-            g.drawString(font, Component.literal(wrStr), tblX + 380, ry + 2, PWPTheme.Colors.TEXT_SECONDARY, false);
-            if (me)
-                g.drawString(
-                        font, Component.literal("◀ вы"), tblX + tblW - 50, ry + 2, PWPTheme.Colors.TEXT_ACCENT, false);
-        }
-        scrollPanel.disableScissor(g);
-        scrollPanel.renderScrollbar(g);
+        if (topR.h() > 0) renderTop(g, font, entries.get(0), fade);
+        renderHeader(g, font, fade);
+        var win = Minecraft.getInstance().getWindow();
+        layer.render(g, mx, my, pt, win.getGuiScaledWidth(), win.getGuiScaledHeight());
     }
 
-    private int totalPillWidth(net.minecraft.client.gui.Font font) {
-        int w = 0;
-        for (String s : CATS) w += font.width(s) + CAT_PADDING * 2 + 4;
-        return w - 4;
+    private void renderTop(GuiGraphics g, Font font, Entry top, float fade) {
+        UIDraw.glass(g, topR, fade, false);
+        UIDraw.accentBar(
+                g,
+                topR.x(),
+                topR.y(),
+                topR.h(),
+                Spacing.ACCENT_BAR_SELECTED,
+                UIDraw.fade(Styles.Control.ACCENT_BAR, fade));
+        Rect in = topR.inset(Spacing.SM + Spacing.ACCENT_BAR_SELECTED, Spacing.XS, Spacing.SM, Spacing.XS);
+        int lh = font.lineHeight;
+        Rect[] rows = Flow.column(in, Spacing.XXS, Flow.Justify.CENTER, lh, lh, lh);
+        Component caption = Component.translatable("pwp_core.lobby.leaders.top", catName(sortCat));
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, caption, in.w()),
+                in.x(),
+                rows[0].y(),
+                UIDraw.fade(PWPTheme.Text.ACCENT, fade),
+                false);
+        Component value = Component.literal(formatCatValue(sortCat, top));
+        int vw = font.width(value);
+        UIDraw.text(g, font, value, in.right() - vw, rows[1].y(), UIDraw.fade(PWPTheme.Text.ACCENT, fade), true);
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, Component.literal(top.name), in.w() - vw - Spacing.SM),
+                in.x(),
+                rows[1].y(),
+                UIDraw.fade(PWPTheme.Text.HEADING, fade),
+                true);
+        Component detail = Component.translatable("pwp_core.lobby.leaders.detail", top.kills, top.wins, top.winrate());
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, detail, in.w()),
+                in.x(),
+                rows[2].y(),
+                UIDraw.fade(PWPTheme.Text.MUTED, fade),
+                false);
     }
 
-    private String formatCatValue(int cat, Entry e) {
+    private void renderHeader(GuiGraphics g, Font font, float fade) {
+        Rect[] c = columns(headerR.withWidth(bodyR.w() - Spacing.SCROLLBAR_WIDTH - Spacing.XXS));
+        int color = UIDraw.fade(PWPTheme.Text.CAPTION, fade);
+        UIDraw.text(g, font, Component.literal("#"), c[0].x(), headerR.y(), color, false);
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, Component.translatable("pwp_core.lobby.leaders.player"), c[1].w()),
+                c[1].x(),
+                headerR.y(),
+                color,
+                false);
+        rightText(g, font, UIDraw.ellipsize(font, catName(sortCat), c[2].w()), c[2], headerR.y(), color);
+        if (c.length > 3) {
+            rightText(g, font, Component.literal("K/D"), c[3], headerR.y(), color);
+            rightText(g, font, Component.literal("Win%"), c[4], headerR.y(), color);
+        }
+        UIDraw.hline(
+                g, headerR.x(), headerR.right(), headerR.bottom() + 1, UIDraw.fade(Styles.Glass.HEADER_DIVIDER, fade));
+    }
+
+    private static void rightText(GuiGraphics g, Font font, Component t, Rect col, int y, int color) {
+        UIDraw.text(g, font, t, col.right() - font.width(t), y, color, false);
+    }
+
+    private void renderRow(GuiGraphics g, Entry e, int x, int y, int w, int h, boolean hovered, boolean selected) {
+        Font font = PWPTheme.Fonts.display();
+        int index = entries.indexOf(e);
+        Rect row = Rect.of(x, y, w, h);
+        var player = Minecraft.getInstance().player;
+        boolean me = player != null && !e.uuid.isEmpty() && e.uuid.equals(player.getStringUUID());
+        if (me) {
+            UIDraw.rect(g, row, Styles.Control.BG_SELECTED);
+            UIDraw.accentBar(g, x, y, h, Spacing.ACCENT_BAR, Styles.Control.ACCENT_BAR);
+        } else if (hovered) {
+            UIDraw.rect(g, row, Styles.Control.BG_HOVER);
+        } else if (index % 2 == 0) {
+            UIDraw.rect(g, row, Styles.Control.BG_DISABLED);
+        }
+        Rect[] c = columns(row);
+        int ty = y + (h - font.lineHeight) / 2 + 1;
+        int rank = index + 1;
+        int rc =
+                switch (rank) {
+                    case 1 -> PWPTheme.Colors.RARITY_LEGENDARY;
+                    case 2 -> PWPTheme.Text.HEADING;
+                    case 3 -> PWPTheme.Colors.ACCENT_SOFT;
+                    default -> PWPTheme.Text.CAPTION;
+                };
+        UIDraw.text(g, font, Component.literal(String.valueOf(rank)), c[0].x(), ty, rc, false);
+        UIDraw.text(
+                g,
+                font,
+                UIDraw.ellipsize(font, Component.literal(e.name), c[1].w()),
+                c[1].x(),
+                ty,
+                me ? PWPTheme.Text.ACCENT : PWPTheme.Text.BODY,
+                false);
+        rightText(
+                g,
+                font,
+                UIDraw.ellipsize(font, Component.literal(formatCatValue(sortCat, e)), c[2].w()),
+                c[2],
+                ty,
+                PWPTheme.Text.BODY);
+        if (c.length > 3) {
+            rightText(g, font, Component.literal(e.kd()), c[3], ty, Colors.TEXT_SECONDARY);
+            rightText(g, font, Component.literal(e.winrate()), c[4], ty, Colors.TEXT_SECONDARY);
+        }
+    }
+
+    private static String formatCatValue(int cat, Entry e) {
         return switch (cat) {
-            case 0 -> String.format("%,d", e.score);
             case 1 -> String.format("%,d", e.kills);
-            case 2 -> String.format("%.2f", e.deaths > 0 ? e.kills / (double) e.deaths : (double) e.kills);
+            case 2 -> e.kd();
             case 3 -> String.valueOf(e.wins);
-            case 4 -> (e.wins + e.losses) > 0 ? String.format("%.0f%%", e.wins * 100f / (e.wins + e.losses)) : "0%";
+            case 4 -> e.winrate();
             case 5 -> String.valueOf(e.captures);
             case 6 -> String.format("%,d", e.damage);
             case 7 -> String.format("%,d", e.healing);
-            case 8 -> formatPlaytime(e.playtimeSec);
-            default -> "";
+            case 8 -> Component.translatable("pwp_core.lobby.leaders.hours", e.playtimeSec / 3600)
+                    .getString();
+            default -> String.format("%,d", e.score);
         };
     }
 
-    private static String formatPlaytime(int secs) {
-        int h = secs / 3600;
-        if (h >= 24) return (h / 24) + "д " + (h % 24) + "ч";
-        return h + "ч";
+    // ================================================================ ввод
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        return state == State.LOADED && !entries.isEmpty() && layer.mouseClicked(mx, my, button);
     }
 
-    public boolean mouseClicked(double mx, double my) {
-        if (scrollPanel.mouseClicked(mx, my, 0)) return true;
-        if (my >= pillY && my <= pillY + 18 && hoveredPill >= 0) {
-            sortBy(hoveredPill);
-            return true;
-        }
-        return false;
-    }
-
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        return scrollPanel.mouseDragged(mx, my, button, dx, dy);
-    }
-
+    @Override
     public boolean mouseReleased(double mx, double my, int button) {
-        return scrollPanel.mouseReleased(mx, my, button);
+        return layer.mouseReleased(mx, my, button);
     }
 
+    @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
-        return Double.compare(scrollPanel.mouseScrolled(mx, my, delta), 0) != 0;
+        return layer.mouseScrolled(mx, my, delta);
     }
 }

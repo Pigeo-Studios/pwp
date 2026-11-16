@@ -231,6 +231,70 @@ public final class UIDraw {
                         Textures.ICONS_H));
     }
 
+    /**
+     * Картинка целиком (вся текстура, любого размера — UV нормированы) в прямоугольник с тинтом.
+     * Пропорции задаёт вызывающий (размер {@code r}).
+     */
+    public static void image(GuiGraphics g, ResourceLocation tex, Rect r, int tint) {
+        if (tex == null || r.w() <= 0 || r.h() <= 0) return;
+        blitTinted(g, tint, () -> g.blit(tex, r.x(), r.y(), r.w(), r.h(), 0F, 0F, 1, 1, 1, 1));
+    }
+
+    /**
+     * Пустое состояние (нет данных / нет голосования / нет профиля): иконка, заголовок и
+     * пояснение с переносом, по центру области. Всё обрезается областью.
+     */
+    public static void emptyState(
+            GuiGraphics g, Font font, Rect area, UIIcon icon, Component title, Component hint, float opacity) {
+        if (area.w() <= 0 || area.h() <= 0 || opacity <= 0F) return;
+        int is = Spacing.ICON_SIZE_LG;
+        boolean showIcon = icon != null && area.h() >= is + 3 * font.lineHeight;
+        List<FormattedCharSequence> hintLines = hint == null
+                ? List.of()
+                : wrap(font, hint, Math.min(area.w(), Spacing.EMPTY_TEXT_MAX_W), Spacing.EMPTY_HINT_LINES);
+        int h = (showIcon ? is + Spacing.SM : 0)
+                + font.lineHeight
+                + (hintLines.isEmpty() ? 0 : Spacing.XS + linesHeight(font, hintLines.size()));
+        int y = area.y() + Math.max(0, (area.h() - h) / 2);
+        if (showIcon) {
+            icon(g, icon, area.centerX() - is / 2, y, is, fade(PWPTheme.Text.CAPTION, opacity * 0.8F));
+            y += is + Spacing.SM;
+        }
+        Component t = ellipsize(font, title, area.w());
+        text(g, font, t, area.centerX() - font.width(t) / 2, y, fade(PWPTheme.Text.HEADING, opacity), true);
+        y += font.lineHeight + Spacing.XS;
+        lines(
+                g,
+                font,
+                hintLines,
+                Rect.of(area.x(), y, area.w(), area.bottom() - y),
+                true,
+                fade(PWPTheme.Text.MUTED, opacity),
+                false);
+    }
+
+    /**
+     * Строка «ключ … значение»: ключ слева (приглушённый), значение по правому краю. Значение
+     * в приоритете — ключ обрезается «…», если не хватает места.
+     */
+    public static void keyValue(GuiGraphics g, Font font, Rect row, Component key, Component value, float opacity) {
+        if (row.w() <= 0) return;
+        Component v = ellipsize(font, value, row.w() * 2 / 3);
+        int vw = font.width(v);
+        int ty = row.y() + (row.h() - font.lineHeight) / 2 + 1;
+        text(g, font, v, row.right() - vw, ty, fade(PWPTheme.Text.BODY, opacity), false);
+        Component k = ellipsize(font, key, row.w() - vw - Spacing.SM);
+        text(g, font, k, row.x(), ty, fade(PWPTheme.Text.MUTED, opacity), false);
+    }
+
+    /** Заголовок секции: акцентная полоса слева + текст (обрезка «…»). Высота — font.lineHeight. */
+    public static void sectionTitle(GuiGraphics g, Font font, Rect r, Component title, int color, float opacity) {
+        if (r.w() <= 0) return;
+        accentBar(g, r.x(), r.y(), font.lineHeight - 1, Spacing.ACCENT_BAR, fade(Styles.Control.ACCENT_BAR, opacity));
+        int tx = r.x() + Spacing.ACCENT_BAR + Spacing.XS;
+        text(g, font, ellipsize(font, title, r.right() - tx), tx, r.y(), fade(color, opacity), true);
+    }
+
     // ================================================================ панели
 
     /**

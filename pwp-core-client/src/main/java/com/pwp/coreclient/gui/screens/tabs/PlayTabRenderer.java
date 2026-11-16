@@ -1,22 +1,40 @@
 package com.pwp.coreclient.gui.screens.tabs;
 
 import com.pwp.coreclient.gui.components.PWPMatchCard;
-import com.pwp.coreclient.gui.components.RoundedRect;
 import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.gui.theme.PWPTheme.Animations;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
+import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.network.LobbyStatePacket;
+import com.pwp.coreclient.ui.UICard;
+import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.UIIcon;
+import com.pwp.coreclient.ui.UILayer;
+import com.pwp.coreclient.ui.UIMath;
+import com.pwp.coreclient.ui.UIScrollArea;
+import com.pwp.coreclient.ui.UITooltip;
+import com.pwp.coreclient.ui.layout.Flow;
+import com.pwp.coreclient.ui.layout.Grid;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 
-public class PlayTabRenderer {
+/**
+ * Вкладка «Игра»: активные матчи карточками {@link UICard} (превью карты, статус, время,
+ * стороны и тикеты, счётчик игроков в колонке фиксированной ширины). Клик — вход в матч
+ * ({@link LobbyBackend#joinMatch}, прежний JoinMatchServerPacket). Данные — только из пакета.
+ */
+public class PlayTabRenderer implements LobbyTabView {
 
     public static class MatchEntry {
         public String title;
         public String mode;
-        public String duration;
+        public int elapsedSec;
         public int currentPlayers;
         public int maxPlayers;
         public String blueFaction;
@@ -26,26 +44,12 @@ public class PlayTabRenderer {
         public PWPMatchCard.Status status;
         public int serverId;
         public String worldPath;
+        public boolean current;
 
-        public MatchEntry(
+        MatchEntry(
                 String title,
                 String mode,
-                String duration,
-                int current,
-                int max,
-                String blue,
-                String red,
-                int bt,
-                int rt,
-                PWPMatchCard.Status status,
-                int serverId) {
-            this(title, mode, duration, current, max, blue, red, bt, rt, status, serverId, null);
-        }
-
-        public MatchEntry(
-                String title,
-                String mode,
-                String duration,
+                int elapsedSec,
                 int current,
                 int max,
                 String blue,
@@ -54,10 +58,11 @@ public class PlayTabRenderer {
                 int rt,
                 PWPMatchCard.Status status,
                 int serverId,
-                String worldPath) {
+                String worldPath,
+                boolean isCurrent) {
             this.title = title;
             this.mode = mode;
-            this.duration = duration;
+            this.elapsedSec = elapsedSec;
             this.currentPlayers = current;
             this.maxPlayers = max;
             this.blueFaction = blue;
@@ -67,54 +72,72 @@ public class PlayTabRenderer {
             this.status = status;
             this.serverId = serverId;
             this.worldPath = worldPath;
+            this.current = isCurrent;
         }
     }
 
+    private LobbyBackend backend = LobbyBackend.NETWORK;
     private final List<MatchEntry> matches = new ArrayList<>();
-    private int hoveredIndex = -1;
-    private long tooltipHoverStart;
-    private int prevHovered = -1;
+    private final UILayer layer = new UILayer();
+    private final UIScrollArea grid = new UIScrollArea();
+    private final List<UICard> cards = new ArrayList<>();
+    private Rect area = Rect.of(0, 0, 0, 0);
+    private Rect titleR = area, bodyR = area;
+    private long shownAt = System.currentTimeMillis();
 
-    public PlayTabRenderer() {}
+    public void setBackend(LobbyBackend backend) {
+        this.backend = backend;
+    }
 
     public void applyState(LobbyStatePacket pkt) {
+        int before = matches.size();
         matches.clear();
-        // Активный матч лобби (карточка сверху)
+        // Активный матч лобби — первой карточкой
         if (pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING || pkt.phase == LobbyStatePacket.PHASE_MATCH_PLAYING) {
             matches.add(new MatchEntry(
-                    pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "-",
+                    pkt.matchMapDisplay != null ? pkt.matchMapDisplay : "—",
                     pkt.matchModeDisplay != null ? pkt.matchModeDisplay : "",
-                    pkt.matchElapsed + "s",
+                    pkt.matchElapsed,
                     pkt.matchPlayers,
                     pkt.matchMaxPlayers,
-                    pkt.matchBlueFaction != null ? pkt.matchBlueFaction : "",
-                    pkt.matchRedFaction != null ? pkt.matchRedFaction : "",
+                    pkt.matchBlueFaction,
+                    pkt.matchRedFaction,
                     pkt.matchBlueTickets,
                     pkt.matchRedTickets,
                     pkt.phase == LobbyStatePacket.PHASE_MATCH_STARTING
                             ? PWPMatchCard.Status.STARTING
                             : PWPMatchCard.Status.PLAYING,
                     pkt.matchServerId,
-                    pkt.matchWorldPath));
+                    pkt.matchWorldPath,
+                    true));
         }
-        // Остальные активные матчи
-        int count = pkt.matchCount;
-        for (int i = 0; i < count; i++) {
-            PWPMatchCard.Status st = parseStatus(i < pkt.mStatuses.length ? pkt.mStatuses[i] : "");
+        for (int i = 0; i < pkt.matchCount; i++) {
+            String status = at(pkt.mStatuses, i);
             matches.add(new MatchEntry(
-                    i < pkt.mDisplayNames.length ? pkt.mDisplayNames[i] : "-",
-                    i < pkt.mStatuses.length ? pkt.mStatuses[i] : "",
-                    (i < pkt.mElapsed.length ? pkt.mElapsed[i] : 0) + "s",
-                    i < pkt.mPlayers.length ? pkt.mPlayers[i] : 0,
-                    i < pkt.mMaxPlayers.length ? pkt.mMaxPlayers[i] : 0,
-                    i < pkt.mBlueFactions.length ? pkt.mBlueFactions[i] : "",
-                    i < pkt.mRedFactions.length ? pkt.mRedFactions[i] : "",
-                    i < pkt.mBlueTickets.length ? pkt.mBlueTickets[i] : 0,
-                    i < pkt.mRedTickets.length ? pkt.mRedTickets[i] : 0,
-                    st,
-                    i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1,
-                    i < pkt.mWorldPaths.length ? pkt.mWorldPaths[i] : null));
+                    at(pkt.mDisplayNames, i) != null ? at(pkt.mDisplayNames, i) : "—",
+                    status != null ? status : "",
+                    at(pkt.mElapsed, i),
+                    at(pkt.mPlayers, i),
+                    at(pkt.mMaxPlayers, i),
+                    at(pkt.mBlueFactions, i),
+                    at(pkt.mRedFactions, i),
+                    at(pkt.mBlueTickets, i),
+                    at(pkt.mRedTickets, i),
+                    parseStatus(status),
+                    pkt.mServerIds != null && i < pkt.mServerIds.length ? pkt.mServerIds[i] : -1,
+                    at(pkt.mWorldPaths, i),
+                    false));
         }
+        if (matches.size() != before || cards.size() != matches.size()) rebuild();
+        else update();
+    }
+
+    private static String at(String[] a, int i) {
+        return a != null && i >= 0 && i < a.length ? a[i] : null;
+    }
+
+    private static int at(int[] a, int i) {
+        return a != null && i >= 0 && i < a.length ? a[i] : 0;
     }
 
     private static PWPMatchCard.Status parseStatus(String s) {
@@ -129,126 +152,154 @@ public class PlayTabRenderer {
         };
     }
 
-    public void render(GuiGraphics gui, int screenW, int screenH, int mouseX, int mouseY) {
-        long now = System.currentTimeMillis();
-        var font = PWPTheme.Fonts.display();
-        int titleY = 80;
-
-        String title = "АКТИВНЫЕ МАТЧИ";
-        gui.drawString(
-                font,
-                Component.literal(title),
-                screenW / 2 - font.width(title) / 2,
-                titleY,
-                PWPTheme.Colors.TEXT_ACCENT,
-                false);
-        gui.fill(screenW / 2 - 60, titleY + 14, screenW / 2 + 60, titleY + 15, PWPTheme.Colors.ACCENT);
-
-        int listX = 60;
-        int listW = screenW - 120;
-        int cardH = PWPMatchCard.cardHeight();
-        int cardY = titleY + 30;
-        int gap = 6;
-
-        hoveredIndex = -1;
-        for (int i = 0; i < matches.size(); i++) {
-            int cy = cardY + i * (cardH + gap);
-            boolean hovered = mouseX >= listX && mouseX <= listX + listW && mouseY >= cy && mouseY <= cy + cardH;
-            if (hovered) hoveredIndex = i;
-
-            MatchEntry m = matches.get(i);
-            // Превью карты матча (иконка выбранной карты)
-            ResourceLocation preview = null;
-            if (m.worldPath != null && !m.worldPath.isEmpty()) {
-                preview = PWPLobbyScreen.getTexture("preview", m.worldPath, "match_");
-            }
-            PWPMatchCard.render(
-                    gui,
-                    listX,
-                    cy,
-                    listW,
-                    cardH,
-                    m.title,
-                    m.mode,
-                    m.duration,
-                    m.currentPlayers,
-                    m.maxPlayers,
-                    m.blueFaction,
-                    m.redFaction,
-                    m.blueTickets,
-                    m.redTickets,
-                    m.status,
-                    preview,
-                    false,
-                    hovered);
-        }
-
-        // Tooltip
-        if (hoveredIndex >= 0 && hoveredIndex < matches.size()) {
-            if (hoveredIndex != prevHovered) {
-                tooltipHoverStart = now;
-                prevHovered = hoveredIndex;
-            }
-            if (now - tooltipHoverStart > 1500) {
-                MatchEntry m = matches.get(hoveredIndex);
-                renderTooltip(gui, m, mouseX, mouseY, screenW, screenH, now);
-            }
-        } else {
-            prevHovered = -1;
-        }
-    }
-
-    private void renderTooltip(GuiGraphics g, MatchEntry m, int mx, int my, int sw, int sh, long now) {
-        long elapsed = now - tooltipHoverStart - 1500;
-        float t = Math.min(elapsed / 400f, 1);
-        float alpha = Math.max(0, Math.min(1, t < 0.5f ? 2 * t * t : -1 + (4 - 2 * t) * t));
-        if (alpha < 0.01f) return;
-
-        var f = PWPTheme.Fonts.display();
-        String[] lines = {
-            m.title,
-            m.mode + " | " + m.duration,
-            m.blueFaction + " vs " + m.redFaction,
-            "Игроки: " + m.currentPlayers + "/" + m.maxPlayers,
-            m.status == PWPMatchCard.Status.PLAYING || m.status == PWPMatchCard.Status.FINISHED
-                    ? "Билеты: " + m.blueTickets + " | " + m.redTickets
-                    : ""
-        };
-
-        int lineH = 12;
-        int pad = 8;
-        int tw = 0;
-        for (String l : lines) {
-            int lw = f.width(l);
-            if (lw > tw) tw = lw;
-        }
-        tw = Math.min(tw + pad * 2, sw - 20);
-        int th = lines.length * lineH + pad;
-
-        int tx = mx + 12, ty = my - th - 8;
-        if (tx + tw > sw - 8) tx = sw - 8 - tw;
-        if (ty < 8) ty = my + 12;
-
-        RoundedRect.fill(g, tx, ty, tw, th, 4, PWPTheme.Colors.multiplyAlpha(0xCC0E1117, alpha));
-        RoundedRect.border(g, tx, ty, tw, th, 4, 1, PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.BORDER_LIGHT, alpha));
-
-        int tc = PWPTheme.Colors.multiplyAlpha(PWPTheme.Colors.TEXT_PRIMARY, alpha);
-        int ly = ty + 4;
-        for (String l : lines) {
-            if (!l.isEmpty()) g.drawString(f, Component.literal(l), tx + pad, ly, tc, false);
-            ly += lineH;
-        }
-    }
-
-    public int getHoveredIndex() {
-        return hoveredIndex;
-    }
-
-    public int getServerId(int index) {
-        return matches.get(index).serverId;
-    }
-
     public List<MatchEntry> getMatches() {
         return matches;
+    }
+
+    @Override
+    public void layout(Rect area) {
+        this.area = area;
+        rebuild();
+    }
+
+    @Override
+    public void onShow() {
+        shownAt = System.currentTimeMillis();
+    }
+
+    private void rebuild() {
+        layer.clear();
+        grid.clear();
+        cards.clear();
+        Font font = PWPTheme.Fonts.display();
+        Rect[] col = Flow.column(area, 0, Flow.Justify.START, font.lineHeight, Spacing.SM, Flow.flex(1));
+        titleR = col[0];
+        bodyR = col[2];
+        grid.setBounds(bodyR);
+        layer.add(grid);
+        int n = matches.size();
+        if (n > 0) {
+            int gap = Spacing.GRID_GAP;
+            int cardH = area.h() < Spacing.LOBBY_COMPACT_H ? Spacing.VOTE_CARD_H : Spacing.VOTE_CARD_H_LARGE;
+            int cols =
+                    Math.min(n, Grid.columnsFor(bodyR.w(), Spacing.MATCH_CARD_MIN_W, gap, Spacing.MATCH_CARD_MAX_COLS));
+            int contentW = grid.contentWidth(Grid.height(n, cols, cardH, gap));
+            int gridW = Math.min(contentW, cols * Spacing.MATCH_CARD_MAX_W + (cols - 1) * gap);
+            Rect[] cells = Grid.cells(Rect.of((contentW - gridW) / 2, 0, gridW, 0), n, cols, cardH, gap);
+            int badgeW = font.width("00/00");
+            for (int i = 0; i < n; i++) {
+                final int idx = i;
+                UICard c = new UICard(Component.empty(), () -> join(idx)).badgeWidth(badgeW);
+                cards.add(grid.place(c, cells[i]));
+            }
+        }
+        update();
+    }
+
+    private void join(int idx) {
+        if (idx < 0 || idx >= matches.size()) return;
+        int sid = matches.get(idx).serverId;
+        if (sid >= 0) backend.joinMatch(sid);
+    }
+
+    private void update() {
+        for (int i = 0; i < cards.size() && i < matches.size(); i++) {
+            MatchEntry m = matches.get(i);
+            UICard c = cards.get(i);
+            c.label(Component.literal(m.title));
+            c.subtitle(subtitle(m))
+                    .badge(Component.literal(m.currentPlayers + "/" + m.maxPlayers))
+                    .image(PWPLobbyScreen.getTexture("preview", m.worldPath, "match_"), 1, 1);
+            c.selected(m.current);
+            c.setEnabled(m.serverId >= 0);
+            c.tooltip(tooltip(m));
+        }
+    }
+
+    private static Component statusText(PWPMatchCard.Status s) {
+        return Component.translatable("pwp_core.lobby.status." + s.name().toLowerCase());
+    }
+
+    private static boolean hasTickets(MatchEntry m) {
+        return m.status == PWPMatchCard.Status.PLAYING || m.status == PWPMatchCard.Status.FINISHED;
+    }
+
+    /** «Статус · 12:34 · США vs Россия · 100:80» — порядок важности, хвост обрежет «…». */
+    private static Component subtitle(MatchEntry m) {
+        var c = Component.empty().append(statusText(m.status));
+        c.append(" · " + LobbyText.clock(m.elapsedSec));
+        if (m.blueFaction != null && !m.blueFaction.isBlank()) {
+            c.append(" · ")
+                    .append(Component.translatable(
+                            "pwp_core.lobby.versus",
+                            LobbyText.faction(m.blueFaction),
+                            LobbyText.faction(m.redFaction)));
+        }
+        if (hasTickets(m)) c.append(" · " + m.blueTickets + ":" + m.redTickets);
+        return c;
+    }
+
+    private static UITooltip.Content tooltip(MatchEntry m) {
+        List<Component> lines = new ArrayList<>();
+        if (!m.mode.isBlank()) lines.add(Component.literal(m.mode));
+        lines.add(statusText(m.status).copy().append(" · " + LobbyText.clock(m.elapsedSec)));
+        if (m.blueFaction != null && !m.blueFaction.isBlank()) {
+            lines.add(Component.translatable(
+                    "pwp_core.lobby.versus", LobbyText.faction(m.blueFaction), LobbyText.faction(m.redFaction)));
+        }
+        lines.add(Component.translatable("pwp_core.lobby.match.players", m.currentPlayers, m.maxPlayers));
+        if (hasTickets(m)) {
+            lines.add(Component.translatable("pwp_core.lobby.match.tickets_value", m.blueTickets, m.redTickets));
+        }
+        if (m.serverId >= 0) lines.add(Component.translatable("pwp_core.lobby.match.click_to_join"));
+        return new UITooltip.Content(Component.literal(m.title), lines);
+    }
+
+    @Override
+    public void render(GuiGraphics g, int mx, int my, float pt) {
+        Font font = PWPTheme.Fonts.display();
+        long elapsed = System.currentTimeMillis() - shownAt;
+        float fade = UIMath.stagger(elapsed, 0, 0, 0, Animations.ENTER);
+        Component count = Component.literal(String.valueOf(matches.size()));
+        int cw = font.width(count);
+        UIDraw.sectionTitle(
+                g,
+                font,
+                titleR.withWidth(titleR.w() - cw - Spacing.SM),
+                Component.translatable("pwp_core.lobby.play.title"),
+                PWPTheme.Text.HEADING,
+                fade);
+        UIDraw.text(g, font, count, titleR.right() - cw, titleR.y(), UIDraw.fade(Colors.TEXT_SECONDARY, fade), false);
+        for (int i = 0; i < cards.size(); i++) {
+            float p = UIMath.stagger(elapsed, i, 0, Animations.STAGGER_FAST, Animations.ENTER);
+            cards.get(i).setAppearance(p, 0, Math.round((1F - p) * Animations.ENTER_SLIDE));
+        }
+        if (matches.isEmpty()) {
+            UIDraw.emptyState(
+                    g,
+                    font,
+                    bodyR,
+                    UIIcon.SERVER,
+                    Component.translatable("pwp_core.lobby.play.empty"),
+                    Component.translatable("pwp_core.lobby.play.empty_hint"),
+                    fade);
+        }
+        var win = Minecraft.getInstance().getWindow();
+        layer.render(g, mx, my, pt, win.getGuiScaledWidth(), win.getGuiScaledHeight());
+    }
+
+    @Override
+    public boolean mouseClicked(double mx, double my, int button) {
+        return layer.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int button) {
+        return layer.mouseReleased(mx, my, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double delta) {
+        return layer.mouseScrolled(mx, my, delta);
     }
 }

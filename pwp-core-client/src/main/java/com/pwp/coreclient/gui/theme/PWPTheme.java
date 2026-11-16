@@ -256,6 +256,47 @@ public class PWPTheme {
         public static final int TIP_LINES = 3;
         /** Максимум строк причины дисконнекта. */
         public static final int REASON_LINES_MAX = 8;
+        /** Пустое состояние: ширина текста и строк пояснения. */
+        public static final int EMPTY_TEXT_MAX_W = 260;
+
+        public static final int EMPTY_HINT_LINES = 3;
+        /** Полоса доли голосов у карточки. */
+        public static final int SHARE_BAR_H = 2;
+        /** Лобби: вкладки, карточки голосования/матчей, таблица лидеров. */
+        public static final int LOBBY_TAB_H = 18;
+
+        public static final int LOBBY_TAB_H_LARGE = 22;
+        public static final int LOBBY_TAB_PAD = 12;
+        public static final int VOTE_CARD_MIN_W = 150;
+        public static final int VOTE_CARD_MAX_W = 260;
+        public static final int FACTION_COL_MAX_W = 240;
+        public static final int RESULT_CARD_MAX_W = 220;
+        public static final int MATCH_CARD_MAX_W = 420;
+        public static final int INFO_PANEL_MAX_W = 340;
+        /** Высота области вкладки, ниже которой лобби ужимается (карточки ниже, без лишнего). */
+        public static final int LOBBY_COMPACT_H = 150;
+
+        public static final int VOTE_CARD_MAX_COLS = 4;
+        public static final int VOTE_CARD_H = 34;
+        public static final int VOTE_CARD_H_LARGE = 40;
+        public static final int FACTION_CARD_H = 28;
+        public static final int MATCH_CARD_MIN_W = 240;
+        public static final int MATCH_CARD_MAX_COLS = 2;
+        public static final int RESULT_CARD_MIN_W = 120;
+        public static final int RESULT_CARD_H = 56;
+        public static final int PROFILE_PANEL_MIN_W = 200;
+        /** Минимальная ширина пары «ключ … значение» (две пары в ряд, если влезают). */
+        public static final int PROFILE_PAIR_MIN_W = 110;
+
+        public static final int LEADER_ROW_H = 14;
+        public static final int LEADER_PILL_H = 16;
+        public static final int LEADER_TOP_H = 40;
+        /** Ширина таблицы лидеров, с которой показываются колонки K/D и Win%. */
+        public static final int LEADER_WIDE_MIN_W = 300;
+        /** Колонка таймера голосования (под «00:00»). */
+        public static final int VOTE_BAR_H = 4;
+        /** Карточки экрана выбора (PWPSelectionScreen): зазор и поле. */
+        public static final int SELECTION_MAX_COLS = 6;
 
         private Spacing() {}
     }

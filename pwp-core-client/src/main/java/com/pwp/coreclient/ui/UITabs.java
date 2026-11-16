@@ -1,8 +1,10 @@
 package com.pwp.coreclient.ui;
 
 import com.pwp.coreclient.gui.theme.PWPTheme.Animations;
+import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
 import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntConsumer;
@@ -11,7 +13,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-/** Горизонтальные вкладки равной ширины; подчёркивание активной плавно переезжает. */
+/**
+ * Горизонтальные вкладки равной ширины в тактическом стиле: без плашек, при наведении —
+ * блик, у активной — акцентный текст и подчёркивание, которое плавно переезжает; снизу 1px
+ * линия. Подписи обрезаются «…» по ширине вкладки.
+ */
 @OnlyIn(Dist.CLIENT)
 public class UITabs extends UIWidget {
     private final List<Component> labels = new ArrayList<>();
@@ -36,6 +42,13 @@ public class UITabs extends UIWidget {
         else indicator.snap(index);
     }
 
+    /** Ширина, при которой все подписи помещаются без обрезки. */
+    public int preferredWidth() {
+        int max = 0;
+        for (Component c : labels) max = Math.max(max, font().width(c));
+        return labels.size() * (max + 2 * Spacing.LOBBY_TAB_PAD);
+    }
+
     private int tabWidth() {
         return labels.isEmpty() ? width : width / labels.size();
     }
@@ -45,16 +58,34 @@ public class UITabs extends UIWidget {
         int tw = tabWidth();
         for (int i = 0; i < labels.size(); i++) {
             int tx = x + i * tw;
-            boolean hovered = mouseX >= tx && mouseX < tx + tw && mouseY >= y && mouseY < y + height;
-            int bg = i == selected ? Styles.Tab.BG_ACTIVE : hovered ? Styles.Tab.BG_HOVER : Styles.Tab.BG;
-            g.fill(tx, y, tx + tw, y + height, bg);
-            int color = i == selected ? Styles.Tab.TEXT_ACTIVE : Styles.Tab.TEXT;
+            Rect tab = Rect.of(tx, y, tw, height);
+            boolean hovered = enabled && tab.contains(mouseX, mouseY);
+            boolean active = i == selected;
+            if (hovered || active) {
+                UIDraw.gradientV(
+                        g,
+                        tab,
+                        UIDraw.fade(Styles.Control.SHEEN_TOP, opacity),
+                        UIDraw.fade(active ? Styles.Control.BG_SELECTED : Styles.Control.BG_HOVER, opacity * 0.6F));
+            }
+            int color = active ? Styles.Tab.TEXT_ACTIVE : hovered ? Styles.Control.TEXT_HOVER : Styles.Tab.TEXT;
             Component shown = UIDraw.ellipsize(font(), labels.get(i), tw - 2 * Spacing.XS);
-            UIDraw.centered(g, font(), shown, tx + tw / 2, y + height / 2 + 1, color);
+            UIDraw.centered(g, font(), shown, tx + tw / 2, y + height / 2 + 1, UIDraw.fade(color, opacity));
         }
-        g.fill(x, y + height - 1, x + width, y + height, Styles.Tab.BORDER);
+        UIDraw.hline(
+                g,
+                x,
+                x + width,
+                y + height - 1,
+                UIDraw.fade(Colors.withAlpha(Styles.Glass.HEADER_DIVIDER, 0x33), opacity));
         int ix = x + Math.round(indicator.value() * tw);
-        g.fill(ix, y + height - 2, ix + tw, y + height, Styles.Tab.BORDER_ACTIVE);
+        UIDraw.accentBarH(
+                g,
+                ix,
+                y + height - Spacing.ACCENT_BAR,
+                tw,
+                Spacing.ACCENT_BAR,
+                UIDraw.fade(Styles.Tab.BORDER_ACTIVE, opacity));
     }
 
     @Override
