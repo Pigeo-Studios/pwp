@@ -359,5 +359,8 @@
     "gui.pwpwarfare.map.vehicles": "Vehicles",
     "gui.pwpwarfare.map.no_vehicles": "No vehicle spawners",
     "gui.pwpwarfare.map.controls": "LMB drag: pan · Wheel: zoom · RMB: markers",
-    "gui.pwpwarfare.map.no_markers": "No markers"
+    "gui.pwpwarfare.map.no_markers": "No markers",
+    "gui.pwpwarfare.kit_select.preview": "Preview loadout",
+    "gui.pwpwarfare.grid.empty": "Nothing here yet",
+    "gui.pwpwarfare.grid.loading": "Loading…"
 }

@@ -359,5 +359,8 @@
     "gui.pwpwarfare.map.vehicles": "Техніка",
     "gui.pwpwarfare.map.no_vehicles": "Немає спавнерів техніки",
     "gui.pwpwarfare.map.controls": "ЛКМ: зсув · Коліщатко: зум · ПКМ: маркери",
-    "gui.pwpwarfare.map.no_markers": "Немає маркерів"
+    "gui.pwpwarfare.map.no_markers": "Немає маркерів",
+    "gui.pwpwarfare.kit_select.preview": "Перегляд спорядження",
+    "gui.pwpwarfare.grid.empty": "Тут поки порожньо",
+    "gui.pwpwarfare.grid.loading": "Завантаження…"
 }

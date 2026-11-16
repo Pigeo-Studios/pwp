@@ -202,4 +202,16 @@ public final class WTheme {
     public static final int MARKER_CARD_MIN_W = 72;
     public static final int MARKER_CARD_H = 56;
     public static final int MARKER_COLS_MAX = 5;
+
+    // ------------------------------------------------------------ сетки карточек
+    public static final int CARD_MIN_W = 92;
+    public static final int CARD_MAX_W = 130;
+    public static final int CARD_H = 64;
+    public static final int CARD_COLS_MAX = 5;
+    public static final int CARD_PANEL_MIN_W = 200;
+    public static final int CARD_PANEL_MAX_W = 660;
+    /** Высота области под заглушку «пусто/загрузка». */
+    public static final int CARD_EMPTY_H = 80;
+    /** Кнопка-действие в углу карточки. */
+    public static final int CARD_ACTION = 12;
 }

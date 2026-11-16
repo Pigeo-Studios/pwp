@@ -3,27 +3,23 @@ package com.pigeostudios.pwp.warfare.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.pigeostudios.pwp.warfare.client.ClientData;
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPPanel;
-import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
+import com.pigeostudios.pwp.warfare.client.gui.ui.CardGridScreen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.network.data.DataRequest;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-public class FactionSelectScreen extends Screen {
-    private static final int CARD_W = 130;
-    private static final int CARD_H = 50;
-    private static final int GAP = 10;
-
+/**
+ * Админ: выбор фракции для редактирования китов. Список фракций — DataRequest «factions»
+ * (как раньше; пустой ответ — фолбэк ukraine/russia/usa), карточка — флаг + название.
+ */
+public class FactionSelectScreen extends CardGridScreen {
     private List<String> factions = new ArrayList<>();
     private boolean loading = true;
     private boolean requested;
-    private int cols;
-    private int panelW;
-    private int panelH;
 
     public FactionSelectScreen() {
         super(Component.translatable("gui.pwpwarfare.faction_select.title"));
@@ -31,15 +27,12 @@ public class FactionSelectScreen extends Screen {
 
     @Override
     protected void init() {
-        cols = Math.max(1, Math.min(4, (width - 40) / (CARD_W + GAP)));
-        panelW = cols * CARD_W + (cols - 1) * GAP + 20;
-        panelW = Math.min(panelW, width - 20);
-        int rows = Math.max(1, (factions.size() + cols - 1) / cols);
-        panelH = Math.min(height - 60, rows * CARD_H + (rows - 1) * GAP + 56);
-
-        ClientData.factionsData = null;
-        requested = true;
-        com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("factions", ""));
+        super.init();
+        if (!requested && loading) {
+            ClientData.factionsData = null;
+            requested = true;
+            com.pwp.coreclient.network.PacketHandler.INSTANCE.sendToServer(new DataRequest("factions", ""));
+        }
     }
 
     @Override
@@ -60,58 +53,36 @@ public class FactionSelectScreen extends Screen {
             }
             factions = loaded;
             loading = false;
-            recreateWidgets();
-        }
-    }
-
-    private void recreateWidgets() {
-        clearWidgets();
-        int cx = (width - panelW) / 2;
-        int py = 10 + 34;
-
-        for (int i = 0; i < factions.size(); i++) {
-            String faction = factions.get(i);
-            int r = i / cols;
-            int c = i % cols;
-            int bx = cx + 10 + c * (CARD_W + GAP);
-            int by = py + r * (CARD_H + GAP);
-
-            addRenderableWidget(new PWPButton(
-                    bx,
-                    by,
-                    CARD_W,
-                    CARD_H,
-                    Component.literal(faction.toUpperCase()),
-                    b -> minecraft.setScreen(new FactionKitListScreen(faction)),
-                    PWPButton.Style.PRIMARY));
         }
     }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
+    protected boolean loading() {
+        return loading;
+    }
 
-        int cx = (width - panelW) / 2;
-        int py = 10;
+    @Override
+    protected WarfareIcon titleIcon() {
+        return WarfareIcon.TEAM;
+    }
 
-        PWPPanel.render(gui, cx, py, panelW, panelH);
-        gui.drawCenteredString(
-                PWPTheme.Fonts.display(),
-                Component.literal(title.getString()),
-                width / 2,
-                py + 10,
-                PWPTheme.Colors.TEXT_ACCENT);
-        gui.fill(cx + 10, py + 22, cx + panelW - 10, py + 23, PWPTheme.Colors.ACCENT);
-
-        if (loading) {
-            gui.drawCenteredString(
-                    PWPTheme.Fonts.display(),
-                    Component.translatable("gui.pwpwarfare.faction_select.loading"),
-                    width / 2,
-                    height / 2,
-                    PWPTheme.Colors.TEXT_DIM);
+    @Override
+    protected List<Card> cards() {
+        List<Card> out = new ArrayList<>();
+        for (String faction : factions) {
+            var flag = TeamRoster.flag(faction);
+            Card c = Card.of(faction, Component.literal(faction.toUpperCase()), () -> Minecraft.getInstance()
+                            .setScreen(new FactionKitListScreen(faction)))
+                    .icon(WarfareIcon.TEAM);
+            if (flag != null
+                    && Minecraft.getInstance()
+                            .getResourceManager()
+                            .getResource(flag)
+                            .isPresent()) {
+                c = c.image(flag, 64F / 36F);
+            }
+            out.add(c);
         }
-
-        super.render(gui, mx, my, pt);
+        return out;
     }
 }

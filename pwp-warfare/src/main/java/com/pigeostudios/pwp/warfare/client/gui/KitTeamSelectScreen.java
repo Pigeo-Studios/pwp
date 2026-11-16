@@ -1,57 +1,42 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.pwp.coreclient.gui.components.PWPButton;
-import com.pwp.coreclient.gui.components.PWPLayout;
-import com.pwp.coreclient.gui.components.PWPPanel;
-import com.pwp.coreclient.gui.theme.PWPTheme;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.CardGridScreen;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
+import java.util.List;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-public class KitTeamSelectScreen extends Screen {
-    private static final int PANEL_W = 240;
-    private static final int PANEL_H = 100;
-
+/** Админ: выбор команды для редактирования китов (BLUE / RED → KitListScreen). */
+public class KitTeamSelectScreen extends CardGridScreen {
     public KitTeamSelectScreen() {
         super(Component.translatable("gui.pwpwarfare.kit_team_select.title"));
     }
 
     @Override
-    protected void init() {
-        int cx = PWPLayout.centerX(width, PANEL_W);
-        int cy = (height - PANEL_H) / 2;
-
-        addRenderableWidget(new PWPButton(
-                cx + 10,
-                cy + 50,
-                100,
-                22,
-                Component.translatable("gui.pwpwarfare.kit_team_select.blue"),
-                b -> minecraft.setScreen(new KitListScreen("BLUE")),
-                PWPButton.Style.PRIMARY));
-
-        addRenderableWidget(new PWPButton(
-                cx + PANEL_W - 110,
-                cy + 50,
-                100,
-                22,
-                Component.translatable("gui.pwpwarfare.kit_team_select.red"),
-                b -> minecraft.setScreen(new KitListScreen("RED")),
-                PWPButton.Style.DANGER));
+    protected WarfareIcon titleIcon() {
+        return WarfareIcon.TEAM;
     }
 
     @Override
-    public void render(GuiGraphics gui, int mx, int my, float pt) {
-        renderBackground(gui);
+    protected int maxCols() {
+        return 2;
+    }
 
-        int cx = PWPLayout.centerX(width, PANEL_W);
-        int cy = (height - PANEL_H) / 2;
-
-        PWPPanel.render(gui, cx, cy, PANEL_W, PANEL_H);
-
-        gui.drawCenteredString(PWPTheme.Fonts.display(), title, width / 2, cy + 12, PWPTheme.Colors.TEXT_PRIMARY);
-        PWPLayout.renderDivider(gui, cx + 10, cy + 28, PANEL_W - 20);
-
-        super.render(gui, mx, my, pt);
+    @Override
+    protected List<Card> cards() {
+        return List.of(
+                Card.of(
+                                "BLUE",
+                                Component.translatable("gui.pwpwarfare.kit_team_select.blue"),
+                                () -> Minecraft.getInstance().setScreen(new KitListScreen("BLUE")))
+                        .icon(WarfareIcon.SHIELD)
+                        .accent(WTheme.TEAM_BLUE),
+                Card.of(
+                                "RED",
+                                Component.translatable("gui.pwpwarfare.kit_team_select.red"),
+                                () -> Minecraft.getInstance().setScreen(new KitListScreen("RED")))
+                        .icon(WarfareIcon.TARGET)
+                        .accent(WTheme.TEAM_RED));
     }
 }
