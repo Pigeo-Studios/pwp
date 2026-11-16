@@ -107,11 +107,24 @@ public class PWPMainMenuScreen extends Screen {
     }
 
     /**
-     * Адрес кнопки «Играть»: прод по умолчанию, для тест-стенда — JVM-флаг
-     * {@code -Dpwp.serverHost=127.0.0.1} (можно с портом: {@code host:port}).
+     * Адрес кнопки «Играть» ({@code host} или {@code host:port}). Порядок: JVM-флаг
+     * {@code -Dpwp.serverHost}, затем первая строка файла {@code config/pwp_server_host.txt}
+     * в папке игры (для тест-стенда — лаунчер такой файл не перезаписывает), иначе прод.
      */
     private static String serverHost() {
-        return System.getProperty("pwp.serverHost", "pigeo.asuscomm.com");
+        String prop = System.getProperty("pwp.serverHost");
+        if (prop != null && !prop.isBlank()) return prop.trim();
+        var file = net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get().resolve("pwp_server_host.txt");
+        if (java.nio.file.Files.isRegularFile(file)) {
+            try {
+                for (String line : java.nio.file.Files.readAllLines(file)) {
+                    if (!line.isBlank() && !line.trim().startsWith("#")) return line.trim();
+                }
+            } catch (java.io.IOException e) {
+                PWP_LOG.warn("PWPMainMenuScreen.serverHost: не прочитан {}", file, e);
+            }
+        }
+        return "pigeo.asuscomm.com";
     }
 
     private void openReplayViewer() {
@@ -128,6 +141,9 @@ public class PWPMainMenuScreen extends Screen {
 
     private void detectReplayMod() {
         replayModAvailable = false;
+        // ReplayMod не установлен — норма, стектрейс ClassNotFoundException при каждом
+        // открытии меню не нужен.
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("replaymod")) return;
         try {
             Class.forName("com.replaymod.replay.ReplayModReplay");
             Class<?> rc = Class.forName("com.replaymod.core.ReplayMod");

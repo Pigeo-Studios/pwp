@@ -11,8 +11,7 @@
     "ConnectScreenMixin",
     "ConnectScreenAccessor",
     "ScreenInvoker",
-    "DisconnectedScreenAccessor",
-    "FontAccessor"
+    "DisconnectedScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
