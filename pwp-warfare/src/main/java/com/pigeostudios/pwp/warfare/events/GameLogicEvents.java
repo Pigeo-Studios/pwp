@@ -123,6 +123,8 @@ public class GameLogicEvents {
     // Запуск обратного отсчёта перед началом игры
     public static void startGameCountdown(ServerLevel level) {
         WarfareWorldData data = WarfareWorldData.get(level);
+        // Этап 1: замечания валидатора раскладки — только лог, старт не блокируется
+        com.pigeostudios.pwp.warfare.config.MapLayoutState.log("match start");
         data.match.waitingActive = false;
         data.match.countdownTicks = 100;
         data.match.countdownActive = true;

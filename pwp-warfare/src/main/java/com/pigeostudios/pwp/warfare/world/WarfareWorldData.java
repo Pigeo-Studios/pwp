@@ -190,22 +190,19 @@ public class WarfareWorldData extends SavedData {
         return out;
     }
 
-    public void parseConfigVehicleSpawners(JsonArray spawners, String team, ServerLevel level) {
-        if (spawners == null) return;
-        for (var el : spawners) {
-            JsonObject obj = el.getAsJsonObject();
-            ConfigVehicleSpawner spawner = new ConfigVehicleSpawner();
-            spawner.team = team;
-            if (obj.has("vehicleName"))
-                spawner.vehicleName = obj.get("vehicleName").getAsString();
-            if (obj.has("role")) spawner.role = obj.get("role").getAsString();
-            spawner.x = obj.get("x").getAsInt();
-            spawner.y = obj.get("y").getAsInt();
-            spawner.z = obj.get("z").getAsInt();
-            if (obj.has("yaw")) spawner.yaw = obj.get("yaw").getAsFloat();
-            spawner.fixed = obj.has("fixed") && obj.get("fixed").getAsBoolean();
-            this.vehicles.configVehicleSpawners.add(spawner);
-        }
+    /** Слот спавнера техники из map_config (разбор — layout/MapLayoutCodec). */
+    public void addConfigVehicleSpawner(
+            String team, String role, String vehicleName, int x, int y, int z, float yaw, boolean fixed) {
+        ConfigVehicleSpawner spawner = new ConfigVehicleSpawner();
+        spawner.team = team;
+        spawner.role = role;
+        spawner.vehicleName = vehicleName;
+        spawner.x = x;
+        spawner.y = y;
+        spawner.z = z;
+        spawner.yaw = yaw;
+        spawner.fixed = fixed;
+        this.vehicles.configVehicleSpawners.add(spawner);
     }
 
     // Слоты, чей чанк на момент старта матча не был загружен — доустанавливаются

@@ -1,17 +1,25 @@
 package com.pigeostudios.pwp.warfare;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
 import com.pigeostudios.pwp.warfare.client.ClientConfigRegistry;
 import com.pigeostudios.pwp.warfare.command.ModCommands;
+import com.pigeostudios.pwp.warfare.config.MapLayoutState;
 import com.pigeostudios.pwp.warfare.config.MatchConfigLoader;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.entity.ModEntities;
 import com.pigeostudios.pwp.warfare.item.ModCreativeModeTabs;
 import com.pigeostudios.pwp.warfare.item.ModItems;
+import com.pigeostudios.pwp.warfare.layout.Box;
+import com.pigeostudios.pwp.warfare.layout.Issue;
+import com.pigeostudios.pwp.warfare.layout.LayoutDerive;
+import com.pigeostudios.pwp.warfare.layout.LayoutValidator;
+import com.pigeostudios.pwp.warfare.layout.MapLayout;
+import com.pigeostudios.pwp.warfare.layout.MapLayout.Border;
+import com.pigeostudios.pwp.warfare.layout.MapLayoutCodec;
+import com.pigeostudios.pwp.warfare.layout.Team;
 import com.pigeostudios.pwp.warfare.menu.ModMenuTypes;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.server.FactionDataLoader;
@@ -22,6 +30,8 @@ import com.pwp.api.config.MapConfigLegacy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
@@ -146,14 +156,22 @@ public class WarfareMod {
                     data.match.deathTicketCost = settings.get("deathTicketCost").getAsInt();
             }
 
-            if (root.has("mapBounds")) {
-                JsonObject bounds = root.getAsJsonObject("mapBounds");
-                if (bounds.has("centerX"))
-                    data.match.mapCenterX = bounds.get("centerX").getAsInt();
-                if (bounds.has("centerZ"))
-                    data.match.mapCenterZ = bounds.get("centerZ").getAsInt();
-                if (bounds.has("sizeBlocks"))
-                    data.match.mapSizeBlocks = bounds.get("sizeBlocks").getAsInt();
+            // Раскладка (точки, мейны, спавны, техника, граница, режим) — через чистую модель: кодек + авто-вывод
+            // незаданного (явное в конфиге приоритетнее) + валидатор (пока только лог, старт не блокируется)
+            MapLayoutCodec.Parsed parsed = MapLayoutCodec.read(root);
+            LayoutDerive.Resolved resolved = LayoutDerive.resolve(parsed.layout());
+            MapLayout layout = resolved.layout();
+            List<Issue> issues = new ArrayList<>(parsed.issues());
+            issues.addAll(resolved.notes());
+            issues.addAll(LayoutValidator.validate(layout));
+            MapLayoutState.set(layout, issues, configPath.toString());
+            MapLayoutState.log("map_config load");
+
+            Border border = layout.border();
+            if (border != null) {
+                if (border.centerX() != null) data.match.mapCenterX = border.centerX();
+                if (border.centerZ() != null) data.match.mapCenterZ = border.centerZ();
+                if (border.sizeBlocks() != null) data.match.mapSizeBlocks = border.sizeBlocks();
                 level.getWorldBorder().setCenter(data.match.mapCenterX, data.match.mapCenterZ);
                 level.getWorldBorder().setSize(data.match.mapSizeBlocks);
             }
@@ -164,21 +182,9 @@ public class WarfareMod {
 
             if (root.has("mainZones")) {
                 data.structures.mainZones.clear();
-                var zones = root.getAsJsonArray("mainZones");
-                for (var el : zones) {
-                    JsonObject zone = el.getAsJsonObject();
-                    String team = zone.get("team").getAsString();
-                    String shape = zone.has("shape") ? zone.get("shape").getAsString() : "cylinder";
-                    JsonObject p1 = zone.getAsJsonObject("pos1");
-                    JsonObject p2 = zone.getAsJsonObject("pos2");
-                    AABB aabb = new AABB(
-                            p1.get("x").getAsInt(),
-                            p1.get("y").getAsInt(),
-                            p1.get("z").getAsInt(),
-                            p2.get("x").getAsInt(),
-                            p2.get("y").getAsInt(),
-                            p2.get("z").getAsInt());
-                    data.structures.mainZones.add(new WarfareWorldData.MainProtectionZone(team, shape, aabb));
+                for (MapLayout.MainZoneDef zone : layout.mainZones()) {
+                    data.structures.mainZones.add(
+                            new WarfareWorldData.MainProtectionZone(zone.team(), zone.effShape(), aabb(zone.box())));
                 }
             }
 
@@ -187,35 +193,30 @@ public class WarfareMod {
             // Точки захвата: единый источник — map_config (паттерн или capturePoints). SavedData — лишь копия на
             // время матча; applyMapConfig идёт на каждом старте сервера (configApplied в NBT не пишется).
             boolean pointsFromConfig = false;
-            if (root.has("capturePointPatterns") && root.has("capturePointPatternIndex")) {
-                int patternIdx = root.get("capturePointPatternIndex").getAsInt();
-                JsonArray patterns = root.getAsJsonArray("capturePointPatterns");
-                if (patternIdx >= 0 && patternIdx < patterns.size()) {
-                    JsonObject chosen = patterns.get(patternIdx).getAsJsonObject();
-                    String patternName =
-                            chosen.has("name") ? chosen.get("name").getAsString() : "Pattern " + patternIdx;
-                    JsonArray points = chosen.getAsJsonArray("points");
-                    data.match.capturePoints.clear();
-                    for (var el : points) {
-                        data.match.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
-                    }
-                    pointsFromConfig = true;
-                    LOGGER.info(
-                            "Loaded capture point pattern: {} ({} points)",
-                            patternName,
-                            data.match.capturePoints.size());
-                } else {
-                    LOGGER.warn("Invalid capture point pattern index {}, falling back to default", patternIdx);
+            if (layout.patternIndex() >= 0) {
+                int patternIdx = layout.patternIndex();
+                JsonObject chosen = root.getAsJsonArray("capturePointPatterns")
+                        .get(patternIdx)
+                        .getAsJsonObject();
+                String patternName = chosen.has("name") ? chosen.get("name").getAsString() : "Pattern " + patternIdx;
+                data.match.capturePoints.clear();
+                for (MapLayout.CapturePointDef p : layout.points()) {
+                    data.match.capturePoints.add(toCapturePoint(p));
                 }
+                pointsFromConfig = true;
+                LOGGER.info(
+                        "Loaded capture point pattern: {} ({} points)", patternName, data.match.capturePoints.size());
+            } else if (root.has("capturePointPatterns") && root.has("capturePointPatternIndex")) {
+                LOGGER.warn(
+                        "Invalid capture point pattern index {}, falling back to default",
+                        root.get("capturePointPatternIndex"));
             }
 
-            if (!pointsFromConfig
-                    && root.has("capturePoints")
-                    && root.getAsJsonArray("capturePoints").size() > 0) {
+            if (!pointsFromConfig && !layout.points().isEmpty()) {
                 int fromWorld = data.match.capturePoints.size();
                 data.match.capturePoints.clear();
-                for (var el : root.getAsJsonArray("capturePoints")) {
-                    data.match.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
+                for (MapLayout.CapturePointDef p : layout.points()) {
+                    data.match.capturePoints.add(toCapturePoint(p));
                 }
                 pointsFromConfig = true;
                 LOGGER.info(
@@ -233,27 +234,15 @@ public class WarfareMod {
                         data.match.capturePoints.size());
             }
 
-            if (root.has("teams")) {
-                JsonObject teams = root.getAsJsonObject("teams");
-                for (String teamKey : new String[] {"BLUE", "RED"}) {
-                    if (teams.has(teamKey)) {
-                        JsonObject team = teams.getAsJsonObject(teamKey);
-                        if (team.has("spawn")) {
-                            JsonObject spawn = team.getAsJsonObject("spawn");
-                            String dim = spawn.has("dimension")
-                                    ? spawn.get("dimension").getAsString()
-                                    : "minecraft:overworld";
-                            int sx = spawn.get("x").getAsInt();
-                            int sy = spawn.has("y") ? spawn.get("y").getAsInt() : 64;
-                            int sz = spawn.get("z").getAsInt();
-                            BlockPos pos = new BlockPos(sx, sy, sz);
-                            if (teamKey.equals("BLUE")) {
-                                data.match.blueSpawns.put(dim, pos);
-                            } else {
-                                data.match.redSpawns.put(dim, pos);
-                            }
-                        }
-                    }
+            // Спавн мейна: teams.*.spawn, иначе выведен из центра мейн-зоны (Y — дефолт 64, см. SPAWN_DERIVED)
+            for (Team team : Team.values()) {
+                MapLayout.TeamSpawn spawn = layout.spawn(team);
+                if (spawn == null) continue;
+                BlockPos pos = new BlockPos(spawn.x(), spawn.effY(), spawn.z());
+                if (team == Team.BLUE) {
+                    data.match.blueSpawns.put(spawn.effDimension(), pos);
+                } else {
+                    data.match.redSpawns.put(spawn.effDimension(), pos);
                 }
             }
 
@@ -265,14 +254,16 @@ public class WarfareMod {
                 LOGGER.info("Core API not available, using NBT-based kits/vehicles");
             }
 
-            if (root.has("vehicleSpawners")) {
-                JsonObject vsObj = root.getAsJsonObject("vehicleSpawners");
-                if (vsObj.has("BLUE")) {
-                    data.parseConfigVehicleSpawners(vsObj.getAsJsonArray("BLUE"), "BLUE", level);
-                }
-                if (vsObj.has("RED")) {
-                    data.parseConfigVehicleSpawners(vsObj.getAsJsonArray("RED"), "RED", level);
-                }
+            for (MapLayout.VehicleSlot slot : layout.vehicleSlots()) {
+                data.addConfigVehicleSpawner(
+                        slot.team().name(),
+                        slot.role(),
+                        slot.vehicleName(),
+                        slot.pos().x(),
+                        slot.pos().y(),
+                        slot.pos().z(),
+                        slot.effYaw(),
+                        slot.effFixed());
             }
 
             if (data.match.hideDeathMessages) {
@@ -319,7 +310,7 @@ public class WarfareMod {
                     root.get("name").getAsString());
 
             // INVASION mode: set all points to defender, adjust tickets
-            String mode = root.has("mode") ? root.get("mode").getAsString() : "aas";
+            String mode = layout.effectiveMode();
             data.match.gameMode = mode;
             if (mode.equals("invasion") && !data.match.capturePoints.isEmpty()) {
                 String defender = root.has("invasionDefender")
@@ -374,31 +365,31 @@ public class WarfareMod {
         if (!keys.isEmpty()) LOGGER.warn(MapConfigLegacy.warning(source, keys));
     }
 
-    private static WarfareWorldData.CapturePoint parseCapturePoint(JsonObject cp) {
-        String name = cp.get("name").getAsString();
-        String shape = cp.has("shape") ? cp.get("shape").getAsString() : "cylinder";
-        JsonObject p1 = cp.getAsJsonObject("pos1");
-        JsonObject p2 = cp.getAsJsonObject("pos2");
-        AABB aabb = new AABB(
-                p1.get("x").getAsInt(),
-                p1.get("y").getAsInt(),
-                p1.get("z").getAsInt(),
-                p2.get("x").getAsInt(),
-                p2.get("y").getAsInt(),
-                p2.get("z").getAsInt());
-        int bp = cp.has("bluePriority") ? cp.get("bluePriority").getAsInt() : 10;
-        int rp = cp.has("redPriority") ? cp.get("redPriority").getAsInt() : 10;
-        int ctm = cp.has("captureTimeMinutes") ? cp.get("captureTimeMinutes").getAsInt() : 2;
-        int pen = cp.has("ticketPenalty") ? cp.get("ticketPenalty").getAsInt() : 60;
-        int deduct = cp.has("captureDeduction") ? cp.get("captureDeduction").getAsInt() : 0;
-        int lockMin =
-                cp.has("lockDurationMinutes") ? cp.get("lockDurationMinutes").getAsInt() : 0;
-        int gainNeut = cp.has("gainNeutralizeTickets")
-                ? cp.get("gainNeutralizeTickets").getAsInt()
-                : 0;
-        int gainCap =
-                cp.has("gainCaptureTickets") ? cp.get("gainCaptureTickets").getAsInt() : 0;
+    /** Точка из раскладки → состояние матча. Приоритет, который не удалось вывести, — прежний дефолт 10. */
+    private static WarfareWorldData.CapturePoint toCapturePoint(MapLayout.CapturePointDef p) {
+        int legacy = MapLayout.CapturePointDef.LEGACY_DEFAULT_PRIORITY;
         return new WarfareWorldData.CapturePoint(
-                name, aabb, bp, rp, ctm, pen, deduct, shape, lockMin, gainNeut, gainCap);
+                p.name(),
+                aabb(p.box()),
+                p.bluePriority() != null ? p.bluePriority() : legacy,
+                p.redPriority() != null ? p.redPriority() : legacy,
+                p.effCaptureTimeMinutes(),
+                p.effTicketPenalty(),
+                p.effCaptureDeduction(),
+                p.effShape(),
+                p.effLockDurationMinutes(),
+                p.effGainNeutralizeTickets(),
+                p.effGainCaptureTickets());
+    }
+
+    /** Бокс как его строил прежний парсер: углы pos1/pos2 как есть (AABB сам нормализует min/max). */
+    private static AABB aabb(Box b) {
+        return new AABB(
+                b.pos1().x(),
+                b.pos1().y(),
+                b.pos1().z(),
+                b.pos2().x(),
+                b.pos2().y(),
+                b.pos2().z());
     }
 }

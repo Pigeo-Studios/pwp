@@ -31,6 +31,10 @@ sourceSets {
 }
 
 dependencies {
+    // Gson — для кодека map_config (warfare/layout/MapLayoutCodec). В рантайме его даёт Minecraft
+    // (1.20.1 = Gson 2.10.1), поэтому только compileOnly: в jar Forge-модулей отдельно не пакуется.
+    compileOnly 'com.google.code.gson:gson:2.10.1'
+    testImplementation 'com.google.code.gson:gson:2.10.1'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
