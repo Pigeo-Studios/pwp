@@ -14,9 +14,14 @@ public class WarfareConfig {
     public static final Builder CLIENT_BUILDER = new Builder();
     public static ForgeConfigSpec SPEC;
     public static ForgeConfigSpec CLIENT_SPEC;
+    /**
+     * Устарело с этапа 3 HUD: компас масштабируется общей настройкой «Масштаб HUD» (hud.scale), это
+     * значение больше не читается (ключ оставлен, чтобы не ломать client-конфиг и /compass scale).
+     */
     public static final IntValue COMPASS_SCALE = CLIENT_BUILDER
             .comment("Scale of the HUD compass (1 = Small, 2 = Normal, 3 = Large)")
             .defineInRange("compassScale", 2, 1, 3);
+
     public static final BooleanValue LOW_TICKETS_SIREN =
             BUILDER.comment("Play siren at 50 tickets").define("lowTicketsSiren", true);
     public static final BooleanValue AGS_PROJECTILE_DESTRUCTION =

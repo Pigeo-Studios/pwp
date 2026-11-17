@@ -14,8 +14,10 @@ import com.pwp.coreclient.ui.layout.Rect;
  * <p>Зоны:
  *
  * <ul>
- *   <li>верх-центр — ярусы: полоса компаса/тикетов, таймер фазы, баннер события. Таймер и баннер
- *       сужаются до промежутка между боковыми колонками;
+ *   <li>верх-центр — полоса компаса/тикетов {@link #topBand()}, под ней стек {@link #top()} сверху
+ *       вниз (этап 3: таймер фазы Invasion → виджет точки захвата → баннер события). Стек и
+ *       прежние ярусы {@link #phaseTimer()}/{@link #eventBanner()} сужаются до промежутка между
+ *       боковыми колонками и не опускаются на зону прицела;
  *   <li>левая колонка — один стек {@link #left()} сверху вниз: сначала верхняя группа
  *       (кровотечение, голосование старта), затем {@link Stack#advanceTo} к якорю
  *       {@link #midLeftAnchor()} и средняя группа (радио, голос). Верхняя группа может заходить
@@ -98,6 +100,8 @@ public final class HudZones {
     private final Rect rightColumn;
     private final int midLeftAnchor;
 
+    private final Rect topColumn;
+    private final Stack top;
     private final Stack left;
     private final Stack right;
     private final Stack bottomLeftStack;
@@ -136,6 +140,8 @@ public final class HudZones {
         int bannerY = phaseTimer.bottom() + gap;
         int bannerH = Math.max(0, Math.min(u(BANNER_H), crosshair.y() - gap - bannerY));
         eventBanner = new Rect(cx - bannerW / 2, bannerY, bannerW, bannerH);
+        int topY = topBand.bottom() + gap;
+        topColumn = new Rect(cx - bannerW / 2, topY, bannerW, Math.max(0, crosshair.y() - gap - topY));
         boolean sidesUnderBand = sideW > 0 && leftX + sideW > topBand.x();
         int sideTop = sidesUnderBand ? topBand.bottom() + gap : edge;
 
@@ -175,6 +181,7 @@ public final class HudZones {
         rightColumn = new Rect(rightX, sideTop, sideW, Math.max(0, rightBottom - sideTop));
         midLeftAnchor = Math.max(sideTop, height / 2 - u(MID_LEFT_ABOVE_CENTER));
 
+        top = new Stack(topColumn, false, gap);
         left = new Stack(leftColumn, false, gap);
         right = new Stack(rightColumn, false, gap);
         bottomLeftStack = new Stack(bottomLeft, true, u(1));
@@ -233,6 +240,7 @@ public final class HudZones {
 
     /** Сброс стеков и контекстного яруса — раз в кадр перед отрисовкой HUD. Без аллокаций. */
     public void beginFrame() {
+        top.reset();
         left.reset();
         right.reset();
         bottomLeftStack.reset();
@@ -329,6 +337,16 @@ public final class HudZones {
     /** Y начала средней группы левой колонки (радио/голос). */
     public int midLeftAnchor() {
         return midLeftAnchor;
+    }
+
+    /** Область стека верх-центра под полосой компаса (до зоны прицела). */
+    public Rect topColumn() {
+        return topColumn;
+    }
+
+    /** Стек верх-центра сверху вниз: таймер фазы, точка захвата, баннер события. */
+    public Stack top() {
+        return top;
     }
 
     public Stack left() {

@@ -376,4 +376,82 @@ public final class WTheme {
     public static final int HUD_POSITIVE = Colors.SUCCESS_LIGHT;
     /** Пациент: «вас лечат». */
     public static final int HUD_MEDIC = Colors.SUCCESS_LIGHT;
+
+    // ------------------------------------------------------------ HUD верх (этап 3: client/hud/TopHud)
+    // Размеры — базовые HUD-единицы внутри HudZones.topBand()/top() (масштаб HUD применяет HudDraw.begin).
+    /** Цвета команд на HUD: светлее токенов меню — читаются поверх мира. */
+    public static final int HUD_TEAM_BLUE = Colors.lerp(TEAM_BLUE, 0xFFFFFFFF, 0.22F);
+
+    public static final int HUD_TEAM_RED = Colors.lerp(TEAM_RED, 0xFFFFFFFF, 0.18F);
+    public static final int HUD_TEAM_NEUTRAL = HudTheme.LABEL;
+    /** Подкраска половин полосы захвата (BLUE слева, RED справа). */
+    public static final float HUD_TEAM_TINT = 0.28F;
+
+    /** Лента компаса: ширина, высота, видимый сектор (градусы). */
+    public static final int TOP_COMPASS_W = 200;
+
+    public static final int TOP_COMPASS_H = 24;
+    public static final float TOP_COMPASS_RANGE = 90F;
+    /** Подложка ленты режется на столько вертикальных полос с фейдом к краям. */
+    public static final int TOP_COMPASS_SLICES = 20;
+
+    public static final int TOP_COMPASS_BG = 0x9A050709;
+    public static final int TOP_COMPASS_LINE = 0x40FFFFFF;
+    public static final int TOP_TICK = 0xE6E8E9EB;
+    public static final int TOP_TICK_MINOR = 0x8CE8E9EB;
+    public static final int TOP_TICK_MAJOR_H = 5;
+    public static final int TOP_TICK_MINOR_H = 2;
+    /** Подписи: Y строки, масштаб чисел градусов (стороны света — в полный размер). */
+    public static final int TOP_LABEL_Y = 6;
+
+    public static final float TOP_NUMBER_SCALE = 0.6667F;
+    public static final int TOP_CARDINAL = Colors.ACCENT;
+    public static final int TOP_NUMBER = 0xD0B8BCC2;
+    /** Метки на ленте (точки, приказы, пинги, ноки): Y и размер иконки. */
+    public static final int TOP_MARK_Y = 15;
+
+    public static final int TOP_MARK = 9;
+    public static final int TOP_MARK_SMALL = 7;
+    /** Центральный маркер (треугольник сверху) и плашка азимута под ним. */
+    public static final int TOP_CENTER = Colors.ACCENT;
+
+    public static final int TOP_CENTER_TRI = 3;
+    public static final int TOP_BEARING_W = 24;
+    public static final int TOP_BEARING_H = 11;
+    public static final int TOP_BEARING_Y = 3;
+    /** Зазор между лентой компаса и полосой тикетов. */
+    public static final int TOP_ROW_GAP = 2;
+
+    /** Полоса тикетов: плашка команды (флаг + число), таймер матча между ними. */
+    public static final int TOP_TICKET_W = 46;
+
+    public static final int TOP_TIMER_W = 40;
+    public static final int TOP_SCORE_H = 13;
+    public static final int TOP_SCORE_GAP = 2;
+    public static final int TOP_FLAG_W = 12;
+    public static final int TOP_FLAG_H = 7;
+    /** Плавное изменение числа тикетов (доля пути за кадр при 60 FPS) и скачок без анимации. */
+    public static final float TOP_TICKET_RATE = 0.12F;
+
+    public static final int TOP_TICKET_SNAP = 300;
+    /** Мигание числа при «кровотечении» тикетов. */
+    public static final long TOP_BLEED_PULSE_MS = 900L;
+
+    /** Стек верх-центра: таймер Invasion, точка захвата, баннер события. */
+    public static final int TOP_PHASE_W = 150;
+
+    public static final int TOP_POINT_W = 180;
+    public static final int TOP_POINT_H = 24;
+    public static final int TOP_POINT_BAR_H = 4;
+    public static final int TOP_POINT_CHEVRONS = 3;
+    public static final int TOP_POINT_CHEVRON_STEP = 4;
+    public static final int TOP_BANNER_W = 210;
+    public static final int TOP_BANNER_H = 22;
+    public static final int TOP_BANNER_BAR_H = 2;
+    /** Баннер: держится duration + HOLD, затем гаснет за FADE. */
+    public static final long TOP_BANNER_HOLD_MS = 2000L;
+
+    public static final long TOP_BANNER_FADE_MS = 1000L;
+    /** Мигание метки нока на компасе. */
+    public static final long TOP_BLINK_MS = 1200L;
 }

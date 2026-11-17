@@ -132,6 +132,40 @@ class HudZonesTest {
     }
 
     @Test
+    void topStackSitsBetweenColumnsUnderBandAboveCrosshair() {
+        for (int[] s : SCREENS) {
+            for (float scale : SCALES) {
+                HudZones z = HudZones.layout(s[0], s[1], scale);
+                Rect t = z.topColumn();
+                String ctx = s[0] + "x" + s[1] + " @" + scale + ": ";
+                if (t.w() == 0 || t.h() == 0) continue;
+                assertTrue(t.x() >= 0 && t.right() <= s[0], ctx + "стек верха за краем " + t);
+                assertTrue(t.y() >= z.topBand().bottom(), ctx + "стек верха налезает на компас " + t);
+                assertTrue(t.bottom() <= z.crosshair().y(), ctx + "стек верха на прицеле " + t);
+                assertFalse(t.intersects(z.leftColumn()), ctx + "стек верха на левой колонке");
+                assertFalse(t.intersects(z.rightColumn()), ctx + "стек верха на правой колонке");
+            }
+        }
+        // 1080p: guiScale 2/3 держат таймер (13) + точку захвата (24) + баннер (22); guiScale 4 —
+        // точку + баннер (таймер подготовки Invasion и баннер о захвате одновременно редки)
+        for (int gs = 2; gs <= 3; gs++) {
+            HudZones z = HudZones.layout(1920 / gs, 1080 / gs, 1F);
+            assertTrue(z.topColumn().h() >= 13 + 24 + 22 + 2 * HudZones.GAP, "guiScale " + gs + " " + z.topColumn());
+            assertTrue(z.topColumn().w() >= 160, "guiScale " + gs + " " + z.topColumn());
+        }
+        HudZones z4 = HudZones.layout(480, 270, 1F);
+        assertTrue(z4.topColumn().h() >= 24 + 22 + HudZones.GAP, "guiScale 4 " + z4.topColumn());
+        assertTrue(z4.topColumn().w() >= 120, "guiScale 4 " + z4.topColumn());
+        HudZones z = HudZones.layout(960, 540, 1F);
+        z.beginFrame();
+        int y0 = z.top().next(13);
+        assertEquals(z.topBand().bottom() + HudZones.GAP, y0);
+        assertEquals(y0 + 13 + HudZones.GAP, z.top().next(30));
+        z.beginFrame();
+        assertEquals(y0, z.top().next(13), "стек сбрасывается раз в кадр");
+    }
+
+    @Test
     void downStackPlacesBlocksWithoutOverlap() {
         HudZones.Stack st = new HudZones.Stack(Rect.of(10, 20, 100, 100), false, 4);
         assertEquals(20, st.next(30));

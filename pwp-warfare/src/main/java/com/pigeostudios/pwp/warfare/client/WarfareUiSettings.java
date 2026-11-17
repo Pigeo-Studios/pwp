@@ -131,7 +131,7 @@ public final class WarfareUiSettings {
                     UiSettings.Format.PERCENT)
             .tooltip("gui.pwpwarfare.ui_settings.hud.side_map_bg.tip");
 
-    /** Компас сверху: WarfareOverlay.renderCompass. */
+    /** Лента компаса сверху (с метками): TopHud.compass; выключено — полоса тикетов поднимается на её место. */
     public static final UiSettings.Toggle COMPASS = UiSettings.toggle(
                     "hud.compass", HUD, "gui.pwpwarfare.ui_settings.hud.compass", true)
             .tooltip("gui.pwpwarfare.ui_settings.hud.compass.tip");

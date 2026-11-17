@@ -21,6 +21,7 @@ import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
+import com.pigeostudios.pwp.warfare.client.hud.TopHud;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
@@ -34,7 +35,6 @@ import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -82,20 +82,6 @@ public class WarfareOverlay {
             new ResourceLocation("pwpwarfare", "textures/misc/vignette.png");
     private static final ResourceLocation ARROW_TEX =
             new ResourceLocation("pwpwarfare", "textures/gui/capture_arrow.png");
-    private static final ResourceLocation ICON_PLUS =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/medic_plus.png");
-    private static final ResourceLocation ICON_PING =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye.png");
-    private static final ResourceLocation MOVE_TEXTURE =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move.png");
-    private static final ResourceLocation MOVE_TEX_BRAVO =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move_bravo.png");
-    private static final ResourceLocation PING_TEX_BRAVO =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_bravo.png");
-    private static final ResourceLocation MOVE_TEX_CHARLIE =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move_charlie.png");
-    private static final ResourceLocation PING_TEX_CHARLIE =
-            new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_charlie.png");
     private static SquadMapRenderer HUD_SIDE_MAP;
     private static final ResourceLocation MOUSE_LEFT = new ResourceLocation("pwpwarfare", "textures/gui/dig_icon.png");
     private static final ResourceLocation MOUSE_RIGHT =
@@ -110,16 +96,11 @@ public class WarfareOverlay {
             new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
     private static final ResourceLocation VOICE_ICON_STAR_TEX =
             new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_star.png");
-    private static final Map<String, ResourceLocation> SQUADCALC_ICONS = new HashMap<>();
-
-    private static ResourceLocation squadCalcIcon(String type, String team) {
-        String s = "enemy".equals(team) ? "_r" : "team".equals(team) ? "_y" : "_g";
-        return SQUADCALC_ICONS.computeIfAbsent(
-                type + s, k -> new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + k + ".png"));
-    }
 
     // ------------------------------------------------------------ строки HUD (lang, кэш компонентов)
     private static final String HUD = "gui.pwpwarfare.hud.";
+    private static final TopHud TOP = new TopHud();
+    private static final TopHud.Model TOP_MODEL = new TopHud.Model();
     private static final WHud.Fmt CMD_VOTE_TITLE = new WHud.Fmt(HUD + "cmd_vote.title");
     private static final Component CMD_VOTE_RULE = Component.translatable(HUD + "cmd_vote.rule");
     private static final Component CMD_VOTE_WAITING = Component.translatable(HUD + "cmd_vote.waiting");
@@ -130,19 +111,12 @@ public class WarfareOverlay {
     private static final WHud.Fmt ART_POS = new WHud.Fmt(HUD + "art.pos");
     private static final WHud.KeyHint ART_KEYS =
             new WHud.KeyHint(HUD + "art.keys", ModKeyBindings.ART_CONFIRM_KEY, ModKeyBindings.ART_DENY_KEY);
-    private static final WHud.Fmt CAPTURE_CAPTURED = new WHud.Fmt(HUD + "capture.captured");
-    private static final WHud.Fmt CAPTURE_NEUTRALIZED = new WHud.Fmt(HUD + "capture.neutralized");
     private static final Component BUILD_DESTROY = Component.translatable(HUD + "build.destroy");
     private static final Component BUILD_BUILD = Component.translatable(HUD + "build.build");
     private static final Component BUILD_DESTROYING = Component.translatable(HUD + "build.destroying");
     private static final Component BUILD_DISMANTLING = Component.translatable(HUD + "build.dismantling");
     private static final Component BUILD_ENEMY = Component.translatable(HUD + "build.enemy");
     private static final Component BUILD_FINISHED = Component.translatable(HUD + "build.finished");
-    private static final WHud.Clock INVASION_CLOCK = new WHud.Clock();
-    private static final WHud.Fmt INVASION_SETUP = new WHud.Fmt(HUD + "invasion.setup");
-    private static final WHud.Fmt INVASION_BLOCKADE = new WHud.Fmt(HUD + "invasion.blockade");
-    private static final Component POINT_BLOCKED = Component.translatable(HUD + "point.blocked");
-    private static final WHud.Fmt POINT_NEED = new WHud.Fmt(HUD + "point.need");
     private static final Component VOTE_TITLE = Component.translatable(HUD + "vote.title");
     private static final WHud.Clock VOTE_CLOCK = new WHud.Clock();
     private static final WHud.Fmt VOTE_BLUE_READY = new WHud.Fmt(HUD + "vote.ready");
@@ -159,9 +133,6 @@ public class WarfareOverlay {
     /** Строки списка ноков у медика: кэш по номеру строки (имя/дистанция меняются редко). */
     private static final WHud.Fmt[] MEDIC_ROWS = new WHud.Fmt[16];
 
-    private static Component captureUpperSrc;
-    private static String captureUpper;
-
     private static WHud.Fmt medicRow(int i) {
         int idx = Math.min(i, MEDIC_ROWS.length - 1);
         WHud.Fmt f = MEDIC_ROWS[idx];
@@ -173,15 +144,6 @@ public class WarfareOverlay {
     }
 
     /** Строка уведомления о захвате в верхнем регистре (как раньше); пересборка только при смене. */
-    private static String upperCached(WHud.Fmt fmt, String team, String point) {
-        Component c = fmt.of(team, point);
-        if (c != captureUpperSrc) {
-            captureUpperSrc = c;
-            captureUpper = c.getString().toUpperCase();
-        }
-        return captureUpper;
-    }
-
     @SubscribeEvent
     public static void onRenderOverlay(Post event) {
         if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
@@ -221,16 +183,10 @@ public class WarfareOverlay {
 
     /** HUD-элементы под общим гейтом {@link WHud#hudVisible()}. */
     private static void renderHud(GuiGraphics gui, Minecraft mc, int width, int height, float partialTick) {
-        renderTickets(gui, mc, width);
+        // верх (этап 3): компас, тикеты + таймер, таймер Invasion, точка захвата, баннер захвата
+        TopHud.fromClient(TOP_MODEL, mc, partialTick);
+        TOP.render(gui, PWPTheme.Fonts.display(), WHud.zones(), TOP_MODEL);
         renderVotePanel(gui, mc, height);
-        if (ClientData.allCapturePoints != null) {
-            for (WarfareWorldData.CapturePoint cp : ClientData.allCapturePoints) {
-                if (mc.player.getBoundingBox().intersects(cp.area)) {
-                    renderCapturePoint(gui, mc, width, height);
-                    break;
-                }
-            }
-        }
 
         renderHubMaterials(gui, mc, width, height);
         renderVehicleHud(gui, mc, width, height);
@@ -239,459 +195,8 @@ public class WarfareOverlay {
         renderPlacementHints(gui, mc, width, height);
         // после look-at/Build Mode: они резервируют низ-центр, стройка встаёт над ними
         renderBuildProgress(gui);
-        renderCaptureNotifications(gui, mc, width, height);
-        renderCompass(gui, mc, width, partialTick);
-        renderInvasionSetupTimer(gui, mc, width);
         renderCMDVotePanel(gui, mc, width);
         renderArtStrikeRequest(gui, mc, width);
-    }
-
-    private static void renderCompass(GuiGraphics gui, Minecraft mc, int screenWidth, float partialTick) {
-        // настройка «Компас» (интерфейс PWP)
-        if (!mc.options.hideGui && WarfareUiSettings.COMPASS.get()) {
-            int configVal = (Integer) WarfareConfig.COMPASS_SCALE.get();
-            float scaleFactor = 1.0F;
-            if (configVal == 1) {
-                scaleFactor = 0.6666667F;
-            } else if (configVal == 3) {
-                scaleFactor = 1.5F;
-            }
-
-            float centerX = screenWidth / 2.0F;
-            float y = 8.0F;
-            float baseWidth = 320.0F;
-            float scaledWidth = baseWidth * scaleFactor;
-            float visibleRange = 70.0F;
-            float pixelsPerDegree = scaledWidth / visibleRange;
-            gui.pose().pushPose();
-            gui.pose().translate(centerX, y, 0.0F);
-            gui.pose().scale(scaleFactor, scaleFactor, 1.0F);
-            gui.pose().translate(-centerX, -y, 0.0F);
-            gui.pose().pushPose();
-            gui.pose().translate(centerX, y + 2.0F, 100.0F);
-            gui.pose().scale(0.8F, 0.8F, 1.0F);
-            drawOutlinedString(gui, mc, "\u25BC", -(PWPTheme.Fonts.display().width("\u25BC") / 2), 0, -1);
-            gui.pose().popPose();
-            float playerYaw = (mc.player.getViewYRot(partialTick) % 360.0F + 360.0F) % 360.0F;
-            String bearing = String.valueOf((int) playerYaw);
-            gui.pose().pushPose();
-            gui.pose().translate(centerX, y + 26.0F, 100.0F);
-            drawOutlinedString(gui, mc, bearing, -(PWPTheme.Fonts.display().width(bearing) / 2), 0, -1);
-            gui.pose().popPose();
-            gui.enableScissor(
-                    (int) (centerX - scaledWidth / 2.0F), 0, (int) (centerX + scaledWidth / 2.0F), screenHeight());
-
-            for (int i = (int) (playerYaw - visibleRange / 2.0F) - 1;
-                    i <= (int) (playerYaw + visibleRange / 2.0F) + 1;
-                    i++) {
-                int degree = (i % 360 + 360) % 360;
-                float xPos = centerX + (i - playerYaw) * pixelsPerDegree;
-                float diffFromCenter = Math.abs(xPos - centerX);
-                float edgeFading = 1.0F - (float) Math.pow(diffFromCenter / (scaledWidth / 2.0F), 2.0);
-                if (!(edgeFading <= 0.02F)) {
-                    int alpha = (int) (edgeFading * 255.0F);
-                    if (degree % 15 == 0) {
-                        drawSmoothLine(gui, xPos, y + 10.0F, 1.2F, 6.0F, alpha << 24 | 16777215);
-                        String label = getDirectionLabel(degree);
-                        int txtCol =
-                                !Character.isDigit(label.charAt(0)) ? alpha << 24 | 8965375 : alpha << 24 | 16777215;
-                        gui.pose().pushPose();
-                        gui.pose().translate(xPos, y + 18.0F, 0.0F);
-                        gui.pose().scale(0.75F, 0.75F, 1.0F);
-                        drawOutlinedStringWithAlpha(
-                                gui, mc, label, -(PWPTheme.Fonts.display().width(label) / 2), 0, txtCol, alpha);
-                        gui.pose().popPose();
-                    } else if (degree % 5 == 0) {
-                        drawSmoothLine(gui, xPos, y + 12.0F, 1.0F, 4.0F, alpha << 24 | 16777215);
-                    } else {
-                        drawSmoothLine(gui, xPos, y + 14.0F, 0.8F, 1.5F, alpha << 24 | 16777215);
-                    }
-                }
-            }
-
-            renderMarkersOnCompass(gui, mc, playerYaw, centerX, y, pixelsPerDegree, scaledWidth, visibleRange);
-            renderDownedOnCompass(gui, mc, playerYaw, centerX, y, pixelsPerDegree, scaledWidth, visibleRange);
-            renderSquadPingOnCompass(gui, mc, playerYaw, centerX, y, pixelsPerDegree, scaledWidth, visibleRange);
-            renderSquadMarkersOnCompass(gui, mc, playerYaw, centerX, y, pixelsPerDegree, scaledWidth, visibleRange);
-            gui.disableScissor();
-            gui.pose().popPose();
-        }
-    }
-
-    private static void renderSquadMarkersOnCompass(
-            GuiGraphics gui,
-            Minecraft mc,
-            float playerYaw,
-            float centerX,
-            float y,
-            float pixelsPerDegree,
-            float widthInPixels,
-            float visibleRange) {
-        String myName = mc.player.getScoreboardName();
-        WarfareWorldData.Squad mySquad = null;
-
-        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-            if (s.members.contains(myName)) {
-                mySquad = s;
-                break;
-            }
-        }
-
-        if (mySquad != null) {
-            boolean isSL = mySquad.leader.equals(myName);
-            if (!mySquad.bravoMembers.contains(myName) && !mySquad.bravoLeader.equals(myName)) {
-                boolean isBravo = false;
-            } else {
-                boolean isBravo = true;
-            }
-
-            if (!mySquad.charlieMembers.contains(myName) && !mySquad.charlieLeader.equals(myName)) {
-                boolean isCharlie = false;
-            } else {
-                boolean isCharlie = true;
-            }
-
-            if (mySquad.marker != null && mySquad.marker.type == 0) {
-                drawSquadCompassMarker(
-                        gui,
-                        mc,
-                        playerYaw,
-                        centerX,
-                        y,
-                        pixelsPerDegree,
-                        widthInPixels,
-                        visibleRange,
-                        mySquad.marker,
-                        MOVE_TEXTURE);
-            }
-
-            if (mySquad.bravoMarker != null && mySquad.bravoMarker.type == 0) {
-                drawSquadCompassMarker(
-                        gui,
-                        mc,
-                        playerYaw,
-                        centerX,
-                        y,
-                        pixelsPerDegree,
-                        widthInPixels,
-                        visibleRange,
-                        mySquad.bravoMarker,
-                        MOVE_TEX_BRAVO);
-            }
-
-            if (mySquad.charlieMarker != null && mySquad.charlieMarker.type == 0) {
-                drawSquadCompassMarker(
-                        gui,
-                        mc,
-                        playerYaw,
-                        centerX,
-                        y,
-                        pixelsPerDegree,
-                        widthInPixels,
-                        visibleRange,
-                        mySquad.charlieMarker,
-                        MOVE_TEX_CHARLIE);
-            }
-        }
-    }
-
-    private static void drawSquadCompassMarker(
-            GuiGraphics gui,
-            Minecraft mc,
-            float pYaw,
-            float cX,
-            float y,
-            float ppd,
-            float wPix,
-            float vRange,
-            WarfareWorldData.SquadMarker m,
-            ResourceLocation icon) {
-        double dist = Math.sqrt(mc.player.distanceToSqr(m.x + 0.5, mc.player.getY(), m.z + 0.5));
-        if (!(dist > 5000.0)) {
-            double dx = m.x + 0.5 - mc.player.getX();
-            double dz = m.z + 0.5 - mc.player.getZ();
-            float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-            float diff = Mth.wrapDegrees(angle - pYaw);
-            if (Math.abs(diff) < vRange / 2.0F + 5.0F) {
-                float xPos = cX + diff * ppd;
-                float edgeFading = 1.0F - (float) Math.pow(Math.abs(xPos - cX) / (wPix / 2.0F), 4.0);
-                renderCompassIcon(gui, icon, xPos, y - 2.0F, 14, Math.max(0.0F, edgeFading));
-            }
-        }
-    }
-
-    private static ResourceLocation getSquadMarkerIcon(int type) {
-        switch (type) {
-            case 1:
-                return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_attack.png");
-            case 2:
-                return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_defend.png");
-            case 3:
-                return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_build.png");
-            case 4:
-            default:
-                return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_move.png");
-            case 5:
-                return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/marker_attack.png");
-        }
-    }
-
-    private static void renderMarkersOnCompass(
-            GuiGraphics gui,
-            Minecraft mc,
-            float playerYaw,
-            float centerX,
-            float y,
-            float pixelsPerDegree,
-            float widthInPixels,
-            float visibleRange) {
-        String myTeam =
-                mc.player.getTeam() != null ? mc.player.getTeam().getName().toUpperCase() : "NEUTRAL";
-
-        for (WarfareWorldData.MapMarker m : ClientData.activeMarkers) {
-            if (m.team.equalsIgnoreCase(myTeam) || mc.player.isCreative()) {
-                double dist =
-                        Math.sqrt(mc.player.distanceToSqr(m.pos.getX() + 0.5, mc.player.getY(), m.pos.getZ() + 0.5));
-                if (!(dist > 250.0)) {
-                    double dx = m.pos.getX() + 0.5 - mc.player.getX();
-                    double dz = m.pos.getZ() + 0.5 - mc.player.getZ();
-                    float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-                    float diff = Mth.wrapDegrees(angle - playerYaw);
-                    if (Math.abs(diff) < visibleRange / 2.0F + 5.0F) {
-                        float xPos = centerX + diff * pixelsPerDegree;
-                        float distAlpha = 1.0F;
-                        if (dist > 150.0) {
-                            distAlpha = 0.35F;
-                        } else if (dist > 50.0) {
-                            distAlpha = 0.7F;
-                        }
-
-                        float edgeFading =
-                                1.0F - (float) Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
-                        float finalAlpha = distAlpha * Math.max(0.0F, edgeFading);
-                        if (finalAlpha > 0.05F) {
-                            ResourceLocation icon = getMarkerIconLocal(m.type);
-                            renderCompassIcon(gui, icon, xPos, y - 2.0F, 12, finalAlpha);
-                        }
-                    }
-                }
-            }
-        }
-
-        long now = mc.level.getGameTime();
-        for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
-            double dist = Math.sqrt(mc.player.distanceToSqr(m.pos.getX() + 0.5, mc.player.getY(), m.pos.getZ() + 0.5));
-            if (dist > 300.0) continue;
-            double dx = m.pos.getX() + 0.5 - mc.player.getX();
-            double dz = m.pos.getZ() + 0.5 - mc.player.getZ();
-            float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-            float diff = Mth.wrapDegrees(angle - playerYaw);
-            if (Math.abs(diff) >= visibleRange / 2.0F + 5.0F) continue;
-            float xPos = centerX + diff * pixelsPerDegree;
-            float edgeFading = 1.0F - (float) Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
-            float lifeAlpha = Math.max(0, (6000 - (now - m.createdAt)) / 6000f);
-            float finalAlpha = lifeAlpha * Math.max(0.0F, edgeFading);
-            if (finalAlpha > 0.05F) {
-                renderCompassIcon(gui, squadCalcIcon(m.iconType, m.team), xPos, y - 2.0F, 12, finalAlpha);
-            }
-        }
-    }
-
-    private static void renderDownedOnCompass(
-            GuiGraphics gui,
-            Minecraft mc,
-            float playerYaw,
-            float centerX,
-            float y,
-            float pixelsPerDegree,
-            float widthInPixels,
-            float visibleRange) {
-        if (ClientData.mapPlayers != null) {
-            String myName = mc.player.getScoreboardName();
-            String myTeam = "NEUTRAL";
-            if (mc.player.getTeam() != null) {
-                myTeam = mc.player.getTeam().getName().toUpperCase();
-            }
-
-            for (MapPlayerInfo info : ClientData.mapPlayers.values()) {
-                if (!info.name.equals(myName)
-                        && info.isDowned
-                        && !myTeam.equals("NEUTRAL")
-                        && info.team.equalsIgnoreCase(myTeam)) {
-                    double dx = info.x - mc.player.getX();
-                    double dz = info.z - mc.player.getZ();
-                    double dist = Math.sqrt(dx * dx + dz * dz);
-                    if (!(dist > 50.0)) {
-                        float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-                        float diff = Mth.wrapDegrees(angle - playerYaw);
-                        if (Math.abs(diff) < visibleRange / 2.0F + 5.0F) {
-                            float xPos = centerX + diff * pixelsPerDegree;
-                            float edgeFading =
-                                    1.0F - (float) Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
-                            float blink = 0.8F + (float) Math.sin(System.currentTimeMillis() / 200.0) * 0.2F;
-                            float finalAlpha = Math.max(0.0F, edgeFading) * blink;
-                            if (finalAlpha > 0.05F) {
-                                renderCompassIcon(gui, ICON_PLUS, xPos, y - 2.0F, 10, finalAlpha);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static void renderSquadPingOnCompass(
-            GuiGraphics gui,
-            Minecraft mc,
-            float playerYaw,
-            float centerX,
-            float y,
-            float pixelsPerDegree,
-            float widthInPixels,
-            float visibleRange) {
-        String myName = mc.player.getScoreboardName();
-        WarfareWorldData.Squad mySquad = null;
-
-        for (WarfareWorldData.Squad s : ClientData.clientSquads) {
-            if (s.members.contains(myName)) {
-                mySquad = s;
-                break;
-            }
-        }
-
-        if (mySquad != null) {
-            boolean isSL = mySquad.leader.equals(myName);
-            boolean isBravo = mySquad.bravoMembers.contains(myName) || mySquad.bravoLeader.equals(myName);
-            boolean isCharlie = mySquad.charlieMembers.contains(myName) || mySquad.charlieLeader.equals(myName);
-            long time = mc.level.getGameTime();
-            if (mySquad.pingPos != null && time < mySquad.pingExpiry) {
-                drawCompassPing(
-                        gui,
-                        mc,
-                        playerYaw,
-                        centerX,
-                        y,
-                        pixelsPerDegree,
-                        widthInPixels,
-                        visibleRange,
-                        mySquad.pingPos,
-                        ICON_PING);
-            }
-
-            if (mySquad.bravoPingPos != null && time < mySquad.bravoPingExpiry && (isSL || isBravo)) {
-                drawCompassPing(
-                        gui,
-                        mc,
-                        playerYaw,
-                        centerX,
-                        y,
-                        pixelsPerDegree,
-                        widthInPixels,
-                        visibleRange,
-                        mySquad.bravoPingPos,
-                        PING_TEX_BRAVO);
-            }
-
-            if (mySquad.charliePingPos != null && time < mySquad.charliePingExpiry && (isSL || isCharlie)) {
-                drawCompassPing(
-                        gui,
-                        mc,
-                        playerYaw,
-                        centerX,
-                        y,
-                        pixelsPerDegree,
-                        widthInPixels,
-                        visibleRange,
-                        mySquad.charliePingPos,
-                        PING_TEX_CHARLIE);
-            }
-        }
-    }
-
-    private static void drawCompassPing(
-            GuiGraphics gui,
-            Minecraft mc,
-            float playerYaw,
-            float centerX,
-            float y,
-            float pixelsPerDegree,
-            float widthInPixels,
-            float visibleRange,
-            BlockPos pingPos,
-            ResourceLocation icon) {
-        double dx = pingPos.getX() + 0.5 - mc.player.getX();
-        double dz = pingPos.getZ() + 0.5 - mc.player.getZ();
-        float angle = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-        float diff = Mth.wrapDegrees(angle - playerYaw);
-        if (Math.abs(diff) < visibleRange / 2.0F + 5.0F) {
-            float xPos = centerX + diff * pixelsPerDegree;
-            float edgeFading = 1.0F - (float) Math.pow(Math.abs(xPos - centerX) / (widthInPixels / 2.0F), 4.0);
-            float blink = 0.8F + (float) Math.sin((float) mc.level.getGameTime() * 0.4F) * 0.2F;
-            float finalAlpha = Math.max(0.0F, edgeFading) * blink;
-            if (finalAlpha > 0.05F) {
-                renderCompassIcon(gui, icon, xPos, y - 2.0F, 12, finalAlpha);
-            }
-        }
-    }
-
-    private static void renderCompassIcon(
-            GuiGraphics gui, ResourceLocation icon, float x, float y, int size, float alpha) {
-        gui.pose().pushPose();
-        gui.pose().translate(x - size / 2.0F, y - size / 2.0F, 50.0F);
-        RenderSystem.enableBlend();
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
-        gui.blit(icon, 0, 0, 0.0F, 0.0F, size, size, size, size);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        gui.pose().popPose();
-    }
-
-    private static ResourceLocation getMarkerIconLocal(String type) {
-        String path = type.toLowerCase().replace("enemy ", "").replace(" ", "_");
-        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + path + "_marker.png");
-    }
-
-    private static int screenHeight() {
-        return Minecraft.getInstance().getWindow().getGuiScaledHeight();
-    }
-
-    private static void drawSmoothLine(GuiGraphics gui, float x, float y, float width, float height, int color) {
-        gui.pose().pushPose();
-        gui.pose().translate(x - width / 2.0F, y, 0.0F);
-        gui.fill(0, 0, Math.max(1, (int) width), (int) height, color);
-        gui.pose().popPose();
-    }
-
-    private static void drawOutlinedStringWithAlpha(
-            GuiGraphics gui, Minecraft mc, String text, int x, int y, int color, int alpha) {
-        int black = alpha << 24;
-        gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x + 1, y, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
-    }
-
-    private static String getDirectionLabel(int degree) {
-        switch (degree) {
-            case 0:
-                return "S";
-            case 45:
-                return "SW";
-            case 90:
-                return "W";
-            case 135:
-                return "NW";
-            case 180:
-                return "N";
-            case 225:
-                return "NE";
-            case 270:
-                return "E";
-            case 315:
-                return "SE";
-            default:
-                return String.valueOf(degree);
-        }
     }
 
     private static void renderCMDVotePanel(GuiGraphics gui, Minecraft mc, int width) {
@@ -788,137 +293,6 @@ public class WarfareOverlay {
                     }
                 }
             }
-        }
-    }
-
-    private static void renderCaptureNotifications(GuiGraphics gui, Minecraft mc, int screenWidth, int screenHeight) {
-        if (!ClientData.captureNotifications.isEmpty()) {
-            long now = System.currentTimeMillis();
-            int flagW = 54;
-            int flagH = 30;
-            int x = (screenWidth - flagW) / 2;
-            int y = 65;
-
-            for (ClientData.CaptureNotification note : new ArrayList<>(ClientData.captureNotifications)) {
-                long elapsed = now - note.startTime;
-                long displayTime = note.duration + 2000L;
-                long fadeTime = 1000L;
-                if (elapsed <= displayTime + fadeTime) {
-                    float overallAlpha = 1.0F;
-                    if (elapsed > displayTime) {
-                        overallAlpha = 1.0F - (float) (elapsed - displayTime) / (float) fadeTime;
-                    }
-
-                    overallAlpha = Mth.clamp(overallAlpha, 0.0F, 1.0F);
-                    float progress = Math.min(1.0F, (float) elapsed / (float) note.duration);
-                    int teamColor = note.team.equalsIgnoreCase("BLUE") ? -13408564 : -3394765;
-                    boolean showTeamFlag = note.isNeutralized ? progress < 1.0F : progress >= 1.0F;
-                    int bgAlpha = (int) (overallAlpha * 170.0F) << 24;
-                    RenderSystem.enableBlend();
-                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, overallAlpha);
-                    if (showTeamFlag) {
-                        String flagTeam = note.team;
-                        if (note.isNeutralized) {
-                            flagTeam = note.team.equalsIgnoreCase("BLUE") ? "RED" : "BLUE";
-                        }
-
-                        String faction =
-                                flagTeam.equalsIgnoreCase("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
-                        ResourceLocation tex = getFlagTexture(faction);
-                        if (tex != null) {
-                            gui.blit(tex, x, y, flagW, flagH, 0.0F, 0.0F, 64, 36, 64, 36);
-                        } else {
-                            renderSolidWithAlpha(gui, x, y, flagW, flagH, teamColor, overallAlpha);
-                        }
-                    } else {
-                        renderSolidWithAlpha(gui, x, y, flagW, flagH, -1, overallAlpha);
-                    }
-
-                    renderNotificationArrows(gui, x, y, flagW, flagH, teamColor, overallAlpha);
-                    renderWrappingLine(gui, x, y, flagW, flagH, progress, teamColor, overallAlpha);
-                    String teamDisplayName =
-                            note.team.equalsIgnoreCase("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
-                    WHud.Fmt fmt = note.isNeutralized ? CAPTURE_NEUTRALIZED : CAPTURE_CAPTURED;
-                    String msg = upperCached(fmt, teamDisplayName, note.pointName);
-                    int textA = (int) (overallAlpha * 255.0F);
-                    // текст с альфой <4 ваниль рисует НЕПРОЗРАЧНЫМ — на хвосте фейда не рисуем
-                    if (textA >= 4) {
-                        int textColor = textA << 24 | 16777215;
-                        gui.pose().pushPose();
-                        gui.pose().translate(x + flagW / 2.0F, y + flagH + 8, 50.0F);
-                        gui.pose().scale(0.9F, 0.9F, 1.0F);
-                        gui.drawCenteredString(PWPTheme.Fonts.display(), msg, 0, 0, textColor);
-                        gui.pose().popPose();
-                    }
-                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                    break;
-                }
-
-                ClientData.captureNotifications.remove(note);
-            }
-        }
-    }
-
-    private static void renderNotificationArrows(
-            GuiGraphics gui, int x, int y, int w, int h, int color, float overallAlpha) {
-        float r = (color >> 16 & 0xFF) / 255.0F;
-        float g = (color >> 8 & 0xFF) / 255.0F;
-        float b = (color & 0xFF) / 255.0F;
-        float pulse = 0.7F + (float) Math.sin(System.currentTimeMillis() / 120.0) * 0.3F;
-        RenderSystem.setShaderColor(r, g, b, overallAlpha * pulse);
-        int arrowSize = 12;
-        int centerY = y + h / 2 - arrowSize / 2;
-
-        for (int i = 0; i < 3; i++) {
-            gui.blit(ARROW_TEX, x - 18 - i * 10, centerY, 0.0F, 0.0F, arrowSize, arrowSize, arrowSize, arrowSize);
-            gui.pose().pushPose();
-            int rx = x + w + 18 + i * 10;
-            gui.pose().translate(rx + arrowSize / 2.0, centerY + arrowSize / 2.0, 0.0);
-            gui.pose().mulPose(Axis.ZP.rotationDegrees(180.0F));
-            gui.blit(ARROW_TEX, -arrowSize / 2, -arrowSize / 2, 0.0F, 0.0F, arrowSize, arrowSize, arrowSize, arrowSize);
-            gui.pose().popPose();
-        }
-    }
-
-    private static void renderSolidWithAlpha(GuiGraphics gui, int x, int y, int w, int h, int color, float alpha) {
-        int r = color >> 16 & 0xFF;
-        int g = color >> 8 & 0xFF;
-        int b = color & 0xFF;
-        int a = (int) (alpha * 255.0F);
-        gui.fill(x, y, x + w, y + h, a << 24 | r << 16 | g << 8 | b);
-    }
-
-    private static void renderWrappingLine(
-            GuiGraphics gui, int x, int y, int w, int h, float progress, int color, float alpha) {
-        float totalLen = w + 2 + h + 2 + w + 2 + h + 2;
-        float cur = totalLen * progress;
-        int r = color >> 16 & 0xFF;
-        int g = color >> 8 & 0xFF;
-        int b = color & 0xFF;
-        int a = (int) (alpha * 255.0F);
-        int finalColor = a << 24 | r << 16 | g << 8 | b;
-        float s1 = h + 2;
-        float d1 = Math.min(cur, s1);
-        if (d1 > 0.0F) {
-            gui.fill(x - 2, (int) (y + h + 2 - d1), x, y + h + 2, finalColor);
-        }
-
-        float s2 = w + 2;
-        if (cur > s1) {
-            float d2 = Math.min(cur - s1, s2);
-            gui.fill(x - 2, y - 2, (int) (x - 2 + d2), y, finalColor);
-        }
-
-        float s3 = h + 2;
-        if (cur > s1 + s2) {
-            float d3 = Math.min(cur - s1 - s2, s3);
-            gui.fill(x + w, y - 2, x + w + 2, (int) (y - 2 + d3), finalColor);
-        }
-
-        float s4 = w + 2;
-        if (cur > s1 + s2 + s3) {
-            float d4 = Math.min(cur - (s1 + s2 + s3), s4);
-            gui.fill((int) (x + w + 2 - d4), y + h, x + w + 2, y + h + 2, finalColor);
         }
     }
 
@@ -1326,55 +700,6 @@ public class WarfareOverlay {
                 1.0F);
     }
 
-    private static void renderTickets(GuiGraphics gui, Minecraft mc, int width) {
-        if (mc.player.isCreative() || mc.player.isSpectator()) {
-            int boxWidth = 32;
-            int boxHeight = 18;
-            int gap = 6;
-            int topOffset = 5;
-            int centerX = width / 2;
-            boolean blinkOn = System.currentTimeMillis() / 500L % 2L == 0L;
-            int normalWhite = -1;
-            int alarmRed = -43691;
-            int blueX = centerX - boxWidth - gap / 2;
-            ResourceLocation blueFlag = getFlagTexture(ClientData.BLUE_FACTION);
-            gui.fill(blueX - 1, topOffset - 1, blueX + boxWidth + 1, topOffset + boxHeight + 1, -16777216);
-            if (blueFlag != null) {
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                RenderSystem.enableBlend();
-                gui.blit(
-                        blueFlag, blueX, topOffset, boxWidth, boxHeight, 0.0F, 0.0F, boxWidth, boxHeight, boxWidth,
-                        boxHeight);
-            } else {
-                gui.fill(blueX, topOffset, blueX + boxWidth, topOffset + boxHeight, -869046580);
-            }
-
-            String blueText = String.valueOf(ClientData.BLUE_TICKETS);
-            int blueTextColor = ClientData.blueBleeding ? (blinkOn ? alarmRed : normalWhite) : normalWhite;
-            int blueTextX = blueX + (boxWidth - PWPTheme.Fonts.display().width(blueText)) / 2;
-            int blueTextY = topOffset + (boxHeight - 8) / 2;
-            drawOutlinedString(gui, mc, blueText, blueTextX, blueTextY, blueTextColor);
-            int redX = centerX + gap / 2;
-            ResourceLocation redFlag = getFlagTexture(ClientData.RED_FACTION);
-            gui.fill(redX - 1, topOffset - 1, redX + boxWidth + 1, topOffset + boxHeight + 1, -16777216);
-            if (redFlag != null) {
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                RenderSystem.enableBlend();
-                gui.blit(
-                        redFlag, redX, topOffset, boxWidth, boxHeight, 0.0F, 0.0F, boxWidth, boxHeight, boxWidth,
-                        boxHeight);
-            } else {
-                gui.fill(redX, topOffset, redX + boxWidth, topOffset + boxHeight, -859032781);
-            }
-
-            String redText = String.valueOf(ClientData.RED_TICKETS);
-            int redTextColor = ClientData.redBleeding ? (blinkOn ? alarmRed : normalWhite) : normalWhite;
-            int redTextX = redX + (boxWidth - PWPTheme.Fonts.display().width(redText)) / 2;
-            int redTextY = topOffset + (boxHeight - 8) / 2;
-            drawOutlinedString(gui, mc, redText, redTextX, redTextY, redTextColor);
-        }
-    }
-
     private static void drawOutlinedString(GuiGraphics gui, Minecraft mc, String text, int x, int y, int color) {
         int black = -16777216;
         gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, black, false);
@@ -1382,140 +707,6 @@ public class WarfareOverlay {
         gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
         gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
         gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
-    }
-
-    private static void renderInvasionSetupTimer(GuiGraphics gui, Minecraft mc, int width) {
-        if (ClientData.invasionSetupActive && ClientData.invasionSetupTimer > 0) {
-            String team =
-                    mc.player.getTeam() != null ? mc.player.getTeam().getName().toUpperCase() : "";
-            boolean isDefender = ClientData.invasionDefender.equalsIgnoreCase(team);
-            String time = INVASION_CLOCK.of(ClientData.invasionSetupTimer);
-            WHud.Fmt label = isDefender ? INVASION_SETUP : INVASION_BLOCKADE;
-            label.of(time);
-            String text = label.string();
-            int color = isDefender ? 0xFF55FF55 : 0xFFFF5555;
-            int centerX = width / 2;
-            int y = 52;
-            drawOutlinedString(gui, mc, text, centerX - PWPTheme.Fonts.display().width(text) / 2, y, color);
-        }
-    }
-
-    private static void renderCapturePoint(GuiGraphics gui, Minecraft mc, int width, int height) {
-        if (ClientData.isInsidePoint) {
-            int flagW = 48;
-            int flagH = 27;
-            int xStart = width - flagW - 15;
-            int yStart = 20;
-            int teamColor = -1;
-            String faction = "none";
-            if (ClientData.pointOwner.equals("BLUE")) {
-                teamColor = -13408564;
-                faction = ClientData.BLUE_FACTION;
-            } else if (ClientData.pointOwner.equals("RED")) {
-                teamColor = -3394765;
-                faction = ClientData.RED_FACTION;
-            }
-
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            gui.pose().pushPose();
-            gui.pose().scale(0.8F, 0.8F, 1.0F);
-            int scaledX = (int) ((xStart + flagW / 2) / 0.8F);
-            int scaledY = (int) ((yStart - 9) / 0.8F);
-            gui.drawCenteredString(PWPTheme.Fonts.display(), ClientData.pointName, scaledX, scaledY, -1);
-            gui.pose().popPose();
-            int barStartX = xStart - 1;
-            gui.fill(barStartX, yStart - 1, xStart + flagW + 1, yStart + flagH + 1, -16777216);
-            ResourceLocation flagTexture = getFlagTexture(faction);
-            if (flagTexture != null && !faction.equals("none")) {
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                gui.blit(flagTexture, xStart, yStart, flagW, flagH, 0.0F, 0.0F, 64, 36, 64, 36);
-            } else {
-                gui.fill(xStart, yStart, xStart + flagW, yStart + flagH, teamColor);
-            }
-
-            int barsY = yStart + flagH + 6;
-            int segH = 4;
-            int gap = 1;
-            int[] segmentWidths = new int[] {12, 12, 12, 11};
-            int currentX = barStartX;
-
-            for (int i = 0; i < 4; i++) {
-                int sW = segmentWidths[i];
-                gui.fill(currentX, barsY, currentX + sW, barsY + segH, -1876811230);
-                float threshold = i * 0.25F;
-                if (ClientData.pointProgress > threshold) {
-                    float boxFill = Math.min(1.0F, (ClientData.pointProgress - threshold) / 0.25F);
-                    int fillW = (int) (sW * boxFill);
-                    int fillColor = teamColor;
-                    if (ClientData.pointOwner.equals("NEUTRAL")) {
-                        if (ClientData.pointCapturingTeam.equals("BLUE")) {
-                            fillColor = -13408564;
-                        } else if (ClientData.pointCapturingTeam.equals("RED")) {
-                            fillColor = -3394765;
-                        }
-                    }
-
-                    gui.fill(currentX, barsY, currentX + fillW, barsY + segH, fillColor);
-                }
-
-                currentX += sW + gap;
-            }
-
-            int rate = ClientData.pointCaptureRate;
-            if (rate != 0) {
-                int absRate = Math.min(Math.abs(rate), 4);
-                boolean isForward = rate > 0;
-                String capTeam = ClientData.pointCapturingTeam;
-                int arrowCol = -1;
-                if (capTeam.equalsIgnoreCase("BLUE")) {
-                    arrowCol = -13408564;
-                } else if (capTeam.equalsIgnoreCase("RED")) {
-                    arrowCol = -3394765;
-                }
-
-                float ar = (arrowCol >> 16 & 0xFF) / 255.0F;
-                float ag = (arrowCol >> 8 & 0xFF) / 255.0F;
-                float ab = (arrowCol & 0xFF) / 255.0F;
-                double baseX = isForward ? barStartX + 5 : barStartX + 45;
-                double arrowY = barsY + segH / 2.0;
-
-                for (int j = 0; j < absRate; j++) {
-                    gui.pose().pushPose();
-                    double offsetX = isForward ? j * 6 : -j * 6;
-                    gui.pose().translate(baseX + offsetX, arrowY, 10.0);
-                    gui.pose().scale(1.05F, 1.05F, 1.0F);
-                    if (!isForward) {
-                        gui.pose().mulPose(Axis.ZP.rotationDegrees(180.0F));
-                    }
-
-                    RenderSystem.setShaderColor(ar, ag, ab, 1.0F);
-                    gui.blit(ARROW_TEX, -6, -6, 0.0F, 0.0F, 12, 12, 12, 12);
-                    gui.pose().popPose();
-                }
-            }
-
-            if (ClientData.isLocked) {
-                gui.pose().pushPose();
-                gui.pose().scale(0.7F, 0.7F, 1.0F);
-                int lockX = (int) (barStartX / 0.71F);
-                int lockY = (int) ((barsY + 10) / 0.7F);
-                gui.drawString(PWPTheme.Fonts.display(), POINT_BLOCKED, lockX, lockY, -43691, true);
-                if (!ClientData.nextObjectiveName.isEmpty()) {
-                    gui.drawString(
-                            PWPTheme.Fonts.display(),
-                            POINT_NEED.of(ClientData.nextObjectiveName),
-                            lockX,
-                            lockY + 10,
-                            -3355444,
-                            true);
-                }
-
-                gui.pose().popPose();
-            }
-
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        }
     }
 
     private static void renderVotePanel(GuiGraphics gui, Minecraft mc, int width) {
@@ -1859,7 +1050,8 @@ public class WarfareOverlay {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
-    private static ResourceLocation getFlagTexture(String faction) {
+    /** Флаг фракции (64x36) или null; общий для боковой карты и верха HUD. */
+    public static ResourceLocation getFlagTexture(String faction) {
         if (faction == null) {
             return null;
         }
