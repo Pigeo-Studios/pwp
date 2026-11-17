@@ -366,6 +366,7 @@
     "gui.pwpwarfare.radial.materials": "Materials: %s",
     "gui.pwpwarfare.radial.materials_of": "Materials: %s / %s",
     "gui.pwpwarfare.map.no_data": "No match map data",
+    "gui.pwpwarfare.map.loading": "Loading map %s%%",
     "gui.pwpwarfare.map.zoom": "Zoom %s",
     "gui.pwpwarfare.map.scale": "%s m",
     "gui.pwpwarfare.map.north": "N",

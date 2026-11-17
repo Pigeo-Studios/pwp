@@ -55,11 +55,76 @@ public final class MapLayers {
     }
 
     /**
-     * Динамическая карта из мира ({@link MapTileClient}); если выключена или тайлов ещё нет —
-     * фолбэк: заранее подготовленный PNG на квадрат карты матча.
+     * Динамическая карта из мира ({@link MapTileClient}) поверх заглушки/старого PNG/обзора; если
+     * выключена — заранее подготовленный PNG на квадрат карты матча.
      */
     public static void tiles(GuiGraphics g, MapView v) {
-        if (MapTileClient.draw(g, v)) return;
+        if (MapTileClient.enabled()) {
+            // карта никогда не чёрная: снизу вверх — топо-заглушка, старый PNG карты (если есть),
+            // грубый обзор зоны, детальные тайлы (fade-in)
+            placeholder(g, v, System.currentTimeMillis());
+            if (legacyPngExists()) legacyPng(g, v);
+            MapTileClient.draw(g, v);
+            return;
+        }
+        legacyPng(g, v);
+    }
+
+    private static final Map<ResourceLocation, Boolean> PNG_EXISTS = new HashMap<>();
+
+    /** Старый PNG есть только у карт с полем image (иначе подложка «map1» была бы чужой картой). */
+    private static boolean legacyPngExists() {
+        String img = ClientData.currentMapImage;
+        if (img == null || img.isEmpty()) return false;
+        return PNG_EXISTS.computeIfAbsent(mapTexture(), id -> Minecraft.getInstance()
+                .getResourceManager()
+                .getResource(id)
+                .isPresent());
+    }
+
+    /**
+     * Заглушка «карта грузится» в играбельной зоне: тёмно-зелёный топо-фон с шумом (сетку кладёт
+     * {@link #grid} поверх), пока карта не готова — тонкая бегущая полоса шиммера.
+     */
+    private static void placeholder(GuiGraphics g, MapView v, long now) {
+        Rect clip = intersect(v.area(), v.playableScreen());
+        if (clip.w() <= 0 || clip.h() <= 0) return;
+        UIDraw.rect(g, clip, WTheme.MAP_LOADING_BG);
+        UIDraw.noise(g, clip, WTheme.MAP_LOADING_NOISE);
+        if (MapTileClient.loadingPercent() >= 100) return;
+        int band = Math.max(WTheme.MAP_LOADING_SHIMMER_MIN_W, clip.w() / 5);
+        float t = (now % WTheme.MAP_LOADING_SHIMMER_MS) / (float) WTheme.MAP_LOADING_SHIMMER_MS;
+        int x = clip.x() - band + Math.round(t * (clip.w() + band));
+        int half = band / 2;
+        Rect l = intersect(Rect.of(x, clip.y(), half, clip.h()), clip);
+        Rect r = intersect(Rect.of(x + half, clip.y(), band - half, clip.h()), clip);
+        int c = WTheme.MAP_LOADING_SHIMMER;
+        if (l.w() > 0) UIDraw.gradientH(g, l, c & 0x00FFFFFF, c);
+        if (r.w() > 0) UIDraw.gradientH(g, r, c, c & 0x00FFFFFF);
+    }
+
+    /**
+     * Индикатор «Загрузка карты N%» в правом нижнем углу области карты (только динамическая карта
+     * и пока не всё загружено): подпись + тонкая полоса прогресса.
+     */
+    public static void loading(GuiGraphics g, Font font, MapView v) {
+        if (!MapTileClient.enabled()) return;
+        int pct = MapTileClient.loadingPercent();
+        if (pct >= 100) return;
+        Component text = Component.translatable("gui.pwpwarfare.map.loading", pct);
+        int w = font.width(text) + Spacing.XS * 2;
+        int h = font.lineHeight + 3 + WTheme.BAR_H;
+        Rect a = v.area();
+        Rect box = Rect.of(a.right() - Spacing.SM - w, a.bottom() - Spacing.SM - h, w, h);
+        if (box.x() < a.x() || box.y() < a.y()) return;
+        label(g, font, Rect.of(box.x(), box.y(), w, font.lineHeight + 3), text.getString());
+        Rect bar = Rect.of(box.x(), box.bottom() - WTheme.BAR_H, w, WTheme.BAR_H);
+        UIDraw.rect(g, bar, WTheme.MAP_LOADING_BAR_TRACK);
+        UIDraw.rect(g, Rect.of(bar.x(), bar.y(), Math.round(w * pct / 100F), bar.h()), WTheme.MAP_LOADING_BAR);
+    }
+
+    /** Заранее подготовленный PNG на квадрат карты матча. */
+    private static void legacyPng(GuiGraphics g, MapView v) {
         int s = ClientData.mapSizeBlocks;
         if (s <= 0) return;
         ResourceLocation tex = mapTexture();

@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.server.map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.map.MapOverview;
 import com.pigeostudios.pwp.warfare.map.MapPng;
 import com.pigeostudios.pwp.warfare.map.MapTileMath;
 import com.pigeostudios.pwp.warfare.map.MapTileQuery;
@@ -24,6 +25,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -62,7 +64,7 @@ public final class MapTileService {
     /** Тайлов одного измерения в памяти. */
     static final int MEMORY_CAP = 512;
 
-    private record Entry(byte[] png, String hash, long renderedAt) {}
+    record Entry(byte[] png, String hash, long renderedAt) {}
 
     private static final Map<String, Map<Long, Entry>> MEMORY = new ConcurrentHashMap<>();
     private static final Map<String, CompletableFuture<Entry>> IN_FLIGHT = new ConcurrentHashMap<>();
@@ -82,6 +84,7 @@ public final class MapTileService {
                 return handle(player, DataRequests.str(params, "t", ""));
             }
         });
+        MapOverviewService.register();
     }
 
     /** Главный поток (fetch DataRequests). */
@@ -171,20 +174,13 @@ public final class MapTileService {
                         return CompletableFuture.completedFuture(disk);
                     }
                     // снимок — задачей главного потока (не блокирует текущий тик)
-                    return CompletableFuture.supplyAsync(() -> MapTileRenderer.snapshot(level, r.x(), r.z()), server)
-                            .thenCompose(MapTileRenderer.Snapshot::whenRead)
-                            .thenApplyAsync(
-                                    s -> {
-                                        byte[] png = s.render();
-                                        Entry e = new Entry(png, MapPng.hash(png), System.currentTimeMillis());
-                                        writeDisk(file, png);
-                                        return e;
-                                    },
-                                    EXEC)
-                            .exceptionally(t -> {
-                                LOG.warn("Рендер тайла карты {} {},{} не удался", dim, r.x(), r.z(), t);
-                                return disk;
-                            });
+                    return renderFrom(
+                            CompletableFuture.supplyAsync(() -> MapTileRenderer.snapshot(level, r.x(), r.z()), server),
+                            file,
+                            dim,
+                            r.x(),
+                            r.z(),
+                            disk);
                 })
                 .whenComplete((e, t) -> {
                     if (e != null) put(dim, key, e);
@@ -192,6 +188,117 @@ public final class MapTileService {
                 });
         CompletableFuture<Entry> raced = IN_FLIGHT.putIfAbsent(fk, f);
         return raced != null ? raced : f;
+    }
+
+    /** Снимок → чтение NBT → рендер на фоне → диск. Ошибка — {@code fallback} (может быть null). */
+    private static CompletableFuture<Entry> renderFrom(
+            CompletableFuture<MapTileRenderer.Snapshot> snap, Path file, String dim, int tx, int tz, Entry fallback) {
+        return snap.thenCompose(MapTileRenderer.Snapshot::whenRead)
+                .thenApplyAsync(
+                        s -> {
+                            byte[] png = s.render();
+                            Entry e = new Entry(png, MapPng.hash(png), System.currentTimeMillis());
+                            writeDisk(file, png);
+                            return e;
+                        },
+                        EXEC)
+                .exceptionally(t -> {
+                    LOG.warn("Рендер тайла карты {} {},{} не удался", dim, tx, tz, t);
+                    return fallback;
+                });
+    }
+
+    // ------------------------------------------------------------------ для пререндера (MapPrerender)
+
+    /**
+     * ФОНОВЫЙ поток: тайл на диске палитровый и не старше своего region-файла — кладётся в память
+     * как свежий (renderedAt = сейчас), true. Иначе false — нужен рендер.
+     */
+    static boolean loadIfFresh(MinecraftServer server, ServerLevel level, String dim, int tx, int tz) {
+        long key = MapTileMath.key(0, tx, tz);
+        Entry mem = memory(dim).get(key);
+        if (mem != null && MapPng.isIndexed(mem.png()) && System.currentTimeMillis() - mem.renderedAt() <= TTL_MS)
+            return true;
+        Path file = tileFile(server, dim, tx, tz);
+        try {
+            if (!Files.isRegularFile(file)) return false;
+            long tileMtime = Files.getLastModifiedTime(file).toMillis();
+            Path region = DimensionType.getStorageFolder(level.dimension(), server.getWorldPath(LevelResource.ROOT))
+                    .resolve("region")
+                    .resolve("r." + MapOverview.regionOf(tx) + "." + MapOverview.regionOf(tz) + ".mca");
+            long regionMtime = Files.isRegularFile(region)
+                    ? Files.getLastModifiedTime(region).toMillis()
+                    : -1;
+            byte[] png = Files.readAllBytes(file);
+            if (!MapOverview.cacheFresh(MapPng.isIndexed(png), tileMtime, regionMtime)) return false;
+            MapPng.decode(png); // проверка целостности
+            put(dim, key, new Entry(png, MapPng.hash(png), System.currentTimeMillis()));
+            return true;
+        } catch (IOException | IllegalArgumentException e) {
+            LOG.warn("Кэш тайла карты {} не прочитан — будет перерисован", file, e);
+            return false;
+        }
+    }
+
+    /**
+     * Пререндер одного тайла из снимка, сделанного вызывающим на ГЛАВНОМ потоке. Если тайл уже
+     * рендерится по запросу игрока — присоединяется к нему.
+     */
+    static CompletableFuture<Entry> renderSnapshot(MinecraftServer server, String dim, MapTileRenderer.Snapshot snap) {
+        MapTileQuery.Ref r = new MapTileQuery.Ref(snap.tx, snap.tz, "");
+        String fk = flightKey(dim, r);
+        CompletableFuture<Entry> existing = IN_FLIGHT.get(fk);
+        if (existing != null) return existing;
+        long key = MapTileMath.key(0, snap.tx, snap.tz);
+        CompletableFuture<Entry> f = renderFrom(
+                        CompletableFuture.completedFuture(snap),
+                        tileFile(server, dim, snap.tx, snap.tz),
+                        dim,
+                        snap.tx,
+                        snap.tz,
+                        null)
+                .whenComplete((e, t) -> {
+                    if (e != null) put(dim, key, e);
+                    IN_FLIGHT.remove(fk);
+                });
+        CompletableFuture<Entry> raced = IN_FLIGHT.putIfAbsent(fk, f);
+        return raced != null ? raced : f;
+    }
+
+    /** Тайл в памяти (для обзора/прогресса); null — нет. */
+    static Entry cached(String dim, int tx, int tz) {
+        return memory(dim).get(MapTileMath.key(0, tx, tz));
+    }
+
+    static ExecutorService executor() {
+        return EXEC;
+    }
+
+    /**
+     * {minX, minZ, maxX, maxZ} играбельной зоны матча (граница мира ∩ квадрат карты); null — карта
+     * матча не задана (пререндер и обзор не работают — неизвестно, что рендерить).
+     */
+    static double[] zoneBounds(ServerLevel level) {
+        var match = WarfareWorldData.get(level).match;
+        if (match.mapSizeBlocks <= 0) return null;
+        WorldBorder wb = level.getWorldBorder();
+        double h = match.mapSizeBlocks / 2.0;
+        double minX = Math.max(wb.getMinX(), match.mapCenterX - h);
+        double maxX = Math.min(wb.getMaxX(), match.mapCenterX + h);
+        double minZ = Math.max(wb.getMinZ(), match.mapCenterZ - h);
+        double maxZ = Math.min(wb.getMaxZ(), match.mapCenterZ + h);
+        if (maxX <= minX || maxZ <= minZ) return null;
+        return new double[] {minX, minZ, maxX, maxZ};
+    }
+
+    /** Диапазон тайлов уровня 0 зоны: {tx0, tz0, tx1, tz1} включительно. */
+    static int[] tileRange(double[] b) {
+        return new int[] {
+            MapTileMath.tileOf(b[0], 0),
+            MapTileMath.tileOf(b[1], 0),
+            MapTileMath.tileOf(Math.nextDown(b[2]), 0),
+            MapTileMath.tileOf(Math.nextDown(b[3]), 0)
+        };
     }
 
     private static void put(String dim, long key, Entry e) {
@@ -287,5 +394,6 @@ public final class MapTileService {
     public static void clearMemory() {
         MEMORY.clear();
         IN_FLIGHT.clear();
+        EXEC.execute(MapOverviewService::clear);
     }
 }

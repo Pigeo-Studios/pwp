@@ -366,6 +366,7 @@
     "gui.pwpwarfare.radial.materials": "Материалы: %s",
     "gui.pwpwarfare.radial.materials_of": "Материалы: %s / %s",
     "gui.pwpwarfare.map.no_data": "Нет данных карты матча",
+    "gui.pwpwarfare.map.loading": "Загрузка карты %s%%",
     "gui.pwpwarfare.map.zoom": "Зум %s",
     "gui.pwpwarfare.map.scale": "%s м",
     "gui.pwpwarfare.map.north": "С",

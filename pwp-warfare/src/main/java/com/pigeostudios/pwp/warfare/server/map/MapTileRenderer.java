@@ -92,7 +92,7 @@ final class MapTileRenderer {
             }
             int[] px = new int[MapTileMath.PIXELS];
             MapShading.render(rgb, height, depth, w, w, px);
-            return MapPng.encode(px, w, w);
+            return MapPng.encodeIndexed(px, w, w);
         }
 
         @SuppressWarnings("unchecked")

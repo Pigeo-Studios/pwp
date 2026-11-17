@@ -19,10 +19,13 @@ public final class MapShading {
     static final int SEA_LEVEL = 63;
     /** Сила отмывки на блок перепада. */
     static final float SLOPE_GAIN = 0.07F;
+
     static final float SHADE_MIN = 0.62F;
     static final float SHADE_MAX = 1.22F;
     /** Тон по высоте: ±8% на ±96 блоков от уровня моря. */
     static final float ALT_GAIN = 0.08F / 96F;
+    /** Ступеней яркости на единицу множителя (1/32 ~ 3%: глазу незаметно, палитра <= 256). */
+    static final int SHADE_STEPS = 32;
     /** Глубина, на которой вода максимально тёмная. */
     static final int DEPTH_MAX = 24;
     /** Цвет глубокой воды (RGB). */
@@ -51,6 +54,8 @@ public final class MapShading {
         float f = 1F + slope * SLOPE_GAIN;
         f = Math.max(SHADE_MIN, Math.min(SHADE_MAX, f));
         f *= 1F + (h - SEA_LEVEL) * ALT_GAIN;
+        // ступени яркости: цветов в тайле = MapColor x уровни — влезает в палитровый PNG
+        f = Math.round(f * SHADE_STEPS) / (float) SHADE_STEPS;
         r = clamp(Math.round(r * f));
         g = clamp(Math.round(g * f));
         b = clamp(Math.round(b * f));

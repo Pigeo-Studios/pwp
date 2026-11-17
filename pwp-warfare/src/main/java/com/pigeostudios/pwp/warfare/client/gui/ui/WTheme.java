@@ -220,6 +220,15 @@ public final class WTheme {
 
     public static final int MAP_LABEL_BORDER = 0x26FFFFFF;
     public static final int MAP_LABEL_TEXT = 0xFFE2E4E6;
+    /** Карта грузится (MapLayers.placeholder/loading): тёмно-зелёный топо-фон, шум, шиммер, полоса. */
+    public static final int MAP_LOADING_BG = 0xFF17221B;
+
+    public static final int MAP_LOADING_NOISE = 0x30A8C8A0;
+    public static final int MAP_LOADING_SHIMMER = 0x18E8F4E0;
+    public static final int MAP_LOADING_SHIMMER_MIN_W = 40;
+    public static final long MAP_LOADING_SHIMMER_MS = 1800L;
+    public static final int MAP_LOADING_BAR = 0xFFC8812A;
+    public static final int MAP_LOADING_BAR_TRACK = 0x66000000;
     /** Место под колонку подписей строк слева (плашка координат не наезжает). */
     public static final int MAP_LABEL_COL_W = 18;
     /** Шкала масштаба: целевой диапазон длины, px. */

@@ -216,6 +216,7 @@ public class SquadMapRenderer {
         drawPreview(g, cx, cz);
 
         MapLayers.noMap(g, font, v);
+        MapLayers.loading(g, font, v);
         MapHud.frame(g, v);
         MapHud.readout(g, font, v, mx, my);
         MapHud.scaleBar(g, font, v);

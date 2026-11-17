@@ -145,7 +145,9 @@ class MapTilesTest {
         assertEquals(2, bad.size());
         assertEquals("", bad.get(0).hash());
         assertEquals(new MapTileQuery.Ref(3, 4, ""), bad.get(1));
-        assertEquals(MapTileQuery.MAX_TILES, MapTileQuery.parse("1,1;2,2;3,3;4,4;5,5;6,6;7,7;8,8").size());
+        assertEquals(
+                MapTileQuery.MAX_TILES,
+                MapTileQuery.parse("1,1;2,2;3,3;4,4;5,5;6,6;7,7;8,8").size());
         assertTrue(MapTileQuery.parse(null).isEmpty());
     }
 }

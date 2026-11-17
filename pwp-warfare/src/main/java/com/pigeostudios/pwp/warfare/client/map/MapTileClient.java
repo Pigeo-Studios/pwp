@@ -61,7 +61,9 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Текстуры — {@link DynamicTexture} на тайл; загрузка в GPU только у изменившихся тайлов.
  * Включается настройкой {@link WarfareUiSettings#MAP_WORLD} (по умолчанию выключено — до
- * проверки в игре); выключено или тайлов нет — {@code MapLayers.tiles} рисует старый PNG.
+ * проверки в игре); выключено — {@code MapLayers.tiles} рисует старый PNG. Пока тайлов нет,
+ * под ними — грубый обзор зоны ({@link MapOverviewClient}), старый PNG и топо-заглушка; с
+ * картой закрытой во время матча тайлы зоны предзагружаются (реже, от игрока наружу).
  */
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT)
@@ -87,6 +89,12 @@ public final class MapTileClient {
     static final int MEMORY_CAP = 300;
     /** Тайлов в видимой области максимум (защита от бесконечной границы). */
     static final int VISIBLE_LIMIT = 1024;
+    /** Предзагрузка (карта закрыта, но идёт матч/деплой): пауза между запросами тайлов. */
+    static final long PREFETCH_GAP_MS = 1_000;
+    /** Как часто пересчитывать список предзагрузки (по удалению от игрока). */
+    static final long PREFETCH_REPLAN_MS = 5_000;
+    /** Плавное появление детального тайла поверх подложки. */
+    static final long FADE_MS = 350;
 
     private static class Tex {
         final int[] px = new int[MapTileMath.PIXELS];
@@ -135,6 +143,12 @@ public final class MapTileClient {
         long verifiedAt;
         boolean out;
         int version;
+        /** Когда тайл впервые получил данные (fade-in); 0 — ещё нет. */
+        long shownAt;
+
+        void markShown() {
+            if (shownAt == 0) shownAt = System.currentTimeMillis();
+        }
 
         Tile(int tx, int tz) {
             this.tx = tx;
@@ -161,6 +175,7 @@ public final class MapTileClient {
     private static int liveRadius = -1;
     private static int[][] liveOrder = new int[0][];
     private static boolean listening;
+    private static long prefetchPlannedAt;
 
     private MapTileClient() {}
 
@@ -168,6 +183,7 @@ public final class MapTileClient {
     public static void init() {
         if (listening) return;
         listening = true;
+        MapOverviewClient.init();
         ClientDataResponses.listen((type, json) -> {
             if (TYPE.equals(type)) onResponse(json);
         });
@@ -210,10 +226,16 @@ public final class MapTileClient {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
+        // подложка: грубый обзор всей зоны (пока детальных тайлов нет — карта не пустая)
+        drew |= MapOverviewClient.draw(g, v);
         if (level == 0) {
+            long now = lastDrawMs;
             for (long[] w : wanted) {
                 Tile t = TILES.get(MapTileMath.key(0, (int) w[0], (int) w[1]));
                 if (t == null || !t.hasData) continue;
+                // fade-in от прихода данных: тайлы, предзагруженные до открытия карты, — сразу целиком
+                float fade = Math.min(1F, Math.max(0F, (now - t.shownAt) / (float) FADE_MS));
+                RenderSystem.setShaderColor(1F, 1F, 1F, fade);
                 if (t.dirty && t.tex != null && uploads[0]-- <= 0) {
                     drew |= blit(g, v, t, t.tx, t.tz, 0, smooth); // старая текстура — до следующего кадра
                     continue;
@@ -221,6 +243,7 @@ public final class MapTileClient {
                 t.upload(mc);
                 drew |= blit(g, v, t, t.tx, t.tz, 0, smooth);
             }
+            RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
         } else {
             int rebuilds = 1;
             for (long[] w : MapTileMath.tilesIn(x0, z0, x1, z1, level, v.centerX(), v.centerZ(), VISIBLE_LIMIT)) {
@@ -297,10 +320,55 @@ public final class MapTileClient {
         ensureContext(mc);
         for (Runnable r; (r = MAIN.poll()) != null; ) r.run();
         long now = System.currentTimeMillis();
-        if (now - lastDrawMs > IDLE_MS) return;
-        sendRequest(now);
+        MapOverviewClient.tick(mc, context, cacheDir, now);
+        if (now - lastDrawMs > IDLE_MS) {
+            // карта закрыта: предзагрузка всей зоны матча (по удалению от игрока), реже обычного —
+            // к открытию M/деплоя тайлы уже на месте
+            if (ClientData.mapSizeBlocks <= 0 || mc.player == null) return;
+            if (now - prefetchPlannedAt > PREFETCH_REPLAN_MS || wanted.isEmpty()) {
+                prefetchPlannedAt = now;
+                double[] pw = MapView.playableWorld();
+                wanted = MapTileMath.tilesIn(
+                        pw[0],
+                        pw[1],
+                        pw[2],
+                        pw[3],
+                        0,
+                        mc.player.getX(),
+                        mc.player.getZ(),
+                        Math.min(VISIBLE_LIMIT, MEMORY_CAP));
+                for (long[] w : wanted) tile((int) w[0], (int) w[1]);
+            }
+            sendRequest(now, PREFETCH_GAP_MS);
+            evict();
+            return;
+        }
+        prefetchPlannedAt = 0;
+        sendRequest(now, REQUEST_GAP_MS);
         sampleLive(mc, mc.level);
         evict();
+    }
+
+    /**
+     * Готовность карты в процентах для индикатора: минимум из серверного пререндера и доли
+     * видимых (или предзагружаемых) тайлов с данными. 100 — индикатор не нужен.
+     */
+    public static int loadingPercent() {
+        if (!enabled()) return 100;
+        int server = MapOverviewClient.serverPercent();
+        int n = 0, have = 0;
+        for (long[] w : wanted) {
+            Tile t = TILES.get(MapTileMath.key(0, (int) w[0], (int) w[1]));
+            n++;
+            if (t != null && (t.hasData || t.out || t.verifiedAt != 0)) have++;
+        }
+        int client = n == 0 ? (MapOverviewClient.known() ? 100 : 0) : (int) (have * 100L / n);
+        return server < 0 ? client : Math.min(server, client);
+    }
+
+    /** Каталог кэша текущего сервера/измерения (null — нет мира). */
+    static Path cacheDir() {
+        return cacheDir;
     }
 
     private static Tile tile(int tx, int tz) {
@@ -314,10 +382,10 @@ public final class MapTileClient {
         return t;
     }
 
-    private static void sendRequest(long now) {
+    private static void sendRequest(long now, long gap) {
         if (inFlight && now - sentAt < REQUEST_TIMEOUT_MS) return;
         inFlight = false;
-        if (now - lastResponseAt < REQUEST_GAP_MS || now - sentAt < REQUEST_GAP_MS) return;
+        if (now - lastResponseAt < gap || now - sentAt < gap) return;
         List<MapTileQuery.Ref> refs = new ArrayList<>();
         for (long[] w : wanted) {
             Tile t = TILES.get(MapTileMath.key(0, (int) w[0], (int) w[1]));
@@ -394,6 +462,7 @@ public final class MapTileClient {
         System.arraycopy(argb, 0, t.px, 0, t.px.length);
         t.hash = hash;
         t.hasData = true;
+        t.markShown();
         t.dirty = true;
         t.version++;
         t.verifiedAt = System.currentTimeMillis();
@@ -470,6 +539,7 @@ public final class MapTileClient {
         }
         if (changed) {
             t.hasData = true;
+            t.markShown();
             t.dirty = true;
             t.version++;
         }
@@ -543,6 +613,7 @@ public final class MapTileClient {
                             System.arraycopy(fpx, 0, t.px, 0, t.px.length);
                             t.hash = fh;
                             t.hasData = true;
+                            t.markShown();
                             t.dirty = true;
                             t.version++;
                         } else if (fpx != null) {
@@ -553,7 +624,7 @@ public final class MapTileClient {
                 Util.backgroundExecutor());
     }
 
-    private static void writeFile(Path file, byte[] png) {
+    static void writeFile(Path file, byte[] png) {
         try {
             Files.createDirectories(file.getParent());
             Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
@@ -583,6 +654,7 @@ public final class MapTileClient {
         for (Mip m : MIPS.values()) m.close(mc);
         TILES.clear();
         MIPS.clear();
+        MapOverviewClient.clear(mc);
         wanted = List.of();
         context = null;
         inFlight = false;
