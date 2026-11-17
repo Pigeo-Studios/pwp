@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.medicine.event;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
 import com.pigeostudios.pwp.medicine.item.ModItems;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -39,6 +40,10 @@ public class ClientHUDHandler {
     private static final ResourceLocation SHADER_DESATURATE = new ResourceLocation("shaders/post/desaturate.json");
     private static boolean shaderActive = false;
     private static float bleedAnimProgress = 0.0f;
+    // Выезд баннера кровотечения — в РЕАЛЬНОМ времени: прежние 0.025/кадр при 60 FPS
+    // = полный выезд за ~667 мс (раньше при 144 FPS выезжал вдвое быстрее).
+    private static final float BLEED_ANIM_MS = 1000.0f / 60.0f / 0.025f;
+    private static long bleedAnimLastMs = -1L;
     private static final float ANIM_SPEED = 0.025f;
 
     @SubscribeEvent
@@ -72,10 +77,14 @@ public class ClientHUDHandler {
             return;
         }
         boolean hasBleeding = mc.player.hasEffect(ModEffects.BLEEDING.get());
+        long nowMs = Util.getMillis();
+        long dtMs = bleedAnimLastMs < 0L ? 0L : Math.max(0L, Math.min(100L, nowMs - bleedAnimLastMs));
+        bleedAnimLastMs = nowMs;
+        float step = dtMs / BLEED_ANIM_MS;
         if (hasBleeding && bleedAnimProgress < 1.0f) {
-            bleedAnimProgress += 0.025f;
+            bleedAnimProgress += step;
         } else if (!hasBleeding && bleedAnimProgress > 0.0f) {
-            bleedAnimProgress -= 0.025f;
+            bleedAnimProgress -= step;
         }
         bleedAnimProgress = Math.max(0.0f, Math.min(1.0f, bleedAnimProgress));
         if (bleedAnimProgress > 0.0f) {

@@ -29,6 +29,7 @@ import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIDamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -769,13 +770,16 @@ public class WarfareOverlay {
                             note.team.equalsIgnoreCase("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
                     String status = note.isNeutralized ? " neutralized " : " captured ";
                     String msg = (teamDisplayName + status + note.pointName).toUpperCase();
-                    int textAlpha = (int) (overallAlpha * 255.0F) << 24;
-                    int textColor = textAlpha | 16777215;
-                    gui.pose().pushPose();
-                    gui.pose().translate(x + flagW / 2.0F, y + flagH + 8, 50.0F);
-                    gui.pose().scale(0.9F, 0.9F, 1.0F);
-                    gui.drawCenteredString(PWPTheme.Fonts.display(), msg, 0, 0, textColor);
-                    gui.pose().popPose();
+                    int textA = (int) (overallAlpha * 255.0F);
+                    // текст с альфой <4 ваниль рисует НЕПРОЗРАЧНЫМ — на хвосте фейда не рисуем
+                    if (textA >= 4) {
+                        int textColor = textA << 24 | 16777215;
+                        gui.pose().pushPose();
+                        gui.pose().translate(x + flagW / 2.0F, y + flagH + 8, 50.0F);
+                        gui.pose().scale(0.9F, 0.9F, 1.0F);
+                        gui.drawCenteredString(PWPTheme.Fonts.display(), msg, 0, 0, textColor);
+                        gui.pose().popPose();
+                    }
                     RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                     break;
                 }
@@ -868,36 +872,6 @@ public class WarfareOverlay {
             gui.drawString(PWPTheme.Fonts.display(), "Confirm", xStart + 26, row2Y + 2, -1, true);
             gui.blit(ICON_CONFIRM, xStart + uiWidth - 20, row2Y, 0.0F, 0.0F, 12, 12, 12, 12);
             RenderSystem.disableBlend();
-        }
-    }
-
-    private static void renderDownedUI(GuiGraphics gui, Minecraft mc, int width) {
-        String currentKit = ClientData.myCurrentKit;
-        boolean amIMedic = "Medic".equalsIgnoreCase(ClientData.myCurrentKit);
-        long now = mc.level.getGameTime();
-        int yOffset = 60;
-
-        for (Integer id : ClientData.DOWNED_PLAYERS) {
-            if (mc.level.getEntity(id) instanceof Player downed
-                    && downed != mc.player
-                    && mc.player.getTeam() != null
-                    && downed.getTeam() != null
-                    && mc.player.getTeam().isAlliedTo(downed.getTeam())) {
-                long lastShout = WarfareData.of(downed).getLong(WarfareKeys.LAST_MEDIC_SHOUT_TIME_MS);
-                boolean isShouting = now - lastShout < 3000L;
-                if (amIMedic || isShouting) {
-                    int distance = (int) mc.player.distanceTo(downed);
-                    if (distance < 150) {
-                        String name = downed.getScoreboardName();
-                        String text = "\u271A " + name + " [" + distance + "m]";
-                        int x = width - PWPTheme.Fonts.display().width(text) - 10;
-                        int bgColor = isShouting ? -1426128896 : -2136342528;
-                        gui.fill(x - 2, yOffset - 1, width - 5, yOffset + 9, bgColor);
-                        gui.drawString(PWPTheme.Fonts.display(), text, x, yOffset, 16777215, false);
-                        yOffset += 12;
-                    }
-                }
-            }
         }
     }
 
@@ -1019,6 +993,8 @@ public class WarfareOverlay {
     }
 
     private static float vehicleHintAlpha = 0.0F;
+    private static final UIDamp.Frame VEHICLE_HINT_FRAME = new UIDamp.Frame();
+    private static final UIDamp.Frame VOTE_FRAME = new UIDamp.Frame();
 
     // Единый HUD-блок техники: подсказка при наведении прицела (спецкит/шифт+ПКМ)
     // и статус-бар при нахождении в технике. Позиция — ярус look-at подсказок
@@ -1063,7 +1039,8 @@ public class WarfareOverlay {
             }
         }
 
-        vehicleHintAlpha += (target - vehicleHintAlpha) * 0.2F;
+        // 0.2/кадр при 60 FPS, в реальном времени
+        vehicleHintAlpha = UIDamp.approach(vehicleHintAlpha, target, 0.2F, VEHICLE_HINT_FRAME.dtMs());
         if (vehicleHintAlpha <= 0.02F || text == null) return;
 
         int alpha = Math.min(255, (int) (vehicleHintAlpha * 255.0F));
@@ -1455,8 +1432,9 @@ public class WarfareOverlay {
     }
 
     private static void renderVotePanel(GuiGraphics gui, Minecraft mc, int width) {
-        float speed = 0.05F;
-        ClientData.voteTransition = Mth.lerp(speed, ClientData.voteTransition, ClientData.voteActive ? 1.0F : 0.0F);
+        // 0.05/кадр при 60 FPS, в реальном времени
+        ClientData.voteTransition = UIDamp.approach(
+                ClientData.voteTransition, ClientData.voteActive ? 1.0F : 0.0F, 0.05F, VOTE_FRAME.dtMs());
         if (!(ClientData.voteTransition <= 0.001F)) {
             int xPos = (int) Mth.lerp(ClientData.voteTransition, -180.0F, 10.0F);
             int yPos = 60;
@@ -1682,11 +1660,17 @@ public class WarfareOverlay {
         }
     }
 
+    // Список ноков у медика: ТОЛЬКО союзники (раньше были видны и вражеские ноки
+    // с дистанцией; мёртвый дубль renderDownedUI с фильтром удалён).
     private static void renderMedicUI(GuiGraphics gui, Minecraft mc, int width) {
+        if (mc.player.getTeam() == null) return;
         int yOffset = 60;
 
         for (Integer id : ClientData.DOWNED_PLAYERS) {
-            if (mc.level.getEntity(id) instanceof Player downed && downed != mc.player) {
+            if (mc.level.getEntity(id) instanceof Player downed
+                    && downed != mc.player
+                    && downed.getTeam() != null
+                    && mc.player.getTeam().isAlliedTo(downed.getTeam())) {
                 int distance = (int) mc.player.distanceTo(downed);
                 if (distance < 100) {
                     String name = downed.getScoreboardName();

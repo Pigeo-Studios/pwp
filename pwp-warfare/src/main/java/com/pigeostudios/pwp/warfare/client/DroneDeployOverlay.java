@@ -2,12 +2,14 @@ package com.pigeostudios.pwp.warfare.client;
 
 import com.mojang.math.Axis;
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
@@ -20,16 +22,21 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 // - компактный маркер-кольцо НАД дроном (y+1.3 — на высоте корпуса, а не на
 //   земле: на земле кольцо уезжало под ноги дрону при взгляде сбоку);
 // - две строки под прицелом: имя дрона + честный таймер T-Nс.
-// Прогресс сглаживается клиентским lerp (плавность HUD). Авто-скрыл: если
+// Прогресс сглаживается клиентским lerp (плавность HUD, реальное время — UIDamp).
+// Рисуется ОДИН раз за кадр — после CHAT_PANEL, как лента/фидбек (Post приходит
+// на каждый ванильный оверлей: без фильтра кольцо рисовалось 20+ раз за кадр). Авто-скрыл: если
 // пакеты не приходят >60 тиков (3с — пакеты идут каждые 5 тиков), канал
 // считаем мёртвым и гуишку прячем (дрон пропал/сервер умер).
 // Состояние приходит с сервера только игроку канала (PacketDistributor.PLAYER).
 @EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT, bus = Bus.FORGE)
 public class DroneDeployOverlay {
+    private static final UIDamp.Frame FRAME = new UIDamp.Frame();
+
     private DroneDeployOverlay() {}
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+        if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
         if (!ClientData.droneDeployActive) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -43,8 +50,12 @@ public class DroneDeployOverlay {
 
         GuiGraphics gui = event.getGuiGraphics();
         // Плавность: клиентский lerp к серверному прогрессу.
-        ClientData.droneDeployDisplayProgress = Mth.lerp(
-                0.12F, ClientData.droneDeployDisplayProgress, Mth.clamp(ClientData.droneDeployProgress, 0.0F, 1.0F));
+        // 0.12/кадр при 60 FPS (прежний покадровый коэффициент), в реальном времени.
+        ClientData.droneDeployDisplayProgress = UIDamp.approach(
+                ClientData.droneDeployDisplayProgress,
+                Mth.clamp(ClientData.droneDeployProgress, 0.0F, 1.0F),
+                0.12F,
+                FRAME.dtMs());
         float progress = Mth.clamp(ClientData.droneDeployDisplayProgress, 0.0F, 1.0F);
         int cx = gui.guiWidth() / 2;
         int cy = gui.guiHeight() / 2;

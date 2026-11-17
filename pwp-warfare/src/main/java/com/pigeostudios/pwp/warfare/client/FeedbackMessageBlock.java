@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -26,6 +27,7 @@ public class FeedbackMessageBlock {
     private static long showUntilTick = 0L;
     private static boolean fading = false;
     private static float alpha = 0.0F;
+    private static final UIDamp.Frame FRAME = new UIDamp.Frame();
 
     private FeedbackMessageBlock() {}
 
@@ -48,7 +50,7 @@ public class FeedbackMessageBlock {
         if (!fading && now >= showUntilTick) fading = true;
 
         float target = fading ? 0.0F : 1.0F;
-        alpha += (target - alpha) * 0.2F;
+        alpha = UIDamp.approach(alpha, target, 0.2F, FRAME.dtMs()); // 0.2/кадр при 60 FPS
         if (alpha <= 0.01F) return;
 
         GuiGraphics gui = event.getGuiGraphics();
@@ -62,11 +64,13 @@ public class FeedbackMessageBlock {
         int x = (width - boxWidth) / 2;
         int y = height - 58; // ярус фидбека: над хотбаром (его верх h-42), ниже ленты (h-76/h-94)
         int a = (int) (Math.min(1.0F, alpha) * 220.0F * WarfareUiSettings.MESSAGE_OPACITY.get());
-        if (a <= 2) return;
+        if (a <= 0) return;
 
         gui.fill(x, y, x + boxWidth, y + boxHeight, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BACKGROUND, a));
         gui.fill(x, y, x + 3, y + boxHeight, PWPTheme.Colors.withAlpha(PWPTheme.Colors.ACCENT, a));
         gui.fill(x, y, x + boxWidth, y + 1, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BORDER_LIGHT, a));
+        // текст с альфой <4 ваниль рисует НЕПРОЗРАЧНЫМ — на хвосте фейда текст не рисуем
+        if (a < 4) return;
         int textY = y + (boxHeight - font.lineHeight) / 2;
         gui.drawString(
                 font,

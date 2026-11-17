@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.UIDamp;
 import com.tacz.guns.api.event.common.GunShootEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +22,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 // Новое уведомление появляется в верхнем слоте (плавно), предыдущий верхний
 // опускается вниз, нижний плавно гаснет. Дедик: то же сообщение уже висит —
 // просто продлеваем таймер (зажатый ЛКМ в мейн-зоне не спамит ленту).
-// Анимации: плавный фейд (0.2/кадр) и скольжение между слотами (0.18/кадр) —
+// Анимации: плавный фейд (0.2/кадр при 60 FPS) и скольжение между слотами
+// (0.18/кадр при 60 FPS) — в реальном времени через UIDamp, от FPS не зависят;
 // ничего не появляется резко. Отрисовка: низ-центр, шрифт PWPTheme, полоска
 // слева DANGER (блок) / ACCENT (инфо). Экшенбар/тайтлы/чаты не трогаем.
 @EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT, bus = Bus.FORGE)
@@ -36,6 +38,7 @@ public class NotificationFeed {
     private static final int ANCHOR_Y = 76; // нижний слот: height - ANCHOR_Y (выше фидбек-блока на h-58)
 
     private static final List<Entry> ENTRIES = new ArrayList<>();
+    private static final UIDamp.Frame FRAME = new UIDamp.Frame();
 
     private static final class Entry {
         String key;
@@ -132,13 +135,14 @@ public class NotificationFeed {
         GuiGraphics gui = event.getGuiGraphics();
         int width = mc.getWindow().getGuiScaledWidth();
         Font font = PWPTheme.Fonts.display();
+        long dt = FRAME.dtMs();
         ListIterator<Entry> it = ENTRIES.listIterator();
         while (it.hasNext()) {
             Entry entry = it.next();
             float targetAlpha = entry.fading ? 0.0F : 1.0F;
-            entry.alpha += (targetAlpha - entry.alpha) * 0.2F;
+            entry.alpha = UIDamp.approach(entry.alpha, targetAlpha, 0.2F, dt);
             float targetY = slotY(entry.slot);
-            entry.y += (targetY - entry.y) * 0.18F;
+            entry.y = UIDamp.approach(entry.y, targetY, 0.18F, dt);
             if (entry.fading && entry.alpha < 0.01F) {
                 it.remove();
                 continue;
@@ -151,7 +155,7 @@ public class NotificationFeed {
     private static void drawEntry(GuiGraphics gui, Font font, Entry entry, int width) {
         // настройка «Непрозрачность сообщений»
         int alpha = (int) (Math.min(1.0F, entry.alpha) * 220.0F * WarfareUiSettings.MESSAGE_OPACITY.get());
-        if (alpha <= 2) return;
+        if (alpha <= 0) return;
         int textWidth = font.width(entry.text);
         int padding = PWPTheme.Spacing.SM;
         int boxWidth = textWidth + padding * 2 + PWPTheme.Spacing.XS;
@@ -161,6 +165,8 @@ public class NotificationFeed {
         gui.fill(x, y, x + boxWidth, y + ENTRY_HEIGHT, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BACKGROUND, alpha));
         gui.fill(x, y, x + 3, y + ENTRY_HEIGHT, PWPTheme.Colors.withAlpha(accent, alpha));
         gui.fill(x, y, x + boxWidth, y + 1, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BORDER_LIGHT, alpha));
+        // текст с альфой <4 ваниль рисует НЕПРОЗРАЧНЫМ — на хвосте фейда текст не рисуем
+        if (alpha < 4) return;
         int textY = y + (ENTRY_HEIGHT - font.lineHeight) / 2;
         gui.drawString(
                 font,
