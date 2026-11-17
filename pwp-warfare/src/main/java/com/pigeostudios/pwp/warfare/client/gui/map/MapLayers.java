@@ -6,6 +6,7 @@ import com.pigeostudios.pwp.warfare.client.WarfareUiSettings;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
+import com.pigeostudios.pwp.warfare.client.map.MapTileClient;
 import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
 import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.ui.UIDraw;
@@ -25,7 +26,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * нет мерцания/z-fighting):
  * <ol>
  *   <li>{@link #background} — подложка вне текстуры карты;
- *   <li>{@link #tiles} — текстура карты матча (сглаживание только на время blit);
+ *   <li>{@link #tiles} — тайлы карты из мира, иначе PNG карты матча (сглаживание только на время blit);
  *   <li>{@link #grid} — сетка 300 (и 100 при приближении) только внутри играбельной зоны;
  *   <li>{@link #bounds} — ОДНА маска вне зоны из непересекающихся полос + градиентный край и
  *       светящаяся пунктирная линия границы;
@@ -53,7 +54,12 @@ public final class MapLayers {
                 img, k -> new ResourceLocation("pwpwarfare", "textures/gui/maps/" + k + ".png"));
     }
 
+    /**
+     * Динамическая карта из мира ({@link MapTileClient}); если выключена или тайлов ещё нет —
+     * фолбэк: заранее подготовленный PNG на квадрат карты матча.
+     */
     public static void tiles(GuiGraphics g, MapView v) {
+        if (MapTileClient.draw(g, v)) return;
         int s = ClientData.mapSizeBlocks;
         if (s <= 0) return;
         ResourceLocation tex = mapTexture();
@@ -220,7 +226,7 @@ public final class MapLayers {
 
     /** Иконка-подсказка «нет карты» (неизвестный размер карты матча). */
     public static void noMap(GuiGraphics g, Font font, MapView v) {
-        if (ClientData.mapSizeBlocks > 0) return;
+        if (ClientData.mapSizeBlocks > 0 || MapTileClient.hasAny()) return;
         WDraw.emptyState(
                 g, font, v.area(), WarfareIcon.MAP, Component.translatable("gui.pwpwarfare.map.no_data"), null, 1F);
     }

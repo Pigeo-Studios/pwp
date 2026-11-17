@@ -66,6 +66,8 @@ public class WarfareMod {
             PacketHandler.register();
             // Типы запросов данных warfare — в единой системе core-client
             com.pigeostudios.pwp.warfare.network.WarfareDataRequests.register();
+            // тайлы динамической карты (mapTile): отвечает только на запросы клиентов с включённой картой
+            com.pigeostudios.pwp.warfare.server.map.MapTileService.register();
         });
     }
 

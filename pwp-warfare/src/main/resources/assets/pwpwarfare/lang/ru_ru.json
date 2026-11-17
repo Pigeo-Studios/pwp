@@ -527,6 +527,8 @@
     "gui.pwpwarfare.ui_settings.map.names.never": "Никогда",
     "gui.pwpwarfare.ui_settings.map.path_opacity": "Прозрачность путей",
     "gui.pwpwarfare.ui_settings.map.path_opacity.tip": "Нарисованные маршруты: линии, кружки начала и стрелки.",
+    "gui.pwpwarfare.ui_settings.map.world_tiles": "Карта из мира (бета)",
+    "gui.pwpwarfare.ui_settings.map.world_tiles.tip": "Рисовать тактическую карту из реального мира: цвета местности, рельеф и глубина воды с сервера плюс свежие загруженные чанки. Выключено — заранее подготовленная картинка.",
     "gui.pwpwarfare.ui_settings.hud.side_map_size": "Размер боковой карты",
     "gui.pwpwarfare.ui_settings.hud.side_map_size.tip": "Панель карты, которая выезжает справа во время матча.",
     "gui.pwpwarfare.ui_settings.hud.side_map_bg": "Фон боковой карты",

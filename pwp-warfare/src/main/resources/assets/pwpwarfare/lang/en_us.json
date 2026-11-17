@@ -527,6 +527,8 @@
     "gui.pwpwarfare.ui_settings.map.names.never": "Never",
     "gui.pwpwarfare.ui_settings.map.path_opacity": "Path opacity",
     "gui.pwpwarfare.ui_settings.map.path_opacity.tip": "Drawn routes: lines, start circles and arrows.",
+    "gui.pwpwarfare.ui_settings.map.world_tiles": "Map from the world (beta)",
+    "gui.pwpwarfare.ui_settings.map.world_tiles.tip": "Draw the tactical map from the real world: terrain colours, relief and water depth from the server plus freshly loaded chunks. Off — the prepared map image.",
     "gui.pwpwarfare.ui_settings.hud.side_map_size": "Side map size",
     "gui.pwpwarfare.ui_settings.hud.side_map_size.tip": "The map panel that slides in from the right during a match.",
     "gui.pwpwarfare.ui_settings.hud.side_map_bg": "Side map background",

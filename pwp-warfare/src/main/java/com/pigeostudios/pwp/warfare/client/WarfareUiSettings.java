@@ -96,6 +96,14 @@ public final class WarfareUiSettings {
                     UiSettings.Format.PERCENT)
             .tooltip("gui.pwpwarfare.ui_settings.map.path_opacity.tip");
 
+    /**
+     * Карта из реального мира (тайлы с сервера + дорисовка из загруженных чанков): MapLayers.tiles →
+     * MapTileClient. По умолчанию выключено до проверки в игре; выключено — старая PNG-карта.
+     */
+    public static final UiSettings.Toggle MAP_WORLD = UiSettings.toggle(
+                    "map.world_tiles", MAP, "gui.pwpwarfare.ui_settings.map.world_tiles", false)
+            .tooltip("gui.pwpwarfare.ui_settings.map.world_tiles.tip");
+
     // ---------------------------------------------------------------- HUD
     // (WarfareOverlay/NotificationFeed/FeedbackMessageBlock)
 
