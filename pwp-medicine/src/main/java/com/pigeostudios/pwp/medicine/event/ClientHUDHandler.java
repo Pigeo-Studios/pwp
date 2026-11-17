@@ -10,7 +10,6 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -46,7 +45,8 @@ public class ClientHUDHandler {
     // = полный выезд за ~667 мс (раньше при 144 FPS выезжал вдвое быстрее).
     private static final float BLEED_ANIM_MS = 1000.0f / 60.0f / 0.025f;
     private static long bleedAnimLastMs = -1L;
-    private static final float ANIM_SPEED = 0.025f;
+    /** Место баннера кровотечения в левом стеке HUD на этот кадр (занято в RenderGuiEvent.Pre). */
+    private static int bleedY = WHud.SIDE_NONE;
 
     @SubscribeEvent
     public static void onCameraSetup(ViewportEvent.ComputeCameraAngles event) {
@@ -78,21 +78,10 @@ public class ClientHUDHandler {
         if (mc.player == null) {
             return;
         }
-        boolean hasBleeding = mc.player.hasEffect(ModEffects.BLEEDING.get());
-        long nowMs = Util.getMillis();
-        long dtMs = bleedAnimLastMs < 0L ? 0L : Math.max(0L, Math.min(100L, nowMs - bleedAnimLastMs));
-        bleedAnimLastMs = nowMs;
-        float step = dtMs / BLEED_ANIM_MS;
-        if (hasBleeding && bleedAnimProgress < 1.0f) {
-            bleedAnimProgress += step;
-        } else if (!hasBleeding && bleedAnimProgress > 0.0f) {
-            bleedAnimProgress -= step;
-        }
-        bleedAnimProgress = Math.max(0.0f, Math.min(1.0f, bleedAnimProgress));
         // общий гейт HUD warfare (F1 скрывает); ч/б шейдер нока — вне гейта (эффект картинки)
         boolean hud = WHud.hudVisible();
-        if (hud && bleedAnimProgress > 0.0f) {
-            ClientHUDHandler.drawBleedingMenu(event.getGuiGraphics(), mc, bleedAnimProgress);
+        if (hud && bleedY != WHud.SIDE_NONE) {
+            ClientHUDHandler.drawBleedingMenu(event.getGuiGraphics(), bleedAnimProgress);
         }
         ClientHUDHandler.handleGrayscaleShader(mc, mc.player);
         if (!hud) return;
@@ -118,7 +107,12 @@ public class ClientHUDHandler {
     public static void onRenderGuiPre(RenderGuiEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
         patientHealer = null;
-        if (mc.player == null || !WHud.hudVisible()) return;
+        bleedY = WHud.SIDE_NONE;
+        if (mc.player == null) return;
+        updateBleedAnim(mc.player.hasEffect(ModEffects.BLEEDING.get()));
+        if (!WHud.hudVisible()) return;
+        // баннер кровотечения — первым в левом стеке HUD (выше голосований и голоса; этап 4)
+        if (bleedAnimProgress > 0.0f) bleedY = WHud.leftClaim(WHud.font());
         if (ClientHUDHandler.getHudTarget(mc) != null) return;
         patientHealer = ClientHUDHandler.getHealerTargetingMe(mc);
         if (patientHealer != null) WHud.contextOffer(WHud.CTX_PATIENT);
@@ -143,20 +137,35 @@ public class ClientHUDHandler {
     /** Подпись баннера кровотечения: компонент кэширован (не создаётся в кадре). */
     private static final Component BLEEDING_TEXT = Component.translatable("gui.pwp_medicine.bleeding");
 
-    private static void drawBleedingMenu(GuiGraphics guiGraphics, Minecraft mc, float progress) {
-        Component text = BLEEDING_TEXT;
-        int textWidth = mc.font.width((FormattedText) text);
-        int width = textWidth + 46;
-        int height = 26;
-        int x = (int) ((float) (-width) + progress * (float) (width + 10));
-        int y = 40;
-        RenderSystem.enableBlend();
-        guiGraphics.fill(x, y, x + width, y + height, 0xCC06080A);
-        guiGraphics.fill(x, y, x + 3, y + height, 0xFFA53D3D);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        guiGraphics.blit(BLEEDING_ICON, x + 8, y + 5, 0.0f, 0.0f, 16, 16, 16, 16);
-        guiGraphics.drawString(mc.font, (Component) text, x + 32, y + 9, -1, true);
-        RenderSystem.disableBlend();
+    /** Выезд/уезд баннера в реальном времени (раз в кадр, в RenderGuiEvent.Pre). */
+    private static void updateBleedAnim(boolean hasBleeding) {
+        long nowMs = Util.getMillis();
+        long dtMs = bleedAnimLastMs < 0L ? 0L : Math.max(0L, Math.min(100L, nowMs - bleedAnimLastMs));
+        bleedAnimLastMs = nowMs;
+        float step = dtMs / BLEED_ANIM_MS;
+        if (hasBleeding && bleedAnimProgress < 1.0f) {
+            bleedAnimProgress += step;
+        } else if (!hasBleeding && bleedAnimProgress > 0.0f) {
+            bleedAnimProgress -= step;
+        }
+        bleedAnimProgress = Math.max(0.0f, Math.min(1.0f, bleedAnimProgress));
+    }
+
+    /** Баннер кровотечения — плашка-тревога левого стека HUD (кит WHud, место занято в Pre). */
+    private static void drawBleedingMenu(GuiGraphics guiGraphics, float progress) {
+        long period = WTheme.SIDE_ALERT_PULSE_MS;
+        double ph = (Util.getMillis() % period) / (double) period * Math.PI * 2.0;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(ph);
+        WHud.sideAlert(
+                guiGraphics,
+                WHud.font(),
+                bleedY,
+                BLEEDING_ICON,
+                WarfareIcon.PLUS,
+                BLEEDING_TEXT,
+                WTheme.HUD_DANGER,
+                progress,
+                pulse);
     }
 
     private static void renderHealthHUD(

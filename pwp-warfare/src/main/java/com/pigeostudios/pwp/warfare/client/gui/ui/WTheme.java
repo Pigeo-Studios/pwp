@@ -454,4 +454,49 @@ public final class WTheme {
     public static final long TOP_BANNER_FADE_MS = 1000L;
     /** Мигание метки нока на компасе. */
     public static final long TOP_BLINK_MS = 1200L;
+
+    // ------------------------------------------------------------ HUD боковые стеки (этап 4: client/hud/SideHud)
+    // Размеры — базовые HUD-единицы внутри HudZones.left()/right() (масштаб HUD применяет HudDraw.begin).
+    /** Ёмкость списков панелей (голосующие, раненые, говорящие); лишние строки — «+N». */
+    public static final int SIDE_MAX_ROWS = 48;
+    /** Ширина панелей голосований и арты (не шире колонки). */
+    public static final int SIDE_PANEL_W = 165;
+    /** Ширина списка раненых у медика. */
+    public static final int SIDE_LIST_W = 130;
+    /** Максимальная ширина плашки говорящего. */
+    public static final int SIDE_VOICE_W = 130;
+    /** Зазор между строками панели и между плашками голоса. */
+    public static final int SIDE_LINE_GAP = 1;
+
+    public static final int SIDE_VOICE_GAP = 1;
+    /** Полоса прогресса панели (голоса, окно ответа на арту). */
+    public static final int SIDE_BAR_H = 3;
+    /** Деления полосы голосования — по голосу, пока голосующих не больше. */
+    public static final int SIDE_BAR_MAX_SEGMENTS = 12;
+    /** Метка голоса (квадрат) и точка команды. */
+    public static final int SIDE_VOTE_MARK = 5;
+    /** Порог голосования за командира: 50% голосов лидеров отрядов (как в правиле). */
+    public static final float SIDE_CMD_PASS = 0.5F;
+    /** Окно ответа на запрос арты, тики (полоса = остаток; прежнее значение HUD). */
+    public static final int SIDE_ART_WINDOW_TICKS = 200;
+    /** Раненые дальше — не в списке медика (блоки). */
+    public static final int SIDE_MEDIC_RANGE = 100;
+    /** Говорящий пропадает, если пакета голоса нет дольше (мс). */
+    public static final long SIDE_VOICE_TIMEOUT_MS = 1000L;
+    /** Выезд панелей: доля пути за кадр при 60 FPS (реальное время); порог «доехала». */
+    public static final float SIDE_SLIDE_RATE = 0.18F;
+
+    public static final float SIDE_SLIDE_EPS = 0.001F;
+    /** «Эквалайзер» говорящего: столбики, период, сдвиг фазы столбика и строки. */
+    public static final int SIDE_EQ_BARS = 3;
+
+    public static final long SIDE_EQ_PERIOD_MS = 520L;
+    public static final long SIDE_EQ_PHASE_MS = 170L;
+    public static final long SIDE_EQ_ROW_MS = 90L;
+    /** Плашка-тревога (кровотечение): добавка к высоте плашки, иконка, сила и период пульса. */
+    public static final int SIDE_ALERT_EXTRA_H = 6;
+
+    public static final int SIDE_ALERT_ICON = 12;
+    public static final float SIDE_ALERT_PULSE = 0.18F;
+    public static final long SIDE_ALERT_PULSE_MS = 1200L;
 }

@@ -17,7 +17,8 @@ import net.minecraftforge.fml.common.Mod;
  *
  * <ol>
  *   <li>{@code RenderGuiEvent.Pre} HIGHEST — здесь {@link HudZones#beginFrame()};
- *   <li>{@code RenderGuiEvent.Pre} NORMAL — элементы контекстного яруса делают {@code offer};
+ *   <li>{@code RenderGuiEvent.Pre} NORMAL — элементы контекстного яруса делают {@code offer}, баннер кровотечения
+ *       pwp-medicine занимает верх левого стека (раньше всех боковых панелей);
  *   <li>{@code RenderGuiOverlayEvent.Post(CHAT_PANEL)}: HIGH — HP/броня pwp-limits (низ стека
  *       низ-лево), NORMAL — warfare (БК, припасы, старые look-at резервируют ярус, стройка), LOW —
  *       канал дрона;

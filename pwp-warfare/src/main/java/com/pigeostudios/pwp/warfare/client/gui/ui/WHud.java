@@ -1,11 +1,13 @@
 package com.pigeostudios.pwp.warfare.client.gui.ui;
 
+import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
 import com.pwp.coreclient.ui.UIDraw;
 import com.pwp.coreclient.ui.hud.Hud;
 import com.pwp.coreclient.ui.hud.HudDraw;
 import com.pwp.coreclient.ui.hud.HudTheme;
 import com.pwp.coreclient.ui.hud.HudZones;
+import com.pwp.coreclient.ui.layout.TextFit;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -130,6 +132,77 @@ public final class WHud {
         HudDraw.bar(g, pad, by, w - pad - HudTheme.PAD_X, HudTheme.CONTEXT_BAR_H, frac, -1F, 10, accent, o);
         HudDraw.end(g);
         return true;
+    }
+
+    // ================================================================ боковые стеки (этап 4)
+    // Обёртки без типов core-client в сигнатурах — pwp-medicine не тянет core-client в classpath.
+
+    /** «Места нет» для {@link #leftClaim}. */
+    public static final int SIDE_NONE = HudZones.Stack.NONE;
+
+    /** Шрифт HUD матча (как у остальных элементов warfare). */
+    public static Font font() {
+        return PWPTheme.Fonts.display();
+    }
+
+    /** Высота боковой плашки-тревоги ({@link #sideAlert}) в базовых единицах. */
+    public static int alertHeight(Font font) {
+        return plateHeight(font) + WTheme.SIDE_ALERT_EXTRA_H;
+    }
+
+    /** Обрезка заголовка плашки-тревоги (без аллокаций, пока заголовок/ширина не менялись). */
+    private static final Fit ALERT_FIT = new Fit();
+
+    /**
+     * Занять место под плашку-тревогу в начале левого стека (баннер кровотечения). Вызывать в
+     * {@code RenderGuiEvent.Pre} (после сброса стеков, до отрисовки HUD warfare): так тревога всегда
+     * выше голосований и голоса. Возвращает Y (GUI-пиксели) или {@link #SIDE_NONE}.
+     */
+    public static int leftClaim(Font font) {
+        HudZones z = zones();
+        return z.left().next(z.u(alertHeight(font)));
+    }
+
+    /**
+     * Плашка-тревога левого стека в занятом {@link #leftClaim} месте: акцентная полоска (пульс
+     * {@code pulse} 0..1 — сила подсветки), иконка-текстура {@code tex} (целиком, без тинта) или
+     * иконка атласа {@code icon}, заголовок цветом акцента. {@code slide} 0..1 — выезд от левого края.
+     */
+    public static void sideAlert(
+            GuiGraphics g,
+            Font font,
+            int y,
+            ResourceLocation tex,
+            WarfareIcon icon,
+            Component title,
+            int accent,
+            float slide,
+            float pulse) {
+        if (y == SIDE_NONE || slide <= 0F) return;
+        HudZones z = zones();
+        HudZones.Stack st = z.left();
+        float s = z.scale();
+        int pad = HudTheme.PLATE_STRIPE + HudTheme.PAD_X;
+        int is = WTheme.SIDE_ALERT_ICON;
+        int maxW = Math.round(st.area().w() / s);
+        int tx = pad + is + HudTheme.ICON_GAP + 1;
+        if (maxW - HudTheme.PAD_X <= tx) return;
+        String t = ALERT_FIT.of(font, title, maxW - HudTheme.PAD_X - tx);
+        int w = tx + font.width(t) + HudTheme.PAD_X;
+        int h = alertHeight(font);
+        float x = st.area().x();
+        float hidden = -(w * s) - 1F;
+        HudDraw.begin(g, x + (hidden - x) * (1F - Math.min(1F, slide)), y, s);
+        HudDraw.plate(g, 0, 0, w, h, accent, 1F);
+        if (pulse > 0F) g.fill(0, 0, w, h, UIDraw.fade(accent, WTheme.SIDE_ALERT_PULSE * Math.min(1F, pulse)));
+        int iy = (h - is) / 2;
+        if (tex != null) {
+            HudDraw.icon(g, tex, 0, 0, 1, 1, 1, pad, iy, is, HudTheme.VALUE);
+        } else {
+            icon(g, icon, pad, iy, is, accent);
+        }
+        HudDraw.text(g, font, t, tx, (h - font.lineHeight) / 2 + 1, accent, true);
+        HudDraw.end(g);
     }
 
     // ================================================================ плашка-значение в стеке
@@ -324,6 +397,47 @@ public final class WHud {
                 text = (m < 10 ? "0" : "") + m + (r < 10 ? ":0" : ":") + r;
             }
             return text;
+        }
+    }
+
+    /**
+     * Строка, обрезанная многоточием по ширине; пересчёт только при смене строки/компонента, ширины
+     * или языка (обрезка аллоцирует — в кадре её нет, пока ничего не меняется).
+     */
+    public static final class Fit {
+        private String src;
+        private Component srcComponent;
+        private String lang;
+        private int width = -1;
+        private String out = "";
+
+        public String of(Font font, String s, int maxW) {
+            if (s == null) return "";
+            if (srcComponent != null || !s.equals(src) || maxW != width) {
+                srcComponent = null;
+                src = s;
+                width = maxW;
+                out = cut(font, s, maxW);
+            }
+            return out;
+        }
+
+        /** Переведённый компонент: строка разрешается заново только при смене языка. */
+        public String of(Font font, Component c, int maxW) {
+            if (c == null) return "";
+            String l = Minecraft.getInstance().getLanguageManager().getSelected();
+            if (c != srcComponent || maxW != width || !l.equals(lang)) {
+                srcComponent = c;
+                src = null;
+                lang = l;
+                width = maxW;
+                out = cut(font, c.getString(), maxW);
+            }
+            return out;
+        }
+
+        private static String cut(Font font, String s, int maxW) {
+            return font.width(s) <= maxW ? s : TextFit.ellipsize(s, maxW, font::width);
         }
     }
 

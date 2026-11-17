@@ -1,14 +1,17 @@
 package com.pigeostudios.pwp.warfare.client.gui.devtest;
 
+import com.pigeostudios.pwp.warfare.client.WarfareOverlay;
 import com.pigeostudios.pwp.warfare.client.WarfareUiSettings;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
+import com.pigeostudios.pwp.warfare.client.hud.SideHud;
 import com.pigeostudios.pwp.warfare.client.hud.TopHud;
 import com.pwp.coreclient.gui.devtest.UiGallery;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDraw;
 import com.pwp.coreclient.ui.hud.Hud;
+import com.pwp.coreclient.ui.hud.HudDraw;
 import com.pwp.coreclient.ui.hud.HudHotbar;
 import com.pwp.coreclient.ui.hud.HudVitals;
 import com.pwp.coreclient.ui.hud.HudZones;
@@ -22,6 +25,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.ModList;
 
 /**
  * Превью HUD на фикстурах ({@code /pwpui open hud}): тот же код отрисовки, что в матче — низ
@@ -34,6 +38,11 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * число мигает), точка захвата по кругу проходит захват → оспаривается → нейтрализацию →
  * блокировку, таймер подготовки Invasion показывается в первой половине цикла, баннер о захвате —
  * раз в цикл с фейдом.
+ *
+ * <p>Боковые стеки ({@link SideHud}): баннер кровотечения (как у pwp-medicine — первым в левом
+ * стеке), голосование за старт, голосование за командира, запрос арты, два раненых у медика, двое
+ * говорящих. Каждые {@value #MAP_PERIOD_MS} мс на полпериода «открывается» боковая карта (заглушка
+ * той же геометрии) — правый стек ужимается над ней, а не влезшее переезжает в левый.
  *
  * <p>Сцена «живая», чтобы видеть анимации: раз в 4 с по игроку прилетает урон (63% → 41%, хвост
  * урона), через 1.6 с — лечение обратно; выбранный слот хотбара переключается раз в 1.5 с;
@@ -69,6 +78,18 @@ public final class HudPreviewScreen extends Screen {
     private final WHud.Fmt percent = new WHud.Fmt("gui.pwpwarfare.hud.percent");
     private final TopHud top = new TopHud();
     private final TopHud.Model model = new TopHud.Model();
+    private final SideHud side = new SideHud();
+    private final SideHud.Model sideModel = new SideHud.Model();
+
+    /** Боковые стеки: период «открытия» карты, кровотечение, иконка (текстура pwp-medicine, если есть). */
+    private static final long MAP_PERIOD_MS = 12000L;
+
+    private static final long BLEED_PERIOD_MS = 9000L;
+    private static final long BLEED_SLIDE_MS = 667L;
+    private static final Component BLEEDING = Component.translatable("gui.pwp_medicine.bleeding");
+    private final ResourceLocation bleedIcon = ModList.get().isLoaded("pwp_medicine")
+            ? new ResourceLocation("pwp_medicine", "textures/gui/bleeding_icon.png")
+            : null;
 
     /** Верх: период поворота компаса, цикл точки захвата, тикеты за секунду «кровотечения». */
     private static final long YAW_PERIOD_MS = 40000L;
@@ -109,8 +130,19 @@ public final class HudPreviewScreen extends Screen {
         long t = Util.getMillis() - start;
         HudZones z = Hud.zones(width, height);
         z.beginFrame();
+        // кровотечение занимает верх левого стека первым (в матче — в RenderGuiEvent.Pre)
+        float bleed = empty ? 0F : bleedSlide(t);
+        int bleedY = bleed > 0F ? WHud.leftClaim(WHud.font()) : WHud.SIDE_NONE;
         fillTop(t);
         top.render(g, PWPTheme.Fonts.display(), z, model);
+        fillSide(t);
+        if (sideModel.mapOpen) mapStub(g);
+        side.render(g, PWPTheme.Fonts.display(), z, sideModel);
+        if (bleedY != WHud.SIDE_NONE) {
+            float pulse = 0.5F + 0.5F * (float) Math.sin(t / (double) WTheme.SIDE_ALERT_PULSE_MS * Math.PI * 2.0);
+            WHud.sideAlert(
+                    g, WHud.font(), bleedY, bleedIcon, WarfareIcon.PLUS, BLEEDING, WTheme.HUD_DANGER, bleed, pulse);
+        }
         if (!empty) WHud.contextOffer(WHud.CTX_CONSTRUCTION);
 
         int selected = (int) ((t / SLOT_PERIOD_MS) % 9);
@@ -171,6 +203,94 @@ public final class HudPreviewScreen extends Screen {
                 PWPTheme.Colors.ACCENT,
                 1F);
     }
+
+    /** Кровотечение: 2/3 периода есть (выезд), 1/3 — нет (уезд). */
+    private static float bleedSlide(long t) {
+        long c = t % BLEED_PERIOD_MS;
+        long on = BLEED_PERIOD_MS * 2 / 3;
+        if (c < on) return Math.min(1F, c / (float) BLEED_SLIDE_MS);
+        return Math.max(0F, 1F - (c - on) / (float) BLEED_SLIDE_MS);
+    }
+
+    /** Заглушка боковой карты той же геометрии (сама карта — client/gui/map, в превью не рисуется). */
+    private void mapStub(GuiGraphics g) {
+        SideHud.Model m = sideModel;
+        HudDraw.plateBg(g, m.mapX, m.mapY, m.mapW, m.mapH, 1F);
+        int is = WTheme.HUD_ICON * 2;
+        WHud.icon(g, WarfareIcon.MAP, m.mapX + (m.mapW - is) / 2, m.mapY + (m.mapH - is) / 2, is, WTheme.HUD_LABEL);
+    }
+
+    /** Фикстура боковых стеков: те же поля, что наполняет SideHud.fromClient в матче. */
+    private void fillSide(long t) {
+        SideHud.Model m = sideModel;
+        m.vote = !empty;
+        m.cmd = !empty;
+        m.art = !empty && (t % CYCLE_MS) < CYCLE_MS * 3 / 4;
+        m.voteRows.clear();
+        m.cmdRows.clear();
+        m.downed.clear();
+        m.voice.clear();
+        m.medic = false;
+        m.mapOpen = !empty && (t % MAP_PERIOD_MS) >= MAP_PERIOD_MS / 2;
+        if (m.mapOpen) {
+            m.mapW = WarfareOverlay.sideMapWidth(height);
+            m.mapH = WarfareOverlay.sideMapHeight(height);
+            m.mapX = WarfareOverlay.sideMapX(width, height);
+            m.mapY = WarfareOverlay.sideMapY(height);
+        }
+        if (empty) return;
+
+        m.voteSeconds = 165 - (int) ((t / 1000L) % 165L);
+        m.blueName = longStrings ? "Объединённые силы обороны северного направления" : "ЗСУ";
+        m.redName = longStrings ? "Группировка войск «Запад» — сводный отряд" : "ВС РФ";
+        m.blueReady = true;
+        m.redReady = false;
+        String[] team = longStrings ? LONG_NAMES : NAMES;
+        int[] votes = {SideHud.VOTE_YES, SideHud.VOTE_YES, SideHud.VOTE_NONE, SideHud.VOTE_NO, SideHud.VOTE_YES};
+        for (int i = 0; i < team.length; i++) {
+            SideHud.Row r = m.voteRows.add();
+            r.name = team[i];
+            r.vote = votes[i % votes.length];
+            r.self = i == 0;
+        }
+
+        m.cmdCandidate = team[1];
+        m.cmdSelf = false;
+        for (int i = 2; i < 5; i++) {
+            SideHud.Row r = m.cmdRows.add();
+            r.name = team[i];
+            r.vote = votes[i];
+        }
+
+        m.artFrom = team[3];
+        m.artX = 1240;
+        m.artZ = -385;
+        m.artLeft = 1F - (t % CYCLE_MS) / (float) (CYCLE_MS * 3 / 4);
+
+        m.medic = true;
+        SideHud.Row d1 = m.downed.add();
+        d1.name = team[2];
+        d1.distance = 14;
+        SideHud.Row d2 = m.downed.add();
+        d2.name = team[4];
+        d2.distance = 63;
+
+        SideHud.Row v1 = m.voice.add();
+        v1.name = team[1];
+        v1.radio = true;
+        v1.cmd = true;
+        SideHud.Row v2 = m.voice.add();
+        v2.name = team[0];
+    }
+
+    private static final String[] NAMES = {"Pigeon", "Kovalenko", "Medic_Ivan", "Sapper", "Shturm_77"};
+    private static final String[] LONG_NAMES = {
+        "Pigeon_The_Very_Long_Nickname",
+        "Kovalenko_Oleksandr_Commander",
+        "Medic_Ivan_Ivanovich_Petrov",
+        "Sapper_With_Extremely_Long_Name",
+        "Shturm_77_Rifleman_Long"
+    };
 
     /** Фикстура верха: те же поля, что наполняет TopHud.fromClient в матче. */
     private void fillTop(long t) {

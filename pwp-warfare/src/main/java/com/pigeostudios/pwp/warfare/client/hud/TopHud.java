@@ -18,7 +18,6 @@ import com.pwp.coreclient.ui.hud.HudDraw;
 import com.pwp.coreclient.ui.hud.HudTheme;
 import com.pwp.coreclient.ui.hud.HudZones;
 import com.pwp.coreclient.ui.layout.Rect;
-import com.pwp.coreclient.ui.layout.TextFit;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -132,8 +131,8 @@ public final class TopHud {
     private String lastSidePoint = "";
 
     private String lastSideTeam = CaptureBar.NONE;
-    private final Fit pointNameFit = new Fit();
-    private final Fit noteFit = new Fit();
+    private final WHud.Fit pointNameFit = new WHud.Fit();
+    private final WHud.Fit noteFit = new WHud.Fit();
     private Component noteSrc;
     private String noteUpper = "";
 
@@ -620,22 +619,5 @@ public final class TopHud {
         g.blit(tex, x, y, size, size, 0F, 0F, 1, 1, 1, 1);
         RenderSystem.setShaderColor(1F, 1F, 1F, 1F);
         RenderSystem.disableBlend();
-    }
-
-    /** Строка, обрезанная многоточием по ширине; пересчёт только при смене строки/ширины. */
-    private static final class Fit {
-        private String src;
-        private int width = -1;
-        private String out = "";
-
-        String of(Font font, String s, int maxW) {
-            if (s == null) return "";
-            if (!s.equals(src) || maxW != width) {
-                src = s;
-                width = maxW;
-                out = font.width(s) <= maxW ? s : TextFit.ellipsize(s, maxW, font::width);
-            }
-            return out;
-        }
     }
 }

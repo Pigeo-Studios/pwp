@@ -22,7 +22,8 @@ import com.pwp.coreclient.ui.layout.Rect;
  *       (кровотечение, голосование старта), затем {@link Stack#advanceTo} к якорю
  *       {@link #midLeftAnchor()} и средняя группа (радио, голос). Верхняя группа может заходить
  *       ниже якоря — тогда средняя просто начнётся под ней (перекрытий нет);
- *   <li>правая колонка — один стек {@link #right()} (точка захвата, голосование CMD, арта, ноки);
+ *   <li>правая колонка — один стек {@link #right()} (голосование CMD, арта, ноки); при открытой
+ *       боковой карте — {@link #rightBeside} (часть колонки над картой);
  *   <li>центр — {@link #crosshair()}: кольца у прицела (радиус ≤ половины стороны);
  *   <li>низ-центр — ярусы снизу вверх: хотбар, фидбек, лента уведомлений, контекстный ярус. В
  *       контекстном ярусе показывается ОДИН элемент — победитель {@link ContextTier} по приоритету.
@@ -107,6 +108,14 @@ public final class HudZones {
     private final Stack bottomLeftStack;
     private final Stack bottomRightStack;
     private final ContextTier contextTier;
+
+    /** Правый стек «рядом с препятствием» (боковая карта); пересоздаётся только при смене препятствия. */
+    private Stack rightBeside;
+
+    private int besideX = Integer.MIN_VALUE;
+    private int besideY;
+    private int besideW;
+    private int besideH;
 
     private HudZones(int guiW, int guiH, float hudScale, float requestedScale) {
         this.width = Math.max(0, guiW);
@@ -245,6 +254,7 @@ public final class HudZones {
         right.reset();
         bottomLeftStack.reset();
         bottomRightStack.reset();
+        if (rightBeside != null) rightBeside.reset();
         contextTier.reset();
     }
 
@@ -355,6 +365,33 @@ public final class HudZones {
 
     public Stack right() {
         return right;
+    }
+
+    /**
+     * Правый стек, когда справа открыто препятствие {@code x,y,w,h} (боковая карта в конечном
+     * положении): если препятствие перекрывает правую колонку по горизонтали, стек — часть колонки
+     * НАД ним (до {@code y - GAP}; высота 0, если места нет), иначе — обычная колонка. Объект
+     * пересоздаётся только при смене препятствия (размер экрана/настройка карты), покадрово —
+     * только сброс в {@link #beginFrame()}.
+     */
+    public Stack rightBeside(int x, int y, int w, int h) {
+        if (w <= 0 || h <= 0) return right;
+        if (rightBeside == null || x != besideX || y != besideY || w != besideW || h != besideH) {
+            besideX = x;
+            besideY = y;
+            besideW = w;
+            besideH = h;
+            Rect col = rightColumn;
+            Rect area = col;
+            boolean overlapsX = x < col.right() && x + w > col.x();
+            boolean overlapsY = y < col.bottom() && y + h > col.y();
+            if (overlapsX && overlapsY) {
+                int bottom = Math.max(col.y(), Math.min(col.bottom(), y - u(GAP)));
+                area = new Rect(col.x(), col.y(), col.w(), bottom - col.y());
+            }
+            rightBeside = new Stack(area, false, u(GAP));
+        }
+        return rightBeside;
     }
 
     /** Низ-лево снизу вверх: HP-бар, над ним БК. */

@@ -265,4 +265,30 @@ class HudZonesTest {
         assertEquals(HudZones.ContextTier.NONE, small.contextTier().place(20));
         assertEquals(HudZones.ContextTier.NONE, small.contextTier().place(0));
     }
+
+    @Test
+    void rightBesideClipsColumnAboveSideMapOrKeepsIt() {
+        HudZones z = HudZones.layout(960, 540, 1F);
+        Rect col = z.rightColumn();
+        // карта справа по центру экрана: стек — часть колонки над ней
+        HudZones.Stack s = z.rightBeside(560, 100, 390, 340);
+        assertEquals(col.x(), s.area().x());
+        assertEquals(col.y(), s.area().y());
+        assertEquals(100 - HudZones.GAP, s.area().bottom());
+        // тот же прямоугольник — тот же объект (без аллокаций в кадре)
+        assertSame(s, z.rightBeside(560, 100, 390, 340));
+        // карта выше колонки целиком — места нет
+        HudZones.Stack none = z.rightBeside(560, 0, 390, 540);
+        assertEquals(0, none.area().h());
+        assertFalse(none.fits(1));
+        // карта не задевает колонку — обычная колонка
+        assertEquals(col, z.rightBeside(10, 100, 100, 100).area());
+        // пустой прямоугольник — сам правый стек
+        assertSame(z.right(), z.rightBeside(0, 0, 0, 0));
+        // сброс кадра сбрасывает и его
+        HudZones.Stack b = z.rightBeside(560, 100, 390, 340);
+        b.next(20);
+        z.beginFrame();
+        assertEquals(b.area().h(), b.remaining());
+    }
 }
