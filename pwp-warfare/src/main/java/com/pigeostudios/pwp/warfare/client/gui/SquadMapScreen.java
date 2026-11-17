@@ -76,6 +76,32 @@ public class SquadMapScreen extends Screen {
         this.parent = parent;
     }
 
+    /** Последний зум карты M (блоков на пиксель) — переживает закрытие экрана; 0 — «вся карта». */
+    private static double savedScale = 0.0;
+
+    /**
+     * Свой зум, как у карты деплоя: колесо приближает к курсору глубже «всей карты». Нижняя граница —
+     * {@link WTheme#DEPLOY_MAP_MIN_BPP}, верхняя — вся карта с запасом. Повторный init (ресайз) зум не
+     * сбрасывает; центрирование на игроке — только при первом открытии.
+     */
+    private void initZoom() {
+        double size = ClientData.mapSizeBlocks;
+        double fit = size > 0 ? Math.max(size / Math.max(1, mMapW), size / Math.max(1, mMapH)) : 4.0;
+        boolean first = map.localScale <= 0;
+        map.fitScale = 0;
+        map.localMin = WTheme.DEPLOY_MAP_MIN_BPP;
+        map.localMax = Math.max(fit * WTheme.DEPLOY_MAP_FIT_SLACK, WTheme.DEPLOY_MAP_MIN_BPP * 2);
+        double want = first ? (savedScale > 0 ? savedScale : fit) : map.localScale;
+        map.localScale = Math.max(map.localMin, Math.min(map.localMax, want));
+        if (first) map.centerOnPlayer();
+    }
+
+    @Override
+    public void removed() {
+        savedScale = map.localScale;
+        super.removed();
+    }
+
     @Override
     protected void init() {
         super.init();
@@ -85,6 +111,7 @@ public class SquadMapScreen extends Screen {
         mMapW = mapRect.w();
         mMapH = mapRect.h();
         map.init(mX, mY, mMapW, mMapH);
+        initZoom();
 
         squadInput = addRenderableWidget(new EditBox(font, 0, 0, 90, WTheme.FIELD_H, Component.empty()));
         squadInput.setMaxLength(12);
