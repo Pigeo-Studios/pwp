@@ -411,7 +411,7 @@ public class SkinInventoryScreen extends Screen {
                         Component.literal("✔"),
                         r.right() - 8,
                         r.y() + 1,
-                        UIDraw.fade(0xFFFFFFFF, opacity),
+                        UIDraw.fade(PWPTheme.Text.HEADING, opacity),
                         false);
                 g.pose().popPose();
             } else if (!access) {

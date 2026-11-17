@@ -230,5 +230,10 @@
     "pwp_core.ui_settings.hud.scale": "Масштаб HUD",
     "pwp_core.ui_settings.hud.scale.tip": "Размер HUD матча: хотбар, здоровье, плашки, сообщения. На маленьком экране уменьшается сам.",
     "pwp_core.ui_settings.hud.plate_opacity": "Фон HUD-плашек",
-    "pwp_core.ui_settings.hud.plate_opacity.tip": "Непрозрачность тёмной подложки под плашками HUD и слотами хотбара."
+    "pwp_core.ui_settings.hud.plate_opacity.tip": "Непрозрачность тёмной подложки под плашками HUD и слотами хотбара.",
+    "pwp_core.ui_settings.hud.inventory_style": "Стиль инвентаря PWP",
+    "pwp_core.ui_settings.hud.inventory_style.tip": "Тактический вид инвентаря игрока, сундуков и шалкеров. Выключите, если инвентарь другого мода выглядит сломанным.",
+    "pwp_core.inventory.title": "Инвентарь",
+    "pwp_core.inventory.armor": "Броня",
+    "pwp_core.inventory.crafting": "Крафт"
 }

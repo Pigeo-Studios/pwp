@@ -46,6 +46,8 @@ public final class CoreUiFixtures {
 
     public static void registerAll() {
         UiGallery.register("core.main_menu", PWPMainMenuScreen::new);
+        UiGallery.register("core.inventory.player", InventoryStylePreviewScreen::player);
+        UiGallery.register("core.inventory.chest", InventoryStylePreviewScreen::chest);
         UiGallery.register("core.loading.connecting", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
         UiGallery.register("core.loading.world", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.LOADING_WORLD));
         UiGallery.register(

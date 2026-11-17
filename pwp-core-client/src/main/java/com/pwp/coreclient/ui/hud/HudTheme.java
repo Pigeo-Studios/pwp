@@ -95,4 +95,36 @@ public final class HudTheme {
     public static final int RING_THICK = 2;
 
     public static final int RING_GAP = 2;
+
+    // ------------------------------------------------------------ инвентарь (этап 6)
+    /** Размер иконки предмета в слоте контейнера (ваниль). */
+    public static final int INV_ITEM = 16;
+    /** Плашка слота выступает на 1px за иконку (как ванильная рамка 18x18). */
+    public static final int INV_SLOT_OUTSET = 1;
+    /** Рамка слота результата крафта (ванильная «большая» рамка 26x26). */
+    public static final int INV_RESULT_OUTSET = 5;
+    /** Шапка «Инвентарь» над панелью InventoryScreen (внутри места нет: броня с y=8). */
+    public static final int INV_HEADER_H = 14;
+    /** Зазор между элементами панели (подпись/разделитель/рамка куклы). */
+    public static final int INV_GAP = 2;
+    /** Стрелка крафта: длина «наконечника» и толщина древка. */
+    public static final int INV_ARROW_HEAD = 3;
+
+    public static final int INV_ARROW_THICK = 2;
+    /** Кукла игрока — ванильные параметры InventoryScreen.renderBg: масштаб, подъём взгляда, отступ ног. */
+    public static final int INV_DOLL_SCALE = 30;
+
+    public static final int INV_DOLL_EYE = 50;
+    public static final int INV_DOLL_FOOT_INSET = 3;
+
+    public static final int INV_SLOT_BG = 0xCC07090C;
+    public static final int INV_SLOT_BORDER = 0x2EFFFFFF;
+    public static final int INV_SLOT_HIGHLIGHT = 0x0FFFFFFF;
+    public static final int INV_RESULT_BORDER = SLOT_BORDER_SELECTED;
+    public static final int INV_DOLL_BG = 0x99030405;
+    public static final int INV_DOLL_BORDER = PLATE_BORDER;
+    public static final int INV_DIVIDER = 0x22FFFFFF;
+    public static final int INV_LABEL = PWPTheme.Text.CAPTION;
+    public static final int INV_TITLE = PWPTheme.Text.HEADING;
+    public static final int INV_ARROW = 0x66C8CBCE;
 }

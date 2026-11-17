@@ -230,5 +230,10 @@
     "pwp_core.ui_settings.hud.scale": "HUD scale",
     "pwp_core.ui_settings.hud.scale.tip": "Size of the match HUD: hotbar, health, plates, messages. Shrinks automatically on small screens.",
     "pwp_core.ui_settings.hud.plate_opacity": "HUD plate background",
-    "pwp_core.ui_settings.hud.plate_opacity.tip": "Opacity of the dark backgrounds behind HUD plates and hotbar slots."
+    "pwp_core.ui_settings.hud.plate_opacity.tip": "Opacity of the dark backgrounds behind HUD plates and hotbar slots.",
+    "pwp_core.ui_settings.hud.inventory_style": "PWP inventory style",
+    "pwp_core.ui_settings.hud.inventory_style.tip": "Tactical look for the player inventory, chests and shulker boxes. Turn off if another mod's inventory looks broken.",
+    "pwp_core.inventory.title": "Inventory",
+    "pwp_core.inventory.armor": "Armor",
+    "pwp_core.inventory.crafting": "Crafting"
 }

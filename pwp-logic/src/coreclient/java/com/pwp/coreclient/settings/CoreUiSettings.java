@@ -75,6 +75,14 @@ public final class CoreUiSettings {
                     UiSettings.Format.PERCENT)
             .tooltip("pwp_core.ui_settings.hud.plate_opacity.tip");
 
+    /**
+     * PWP-стиль ванильного инвентаря и сундуков (этап 6 HUD). Фолбэк при несовместимости с модами:
+     * выкл — ванильная текстура. По умолчанию ВЫКЛ до проверки в игре.
+     */
+    public static final UiSettings.Toggle HUD_INVENTORY_STYLE = UiSettings.toggle(
+                    "hud.inventory_style", HUD, "pwp_core.ui_settings.hud.inventory_style", false)
+            .tooltip("pwp_core.ui_settings.hud.inventory_style.tip");
+
     static {
         ANIMATIONS.onChange(() -> UIAnim.setAnimationsEnabled(ANIMATIONS.get()));
     }
