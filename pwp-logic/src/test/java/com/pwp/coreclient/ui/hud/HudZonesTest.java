@@ -192,4 +192,43 @@ class HudZonesTest {
         assertSame(b, c.get(640, 360, 2F));
         assertEquals(1F, HudZones.clampScale(Float.NaN));
     }
+
+    @Test
+    void bottomSidesSitBesideHotbarOnOneLine() {
+        for (int gs = 2; gs <= 4; gs++) {
+            HudZones z = HudZones.layout(1920 / gs, 1080 / gs, 1F);
+            assertEquals(z.hotbar().bottom(), z.bottomLeft().bottom(), "guiScale " + gs);
+            assertEquals(z.hotbar().bottom(), z.bottomRight().bottom(), "guiScale " + gs);
+            assertTrue(z.bottomLeft().right() < z.hotbar().x(), "низ-лево левее хотбара");
+            assertTrue(z.bottomRight().x() > z.hotbar().right(), "низ-право правее хотбара");
+            // полоса HP (16) + плашка БК (13) + зазор
+            HudZones.Stack st = z.bottomLeftStack();
+            st.reset();
+            assertTrue(st.next(z.u(16)) != HudZones.Stack.NONE, "HP");
+            assertTrue(st.next(z.u(13)) != HudZones.Stack.NONE, "БК над HP");
+        }
+    }
+
+    @Test
+    void contextPlaceInTierOrAboveReservedOrHidden() {
+        HudZones z = HudZones.layout(960, 540, 1F);
+        HudZones.ContextTier t = z.contextTier();
+        z.beginFrame();
+        assertEquals(z.context().bottom() - 20, t.place(20), "свободный ярус — по нижней грани");
+        int lookAtTop = 540 - 131;
+        t.reserve(lookAtTop);
+        assertTrue(t.reserved());
+        int y = t.place(20);
+        assertEquals(lookAtTop - HudZones.GAP - 20, y, "над старой подсказкой");
+        assertTrue(y >= z.crosshair().bottom());
+        z.beginFrame();
+        assertFalse(t.reserved(), "новый кадр — резерв снят");
+
+        // guiScale 4: над подсказкой места до прицела нет — скрыть, а не наложить
+        HudZones small = HudZones.layout(480, 270, 1F);
+        small.beginFrame();
+        small.contextTier().reserve(270 - 131);
+        assertEquals(HudZones.ContextTier.NONE, small.contextTier().place(20));
+        assertEquals(HudZones.ContextTier.NONE, small.contextTier().place(0));
+    }
 }

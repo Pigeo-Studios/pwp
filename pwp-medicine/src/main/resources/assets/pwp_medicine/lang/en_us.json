@@ -7,5 +7,6 @@
   "death.attack.player.item": "%1$s bled out while fighting %2$s",
   "death.attack.generic": "%1$s died from blood loss",
   "death.attack.bleeding": "%1$s bled out",
-  "death.attack.bleeding.player": "%1$s bled out while fighting %2$s"
+  "death.attack.bleeding.player": "%1$s bled out while fighting %2$s",
+  "gui.pwp_medicine.hud.patient": "Treated by %s"
 }

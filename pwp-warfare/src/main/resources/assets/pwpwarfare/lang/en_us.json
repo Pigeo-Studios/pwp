@@ -581,9 +581,7 @@
     "gui.pwpwarfare.hud.invasion.blockade": "🔒 BLOCKADE %s",
     "gui.pwpwarfare.hud.point.blocked": "BLOCKED",
     "gui.pwpwarfare.hud.point.need": "Need: %s",
-    "gui.pwpwarfare.hud.supply.crates": "Supplies: %s / %s",
     "gui.pwpwarfare.hud.supply.loading": "LOADING...",
-    "gui.pwpwarfare.hud.ammo": "Ammo: %s / %s",
     "gui.pwpwarfare.hud.medic.downed": "✚ %s [%sm]",
     "gui.pwpwarfare.hud.drone.fpv": "FPV DRONE",
     "gui.pwpwarfare.hud.drone.mavic_drop": "MAVIC · DROP",
@@ -605,5 +603,10 @@
     "key.pwpwarfare.vote_cmd_yes": "Commander vote: YES",
     "key.pwpwarfare.vote_cmd_no": "Commander vote: NO",
     "key.pwpwarfare.art_confirm": "Artillery request: confirm",
-    "key.pwpwarfare.art_deny": "Artillery request: deny"
+    "key.pwpwarfare.art_deny": "Artillery request: deny",
+    "gui.pwpwarfare.hud.ammo.label": "AMMO",
+    "gui.pwpwarfare.hud.supply.label": "Supplies",
+    "gui.pwpwarfare.hud.value_of": "%s / %s",
+    "gui.pwpwarfare.hud.percent": "%s%%",
+    "gui.pwpwarfare.devtest.hud.title": "HUD preview (fixture)"
 }

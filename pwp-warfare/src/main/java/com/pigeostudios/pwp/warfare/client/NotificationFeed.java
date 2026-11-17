@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare.client;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
+import com.pwp.coreclient.ui.hud.HudDraw;
+import com.pwp.coreclient.ui.hud.HudZones;
 import com.tacz.guns.api.event.common.GunShootEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +38,8 @@ public class NotificationFeed {
     private static final int ENTRY_HEIGHT = 16;
     private static final int ENTRY_GAP = 2;
     private static final long LIFE_TICKS = 70L; // 3.5 секунды
-    private static final int ANCHOR_Y = 76; // нижний слот: height - ANCHOR_Y (выше фидбек-блока на h-58)
+    // Положение — ярус ленты HudZones.feed() (низ-центр, над фидбеком); y записей — в базовых
+    // единицах от низа яруса, масштаб HUD — через HudDraw.begin.
 
     private static final List<Entry> ENTRIES = new ArrayList<>();
     private static final UIDamp.Frame FRAME = new UIDamp.Frame();
@@ -106,10 +109,15 @@ public class NotificationFeed {
         return WarfareUiSettings.ticks(WarfareUiSettings.NOTIFY_SECONDS);
     }
 
+    /** Y слота относительно низа яруса ленты (базовые единицы); slot 0 — нижний. */
     private static int slotY(int slot) {
-        Minecraft mc = Minecraft.getInstance();
-        int height = mc.getWindow().getGuiScaledHeight();
-        return height - ANCHOR_Y - slot * (ENTRY_HEIGHT + ENTRY_GAP);
+        return -ENTRY_HEIGHT - displaySlot(slot) * (ENTRY_HEIGHT + ENTRY_GAP);
+    }
+
+    /** На низком экране ярус держит 1 слот: виден верхний (самый свежий), нижний уходит вниз. */
+    private static int displaySlot(int slot) {
+        return slot
+                - (MAX_ENTRIES - Math.max(1, Math.min(MAX_ENTRIES, WHud.zones().feedSlots())));
     }
 
     // Клиентская отмена выстрела TACZ: только для своего игрока (чужие анимации не трогаем)
@@ -139,9 +147,11 @@ public class NotificationFeed {
         }
 
         GuiGraphics gui = event.getGuiGraphics();
-        int width = mc.getWindow().getGuiScaledWidth();
         Font font = PWPTheme.Fonts.display();
         long dt = FRAME.dtMs();
+        HudZones z = WHud.zones();
+        boolean twoSlots = z.feedSlots() >= MAX_ENTRIES;
+        HudDraw.begin(gui, z.feed().centerX(), z.feed().bottom(), z.scale());
         ListIterator<Entry> it = ENTRIES.listIterator();
         while (it.hasNext()) {
             Entry entry = it.next();
@@ -154,19 +164,23 @@ public class NotificationFeed {
                 continue;
             }
             if (entry.alpha <= 0.01F) continue;
-            drawEntry(gui, font, entry, width);
+            int shown = displaySlot(entry.slot);
+            // гаснущая нижняя запись уезжает вниз только при двух слотах; иначе — не рисуем вне яруса
+            if (shown < 0 && !(twoSlots && entry.fading && shown == -1)) continue;
+            drawEntry(gui, font, entry);
         }
+        HudDraw.end(gui);
     }
 
-    private static void drawEntry(GuiGraphics gui, Font font, Entry entry, int width) {
+    private static void drawEntry(GuiGraphics gui, Font font, Entry entry) {
         // настройка «Непрозрачность сообщений»
         int alpha = (int) (Math.min(1.0F, entry.alpha) * 220.0F * WarfareUiSettings.MESSAGE_OPACITY.get());
         if (alpha <= 0) return;
         int textWidth = font.width(entry.text);
         int padding = PWPTheme.Spacing.SM;
         int boxWidth = textWidth + padding * 2 + PWPTheme.Spacing.XS;
-        int x = (width - boxWidth) / 2;
-        int y = (int) entry.y;
+        int x = -boxWidth / 2;
+        int y = Math.round(entry.y);
         int accent = entry.severity == SEVERITY_DANGER ? PWPTheme.Colors.DANGER : PWPTheme.Colors.ACCENT;
         gui.fill(x, y, x + boxWidth, y + ENTRY_HEIGHT, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BACKGROUND, alpha));
         gui.fill(x, y, x + 3, y + ENTRY_HEIGHT, PWPTheme.Colors.withAlpha(accent, alpha));

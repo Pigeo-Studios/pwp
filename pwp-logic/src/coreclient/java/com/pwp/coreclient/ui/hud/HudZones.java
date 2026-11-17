@@ -26,7 +26,7 @@ import com.pwp.coreclient.ui.layout.Rect;
  *       контекстном ярусе показывается ОДИН элемент — победитель {@link ContextTier} по приоритету.
  *       Текст канала дрона (в аудите — «текст под прицелом») живёт тоже здесь, с высшим приоритетом:
  *       при guiScale 4 на 1080p места между прицелом и лентой нет;
- *   <li>низ-лево / низ-право — стеки снизу вверх (HP + БК, припасы).
+ *   <li>низ-лево / низ-право — стеки снизу вверх (HP + БК, припасы); низ выровнен по низу хотбара.
  * </ul>
  *
  * <p>Когда низ-центр не помещается под прицелом (низкий экран), раскладка ужимается по шагам: лента
@@ -67,8 +67,8 @@ public final class HudZones {
     public static final int GAP_FEED_CONTEXT = 6;
 
     public static final int BOTTOM_SIDE_W = 100;
-    public static final int BOTTOM_SIDE_H = 24;
-    public static final int BOTTOM_SIDE_PAD = 20;
+    /** Высота низ-лево/низ-право: полоса HP+брони (16) + плашка БК (13) + зазоры. */
+    public static final int BOTTOM_SIDE_H = 34;
 
     public static final float SCALE_MIN = 0.5F;
     public static final float SCALE_MAX = 2F;
@@ -164,7 +164,7 @@ public final class HudZones {
         // ---------------------------------------------------- низ-лево / низ-право
         int bsw = Math.max(0, Math.min(u(BOTTOM_SIDE_W), bx - gap - edge));
         int bsh = u(BOTTOM_SIDE_H);
-        int bsy = height - u(BOTTOM_SIDE_PAD) - bsh;
+        int bsy = hotbar.bottom() - bsh; // рядом с хотбаром, низ по одной линии
         bottomLeft = new Rect(edge, bsy, bsw, bsh);
         bottomRight = new Rect(width - edge - bsw, bsy, bsw, bsh);
 
@@ -179,7 +179,7 @@ public final class HudZones {
         right = new Stack(rightColumn, false, gap);
         bottomLeftStack = new Stack(bottomLeft, true, u(1));
         bottomRightStack = new Stack(bottomRight, true, u(1));
-        contextTier = new ContextTier(context);
+        contextTier = new ContextTier(context, crosshair.bottom(), gap);
     }
 
     /**
@@ -450,10 +450,23 @@ public final class HudZones {
         public static final int PATIENT = 10;
 
         private final Rect area;
+        private final int ceiling;
+        private final int gap;
         private int best = NONE;
+        private int reservedTop = NONE;
 
         public ContextTier(Rect area) {
+            this(area, area.y(), 0);
+        }
+
+        /**
+         * @param ceiling выше этого Y блок не поднимается (низ зоны прицела)
+         * @param gap зазор до занятой части яруса
+         */
+        public ContextTier(Rect area, int ceiling, int gap) {
             this.area = area;
+            this.ceiling = ceiling;
+            this.gap = Math.max(0, gap);
         }
 
         public Rect area() {
@@ -467,6 +480,32 @@ public final class HudZones {
 
         public void reset() {
             best = NONE;
+            reservedTop = NONE;
+        }
+
+        /**
+         * Старый элемент (look-at подсказки, Build Mode — пока рисуются по своим координатам) в
+         * этом кадре уже занял ярус до Y {@code top}. Победитель яруса тогда ставится над ним
+         * ({@link #place}).
+         */
+        public void reserve(int top) {
+            reservedTop = reservedTop == NONE ? top : Math.min(reservedTop, top);
+        }
+
+        public boolean reserved() {
+            return reservedTop != NONE;
+        }
+
+        /**
+         * Y верхнего края блока высотой {@code h} для победителя: в ярусе (по нижней грани), если
+         * ярус свободен; над занятой частью, если его занял старый элемент; {@link #NONE} — не
+         * влезает под прицел (лучше скрыть, чем наложить).
+         */
+        public int place(int h) {
+            if (!enabled() || h <= 0) return NONE;
+            int bottom = reserved() ? Math.min(area.y(), reservedTop) - gap : area.bottom();
+            int y = bottom - h;
+            return y >= ceiling ? y : NONE;
         }
 
         public void offer(int priority) {

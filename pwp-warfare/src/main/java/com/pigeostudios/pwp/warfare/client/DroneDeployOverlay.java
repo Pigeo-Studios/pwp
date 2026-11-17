@@ -2,6 +2,8 @@ package com.pigeostudios.pwp.warfare.client;
 
 import com.mojang.math.Axis;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
@@ -10,8 +12,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
@@ -23,7 +27,8 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 //   сам по себе: это 0..1 за тик, лопасть «стояла» и дёргалась);
 // - компактный маркер-кольцо НАД дроном (y+1.3 — на высоте корпуса, а не на
 //   земле: на земле кольцо уезжало под ноги дрону при взгляде сбоку);
-// - две строки под прицелом: имя дрона + честный таймер T-Nс.
+// - плашка в контекстном ярусе низ-центра (HudZones.ContextTier, высший приоритет): имя дрона +
+//   честный таймер T-Nс + полоса прогресса.
 // Прогресс сглаживается клиентским lerp (плавность HUD, реальное время — UIDamp).
 // Рисуется ОДИН раз за кадр — после CHAT_PANEL, как лента/фидбек (Post приходит
 // на каждый ванильный оверлей: без фильтра кольцо рисовалось 20+ раз за кадр). Авто-скрыл: если
@@ -36,7 +41,14 @@ public class DroneDeployOverlay {
 
     private DroneDeployOverlay() {}
 
+    /** Заявка в контекстный ярус (текст канала живёт там, а не под прицелом). */
     @SubscribeEvent
+    public static void onRenderGuiPre(RenderGuiEvent.Pre event) {
+        if (ClientData.droneDeployActive && WHud.hudVisible()) WHud.contextOffer(WHud.CTX_DRONE);
+    }
+
+    // LOW: после WarfareOverlay (NORMAL) — старые look-at к этому моменту уже зарезервировали ярус
+    @SubscribeEvent(priority = EventPriority.LOW)
     public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
         if (event.getOverlay() != VanillaGuiOverlay.CHAT_PANEL.type()) return;
         if (!ClientData.droneDeployActive) return;
@@ -99,17 +111,23 @@ public class DroneDeployOverlay {
         // Текст под прицелом: имя дрона + таймер.
         int totalTicks = Math.max(1, ClientData.droneDeployTotalTicks);
         int secondsLeft = Math.max(0, (int) Math.ceil((1.0F - progress) * totalTicks / 20.0F));
-        String title = deploying ? droneName(ClientData.droneDeployTypeId) : MAVIC_RELOAD.getString();
         WHud.Fmt subFmt = deploying ? SUB_DEPLOY : SUB_RELOAD;
         subFmt.of(secondsLeft);
         String sub = subFmt.string();
 
-        int tw = PWPTheme.Fonts.display().width(title);
-        int sw = PWPTheme.Fonts.display().width(sub);
-        int boxW = Math.max(tw, sw) + 10;
-        gui.fill(cx - boxW / 2, cy + 34, cx + boxW / 2, cy + 58, 0x66000000);
-        gui.drawString(PWPTheme.Fonts.display(), title, cx - tw / 2, cy + 36, 0xFFE8E8E8, true);
-        gui.drawString(PWPTheme.Fonts.display(), sub, cx - sw / 2, cy + 47, deploying ? 0xFFFFB366 : 0xFFFFC96A, true);
+        // плашка контекстного яруса низ-центра (раньше — блок под прицелом cy+34..58)
+        int accent = deploying ? PWPTheme.Colors.ACCENT : WTheme.HUD_POSITIVE;
+        WHud.contextPlate(
+                gui,
+                PWPTheme.Fonts.display(),
+                WHud.CTX_DRONE,
+                WarfareIcon.TARGET,
+                deploying ? droneName(ClientData.droneDeployTypeId) : MAVIC_RELOAD,
+                sub,
+                accent,
+                progress,
+                accent,
+                1.0F);
     }
 
     /** Кольцо прогресса: сегменты заполняются пропорционально progress. */
@@ -133,15 +151,13 @@ public class DroneDeployOverlay {
     private static final WHud.Fmt SUB_DEPLOY = new WHud.Fmt("gui.pwpwarfare.hud.drone.deploying");
     private static final WHud.Fmt SUB_RELOAD = new WHud.Fmt("gui.pwpwarfare.hud.drone.reloading");
 
-    private static String droneName(String typeId) {
-        Component c =
-                switch (typeId) {
-                    case "uncomplicatedfpv:fpv_drone" -> NAME_FPV;
-                    case "uncomplicatedfpv:mavic_drone_with_drop" -> NAME_MAVIC_DROP;
-                    case "uncomplicatedfpv:mavic_drone_no_drop" -> NAME_MAVIC_SCOUT;
-                    default -> NAME_DRONE;
-                };
-        return c.getString();
+    private static Component droneName(String typeId) {
+        return switch (typeId) {
+            case "uncomplicatedfpv:fpv_drone" -> NAME_FPV;
+            case "uncomplicatedfpv:mavic_drone_with_drop" -> NAME_MAVIC_DROP;
+            case "uncomplicatedfpv:mavic_drone_no_drop" -> NAME_MAVIC_SCOUT;
+            default -> NAME_DRONE;
+        };
     }
 
     /** 3D -> 2D проекция точки на экран; null если точка за камерой. */

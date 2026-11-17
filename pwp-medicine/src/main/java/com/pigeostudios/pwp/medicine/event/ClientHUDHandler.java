@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
 import com.pigeostudios.pwp.medicine.item.ModItems;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -99,13 +101,43 @@ public class ClientHUDHandler {
         float screenY = (float) mc.getWindow().getGuiScaledHeight() / 2.0f;
         if (target != null) {
             ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, target, target == mc.player, screenX, screenY);
-        } else {
-            Player healer = ClientHUDHandler.getHealerTargetingMe(mc);
-            if (healer != null) {
-                float patientY = (float) mc.getWindow().getGuiScaledHeight() - 65.0f;
-                ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, mc.player, false, screenX, patientY);
-            }
+        } else if (patientHealer != null) {
+            ClientHUDHandler.renderPatient(event.getGuiGraphics(), mc, patientHealer);
         }
+    }
+
+    // ------------------------------------------------------------ пациент (контекстный ярус HUD)
+    /** Кто лечит меня в этом кадре (считается один раз в RenderGuiEvent.Pre). */
+    private static Player patientHealer;
+
+    private static final WHud.Fmt PATIENT_TITLE = new WHud.Fmt("gui.pwp_medicine.hud.patient");
+    private static final WHud.Fmt PATIENT_HP = new WHud.Fmt("gui.pwpwarfare.hud.percent");
+
+    /** Заявка «меня лечат» в контекстный ярус низ-центра (раньше — иконка на h-65 поверх ленты). */
+    @SubscribeEvent
+    public static void onRenderGuiPre(RenderGuiEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        patientHealer = null;
+        if (mc.player == null || !WHud.hudVisible()) return;
+        if (ClientHUDHandler.getHudTarget(mc) != null) return;
+        patientHealer = ClientHUDHandler.getHealerTargetingMe(mc);
+        if (patientHealer != null) WHud.contextOffer(WHud.CTX_PATIENT);
+    }
+
+    private static void renderPatient(GuiGraphics g, Minecraft mc, Player healer) {
+        float hp = Math.max(0.0f, Math.min(1.0f, mc.player.getHealth() / Math.max(1.0f, mc.player.getMaxHealth())));
+        PATIENT_HP.of(Math.round(hp * 100.0f));
+        WHud.contextPlate(
+                g,
+                mc.font,
+                WHud.CTX_PATIENT,
+                WarfareIcon.PLUS,
+                PATIENT_TITLE.of(healer.getGameProfile().getName()),
+                PATIENT_HP.string(),
+                WTheme.HUD_VALUE,
+                hp,
+                WTheme.HUD_MEDIC,
+                1.0f);
     }
 
     /** Подпись баннера кровотечения: компонент кэширован (не создаётся в кадре). */

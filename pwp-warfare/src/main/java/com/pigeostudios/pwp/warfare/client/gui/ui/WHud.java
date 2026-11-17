@@ -2,6 +2,9 @@ package com.pigeostudios.pwp.warfare.client.gui.ui;
 
 import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
 import com.pwp.coreclient.ui.UIDraw;
+import com.pwp.coreclient.ui.hud.Hud;
+import com.pwp.coreclient.ui.hud.HudDraw;
+import com.pwp.coreclient.ui.hud.HudTheme;
 import com.pwp.coreclient.ui.hud.HudZones;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -26,7 +29,6 @@ import net.minecraftforge.registries.ForgeRegistries;
 public final class WHud {
     private WHud() {}
 
-    private static final HudZones.Cache ZONES = new HudZones.Cache();
     private static final ResourceLocation SBW_MONITOR = new ResourceLocation("superbwarfare", "monitor");
 
     // ================================================================ гейт
@@ -56,10 +58,121 @@ public final class WHud {
         return tag != null && tag.getBoolean("Using") && tag.getBoolean("Linked");
     }
 
-    /** Зоны HUD текущего экрана (пересчёт только при смене размера окна/guiScale). */
+    /**
+     * Зоны HUD текущего экрана — общие для всех модов ({@link Hud#zones()}: масштаб из настройки
+     * «Масштаб HUD», сброс стеков раз в кадр в {@code RenderGuiEvent.Pre}).
+     */
     public static HudZones zones() {
-        Minecraft mc = Minecraft.getInstance();
-        return ZONES.get(mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight(), WTheme.HUD_SCALE);
+        return Hud.zones();
+    }
+
+    // ================================================================ контекстный ярус
+    // Константы и обёртки — чтобы pwp-medicine не тянул классы core-client в свой classpath.
+
+    public static final int CTX_DRONE = HudZones.ContextTier.DRONE_CHANNEL;
+    public static final int CTX_CONSTRUCTION = HudZones.ContextTier.CONSTRUCTION;
+    public static final int CTX_PATIENT = HudZones.ContextTier.PATIENT;
+
+    /** Заявка в контекстный ярус на этот кадр (вызывать в {@code RenderGuiEvent.Pre}). */
+    public static void contextOffer(int priority) {
+        zones().contextTier().offer(priority);
+    }
+
+    /**
+     * Старый элемент (look-at, Build Mode — пока на своих координатах) нарисован в этом кадре и
+     * занимает низ-центр до Y {@code top}: победитель яруса поднимется над ним или скроется.
+     */
+    public static void contextReserve(int top) {
+        zones().contextTier().reserve(top);
+    }
+
+    /**
+     * Плашка контекстного яруса (стройка, канал дрона, пациент): иконка, заголовок, значение
+     * справа, полоса прогресса снизу. Рисуется, только если {@code priority} — победитель яруса и
+     * место есть; иначе false.
+     */
+    public static boolean contextPlate(
+            GuiGraphics g,
+            Font font,
+            int priority,
+            WarfareIcon icon,
+            Component title,
+            String value,
+            int valueColor,
+            float frac,
+            int accent,
+            float o) {
+        HudZones z = zones();
+        HudZones.ContextTier tier = z.contextTier();
+        if (o <= 0F || !tier.shows(priority)) return false;
+        int y = tier.place(z.u(HudTheme.CONTEXT_H));
+        if (y == HudZones.ContextTier.NONE) return false;
+        float s = z.scale();
+        int w = Math.min(HudTheme.CONTEXT_W, Math.round(tier.area().w() / s));
+        int h = HudTheme.CONTEXT_H;
+        HudDraw.begin(g, tier.area().centerX() - w * s / 2F, y, s);
+        HudDraw.plate(g, 0, 0, w, h, accent, o);
+        int pad = HudTheme.PLATE_STRIPE + HudTheme.PAD_X;
+        int ty = HudTheme.PAD_Y + 1;
+        int tx = pad;
+        if (icon != null) {
+            icon(g, icon, tx, ty, HudTheme.ICON, UIDraw.fade(accent, o));
+            tx += HudTheme.ICON + HudTheme.ICON_GAP;
+        }
+        int vw = value == null ? 0 : font.width(value);
+        int vx = w - HudTheme.PAD_X - vw;
+        if (title != null) {
+            Component t = UIDraw.ellipsize(font, title, Math.max(0, vx - HudTheme.PAD_X - tx));
+            UIDraw.text(g, font, t, tx, ty, UIDraw.fade(HudTheme.VALUE, o), true);
+        }
+        HudDraw.text(g, font, value, vx, ty, UIDraw.fade(valueColor, o), true);
+        int by = ty + font.lineHeight + HudTheme.PAD_Y;
+        HudDraw.bar(g, pad, by, w - pad - HudTheme.PAD_X, HudTheme.CONTEXT_BAR_H, frac, -1F, 10, accent, o);
+        HudDraw.end(g);
+        return true;
+    }
+
+    // ================================================================ плашка-значение в стеке
+
+    /**
+     * Плашка-значение в стеке низ-лево/низ-право (БК, припасы): иконка цветом акцента, подпись
+     * приглушённо, значение справа; {@code frac} ≥ 0 — тонкая полоса заполнения по низу. Занимает
+     * место в стеке; false — не влезла.
+     */
+    public static boolean stackPlate(
+            GuiGraphics g,
+            Font font,
+            HudZones.Stack stack,
+            WarfareIcon icon,
+            Component label,
+            String value,
+            int valueColor,
+            float frac,
+            int accent,
+            float o) {
+        HudZones z = zones();
+        int h = plateHeight(font);
+        int y = stack.next(z.u(h));
+        if (y == HudZones.Stack.NONE || o <= 0F) return false;
+        float s = z.scale();
+        int w = Math.round(stack.area().w() / s);
+        HudDraw.begin(g, stack.area().x(), y, s);
+        HudDraw.plate(g, 0, 0, w, h, accent, o);
+        int tx = HudTheme.PLATE_STRIPE + HudTheme.PAD_X;
+        int ty = HudTheme.PAD_Y + 1;
+        if (icon != null) {
+            icon(g, icon, tx, ty, HudTheme.ICON, UIDraw.fade(accent, o));
+            tx += HudTheme.ICON + HudTheme.ICON_GAP;
+        }
+        if (label != null) UIDraw.text(g, font, label, tx, ty, UIDraw.fade(HudTheme.LABEL, o), false);
+        int vw = value == null ? 0 : font.width(value);
+        HudDraw.text(g, font, value, w - HudTheme.PAD_X - vw, ty, UIDraw.fade(valueColor, o), true);
+        if (frac >= 0F) {
+            int fw = Math.round((w - 2) * Math.min(1F, frac));
+            if (fw > 0) g.fill(1, h - 1 - HudTheme.VALUE_PLATE_BAR_H, 1 + fw, h - 1, UIDraw.fade(accent, o));
+        }
+        HudDraw.end(g);
+        return true;
     }
 
     // ================================================================ текст
@@ -92,19 +205,7 @@ public final class WHud {
      */
     public static void segmentBar(
             GuiGraphics g, int x, int y, int w, int h, float frac, int segments, int fill, float o) {
-        if (w <= 0 || h <= 0 || o <= 0F) return;
-        g.fill(x, y, x + w, y + h, UIDraw.fade(WTheme.HUD_BAR_TRACK, o));
-        float f = Float.isNaN(frac) ? 0F : Math.max(0F, Math.min(1F, frac));
-        int fw = Math.round(w * f);
-        if (fw > 0) g.fill(x, y, x + fw, y + h, UIDraw.fade(fill, o));
-        if (segments > 1) {
-            int tick = UIDraw.fade(WTheme.HUD_BAR_TICK, o);
-            for (int i = 1; i < segments; i++) {
-                int tx = x + (int) ((long) w * i / segments);
-                g.fill(tx, y, tx + 1, y + h, tick);
-            }
-        }
-        border(g, x, y, w, h, UIDraw.fade(WTheme.HUD_BAR_BORDER, o));
+        HudDraw.bar(g, x, y, w, h, frac, -1F, segments, fill, o);
     }
 
     /** Рамка 1px снаружи области {@code x,y,w,h}. */
@@ -140,8 +241,7 @@ public final class WHud {
         if (o <= 0F) return 0;
         int w = plateWidth(font, label, value);
         int h = plateHeight(font);
-        g.fill(x, y, x + w, y + h, UIDraw.fade(WTheme.HUD_PLATE_BG, o));
-        g.fill(x, y, x + WTheme.HUD_PLATE_STRIPE, y + h, UIDraw.fade(accent, o));
+        HudDraw.plate(g, x, y, w, h, accent, o); // фон × настройка «Фон HUD-плашек»
         int tx = x + WTheme.HUD_PLATE_STRIPE + WTheme.HUD_PLATE_PAD_X;
         int ty = y + WTheme.HUD_PLATE_PAD_Y + 1;
         if (label != null) {
@@ -169,9 +269,26 @@ public final class WHud {
         int c = UIDraw.fade(color, o);
         if (Colors.alpha(c) < 4) return iconCountWidth(font, count);
         int is = WTheme.HUD_ICON;
-        WDraw.icon(g, icon, x, y + (font.lineHeight - is) / 2, is, c);
+        icon(g, icon, x, y + (font.lineHeight - is) / 2, is, c);
         text(g, font, count, x + is + WTheme.HUD_ICON_GAP, y, c, true);
         return iconCountWidth(font, count);
+    }
+
+    /** Иконка атласа warfare с тинтом — без лямбды ({@code WDraw.icon} аллоцирует на вызов). */
+    public static void icon(GuiGraphics g, WarfareIcon icon, int x, int y, int size, int color) {
+        if (icon == null) return;
+        HudDraw.icon(
+                g,
+                WTheme.ICONS,
+                icon.u(),
+                icon.v(),
+                WTheme.ICON_CELL,
+                WTheme.ICONS_W,
+                WTheme.ICONS_H,
+                x,
+                y,
+                size,
+                color);
     }
 
     // ================================================================ кэш чисел

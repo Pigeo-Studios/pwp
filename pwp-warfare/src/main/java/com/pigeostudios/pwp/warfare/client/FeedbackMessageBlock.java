@@ -3,6 +3,8 @@ package com.pigeostudios.pwp.warfare.client;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
+import com.pwp.coreclient.ui.hud.HudDraw;
+import com.pwp.coreclient.ui.hud.HudZones;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -56,17 +58,24 @@ public class FeedbackMessageBlock {
         if (!WHud.hudVisible()) return; // общий гейт HUD (F1)
 
         GuiGraphics gui = event.getGuiGraphics();
-        int width = mc.getWindow().getGuiScaledWidth();
-        int height = mc.getWindow().getGuiScaledHeight();
+        HudZones z = WHud.zones();
         Font font = PWPTheme.Fonts.display();
         int textWidth = font.width(current);
         int padding = PWPTheme.Spacing.SM;
         int boxWidth = textWidth + padding * 2 + PWPTheme.Spacing.XS;
         int boxHeight = PWPTheme.Spacing.LG;
-        int x = (width - boxWidth) / 2;
-        int y = height - 58; // ярус фидбека: над хотбаром (его верх h-42), ниже ленты (h-76/h-94)
+        // ярус фидбека HudZones.feedback() (над хотбаром, под лентой); масштаб HUD — HudDraw.begin
+        int x = -boxWidth / 2;
+        int y = -boxHeight;
         int a = (int) (Math.min(1.0F, alpha) * 220.0F * WarfareUiSettings.MESSAGE_OPACITY.get());
         if (a <= 0) return;
+        HudDraw.begin(gui, z.feedback().centerX(), z.feedback().bottom(), z.scale());
+        draw(gui, font, x, y, boxWidth, boxHeight, padding, a);
+        HudDraw.end(gui);
+    }
+
+    private static void draw(
+            GuiGraphics gui, Font font, int x, int y, int boxWidth, int boxHeight, int padding, int a) {
 
         gui.fill(x, y, x + boxWidth, y + boxHeight, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BACKGROUND, a));
         gui.fill(x, y, x + 3, y + boxHeight, PWPTheme.Colors.withAlpha(PWPTheme.Colors.ACCENT, a));

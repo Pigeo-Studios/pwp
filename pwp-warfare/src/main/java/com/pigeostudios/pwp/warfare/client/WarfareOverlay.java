@@ -19,6 +19,8 @@ import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
@@ -52,6 +54,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent.Post;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -79,11 +82,6 @@ public class WarfareOverlay {
             new ResourceLocation("pwpwarfare", "textures/misc/vignette.png");
     private static final ResourceLocation ARROW_TEX =
             new ResourceLocation("pwpwarfare", "textures/gui/capture_arrow.png");
-    private static final ResourceLocation BUILD_ICON =
-            new ResourceLocation("pwpwarfare", "textures/gui/build_icon.png");
-    private static final ResourceLocation DIG_ICON = new ResourceLocation("pwpwarfare", "textures/gui/dig_icon.png");
-    private static final ResourceLocation SHOVEL_ICON =
-            new ResourceLocation("pwpwarfare", "textures/gui/shovel_icon.png");
     private static final ResourceLocation ICON_PLUS =
             new ResourceLocation("pwpwarfare", "textures/gui/map_icons/medic_plus.png");
     private static final ResourceLocation ICON_PING =
@@ -153,9 +151,11 @@ public class WarfareOverlay {
     private static final WHud.Fmt VOTE_RED_WAITING = new WHud.Fmt(HUD + "vote.waiting");
     private static final WHud.KeyHint VOTE_KEYS =
             new WHud.KeyHint(HUD + "vote.keys", ModKeyBindings.VOTE_START_YES_KEY, ModKeyBindings.VOTE_START_NO_KEY);
-    private static final WHud.Fmt SUPPLY = new WHud.Fmt(HUD + "supply.crates");
+    private static final Component SUPPLY_LABEL = Component.translatable(HUD + "supply.label");
+    private static final WHud.Fmt VALUE_OF_SUPPLY = new WHud.Fmt(HUD + "value_of");
     private static final Component SUPPLY_LOADING = Component.translatable(HUD + "supply.loading");
-    private static final WHud.Fmt AMMO = new WHud.Fmt(HUD + "ammo");
+    private static final Component AMMO_LABEL = Component.translatable(HUD + "ammo.label");
+    private static final WHud.Fmt VALUE_OF_AMMO = new WHud.Fmt(HUD + "value_of");
     /** Строки списка ноков у медика: кэш по номеру строки (имя/дистанция меняются редко). */
     private static final WHud.Fmt[] MEDIC_ROWS = new WHud.Fmt[16];
 
@@ -170,11 +170,6 @@ public class WarfareOverlay {
             MEDIC_ROWS[idx] = f;
         }
         return f;
-    }
-
-    private static String supplyText(int crates, int maxCrates) {
-        SUPPLY.of(crates, maxCrates);
-        return SUPPLY.string();
     }
 
     /** Строка уведомления о захвате в верхнем регистре (как раньше); пересборка только при смене. */
@@ -237,12 +232,13 @@ public class WarfareOverlay {
             }
         }
 
-        renderBuildProgress(gui, mc, width, height);
         renderHubMaterials(gui, mc, width, height);
         renderVehicleHud(gui, mc, width, height);
         renderVehicleAmmo(gui, mc, width, height);
         renderSupplyTruckInfo(gui, mc, width, height);
         renderPlacementHints(gui, mc, width, height);
+        // после look-at/Build Mode: они резервируют низ-центр, стройка встаёт над ними
+        renderBuildProgress(gui);
         renderCaptureNotifications(gui, mc, width, height);
         renderCompass(gui, mc, width, partialTick);
         renderInvasionSetupTimer(gui, mc, width);
@@ -932,6 +928,7 @@ public class WarfareOverlay {
             int uiHeight = 44;
             int xStart = (width - uiWidth) / 2;
             int yStart = height - uiHeight - 60;
+            WHud.contextReserve(yStart); // ярус занят — контекстная плашка встанет выше
             int goldLight = -10496;
             gui.fill(xStart, yStart, xStart + uiWidth, yStart + uiHeight, -1879048192);
             gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
@@ -1018,6 +1015,9 @@ public class WarfareOverlay {
         return false;
     }
 
+    /** Верх ромба команды над текстом «Материалы» (центр textY-12, повёрнутый 10x10 + рамка). */
+    private static final int LOOK_AT_DIAMOND_ABOVE = 19;
+
     private static void renderHubMaterials(GuiGraphics gui, Minecraft mc, int width, int height) {
         if (mc.hitResult != null) {
             int mats = -1;
@@ -1054,6 +1054,7 @@ public class WarfareOverlay {
                 int textWidth = PWPTheme.Fonts.display().width(text);
                 int textX = (width - textWidth) / 2;
                 int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
+                WHud.contextReserve(textY - LOOK_AT_DIAMOND_ABOVE); // ромб выше текста
                 PoseStack pose = gui.pose();
                 pose.pushPose();
                 pose.translate(width / 2.0F, textY - 12, 0.0F);
@@ -1121,6 +1122,7 @@ public class WarfareOverlay {
         int textWidth = PWPTheme.Fonts.display().width(text);
         int textX = (width - textWidth) / 2;
         int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
+        WHud.contextReserve(textY - 3);
         gui.fill(textX - 8, textY - 3, textX + textWidth + 8, textY + 12, (alpha / 4) << 24);
         drawVehicleHintText(gui, mc, text, textX, textY, color, alpha);
     }
@@ -1186,7 +1188,33 @@ public class WarfareOverlay {
         return true;
     }
 
-    private static void renderBuildProgress(GuiGraphics gui, Minecraft mc, int width, int height) {
+    // ------------------------------------------------------------ прогресс стройки (контекстный ярус)
+    private static boolean buildActive;
+    private static float buildProgress;
+    private static boolean buildDestroy;
+    private static boolean buildEnemy;
+    /** Статус под прогрессом (демонтаж/готово/чужая) или null. */
+    private static Component buildStatus;
+
+    private static Component buildStatusSrc;
+    private static String buildStatusText;
+    private static final WHud.Fmt BUILD_PERCENT = new WHud.Fmt(HUD + "percent");
+
+    /**
+     * Кадр: собирает состояние стройки (лопата + взгляд на постройку) и подаёт заявку в
+     * контекстный ярус. RenderGuiEvent.Pre — до отрисовки остальных заявителей (сброс яруса — в
+     * Hud core-client на HIGHEST).
+     */
+    @SubscribeEvent
+    public static void onRenderGuiPre(RenderGuiEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        buildActive = false;
+        if (mc.player == null || mc.level == null || !WHud.hudVisible()) return;
+        computeBuild(mc);
+        if (buildActive) WHud.contextOffer(WHud.CTX_CONSTRUCTION);
+    }
+
+    private static void computeBuild(Minecraft mc) {
         ItemStack mainHand = mc.player.getMainHandItem();
         ItemStack offHand = mc.player.getOffhandItem();
         boolean holdingTool = mainHand.getItem() == ModItems.ENTRENCHING_TOOL.get()
@@ -1253,58 +1281,49 @@ public class WarfareOverlay {
                             dismantling = s.isDismantling();
                         }
 
-                        boolean showDestroy = finished || dismantling;
-                        int uiWidth = 120;
-                        int uiHeight = (!showDestroy) ? 54 : 65;
-                        int xStart = width / 2 - uiWidth / 2;
-                        int yStart = height - 110;
-                        int goldLight = -10496;
-                        int goldDark = -4026112;
-                        gui.fill(xStart, yStart, xStart + uiWidth, yStart + uiHeight, -1879048192);
-                        gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
-                        RenderSystem.enableBlend();
-                        if (showDestroy) {
-                            gui.blit(DIG_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
-                            gui.drawString(PWPTheme.Fonts.display(), BUILD_DESTROY, xStart + 26, yStart + 10, -1, true);
-                        } else {
-                            gui.blit(BUILD_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
-                            gui.drawString(PWPTheme.Fonts.display(), BUILD_BUILD, xStart + 26, yStart + 10, -1, true);
-                        }
-
-                        int barY = yStart + (showDestroy ? 28 : 24);
-                        int barWidth = 85;
-                        gui.blit(SHOVEL_ICON, xStart + 8, yStart + (showDestroy ? 25 : 21), 0.0F, 0.0F, 12, 12, 12, 12);
-                        gui.fill(xStart + 26, barY, xStart + 26 + barWidth, barY + 5, 1090519039);
-                        int currentBarWidth = (int) (barWidth * progress);
-                        if (currentBarWidth > 0) {
-                            gui.fillGradient(
-                                    xStart + 26, barY, xStart + 26 + currentBarWidth, barY + 5, goldDark, goldLight);
-                        }
-
+                        buildActive = true;
+                        buildProgress = progress;
+                        buildDestroy = finished || dismantling;
+                        buildEnemy = isEnemy;
                         if (dismantling) {
-                            gui.drawCenteredString(
-                                    PWPTheme.Fonts.display(),
-                                    isEnemy ? BUILD_DESTROYING : BUILD_DISMANTLING,
-                                    xStart + uiWidth / 2,
-                                    yStart + 52,
-                                    isEnemy ? -43691 : -256);
+                            buildStatus = isEnemy ? BUILD_DESTROYING : BUILD_DISMANTLING;
                         } else if (finished) {
-                            gui.drawCenteredString(
-                                    PWPTheme.Fonts.display(),
-                                    isEnemy ? BUILD_ENEMY : BUILD_FINISHED,
-                                    xStart + uiWidth / 2,
-                                    yStart + 52,
-                                    isEnemy ? -43691 : -256);
-                        } else if (isEnemy) {
-                            gui.drawCenteredString(
-                                    PWPTheme.Fonts.display(), BUILD_ENEMY, xStart + uiWidth / 2, yStart + 52, -43691);
+                            buildStatus = isEnemy ? BUILD_ENEMY : BUILD_FINISHED;
+                        } else {
+                            buildStatus = isEnemy ? BUILD_ENEMY : null;
                         }
-
-                        RenderSystem.disableBlend();
                     }
                 }
             }
         }
+    }
+
+    /** Плашка стройки в контекстном ярусе: иконка, «Строить/Разрушить», статус или %, полоса. */
+    private static void renderBuildProgress(GuiGraphics gui) {
+        if (!buildActive) return;
+        String value;
+        if (buildStatus != null) {
+            if (buildStatus != buildStatusSrc) {
+                buildStatusSrc = buildStatus;
+                buildStatusText = buildStatus.getString();
+            }
+            value = buildStatusText;
+        } else {
+            BUILD_PERCENT.of(Math.round(Mth.clamp(buildProgress, 0.0F, 1.0F) * 100.0F));
+            value = BUILD_PERCENT.string();
+        }
+        int accent = buildEnemy ? WTheme.HUD_DANGER : PWPTheme.Colors.ACCENT;
+        WHud.contextPlate(
+                gui,
+                PWPTheme.Fonts.display(),
+                WHud.CTX_CONSTRUCTION,
+                buildDestroy ? WarfareIcon.TRASH : WarfareIcon.WALL,
+                buildDestroy ? BUILD_DESTROY : BUILD_BUILD,
+                value,
+                buildEnemy ? WTheme.HUD_DANGER : WTheme.HUD_VALUE,
+                buildProgress,
+                accent,
+                1.0F);
     }
 
     private static void renderTickets(GuiGraphics gui, Minecraft mc, int width) {
@@ -1649,6 +1668,9 @@ public class WarfareOverlay {
         }
     }
 
+    private static long chargeScanTick = Long.MIN_VALUE;
+    private static boolean chargeScanResult;
+
     private static void renderSupplyTruckInfo(GuiGraphics gui, Minecraft mc, int width, int height) {
         Entity ridingEntity = mc.player.getVehicle();
         if (ridingEntity != null) {
@@ -1657,7 +1679,9 @@ public class WarfareOverlay {
                 int crates = WarfareData.of(supplyTruck).getInt(WarfareKeys.SUPPLY_AMMO);
                 int maxCrates = (Integer) WarfareConfig.SUPPLY_TRUCK_CRATES.get();
                 boolean isCharging = false;
-                if (crates < maxCrates) {
+                if (crates < maxCrates && ClientData.clientTickCounter == chargeScanTick) {
+                    isCharging = chargeScanResult;
+                } else if (crates < maxCrates) {
                     BlockPos vPos = supplyTruck.blockPosition();
 
                     for (BlockPos pos : BlockPos.betweenClosed(vPos.offset(-5, -2, -5), vPos.offset(5, 2, 5))) {
@@ -1666,33 +1690,37 @@ public class WarfareOverlay {
                             break;
                         }
                     }
+                    // скан 11x5x11 блоков — раз в клиентский тик, а не в каждый кадр
+                    chargeScanTick = ClientData.clientTickCounter;
+                    chargeScanResult = isCharging;
                 }
 
-                int color = -1;
+                VALUE_OF_SUPPLY.of(crates, maxCrates);
+                boolean empty = crates == 0;
+                var stack = WHud.zones().bottomRightStack();
+                WHud.stackPlate(
+                        gui,
+                        PWPTheme.Fonts.display(),
+                        stack,
+                        WarfareIcon.CRATE,
+                        SUPPLY_LABEL,
+                        VALUE_OF_SUPPLY.string(),
+                        empty ? WTheme.HUD_DANGER : WTheme.HUD_VALUE,
+                        maxCrates > 0 ? (float) crates / maxCrates : -1.0F,
+                        empty ? WTheme.HUD_DANGER : PWPTheme.Colors.ACCENT,
+                        1.0F);
                 if (isCharging) {
-                    if (System.currentTimeMillis() / 250L % 2L == 0L) {
-                        color = -16711936;
-                    } else {
-                        color = -256;
-                    }
-                } else if (crates == 0) {
-                    color = -43691;
-                }
-
-                String text = supplyText(crates, maxCrates);
-                int textWidth = PWPTheme.Fonts.display().width(text);
-                int x = width - textWidth - 10;
-                int y = height - 25;
-                drawOutlinedString(gui, mc, text, x, y, color);
-                if (isCharging) {
-                    String reloadText = SUPPLY_LOADING.getString();
-                    drawOutlinedString(
+                    WHud.stackPlate(
                             gui,
-                            mc,
-                            reloadText,
-                            width - PWPTheme.Fonts.display().width(reloadText) - 10,
-                            y - 10,
-                            -11141291);
+                            PWPTheme.Fonts.display(),
+                            stack,
+                            WarfareIcon.PLUS,
+                            SUPPLY_LOADING,
+                            null,
+                            WTheme.HUD_POSITIVE,
+                            -1.0F,
+                            WTheme.HUD_POSITIVE,
+                            1.0F);
                 }
             }
         }
@@ -1720,12 +1748,20 @@ public class WarfareOverlay {
         }
 
         if (currentAmmo != -1) {
-            AMMO.of(currentAmmo, maxAmmo);
-            String text = AMMO.string();
-            int x = 10;
-            int y = height - 40;
-            int color = currentAmmo == 0 ? -43691 : -1;
-            drawOutlinedString(gui, mc, text, x, y, color);
+            VALUE_OF_AMMO.of(currentAmmo, maxAmmo);
+            boolean empty = currentAmmo == 0;
+            // низ-лево над полосой HP (pwp-limits занимает низ стека раньше — priority HIGH)
+            WHud.stackPlate(
+                    gui,
+                    PWPTheme.Fonts.display(),
+                    WHud.zones().bottomLeftStack(),
+                    WarfareIcon.GUN,
+                    AMMO_LABEL,
+                    VALUE_OF_AMMO.string(),
+                    empty ? WTheme.HUD_DANGER : WTheme.HUD_VALUE,
+                    maxAmmo > 0 ? (float) currentAmmo / maxAmmo : -1.0F,
+                    empty ? WTheme.HUD_DANGER : PWPTheme.Colors.ACCENT,
+                    1.0F);
         }
     }
 

@@ -57,6 +57,8 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.radial.hub", () -> new HubRadialScreen(BlockPos.ZERO).asPreview());
         UiGallery.register("warfare.radial.markers", () -> new SquadMarkerRadialScreen(0, 0, null).asPreview());
         UiGallery.register("warfare.radial.tactical", () -> new TacticalMapRadialScreen(0, 0, null).asPreview());
+        // низ HUD матча (хотбар, HP/броня, БК, припасы, контекстный ярус) на фикстурах
+        UiGallery.register("hud", HudPreviewScreen::new);
     }
 
     // ------------------------------------------------------------ киты

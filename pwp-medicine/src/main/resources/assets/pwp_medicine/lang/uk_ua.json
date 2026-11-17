@@ -7,5 +7,6 @@
   "death.attack.player.item": "%1$s стік кров'ю у бою з %2$s",
   "death.attack.generic": "%1$s помер від втрати крові",
   "death.attack.bleeding": "%1$s истек кровью",
-  "death.attack.bleeding.player": "%1$s истек кровью в бою с %2$s"
+  "death.attack.bleeding.player": "%1$s истек кровью в бою с %2$s",
+  "gui.pwp_medicine.hud.patient": "Вас лікує %s"
 }

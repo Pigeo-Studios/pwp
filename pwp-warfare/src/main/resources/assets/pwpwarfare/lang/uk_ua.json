@@ -581,9 +581,7 @@
     "gui.pwpwarfare.hud.invasion.blockade": "🔒 БЛОКАДА %s",
     "gui.pwpwarfare.hud.point.blocked": "ЗАБЛОКОВАНО",
     "gui.pwpwarfare.hud.point.need": "Потрібно: %s",
-    "gui.pwpwarfare.hud.supply.crates": "Припаси: %s / %s",
     "gui.pwpwarfare.hud.supply.loading": "ЗАВАНТАЖЕННЯ...",
-    "gui.pwpwarfare.hud.ammo": "БК: %s / %s",
     "gui.pwpwarfare.hud.medic.downed": "✚ %s [%sм]",
     "gui.pwpwarfare.hud.drone.fpv": "FPV-ДРОН",
     "gui.pwpwarfare.hud.drone.mavic_drop": "MAVIC · СКИДАННЯ",
@@ -605,5 +603,10 @@
     "key.pwpwarfare.vote_cmd_yes": "Голосування за командира: ЗА",
     "key.pwpwarfare.vote_cmd_no": "Голосування за командира: ПРОТИ",
     "key.pwpwarfare.art_confirm": "Запит арти: підтвердити",
-    "key.pwpwarfare.art_deny": "Запит арти: відхилити"
+    "key.pwpwarfare.art_deny": "Запит арти: відхилити",
+    "gui.pwpwarfare.hud.ammo.label": "БК",
+    "gui.pwpwarfare.hud.supply.label": "Припаси",
+    "gui.pwpwarfare.hud.value_of": "%s / %s",
+    "gui.pwpwarfare.hud.percent": "%s%%",
+    "gui.pwpwarfare.devtest.hud.title": "Прев'ю HUD (фікстура)"
 }

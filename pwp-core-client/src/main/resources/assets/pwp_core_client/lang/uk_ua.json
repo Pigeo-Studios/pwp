@@ -225,5 +225,10 @@
     "pwp_core.ui_settings.devtest.long_choice": "Вибір із довгим варіантом",
     "pwp_core.ui_settings.devtest.long_tip": "Підказка з довгим описом: переноситься на кілька рядків і показує повний текст підпису.",
     "pwp_core.ui_settings.devtest.option.short": "Коротко",
-    "pwp_core.ui_settings.devtest.option.long": "Надзвичайно довга назва варіанта для перевірки"
+    "pwp_core.ui_settings.devtest.option.long": "Надзвичайно довга назва варіанта для перевірки",
+    "pwp_core.ui_settings.cat.hud": "HUD",
+    "pwp_core.ui_settings.hud.scale": "Масштаб HUD",
+    "pwp_core.ui_settings.hud.scale.tip": "Розмір HUD матчу: хотбар, здоров'я, плашки, повідомлення. На малому екрані зменшується сам.",
+    "pwp_core.ui_settings.hud.plate_opacity": "Фон HUD-плашок",
+    "pwp_core.ui_settings.hud.plate_opacity.tip": "Непрозорість темної підкладки під плашками HUD і слотами хотбара."
 }

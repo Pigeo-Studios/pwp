@@ -1,6 +1,8 @@
 package com.pigeostudios.pwp.limit.client;
 
 import com.pigeostudios.pwp.limit.ModConfig;
+import com.pwp.coreclient.ui.hud.Hud;
+import com.pwp.coreclient.ui.hud.HudVitals;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -9,6 +11,7 @@ import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -16,21 +19,26 @@ import net.minecraftforge.fml.common.Mod;
         modid = "pwplimit",
         value = {Dist.CLIENT})
 public class ClientOverlay {
-    private static float displayHealth = 20.0f;
     private static float lastActualHealth = 20.0f;
     private static float healthBarAlpha = 0.0f;
     // Таймер показа — в миллисекундах реального времени (раньше считал КАДРЫ:
     // 60 кадров = 1 с при 60 FPS, но 0.4 с при 144 FPS). Сглаживание — та же
     // кривая, что прежний покадровый lerp при 60 FPS, но не зависит от FPS.
     private static float healthDisplayTimerMs = 0.0f;
-    private static final float DISPLAY_DURATION_MS = 1000.0f; // = 60 кадров при 60 FPS
+    // 1.6 с (было 1 с): успевает пройти пауза и стекание хвоста урона (DamageTrail)
+    private static final float DISPLAY_DURATION_MS = 1600.0f;
     private static final float FADE_SPEED = 0.08f; // доля за кадр при 60 FPS
-    private static final float HEALTH_LERP = 0.15f; // доля за кадр при 60 FPS
     private static final float FRAME_60_MS = 1000.0f / 60.0f;
     private static final long MAX_DT_MS = 100L;
     private static long lastFrameMs = -1L;
 
-    @SubscribeEvent
+    /** Вид HP/брони — HUD-кит core-client (низ-лево рядом с хотбаром, хвост урона). */
+    private static final HudVitals VITALS = new HudVitals();
+    /** Броня 0..20 (ванильная шкала; больше — полная полоса). */
+    private static final float ARMOR_FULL = 20.0f;
+
+    // HIGH: HP занимает НИЖНЕЕ место стека низ-лево раньше БК warfare (NORMAL)
+    @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onRenderBars(RenderGuiOverlayEvent.Post event) {
         if (!event.getOverlay().id().equals(VanillaGuiOverlay.CHAT_PANEL.id())) {
             return;
@@ -43,10 +51,6 @@ public class ClientOverlay {
         }
 
         GuiGraphics guiGraphics = event.getGuiGraphics();
-        int barWidth = 81;
-        int barHeight = 7;
-        int x = 10;
-        int y = mc.getWindow().getGuiScaledHeight() - 32;
         long nowMs = Util.getMillis();
         long dtMs = lastFrameMs < 0L ? 0L : Math.max(0L, Math.min(MAX_DT_MS, nowMs - lastFrameMs));
         lastFrameMs = nowMs;
@@ -89,44 +93,21 @@ public class ClientOverlay {
             healthDisplayTimerMs -= dtMs;
         }
 
-        // Smooth display health lerp
-        displayHealth = approach(displayHealth, currentHealth, HEALTH_LERP, dtMs);
-
         // Alpha animation
         float targetAlpha = healthDisplayTimerMs > 0 ? 1.0f : 0.0f;
         healthBarAlpha = approach(healthBarAlpha, targetAlpha, FADE_SPEED, dtMs);
 
-        float renderAlpha = healthBarAlpha;
-        if (renderAlpha < 0.01f) {
-            return;
-        }
-
-        int a = Mth.clamp((int) (renderAlpha * 255.0f), 0, 255);
-
-        int filled = (int) (barWidth * Mth.clamp(displayHealth / maxHealth, 0.0f, 1.0f));
-
-        // Frame
-        guiGraphics.fill(x - 1, y - 1, x + barWidth + 1, y + barHeight + 1, (a << 24) | 0x1E222A);
-        // Background
-        guiGraphics.fill(x, y, x + barWidth, y + barHeight, (a << 24) | 0x181C24);
-        // Fill
-        if (filled > 0) {
-            int fillColor = displayHealth / maxHealth > 0.3f ? 0xFF3D7A40 : 0xFFA53D3D;
-            guiGraphics.fill(x, y, x + filled, y + barHeight, (a << 24) | (fillColor & 0x00FFFFFF));
-        }
-
-        // JUMP COOLDOWN BAR (only if active)
-        if (!cdActive) {
-            return;
-        }
-        float progress = (float) elapsed / (float) cooldownMs;
-        int cdFilled = (int) (barWidth * progress);
-        int cdY = y + barHeight + 2;
-
-        guiGraphics.fill(x, cdY, x + barWidth, cdY + 2, (a << 24) | 0x181C24);
-        if (cdFilled > 0) {
-            guiGraphics.fill(x, cdY, x + cdFilled, cdY + 2, (a << 24) | 0xC8812A);
-        }
+        float cooldown = cdActive ? (float) elapsed / (float) cooldownMs : -1.0f;
+        float armor = Mth.clamp(player.getArmorValue() / ARMOR_FULL, 0.0f, 1.0f);
+        // место в стеке занимается и при alpha 0 — БК над HP не прыгает при показе/скрытии
+        VITALS.render(
+                guiGraphics,
+                mc.font,
+                Hud.zones(),
+                currentHealth / maxHealth,
+                armor,
+                cooldown,
+                healthBarAlpha < 0.01f ? 0.0f : healthBarAlpha);
     }
 
     /** Экспоненциальное сглаживание в реальном времени: rate — доля за кадр при 60 FPS. */

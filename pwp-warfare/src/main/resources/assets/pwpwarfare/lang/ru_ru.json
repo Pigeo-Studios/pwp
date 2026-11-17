@@ -581,9 +581,7 @@
     "gui.pwpwarfare.hud.invasion.blockade": "🔒 БЛОКАДА %s",
     "gui.pwpwarfare.hud.point.blocked": "ЗАБЛОКИРОВАНО",
     "gui.pwpwarfare.hud.point.need": "Нужно: %s",
-    "gui.pwpwarfare.hud.supply.crates": "Припасы: %s / %s",
     "gui.pwpwarfare.hud.supply.loading": "ЗАГРУЗКА...",
-    "gui.pwpwarfare.hud.ammo": "БК: %s / %s",
     "gui.pwpwarfare.hud.medic.downed": "✚ %s [%sм]",
     "gui.pwpwarfare.hud.drone.fpv": "FPV-ДРОН",
     "gui.pwpwarfare.hud.drone.mavic_drop": "MAVIC · СБРОС",
@@ -605,5 +603,10 @@
     "key.pwpwarfare.vote_cmd_yes": "Голосование за командира: ЗА",
     "key.pwpwarfare.vote_cmd_no": "Голосование за командира: ПРОТИВ",
     "key.pwpwarfare.art_confirm": "Запрос арты: подтвердить",
-    "key.pwpwarfare.art_deny": "Запрос арты: отклонить"
+    "key.pwpwarfare.art_deny": "Запрос арты: отклонить",
+    "gui.pwpwarfare.hud.ammo.label": "БК",
+    "gui.pwpwarfare.hud.supply.label": "Припасы",
+    "gui.pwpwarfare.hud.value_of": "%s / %s",
+    "gui.pwpwarfare.hud.percent": "%s%%",
+    "gui.pwpwarfare.devtest.hud.title": "Превью HUD (фикстура)"
 }
