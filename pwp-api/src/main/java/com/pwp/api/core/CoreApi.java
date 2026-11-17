@@ -252,6 +252,11 @@ public final class CoreApi {
         return get("/api/v1/leaderboard?orderBy=" + enc(orderBy) + "&page=" + page + "&limit=" + limit);
     }
 
+    /** Роль игрока в БД: {@code {data: {uuid, role}}} (user/support/admin/owner). Игрока нет — ошибка. */
+    public static CompletableFuture<JsonObject> getPlayerRole(String uuid) {
+        return get("/api/v1/player/" + enc(uuid) + "/role");
+    }
+
     public static CompletableFuture<JsonObject> getPlayerRank(String uuid, String orderBy) {
         return get("/api/v1/player/" + enc(uuid) + "/rank?orderBy=" + enc(orderBy));
     }

@@ -79,6 +79,8 @@ public class WarfareMod {
             PacketHandler.register();
             // Типы запросов данных warfare — в единой системе core-client
             com.pigeostudios.pwp.warfare.network.WarfareDataRequests.register();
+            // админ-панель: тип adminMatch + разделы match/map
+            com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerData();
             // тайлы динамической карты (mapTile): отвечает только на запросы клиентов с включённой картой
             com.pigeostudios.pwp.warfare.server.map.MapTileService.register();
         });
@@ -346,7 +348,7 @@ public class WarfareMod {
 
             // Start waiting phase (5 min timer), then voting
             data.match.waitingActive = true;
-            data.match.waitingTimer = 300;
+            data.match.waitingTimer = WarfareConfig.WAITING_PHASE_SECONDS.get();
             data.match.voteActive = false;
             data.match.votes.clear();
             PacketHandler.sendToAllClients(level, data);

@@ -8,7 +8,8 @@ import org.slf4j.Logger;
 
 /**
  * Раскладка карты, применённая из map_config на этом запуске сервера ({@code WarfareMod.applyMapConfig}), и
- * замечания валидатора. Пока только лог: ERROR старт матча НЕ блокирует (этап 1).
+ * замечания валидатора. ERROR блокируют старт матча (этап 2, {@code GameLogicEvents.startGameCountdown},
+ * флаг {@code WarfareConfig.BLOCK_START_ON_LAYOUT_ERRORS}); админ может стартовать принудительно (force).
  */
 public final class MapLayoutState {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -53,7 +54,11 @@ public final class MapLayoutState {
                 source,
                 errors,
                 list.size() - errors,
-                errors > 0 ? " (match start is NOT blocked yet)" : "");
+                errors > 0
+                        ? (WarfareConfig.BLOCK_START_ON_LAYOUT_ERRORS.get()
+                                ? " (match start is BLOCKED; force from admin panel or /pwpwarfare gamestart true force)"
+                                : " (blocking disabled: blockStartOnLayoutErrors=false)")
+                        : "");
         for (Issue i : list) {
             if (i.isError()) LOGGER.error("[MapLayout]   {}", i.format());
             else LOGGER.warn("[MapLayout]   {}", i.format());

@@ -120,15 +120,35 @@ public class GameLogicEvents {
     private static int returnToLobbyTimer = -1;
     private static MinecraftServer returnToLobbyServer = null;
 
-    // Запуск обратного отсчёта перед началом игры
-    public static void startGameCountdown(ServerLevel level) {
+    /** Запуск обратного отсчёта без force (автоматические пути: конец ожидания, голосование «готовы»). */
+    public static com.pigeostudios.pwp.warfare.layout.StartGate.Decision startGameCountdown(ServerLevel level) {
+        return startGameCountdown(level, false);
+    }
+
+    /**
+     * Запуск обратного отсчёта перед началом игры — ЕДИНСТВЕННАЯ точка старта (панель, команда, автостарт).
+     * ERROR валидатора раскладки блокируют старт (флаг {@code blockStartOnLayoutErrors}, по умолчанию вкл.),
+     * если не {@code force}. Заблокировано — ничего не меняется, админам онлайн уходит сообщение.
+     */
+    public static com.pigeostudios.pwp.warfare.layout.StartGate.Decision startGameCountdown(
+            ServerLevel level, boolean force) {
         WarfareWorldData data = WarfareWorldData.get(level);
-        // Этап 1: замечания валидатора раскладки — только лог, старт не блокируется
         com.pigeostudios.pwp.warfare.config.MapLayoutState.log("match start");
+        var decision = com.pigeostudios.pwp.warfare.admin.MatchAdmin.gate(force);
+        if (decision.blocked()) {
+            com.pigeostudios.pwp.warfare.admin.MatchAdmin.notifyBlocked(level, decision);
+            return decision;
+        }
+        if (decision.forced()) {
+            LOGGER.warn(
+                    "[MapLayout] Старт матча ПРИНУДИТЕЛЬНО (force) при {} ошибках раскладки",
+                    decision.errors().size());
+        }
         data.match.waitingActive = false;
         data.match.countdownTicks = 100;
         data.match.countdownActive = true;
         data.setDirty();
+        return decision;
     }
 
     public static void cancelCountdown(ServerLevel level) {
@@ -385,11 +405,13 @@ public class GameLogicEvents {
                                 p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("")));
                                 p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
                             }
-                            broadcastMessage(
-                                    level,
-                                    "\u00a7a[PWP] \u0418\u0433\u0440\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F!",
-                                    ChatFormatting.GREEN);
-                            startGameCountdown(level);
+                            // старт может заблокировать валидатор раскладки — «Игра начинается» только при успехе
+                            if (!startGameCountdown(level).blocked()) {
+                                broadcastMessage(
+                                        level,
+                                        "\u00a7a[PWP] \u0418\u0433\u0440\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F!",
+                                        ChatFormatting.GREEN);
+                            }
                         }
                     }
 

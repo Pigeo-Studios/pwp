@@ -92,6 +92,27 @@ public class PWPPauseScreen extends Screen {
                     .style(UIButton.Style.DARK)
                     .icon(UIIcon.SERVER));
         }
+        // блок админ-кнопок — только при уровне MODERATOR+ (уровень сообщает сервер; права проверяет сервер)
+        boolean adminBlock = preview || com.pwp.coreclient.admin.AdminPanel.hasAccess();
+        if (!preview && adminBlock) com.pwp.coreclient.admin.AdminPanel.refresh();
+        if (adminBlock) {
+            buttons.add(new UIButton(Component.translatable("pwp_core.pause.admin_panel"), () -> {
+                        if (preview) {
+                            LOG.info("[PWPUI] pause: admin panel (preview — без действия)");
+                        } else {
+                            com.pwp.coreclient.admin.AdminPanel.open(this);
+                        }
+                    })
+                    .style(UIButton.Style.DARK)
+                    .icon(UIIcon.SERVER));
+            UIButton mapEditor = new UIButton(Component.translatable("pwp_core.pause.map_editor"), () -> {})
+                    .style(UIButton.Style.DARK)
+                    .icon(UIIcon.SETTINGS);
+            mapEditor.setEnabled(false);
+            mapEditor.tooltip(com.pwp.coreclient.ui.UITooltip.Content.of(
+                    Component.translatable("pwp_core.admin.map_editor.soon")));
+            buttons.add(mapEditor);
+        }
         buttons.add(new UIButton(
                         Component.translatable("pwp_core.pause.ui_settings"),
                         () -> mc.setScreen(new PWPUiSettingsScreen(this)))

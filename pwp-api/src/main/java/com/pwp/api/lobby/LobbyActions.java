@@ -16,6 +16,26 @@ public interface LobbyActions {
     /** Перенести игрока в матч с данным id сервера. */
     void joinMatchById(int matchId, ServerPlayer player);
 
+    /*
+     * Админ-панель (вкладка «Лобби»). Право op 2+ уже проверено пакетом. Возврат: null — успех,
+     * иначе ключ перевода ошибки (уходит клиенту в actionResult).
+     */
+
+    /** Начать голосование за карту. */
+    default String adminStartVote(ServerPlayer admin) {
+        return "pwp_core.admin.error.no_lobby";
+    }
+
+    /** Остановить любое идущее голосование. */
+    default String adminStopVote(ServerPlayer admin) {
+        return "pwp_core.admin.error.no_lobby";
+    }
+
+    /** Применить настройки лобби; {@code persist} — ещё и записать на диск (право OWNER проверено пакетом). */
+    default String adminSaveSettings(ServerPlayer admin, com.pwp.api.config.LobbySettings settings, boolean persist) {
+        return "pwp_core.admin.error.no_lobby";
+    }
+
     /** Регистрация реализации (pwp-lobby). */
     static void install(LobbyActions impl) {
         Holder.impl = impl;

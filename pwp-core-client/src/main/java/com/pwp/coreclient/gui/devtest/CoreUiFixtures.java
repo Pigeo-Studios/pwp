@@ -45,6 +45,16 @@ public final class CoreUiFixtures {
     }
 
     public static void registerAll() {
+        // админ-панель с фикстурами всех вкладок (лобби/матч/карта), без пакетов
+        UiGallery.register(
+                "core.admin_panel",
+                () -> new com.pwp.coreclient.admin.AdminPanelScreen(
+                        null,
+                        new com.pwp.coreclient.admin.AdminPanel.Context(
+                                com.pwp.api.security.AccessLevel.OWNER,
+                                java.util.Set.of("moderation", "lobby", "match", "map"),
+                                true),
+                        com.pwp.coreclient.admin.AdminBackend.PREVIEW));
         UiGallery.register("core.main_menu", PWPMainMenuScreen::new);
         UiGallery.register("core.loading.connecting", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
         UiGallery.register("core.loading.world", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.LOADING_WORLD));

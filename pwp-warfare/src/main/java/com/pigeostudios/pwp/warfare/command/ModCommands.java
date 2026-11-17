@@ -14,7 +14,6 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
-import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenSkinInventory;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
@@ -90,6 +89,21 @@ public class ModCommands {
                                                                                                                                                                                                                                                                                                                                 "active",
                                                                                                                                                                                                                                                                                                                                 BoolArgumentType
                                                                                                                                                                                                                                                                                                                                         .bool())
+                                                                                                                                                                                                                                                                                                                        .then(
+                                                                                                                                                                                                                                                                                                                                Commands
+                                                                                                                                                                                                                                                                                                                                        .literal(
+                                                                                                                                                                                                                                                                                                                                                "force")
+                                                                                                                                                                                                                                                                                                                                        .executes(
+                                                                                                                                                                                                                                                                                                                                                ctx ->
+                                                                                                                                                                                                                                                                                                                                                        setGameStart(
+                                                                                                                                                                                                                                                                                                                                                                (CommandSourceStack)
+                                                                                                                                                                                                                                                                                                                                                                        ctx
+                                                                                                                                                                                                                                                                                                                                                                                .getSource(),
+                                                                                                                                                                                                                                                                                                                                                                BoolArgumentType
+                                                                                                                                                                                                                                                                                                                                                                        .getBool(
+                                                                                                                                                                                                                                                                                                                                                                                ctx,
+                                                                                                                                                                                                                                                                                                                                                                                "active"),
+                                                                                                                                                                                                                                                                                                                                                                true)))
                                                                                                                                                                                                                                                                                                                         .executes(
                                                                                                                                                                                                                                                                                                                                 ctx ->
                                                                                                                                                                                                                                                                                                                                         setGameStart(
@@ -992,74 +1006,55 @@ public class ModCommands {
     }
 
     private static int setGameStart(CommandSourceStack source, boolean active) {
-        ServerLevel level = source.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(level);
-        if (active) {
-            data.match.playedBlueSiren = false;
-            data.match.playedRedSiren = false;
-            GameLogicEvents.startGameCountdown(level);
-            source.sendSuccess(
-                    () -> Component.literal("Отсчёт запущен в этом мире!").withStyle(ChatFormatting.GREEN), true);
-        } else {
-            data.match.isGameStarted = false;
-            data.match.invasionSetupActive = false;
-            GameLogicEvents.cancelCountdown(level);
-            data.setDirty();
-            syncDataToAll(level, data);
-            source.sendSuccess(
-                    () -> Component.literal("Игра остановлена в этом мире!").withStyle(ChatFormatting.RED), true);
-        }
+        return setGameStart(source, active, false);
+    }
 
+    /** Старт/стоп через MatchAdmin: ошибка (в т.ч. блок раскладки) — sendFailure, а не «успех». */
+    private static int setGameStart(CommandSourceStack source, boolean active, boolean force) {
+        ServerLevel level = source.getLevel();
+        if (active) {
+            String err = com.pigeostudios.pwp.warfare.admin.MatchAdmin.start(level, force);
+            if (com.pigeostudios.pwp.warfare.admin.MatchAdmin.ERR_LAYOUT_BLOCKED.equals(err)) {
+                var d = com.pigeostudios.pwp.warfare.admin.MatchAdmin.gate(false);
+                source.sendFailure(Component.translatable(
+                        "pwpwarfare.admin.match.cmd_blocked", d.errors().size()));
+                for (var i : d.errors()) {
+                    source.sendFailure(Component.literal(" - ")
+                            .append(Component.translatable(i.langKey()))
+                            .append(i.subject().isEmpty() ? "" : " [" + i.subject() + "]"));
+                }
+                return 0;
+            }
+            return reply(source, err, "pwpwarfare.admin.match.started");
+        }
+        return reply(
+                source, com.pigeostudios.pwp.warfare.admin.MatchAdmin.stop(level), "pwpwarfare.admin.match.stopped");
+    }
+
+    /** Ответ команды по результату MatchAdmin: null — успех (ключ ok), иначе — ошибка. */
+    private static int reply(CommandSourceStack source, String error, String okKey, Object... args) {
+        if (error != null) {
+            source.sendFailure(Component.translatable(error));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable(okKey, args).withStyle(ChatFormatting.GREEN), true);
         return 1;
     }
 
     private static int setGameMode(CommandSourceStack source, String mode) {
-        ServerLevel level = source.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(level);
-        String cleanMode = mode.equalsIgnoreCase("invasion") ? "invasion" : "aas";
-        data.match.gameMode = cleanMode;
-        if (cleanMode.equals("invasion") && !data.match.capturePoints.isEmpty()) {
-            String defender = data.match.invasionDefender != null ? data.match.invasionDefender : "RED";
-
-            for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
-                cp.owner = defender;
-                cp.progress = 1.0F;
-                cp.capturingTeam = "NONE";
-                cp.invLocked = false;
-            }
-        }
-
-        data.setDirty();
-        syncDataToAll(level, data);
-        source.sendSuccess(
-                () -> Component.literal("Game mode set to " + cleanMode + "!").withStyle(ChatFormatting.GREEN), true);
-        return 1;
+        return reply(
+                source,
+                com.pigeostudios.pwp.warfare.admin.MatchAdmin.setMode(source.getLevel(), mode),
+                "pwpwarfare.admin.match.mode_set",
+                mode.toLowerCase(java.util.Locale.ROOT));
     }
 
     private static int setInvasionDefender(CommandSourceStack source, String team) {
-        ServerLevel level = source.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(level);
-        String defender = team.equalsIgnoreCase("blue") ? "BLUE" : "RED";
-        data.match.invasionDefender = defender;
-        if (data.match.gameMode != null
-                && data.match.gameMode.equals("invasion")
-                && !data.match.capturePoints.isEmpty()) {
-
-            for (WarfareWorldData.CapturePoint cp : data.match.capturePoints) {
-                cp.owner = defender;
-                cp.progress = 1.0F;
-                cp.capturingTeam = "NONE";
-                cp.invLocked = false;
-            }
-        }
-
-        data.setDirty();
-        syncDataToAll(level, data);
-        source.sendSuccess(
-                () -> Component.literal("Invasion defender set to " + defender + "!")
-                        .withStyle(ChatFormatting.GREEN),
-                true);
-        return 1;
+        return reply(
+                source,
+                com.pigeostudios.pwp.warfare.admin.MatchAdmin.setDefender(source.getLevel(), team),
+                "pwpwarfare.admin.match.defender_set",
+                team.toUpperCase(java.util.Locale.ROOT));
     }
 
     private static int setRespawnTime(CommandSourceStack source, int seconds) {
@@ -1076,43 +1071,21 @@ public class ModCommands {
     }
 
     private static int setFaction(CommandSourceStack source, String team, String faction) {
-        ServerLevel level = source.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(level);
-        String cleanFaction = faction.toLowerCase();
-        String valueToSave = cleanFaction.equals("clear") ? "none" : cleanFaction;
-        if (team.equalsIgnoreCase("blue")) {
-            data.match.blueFaction = valueToSave;
-        } else if (team.equalsIgnoreCase("red")) {
-            data.match.redFaction = valueToSave;
-        }
-
-        data.setDirty();
-        syncDataToAll(level, data);
-        return 1;
+        return reply(
+                source,
+                com.pigeostudios.pwp.warfare.admin.MatchAdmin.setFaction(source.getLevel(), team, faction),
+                "pwpwarfare.admin.match.faction_set",
+                team.toUpperCase(java.util.Locale.ROOT),
+                faction.toLowerCase(java.util.Locale.ROOT));
     }
 
     private static int setTickets(CommandSourceStack source, String team, int amount) {
-        ServerLevel level = source.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(level);
-        if (team.equalsIgnoreCase("blue")) {
-            data.match.blueTickets = amount;
-            if (amount > 50) {
-                data.match.playedBlueSiren = false;
-            }
-        } else if (team.equalsIgnoreCase("red")) {
-            data.match.redTickets = amount;
-            if (amount > 50) {
-                data.match.playedRedSiren = false;
-            }
-        }
-
-        data.setDirty();
-        syncDataToAll(level, data);
-        source.sendSuccess(
-                () -> Component.literal(team.toUpperCase() + " tickets set to " + amount)
-                        .withStyle(ChatFormatting.GOLD),
-                true);
-        return 1;
+        return reply(
+                source,
+                com.pigeostudios.pwp.warfare.admin.MatchAdmin.setTickets(source.getLevel(), team, amount),
+                "pwpwarfare.admin.match.tickets_set",
+                team.toUpperCase(java.util.Locale.ROOT),
+                amount);
     }
 
     private static int setDeathTickets(CommandSourceStack source, int amount) {
@@ -1585,45 +1558,11 @@ public class ModCommands {
     }
 
     private static int togglePause(CommandSourceStack source) {
-        ServerLevel level = source.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(level);
-        data.match.isPaused = !data.match.isPaused;
-        data.setDirty();
-        PacketHandler.sendToAllClients(level, data);
-        if (data.match.isPaused) {
-            Scoreboard scoreboard = level.getScoreboard();
-            PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
-            PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
-            if (blueTeam != null) blueTeam.setAllowFriendlyFire(false);
-            if (redTeam != null) redTeam.setAllowFriendlyFire(false);
-            String title = "\u00a7c\u00a7lИГРА НА ПАУЗЕ";
-            String subtitle = "\u00a7eИспользуйте /pwpwarfare pause для возобновления";
-            for (ServerPlayer p : level.players()) {
-                p.connection.send(new ClientboundSetTitlesAnimationPacket(10, 999999, 10));
-                p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(subtitle)));
-                p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(title)));
-            }
-            source.sendSuccess(() -> Component.literal("\u00a7cИгра на паузе! Тикеты, захваты, ПВП заморожены."), true);
-            level.getServer()
-                    .getPlayerList()
-                    .broadcastSystemMessage(Component.literal("\u00a7c\u00a7lИГРА НА ПАУЗЕ администратором"), false);
-        } else {
-            Scoreboard scoreboard = level.getScoreboard();
-            PlayerTeam blueTeam = scoreboard.getPlayerTeam("Blue");
-            PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
-            if (blueTeam != null) blueTeam.setAllowFriendlyFire(true);
-            if (redTeam != null) redTeam.setAllowFriendlyFire(true);
-            for (ServerPlayer p : level.players()) {
-                p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 0, 0));
-                p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("")));
-                p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
-            }
-            source.sendSuccess(() -> Component.literal("\u00a7aИгра возобновлена!"), true);
-            level.getServer()
-                    .getPlayerList()
-                    .broadcastSystemMessage(
-                            Component.literal("\u00a7a\u00a7lИГРА ВОЗОБНОВЛЕНА администратором"), false);
-        }
+        boolean paused = com.pigeostudios.pwp.warfare.admin.MatchAdmin.togglePause(source.getLevel());
+        source.sendSuccess(
+                () -> Component.translatable(
+                        paused ? "pwpwarfare.admin.match.paused_chat" : "pwpwarfare.admin.match.resumed_chat"),
+                true);
         return 1;
     }
 }

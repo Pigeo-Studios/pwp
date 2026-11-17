@@ -142,6 +142,21 @@ public class WarfareConfig {
     public static final IntValue REB_MAX_PER_TEAM =
             BUILDER.comment("Max REB/mini-REB entities per team (anti-spam)").defineInRange("rebMaxPerTeam", 3, 1, 20);
 
+    // этап 2: значения, раньше зашитые в код
+    public static final IntValue WAITING_PHASE_SECONDS = BUILDER.comment(
+                    "Waiting-for-players phase before the match countdown, seconds (was hardcoded 300)")
+            .defineInRange("waitingPhaseSeconds", 300, 0, 3600);
+    public static final IntValue FOB_DISMANTLE_PENALTY = BUILDER.comment(
+                    "Tickets lost when a team dismantles its own FOB (was hardcoded 10)")
+            .defineInRange("fobDismantlePenalty", 10, 0, 1000);
+    public static final IntValue FOB_DESTROY_PENALTY = BUILDER.comment(
+                    "Tickets lost when a team's FOB is destroyed by the enemy (was hardcoded 30)")
+            .defineInRange("fobDestroyPenalty", 30, 0, 1000);
+    public static final BooleanValue BLOCK_START_ON_LAYOUT_ERRORS = BUILDER.comment(
+                    "Block match start (all paths) while the map layout validator reports ERRORs;"
+                            + " admins can still force-start from the admin panel or with /pwpwarfare gamestart true force")
+            .define("blockStartOnLayoutErrors", true);
+
     static {
         BUILDER.push("Gameplay Settings");
         BUILDER.pop();

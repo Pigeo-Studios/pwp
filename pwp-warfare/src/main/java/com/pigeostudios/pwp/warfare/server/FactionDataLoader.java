@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.network.PacketRespawnRequest;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.time.GameClock;
+import com.pwp.api.util.Backoff;
 import com.pwp.api.util.ServerThread;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -42,8 +43,10 @@ import org.slf4j.LoggerFactory;
 public final class FactionDataLoader {
     private static final Logger LOG = LoggerFactory.getLogger(FactionDataLoader.class);
 
-    /** Пауза между повторами загрузки: 10 с. */
+    /** Первая пауза между повторами загрузки: 10 с; дальше удваивается (Backoff) до {@link #RETRY_MAX_TICKS}. */
     static final int RETRY_TICKS = 200;
+    /** Потолок паузы: 5 мин (core-service выключен на тест-стенде — не спамить лог и сеть). */
+    static final int RETRY_MAX_TICKS = 6000;
 
     public enum Team {
         BLUE,
@@ -187,14 +190,20 @@ public final class FactionDataLoader {
             if (response == null
                     || !response.has("data")
                     || !response.get("data").isJsonArray()) {
-                slot.nextAttemptTick = GameClock.serverTicks(server) + RETRY_TICKS;
-                LOG.error(
-                        "{} фракции {} ({}) не загружены из core-service (попытка {}), повтор через {} с",
-                        kind,
-                        slot.faction,
-                        team,
-                        slot.attempts,
-                        RETRY_TICKS / 20);
+                long delay = Backoff.delay(slot.attempts, RETRY_TICKS, RETRY_MAX_TICKS);
+                slot.nextAttemptTick = GameClock.serverTicks(server) + delay;
+                // громко — только на попытках 1, 2, 4, 8…; остальные — debug (раньше ERROR каждые 10 с)
+                if (Backoff.loud(slot.attempts)) {
+                    LOG.warn(
+                            "{} фракции {} ({}) не загружены из core-service (попытка {}), повтор через {} с",
+                            kind,
+                            slot.faction,
+                            team,
+                            slot.attempts,
+                            delay / 20);
+                } else {
+                    LOG.debug("{} фракции {} ({}): попытка {} неудачна", kind, slot.faction, team, slot.attempts);
+                }
                 return;
             }
             WarfareWorldData current = WarfareWorldData.get(target);

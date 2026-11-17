@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
+import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
@@ -99,15 +100,19 @@ public class HubBlock extends BaseEntityBlock {
                 hub.setChanged();
                 ServerLevel serverLevel = (ServerLevel) level;
                 WarfareWorldData data = WarfareWorldData.get(serverLevel);
-                int penalty = 10;
+                int penalty = WarfareConfig.FOB_DISMANTLE_PENALTY.get();
                 if (hubTeam.equalsIgnoreCase("BLUE")) {
                     data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
-                            serverLevel, "BLUE player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.BLUE);
+                            serverLevel,
+                            "BLUE player dismantled Friendly FOB! (-" + penalty + " Tickets)",
+                            ChatFormatting.BLUE);
                 } else if (hubTeam.equalsIgnoreCase("RED")) {
                     data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
-                            serverLevel, "RED player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.RED);
+                            serverLevel,
+                            "RED player dismantled Friendly FOB! (-" + penalty + " Tickets)",
+                            ChatFormatting.RED);
                 }
 
                 data.setDirty();
@@ -128,13 +133,15 @@ public class HubBlock extends BaseEntityBlock {
             if ((Boolean) state.getValue(CONSTRUCTED)) {
                 String hubTeam = hub.getTeam();
                 if (!hub.wasDismantled && !hubTeam.equals("NEUTRAL")) {
-                    int penalty = 30;
+                    int penalty = WarfareConfig.FOB_DESTROY_PENALTY.get();
                     if (hubTeam.equalsIgnoreCase("BLUE")) {
                         data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
-                        this.broadcastMessage(serverLevel, "BLUE FOB Destroyed! (-30 Tickets)", ChatFormatting.BLUE);
+                        this.broadcastMessage(
+                                serverLevel, "BLUE FOB Destroyed! (-" + penalty + " Tickets)", ChatFormatting.BLUE);
                     } else if (hubTeam.equalsIgnoreCase("RED")) {
                         data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
-                        this.broadcastMessage(serverLevel, "RED FOB Destroyed! (-30 Tickets)", ChatFormatting.RED);
+                        this.broadcastMessage(
+                                serverLevel, "RED FOB Destroyed! (-" + penalty + " Tickets)", ChatFormatting.RED);
                     }
                 }
             }

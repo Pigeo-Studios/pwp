@@ -24,6 +24,9 @@ public class CoreClientMod {
             // лобби: клавиша «Меню лобби», подсказка в HUD, тост при старте голосования
             com.pwp.coreclient.lobby.LobbyHud.init(
                     FMLJavaModLoadingContext.get().getModEventBus());
+            // админ-панель: клавиша F6, состояние «я админ» (adminInfo), реестр вкладок
+            com.pwp.coreclient.admin.AdminPanel.init(
+                    FMLJavaModLoadingContext.get().getModEventBus());
             // настройки интерфейса: свои регистрируем сразу, файл читаем до открытия экранов
             // (настройки модов, зарегистрированные позже, подхватят значения из файла)
             com.pwp.coreclient.settings.CoreUiSettings.init();

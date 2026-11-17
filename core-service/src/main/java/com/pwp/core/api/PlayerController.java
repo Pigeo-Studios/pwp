@@ -83,6 +83,15 @@ public class PlayerController {
             ctx.json(ApiResponse.ok(profile));
         });
 
+        // Роль игрока (user/support/admin/owner) — для уровня доступа в игре (PwpPermissions), без профиля
+        app.get("/api/v1/player/{uuid}/role", ctx -> {
+            String uuid = ctx.pathParam("uuid");
+            Player player = PlayerRepository.findByUuid(uuid);
+            if (player == null) throw new NotFoundResponse();
+            ctx.json(ApiResponse.ok(java.util.Map.of(
+                    "uuid", player.uuid, "role", player.role == null ? "user" : player.role)));
+        });
+
         app.get("/api/v1/leaderboard", ctx -> {
             String orderBy = ctx.queryParam("orderBy") != null ? ctx.queryParam("orderBy") : "kills";
             int page = ctx.queryParam("page") != null ? Integer.parseInt(ctx.queryParam("page")) : 1;

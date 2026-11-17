@@ -5,6 +5,7 @@ import com.pwp.coreclient.CoreClientMod;
 import com.pwp.coreclient.network.data.AdminAction;
 import com.pwp.coreclient.network.data.DataRequest;
 import com.pwp.coreclient.network.data.DataResponse;
+import com.pwp.coreclient.network.data.ModerationAction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -47,6 +48,36 @@ public class PacketHandler {
                 .c2s(
                         AdminAction.DeleteFactionVehicle.class,
                         AdminAction.DeleteFactionVehicle::encode,
-                        AdminAction.DeleteFactionVehicle::decode);
+                        AdminAction.DeleteFactionVehicle::decode)
+                // этап 2: админ-панель, вкладка «Лобби»
+                .c2s(
+                        AdminAction.LobbyStartVote.class,
+                        AdminAction.LobbyStartVote::encode,
+                        AdminAction.LobbyStartVote::decode)
+                .c2s(
+                        AdminAction.LobbyStopVote.class,
+                        AdminAction.LobbyStopVote::encode,
+                        AdminAction.LobbyStopVote::decode)
+                .c2s(
+                        AdminAction.LobbySaveSettings.class,
+                        AdminAction.LobbySaveSettings::encode,
+                        AdminAction.LobbySaveSettings::decode)
+                // уровень доступа (AccessSync) и вкладка «Модерация»
+                .s2c(AccessLevelPacket.class, AccessLevelPacket::encode, AccessLevelPacket::decode)
+                .c2s(ModerationAction.Kick.class, ModerationAction.Kick::encode, ModerationAction.Kick::decode)
+                .c2s(ModerationAction.Ban.class, ModerationAction.Ban::encode, ModerationAction.Ban::decode)
+                .c2s(ModerationAction.Warn.class, ModerationAction.Warn::encode, ModerationAction.Warn::decode)
+                .c2s(
+                        ModerationAction.VoiceMute.class,
+                        ModerationAction.VoiceMute::encode,
+                        ModerationAction.VoiceMute::decode)
+                .c2s(
+                        ModerationAction.TeamJoin.class,
+                        ModerationAction.TeamJoin::encode,
+                        ModerationAction.TeamJoin::decode)
+                .c2s(
+                        ModerationAction.ClearTeamkill.class,
+                        ModerationAction.ClearTeamkill::encode,
+                        ModerationAction.ClearTeamkill::decode);
     }
 }

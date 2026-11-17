@@ -362,6 +362,8 @@ public class PacketHandler {
         com.pigeostudios.pwp.warfare.squad.SquadPackets.register(v2);
         v2.c2s(PacketRespawnRequest.class, PacketRespawnRequest::encode, PacketRespawnRequest::decode)
                 .c2s(PacketSelectKit.class, PacketSelectKit::encode, PacketSelectKit::decode);
+        // этап 2: админ-панель, вкладка «Матч» (только в конец)
+        com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.register(v2);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

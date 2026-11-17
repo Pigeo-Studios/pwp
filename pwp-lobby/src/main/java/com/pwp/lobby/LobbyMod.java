@@ -116,7 +116,12 @@ public class LobbyMod {
 
             MapRegistry.configure(foundPath);
             MapRegistry.loadAll();
-            MatchAllocator.configure(1);
+            // настройки лобби из config/pwp_lobby.json (раньше minPlayers=1 был зашит здесь)
+            ServerConfig.load();
+            // админ-панель: вкладка «Лобби» видна только на лобби-сервере
+            LobbyActionsImpl.registerData();
+            com.pwp.coreclient.network.data.AdminInfo.addFeature(
+                    com.pwp.coreclient.network.data.AdminInfo.FEATURE_LOBBY);
         });
     }
 
@@ -446,8 +451,9 @@ public class LobbyMod {
             serverBroadcast("§7[PWP] Идёт голосование за фракции! §e/votefaction §7<синие> <красные>");
         }
 
-        // Автозапуск голосования, если ничего не активно и политика разрешает
-        if (!MatchAllocator.hasActiveMatch() && !isAnyVoteActive()) {
+        // Автозапуск голосования, если включён автостарт, ничего не активно и политика разрешает
+        // (раньше флаг autostart здесь не проверялся — голосование стартовало при каждом входе)
+        if (ServerConfig.isAutoStartEnabled() && !MatchAllocator.hasActiveMatch() && !isAnyVoteActive()) {
             VotingManager.startVoting();
             sendLobbyStateToPlayer(player);
         }
@@ -645,38 +651,24 @@ public class LobbyMod {
                         }))
                         // /pwp server stopvote
                         .then(Commands.literal("stopvote").executes(ctx -> {
-                            boolean any = false;
-                            if (VotingManager.isActive()) {
-                                VotingManager.stopVoting();
-                                any = true;
-                            }
-                            if (modeVoteActive) {
-                                modeVoteActive = false;
-                                modeVotes.clear();
-                                any = true;
-                            }
-                            if (FactionVotingManager.isActive()) {
-                                FactionVotingManager.stop();
-                                any = true;
-                            }
-                            if (any) {
-                                serverBroadcast("§e[PWP] §fГолосование остановлено администратором");
+                            if (stopAllVotes()) {
                                 ctx.getSource().sendSuccess(() -> Component.literal("Голосование остановлено"), true);
-                            } else {
-                                ctx.getSource().sendFailure(Component.literal("Нет активного голосования"));
+                                return Command.SINGLE_SUCCESS;
                             }
-                            broadcastLobbyState();
-                            return Command.SINGLE_SUCCESS;
+                            ctx.getSource().sendFailure(Component.literal("Нет активного голосования"));
+                            return 0;
                         }))
                         // /pwp server autostart on|off
                         .then(Commands.literal("autostart")
                                 .then(Commands.literal("on").executes(ctx -> {
-                                    ServerConfig.setAutoStartEnabled(true);
+                                    ServerConfig.setAutoStartEnabled(
+                                            true, ctx.getSource().hasPermission(4));
                                     ctx.getSource().sendSuccess(() -> Component.literal("Авто-старт включён"), true);
                                     return Command.SINGLE_SUCCESS;
                                 }))
                                 .then(Commands.literal("off").executes(ctx -> {
-                                    ServerConfig.setAutoStartEnabled(false);
+                                    ServerConfig.setAutoStartEnabled(
+                                            false, ctx.getSource().hasPermission(4));
                                     ctx.getSource().sendSuccess(() -> Component.literal("Авто-старт отключён"), true);
                                     return Command.SINGLE_SUCCESS;
                                 })))
@@ -687,7 +679,8 @@ public class LobbyMod {
                                         .executes(ctx -> {
                                             int n = com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(
                                                     ctx, "count");
-                                            ServerConfig.setMaxMatches(n);
+                                            ServerConfig.setMaxMatches(
+                                                    n, ctx.getSource().hasPermission(4));
                                             ctx.getSource()
                                                     .sendSuccess(() -> Component.literal("Макс. матчей: " + n), true);
                                             return Command.SINGLE_SUCCESS;
@@ -967,7 +960,35 @@ public class LobbyMod {
         modeVotes.clear();
     }
 
-    private static int getModeVoteRemainingSeconds() {
+    /**
+     * Остановить любое идущее голосование (карта/режим/фракции) — команда {@code stopvote} и админ-панель.
+     * false — ничего не шло.
+     */
+    public static boolean stopAllVotes() {
+        boolean any = false;
+        if (VotingManager.isActive()) {
+            VotingManager.stopVoting();
+            any = true;
+        }
+        if (modeVoteActive) {
+            modeVoteActive = false;
+            modeVotes.clear();
+            any = true;
+        }
+        if (FactionVotingManager.isActive()) {
+            FactionVotingManager.stop();
+            any = true;
+        }
+        if (any) serverBroadcast("§e[PWP] §fГолосование остановлено администратором");
+        broadcastLobbyState();
+        return any;
+    }
+
+    public static boolean isModeVoteActive() {
+        return modeVoteActive;
+    }
+
+    static int getModeVoteRemainingSeconds() {
         if (!modeVoteActive) return 0;
         long elapsed = System.currentTimeMillis() - modeVoteStartTime;
         int remaining = modeVoteDurationSec - (int) (elapsed / 1000);
