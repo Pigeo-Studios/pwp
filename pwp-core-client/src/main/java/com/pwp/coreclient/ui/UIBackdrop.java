@@ -24,13 +24,16 @@ public final class UIBackdrop {
 
     public static void overlay(GuiGraphics g, int w, int h, Shade shade) {
         Rect screen = Rect.screen(w, h);
-        UIDraw.gradientV(g, screen, Styles.Backdrop.SCRIM_TOP, Styles.Backdrop.SCRIM_BOTTOM);
+        // сила затемнения — настройка «Затемнение фона меню» (1 = как в теме)
+        float dim = com.pwp.coreclient.settings.CoreUiSettings.BACKDROP_DIM.get();
+        UIDraw.gradientV(
+                g, screen, UIDraw.fade(Styles.Backdrop.SCRIM_TOP, dim), UIDraw.fade(Styles.Backdrop.SCRIM_BOTTOM, dim));
         if (shade == Shade.LEFT) {
             int sw = Math.round(w * Styles.Backdrop.SIDE_SHADE_FRACTION);
             UIDraw.gradientH(
                     g,
                     Rect.of(0, 0, sw, h),
-                    Styles.Backdrop.SIDE_SHADE,
+                    UIDraw.fade(Styles.Backdrop.SIDE_SHADE, dim),
                     Colors.withAlpha(Styles.Backdrop.SIDE_SHADE, 0));
         }
         UIDraw.noise(g, screen, Styles.Backdrop.NOISE_TINT);

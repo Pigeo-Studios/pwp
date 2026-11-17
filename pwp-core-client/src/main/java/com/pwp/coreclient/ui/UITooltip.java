@@ -18,6 +18,11 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public final class UITooltip {
     /** Задержка показа, мс. */
     public static final long DELAY_MS = 350;
+    /** Текущая задержка показа (настройка «Задержка подсказок»), мс. */
+    public static long delayMs() {
+        return Math.round(com.pwp.coreclient.settings.CoreUiSettings.TOOLTIP_DELAY_MS.get());
+    }
+
     /** Максимальная ширина текста до переноса. */
     public static final int MAX_WIDTH = 200;
 

@@ -88,6 +88,11 @@ public class PWPMainMenuScreen extends Screen {
                                 .setScreen(new OptionsScreen(this, Minecraft.getInstance().options)))
                         .style(UIButton.Style.DARK)
                         .icon(UIIcon.SETTINGS));
+        menuButtons.add(
+                new UIButton(Component.translatable("pwp_core.main_menu.ui_settings"), () -> Minecraft.getInstance()
+                                .setScreen(new PWPUiSettingsScreen(this)))
+                        .style(UIButton.Style.DARK)
+                        .icon(UIIcon.SLIDERS));
         if (replayModAvailable) {
             menuButtons.add(
                     new UIButton(Component.translatable("pwp_core.main_menu.replay_viewer"), this::openReplayViewer)

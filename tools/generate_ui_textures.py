@@ -283,9 +283,37 @@ def play():
     return poly((4, 2.5), (4, 13.5), (13.5, 8))
 
 
+def keyboard():
+    """Клавиатура: корпус с рядами клавиш-прорезей и пробелом."""
+    holes = []
+    for row, y in enumerate((5, 8)):
+        for i in range(5):
+            holes.append(rect(2.5 + i * 2.4, y, 3.9 + i * 2.4, y + 1.6))
+    holes.append(rect(4.5, 11, 11.5, 12.6))
+    return minus(rect(0.8, 3, 15.2, 14), *holes)
+
+
+def mods():
+    """Моды: четыре блока 2x2, правый верхний сдвинут (как «сборка»)."""
+    return union(
+        rect(1.5, 8.5, 7.5, 14.5), rect(8.5, 8.5, 14.5, 14.5),
+        rect(1.5, 1.5, 7.5, 7.5), rect(9.5, 0.8, 15.2, 6.5),
+    )
+
+
+def sliders():
+    """Ползунки: три линии с ручками на разных позициях."""
+    return union(
+        rect(1, 3, 15, 4.4), rect(3, 1, 6, 6.4),
+        rect(1, 7.4, 15, 8.8), rect(9.5, 5.4, 12.5, 10.8),
+        rect(1, 11.8, 15, 13.2), rect(5.5, 9.8, 8.5, 15.2),
+    )
+
+
 ICONS = [
     play(), profile(), gear(), power(), flag(), warning(), arrow_back(), record(),
     crosshair(), burst(), rocket(), cross(), info(), check(), close(), server(),
+    keyboard(), mods(), sliders(),
 ]
 
 
@@ -305,7 +333,7 @@ def rasterize(shape):
 
 
 def icons():
-    cols, rows = 8, 2
+    cols, rows = 8, 3
     px = blank(cols * CELL, rows * CELL)
     for i, shape in enumerate(ICONS):
         cell = rasterize(shape)
@@ -323,7 +351,7 @@ def main():
         "scanlines.png": (64, 64, scanlines()),
         "frame.png": (32, 32, frame()),
         "shadow.png": (32, 32, shadow()),
-        "icons.png": (128, 32, icons()),
+        "icons.png": (128, 48, icons()),
     }
     for name, (w, h, px) in outputs.items():
         path = os.path.join(OUT, name)

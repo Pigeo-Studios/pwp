@@ -66,6 +66,7 @@ public final class UIMath {
      * (delay + index * stagger), затем ease-out-cubic за {@code duration} мс, потом 1.
      */
     public static float stagger(long elapsedMs, int index, long delayMs, long staggerMs, long durationMs) {
+        if (!UIAnim.animationsEnabled()) return 1F;
         double t = (elapsedMs - delayMs - (double) index * staggerMs) / Math.max(1, durationMs);
         if (t <= 0) return 0F;
         if (t >= 1) return 1F;

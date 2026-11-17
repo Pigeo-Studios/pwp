@@ -190,6 +190,29 @@ public class PWPTheme {
 
         public static final int TOGGLE_WIDTH = 36;
         public static final int TOGGLE_HEIGHT = 16;
+        /** Ползунок настроек: толщина трека и размер ручки. */
+        public static final int SLIDER_TRACK_H = 3;
+
+        public static final int SLIDER_KNOB_W = 6;
+        public static final int SLIDER_KNOB_H = 12;
+        /** Тумблер настроек (компактный): ширина/высота. */
+        public static final int SWITCH_W = 26;
+
+        public static final int SWITCH_H = 12;
+        /** Ширина стрелки у выбора «‹ значение ›». */
+        public static final int CHOICE_ARROW_W = 12;
+        /** Экран настроек интерфейса: ряд, колонки и пределы. */
+        public static final int SETTING_ROW_H = 20;
+
+        public static final int SETTING_ROW_H_COMPACT = 16;
+        public static final int SETTING_CONTROL_MIN_W = 80;
+        public static final int SETTING_CONTROL_MAX_W = 190;
+        public static final int SETTING_VALUE_W = 40;
+        public static final int SETTING_LABEL_MIN_W = 60;
+        public static final int SETTING_CAT_MIN_W = 80;
+        public static final int SETTING_CAT_MAX_W = 160;
+        public static final int SETTINGS_MAX_W = 680;
+        public static final int SETTING_ACTION_MAX_W = 150;
 
         // --- Редизайн 2026-11 (тактический стиль: строгая сетка, 1px линии) ---
         /** Тонкая линия обводки/разделителя. */
@@ -333,6 +356,8 @@ public class PWPTheme {
     // ============================================================
 
     public static class Animations {
+        /** Перемещение ручки тумблера/ползунка. */
+        public static final int DURATION_KNOB = 140;
 
         public static final int DURATION_INSTANT = 50;
         public static final int DURATION_FAST = 100;
@@ -439,7 +464,7 @@ public class PWPTheme {
         public static final net.minecraft.resources.ResourceLocation ICONS = ui("icons");
 
         public static final int ICONS_W = 128;
-        public static final int ICONS_H = 32;
+        public static final int ICONS_H = 48;
         public static final int ICON_CELL = 16;
 
         private Textures() {}
@@ -681,6 +706,26 @@ public class PWPTheme {
             public static final int DANGER_TOP = 0xE0A53D3D;
             public static final int DANGER_BOTTOM = 0xE0702424;
             public static final int DANGER_BORDER = 0xFFC86060;
+        }
+
+        /** Контролы настроек: ползунок, тумблер, выбор (UISlider/UIToggle/UIChoice). */
+        public static class Setting {
+            public static final int TRACK = 0x40FFFFFF;
+            public static final int TRACK_DISABLED = 0x1AFFFFFF;
+            public static final int FILL = Colors.ACCENT;
+            public static final int FILL_DISABLED = 0x59FFFFFF;
+            public static final int KNOB = 0xFFE6E8EA;
+            public static final int KNOB_HOVER = 0xFFFFFFFF;
+            public static final int KNOB_BORDER = 0xCC000000;
+            public static final int TOGGLE_OFF = 0x66101318;
+            public static final int TOGGLE_ON = 0xCCC8812A;
+            public static final int VALUE = Colors.TEXT_ACCENT;
+            public static final int LABEL = Colors.TEXT_PRIMARY;
+            public static final int LABEL_CHANGED = Colors.TEXT_ACCENT;
+            public static final int ROW_HOVER = 0x14FFFFFF;
+            public static final int ROW_DIVIDER = 0x14FFFFFF;
+            public static final int ARROW = Colors.TEXT_SECONDARY;
+            public static final int ARROW_HOVER = Colors.ACCENT;
         }
 
         /** Цвета категорий ролей (иконки UIIcon.DIRECT_COMBAT..SUPPORT). */

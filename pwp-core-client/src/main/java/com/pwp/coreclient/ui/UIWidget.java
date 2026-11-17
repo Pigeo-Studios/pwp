@@ -80,6 +80,11 @@ public abstract class UIWidget {
         return false;
     }
 
+    /** Перетаскивание с зажатой кнопкой (ползунки); true — обработано. */
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        return false;
+    }
+
     public boolean mouseScrolled(double mx, double my, double delta) {
         return false;
     }

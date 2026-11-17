@@ -21,6 +21,10 @@ public class CoreClientMod {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ClientScreenHandler.init();
+            // настройки интерфейса: свои регистрируем сразу, файл читаем до открытия экранов
+            // (настройки модов, зарегистрированные позже, подхватят значения из файла)
+            com.pwp.coreclient.settings.CoreUiSettings.init();
+            com.pwp.coreclient.settings.UiSettingsFile.load();
             // тест-стенд UI (/pwpui): только -Dpwp.uitest=true или dev-окружение
             com.pwp.coreclient.gui.devtest.UiTestCommand.init();
         }

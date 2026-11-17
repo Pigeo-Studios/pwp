@@ -25,6 +25,17 @@ public final class UIAnim {
     /** Системные часы UI (мс). */
     public static final LongSupplier REAL_TIME = () -> System.nanoTime() / 1_000_000L;
 
+    /** Глобальный выключатель анимаций (настройка «Анимации интерфейса»): выкл — мгновенно. */
+    private static volatile boolean animationsEnabled = true;
+
+    public static void setAnimationsEnabled(boolean enabled) {
+        animationsEnabled = enabled;
+    }
+
+    public static boolean animationsEnabled() {
+        return animationsEnabled;
+    }
+
     private final long durationMs;
     private final Easing easing;
     private final LongSupplier clock;
@@ -69,6 +80,7 @@ public final class UIAnim {
 
     /** Линейный прогресс 0..1 текущего перехода. */
     public float progress() {
+        if (!animationsEnabled) return 1F;
         long elapsed = clock.getAsLong() - startMs;
         return Math.max(0F, Math.min(1F, (float) elapsed / durationMs));
     }

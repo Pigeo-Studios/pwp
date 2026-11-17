@@ -145,11 +145,13 @@ public final class UIDraw {
 
     /** Тонкий шум поверх области. */
     public static void noise(GuiGraphics g, Rect r, int tint) {
+        if (!com.pwp.coreclient.settings.CoreUiSettings.BACKDROP_FX.get()) return;
         tile(g, Textures.NOISE, r, Textures.TILE_SIZE, tint);
     }
 
     /** Скан-лайны (каждая вторая GUI-строка) поверх области. */
     public static void scanlines(GuiGraphics g, Rect r, int tint) {
+        if (!com.pwp.coreclient.settings.CoreUiSettings.BACKDROP_FX.get()) return;
         tile(g, Textures.SCANLINES, r, Textures.TILE_SIZE, tint);
     }
 

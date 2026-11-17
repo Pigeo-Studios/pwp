@@ -24,7 +24,10 @@ public enum UIIcon {
     INFO,
     CHECK,
     CLOSE,
-    SERVER;
+    SERVER,
+    KEYBOARD,
+    MODS,
+    SLIDERS;
 
     private static final int COLUMNS = Textures.ICONS_W / Textures.ICON_CELL;
 

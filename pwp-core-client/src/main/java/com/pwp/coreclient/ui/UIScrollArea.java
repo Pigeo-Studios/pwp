@@ -122,6 +122,15 @@ public class UIScrollArea extends UIWidget {
         return handled;
     }
 
+    /** Перетаскивание — всем детям (ползунок держит захват, даже если курсор ушёл). */
+    @Override
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        for (UIWidget c : children) {
+            if (c.isVisible() && c.mouseDragged(mx, my, button, dx, dy)) return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (!isMouseOver(mx, my) || contentHeight <= height) return false;

@@ -2,8 +2,11 @@ package com.pwp.coreclient;
 
 import com.pwp.coreclient.gui.screens.PWPDisconnectedScreen;
 import com.pwp.coreclient.gui.screens.PWPMainMenuScreen;
+import com.pwp.coreclient.gui.screens.PWPPauseScreen;
 import com.pwp.coreclient.mixin.DisconnectedScreenAccessor;
+import com.pwp.coreclient.mixin.PauseScreenAccessor;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.network.chat.Component;
@@ -22,6 +25,10 @@ public class ClientScreenHandler {
             event.setNewScreen(new PWPMainMenuScreen());
         } else if (event.getNewScreen() instanceof JoinMultiplayerScreen) {
             event.setNewScreen(new PWPMainMenuScreen());
+        } else if (event.getNewScreen() instanceof PauseScreen pause
+                && ((PauseScreenAccessor) pause).getShowPauseMenu()) {
+            // своё меню паузы; F3+Esc (пауза без меню, showPauseMenu=false) — ванильное
+            event.setNewScreen(new PWPPauseScreen());
         } else if (event.getNewScreen() instanceof DisconnectedScreen) {
             Component reason = ((DisconnectedScreenAccessor) event.getNewScreen()).getReason();
             event.setNewScreen(new PWPDisconnectedScreen(reason));

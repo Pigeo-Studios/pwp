@@ -63,6 +63,13 @@ public final class CoreUiFixtures {
         UiGallery.register("vanilla.level_loading", () -> new LevelLoadingScreen(new StoringChunkProgressListener(11)));
         UiGallery.register("core.disconnect.short", () -> new PWPDisconnectedScreen(Component.literal("Timed out")));
         UiGallery.register("core.disconnect.long", () -> new PWPDisconnectedScreen(Component.literal(longReason())));
+        // меню паузы (превью: «Отключиться» только пишет в лог) и настройки интерфейса
+        UiGallery.register("core.pause", () -> new com.pwp.coreclient.gui.screens.PWPPauseScreen(true));
+        UiGallery.register("core.ui_settings", () -> new com.pwp.coreclient.gui.screens.PWPUiSettingsScreen(null));
+        UiGallery.register("core.ui_settings.long", () -> {
+            UiSettingsFixtures.ensureRegistered();
+            return new com.pwp.coreclient.gui.screens.PWPUiSettingsScreen(null, UiSettingsFixtures.CATEGORY_ID);
+        });
         UiGallery.register(
                 "core.disconnect.colored",
                 () -> new PWPDisconnectedScreen(Component.empty()

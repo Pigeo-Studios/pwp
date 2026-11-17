@@ -98,7 +98,7 @@ public final class UILayer {
             hoverStartMs = now;
             tooltipAlpha.snap(0F);
         }
-        if (owner != null && now - hoverStartMs >= UITooltip.DELAY_MS) tooltipAlpha.to(1F);
+        if (owner != null && now - hoverStartMs >= UITooltip.delayMs()) tooltipAlpha.to(1F);
         if (owner != null) UITooltip.render(g, owner.tooltip(), mouseX, mouseY, screenW, screenH, tooltipAlpha.value());
     }
 
@@ -120,6 +120,16 @@ public final class UILayer {
             if (widgets.get(i).mouseReleased(mx, my, button)) handled = true;
         }
         return handled;
+    }
+
+    /** Перетаскивание получают все видимые виджеты сверху вниз (захват ползунком). */
+    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (hasModal()) return true;
+        for (int i = widgets.size() - 1; i >= 0; i--) {
+            UIWidget w = widgets.get(i);
+            if (w.isVisible() && w.mouseDragged(mx, my, button, dx, dy)) return true;
+        }
+        return false;
     }
 
     public List<UIWidget> widgets() {
