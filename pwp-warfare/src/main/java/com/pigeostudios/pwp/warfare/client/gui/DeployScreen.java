@@ -114,7 +114,7 @@ public class DeployScreen extends Screen {
     private final AnimMap tabAnim = new AnimMap(PWPTheme.Animations.DURATION_NORMAL);
     private final AnimMap hover = new AnimMap();
 
-    private UIButton selectSpawnBtn, createSquadBtn, applyCmdBtn;
+    private UIButton selectSpawnBtn, createSquadBtn, applyCmdBtn, closeBtn;
     private EditBox squadInput, chatInput;
     private int mySquadId = -1;
     private int lastSquadCount;
@@ -283,6 +283,10 @@ public class DeployScreen extends Screen {
                 })
                 .style(UIButton.Style.DARK);
         applyCmdBtn.setVisible(false);
+        // Явный выход из меню (кроме Esc и повторного K) — живой/ждущий игрок не должен застревать
+        closeBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.button.close"), this::onClose)
+                .style(UIButton.Style.GHOST)
+                .icon(UIIcon.CLOSE);
         squadInput = addRenderableWidget(new EditBox(font, 0, 0, 90, WTheme.FIELD_H, Component.empty()));
         squadInput.setMaxLength(12);
         squadInput.setBordered(false);
@@ -538,6 +542,14 @@ public class DeployScreen extends Screen {
         contextMenu.render(g, mx, my);
     }
 
+    /** Кнопка «Закрыть» — правый край верхней полосы (ширина по подписи). */
+    private Rect closeRect(Layout l) {
+        Rect top = l.top();
+        int w = font.width(closeBtn.label()) + WTheme.ICON_ROW + 3 * Spacing.SM;
+        int h = Math.max(0, Math.min(top.h() - 2 * Spacing.XS, WTheme.SMALL_BUTTON_H + Spacing.XS));
+        return Rect.of(width - l.content().x() - w, top.centerY() - h / 2, w, h);
+    }
+
     private void renderTopBar(GuiGraphics g, Layout l, int mx, int my, float o) {
         Rect top = l.top();
         UIBackdrop.bar(g, top, true);
@@ -597,8 +609,11 @@ public class DeployScreen extends Screen {
                     true,
                     o);
         }
-        // справа: флаг, название команды, тикеты
-        Rect right = Rect.of(rightStart, top.y(), Math.max(0, width - margin - rightStart), top.h());
+        // справа: кнопка «Закрыть», левее — флаг, название команды, тикеты
+        Rect close = closeRect(l);
+        closeBtn.setBounds(close);
+        closeBtn.render(g, mx, my, 0F);
+        Rect right = Rect.of(rightStart, top.y(), Math.max(0, close.x() - Spacing.SM - rightStart), top.h());
         String team = getPlayerTeam().toUpperCase();
         boolean isBlue = team.contains("BLUE");
         String faction = isBlue ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
@@ -1059,6 +1074,7 @@ public class DeployScreen extends Screen {
             return true;
         }
         Layout l = layout();
+        if (btn == 0 && closeBtn.mouseClicked(mx, my, btn)) return true;
         if (activeTab == TAB_DEPLOY) {
             if (selectSpawnBtn.isVisible() && selectSpawnBtn.mouseClicked(mx, my, btn)) return true;
             if (applyCmdBtn.isVisible() && applyCmdBtn.mouseClicked(mx, my, btn)) return true;
@@ -1280,6 +1296,13 @@ public class DeployScreen extends Screen {
                 activeSquadKey = -1;
                 return true;
             }
+            // Esc ВСЕГДА закрывает экран (после закрытия открытых меню) — раньше его глотало поле
+            // ввода с фокусом (EditBox возвращает false на Esc → super.keyPressed не вызывался),
+            // в т.ч. скрытое поле названия отряда после вступления в отряд.
+            if (key == 256) {
+                onClose();
+                return true;
+            }
         }
         if (key == 257 && mySquadId < 0 && createSquadBtn.isVisible() && squadInput.isFocused()) {
             createSquad();
@@ -1295,8 +1318,17 @@ public class DeployScreen extends Screen {
             chatInput.setFocused(false);
             return true;
         }
+        // фокус у скрытого поля — снять (иначе оно глотает клавиши, в т.ч. K)
+        if (squadInput.isFocused() && !squadInput.isVisible()) squadInput.setFocused(false);
+        if (chatInput.isFocused() && !chatInput.isVisible()) chatInput.setFocused(false);
         if (chatInput.isFocused()) return chatInput.keyPressed(key, scan, mod);
         if (squadInput.isFocused()) return squadInput.keyPressed(key, scan, mod);
+        // повторное K (клавиша меню отряда) закрывает экран
+        if (!preview && com.pigeostudios.pwp.warfare.client.ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(key, scan)) {
+            ClientData.deployToggleClosedAt = System.currentTimeMillis();
+            onClose();
+            return true;
+        }
         if ((key == 257 || key == 335) && pathActive) {
             confirmPath();
             return true;
@@ -1451,6 +1483,14 @@ public class DeployScreen extends Screen {
         ClientData.awaitingRespawn = true;
         ClientData.deployBlockedUntil = System.currentTimeMillis() + 5000;
         Minecraft.getInstance().setScreen(null);
+    }
+
+    @Override
+    public void onClose() {
+        // Закрыл сам игрок (Esc / K / «Закрыть»): запоздавший ответ на запрос китов не должен
+        // открыть меню заново (ClientHooks.openPlayerKitMenu)
+        if (!preview) ClientData.deployDismissedAt = System.currentTimeMillis();
+        super.onClose();
     }
 
     @Override

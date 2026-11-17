@@ -503,7 +503,9 @@ public class ClientEvents {
 
                 if (event.getAction() == 1
                         && ModKeyBindings.OPEN_SQUAD_MENU_KEY.matches(event.getKey(), event.getScanCode())
-                        && mc.screen == null) {
+                        && mc.screen == null
+                        // то же нажатие K, которое закрыло меню деплоя, не открывает его снова
+                        && System.currentTimeMillis() - ClientData.deployToggleClosedAt > 250L) {
                     String teamName =
                             mc.player.getTeam() != null ? mc.player.getTeam().getName() : "";
                     boolean isValidTeam = teamName.equalsIgnoreCase("Blue") || teamName.equalsIgnoreCase("Red");

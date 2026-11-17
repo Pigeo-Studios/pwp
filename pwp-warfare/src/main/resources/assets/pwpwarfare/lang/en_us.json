@@ -321,6 +321,7 @@
     "gui.pwpwarfare.deploy.hint.ready": "Ready: press %s",
     "gui.pwpwarfare.deploy.map.path_length": "Path: %sm (min %sm, max %sm)",
     "gui.pwpwarfare.deploy.button.respawn": "DEPLOY",
+    "gui.pwpwarfare.deploy.button.close": "CLOSE",
     "gui.pwpwarfare.deploy.button.alive": "ALIVE",
     "gui.pwpwarfare.deploy.button.wait": "WAIT %s",
     "gui.pwpwarfare.deploy.button.pick_spawn": "PICK A SPAWN",

@@ -146,6 +146,8 @@ public class ClientHooks {
         }
         // Во время респавна меню заново не открываем (запоздавший ответ на запрос китов)
         if (ClientData.awaitingRespawn || System.currentTimeMillis() < ClientData.deployBlockedUntil) return;
+        // Игрок только что сам закрыл меню — запоздавший ответ не открывает его снова
+        if (System.currentTimeMillis() - ClientData.deployDismissedAt < 5000L) return;
         var p = Minecraft.getInstance().player;
         if (p == null || !p.isDeadOrDying()) return;
         ClientData.deployRequested = true;

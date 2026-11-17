@@ -211,6 +211,29 @@ public class PWPLobbyScreen extends Screen {
         }
     }
 
+    /**
+     * Открыть лобби явно (клавиша «Меню лобби», кнопка в паузе, старт голосования) с
+     * последним состоянием из {@link LobbyStatePacket}; снимает «игрок закрыл в этой фазе».
+     */
+    public static void openManually(LobbyStatePacket pkt) {
+        closedPhase = -1;
+        ensureOpenOrCreate(s -> {
+            if (pkt != null) s.applyState(pkt, false);
+        });
+    }
+
+    @Override
+    public boolean keyPressed(int key, int scan, int mod) {
+        // та же клавиша «Меню лобби» закрывает экран (если не печатаем в поле ввода)
+        if (!preview
+                && com.pwp.coreclient.lobby.LobbyHud.LOBBY_KEY.matches(key, scan)
+                && !(getFocused() instanceof net.minecraft.client.gui.components.EditBox)) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(key, scan, mod);
+    }
+
     private boolean isMinecraftScreenInvalid() {
         return Minecraft.getInstance().screen != this;
     }

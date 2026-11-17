@@ -127,6 +127,11 @@ public class ClientData {
     public static boolean deployRequested = false;
     public static boolean awaitingRespawn = false;
     public static long deployBlockedUntil = 0L;
+    /** Момент, когда игрок сам закрыл меню деплоя (Esc/K/«Закрыть») — без самопереоткрытия. */
+    public static long deployDismissedAt = 0L;
+    /** Момент закрытия меню деплоя клавишей K — то же нажатие не должно открыть его снова. */
+    public static long deployToggleClosedAt = 0L;
+
     public static int downedBleedoutDuration = 0;
     public static List<Component> menuChatHistory = new ArrayList<>();
     public static List<ClientData.CaptureNotification> captureNotifications = new CopyOnWriteArrayList<>();

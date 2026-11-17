@@ -1,6 +1,5 @@
 package com.pwp.coreclient.network;
 
-import com.pwp.coreclient.gui.screens.PWPLobbyScreen;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
@@ -477,7 +476,7 @@ public class LobbyStatePacket {
 
     public static void handle(LobbyStatePacket msg, Supplier<NetworkEvent.Context> ctx) {
         if (ctx.get().getDirection().getReceptionSide().isClient()) {
-            ctx.get().enqueueWork(() -> PWPLobbyScreen.updateLobbyState(msg));
+            ctx.get().enqueueWork(() -> com.pwp.coreclient.lobby.LobbyHud.onState(msg));
         }
         ctx.get().setPacketHandled(true);
     }

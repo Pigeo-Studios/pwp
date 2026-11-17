@@ -321,6 +321,7 @@
     "gui.pwpwarfare.deploy.hint.ready": "Готово: нажмите «%s»",
     "gui.pwpwarfare.deploy.map.path_length": "Путь: %sм (мин %sм, макс %sм)",
     "gui.pwpwarfare.deploy.button.respawn": "ВОЗРОДИТЬСЯ",
+    "gui.pwpwarfare.deploy.button.close": "ЗАКРЫТЬ",
     "gui.pwpwarfare.deploy.button.alive": "ЖИВ",
     "gui.pwpwarfare.deploy.button.wait": "ЖДАТЬ %s",
     "gui.pwpwarfare.deploy.button.pick_spawn": "ВЫБРАТЬ ТОЧКУ",

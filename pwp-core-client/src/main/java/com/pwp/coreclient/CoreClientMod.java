@@ -21,6 +21,9 @@ public class CoreClientMod {
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             ClientScreenHandler.init();
+            // лобби: клавиша «Меню лобби», подсказка в HUD, тост при старте голосования
+            com.pwp.coreclient.lobby.LobbyHud.init(
+                    FMLJavaModLoadingContext.get().getModEventBus());
             // настройки интерфейса: свои регистрируем сразу, файл читаем до открытия экранов
             // (настройки модов, зарегистрированные позже, подхватят значения из файла)
             com.pwp.coreclient.settings.CoreUiSettings.init();

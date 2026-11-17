@@ -83,6 +83,15 @@ public class PWPPauseScreen extends Screen {
         buttons.add(new UIButton(Component.translatable("pwp_core.pause.resume"), this::resume)
                 .style(UIButton.Style.ACCENT)
                 .icon(UIIcon.PLAY));
+        // только на лобби-сервере (пришёл LobbyStatePacket): меню голосования/матчей
+        if (!preview && com.pwp.coreclient.lobby.LobbyHud.isOnLobby()) {
+            buttons.add(new UIButton(Component.translatable("pwp_core.pause.lobby"), () -> {
+                        mc.setScreen(null);
+                        com.pwp.coreclient.lobby.LobbyHud.openLobby();
+                    })
+                    .style(UIButton.Style.DARK)
+                    .icon(UIIcon.SERVER));
+        }
         buttons.add(new UIButton(
                         Component.translatable("pwp_core.pause.ui_settings"),
                         () -> mc.setScreen(new PWPUiSettingsScreen(this)))
