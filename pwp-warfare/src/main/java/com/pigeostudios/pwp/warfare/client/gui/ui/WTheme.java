@@ -89,6 +89,49 @@ public final class WTheme {
 
     public static final int PORTRAIT_SCALE_MAX = 120;
 
+    // ------------------------------------------------------------ деплой «как в Squad» (с 17.11.2026)
+    /** Колонки вкладки деплоя: отряды | карта + точки | роли + снаряжение. */
+    public static final float DEPLOY_SQ_SQUADS_WEIGHT = 20;
+
+    public static final float DEPLOY_SQ_MAP_WEIGHT = 44;
+    public static final float DEPLOY_SQ_RIGHT_WEIGHT = 36;
+    /** Доля колонки карты под список точек спавна (под картой). */
+    public static final float DEPLOY_SQ_SPAWNS_FRACTION = 0.27F;
+    /** Доля правой колонки под сетку ролей (остальное — снаряжение + кукла). */
+    public static final float DEPLOY_SQ_ROLES_FRACTION = 0.48F;
+    /** Крупная кнопка деплоя справа внизу. */
+    public static final float DEPLOY_CTA_FRACTION = 0.24F;
+
+    public static final int DEPLOY_CTA_MIN_W = 130;
+    public static final int DEPLOY_CTA_MAX_W = 240;
+    /** Точки спавна на карте деплоя: радиус кольца, выбранной, зона клика (px). */
+    public static final int DEPLOY_SPAWN_RING_R = 8;
+
+    public static final int DEPLOY_SPAWN_RING_SEL_R = 11;
+    public static final int DEPLOY_SPAWN_HIT_R = 15;
+    /** Период пульса кольца выбранной точки, мс. */
+    public static final long DEPLOY_SPAWN_PULSE_MS = 1400;
+    /** Кольцо точки: обычная / под курсором / выбранная / недоступная. */
+    public static final int DEPLOY_SPAWN_RING = Colors.multiplyAlpha(PWPTheme.Text.HEADING, 0.55F);
+
+    public static final int DEPLOY_SPAWN_RING_HOVER = PWPTheme.Text.HEADING;
+    public static final int DEPLOY_SPAWN_RING_SELECTED = Colors.ACCENT;
+    public static final int DEPLOY_SPAWN_RING_OFF = PWPTheme.Text.DANGER;
+    /** Зум карты деплоя: минимум (блоков/px) и запас отдаления сверх «вся карта». */
+    public static final double DEPLOY_MAP_MIN_BPP = 0.25;
+
+    public static final double DEPLOY_MAP_FIT_SLACK = 1.5;
+    /** Кукла: начальный поворот (градусы) и чувствительность перетаскивания (градусов на px). */
+    public static final float PORTRAIT_DEFAULT_YAW = 25F;
+
+    public static final float PORTRAIT_DRAG_DEG_PER_PX = 1.4F;
+    /** Шаги потока деплоя внизу: кружок номера шага. */
+    public static final int DEPLOY_STEP_DOT = 10;
+
+    public static final int DEPLOY_STEP_DONE = Colors.SUCCESS_LIGHT;
+    public static final int DEPLOY_STEP_TODO = Colors.WARNING;
+    public static final int DEPLOY_STEP_IDLE = PWPTheme.Text.MUTED;
+
     // ------------------------------------------------------------ цвета
     public static final int STATUS_OK = Colors.SUCCESS_LIGHT;
     public static final int STATUS_WARN = Colors.WARNING;

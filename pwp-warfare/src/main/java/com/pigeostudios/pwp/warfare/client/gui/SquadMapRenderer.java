@@ -44,12 +44,22 @@ import org.lwjgl.glfw.GLFW;
 
 public class SquadMapRenderer {
 
+    /** Шаг зума колесом для {@link #localScale}. */
+    private static final double LOCAL_ZOOM_STEP = 1.25;
+
     public int mapX, mapY, mapWidth, mapHeight;
     public String selectedSpawnId = "";
     // Минимальный скейл (блоков на пиксель) для вписывания всей карты в область рендера.
     // 0 = использовать глобальный ClientData.mapScale (поведение M-меню).
     public double fitScale = 0.0;
+    /**
+     * Свой масштаб этого рендера (блоков на пиксель), > 0 — колесо зумит его вокруг курсора в
+     * пределах [{@link #localMin}, {@link #localMax}], глобальный ClientData.mapScale и fitScale не
+     * используются (карта деплоя). 0 — поведение M-меню.
+     */
+    public double localScale = 0.0;
 
+    public double localMin = 0.25, localMax = 8.0;
     private double panX, panZ;
     private boolean isDraggingMap;
     private double lastMouseX, lastMouseY;
@@ -125,7 +135,24 @@ public class SquadMapRenderer {
         panZ = 0;
     }
 
+    /** Центр вида на мировую точку (смещение от игрока). */
+    public void centerOn(LocalPlayer p, double wx, double wz) {
+        panX = wx - p.getX();
+        panZ = wz - p.getZ();
+    }
+
+    /** Мировая точка видна в области карты (с отступом {@code marginPx}). */
+    public boolean isVisible(LocalPlayer p, double wx, double wz, int marginPx) {
+        MapView v = view(p);
+        double sx = v.sx(wx), sy = v.sy(wz);
+        return sx >= mapX + marginPx
+                && sx <= mapX + mapWidth - marginPx
+                && sy >= mapY + marginPx
+                && sy <= mapY + mapHeight - marginPx;
+    }
+
     public double effectiveScale() {
+        if (localScale > 0) return localScale;
         return fitScale > 0 ? Math.max(ClientData.mapScale, fitScale) : ClientData.mapScale;
     }
 
@@ -1495,6 +1522,16 @@ public class SquadMapRenderer {
 
     public boolean mouseScrolled(double mx, double my, double delta) {
         if (!isMouseOver(mx, my)) return false;
+        if (localScale > 0) {
+            // зум вокруг курсора: мировая точка под мышью остаётся на месте
+            double cxs = mapX + mapWidth / 2.0, cys = mapY + mapHeight / 2.0;
+            double ns = delta > 0 ? localScale / LOCAL_ZOOM_STEP : localScale * LOCAL_ZOOM_STEP;
+            ns = Math.max(localMin, Math.min(localMax, ns));
+            panX += (mx - cxs) * (localScale - ns);
+            panZ += (my - cys) * (localScale - ns);
+            localScale = ns;
+            return true;
+        }
         ClientData.zoomMap(delta);
         return true;
     }

@@ -9,6 +9,7 @@ import com.pigeostudios.pwp.warfare.client.gui.deploy.RoleGrid;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.RulesPanel;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.SpawnPanel;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.TeamRoster;
+import com.pigeostudios.pwp.warfare.client.gui.map.MapDraw;
 import com.pigeostudios.pwp.warfare.client.gui.ui.AnimMap;
 import com.pigeostudios.pwp.warfare.client.gui.ui.SquadList;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
@@ -95,7 +96,9 @@ public class DeployScreen extends Screen {
             Rect right,
             Rect loadout,
             Rect portrait,
+            Rect mapPanel,
             Rect map,
+            Rect steps,
             Rect deployButton,
             Rect timerBar) {}
 
@@ -316,13 +319,14 @@ public class DeployScreen extends Screen {
 
         Rect content = Rect.of(
                 margin, top.bottom() + WTheme.GAP, width - 2 * margin, bottom.y() - top.bottom() - 2 * WTheme.GAP);
+        // колонки «как в Squad»: отряды | карта + точки | роли + снаряжение
         Rect[] cols = Flow.row(
                 content,
                 WTheme.GAP,
                 Flow.Justify.START,
-                Flow.flex(Math.round(WTheme.DEPLOY_SQUADS_WEIGHT)),
-                Flow.flex(Math.round(WTheme.DEPLOY_CENTER_WEIGHT)),
-                Flow.flex(Math.round(WTheme.DEPLOY_RIGHT_WEIGHT)));
+                Flow.flex(Math.round(WTheme.DEPLOY_SQ_SQUADS_WEIGHT)),
+                Flow.flex(Math.round(WTheme.DEPLOY_SQ_MAP_WEIGHT)),
+                Flow.flex(Math.round(WTheme.DEPLOY_SQ_RIGHT_WEIGHT)));
         int headerH = WDraw.headerHeight(height);
 
         // отряды: [кнопка «стать командиром»] список … [создать отряд] [чат]
@@ -341,27 +345,30 @@ public class DeployScreen extends Screen {
         Rect createRow = sq[1].withHeight(Math.min(sq[1].h(), WTheme.FIELD_H));
         Rect chat = sq[2];
 
-        // центр: роли / точки спавна
+        // центр: карта (главный элемент) и под ней список точек спавна
         Rect center = cols[1];
-        int rolesH = Math.round(center.h() * WTheme.DEPLOY_ROLES_FRACTION);
-        Rect[] cc = Flow.column(center, WTheme.GAP, Flow.Justify.START, rolesH, Flow.flex(1));
+        int spawnsH = Math.round(center.h() * WTheme.DEPLOY_SQ_SPAWNS_FRACTION);
+        Rect[] cc = Flow.column(center, WTheme.GAP, Flow.Justify.START, Flow.flex(1), spawnsH);
+        Rect mapPanel = cc[0];
+        Rect map = mapPanel.inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
 
-        // справа: снаряжение + портрет, либо карта
+        // справа: роли сверху, снизу снаряжение (альтернативы) + кукла
         Rect right = cols[2];
-        Rect[] lp = Flow.row(right, WTheme.GAP, Flow.Justify.START, Flow.flex(24), Flow.flex(20));
-        Rect mapArea = right.inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
-        int sz = Math.max(0, Math.min(mapArea.w(), mapArea.h()));
-        Rect map = mapArea.centered(sz, sz);
+        int rolesH = Math.round(right.h() * WTheme.DEPLOY_SQ_ROLES_FRACTION);
+        Rect[] rc = Flow.column(right, WTheme.GAP, Flow.Justify.START, rolesH, Flow.flex(1));
+        Rect[] lp = Flow.row(rc[1], WTheme.GAP, Flow.Justify.START, Flow.flex(24), Flow.flex(16));
 
-        // низ: кнопка деплоя справа, под ней полоса таймера
+        // низ: шаги «точка → роль → снаряжение» + подсказка, крупная кнопка деплоя справа
         int bw = Fit.fraction(
                 width,
-                WTheme.DEPLOY_BUTTON_FRACTION,
-                WTheme.DEPLOY_BUTTON_MIN_W,
-                Math.min(WTheme.DEPLOY_BUTTON_MAX_W, width / 2));
+                WTheme.DEPLOY_CTA_FRACTION,
+                WTheme.DEPLOY_CTA_MIN_W,
+                Math.min(WTheme.DEPLOY_CTA_MAX_W, width / 2));
         Rect btnArea = bottom.inset(margin, Spacing.XS, margin, Spacing.XS);
         Rect deployButton = btnArea.rightStrip(bw);
         Rect timerBar = Rect.of(deployButton.x(), deployButton.bottom() - WTheme.BAR_H, deployButton.w(), WTheme.BAR_H);
+        Rect steps = Rect.of(
+                btnArea.x(), btnArea.y(), Math.max(0, deployButton.x() - btnArea.x() - Spacing.MD), btnArea.h());
 
         return new Layout(
                 top,
@@ -373,12 +380,14 @@ public class DeployScreen extends Screen {
                 applyCmd,
                 createRow,
                 chat,
-                cc[0],
+                rc[0],
                 cc[1],
                 right,
                 lp[0],
                 lp[1],
+                mapPanel,
                 map,
+                steps,
                 deployButton,
                 timerBar);
     }
@@ -389,9 +398,16 @@ public class DeployScreen extends Screen {
 
     private void initRightMap(Rect map) {
         rightMapRenderer.init(map.x(), map.y(), map.w(), map.h());
-        // Вписываем всю карту в квадрат, чтобы деплой показывал ту же карту, что и M-меню
-        rightMapRenderer.fitScale = ClientData.mapSizeBlocks / (double) Math.max(1, map.w());
-        rightMapRenderer.centerOnPlayer();
+        // Своё приближение карты деплоя (колесо — вокруг курсора), старт — вся карта матча целиком
+        double size = ClientData.mapSizeBlocks;
+        double fit = size > 0 ? Math.max(size / Math.max(1, map.w()), size / Math.max(1, map.h())) : 4.0;
+        rightMapRenderer.fitScale = 0;
+        rightMapRenderer.localScale = fit;
+        rightMapRenderer.localMin = WTheme.DEPLOY_MAP_MIN_BPP;
+        rightMapRenderer.localMax = Math.max(fit * WTheme.DEPLOY_MAP_FIT_SLACK, WTheme.DEPLOY_MAP_MIN_BPP * 2);
+        LocalPlayer lp = Minecraft.getInstance().player;
+        if (lp != null && size > 0) rightMapRenderer.centerOn(lp, ClientData.mapCenterX, ClientData.mapCenterZ);
+        else rightMapRenderer.centerOnPlayer();
         lastMapRect = map;
         mapNeedsInit = false;
     }
@@ -487,6 +503,7 @@ public class DeployScreen extends Screen {
         } else {
             renderSquadColumn(g, l, mx, my, o);
             int headerH = WDraw.headerHeight(height);
+            spawns.externalHover = mapHoverSpawn;
             Rect rc = WDraw.panel(
                     g,
                     font,
@@ -770,17 +787,29 @@ public class DeployScreen extends Screen {
         box.setHeight(Math.max(1, field.bottom() - ty));
     }
 
-    private boolean showMap() {
-        return !selectedSpawn.isEmpty();
+    /** Точка спавна под курсором на карте деплоя ("" — нет); подсвечивается и в списке. */
+    private String mapHoverSpawn = "";
+
+    private DeployData.SpawnPoint spawnById(String id) {
+        for (var sp : DeployData.spawns) if (sp.id().equals(id)) return sp;
+        return null;
     }
 
+    private java.util.Optional<DeployData.KitRecord> kitRecord() {
+        return DeployData.kits.stream()
+                .filter(k -> k.name().equals(selectedKit))
+                .findFirst();
+    }
+
+    /** Центр колонки: карта всегда видна (как в Squad), точки спавна кликаются прямо на ней. */
     private void renderRight(GuiGraphics g, Layout l, int mx, int my, float pt, float o) {
         int headerH = WDraw.headerHeight(height);
-        if (showMap() && (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null)) {
+        Component controls = Component.translatable("gui.pwpwarfare.deploy.map.controls");
+        if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) {
             Rect c = WDraw.panel(
                     g,
                     font,
-                    l.right(),
+                    l.mapPanel(),
                     headerH,
                     WarfareIcon.MAP,
                     Component.translatable("gui.pwpwarfare.deploy.map.title"),
@@ -788,23 +817,21 @@ public class DeployScreen extends Screen {
                     o);
             WDraw.emptyState(
                     g, font, c, WarfareIcon.MAP, Component.translatable("gui.pwpwarfare.deploy.map.no_world"), null, o);
-        } else if (showMap()) {
-            var lp = Minecraft.getInstance().player;
-            Component pos =
-                    Component.literal("X " + (lp != null ? lp.blockPosition().getX() : 0) + "  Z "
-                            + (lp != null ? lp.blockPosition().getZ() : 0));
+            mapHoverSpawn = "";
+        } else {
             WDraw.panel(
                     g,
                     font,
-                    l.right(),
+                    l.mapPanel(),
                     headerH,
                     WarfareIcon.MAP,
                     Component.translatable("gui.pwpwarfare.deploy.map.title"),
-                    pos,
+                    controls,
                     o);
             if (mapNeedsInit || !l.map().equals(lastMapRect)) initRightMap(l.map());
             rightMapRenderer.tickAnim();
             rightMapRenderer.render(g, mx, my, pt);
+            renderSpawnOverlay(g, l, mx, my);
             UIDraw.outline(g, l.map().outset(1), UIDraw.fade(PWPTheme.Styles.Glass.BORDER, o));
             mapCtx.render(g, mx, my);
             if (pathActive) {
@@ -820,100 +847,146 @@ public class DeployScreen extends Screen {
                         true,
                         o);
             }
-        } else {
-            Rect lc = WDraw.panel(
-                    g,
-                    font,
-                    l.loadout(),
-                    headerH,
-                    WarfareIcon.BACKPACK,
-                    Component.translatable("gui.pwpwarfare.deploy.loadout.panel"),
-                    null,
-                    o);
-            loadout.render(g, lc, mx, my, selectedKit, o);
-            UIDraw.glass(g, l.portrait(), o, false);
-            portrait.render(g, l.portrait().inset(Spacing.XS), mx, my, getSelectedWeapon(), getSelectedArmor(), o);
         }
-    }
-
-    private void renderBottom(GuiGraphics g, Layout l, int mx, int my, float o) {
-        Rect bar = l.bottom();
-        int margin = l.content().x();
-        // слева: выбранный кит (иконка категории + имя), под ним — выбранная точка
-        var kit = DeployData.kits.stream()
-                .filter(k -> k.name().equals(selectedKit))
-                .findFirst();
-        UIIcon ci = kit.map(k -> UIIcon.forRoleCategory(k.category())).orElse(null);
-        int leftW = Math.max(0, l.deployButton().x() - margin - Spacing.MD);
-        Rect left = Rect.of(margin, bar.y() + Spacing.XS, leftW / 2, bar.h() - 2 * Spacing.XS);
-        int is = Spacing.ICON_SIZE;
-        int tx = left.x();
-        if (ci != null && left.w() > is * 3) {
-            UIDraw.icon(g, ci, tx, left.centerY() - is / 2, is, UIDraw.fade(ci.roleColor(), o));
-            tx += is + Spacing.SM;
-        }
-        Rect[] lines = Flow.column(
-                Rect.of(tx, left.y(), left.right() - tx, left.h()),
-                0,
-                Flow.Justify.CENTER,
-                font.lineHeight + 1,
-                font.lineHeight + 1);
-        WDraw.text(
+        // справа внизу: снаряжение (альтернативы) + кукла в выбранном ките
+        Rect lc = WDraw.panel(
                 g,
                 font,
-                Component.literal(DeployData.getDisplayName(selectedKit)),
-                lines[0],
-                Align.START,
-                PWPTheme.Colors.TEXT_ACCENT,
-                true,
+                l.loadout(),
+                headerH,
+                WarfareIcon.BACKPACK,
+                Component.translatable("gui.pwpwarfare.deploy.loadout.panel"),
+                null,
                 o);
-        String spawnName = DeployData.spawns.stream()
-                .filter(s -> s.id().equals(selectedSpawn))
-                .map(DeployData.SpawnPoint::name)
-                .findFirst()
-                .orElse(null);
+        loadout.render(g, lc, mx, my, selectedKit, o);
+        UIDraw.glass(g, l.portrait(), o, false);
+        Rect pa = l.portrait().inset(Spacing.XS);
+        portrait.render(g, pa, mx, my, getSelectedWeapon(), getSelectedArmor(), o);
+        Rect tip = pa.bottomStrip(font.lineHeight + Spacing.XXS);
         WDraw.text(
                 g,
                 font,
-                spawnName != null
-                        ? Component.translatable("gui.pwpwarfare.deploy.bottom.spawn", spawnName)
-                        : Component.translatable("gui.pwpwarfare.deploy.bottom.no_spawn"),
-                lines[1],
-                Align.START,
+                Component.translatable("gui.pwpwarfare.deploy.portrait.rotate"),
+                tip,
+                Align.CENTER,
                 PWPTheme.Text.MUTED,
                 false,
                 o);
+    }
 
-        // центр: статус таймера
-        int sec = secondsLeft();
-        Component status = sec > 0
-                ? Component.translatable("gui.pwpwarfare.deploy.bottom.waiting", mmss(sec))
-                : Component.translatable("gui.pwpwarfare.deploy.bottom.ready");
-        Rect mid =
-                Rect.of(left.right(), bar.y(), Math.max(0, l.deployButton().x() - left.right() - Spacing.SM), bar.h());
-        if (mid.w() > WTheme.ICON_ROW * 3) {
-            int sw = Math.min(font.width(status), mid.w() - WTheme.ICON_ROW - Spacing.XS);
-            int sx = mid.centerX() - (sw + WTheme.ICON_ROW + Spacing.XS) / 2;
-            int color = sec > 0 ? PWPTheme.Text.BODY : WTheme.STATUS_OK;
-            WDraw.icon(
-                    g,
-                    WarfareIcon.CLOCK,
-                    sx,
-                    mid.centerY() - WTheme.ICON_ROW / 2,
-                    WTheme.ICON_ROW,
-                    UIDraw.fade(color, o));
-            WDraw.text(
-                    g,
-                    font,
-                    status,
-                    Rect.of(sx + WTheme.ICON_ROW + Spacing.XS, mid.y(), sw, mid.h()),
-                    Align.START,
-                    color,
-                    true,
-                    o);
+    /**
+     * Точки спавна поверх карты: кольцо (под курсором — ярче, выбранная — пульсирует акцентом,
+     * недоступная — красная) и подпись с именем; у выбранной/наведённой — ещё статус.
+     */
+    private void renderSpawnOverlay(GuiGraphics g, Layout l, int mx, int my) {
+        LocalPlayer p = Minecraft.getInstance().player;
+        if (p == null) return;
+        Rect map = l.map();
+        String hit = !mapCtx.visible && map.contains(mx, my) ? getSpawnAtMap(mx, my) : null;
+        mapHoverSpawn = hit != null ? hit : "";
+        int headerH = WDraw.headerHeight(height);
+        String listHover =
+                spawns.hoveredId(mx, my, l.spawns().inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS));
+        var v = rightMapRenderer.view(p);
+        double ph = (System.currentTimeMillis() % WTheme.DEPLOY_SPAWN_PULSE_MS) / (double) WTheme.DEPLOY_SPAWN_PULSE_MS;
+        float pulse = (float) (0.5 + 0.5 * Math.sin(ph * Math.PI * 2));
+        g.enableScissor(map.x(), map.y(), map.right(), map.bottom());
+        g.pose().pushPose();
+        g.pose().translate(0, 0, 200);
+        for (var sp : DeployData.spawns) {
+            float sx = (float) v.sx(sp.pos().getX() + 0.5);
+            float sy = (float) v.sy(sp.pos().getZ() + 0.5);
+            if (!map.contains((int) sx, (int) sy)) continue;
+            boolean off = SpawnPanel.blocked(sp);
+            boolean sel = sp.id().equals(selectedSpawn);
+            boolean hov = sp.id().equals(mapHoverSpawn) || sp.id().equals(listHover);
+            int color = off
+                    ? WTheme.DEPLOY_SPAWN_RING_OFF
+                    : sel
+                            ? WTheme.DEPLOY_SPAWN_RING_SELECTED
+                            : hov ? WTheme.DEPLOY_SPAWN_RING_HOVER : WTheme.DEPLOY_SPAWN_RING;
+            float r =
+                    sel ? WTheme.DEPLOY_SPAWN_RING_SEL_R + pulse * 2F : WTheme.DEPLOY_SPAWN_RING_R + (hov ? 1.5F : 0F);
+            MapDraw.arc(g, sx, sy, r - 1.5F, r, 0, 360, color);
+            if (sel) MapDraw.arc(g, sx, sy, r + 2F, r + 3F, 0, 360, Colors.multiplyAlpha(color, 1F - pulse));
+            Component label = Component.literal(sp.name());
+            if (sel || hov) label = label.copy().append("  ").append(SpawnPanel.statusText(sp.status()));
+            int tc = off ? WTheme.DEPLOY_SPAWN_RING_OFF : sel ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Text.HEADING;
+            MapDraw.label(g, font, label, (int) sx, (int) (sy - r) - font.lineHeight - Spacing.XXS - 1, tc);
         }
+        g.pose().popPose();
+        g.disableScissor();
+    }
 
-        // справа: кнопка деплоя + полоса таймера (заполняется к готовности)
+    /** Что мешает деплою прямо сейчас (или «готово»): подсказка под шагами. Цвет — в colorOut[0]. */
+    private Component deployHint(int[] colorOut) {
+        var p = Minecraft.getInstance().player;
+        colorOut[0] = WTheme.DEPLOY_STEP_TODO;
+        if (p == null) return Component.empty();
+        boolean dead = p.isDeadOrDying() || ClientData.DOWNED_PLAYERS.contains(p.getId());
+        var kit = kitRecord();
+        DeployData.SpawnPoint sp = spawnById(selectedSpawn);
+        if (!dead) {
+            colorOut[0] = WTheme.DEPLOY_STEP_IDLE;
+            return Component.translatable("gui.pwpwarfare.deploy.hint.alive");
+        }
+        if (kit.isPresent() && !kit.get().available()) {
+            String reason = kit.get().reason();
+            return reason == null || reason.isEmpty()
+                    ? Component.translatable("gui.pwpwarfare.deploy.hint.kit_unavailable")
+                    : Component.translatable("gui.pwpwarfare.deploy.hint.kit_reason", reason);
+        }
+        if (sp == null) return Component.translatable("gui.pwpwarfare.deploy.hint.pick_spawn");
+        if (SpawnPanel.blocked(sp)) return Component.translatable("gui.pwpwarfare.deploy.hint.spawn_blocked");
+        int sec = secondsLeft();
+        if (sec > 0) {
+            colorOut[0] = PWPTheme.Text.BODY;
+            return Component.translatable("gui.pwpwarfare.deploy.hint.wait", mmss(sec));
+        }
+        colorOut[0] = WTheme.DEPLOY_STEP_DONE;
+        return Component.translatable(
+                "gui.pwpwarfare.deploy.hint.ready", Component.translatable("gui.pwpwarfare.deploy.button.respawn"));
+    }
+
+    /** Низ: шаги «1 точка → 2 роль → 3 снаряжение», подсказка, крупная кнопка деплоя справа. */
+    private void renderBottom(GuiGraphics g, Layout l, int mx, int my, float o) {
+        Rect area = l.steps();
+        int lh = font.lineHeight + Spacing.XXS;
+        Rect[] lines = Flow.column(area, Spacing.XXS, Flow.Justify.CENTER, lh + Spacing.XXS, lh);
+        DeployData.SpawnPoint sp = spawnById(selectedSpawn);
+        var kit = kitRecord();
+        ItemStack weapon = getSelectedWeapon();
+        boolean spawnOk = sp != null && !SpawnPanel.blocked(sp);
+        boolean kitOk = kit.isPresent() && kit.get().available();
+        Component[] values = {
+            sp != null ? Component.literal(sp.name()) : Component.translatable("gui.pwpwarfare.deploy.step.none"),
+            Component.literal(DeployData.getDisplayName(selectedKit)),
+            weapon.isEmpty() ? Component.translatable("gui.pwpwarfare.deploy.step.default") : weapon.getHoverName()
+        };
+        boolean[] done = {spawnOk, kitOk, kitOk};
+        Rect[] cells = Flow.row(lines[0], Spacing.SM, Flow.Justify.START, Flow.flex(1), Flow.flex(1), Flow.flex(1));
+        int dot = WTheme.DEPLOY_STEP_DOT;
+        for (int i = 0; i < cells.length; i++) {
+            Rect c = cells[i];
+            boolean prevOk = i == 0 || done[i - 1];
+            int col = done[i] ? WTheme.DEPLOY_STEP_DONE : prevOk ? WTheme.DEPLOY_STEP_TODO : WTheme.DEPLOY_STEP_IDLE;
+            int valueColor = done[i] ? PWPTheme.Text.HEADING : col;
+            Rect d = Rect.of(c.x(), c.centerY() - dot / 2, dot, dot);
+            UIDraw.rect(g, d, UIDraw.fade(Colors.multiplyAlpha(col, 0.25F), o));
+            UIDraw.outline(g, d, UIDraw.fade(col, o));
+            WDraw.text(g, font, Component.literal(String.valueOf(i + 1)), d.outset(1), Align.CENTER, col, false, o);
+            Component t = Component.translatable("gui.pwpwarfare.deploy.step." + (i + 1))
+                    .append(Component.literal(": ").withStyle(st -> st.withColor(PWPTheme.Text.MUTED)))
+                    .append(values[i].copy().withStyle(st -> st.withColor(valueColor)));
+            Rect tr = Rect.of(d.right() + Spacing.XS, c.y(), Math.max(0, c.right() - d.right() - Spacing.XS), c.h());
+            WDraw.text(g, font, t, tr, Align.START, col, false, o);
+        }
+        int[] hc = {0};
+        Component hint = deployHint(hc);
+        WDraw.text(g, font, hint, lines[1], Align.START, hc[0], false, o);
+
+        // справа: крупная кнопка деплоя + полоса таймера (заполняется к готовности)
+        int sec = secondsLeft();
         selectSpawnBtn.setBounds(l.deployButton());
         selectSpawnBtn.render(g, mx, my, 0F);
         float frac = DeployData.deployTimer > 0 ? 1F - sec / (float) DeployData.deployTimer : 1F;
@@ -1031,8 +1104,6 @@ public class DeployScreen extends Screen {
             if (kit != null) {
                 selectedKit = kit;
                 send(new PacketSelectKit(kit, DeployData.getSlotSelections(kit)));
-                selectedSpawn = "";
-                rightMapRenderer.selectedSpawnId = "";
                 return true;
             }
 
@@ -1040,20 +1111,19 @@ public class DeployScreen extends Screen {
             String sp = spawns.mouseClicked(
                     mx, my, btn, l.spawns().inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS));
             if (sp != null) {
-                selectedSpawn = sp;
-                rightMapRenderer.selectedSpawnId = sp;
-                mapNeedsInit = true;
+                selectSpawn(sp);
                 return true;
             }
 
-            // ── СПРАВА: снаряжение (пока точка не выбрана) ──
-            if (!showMap()) {
+            // ── СНАРЯЖЕНИЕ (альтернативы) и КУКЛА ──
+            if (l.loadout().contains(mx, my)) {
                 Rect lc = l.loadout().inset(Spacing.XS, headerH + Spacing.XS, Spacing.XS, Spacing.XS);
                 return loadout.mouseClicked(mx, my, btn, lc, selectedKit);
             }
+            if (btn == 0 && portrait.startDrag(l.portrait(), mx, my)) return true;
 
             // ── КАРТА ──
-            if (l.right().contains(mx, my) && Minecraft.getInstance().level != null) return mapClicked(mx, my, btn);
+            if (l.map().contains(mx, my) && Minecraft.getInstance().level != null) return mapClicked(mx, my, btn);
         }
         return false;
     }
@@ -1111,8 +1181,7 @@ public class DeployScreen extends Screen {
         if (btn == 0) {
             String sid = getSpawnAtMap(mx, my);
             if (sid != null) {
-                selectedSpawn = sid;
-                rightMapRenderer.selectedSpawnId = sid;
+                selectSpawn(sid);
                 return true;
             }
             rightMapRenderer.mouseClicked(mx, my, btn);
@@ -1121,13 +1190,24 @@ public class DeployScreen extends Screen {
         return false;
     }
 
+    /** Выбор точки (список или карта): общий для обоих, карта подтягивается к точке вне вида. */
+    private void selectSpawn(String id) {
+        selectedSpawn = id;
+        rightMapRenderer.selectedSpawnId = id;
+        LocalPlayer p = Minecraft.getInstance().player;
+        DeployData.SpawnPoint sp = spawnById(id);
+        if (p != null
+                && sp != null
+                && !rightMapRenderer.isVisible(p, sp.pos().getX(), sp.pos().getZ(), Spacing.XL)) {
+            rightMapRenderer.centerOn(p, sp.pos().getX() + 0.5, sp.pos().getZ() + 0.5);
+        }
+    }
+
     @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
-        if (activeTab == TAB_DEPLOY
-                && !mapCtx.visible
-                && !pathActive
-                && showMap()
-                && layout().right().contains(mx, my)) {
+        if (activeTab == TAB_DEPLOY && portrait.drag(dx)) return true;
+        if (activeTab == TAB_DEPLOY && !mapCtx.visible && !pathActive) {
+            // перетаскивание продолжается и за краем карты (начато внутри — см. mapClicked)
             rightMapRenderer.mouseDragged(mx, my, btn, dx, dy);
         }
         return super.mouseDragged(mx, my, btn, dx, dy);
@@ -1145,9 +1225,8 @@ public class DeployScreen extends Screen {
         selectSpawnBtn.mouseReleased(mx, my, btn);
         applyCmdBtn.mouseReleased(mx, my, btn);
         createSquadBtn.mouseReleased(mx, my, btn);
-        if (activeTab == TAB_DEPLOY && showMap() && layout().right().contains(mx, my)) {
-            rightMapRenderer.mouseReleased(btn);
-        }
+        portrait.stopDrag();
+        if (activeTab == TAB_DEPLOY) rightMapRenderer.mouseReleased(btn);
         return super.mouseReleased(mx, my, btn);
     }
 
@@ -1170,7 +1249,7 @@ public class DeployScreen extends Screen {
             spawns.scroll(delta);
             return true;
         }
-        if (!mapCtx.visible && showMap() && l.right().contains(mx, my)) {
+        if (!mapCtx.visible && l.map().contains(mx, my)) {
             rightMapRenderer.mouseScrolled(mx, my, delta);
             return true;
         }
@@ -1235,7 +1314,7 @@ public class DeployScreen extends Screen {
         int mcy = rightMapRenderer.mapY + rightMapRenderer.mapHeight / 2;
 
         String best = null;
-        double bestD = 15;
+        double bestD = WTheme.DEPLOY_SPAWN_HIT_R;
         for (var sp : DeployData.spawns) {
             double sx = mcx + (sp.pos().getX() - cx) / bpp;
             double sy = mcy + (sp.pos().getZ() - cz) / bpp;

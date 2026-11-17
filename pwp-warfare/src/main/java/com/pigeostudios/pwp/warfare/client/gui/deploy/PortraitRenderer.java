@@ -10,7 +10,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import org.joml.Quaternionf;
 
 public class PortraitRenderer {
     private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(PortraitRenderer.class);
@@ -20,7 +22,7 @@ public class PortraitRenderer {
 
     /**
      * Портрет бойца с выбранным оружием и бронёй кита в области {@code area}: углублённая
-     * подложка с мягким градиентом «пола», модель следует за мышью.
+     * подложка с мягким градиентом «пола»; модель вращается перетаскиванием ({@link #drag}).
      */
     public void render(
             GuiGraphics gui, Rect area, int mx, int my, ItemStack weapon, List<ItemStack> armorPieces, float o) {
@@ -47,20 +49,68 @@ public class PortraitRenderer {
             int entityY = y + panelH / 2 + panelH / 6;
 
             gui.enableScissor(x, y, x + w, y + panelH);
-            float lx = (float) (entityX - mx) * 0.4f;
-            float ly = (float) (entityY - panelH / 4 - my) * 0.4f;
             gui.pose().pushPose();
             try {
-                InventoryScreen.renderEntityInInventoryFollowsMouse(gui, entityX, entityY, sc, lx, ly, p);
-            } catch (Exception ignored) {
+                renderRotated(gui, entityX, entityY, sc, p);
+            } catch (RuntimeException e) {
                 com.pwp.api.util.LogOnce.warn(
-                        PWP_LOG, "PortraitRenderer:48", "PortraitRenderer.render: исключение", ignored);
+                        PWP_LOG, "PortraitRenderer:render", "PortraitRenderer.render: исключение", e);
             }
             gui.pose().popPose();
             gui.disableScissor();
 
             restore(p);
             if (dead) p.deathTime = savedDeathTime;
+        }
+    }
+
+    /** Поворот куклы (градусы вокруг вертикали), меняется перетаскиванием мышью. */
+    private float yaw = WTheme.PORTRAIT_DEFAULT_YAW;
+
+    private boolean dragging;
+
+    /** ЛКМ по кукле — начать вращение. */
+    public boolean startDrag(Rect area, double mx, double my) {
+        dragging = area.contains(mx, my);
+        return dragging;
+    }
+
+    public boolean drag(double dx) {
+        if (!dragging) return false;
+        yaw = (yaw + (float) dx * WTheme.PORTRAIT_DRAG_DEG_PER_PX) % 360F;
+        return true;
+    }
+
+    public void stopDrag() {
+        dragging = false;
+    }
+
+    /**
+     * Модель целиком повёрнута на {@link #yaw} (как в Squad: вращение мышью, а не «смотрит на
+     * курсор»). Повороты сущности подменяются только на время отрисовки.
+     */
+    private void renderRotated(GuiGraphics gui, int x, int y, int scale, LivingEntity e) {
+        float bodyRot = e.yBodyRot, yRot = e.getYRot(), xRot = e.getXRot();
+        float headO = e.yHeadRotO, head = e.yHeadRot, bodyO = e.yBodyRotO;
+        Quaternionf pose = new Quaternionf().rotateZ((float) Math.PI);
+        Quaternionf cam = new Quaternionf().rotateX((float) Math.toRadians(-8.0));
+        pose.mul(cam);
+        float r = 180F + yaw;
+        e.yBodyRot = r;
+        e.yBodyRotO = r;
+        e.setYRot(r);
+        e.setXRot(0F);
+        e.yHeadRot = r;
+        e.yHeadRotO = r;
+        try {
+            InventoryScreen.renderEntityInInventory(gui, x, y, scale, pose, cam, e);
+        } finally {
+            e.yBodyRot = bodyRot;
+            e.yBodyRotO = bodyO;
+            e.setYRot(yRot);
+            e.setXRot(xRot);
+            e.yHeadRotO = headO;
+            e.yHeadRot = head;
         }
     }
 

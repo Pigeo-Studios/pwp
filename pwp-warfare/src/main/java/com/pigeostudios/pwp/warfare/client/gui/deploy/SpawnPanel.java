@@ -59,22 +59,22 @@ public class SpawnPanel {
         return n == 0 ? 0 : n * cardH(area) + (n - 1) * Spacing.XXS;
     }
 
-    static boolean blocked(DeployData.SpawnPoint sp) {
+    public static boolean blocked(DeployData.SpawnPoint sp) {
         return sp.status() == DeployData.SpawnStatus.BLOCKED || sp.status() == DeployData.SpawnStatus.DESTROYED;
     }
 
-    static WarfareIcon typeIcon(String id) {
+    public static WarfareIcon typeIcon(String id) {
         if (id.startsWith("HUB")) return WarfareIcon.SPAWN_FOB;
         if (id.startsWith("RALLY")) return WarfareIcon.SPAWN_RALLY;
         return WarfareIcon.SPAWN_MAIN;
     }
 
-    static Component statusText(DeployData.SpawnStatus st) {
+    public static Component statusText(DeployData.SpawnStatus st) {
         return Component.translatable(
                 "gui.pwpwarfare.deploy.spawn.status." + st.name().toLowerCase());
     }
 
-    static int statusColor(DeployData.SpawnStatus st) {
+    public static int statusColor(DeployData.SpawnStatus st) {
         return switch (st) {
             case SAFE, HEALTHY -> WTheme.STATUS_OK;
             case COOLDOWN -> WTheme.STATUS_WARN;
@@ -110,7 +110,7 @@ public class SpawnPanel {
         DeployData.SpawnPoint sp = c.sp();
         Rect r = c.rect();
         boolean off = blocked(sp);
-        float h = hover.get(sp.id(), hovered && !off);
+        float h = hover.get(sp.id(), (hovered || sp.id().equals(externalHover)) && !off);
         float s = select.get(sp.id(), sel.equals(sp.id()));
         WDraw.tile(g, r, h, s, off ? 0F : 1F, o);
 
@@ -167,6 +167,18 @@ public class SpawnPanel {
     }
 
     /** id выбранной точки, "" — заблокированная (сброс выбора, как раньше), null — мимо. */
+    /** Точка под курсором на карте деплоя — подсвечивается в списке так же, как при наведении. */
+    public String externalHover = "";
+
+    /** id точки под курсором в списке (null — нет). */
+    public String hoveredId(double mx, double my, Rect area) {
+        if (!area.contains(mx, my)) return null;
+        for (Card c : layout(area)) {
+            if (c.rect().contains(mx, my)) return c.sp().id();
+        }
+        return null;
+    }
+
     public String mouseClicked(double mx, double my, int btn, Rect area) {
         if (btn != 0 || !area.contains(mx, my)) return null;
         for (Card c : layout(area)) {
