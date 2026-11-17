@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.client.gui.map;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
+import com.pigeostudios.pwp.warfare.client.WarfareUiSettings;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
@@ -72,12 +73,14 @@ public final class MapLayers {
     public static void grid(GuiGraphics g, MapView v) {
         Rect clip = intersect(v.area(), v.playableScreen());
         if (clip.w() <= 0 || clip.h() <= 0) return;
+        float go = WarfareUiSettings.MAP_GRID_OPACITY.get(); // настройка «Прозрачность сетки»
+        if (go <= 0F) return;
         if (v.bpp() <= WTheme.MAP_SUBGRID_MAX_BPP) {
             float a =
                     (float) Math.min(1, Math.max(0, (WTheme.MAP_SUBGRID_MAX_BPP - v.bpp()) / WTheme.MAP_SUBGRID_FADE));
-            lines(g, v, clip, MapView.SUB_CELL, UIDraw.fade(WTheme.MAP_GRID_MINOR, a), false);
+            lines(g, v, clip, MapView.SUB_CELL, UIDraw.fade(WTheme.MAP_GRID_MINOR, a * go), false);
         }
-        lines(g, v, clip, MapView.CELL, WTheme.MAP_GRID_MAJOR, true);
+        lines(g, v, clip, MapView.CELL, UIDraw.fade(WTheme.MAP_GRID_MAJOR, go), true);
     }
 
     private static void lines(GuiGraphics g, MapView v, Rect clip, long step, int color, boolean major) {
@@ -111,8 +114,10 @@ public final class MapLayers {
         int band = WTheme.MAP_EDGE_BAND;
         // внешняя граница полосы
         Rect outer = p.outset(band);
-        int mask = WTheme.MAP_OUT_MASK;
-        int edge = WTheme.MAP_OUT_EDGE;
+        // настройка «Затемнение вне зоны» (линия границы рисуется всегда)
+        float dim = WarfareUiSettings.MAP_OUTSIDE_DIM.get();
+        int mask = UIDraw.fade(WTheme.MAP_OUT_MASK, dim);
+        int edge = UIDraw.fade(WTheme.MAP_OUT_EDGE, dim);
         // 1) сплошная маска вне outer
         fillClipped(g, a, Rect.of(a.x(), a.y(), a.w(), outer.y() - a.y()), mask);
         fillClipped(g, a, Rect.of(a.x(), outer.bottom(), a.w(), a.bottom() - outer.bottom()), mask);

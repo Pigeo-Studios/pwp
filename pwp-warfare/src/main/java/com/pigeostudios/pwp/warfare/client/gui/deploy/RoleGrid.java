@@ -139,7 +139,7 @@ public class RoleGrid {
 
         if (hov == null || !hov.equals(hoveredKit)) hoverSince = System.currentTimeMillis();
         hoveredKit = hov;
-        if (hovKit != null && System.currentTimeMillis() - hoverSince >= UITooltip.DELAY_MS) {
+        if (hovKit != null && System.currentTimeMillis() - hoverSince >= UITooltip.delayMs()) {
             List<Component> lines = new ArrayList<>();
             if (!hovKit.available() && !hovKit.reason().isEmpty()) {
                 lines.add(Component.literal(hovKit.reason()).withStyle(s -> s.withColor(WTheme.STATUS_BAD)));

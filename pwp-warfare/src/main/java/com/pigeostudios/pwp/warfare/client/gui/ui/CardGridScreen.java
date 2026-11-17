@@ -310,7 +310,7 @@ public abstract class CardGridScreen extends Screen {
         WDraw.scrollbar(g, c, contentH, scroll.offset(), 1F);
         if (hov == null || !hov.equals(hoveredKey)) hoverSince = System.currentTimeMillis();
         hoveredKey = hov;
-        if (tip != null && System.currentTimeMillis() - hoverSince >= UITooltip.DELAY_MS) {
+        if (tip != null && System.currentTimeMillis() - hoverSince >= UITooltip.delayMs()) {
             UITooltip.render(g, tip, mx, my, width, height, 1F);
         }
     }

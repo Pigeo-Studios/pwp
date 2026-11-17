@@ -174,7 +174,8 @@ public class WarfareOverlay {
     }
 
     private static void renderCompass(GuiGraphics gui, Minecraft mc, int screenWidth, float partialTick) {
-        if (!mc.options.hideGui) {
+        // настройка «Компас» (интерфейс PWP)
+        if (!mc.options.hideGui && WarfareUiSettings.COMPASS.get()) {
             int configVal = (Integer) WarfareConfig.COMPASS_SCALE.get();
             float scaleFactor = 1.0F;
             if (configVal == 1) {
@@ -1711,7 +1712,8 @@ public class WarfareOverlay {
         if (!ClientData.isMapOpen && ClientData.mapTransition < 0.001F) {
             ClientData.mapTransition = 0.0F;
         } else {
-            int mapSize = (int) ((screenHeight - 60) / 1.3F);
+            // настройка «Размер боковой карты»
+            int mapSize = (int) ((screenHeight - 60) / 1.3F * WarfareUiSettings.SIDE_MAP_SIZE.get());
             int topBarHeight = 35;
             int sidePadding = 15;
             int bottomPadding = 5;
@@ -1721,7 +1723,13 @@ public class WarfareOverlay {
             float visibleX = (float) screenWidth - containerWidth - 10.0F;
             int xPos = (int) Mth.lerp(ClientData.mapTransition, hiddenX, visibleX);
             int yPos = (screenHeight - containerHeight) / 2;
-            gui.fill(xPos, yPos, xPos + containerWidth, yPos + containerHeight, -1442840576);
+            // настройка «Фон боковой карты» — множитель альфы подложки 0xAA000000
+            gui.fill(
+                    xPos,
+                    yPos,
+                    xPos + containerWidth,
+                    yPos + containerHeight,
+                    com.pwp.coreclient.ui.UIDraw.fade(-1442840576, WarfareUiSettings.SIDE_MAP_BG.get()));
             renderMinimapStatus(gui, mc, xPos, yPos, containerWidth, topBarHeight);
             HUD_SIDE_MAP.init(xPos + sidePadding, yPos + topBarHeight, mapSize, mapSize);
             HUD_SIDE_MAP.render(gui, -1, -1, partialTick);

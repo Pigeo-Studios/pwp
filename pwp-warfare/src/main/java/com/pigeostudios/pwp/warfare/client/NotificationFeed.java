@@ -60,7 +60,7 @@ public class NotificationFeed {
         for (Entry entry : ENTRIES) {
             if (entry.key.equals(textKey)) {
                 entry.fading = false;
-                entry.expireTick = now + LIFE_TICKS;
+                entry.expireTick = now + lifeTicks();
                 entry.severity = severity;
                 return;
             }
@@ -77,7 +77,7 @@ public class NotificationFeed {
         fresh.key = textKey;
         fresh.text = Component.translatable(textKey);
         fresh.severity = severity;
-        fresh.expireTick = now + LIFE_TICKS;
+        fresh.expireTick = now + lifeTicks();
         fresh.slot = 1;
         fresh.y = slotY(1);
         fresh.alpha = 0.0F;
@@ -95,6 +95,11 @@ public class NotificationFeed {
             if (!entry.fading) return true;
         }
         return false;
+    }
+
+    /** Время жизни записи: настройка «Длительность уведомлений» (по умолчанию LIFE_TICKS = 3.5 с). */
+    private static long lifeTicks() {
+        return WarfareUiSettings.ticks(WarfareUiSettings.NOTIFY_SECONDS);
     }
 
     private static int slotY(int slot) {
@@ -144,7 +149,8 @@ public class NotificationFeed {
     }
 
     private static void drawEntry(GuiGraphics gui, Font font, Entry entry, int width) {
-        int alpha = (int) (Math.min(1.0F, entry.alpha) * 220.0F);
+        // настройка «Непрозрачность сообщений»
+        int alpha = (int) (Math.min(1.0F, entry.alpha) * 220.0F * WarfareUiSettings.MESSAGE_OPACITY.get());
         if (alpha <= 2) return;
         int textWidth = font.width(entry.text);
         int padding = PWPTheme.Spacing.SM;

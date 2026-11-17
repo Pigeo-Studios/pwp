@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.VertexFormat.Mode;
 import com.mojang.math.Axis;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.ModKeyBindings;
+import com.pigeostudios.pwp.warfare.client.WarfareUiSettings;
 import com.pigeostudios.pwp.warfare.client.gui.map.MapDraw;
 import com.pigeostudios.pwp.warfare.client.gui.map.MapHud;
 import com.pigeostudios.pwp.warfare.client.gui.map.MapLayers;
@@ -526,6 +527,8 @@ public class SquadMapRenderer {
             g.pose().pushPose();
             g.pose().translate(sx, sy, 150);
             if (!record.type.equals("Mine")) g.pose().mulPose(Axis.ZP.rotationDegrees(record.yaw + 180));
+            float vs = WarfareUiSettings.MAP_ICON_SCALE.get();
+            g.pose().scale(vs, vs, 1F);
             RenderSystem.setShaderColor(1, 1, 1, 1);
             RenderSystem.enableBlend();
             g.blit(icon, -6, -6, 12, 12, 0, 0, 16, 16, 16, 16);
@@ -606,7 +609,9 @@ public class SquadMapRenderer {
             if (info.isDowned) {
                 if (amIMedic || currentTime - info.lastShoutTime < 60) {
                     RenderSystem.setShaderColor(1, 1, 1, 1);
+                    pushIconScale(g, sx, sy);
                     g.blit(ICON_PLUS, sx - 4, sy - 4, 8, 8, 0, 0, 16, 16, 16, 16);
+                    g.pose().popPose();
                 }
             } else {
                 float r2 = 0.2F, g2 = 0.6F, b2 = 1.0F;
@@ -616,7 +621,9 @@ public class SquadMapRenderer {
                     b2 = 0;
                 }
                 RenderSystem.setShaderColor(r2, g2, b2, 1);
+                pushIconScale(g, sx, sy);
                 g.blit(ICON_CIRCLE, sx - 3, sy - 3, 6, 6, 0, 0, 16, 16, 16, 16);
+                g.pose().popPose();
                 RenderSystem.setShaderColor(1, 1, 1, 1);
             }
             Integer displayNum = idToDisplayNum.get(info.squadId);
@@ -625,7 +632,8 @@ public class SquadMapRenderer {
                 int textColor = info.squadId == myInternalSquadId ? -11141291 : -11184641;
                 g.pose().pushPose();
                 g.pose().translate(sx, sy, 350);
-                g.pose().scale(0.5F, 0.5F, 1);
+                float ns = 0.5F * WarfareUiSettings.MAP_ICON_SCALE.get();
+                g.pose().scale(ns, ns, 1);
                 int tw = f.width(numStr);
                 drawSquadNumber(g, f, numStr, -(tw / 2), -4, textColor);
                 g.pose().popPose();
@@ -666,6 +674,8 @@ public class SquadMapRenderer {
         g.pose().pushPose();
         g.pose().translate(mySx, mySy, 300);
         g.pose().mulPose(Axis.ZP.rotationDegrees(self.getYRot() + 180));
+        float selfScale = WarfareUiSettings.MAP_ICON_SCALE.get();
+        g.pose().scale(selfScale, selfScale, 1F);
         if (mySquadId != -1) RenderSystem.setShaderColor(0, 1, 0, 1);
         else RenderSystem.setShaderColor(1, 1, 1, 1);
         g.blit(ICON_SELF, -5, -5, 10, 10, 0, 0, 16, 16, 16, 16);
@@ -742,8 +752,11 @@ public class SquadMapRenderer {
         if (withDash) drawDashedLine(g, px, py, mx, my, color);
         if (inMap(mx, my)) {
             RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, 1);
+            RenderSystem.setShaderColor(1, 1, 1, markerAlpha(1F));
+            pushIconScale(g, mx, my);
             g.blit(icon, mx - 6, my - 6, 0, 0, 12, 12, 12, 12);
+            g.pose().popPose();
+            RenderSystem.setShaderColor(1, 1, 1, 1);
             double distance = Math.sqrt(mc.player.distanceToSqr(m.x, mc.player.getY(), m.z));
             String distText = (int) distance + "m";
             g.pose().pushPose();
@@ -826,8 +839,10 @@ public class SquadMapRenderer {
             setFilter(icon, true);
             g.pose().pushPose();
             g.pose().translate(sx, sy, 120);
+            float ts = WarfareUiSettings.MAP_ICON_SCALE.get();
+            g.pose().scale(ts, ts, 1F);
             RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, alpha);
+            RenderSystem.setShaderColor(1, 1, 1, markerAlpha(alpha));
             g.blit(icon, -8, -8, 16, 16, 0, 0, 32, 32, 32, 32);
             RenderSystem.setShaderColor(1, 1, 1, 1);
             g.pose().popPose();
@@ -869,8 +884,10 @@ public class SquadMapRenderer {
                 int my = toScreenZ(rm.z, cz);
                 if (!inMap(mx, my)) continue;
                 RenderSystem.enableBlend();
-                RenderSystem.setShaderColor(1, 1, 1, alpha);
+                RenderSystem.setShaderColor(1, 1, 1, markerAlpha(alpha));
+                pushIconScale(g, mx, my);
                 g.blit(rhombusTex, mx - 8, my - 8, 0, 0, 16, 16, 16, 16);
+                g.pose().popPose();
                 g.pose().pushPose();
                 g.pose().translate(mx, my, 500);
                 g.pose().scale(0.5F, 0.5F, 1);
@@ -935,8 +952,12 @@ public class SquadMapRenderer {
         int px = toScreenX(pos.getX() + 0.5, cx);
         int py = toScreenZ(pos.getZ() + 0.5, cz);
         if (inMap(px, py)) {
-            RenderSystem.setShaderColor(1, 1, 1, 1);
+            RenderSystem.enableBlend();
+            RenderSystem.setShaderColor(1, 1, 1, markerAlpha(1F));
+            pushIconScale(g, px, py);
             g.blit(icon, px - 6, py - 6, 0, 0, 12, 12, 12, 12);
+            g.pose().popPose();
+            RenderSystem.setShaderColor(1, 1, 1, 1);
         }
     }
 
@@ -967,7 +988,30 @@ public class SquadMapRenderer {
         g.drawString(font, text, x, y, color, false);
     }
 
+    /** Масштаб иконки вокруг её центра (настройка «Размер иконок»); парный popPose обязателен. */
+    private static void pushIconScale(GuiGraphics g, float cx, float cy) {
+        float s = WarfareUiSettings.MAP_ICON_SCALE.get();
+        g.pose().pushPose();
+        g.pose().translate(cx, cy, 0);
+        g.pose().scale(s, s, 1F);
+        g.pose().translate(-cx, -cy, 0);
+    }
+
+    /** Прозрачность меток/маркеров (настройка «Прозрачность меток»). */
+    private static float markerAlpha(float a) {
+        return a * WarfareUiSettings.MAP_MARKER_OPACITY.get();
+    }
+
     private boolean isShowNicknamesHeld() {
+        // настройка «Подписи имён»: всегда / никогда / по клавише (как было)
+        switch (WarfareUiSettings.MAP_NAMES.get()) {
+            case ALWAYS:
+                return true;
+            case NEVER:
+                return false;
+            default:
+                break;
+        }
         Minecraft mc = Minecraft.getInstance();
         long window = mc.getWindow().getWindow();
         Key nickKey = ModKeyBindings.SHOW_NICKNAMES_KEY.getKey();
@@ -1087,8 +1131,10 @@ public class SquadMapRenderer {
             if (t < 0.2f) alpha = 1.0f;
             else alpha = Math.max(0, 1.0f - (float) Math.pow((t - 0.2f) / 0.8f, 1.5f));
             RenderSystem.enableBlend();
-            RenderSystem.setShaderColor(1, 1, 1, alpha * 0.9F);
+            RenderSystem.setShaderColor(1, 1, 1, markerAlpha(alpha * 0.9F));
+            pushIconScale(g, px, py);
             g.blit(icon(m.iconType, m.team), px - 10, py - 10, 0, 0, 20, 20, 20, 20);
+            g.pose().popPose();
             RenderSystem.setShaderColor(1, 1, 1, 1);
             if (("hat".equals(m.iconType) || "rally".equals(m.iconType)) && "squad".equals(m.team)) {
                 var p = Minecraft.getInstance().player;
@@ -1147,7 +1193,11 @@ public class SquadMapRenderer {
         return Math.max(0, 1.0f - (float) Math.pow((t - 0.2f) / 0.8f, 1.5f));
     }
 
+    /** Прозрачность путей (настройка «Прозрачность путей»); вне drawPath — 1 (превью). */
+    private float pathOpacity = 1F;
+
     private void drawPath(GuiGraphics g, double cx, double cz) {
+        pathOpacity = WarfareUiSettings.MAP_PATH_OPACITY.get();
         pathFadeAlpha = 1.0f;
         drawGroup(g, cx, cz, pathGroups(), 0xFF44FF44);
         drawGroup(g, cx, cz, pathGroupsRed(), 0xFFFF4444);
@@ -1171,6 +1221,7 @@ public class SquadMapRenderer {
             }
         }
         pathAnimProgress = savedAnim;
+        pathOpacity = 1F;
     }
 
     private void drawSquadPaths(GuiGraphics g, double cx, double cz) {
@@ -1228,15 +1279,15 @@ public class SquadMapRenderer {
                 float angle = (float) Math.toDegrees(Math.atan2(ly2 - (int) ly1, lx2 - (int) lx1));
                 pose.mulPose(Axis.ZP.rotationDegrees(angle));
                 float clen = (float) Math.hypot(lx2 - lx1, ly2 - ly1);
-                g.fill(0, -1, (int) clen, 2, 0x66000000);
-                g.fill(0, 0, (int) clen, 1, lineCol);
+                g.fill(0, -1, (int) clen, 2, UIDraw.fade(0x66000000, pathOpacity));
+                g.fill(0, 0, (int) clen, 1, UIDraw.fade(lineCol, pathOpacity));
                 pose.popPose();
                 if (t < 1) break;
             }
 
             if (pathAnimProgress > 0.05F) {
                 int sx = (int) segX[0], sy = (int) segY[0];
-                RenderSystem.setShaderColor(r, gr, b, 0.9F * pathFadeAlpha);
+                RenderSystem.setShaderColor(r, gr, b, 0.9F * pathFadeAlpha * pathOpacity);
                 g.blit(ICON_CIRCLE, sx - 9, sy - 9, 18, 18, 0, 0, 16, 16, 16, 16);
                 RenderSystem.setShaderColor(1, 1, 1, 1);
                 String numStr = String.valueOf(squadNum);
@@ -1260,7 +1311,7 @@ public class SquadMapRenderer {
                     pose.translate(ex2, ey2, 200);
                     float eAngle = (float) Math.toDegrees(Math.atan2(edy, edx)) + 90;
                     pose.mulPose(Axis.ZP.rotationDegrees(eAngle));
-                    RenderSystem.setShaderColor(r, gr, b, 0.9F * pathFadeAlpha);
+                    RenderSystem.setShaderColor(r, gr, b, 0.9F * pathFadeAlpha * pathOpacity);
                     g.blit(ICON_SELF, -9, -9, 18, 18, 0, 0, 16, 16, 16, 16);
                     RenderSystem.setShaderColor(1, 1, 1, 1);
                     pose.popPose();
@@ -1322,7 +1373,7 @@ public class SquadMapRenderer {
             // Start circle (appears at progress > 5% of first segment)
             if (pathAnimProgress > 0.05F) {
                 int sx = (int) segX[0], sy = (int) segY[0];
-                RenderSystem.setShaderColor(r, gr2, b, 0.9F * pathFadeAlpha);
+                RenderSystem.setShaderColor(r, gr2, b, 0.9F * pathFadeAlpha * pathOpacity);
                 g.blit(ICON_CIRCLE, sx - 8, sy - 8, 16, 16, 0, 0, 16, 16, 16, 16);
                 RenderSystem.setShaderColor(1, 1, 1, 1);
             }
@@ -1339,7 +1390,7 @@ public class SquadMapRenderer {
                     pose.translate(ex2, ey2, 200);
                     float eAngle = (float) Math.toDegrees(Math.atan2(edy, edx)) + 90;
                     pose.mulPose(Axis.ZP.rotationDegrees(eAngle));
-                    RenderSystem.setShaderColor(r, gr2, b, 0.9F * pathFadeAlpha);
+                    RenderSystem.setShaderColor(r, gr2, b, 0.9F * pathFadeAlpha * pathOpacity);
                     g.blit(ICON_SELF, -8, -8, 16, 16, 0, 0, 16, 16, 16, 16);
                     RenderSystem.setShaderColor(1, 1, 1, 1);
                     pose.popPose();
@@ -1356,8 +1407,8 @@ public class SquadMapRenderer {
         pose.translate(x1, y1, 200);
         float angle = (float) Math.toDegrees(Math.atan2(dy, dx));
         pose.mulPose(Axis.ZP.rotationDegrees(angle));
-        g.fill(0, -1, (int) len, 2, 0x66000000);
-        g.fill(0, 0, (int) len, 1, col);
+        g.fill(0, -1, (int) len, 2, UIDraw.fade(0x66000000, pathOpacity));
+        g.fill(0, 0, (int) len, 1, UIDraw.fade(col, pathOpacity));
         pose.popPose();
     }
 

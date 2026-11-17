@@ -33,7 +33,8 @@ public class FeedbackMessageBlock {
         Minecraft mc = Minecraft.getInstance();
         long now = mc.level != null ? mc.level.getGameTime() : 0L;
         current = message;
-        showUntilTick = now + SHOW_TICKS;
+        // настройка «Длительность сообщений» (по умолчанию SHOW_TICKS = 3 с, как ваниль)
+        showUntilTick = now + WarfareUiSettings.ticks(WarfareUiSettings.FEEDBACK_SECONDS);
         fading = false;
         if (alpha < 0.3F) alpha = 0.3F; // уже видимое сообщение не «прыгает» при замене
     }
@@ -60,7 +61,7 @@ public class FeedbackMessageBlock {
         int boxHeight = PWPTheme.Spacing.LG;
         int x = (width - boxWidth) / 2;
         int y = height - 58; // ярус фидбека: над хотбаром (его верх h-42), ниже ленты (h-76/h-94)
-        int a = (int) (Math.min(1.0F, alpha) * 220.0F);
+        int a = (int) (Math.min(1.0F, alpha) * 220.0F * WarfareUiSettings.MESSAGE_OPACITY.get());
         if (a <= 2) return;
 
         gui.fill(x, y, x + boxWidth, y + boxHeight, PWPTheme.Colors.withAlpha(PWPTheme.Colors.BACKGROUND, a));
