@@ -85,4 +85,14 @@ public final class HudTheme {
     public static final int CONTEXT_W = 170;
     public static final int CONTEXT_H = 20;
     public static final int CONTEXT_BAR_H = 3;
+
+    // ------------------------------------------------------------ кольца у прицела (этап 5)
+    /** Трек сегментного кольца (незалитые сегменты). */
+    public static final int RING_TRACK = 0x8C101317;
+    /** Подложка-тень под штрихом (читается на светлом небе). */
+    public static final int RING_SHADOW = 0x66000000;
+    /** Толщина штриха кольца и зазор между сегментами по дуге. */
+    public static final int RING_THICK = 2;
+
+    public static final int RING_GAP = 2;
 }

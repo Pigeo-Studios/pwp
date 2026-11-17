@@ -57,8 +57,9 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 
 @EventBusSubscriber(modid = "pwpwarfare", value = Dist.CLIENT, bus = Bus.FORGE)
-// Основной оверлей мода: HUD — компас, захват точек, постройки,
-// тикеты, уведомления, рация и другие элементы (комментарий восстановлен: исходник был повреждён)
+// Основной оверлей мода (после CHAT_PANEL): верх — TopHud, боковые стеки — SideHud, плашки БК/припасов и
+// стройка — кит WHud; на старых координатах остались только look-at подсказки (материалы хаба/ящика,
+// техника), Build Mode, виньетка нока и боковая карта (client/gui/map). Центр (дрон) — CenterHud.
 public class WarfareOverlay {
     private static final ResourceLocation FLAG_UKRAINE =
             new ResourceLocation("pwpwarfare", "textures/gui/flags/ukraine.png");
@@ -75,8 +76,6 @@ public class WarfareOverlay {
     private static final ResourceLocation FLAG_PMC = new ResourceLocation("pwpwarfare", "textures/gui/flags/pmc.png");
     private static final ResourceLocation VIGNETTE_TEXTURE =
             new ResourceLocation("pwpwarfare", "textures/misc/vignette.png");
-    private static final ResourceLocation ARROW_TEX =
-            new ResourceLocation("pwpwarfare", "textures/gui/capture_arrow.png");
     private static SquadMapRenderer HUD_SIDE_MAP;
     private static final ResourceLocation MOUSE_LEFT = new ResourceLocation("pwpwarfare", "textures/gui/dig_icon.png");
     private static final ResourceLocation MOUSE_RIGHT =
@@ -104,7 +103,6 @@ public class WarfareOverlay {
     private static final Component AMMO_LABEL = Component.translatable(HUD + "ammo.label");
     private static final WHud.Fmt VALUE_OF_AMMO = new WHud.Fmt(HUD + "value_of");
 
-    /** Строка уведомления о захвате в верхнем регистре (как раньше); пересборка только при смене. */
     @SubscribeEvent
     public static void onRenderOverlay(Post event) {
         if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
@@ -495,84 +493,6 @@ public class WarfareOverlay {
         gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
         gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
         gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
-    }
-
-    private static void renderProgressBars(GuiGraphics gui, Minecraft mc, int centerX, int y, int teamColor) {
-        int barsTotalWidth = 80;
-        int barHeight = 4;
-        int barsStartX = centerX - barsTotalWidth / 2;
-        int barGap = 2;
-        int singleBarWidth = (barsTotalWidth - barGap * 3) / 4;
-
-        for (int i = 0; i < 4; i++) {
-            int currentBarX = barsStartX + i * (singleBarWidth + barGap);
-            gui.fill(currentBarX, y, currentBarX + singleBarWidth, y + barHeight, -12303292);
-            float threshold = i * 0.25F;
-            if (ClientData.pointProgress > threshold) {
-                float fillAmount = Math.min(1.0F, (ClientData.pointProgress - threshold) / 0.25F);
-                int fillWidth = (int) (singleBarWidth * fillAmount);
-                int finalBarColor = teamColor;
-                if (ClientData.pointOwner.equals("NEUTRAL")) {
-                    if (ClientData.pointCapturingTeam.equals("BLUE")) {
-                        finalBarColor = -13408564;
-                    } else if (ClientData.pointCapturingTeam.equals("RED")) {
-                        finalBarColor = -3394765;
-                    }
-                }
-
-                gui.fill(currentBarX, y, currentBarX + fillWidth, y + barHeight, finalBarColor);
-            }
-        }
-    }
-
-    private static void renderCaptureArrows(GuiGraphics gui, Minecraft mc, int centerX, int y) {
-        int rate = ClientData.pointCaptureRate;
-        if (rate != 0) {
-            int absRate = Math.min(Math.abs(rate), 4);
-            boolean isForward = rate > 0;
-            String capTeam = ClientData.pointCapturingTeam;
-            int color = -1;
-            if (capTeam.equalsIgnoreCase("BLUE")) {
-                color = -13408564;
-            } else if (capTeam.equalsIgnoreCase("RED")) {
-                color = -3394765;
-            }
-
-            RenderSystem.enableBlend();
-            float r = (color >> 16 & 0xFF) / 255.0F;
-            float g = (color >> 8 & 0xFF) / 255.0F;
-            float b = (color & 0xFF) / 255.0F;
-            RenderSystem.setShaderColor(r, g, b, 1.0F);
-            int arrowSize = 12;
-            int barsStartX = centerX - 40;
-            int segmentWidth = 20;
-
-            for (int i = 0; i < absRate; i++) {
-                int segmentIndex = isForward ? i : 3 - i;
-                int xPos = barsStartX + segmentIndex * segmentWidth + 2;
-                int yPos = y - 4;
-                if (isForward) {
-                    gui.blit(ARROW_TEX, xPos, yPos, 0.0F, 0.0F, arrowSize, arrowSize, arrowSize, arrowSize);
-                } else {
-                    gui.pose().pushPose();
-                    gui.pose().translate(xPos + arrowSize / 2.0, yPos + arrowSize / 2.0, 0.0);
-                    gui.pose().mulPose(Axis.ZP.rotationDegrees(180.0F));
-                    gui.blit(
-                            ARROW_TEX,
-                            -arrowSize / 2,
-                            -arrowSize / 2,
-                            0.0F,
-                            0.0F,
-                            arrowSize,
-                            arrowSize,
-                            arrowSize,
-                            arrowSize);
-                    gui.pose().popPose();
-                }
-            }
-
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        }
     }
 
     private static long chargeScanTick = Long.MIN_VALUE;

@@ -1,7 +1,9 @@
 package com.pigeostudios.pwp.warfare.client.gui.devtest;
 
+import com.pigeostudios.pwp.warfare.client.WarfareDeathScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DefenseRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
+import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.KitPreviewScreen;
 import com.pigeostudios.pwp.warfare.client.gui.PlayerKitSelectScreen;
@@ -59,6 +61,9 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.radial.tactical", () -> new TacticalMapRadialScreen(0, 0, null).asPreview());
         // низ HUD матча (хотбар, HP/броня, БК, припасы, контекстный ярус) на фикстурах
         UiGallery.register("hud", HudPreviewScreen::new);
+        // экраны нока и смерти (превью: без пакетов, без перехода в деплой)
+        UiGallery.register("warfare.downed", () -> DownedScreen.preview(60));
+        UiGallery.register("warfare.death", WarfareDeathScreen::preview);
     }
 
     // ------------------------------------------------------------ киты

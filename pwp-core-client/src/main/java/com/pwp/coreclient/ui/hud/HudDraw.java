@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Quaternionf;
 
 /**
  * Примитивы HUD матча (этап 2): тёмная стеклянная плашка, полоса с делениями и хвостом урона,
@@ -105,6 +106,52 @@ public final class HudDraw {
     private static int width(int w, float frac) {
         if (Float.isNaN(frac) || frac <= 0F) return 0;
         return Math.round(w * Math.min(1F, frac));
+    }
+
+    // ================================================================ кольцо (этап 5)
+
+    /** Поворот на шаг сегмента — один объект на всё кольцо (mulPose не аллоцирует). */
+    private static final Quaternionf RING_STEP = new Quaternionf();
+
+    /**
+     * Сегментное кольцо вокруг точки {@code (cx, cy)} в текущих координатах (обычно внутри {@link
+     * #begin}): {@code segments} штрихов толщиной {@link HudTheme#RING_THICK} на радиусе {@code
+     * radius} (внешний край), с зазором {@link HudTheme#RING_GAP}. Заливка {@code fill} — от «12
+     * часов» по часовой стрелке на долю {@code frac} (ведущий сегмент — частично), остальное — трек.
+     * Под штрихом — тень на 1px шире. Одна пара push/pop на кольцо, поворот — накопительный, без
+     * аллокаций.
+     */
+    public static void ring(
+            GuiGraphics g, float cx, float cy, int radius, int segments, float frac, int fill, float o) {
+        if (segments <= 0 || radius <= 0 || o <= 0F) return;
+        int full = RingMath.filled(frac, segments);
+        float part = RingMath.partial(frac, segments);
+        int dash = RingMath.dash(radius, segments, HudTheme.RING_GAP);
+        int x0 = -dash / 2;
+        int x1 = x0 + dash;
+        int y0 = -radius;
+        int y1 = y0 + HudTheme.RING_THICK;
+        int shadow = UIDraw.fade(HudTheme.RING_SHADOW, o);
+        int track = UIDraw.fade(HudTheme.RING_TRACK, o);
+        int on = UIDraw.fade(fill, o);
+        RING_STEP.rotationZ(RingMath.step(segments));
+        var pose = g.pose();
+        pose.pushPose();
+        pose.translate(cx, cy, 0F);
+        for (int i = 0; i < segments; i++) {
+            if (Colors.alpha(shadow) != 0) g.fill(x0 - 1, y0 - 1, x1 + 1, y1 + 1, shadow);
+            if (i < full) {
+                g.fill(x0, y0, x1, y1, on);
+            } else {
+                g.fill(x0, y0, x1, y1, track);
+                if (i == full && part > 0F) {
+                    int pw = Math.max(1, Math.round(dash * part));
+                    g.fill(x0, y0, x0 + pw, y1, on);
+                }
+            }
+            pose.mulPose(RING_STEP);
+        }
+        pose.popPose();
     }
 
     // ================================================================ текст

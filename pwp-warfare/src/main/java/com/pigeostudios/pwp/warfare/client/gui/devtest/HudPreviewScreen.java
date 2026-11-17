@@ -5,6 +5,7 @@ import com.pigeostudios.pwp.warfare.client.WarfareUiSettings;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
+import com.pigeostudios.pwp.warfare.client.hud.CenterHud;
 import com.pigeostudios.pwp.warfare.client.hud.SideHud;
 import com.pigeostudios.pwp.warfare.client.hud.TopHud;
 import com.pwp.coreclient.gui.devtest.UiGallery;
@@ -15,6 +16,8 @@ import com.pwp.coreclient.ui.hud.HudDraw;
 import com.pwp.coreclient.ui.hud.HudHotbar;
 import com.pwp.coreclient.ui.hud.HudVitals;
 import com.pwp.coreclient.ui.hud.HudZones;
+import com.pwp.coreclient.ui.hud.RingMath;
+import com.pwp.coreclient.ui.layout.Rect;
 import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,6 +46,8 @@ import net.minecraftforge.fml.ModList;
  * стеке), голосование за старт, голосование за командира, запрос арты, два раненых у медика, двое
  * говорящих. Каждые {@value #MAP_PERIOD_MS} мс на полпериода «открывается» боковая карта (заглушка
  * той же геометрии) — правый стек ужимается над ней, а не влезшее переезжает в левый.
+ *
+ * <p>Центр ({@link CenterHud}): по кругу установка дрона, перезарядка мавика, кольцо HP цели.
  *
  * <p>Сцена «живая», чтобы видеть анимации: раз в 4 с по игроку прилетает урон (63% → 41%, хвост
  * урона), через 1.6 с — лечение обратно; выбранный слот хотбара переключается раз в 1.5 с;
@@ -80,6 +85,28 @@ public final class HudPreviewScreen extends Screen {
     private final TopHud.Model model = new TopHud.Model();
     private final SideHud side = new SideHud();
     private final SideHud.Model sideModel = new SideHud.Model();
+    private final CenterHud center = new CenterHud();
+    private final CenterHud.Model centerModel = new CenterHud.Model();
+    private final WHud.Fmt targetHp = new WHud.Fmt("gui.pwpwarfare.hud.percent");
+
+    /**
+     * Центр (этап 5): цикл из трёх фаз по {@value #CENTER_PHASE_MS} мс — установка дрона (кольцо +
+     * лопасти), перезарядка мавика (кольцо), кольцо HP цели медика (HP убывает). Маркер «над дроном»
+     * — в точке экрана со смещением от центра на долю ширины/высоты.
+     */
+    private static final long CENTER_PHASE_MS = 5000L;
+
+    private static final int CENTER_PHASES = 3;
+    private static final int DRONE_TOTAL_TICKS = 80;
+    private static final float MARKER_DX = 0.18F;
+    private static final float MARKER_DY = -0.12F;
+    private static final float MS_PER_TICK = 50F;
+    /** Сколько HP цель теряет за фазу кольца HP (до красной зоны). */
+    private static final float TARGET_HP_DRAIN = 0.85F;
+
+    private final ResourceLocation medkitIcon = ModList.get().isLoaded("pwp_medicine")
+            ? new ResourceLocation("pwp_medicine", "textures/gui/medkit_icon.png")
+            : null;
 
     /** Боковые стеки: период «открытия» карты, кровотечение, иконка (текстура pwp-medicine, если есть). */
     private static final long MAP_PERIOD_MS = 12000L;
@@ -124,11 +151,11 @@ public final class HudPreviewScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         // «мир» за HUD: тёмный градиент, чтобы было видно стекло плашек
         g.fillGradient(0, 0, width, height, PWPTheme.Colors.SURFACE_LIGHT, PWPTheme.Colors.BACKGROUND);
-        // подпись — по центру (верх занят компасом и стеком верх-центра)
-        UIDraw.centered(g, font, TITLE, width / 2, (height - font.lineHeight) / 2, PWPTheme.Text.MUTED);
-
         long t = Util.getMillis() - start;
         HudZones z = Hud.zones(width, height);
+        // подпись — под зоной прицела (верх занят компасом, центр — кольцами)
+        Rect cross = z.crosshair();
+        UIDraw.centered(g, font, TITLE, width / 2, cross.y() + cross.h() + PWPTheme.Spacing.SM, PWPTheme.Text.MUTED);
         z.beginFrame();
         // кровотечение занимает верх левого стека первым (в матче — в RenderGuiEvent.Pre)
         float bleed = empty ? 0F : bleedSlide(t);
@@ -144,6 +171,7 @@ public final class HudPreviewScreen extends Screen {
                     g, WHud.font(), bleedY, bleedIcon, WarfareIcon.PLUS, BLEEDING, WTheme.HUD_DANGER, bleed, pulse);
         }
         if (!empty) WHud.contextOffer(WHud.CTX_CONSTRUCTION);
+        if (!empty) renderCenter(g, z, t);
 
         int selected = (int) ((t / SLOT_PERIOD_MS) % 9);
         hotbar.render(g, font, z, items, selected, 1F, 1F);
@@ -202,6 +230,31 @@ public final class HudPreviewScreen extends Screen {
                 build,
                 PWPTheme.Colors.ACCENT,
                 1F);
+    }
+
+    /** Центр: та же отрисовка, что в матче (CenterHud для дрона, WHud.crosshair* как у pwp-medicine). */
+    private void renderCenter(GuiGraphics g, HudZones z, long t) {
+        int phase = (int) ((t / CENTER_PHASE_MS) % CENTER_PHASES);
+        float ph = (t % CENTER_PHASE_MS) / (float) CENTER_PHASE_MS;
+        CenterHud.Model m = centerModel;
+        m.drone = phase < 2;
+        if (m.drone) {
+            m.deploying = phase == 0;
+            m.progress = ph;
+            m.time = t / MS_PER_TICK;
+            m.secondsLeft = RingMath.secondsLeft(ph, DRONE_TOTAL_TICKS);
+            m.marker = true;
+            m.markerX = Math.round(width * (0.5F + MARKER_DX));
+            m.markerY = Math.round(height * (0.5F + MARKER_DY));
+            center.render(g, PWPTheme.Fonts.display(), z, m);
+            return;
+        }
+        float hp = 1F - TARGET_HP_DRAIN * ph;
+        int color = hp < WTheme.CENTER_HP_LOW_FRACTION ? WTheme.CENTER_HP_LOW : WTheme.CENTER_HP_FILL;
+        if (medkitIcon != null) WHud.crosshairIcon(g, medkitIcon, WTheme.CENTER_HP_ICON, color);
+        WHud.crosshairRing(g, WTheme.CENTER_HP_R, WTheme.CENTER_HP_SEGMENTS, hp, color, 1F);
+        targetHp.of(Math.round(hp * 100F));
+        WHud.crosshairValue(g, WHud.font(), WTheme.CENTER_HP_R, targetHp.string(), color, 1F);
     }
 
     /** Кровотечение: 2/3 периода есть (выезд), 1/3 — нет (уезд). */

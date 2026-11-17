@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui.ui;
 
+import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
 import com.pwp.coreclient.ui.UIDraw;
@@ -132,6 +133,49 @@ public final class WHud {
         HudDraw.bar(g, pad, by, w - pad - HudTheme.PAD_X, HudTheme.CONTEXT_BAR_H, frac, -1F, 10, accent, o);
         HudDraw.end(g);
         return true;
+    }
+
+    // ================================================================ центр (этап 5)
+    // Обёртки без типов core-client в сигнатурах — pwp-medicine рисует кольцо HP через них.
+
+    /**
+     * Центр экрана занят каналом дрона (установка/перезарядка): у него высший приоритет, кольцо
+     * HP цели в этом кадре не рисуется (кольца не накладываются).
+     */
+    public static boolean centerBusy() {
+        return ClientData.droneDeployActive;
+    }
+
+    /**
+     * Сегментное кольцо вокруг центра экрана (радиус/сегменты — базовые HUD-единицы, масштаб HUD
+     * учитывается): заливка {@code fill} на долю {@code frac} от «12 часов» по часовой стрелке.
+     */
+    public static void crosshairRing(GuiGraphics g, int radius, int segments, float frac, int fill, float o) {
+        HudZones z = zones();
+        HudDraw.begin(g, z.width() / 2F, z.height() / 2F, z.scale());
+        HudDraw.ring(g, 0F, 0F, radius, segments, frac, fill, o);
+        HudDraw.end(g);
+    }
+
+    /** Текстура-иконка {@code size} в центре экрана с тинтом {@code color} (вся текстура). */
+    public static void crosshairIcon(GuiGraphics g, ResourceLocation tex, int size, int color) {
+        HudZones z = zones();
+        HudDraw.begin(g, z.width() / 2F, z.height() / 2F, z.scale());
+        HudDraw.icon(g, tex, 0, 0, 1, 1, 1, -size / 2, -size / 2, size, color);
+        HudDraw.end(g);
+    }
+
+    /**
+     * Плашка значения справа от кольца радиуса {@code radius} у прицела (вертикально по центру):
+     * акцентная полоска + значение. Возвращает ширину в базовых единицах.
+     */
+    public static int crosshairValue(GuiGraphics g, Font font, int radius, String value, int accent, float o) {
+        if (value == null || o <= 0F) return 0;
+        HudZones z = zones();
+        HudDraw.begin(g, z.width() / 2F, z.height() / 2F, z.scale());
+        int w = plate(g, font, radius + WTheme.CENTER_VALUE_GAP, -plateHeight(font) / 2, null, value, accent, o);
+        HudDraw.end(g);
+        return w;
     }
 
     // ================================================================ боковые стеки (этап 4)

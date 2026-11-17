@@ -499,4 +499,71 @@ public final class WTheme {
     public static final int SIDE_ALERT_ICON = 12;
     public static final float SIDE_ALERT_PULSE = 0.18F;
     public static final long SIDE_ALERT_PULSE_MS = 1200L;
+
+    // ------------------------------------------------------------ HUD центр (этап 5: client/hud/CenterHud,
+    // pwp-medicine)
+    // Базовые HUD-единицы от центра экрана (масштаб HUD применяет HudDraw.begin); радиусы ≤ HudZones.CROSSHAIR / 2.
+    /** Кольцо канала дрона: внешний радиус и число сегментов (было 12 точек на r=21). */
+    public static final int CENTER_DRONE_R = 21;
+
+    public static final int CENTER_DRONE_SEGMENTS = 16;
+    /** Лопасти дрона (только установка): три по 120°, оборот за 90 тиков мира (4.5 с, как раньше). */
+    public static final int CENTER_BLADES = 3;
+
+    public static final float CENTER_BLADE_SPIN_TICKS = 90F;
+    /** Лопасть — от радиуса INNER на длину LEN, ширина W; кончик-акцент длиной TIP, ширина TIP_W. */
+    public static final int CENTER_BLADE_INNER = 5;
+
+    public static final int CENTER_BLADE_LEN = 10;
+    public static final int CENTER_BLADE_W = 4;
+    public static final int CENTER_BLADE_TIP = 3;
+    public static final int CENTER_BLADE_TIP_W = 2;
+    public static final int CENTER_BLADE = Colors.multiplyAlpha(PWPTheme.Text.HEADING, 0.8F);
+    public static final int CENTER_BLADE_SHADOW = HudTheme.RING_SHADOW;
+    /** Акцент канала: установка — фирменный, перезарядка мавика — «пополнение». */
+    public static final int CENTER_DRONE_DEPLOY = Colors.ACCENT;
+
+    public static final int CENTER_DRONE_RELOAD = HUD_POSITIVE;
+    /** Маркер над дроном: квадрат-плашка SIZE с ядром CORE, плашка секунд справа через GAP. */
+    public static final int CENTER_MARKER = 9;
+
+    public static final int CENTER_MARKER_CORE = 5;
+    public static final int CENTER_MARKER_GAP = 3;
+    /** Рамка маркера — цвет канала с этой прозрачностью (ядро — полный цвет). */
+    public static final float CENTER_MARKER_FRAME = 0.6F;
+    /** Высота маркера над точкой дрона (блоки): на высоте корпуса, а не на земле (как раньше). */
+    public static final double CENTER_MARKER_LIFT = 1.3;
+    /** Кольцо HP цели (медик с аптечкой): радиус, сегменты как у полосы HP, иконка в центре. */
+    public static final int CENTER_HP_R = 17;
+
+    public static final int CENTER_HP_SEGMENTS = HudTheme.VITALS_SEGMENTS;
+    public static final int CENTER_HP_ICON = 16;
+    /** Плашка значения справа от кольца (зазор от внешнего края кольца). */
+    public static final int CENTER_VALUE_GAP = 4;
+    /** HP цели: цвет полосы выше/ниже порога, как у своей полосы HP. */
+    public static final int CENTER_HP_FILL = HudTheme.HP_FILL;
+
+    public static final int CENTER_HP_LOW = HudTheme.HP_LOW;
+    public static final float CENTER_HP_LOW_FRACTION = HudTheme.HP_LOW_FRACTION;
+
+    // ------------------------------------------------------------ экран смерти (WarfareDeathScreen)
+    /** Затемнение под заголовком (мир за экраном не виден — как раньше, чёрный). */
+    public static final int DEATH_BG = PWPTheme.Colors.BACKGROUND;
+
+    public static final int DEATH_VIGNETTE = Colors.withAlpha(Colors.DANGER, 0x90);
+    public static final float DEATH_VIGNETTE_FRACTION = 0.35F;
+    public static final int DEATH_TITLE = PWPTheme.Text.DANGER;
+    public static final int DEATH_SUB = PWPTheme.Text.MUTED;
+    /** Заголовок увеличен в целое число раз (пиксельный шрифт остаётся чётким). */
+    public static final int DEATH_TITLE_SCALE = 2;
+    /** Акцентная линия под заголовком: ширина и толщина. */
+    public static final int DEATH_LINE_W = 120;
+
+    public static final int DEATH_LINE_H = 2;
+    /** Тайминги прежние: 1 с заголовок, 1 с фейд, затем меню деплоя. */
+    public static final long DEATH_HOLD_MS = 1000L;
+
+    public static final long DEATH_FADE_MS = 1000L;
+    /** Превью тест-стенда: цикл (заголовок → фейд → пауза), деплой не открывается. */
+    public static final long DEATH_PREVIEW_CYCLE_MS = 3500L;
 }

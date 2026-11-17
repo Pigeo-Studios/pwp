@@ -1,6 +1,5 @@
 package com.pigeostudios.pwp.medicine.event;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
 import com.pigeostudios.pwp.medicine.item.ModItems;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
@@ -86,10 +85,11 @@ public class ClientHUDHandler {
         ClientHUDHandler.handleGrayscaleShader(mc, mc.player);
         if (!hud) return;
         Player target = ClientHUDHandler.getHudTarget(mc);
-        float screenX = (float) mc.getWindow().getGuiScaledWidth() / 2.0f;
-        float screenY = (float) mc.getWindow().getGuiScaledHeight() / 2.0f;
         if (target != null) {
-            ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, target, target == mc.player, screenX, screenY);
+            // центр занят каналом дрона (высший приоритет) — кольца не накладываются
+            if (!WHud.centerBusy()) {
+                ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, target, target == mc.player);
+            }
         } else if (patientHealer != null) {
             ClientHUDHandler.renderPatient(event.getGuiGraphics(), mc, patientHealer);
         }
@@ -168,23 +168,23 @@ public class ClientHUDHandler {
                 pulse);
     }
 
-    private static void renderHealthHUD(
-            GuiGraphics guiGraphics, Minecraft mc, Player target, boolean isSelf, float centerX, float centerY) {
-        float healthPercent = Math.max(0.0f, Math.min(1.0f, target.getHealth() / target.getMaxHealth()));
-        int redVal = (int) (255.0f * (1.0f - healthPercent));
-        int greenVal = (int) (255.0f * healthPercent);
-        int hpColor = 0xFF000000 | redVal << 16 | greenVal << 8 | 0;
+    /** Процент HP цели на плашке справа от кольца (строка пересобирается только при смене). */
+    private static final WHud.Fmt TARGET_HP = new WHud.Fmt("gui.pwpwarfare.hud.percent");
+
+    /**
+     * Кольцо HP цели у прицела (этап 5, кит HUD): иконка аптечки/кровотечения в центре цветом HP,
+     * сегментное кольцо (сегменты как у своей полосы HP) и плашка «N%» справа. Своё лечение — только
+     * иконка, как раньше. Центр занят каналом дрона — не рисуется (вызывающий проверяет).
+     */
+    private static void renderHealthHUD(GuiGraphics g, Minecraft mc, Player target, boolean isSelf) {
+        float hp = Math.max(0.0f, Math.min(1.0f, target.getHealth() / Math.max(1.0f, target.getMaxHealth())));
+        int color = hp < WTheme.CENTER_HP_LOW_FRACTION ? WTheme.CENTER_HP_LOW : WTheme.CENTER_HP_FILL;
         ResourceLocation icon = target.hasEffect(ModEffects.BLEEDING.get()) ? BLEEDING_TARGET : ICON_TEXTURE;
-        RenderSystem.enableBlend();
-        RenderSystem.setShaderColor((float) redVal / 255.0f, (float) greenVal / 255.0f, 0.0f, 1.0f);
-        guiGraphics.blit(icon, (int) (centerX - 8.0f), (int) (centerY - 8.0f), 0.0f, 0.0f, 16, 16, 16, 16);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        if (!isSelf) {
-            int bgColor = 0x64444444;
-            ClientHUDHandler.drawUltraHighQualityArc(guiGraphics, centerX, centerY, 17.0f, 1.0f, bgColor, 1.0f);
-            ClientHUDHandler.drawUltraHighQualityArc(
-                    guiGraphics, centerX, centerY, 17.0f, healthPercent, hpColor, 1.2f);
-        }
+        WHud.crosshairIcon(g, icon, WTheme.CENTER_HP_ICON, color);
+        if (isSelf) return;
+        WHud.crosshairRing(g, WTheme.CENTER_HP_R, WTheme.CENTER_HP_SEGMENTS, hp, color, 1.0f);
+        TARGET_HP.of(Math.round(hp * 100.0f));
+        WHud.crosshairValue(g, WHud.font(), WTheme.CENTER_HP_R, TARGET_HP.string(), color, 1.0f);
     }
 
     private static Player getHudTarget(Minecraft mc) {
@@ -255,28 +255,6 @@ public class ClientHUDHandler {
                 mc.gameRenderer.shutdownEffect();
                 shaderActive = false;
             });
-        }
-    }
-
-    private static void drawUltraHighQualityArc(
-            GuiGraphics guiGraphics, float x, float y, float radius, float percent, int color, float thickness) {
-        if (percent <= 0.0f) {
-            return;
-        }
-        int segments = 360;
-        float angleStep = (float) (Math.PI * 2 / (double) segments);
-        int i = 0;
-        while ((float) i < (float) segments * percent) {
-            float angle = (float) i * angleStep - 1.5707964f;
-            float px = x + (float) Math.cos(angle) * radius;
-            float py = y + (float) Math.sin(angle) * radius;
-            guiGraphics.fill(
-                    (int) (px - thickness / 2.0f),
-                    (int) (py - thickness / 2.0f),
-                    (int) (px + thickness / 2.0f + 1.0f),
-                    (int) (py + thickness / 2.0f + 1.0f),
-                    color);
-            ++i;
         }
     }
 }
