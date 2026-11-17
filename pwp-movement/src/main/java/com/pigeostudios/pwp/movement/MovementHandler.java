@@ -102,7 +102,8 @@ public class MovementHandler {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        // F1 скрывает HUD (как общий гейт WHud.hudVisible в warfare; от warfare модуль не зависит)
+        if (mc.player == null || mc.options.hideGui) {
             return;
         }
         float pt = event.getPartialTick();

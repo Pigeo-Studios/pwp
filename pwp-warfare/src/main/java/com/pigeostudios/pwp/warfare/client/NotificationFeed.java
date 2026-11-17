@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client;
 
+import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
 import com.tacz.guns.api.event.common.GunShootEvent;
@@ -130,6 +131,11 @@ public class NotificationFeed {
 
         for (Entry entry : ENTRIES) {
             if (!entry.fading && now >= entry.expireTick) entry.fading = true;
+        }
+        // общий гейт HUD (F1): не рисуем; истёкшие записи снимаем сразу, чтобы не висели до показа
+        if (!WHud.hudVisible()) {
+            ENTRIES.removeIf(e -> e.fading);
+            return;
         }
 
         GuiGraphics gui = event.getGuiGraphics();

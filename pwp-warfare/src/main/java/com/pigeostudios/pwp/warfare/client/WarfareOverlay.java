@@ -18,6 +18,7 @@ import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMapRenderer;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
@@ -39,6 +40,7 @@ import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -118,6 +120,73 @@ public class WarfareOverlay {
                 type + s, k -> new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + k + ".png"));
     }
 
+    // ------------------------------------------------------------ строки HUD (lang, кэш компонентов)
+    private static final String HUD = "gui.pwpwarfare.hud.";
+    private static final WHud.Fmt CMD_VOTE_TITLE = new WHud.Fmt(HUD + "cmd_vote.title");
+    private static final Component CMD_VOTE_RULE = Component.translatable(HUD + "cmd_vote.rule");
+    private static final Component CMD_VOTE_WAITING = Component.translatable(HUD + "cmd_vote.waiting");
+    private static final WHud.KeyHint CMD_VOTE_KEYS =
+            new WHud.KeyHint(HUD + "vote.keys", ModKeyBindings.VOTE_CMD_YES_KEY, ModKeyBindings.VOTE_CMD_NO_KEY);
+    private static final Component ART_TITLE = Component.translatable(HUD + "art.title");
+    private static final WHud.Fmt ART_FROM = new WHud.Fmt(HUD + "art.from");
+    private static final WHud.Fmt ART_POS = new WHud.Fmt(HUD + "art.pos");
+    private static final WHud.KeyHint ART_KEYS =
+            new WHud.KeyHint(HUD + "art.keys", ModKeyBindings.ART_CONFIRM_KEY, ModKeyBindings.ART_DENY_KEY);
+    private static final WHud.Fmt CAPTURE_CAPTURED = new WHud.Fmt(HUD + "capture.captured");
+    private static final WHud.Fmt CAPTURE_NEUTRALIZED = new WHud.Fmt(HUD + "capture.neutralized");
+    private static final Component BUILD_DESTROY = Component.translatable(HUD + "build.destroy");
+    private static final Component BUILD_BUILD = Component.translatable(HUD + "build.build");
+    private static final Component BUILD_DESTROYING = Component.translatable(HUD + "build.destroying");
+    private static final Component BUILD_DISMANTLING = Component.translatable(HUD + "build.dismantling");
+    private static final Component BUILD_ENEMY = Component.translatable(HUD + "build.enemy");
+    private static final Component BUILD_FINISHED = Component.translatable(HUD + "build.finished");
+    private static final WHud.Clock INVASION_CLOCK = new WHud.Clock();
+    private static final WHud.Fmt INVASION_SETUP = new WHud.Fmt(HUD + "invasion.setup");
+    private static final WHud.Fmt INVASION_BLOCKADE = new WHud.Fmt(HUD + "invasion.blockade");
+    private static final Component POINT_BLOCKED = Component.translatable(HUD + "point.blocked");
+    private static final WHud.Fmt POINT_NEED = new WHud.Fmt(HUD + "point.need");
+    private static final Component VOTE_TITLE = Component.translatable(HUD + "vote.title");
+    private static final WHud.Clock VOTE_CLOCK = new WHud.Clock();
+    private static final WHud.Fmt VOTE_BLUE_READY = new WHud.Fmt(HUD + "vote.ready");
+    private static final WHud.Fmt VOTE_BLUE_WAITING = new WHud.Fmt(HUD + "vote.waiting");
+    private static final WHud.Fmt VOTE_RED_READY = new WHud.Fmt(HUD + "vote.ready");
+    private static final WHud.Fmt VOTE_RED_WAITING = new WHud.Fmt(HUD + "vote.waiting");
+    private static final WHud.KeyHint VOTE_KEYS =
+            new WHud.KeyHint(HUD + "vote.keys", ModKeyBindings.VOTE_START_YES_KEY, ModKeyBindings.VOTE_START_NO_KEY);
+    private static final WHud.Fmt SUPPLY = new WHud.Fmt(HUD + "supply.crates");
+    private static final Component SUPPLY_LOADING = Component.translatable(HUD + "supply.loading");
+    private static final WHud.Fmt AMMO = new WHud.Fmt(HUD + "ammo");
+    /** Строки списка ноков у медика: кэш по номеру строки (имя/дистанция меняются редко). */
+    private static final WHud.Fmt[] MEDIC_ROWS = new WHud.Fmt[16];
+
+    private static Component captureUpperSrc;
+    private static String captureUpper;
+
+    private static WHud.Fmt medicRow(int i) {
+        int idx = Math.min(i, MEDIC_ROWS.length - 1);
+        WHud.Fmt f = MEDIC_ROWS[idx];
+        if (f == null) {
+            f = new WHud.Fmt(HUD + "medic.downed");
+            MEDIC_ROWS[idx] = f;
+        }
+        return f;
+    }
+
+    private static String supplyText(int crates, int maxCrates) {
+        SUPPLY.of(crates, maxCrates);
+        return SUPPLY.string();
+    }
+
+    /** Строка уведомления о захвате в верхнем регистре (как раньше); пересборка только при смене. */
+    private static String upperCached(WHud.Fmt fmt, String team, String point) {
+        Component c = fmt.of(team, point);
+        if (c != captureUpperSrc) {
+            captureUpperSrc = c;
+            captureUpper = c.getString().toUpperCase();
+        }
+        return captureUpper;
+    }
+
     @SubscribeEvent
     public static void onRenderOverlay(Post event) {
         if (event.getOverlay() == VanillaGuiOverlay.CHAT_PANEL.type()) {
@@ -126,28 +195,9 @@ public class WarfareOverlay {
             if (mc.player != null && mc.level != null) {
                 int width = mc.getWindow().getGuiScaledWidth();
                 int height = mc.getWindow().getGuiScaledHeight();
-                renderTickets(gui, mc, width);
-                renderVotePanel(gui, mc, height);
-                if (ClientData.allCapturePoints != null) {
-                    for (WarfareWorldData.CapturePoint cp : ClientData.allCapturePoints) {
-                        if (mc.player.getBoundingBox().intersects(cp.area)) {
-                            renderCapturePoint(gui, mc, width, height);
-                            break;
-                        }
-                    }
-                }
-
-                renderBuildProgress(gui, mc, width, height);
-                renderHubMaterials(gui, mc, width, height);
-                renderVehicleHud(gui, mc, width, height);
-                renderVehicleAmmo(gui, mc, width, height);
-                renderSupplyTruckInfo(gui, mc, width, height);
-                renderPlacementHints(gui, mc, width, height);
-                renderCaptureNotifications(gui, mc, width, height);
-                renderCompass(gui, mc, width, event.getPartialTick());
-                renderInvasionSetupTimer(gui, mc, width);
-                renderCMDVotePanel(gui, mc, width);
-                renderArtStrikeRequest(gui, mc, width);
+                // общий гейт HUD (F1 скрывает); виньетка нока и боковая карта — вне гейта
+                boolean hud = WHud.hudVisible();
+                if (hud) renderHud(gui, mc, width, height, event.getPartialTick());
                 if (WarfareData.of(mc.player).getBoolean(WarfareKeys.IS_DOWNED)) {
                     RenderSystem.disableDepthTest();
                     RenderSystem.depthMask(false);
@@ -160,18 +210,44 @@ public class WarfareOverlay {
                     RenderSystem.enableDepthTest();
                 }
 
-                String currentKit = ClientData.myCurrentKit;
-                if ("Medic".equalsIgnoreCase(currentKit)) {
-                    renderMedicUI(gui, mc, width);
+                if (hud) {
+                    if ("Medic".equalsIgnoreCase(ClientData.myCurrentKit)) {
+                        renderMedicUI(gui, mc, width);
+                    }
+                    renderRadioSpeakers(gui, mc, height);
+                    renderVoiceSpeakers(gui, mc, height);
                 }
-
-                renderRadioSpeakers(gui, mc, height);
-                renderVoiceSpeakers(gui, mc, height);
                 if (ClientData.isMapOpen || ClientData.mapTransition > 0.0F) {
                     renderSideMap(gui, mc, width, height, event.getPartialTick());
                 }
             }
         }
+    }
+
+    /** HUD-элементы под общим гейтом {@link WHud#hudVisible()}. */
+    private static void renderHud(GuiGraphics gui, Minecraft mc, int width, int height, float partialTick) {
+        renderTickets(gui, mc, width);
+        renderVotePanel(gui, mc, height);
+        if (ClientData.allCapturePoints != null) {
+            for (WarfareWorldData.CapturePoint cp : ClientData.allCapturePoints) {
+                if (mc.player.getBoundingBox().intersects(cp.area)) {
+                    renderCapturePoint(gui, mc, width, height);
+                    break;
+                }
+            }
+        }
+
+        renderBuildProgress(gui, mc, width, height);
+        renderHubMaterials(gui, mc, width, height);
+        renderVehicleHud(gui, mc, width, height);
+        renderVehicleAmmo(gui, mc, width, height);
+        renderSupplyTruckInfo(gui, mc, width, height);
+        renderPlacementHints(gui, mc, width, height);
+        renderCaptureNotifications(gui, mc, width, height);
+        renderCompass(gui, mc, width, partialTick);
+        renderInvasionSetupTimer(gui, mc, width);
+        renderCMDVotePanel(gui, mc, width);
+        renderArtStrikeRequest(gui, mc, width);
     }
 
     private static void renderCompass(GuiGraphics gui, Minecraft mc, int screenWidth, float partialTick) {
@@ -645,12 +721,11 @@ public class WarfareOverlay {
                 gui.fill(x, y, x + pWidth, y + pHeight, -1442840576);
                 gui.renderOutline(x, y, pWidth, pHeight, -11141291);
                 gui.drawCenteredString(
-                        PWPTheme.Fonts.display(), "CMD VOTE: " + candidateName, x + pWidth / 2, y + 5, -10496);
+                        PWPTheme.Fonts.display(), CMD_VOTE_TITLE.of(candidateName), x + pWidth / 2, y + 5, -10496);
                 gui.pose().pushPose();
                 gui.pose().scale(0.75F, 0.75F, 1.0F);
                 int sx = (int) ((x + pWidth / 2) / 0.75F);
-                gui.drawCenteredString(
-                        PWPTheme.Fonts.display(), "Needs 50% SL votes to pass", sx, (int) ((y + 16) / 0.75F), -5592406);
+                gui.drawCenteredString(PWPTheme.Fonts.display(), CMD_VOTE_RULE, sx, (int) ((y + 16) / 0.75F), -5592406);
                 gui.pose().popPose();
                 gui.fill(x + 5, y + 28, x + pWidth - 5, y + 29, 1442840575);
                 int curY = y + headerH;
@@ -672,10 +747,10 @@ public class WarfareOverlay {
 
                 if (!mc.player.getScoreboardName().equals(candidateName)) {
                     gui.drawCenteredString(
-                            PWPTheme.Fonts.display(), "F7: YES | F8: NO", x + pWidth / 2, y + pHeight - 12, -4473925);
+                            PWPTheme.Fonts.display(), CMD_VOTE_KEYS.get(), x + pWidth / 2, y + pHeight - 12, -4473925);
                 } else {
                     gui.drawCenteredString(
-                            PWPTheme.Fonts.display(), "WAITING FOR VOTES", x + pWidth / 2, y + pHeight - 12, -11141291);
+                            PWPTheme.Fonts.display(), CMD_VOTE_WAITING, x + pWidth / 2, y + pHeight - 12, -11141291);
                 }
             }
         }
@@ -698,21 +773,20 @@ public class WarfareOverlay {
                         int y = 140;
                         gui.fill(x, y, x + 150, y + 45, -1442840576);
                         gui.renderOutline(x, y, 150, 45, -43691);
-                        gui.drawCenteredString(PWPTheme.Fonts.display(), "ARTILLERY REQUEST", x + 75, y + 5, -43691);
+                        gui.drawCenteredString(PWPTheme.Fonts.display(), ART_TITLE, x + 75, y + 5, -43691);
                         gui.pose().pushPose();
                         gui.pose().scale(0.8F, 0.8F, 1.0F);
                         int sx = (int) ((x + 75) / 0.8F);
                         gui.drawCenteredString(
-                                PWPTheme.Fonts.display(), "From: " + requester, sx, (int) ((y + 18) / 0.8F), -1);
+                                PWPTheme.Fonts.display(), ART_FROM.of(requester), sx, (int) ((y + 18) / 0.8F), -1);
                         gui.drawCenteredString(
                                 PWPTheme.Fonts.display(),
-                                "Pos: " + pos.getX() + ", " + pos.getZ(),
+                                ART_POS.of(pos.getX(), pos.getZ()),
                                 sx,
                                 (int) ((y + 28) / 0.8F),
                                 -5592406);
                         gui.pose().popPose();
-                        gui.drawCenteredString(
-                                PWPTheme.Fonts.display(), "PgUp: CONFIRM | PgDn: DENY", x + 75, y + 35, -171);
+                        gui.drawCenteredString(PWPTheme.Fonts.display(), ART_KEYS.get(), x + 75, y + 35, -171);
                         float progress = Math.max(0.0F, timer / 200.0F);
                         gui.fill(x + 5, y + 43, x + 5 + (int) (140.0F * progress), y + 44, -1);
                     }
@@ -768,8 +842,8 @@ public class WarfareOverlay {
                     renderWrappingLine(gui, x, y, flagW, flagH, progress, teamColor, overallAlpha);
                     String teamDisplayName =
                             note.team.equalsIgnoreCase("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
-                    String status = note.isNeutralized ? " neutralized " : " captured ";
-                    String msg = (teamDisplayName + status + note.pointName).toUpperCase();
+                    WHud.Fmt fmt = note.isNeutralized ? CAPTURE_NEUTRALIZED : CAPTURE_CAPTURED;
+                    String msg = upperCached(fmt, teamDisplayName, note.pointName);
                     int textA = (int) (overallAlpha * 255.0F);
                     // текст с альфой <4 ваниль рисует НЕПРОЗРАЧНЫМ — на хвосте фейда не рисуем
                     if (textA >= 4) {
@@ -1191,10 +1265,10 @@ public class WarfareOverlay {
                         RenderSystem.enableBlend();
                         if (showDestroy) {
                             gui.blit(DIG_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
-                            gui.drawString(PWPTheme.Fonts.display(), "Destroy", xStart + 26, yStart + 10, -1, true);
+                            gui.drawString(PWPTheme.Fonts.display(), BUILD_DESTROY, xStart + 26, yStart + 10, -1, true);
                         } else {
                             gui.blit(BUILD_ICON, xStart + 8, yStart + 8, 0.0F, 0.0F, 12, 12, 12, 12);
-                            gui.drawString(PWPTheme.Fonts.display(), "Build", xStart + 26, yStart + 10, -1, true);
+                            gui.drawString(PWPTheme.Fonts.display(), BUILD_BUILD, xStart + 26, yStart + 10, -1, true);
                         }
 
                         int barY = yStart + (showDestroy ? 28 : 24);
@@ -1210,24 +1284,20 @@ public class WarfareOverlay {
                         if (dismantling) {
                             gui.drawCenteredString(
                                     PWPTheme.Fonts.display(),
-                                    isEnemy ? "Destroying..." : "Dismantling...",
+                                    isEnemy ? BUILD_DESTROYING : BUILD_DISMANTLING,
                                     xStart + uiWidth / 2,
                                     yStart + 52,
                                     isEnemy ? -43691 : -256);
                         } else if (finished) {
                             gui.drawCenteredString(
                                     PWPTheme.Fonts.display(),
-                                    isEnemy ? "Enemy structure" : "Structure finished",
+                                    isEnemy ? BUILD_ENEMY : BUILD_FINISHED,
                                     xStart + uiWidth / 2,
                                     yStart + 52,
                                     isEnemy ? -43691 : -256);
                         } else if (isEnemy) {
                             gui.drawCenteredString(
-                                    PWPTheme.Fonts.display(),
-                                    "Enemy structure",
-                                    xStart + uiWidth / 2,
-                                    yStart + 52,
-                                    -43691);
+                                    PWPTheme.Fonts.display(), BUILD_ENEMY, xStart + uiWidth / 2, yStart + 52, -43691);
                         }
 
                         RenderSystem.disableBlend();
@@ -1300,12 +1370,10 @@ public class WarfareOverlay {
             String team =
                     mc.player.getTeam() != null ? mc.player.getTeam().getName().toUpperCase() : "";
             boolean isDefender = ClientData.invasionDefender.equalsIgnoreCase(team);
-            String time =
-                    String.format("%02d:%02d", ClientData.invasionSetupTimer / 60, ClientData.invasionSetupTimer % 60);
-            String label = isDefender
-                    ? "\u23F3 \u041F\u041E\u0414\u0413\u041E\u0422\u041E\u0412\u041A\u0410"
-                    : "\uD83D\uDD12 \u0411\u041B\u041E\u041A\u0410\u0414\u0410";
-            String text = label + " " + time;
+            String time = INVASION_CLOCK.of(ClientData.invasionSetupTimer);
+            WHud.Fmt label = isDefender ? INVASION_SETUP : INVASION_BLOCKADE;
+            label.of(time);
+            String text = label.string();
             int color = isDefender ? 0xFF55FF55 : 0xFFFF5555;
             int centerX = width / 2;
             int y = 52;
@@ -1413,11 +1481,11 @@ public class WarfareOverlay {
                 gui.pose().scale(0.7F, 0.7F, 1.0F);
                 int lockX = (int) (barStartX / 0.71F);
                 int lockY = (int) ((barsY + 10) / 0.7F);
-                gui.drawString(PWPTheme.Fonts.display(), "BLOCKED", lockX, lockY, -43691, true);
+                gui.drawString(PWPTheme.Fonts.display(), POINT_BLOCKED, lockX, lockY, -43691, true);
                 if (!ClientData.nextObjectiveName.isEmpty()) {
                     gui.drawString(
                             PWPTheme.Fonts.display(),
-                            "Need: " + ClientData.nextObjectiveName,
+                            POINT_NEED.of(ClientData.nextObjectiveName),
                             lockX,
                             lockY + 10,
                             -3355444,
@@ -1453,9 +1521,9 @@ public class WarfareOverlay {
             gui.pose().translate(0.0F, 0.0F, 500.0F);
             gui.fill(xPos, yPos, xPos + panelWidth, yPos + panelHeight, -1442840576);
             gui.renderOutline(xPos, yPos, panelWidth, panelHeight, -1);
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "VOTE TO START", xPos + panelWidth / 2, yPos + 5, -10496);
+            gui.drawCenteredString(PWPTheme.Fonts.display(), VOTE_TITLE, xPos + panelWidth / 2, yPos + 5, -10496);
             int seconds = Math.max(0, ClientData.voteTimer);
-            String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
+            String timeStr = VOTE_CLOCK.of(seconds);
             gui.drawCenteredString(PWPTheme.Fonts.display(), timeStr, xPos + panelWidth / 2, yPos + 16, -1);
             gui.fill(xPos + 5, yPos + 28, xPos + panelWidth - 5, yPos + 29, 1442840575);
             String blueName = ClientData.customBlueName;
@@ -1464,14 +1532,14 @@ public class WarfareOverlay {
             int redColor = ClientData.redReady ? -11141291 : -43691;
             gui.drawString(
                     PWPTheme.Fonts.display(),
-                    blueName + ": " + (ClientData.blueReady ? "READY" : "WAITING"),
+                    (ClientData.blueReady ? VOTE_BLUE_READY : VOTE_BLUE_WAITING).of(blueName),
                     xPos + 8,
                     yPos + 32,
                     blueColor,
                     true);
             gui.drawString(
                     PWPTheme.Fonts.display(),
-                    redName + ": " + (ClientData.redReady ? "READY" : "WAITING"),
+                    (ClientData.redReady ? VOTE_RED_READY : VOTE_RED_WAITING).of(redName),
                     xPos + 8,
                     yPos + 44,
                     redColor,
@@ -1495,7 +1563,7 @@ public class WarfareOverlay {
 
             gui.drawCenteredString(
                     PWPTheme.Fonts.display(),
-                    "F9: YES | F10: NO",
+                    VOTE_KEYS.get(),
                     xPos + panelWidth / 2,
                     yPos + panelHeight - 12,
                     -4473925);
@@ -1611,13 +1679,13 @@ public class WarfareOverlay {
                     color = -43691;
                 }
 
-                String text = "Припасы: " + crates + " / " + maxCrates;
+                String text = supplyText(crates, maxCrates);
                 int textWidth = PWPTheme.Fonts.display().width(text);
                 int x = width - textWidth - 10;
                 int y = height - 25;
                 drawOutlinedString(gui, mc, text, x, y, color);
                 if (isCharging) {
-                    String reloadText = "ЗАГРУЗКА...";
+                    String reloadText = SUPPLY_LOADING.getString();
                     drawOutlinedString(
                             gui,
                             mc,
@@ -1652,7 +1720,8 @@ public class WarfareOverlay {
         }
 
         if (currentAmmo != -1) {
-            String text = "БК: " + currentAmmo + " / " + maxAmmo;
+            AMMO.of(currentAmmo, maxAmmo);
+            String text = AMMO.string();
             int x = 10;
             int y = height - 40;
             int color = currentAmmo == 0 ? -43691 : -1;
@@ -1665,6 +1734,7 @@ public class WarfareOverlay {
     private static void renderMedicUI(GuiGraphics gui, Minecraft mc, int width) {
         if (mc.player.getTeam() == null) return;
         int yOffset = 60;
+        int row = 0;
 
         for (Integer id : ClientData.DOWNED_PLAYERS) {
             if (mc.level.getEntity(id) instanceof Player downed
@@ -1673,8 +1743,7 @@ public class WarfareOverlay {
                     && mc.player.getTeam().isAlliedTo(downed.getTeam())) {
                 int distance = (int) mc.player.distanceTo(downed);
                 if (distance < 100) {
-                    String name = downed.getScoreboardName();
-                    String text = "\u271A " + name + " [" + distance + "m]";
+                    Component text = medicRow(row++).of(downed.getScoreboardName(), distance);
                     int x = width - PWPTheme.Fonts.display().width(text) - 10;
                     gui.fill(x - 2, yOffset - 1, width - 5, yOffset + 9, -2130771968);
                     gui.drawString(PWPTheme.Fonts.display(), text, x, yOffset, 16777215, false);

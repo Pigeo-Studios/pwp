@@ -37,7 +37,8 @@ public class ClientOverlay {
         }
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
-        if (player == null || mc.screen != null) {
+        // F1 скрывает HUD (как общий гейт WHud.hudVisible в warfare; от warfare модуль не зависит)
+        if (player == null || mc.screen != null || mc.options.hideGui) {
             return;
         }
 

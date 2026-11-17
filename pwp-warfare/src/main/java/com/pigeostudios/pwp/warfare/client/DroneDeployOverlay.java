@@ -1,10 +1,12 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.mojang.math.Axis;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -46,7 +48,7 @@ public class DroneDeployOverlay {
             ClientData.droneDeployDisplayProgress = 0.0F;
             return;
         }
-        if (mc.options.hideGui || mc.player == null) return;
+        if (!WHud.hudVisible()) return; // общий гейт HUD (F1)
 
         GuiGraphics gui = event.getGuiGraphics();
         // Плавность: клиентский lerp к серверному прогрессу.
@@ -97,8 +99,10 @@ public class DroneDeployOverlay {
         // Текст под прицелом: имя дрона + таймер.
         int totalTicks = Math.max(1, ClientData.droneDeployTotalTicks);
         int secondsLeft = Math.max(0, (int) Math.ceil((1.0F - progress) * totalTicks / 20.0F));
-        String title = deploying ? droneName(ClientData.droneDeployTypeId) : "MAVIC · ПЕРЕЗАРЯДКА";
-        String sub = (deploying ? "УСТАНОВКА · T-" : "ПЕРЕЗАРЯДКА · T-") + secondsLeft + "с";
+        String title = deploying ? droneName(ClientData.droneDeployTypeId) : MAVIC_RELOAD.getString();
+        WHud.Fmt subFmt = deploying ? SUB_DEPLOY : SUB_RELOAD;
+        subFmt.of(secondsLeft);
+        String sub = subFmt.string();
 
         int tw = PWPTheme.Fonts.display().width(title);
         int sw = PWPTheme.Fonts.display().width(sub);
@@ -120,13 +124,24 @@ public class DroneDeployOverlay {
         }
     }
 
+    // строки — lang (gui.pwpwarfare.hud.drone.*), компоненты кэшированы
+    private static final Component NAME_FPV = Component.translatable("gui.pwpwarfare.hud.drone.fpv");
+    private static final Component NAME_MAVIC_DROP = Component.translatable("gui.pwpwarfare.hud.drone.mavic_drop");
+    private static final Component NAME_MAVIC_SCOUT = Component.translatable("gui.pwpwarfare.hud.drone.mavic_scout");
+    private static final Component NAME_DRONE = Component.translatable("gui.pwpwarfare.hud.drone.generic");
+    private static final Component MAVIC_RELOAD = Component.translatable("gui.pwpwarfare.hud.drone.mavic_reload");
+    private static final WHud.Fmt SUB_DEPLOY = new WHud.Fmt("gui.pwpwarfare.hud.drone.deploying");
+    private static final WHud.Fmt SUB_RELOAD = new WHud.Fmt("gui.pwpwarfare.hud.drone.reloading");
+
     private static String droneName(String typeId) {
-        return switch (typeId) {
-            case "uncomplicatedfpv:fpv_drone" -> "FPV-ДРОН";
-            case "uncomplicatedfpv:mavic_drone_with_drop" -> "MAVIC · СБРОС";
-            case "uncomplicatedfpv:mavic_drone_no_drop" -> "MAVIC · РАЗВЕДКА";
-            default -> "ДРОН";
-        };
+        Component c =
+                switch (typeId) {
+                    case "uncomplicatedfpv:fpv_drone" -> NAME_FPV;
+                    case "uncomplicatedfpv:mavic_drone_with_drop" -> NAME_MAVIC_DROP;
+                    case "uncomplicatedfpv:mavic_drone_no_drop" -> NAME_MAVIC_SCOUT;
+                    default -> NAME_DRONE;
+                };
+        return c.getString();
     }
 
     /** 3D -> 2D проекция точки на экран; null если точка за камерой. */

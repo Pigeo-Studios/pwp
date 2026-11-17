@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client;
 
+import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
@@ -52,6 +53,7 @@ public class FeedbackMessageBlock {
         float target = fading ? 0.0F : 1.0F;
         alpha = UIDamp.approach(alpha, target, 0.2F, FRAME.dtMs()); // 0.2/кадр при 60 FPS
         if (alpha <= 0.01F) return;
+        if (!WHud.hudVisible()) return; // общий гейт HUD (F1)
 
         GuiGraphics gui = event.getGuiGraphics();
         int width = mc.getWindow().getGuiScaledWidth();

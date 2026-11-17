@@ -45,4 +45,26 @@ class UIDampTest {
         now.addAndGet(-10); // часы не идут назад, но защита есть
         assertEquals(0L, f.dtMs());
     }
+
+    @Test
+    void animationsOffSnapsToTarget() {
+        UIAnim.setAnimationsEnabled(false);
+        try {
+            assertEquals(1F, UIDamp.approach(0F, 1F, 0.1F, 16), 1e-6);
+            assertEquals(1F, UIDamp.approach(0F, 1F, 0.1F, 0), 1e-6, "даже без времени");
+        } finally {
+            UIAnim.setAnimationsEnabled(true);
+        }
+    }
+
+    @Test
+    void valueFollowsTargetByItsOwnClock() {
+        AtomicLong now = new AtomicLong(0);
+        UIDamp.Value v = new UIDamp.Value(0F, 0.2F, new UIDamp.Frame(now::get));
+        assertEquals(0F, v.update(1F), 1e-6, "первый кадр без сдвига");
+        now.addAndGet(100);
+        assertEquals(UIDamp.approach(0F, 1F, 0.2F, 100), v.update(1F), 1e-6);
+        v.snap(5F);
+        assertEquals(5F, v.get(), 1e-6);
+    }
 }

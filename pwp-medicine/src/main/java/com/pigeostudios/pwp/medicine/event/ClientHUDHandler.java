@@ -3,12 +3,12 @@ package com.pigeostudios.pwp.medicine.event;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
 import com.pigeostudios.pwp.medicine.item.ModItems;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -87,10 +87,13 @@ public class ClientHUDHandler {
             bleedAnimProgress -= step;
         }
         bleedAnimProgress = Math.max(0.0f, Math.min(1.0f, bleedAnimProgress));
-        if (bleedAnimProgress > 0.0f) {
+        // общий гейт HUD warfare (F1 скрывает); ч/б шейдер нока — вне гейта (эффект картинки)
+        boolean hud = WHud.hudVisible();
+        if (hud && bleedAnimProgress > 0.0f) {
             ClientHUDHandler.drawBleedingMenu(event.getGuiGraphics(), mc, bleedAnimProgress);
         }
         ClientHUDHandler.handleGrayscaleShader(mc, mc.player);
+        if (!hud) return;
         Player target = ClientHUDHandler.getHudTarget(mc);
         float screenX = (float) mc.getWindow().getGuiScaledWidth() / 2.0f;
         float screenY = (float) mc.getWindow().getGuiScaledHeight() / 2.0f;
@@ -105,8 +108,11 @@ public class ClientHUDHandler {
         }
     }
 
+    /** Подпись баннера кровотечения: компонент кэширован (не создаётся в кадре). */
+    private static final Component BLEEDING_TEXT = Component.translatable("gui.pwp_medicine.bleeding");
+
     private static void drawBleedingMenu(GuiGraphics guiGraphics, Minecraft mc, float progress) {
-        MutableComponent text = Component.translatable("gui.pwp_medicine.bleeding");
+        Component text = BLEEDING_TEXT;
         int textWidth = mc.font.width((FormattedText) text);
         int width = textWidth + 46;
         int height = 26;

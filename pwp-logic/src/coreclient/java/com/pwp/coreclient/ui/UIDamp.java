@@ -11,7 +11,9 @@ import java.util.function.LongSupplier;
  *
  * <p>{@link Frame} — часы одного элемента HUD: {@code dtMs()} раз за кадр отдаёт время с прошлого
  * кадра, обрезанное до {@link #MAX_DT_MS} (после паузы/свёрнутого окна анимация не «прыгает» в
- * конец, а продолжается). Чистая логика — покрыта тестами (часы подменяются).
+ * конец, а продолжается). {@link Value} — значение + часы одного элемента. При выключенных
+ * анимациях ({@link UIAnim#animationsEnabled()}) значение сразу в цели. Чистая логика — покрыта
+ * тестами (часы подменяются).
  */
 public final class UIDamp {
     /** Длительность кадра при 60 FPS — эталон, под который подбирались старые коэффициенты. */
@@ -29,10 +31,47 @@ public final class UIDamp {
      * @param dtMs время с прошлого кадра, мс
      */
     public static float approach(float current, float target, float ratePer60Fps, long dtMs) {
+        // настройка «Анимации интерфейса» выключена — значение сразу в цели (как у UIAnim)
+        if (!UIAnim.animationsEnabled()) return target;
         if (dtMs <= 0 || ratePer60Fps <= 0F) return current;
         if (ratePer60Fps >= 1F) return target;
         double keep = Math.pow(1.0 - ratePer60Fps, dtMs / (double) FRAME_60_MS);
         return (float) (target + (current - target) * keep);
+    }
+
+    /**
+     * Сглаженное значение элемента HUD (полоса HP, счётчик): своё текущее значение + свои часы.
+     * Покадрово — {@link #update}, без аллокаций.
+     */
+    public static final class Value {
+        private final Frame frame;
+        private final float ratePer60Fps;
+        private float current;
+
+        public Value(float initial, float ratePer60Fps) {
+            this(initial, ratePer60Fps, new Frame());
+        }
+
+        public Value(float initial, float ratePer60Fps, Frame frame) {
+            this.current = initial;
+            this.ratePer60Fps = ratePer60Fps;
+            this.frame = frame;
+        }
+
+        /** Шаг к цели за время с прошлого кадра; возвращает текущее значение. */
+        public float update(float target) {
+            current = approach(current, target, ratePer60Fps, frame.dtMs());
+            return current;
+        }
+
+        /** Мгновенно поставить значение (респавн, смена цели). */
+        public void snap(float value) {
+            current = value;
+        }
+
+        public float get() {
+            return current;
+        }
     }
 
     /** Часы кадров одного элемента HUD. */

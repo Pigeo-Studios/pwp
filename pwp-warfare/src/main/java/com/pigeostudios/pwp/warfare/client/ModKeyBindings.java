@@ -30,6 +30,20 @@ public class ModKeyBindings {
             "key.pwpwarfare.squad_ptt", KeyConflictContext.IN_GAME, Type.KEYSYM, 66, "key.categories.pwpwarfare");
     public static final KeyMapping COMMAND_PTT_KEY = new KeyMapping(
             "key.pwpwarfare.command_ptt", KeyConflictContext.IN_GAME, Type.KEYSYM, 71, "key.categories.pwpwarfare");
+    // Голосования и запрос арты: раньше — сырые коды GLFW в ClientEvents, подписи на HUD — текстом.
+    // Дефолты прежние (F9/F10, F7/F8, PgUp/PgDn), теперь переназначаются и подписываются из KeyMapping.
+    public static final KeyMapping VOTE_START_YES_KEY = new KeyMapping(
+            "key.pwpwarfare.vote_start_yes", KeyConflictContext.IN_GAME, Type.KEYSYM, 298, "key.categories.pwpwarfare");
+    public static final KeyMapping VOTE_START_NO_KEY = new KeyMapping(
+            "key.pwpwarfare.vote_start_no", KeyConflictContext.IN_GAME, Type.KEYSYM, 299, "key.categories.pwpwarfare");
+    public static final KeyMapping VOTE_CMD_YES_KEY = new KeyMapping(
+            "key.pwpwarfare.vote_cmd_yes", KeyConflictContext.IN_GAME, Type.KEYSYM, 296, "key.categories.pwpwarfare");
+    public static final KeyMapping VOTE_CMD_NO_KEY = new KeyMapping(
+            "key.pwpwarfare.vote_cmd_no", KeyConflictContext.IN_GAME, Type.KEYSYM, 297, "key.categories.pwpwarfare");
+    public static final KeyMapping ART_CONFIRM_KEY = new KeyMapping(
+            "key.pwpwarfare.art_confirm", KeyConflictContext.IN_GAME, Type.KEYSYM, 266, "key.categories.pwpwarfare");
+    public static final KeyMapping ART_DENY_KEY = new KeyMapping(
+            "key.pwpwarfare.art_deny", KeyConflictContext.IN_GAME, Type.KEYSYM, 267, "key.categories.pwpwarfare");
 
     @SubscribeEvent
     public static void registerKeys(RegisterKeyMappingsEvent event) {
@@ -40,5 +54,11 @@ public class ModKeyBindings {
         event.register(PLACE_PING_KEY);
         event.register(SQUAD_PTT_KEY);
         event.register(COMMAND_PTT_KEY);
+        event.register(VOTE_START_YES_KEY);
+        event.register(VOTE_START_NO_KEY);
+        event.register(VOTE_CMD_YES_KEY);
+        event.register(VOTE_CMD_NO_KEY);
+        event.register(ART_CONFIRM_KEY);
+        event.register(ART_DENY_KEY);
     }
 }

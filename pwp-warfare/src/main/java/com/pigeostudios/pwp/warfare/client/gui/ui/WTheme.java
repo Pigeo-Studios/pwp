@@ -348,4 +348,34 @@ public final class WTheme {
 
     public static final int SKIN_CAT_H = 16;
     public static final int SKIN_ROW_H = 16;
+
+    // ------------------------------------------------------------ HUD матча (этап 1, кит WHud)
+    /** Масштаб HUD для {@code HudZones} (настройки пока нет — регистрировать, когда подключат). */
+    public static final float HUD_SCALE = 1F;
+    /** Подложка плашки HUD (как WELL, чуть плотнее — читается поверх мира). */
+    public static final int HUD_PLATE_BG = 0xB0050709;
+
+    public static final int HUD_PLATE_BORDER = 0x26FFFFFF;
+    /** Акцентная полоска слева у плашки. */
+    public static final int HUD_PLATE_STRIPE = 2;
+    /** Внутреннее поле плашки по горизонтали / вертикали. */
+    public static final int HUD_PLATE_PAD_X = Spacing.XS;
+
+    public static final int HUD_PLATE_PAD_Y = Spacing.XXS;
+    /** Подпись плашки и значение. */
+    public static final int HUD_LABEL = PWPTheme.Text.MUTED;
+
+    public static final int HUD_VALUE = PWPTheme.Text.HEADING;
+    /** Полоса HUD: трек, заливка по умолчанию, деления. */
+    public static final int HUD_BAR_TRACK = 0x99101317;
+
+    public static final int HUD_BAR_FILL = Colors.ACCENT;
+    public static final int HUD_BAR_TICK = 0xCC050709;
+    public static final int HUD_BAR_BORDER = 0x33FFFFFF;
+    /** Обводка текста поверх мира (компас, подписи у прицела). */
+    public static final int HUD_TEXT_OUTLINE = 0xFF000000;
+    /** Иконка в счётчике HUD и зазор до числа. */
+    public static final int HUD_ICON = ICON_SMALL;
+
+    public static final int HUD_ICON_GAP = Spacing.XXS;
 }
