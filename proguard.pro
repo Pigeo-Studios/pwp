@@ -40,17 +40,15 @@
 # ------------------------------------------------------------
 
 # ------------------------------------------------------------
-# 4. Gson-маппинг match_config.json по именам полей
-#    (ServerManager.ServerMatchConfig и вложенные DTO)
+# 4. Gson-маппинг match_config.json по именам полей — ЕДИНЫЙ POJO
+#    com.pwp.api.config.MatchConfig (pwp-logic/src/api, читают лобби и warfare)
 # ------------------------------------------------------------
--keepclassmembers class com.pwp.lobby.ServerManager$ServerMatchConfig { <fields>; }
--keepclassmembers class com.pwp.lobby.ServerManager$ServerMatchConfig$* { <fields>; }
-# maps/<map>/map_config.json (лобби) и match_config.json (матч-сервер) — тоже Gson по именам полей
+-keepclassmembers class com.pwp.api.config.MatchConfig { <fields>; }
+-keepclassmembers class com.pwp.api.config.MatchConfig$* { <fields>; }
+# maps/<map>/map_config.json (лобби) — тоже Gson по именам полей
 -keepclassmembers class com.pwp.lobby.maps.MapConfig { <fields>; }
 -keepclassmembers class com.pwp.lobby.maps.MapConfig$* { <fields>; }
--keepclassmembers class com.pigeostudios.pwp.warfare.config.MatchConfig { <fields>; }
--keepclassmembers class com.pigeostudios.pwp.warfare.config.MatchConfig$* { <fields>; }
-# pwp-api: рефлексии и Gson-POJO нет (Heartbeat собирает JsonObject вручную) — keep не нужен
+# pwp-api: кроме MatchConfig (выше) рефлексии и Gson-POJO нет (Heartbeat собирает JsonObject вручную)
 
 # ------------------------------------------------------------
 # 5. Имена констант enum — .name() уходит строкой клиенту/

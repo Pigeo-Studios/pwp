@@ -8,7 +8,6 @@
     "version": "1.0",
     "mode": "aas",
     "modeDisplayName": "Наступление и оборона",
-    "durationMinutes": 90,
 
     "availableFactions": ["ukraine", "russia", "usa", "nato", "insurgency", "pmc"],
 
@@ -46,12 +45,7 @@
 
     "settings": {
         "respawnTimer": 15,
-        "deathTicketCost": 2,
-        "lockDurationMinutes": 0,
-        "hideDeathMessages": true,
-        "hideNametags": true,
-        "disableHunger": true,
-        "disableNaturalRegen": true
+        "deathTicketCost": 2
     },
 
     "mainZones": [

@@ -3,6 +3,10 @@ package com.pwp.lobby.maps;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * POJO maps/&lt;map&gt;/map_config.json для лобби (Gson по именам полей — keep в proguard.pro). Мёртвые ключи
+ * (durationMinutes, vehicles, settings.hide*&#47;disable*&#47;lockDurationMinutes) удалены — см. MapConfigLegacy.
+ */
 public class MapConfig {
 
     public String name;
@@ -14,7 +18,6 @@ public class MapConfig {
     public String version = "1.0";
     public String mode = "aas";
     public String modeDisplayName = "Advance and Secure";
-    public int durationMinutes = 90;
 
     public String worldPath;
 
@@ -48,7 +51,6 @@ public class MapConfig {
     public List<MainZoneConfig> mainZones;
     public List<CapturePointConfig> capturePoints;
     public MapBoundsConfig mapBounds = new MapBoundsConfig();
-    public Map<String, List<String>> vehicles;
 
     public static class TeamConfig {
         public String faction = "bluefor";
@@ -66,7 +68,6 @@ public class MapConfig {
     public static class GameSettings {
         public int respawnTimer = 10;
         public int deathTicketCost = 2;
-        public int lockDurationMinutes = 0;
     }
 
     public static class MainZoneConfig {

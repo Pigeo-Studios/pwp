@@ -18,6 +18,7 @@ import com.pigeostudios.pwp.warfare.server.FactionDataLoader;
 import com.pigeostudios.pwp.warfare.server.MatchHeartbeatSender;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.config.MapConfigLegacy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,6 +44,8 @@ import org.slf4j.Logger;
 @Mod("pwpwarfare")
 public class WarfareMod {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final java.util.concurrent.atomic.AtomicBoolean LEGACY_WARNED =
+            new java.util.concurrent.atomic.AtomicBoolean();
 
     public WarfareMod() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -179,6 +182,11 @@ public class WarfareMod {
                 }
             }
 
+            warnLegacyKeys(root, configPath.toString());
+
+            // Точки захвата: единый источник — map_config (паттерн или capturePoints). SavedData — лишь копия на
+            // время матча; applyMapConfig идёт на каждом старте сервера (configApplied в NBT не пишется).
+            boolean pointsFromConfig = false;
             if (root.has("capturePointPatterns") && root.has("capturePointPatternIndex")) {
                 int patternIdx = root.get("capturePointPatternIndex").getAsInt();
                 JsonArray patterns = root.getAsJsonArray("capturePointPatterns");
@@ -191,6 +199,7 @@ public class WarfareMod {
                     for (var el : points) {
                         data.match.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
                     }
+                    pointsFromConfig = true;
                     LOGGER.info(
                             "Loaded capture point pattern: {} ({} points)",
                             patternName,
@@ -200,12 +209,28 @@ public class WarfareMod {
                 }
             }
 
-            if (root.has("capturePoints") && data.match.capturePoints.isEmpty()) {
+            if (!pointsFromConfig
+                    && root.has("capturePoints")
+                    && root.getAsJsonArray("capturePoints").size() > 0) {
+                int fromWorld = data.match.capturePoints.size();
                 data.match.capturePoints.clear();
-                var points = root.getAsJsonArray("capturePoints");
-                for (var el : points) {
+                for (var el : root.getAsJsonArray("capturePoints")) {
                     data.match.capturePoints.add(parseCapturePoint(el.getAsJsonObject()));
                 }
+                pointsFromConfig = true;
+                LOGGER.info(
+                        "Capture points from map_config: {} (replaced {} from world SavedData)",
+                        data.match.capturePoints.size(),
+                        fromWorld);
+            }
+
+            if (!pointsFromConfig && !data.match.capturePoints.isEmpty()) {
+                // В конфиге точек нет, в мире есть — не теряем: оставляем мировые и просим перенести в map_config
+                LOGGER.warn(
+                        "map_config {} has no capturePoints; keeping {} capture points from world SavedData —"
+                                + " move them into map_config (single source of truth)",
+                        configPath,
+                        data.match.capturePoints.size());
             }
 
             if (root.has("teams")) {
@@ -337,6 +362,16 @@ public class WarfareMod {
         } catch (IOException e) {
             LOGGER.error("Failed to read map_config.json", e);
         }
+    }
+
+    /** Устаревшие ключи map_config ({@link MapConfigLegacy}) — WARN один раз за запуск сервера. */
+    private static void warnLegacyKeys(JsonObject root, String source) {
+        if (!LEGACY_WARNED.compareAndSet(false, true)) return;
+        var settingsKeys = root.has("settings") && root.get("settings").isJsonObject()
+                ? root.getAsJsonObject("settings").keySet()
+                : java.util.Set.<String>of();
+        var keys = MapConfigLegacy.ignoredKeys(root.keySet(), settingsKeys);
+        if (!keys.isEmpty()) LOGGER.warn(MapConfigLegacy.warning(source, keys));
     }
 
     private static WarfareWorldData.CapturePoint parseCapturePoint(JsonObject cp) {

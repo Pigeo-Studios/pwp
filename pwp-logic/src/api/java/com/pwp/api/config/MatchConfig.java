@@ -1,5 +1,13 @@
-package com.pigeostudios.pwp.warfare.config;
+package com.pwp.api.config;
 
+/**
+ * Единственный POJO файла {@code match_config.json} (корень матч-сервера, из {@code match_template/}).
+ *
+ * <p>Читают двое: лобби ({@code ServerManager} — секции {@code server} и {@code superbwarfare} для
+ * server.properties и superbwarfare-server.toml) и warfare ({@code MatchConfigLoader} — секция
+ * {@code rules}: gamerules и правила матча). Разбор — Gson по именам полей: поля НЕ переименовывать,
+ * keep-правило в {@code proguard.pro}.
+ */
 public class MatchConfig {
     public Server server = new Server();
     public Rules rules = new Rules();
@@ -21,7 +29,9 @@ public class MatchConfig {
         public boolean disableFireSpread = true;
         public boolean disableBlockDrops = true;
         public boolean disableEntityDrops = true;
+        /** true — ванильные и собственные (добивание) сообщения о смерти показываются. */
         public boolean showDeathMessages = false;
+
         public boolean commandFeedback = false;
         public boolean spectatorsGenerateChunks = false;
     }

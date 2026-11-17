@@ -1,6 +1,8 @@
 package com.pwp.lobby.maps;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.pwp.api.config.MapConfigLegacy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
@@ -17,6 +19,7 @@ public class MapRegistry {
 
     private static final Map<String, MapConfig> maps = new LinkedHashMap<>();
     private static String mapsDirectory = "../maps";
+    private static final Set<String> LEGACY_WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public static void configure(String dir) {
         mapsDirectory = dir;
@@ -44,7 +47,9 @@ public class MapRegistry {
             }
             try (InputStreamReader reader =
                     new InputStreamReader(new FileInputStream(configFile), StandardCharsets.UTF_8)) {
-                MapConfig cfg = GSON.fromJson(reader, MapConfig.class);
+                JsonObject raw = GSON.fromJson(reader, JsonObject.class);
+                warnLegacyKeys(raw, subdir.getName());
+                MapConfig cfg = GSON.fromJson(raw, MapConfig.class);
                 cfg.worldPath = subdir.getAbsolutePath();
                 if (cfg.name != null && !cfg.name.isEmpty()) {
                     maps.put(cfg.name, cfg);
@@ -58,6 +63,16 @@ public class MapRegistry {
         if (maps.isEmpty()) {
             log.warn("No valid maps found in {}", mapsDirectory);
         }
+    }
+
+    /** Устаревшие ключи map_config — WARN один раз на карту за запуск (loadAll зовётся повторно). */
+    private static void warnLegacyKeys(JsonObject raw, String mapDir) {
+        if (raw == null || !LEGACY_WARNED.add(mapDir)) return;
+        Set<String> settingsKeys = raw.has("settings") && raw.get("settings").isJsonObject()
+                ? raw.getAsJsonObject("settings").keySet()
+                : Set.of();
+        List<String> keys = MapConfigLegacy.ignoredKeys(raw.keySet(), settingsKeys);
+        if (!keys.isEmpty()) log.warn(MapConfigLegacy.warning(mapDir, keys));
     }
 
     public static MapConfig get(String name) {

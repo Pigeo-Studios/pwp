@@ -1,6 +1,8 @@
 package com.pwp.lobby;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.pwp.api.config.MatchConfig;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -133,10 +135,15 @@ public class ServerManager {
 
                 // Read match_config.json for server and SBW settings
                 Path matchConfigPath = serverDir.resolve("match_config.json");
-                ServerMatchConfig matchConfig = null;
+                MatchConfig matchConfig = null;
                 if (Files.exists(matchConfigPath)) {
                     try {
-                        matchConfig = new Gson().fromJson(Files.readString(matchConfigPath), ServerMatchConfig.class);
+                        // Единый POJO match_config.json (pwp-api). Отсутствующая секция = null, как раньше:
+                        // тогда view-distance и superbwarfare-server.toml не пишутся (дефолты сервера/мода)
+                        var raw = new Gson().fromJson(Files.readString(matchConfigPath), JsonObject.class);
+                        matchConfig = new Gson().fromJson(raw, MatchConfig.class);
+                        if (!raw.has("server")) matchConfig.server = null;
+                        if (!raw.has("superbwarfare")) matchConfig.superbwarfare = null;
                     } catch (Exception e) {
                         log.warn("Failed to parse match_config.json: {}", e.getMessage());
                     }
@@ -377,7 +384,7 @@ public class ServerManager {
 
     // --- private helpers ---
 
-    private static void writeSBWServerConfig(Path serverDir, String levelName, ServerMatchConfig.Superbwarfare cfg)
+    private static void writeSBWServerConfig(Path serverDir, String levelName, MatchConfig.Superbwarfare cfg)
             throws IOException {
         Path scDir = serverDir.resolve(levelName).resolve("serverconfig");
         Files.createDirectories(scDir);
@@ -386,24 +393,6 @@ public class ServerManager {
                 + "\n\n[projectile]\n\tprojectile_chunk_loading = " + cfg.projectileChunkLoading + "\n";
         Files.writeString(scDir.resolve("superbwarfare-server.toml"), toml);
         log.info("Generated superbwarfare-server.toml for {}", levelName);
-    }
-
-    /** Lightweight DTO for match_config.json fields used by ServerManager */
-    public static class ServerMatchConfig {
-        public Server server;
-        public Superbwarfare superbwarfare;
-
-        public static class Server {
-            public int viewDistance = 8;
-            public int simulationDistance = 6;
-            public int entityBroadcastRange = 50;
-        }
-
-        public static class Superbwarfare {
-            public int vehicleInfoDisplayDistance = 0;
-            public boolean vehicleChunkLoading = true;
-            public boolean projectileChunkLoading = true;
-        }
     }
 
     /** Убить процесс, слушающий порт (зомби матч-сервер от прошлого запуска). */

@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.config;
 
 import com.google.gson.Gson;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.config.MatchConfig;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import net.minecraft.server.level.ServerLevel;
@@ -50,7 +51,9 @@ public class MatchConfigLoader {
 
         WarfareWorldData data = WarfareWorldData.get(level);
         data.match.hideNametags = config.rules.hideNametags;
-        data.match.hideDeathMessages = config.rules.showDeathMessages;
+        // Своё сообщение о добивании (DownedHandler) — по тому же смыслу, что ванильный gamerule выше:
+        // showDeathMessages=true → показываем. Раньше флаг присваивался без инверсии, и сообщений не было никогда.
+        data.match.hideDeathMessages = !config.rules.showDeathMessages;
         data.match.disableHunger = config.rules.disableHunger;
         data.match.disableNaturalRegen = config.rules.disableNaturalRegen;
         data.match.disableBlockDrops = config.rules.disableBlockDrops;
