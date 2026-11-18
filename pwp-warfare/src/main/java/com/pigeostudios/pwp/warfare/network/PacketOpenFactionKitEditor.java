@@ -89,7 +89,7 @@ public class PacketOpenFactionKitEditor {
                     player,
                     new MenuProvider() {
                         public Component getDisplayName() {
-                            return Component.literal("Faction Kit: " + finalKit.name);
+                            return Component.translatable("pwpwarfare.msg.kit_editor.faction_title", finalKit.name);
                         }
 
                         public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {

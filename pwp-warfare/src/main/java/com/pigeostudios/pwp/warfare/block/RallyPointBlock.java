@@ -79,13 +79,13 @@ public class RallyPointBlock extends BaseEntityBlock {
                     data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
                             serverLevel,
-                            "BLUE player dismantled Friendly Rally Point! (-10 Tickets)",
+                            Component.translatable("pwpwarfare.msg.rally.dismantled.blue", 10),
                             ChatFormatting.BLUE);
                 } else if (rallyTeam.equals("RED")) {
                     data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
                             serverLevel,
-                            "RED player dismantled Friendly Rally Point! (-10 Tickets)",
+                            Component.translatable("pwpwarfare.msg.rally.dismantled.red", 10),
                             ChatFormatting.RED);
                 }
                 int squadId = rallyBe.getSquadId();
@@ -116,11 +116,15 @@ public class RallyPointBlock extends BaseEntityBlock {
                 if (state.getBlock() == ModBlocks.BLUE_RALLY_BLOCK.get()) {
                     data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
-                            serverLevel, "BLUE Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.BLUE);
+                            serverLevel,
+                            Component.translatable("pwpwarfare.msg.rally.destroyed.blue", penalty),
+                            ChatFormatting.BLUE);
                 } else if (state.getBlock() == ModBlocks.RED_RALLY_BLOCK.get()) {
                     data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
-                            serverLevel, "RED Rally Point Destroyed! (-" + penalty + ")", ChatFormatting.RED);
+                            serverLevel,
+                            Component.translatable("pwpwarfare.msg.rally.destroyed.red", penalty),
+                            ChatFormatting.RED);
                 }
                 GameLogicEvents.checkSirenManual(serverLevel, data);
                 GameLogicEvents.checkGameOver(serverLevel, data);
@@ -131,9 +135,7 @@ public class RallyPointBlock extends BaseEntityBlock {
         super.onRemove(state, level, pos, newState, isMoving);
     }
 
-    private void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
-        level.getServer()
-                .getPlayerList()
-                .broadcastSystemMessage(Component.literal(text).withStyle(color), false);
+    private void broadcastMessage(ServerLevel level, Component text, ChatFormatting color) {
+        level.getServer().getPlayerList().broadcastSystemMessage(text.copy().withStyle(color), false);
     }
 }

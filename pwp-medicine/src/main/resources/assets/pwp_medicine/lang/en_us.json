@@ -8,5 +8,10 @@
   "death.attack.generic": "%1$s died from blood loss",
   "death.attack.bleeding": "%1$s bled out",
   "death.attack.bleeding.player": "%1$s bled out while fighting %2$s",
-  "gui.pwp_medicine.hud.patient": "Treated by %s"
+  "gui.pwp_medicine.hud.patient": "Treated by %s",
+  "pwp_medicine.msg.cannot_revive_enemy": "You can't revive an enemy!",
+  "pwp_medicine.msg.medkit_required": "A medkit is required",
+  "pwp_medicine.msg.no_bandage_needed": "This player doesn't need a bandage",
+  "pwp_medicine.msg.ally_revived": "Ally revived!",
+  "pwp_medicine.msg.target_bleeding": "Can't heal: the target is bleeding out!"
 }

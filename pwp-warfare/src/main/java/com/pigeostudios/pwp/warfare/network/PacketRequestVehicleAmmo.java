@@ -45,7 +45,7 @@ public class PacketRequestVehicleAmmo {
                     int cost = (Integer) WarfareConfig.HUB_RESUPPLY_COST.get();
                     if (!player.isCreative() && currentMats < cost) {
                         player.displayClientMessage(
-                                Component.literal("Недостаточно материалов в технике! (" + currentMats + ")")
+                                Component.translatable("pwpwarfare.msg.vehicle.not_enough_mats", currentMats)
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     } else {
@@ -66,7 +66,7 @@ public class PacketRequestVehicleAmmo {
                                     }
 
                                     player.displayClientMessage(
-                                            Component.literal("Кит пополнен! Материалы техники: " + newMats)
+                                            Component.translatable("pwpwarfare.msg.vehicle.kit_resupplied", newMats)
                                                     .withStyle(ChatFormatting.GREEN),
                                             true);
                                     player.level()
@@ -79,14 +79,16 @@ public class PacketRequestVehicleAmmo {
                                                     1.0F);
                                 } else {
                                     player.displayClientMessage(
-                                            Component.literal("БК уже полон! Материалы техники: " + currentMats)
+                                            Component.translatable("pwpwarfare.msg.vehicle.ammo_full", currentMats)
                                                     .withStyle(ChatFormatting.YELLOW),
                                             true);
                                 }
                             }
                         } else {
                             player.displayClientMessage(
-                                    Component.literal("Кит не надет!").withStyle(ChatFormatting.RED), true);
+                                    Component.translatable("pwpwarfare.msg.kit.not_equipped")
+                                            .withStyle(ChatFormatting.RED),
+                                    true);
                         }
                     }
                 }

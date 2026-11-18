@@ -48,7 +48,7 @@ public class RebDeploymentEvents {
         event.setCancellationResult(InteractionResult.SUCCESS);
         if (!event.getLevel().isClientSide && player instanceof ServerPlayer sp) {
             sp.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("РЭБ ставится только через стройку (рация)!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.reb.build_only")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
         }
@@ -100,13 +100,13 @@ public class RebDeploymentEvents {
                     target.remove(Entity.RemovalReason.DISCARDED);
                     if (player instanceof ServerPlayer sp) {
                         sp.displayClientMessage(
-                                net.minecraft.network.chat.Component.literal("РЭБ демонтирован")
+                                net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.reb.dismantled")
                                         .withStyle(net.minecraft.ChatFormatting.GREEN),
                                 true);
                     }
                 } else if (player instanceof ServerPlayer sp) {
                     sp.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("Доступ запрещён: РЭБ врага!")
+                            net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.reb.enemy")
                                     .withStyle(net.minecraft.ChatFormatting.RED),
                             true);
                 }
@@ -120,7 +120,7 @@ public class RebDeploymentEvents {
             event.setCancellationResult(InteractionResult.SUCCESS);
             if (!event.getLevel().isClientSide && player instanceof ServerPlayer sp) {
                 sp.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("Доступ запрещён: РЭБ врага!")
+                        net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.reb.enemy")
                                 .withStyle(net.minecraft.ChatFormatting.RED),
                         true);
             }

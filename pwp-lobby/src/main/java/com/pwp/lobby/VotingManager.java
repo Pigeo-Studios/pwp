@@ -5,6 +5,8 @@ import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
 import java.util.*;
 import java.util.stream.Collectors;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,8 +36,10 @@ public class VotingManager {
         if (MatchAllocator.isCycleBusy()) return "pwp_core.lobby.prep.error.busy";
         if (!com.pwp.api.core.MatchPolicy.canStartNewMatch()) {
             String reason = com.pwp.api.core.MatchPolicy.reason();
-            LobbyMod.serverBroadcast("§e[PWP] §cНовые матчи приостановлены"
-                    + (reason != null && !reason.isEmpty() ? ": " + reason : ""));
+            LobbyMod.broadcastPwp(
+                    ChatFormatting.RED,
+                    "pwp_lobby.msg.matches_paused",
+                    reason != null && !reason.isEmpty() ? ": " + reason : "");
             log.info("Voting start blocked by match policy");
             return "pwp_core.admin.lobby.error.policy";
         }
@@ -57,9 +61,10 @@ public class VotingManager {
         lastLeaderBroadcast = 0;
         lastBroadcastedRemaining = -1;
 
-        String mapList = maps.stream().map(m -> m.displayName).collect(Collectors.joining("§7, §e"));
-        LobbyMod.serverBroadcast("§e[PWP] §fГолосование началось! §7Карты: §e" + mapList);
-        LobbyMod.serverBroadcast("§7Напишите §e/votemap <название> §7или откройте GUI чтобы проголосовать");
+        String mapList = maps.stream().map(m -> m.displayName).collect(Collectors.joining(", "));
+        LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.map_vote_started", mapList);
+        LobbyMod.serverBroadcast(
+                Component.translatable("pwp_lobby.msg.map_vote_hint").withStyle(ChatFormatting.GRAY));
         LobbyMod.broadcastLobbyState();
         log.info("Voting started: {} maps available, {} seconds", maps.size(), voteDurationSec);
         return null;
@@ -94,7 +99,7 @@ public class VotingManager {
                 accelerated = true;
                 voteStartTime = now - (voteDurationSec - 60) * 1000L;
                 remaining = 60;
-                LobbyMod.serverBroadcast("§e[PWP] §fПочти все проголосовали! §eОсталось " + remaining + "с");
+                LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.almost_all_voted", remaining);
                 LobbyMod.broadcastLobbyState();
                 log.info("90% threshold reached, vote accelerated to 60s remaining");
             }
@@ -108,7 +113,7 @@ public class VotingManager {
                     || remaining == 60
                     || (remaining <= 120 && remaining % 60 == 0)) {
                 if (remaining > 0) {
-                    LobbyMod.serverBroadcast("§e[PWP] §fГолосование закончится через §e" + remaining + "с");
+                    LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.map_vote_ends_in", remaining);
                 }
                 lastTimerBroadcast = now;
                 lastBroadcastedRemaining = remaining;
@@ -135,12 +140,13 @@ public class VotingManager {
         if (leader == null) return;
         int total = votes.size();
         int online = MatchAllocator.getLobbyPlayerCount();
-        String stats = counts.entrySet().stream()
-                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                .limit(3)
-                .map(e -> "§e" + e.getKey() + "§7(" + e.getValue() + ")")
-                .collect(Collectors.joining(" §8| "));
-        LobbyMod.serverBroadcast("§e[PWP] §fГолоса: " + stats + " §8| §7Проголосовало §e" + total + "§7/" + online);
+        Component stats = LobbyMod.voteList(
+                counts.entrySet().stream()
+                        .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                        .limit(3)
+                        .toList(),
+                0);
+        LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.vote_stats", stats, total, online);
     }
 
     private static void finishVoting() {
@@ -152,12 +158,13 @@ public class VotingManager {
         int total = votes.size();
 
         if (!counts.isEmpty()) {
-            String results = counts.entrySet().stream()
-                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                    .map(e -> "§e" + e.getKey() + " §7(" + e.getValue() + "гол."
-                            + (total > 0 ? " " + (e.getValue() * 100 / total) + "%" : "") + ")")
-                    .collect(Collectors.joining(" §8| "));
-            LobbyMod.serverBroadcast("§e[PWP] §fРезультаты голосования: " + results);
+            Component results = LobbyMod.voteList(
+                    counts.entrySet().stream()
+                            .sorted(Map.Entry.<String, Integer>comparingByValue()
+                                    .reversed())
+                            .toList(),
+                    total);
+            LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.map_vote_results", results);
         }
 
         winner = counts.entrySet().stream()
@@ -171,13 +178,13 @@ public class VotingManager {
         if (winner != null) {
             MapConfig cfg = MapRegistry.get(winner);
             String display = cfg != null ? cfg.displayName : winner;
-            LobbyMod.serverBroadcast("§e[PWP] §aПобедила карта: §e" + display + " §a— дальше голосование за режим");
+            LobbyMod.broadcastPwp(ChatFormatting.GREEN, "pwp_lobby.msg.map_winner", display);
             log.info("Vote finished. Winner: {}", winner);
             LobbyMod.recordResult("MAP", winner, counts.getOrDefault(winner, 0));
             LobbyMod.broadcastLobbyState();
             LobbyMod.onVoteFinished(winner);
         } else {
-            LobbyMod.serverBroadcast("§e[PWP] §cНе удалось определить победителя голосования!");
+            LobbyMod.broadcastPwp(ChatFormatting.RED, "pwp_lobby.msg.no_winner");
             log.warn("Vote finished but no winner!");
             LobbyMod.broadcastLobbyState();
         }

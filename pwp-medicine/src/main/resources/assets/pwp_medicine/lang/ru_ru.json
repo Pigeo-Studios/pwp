@@ -8,5 +8,10 @@
   "death.attack.generic": "%1$s умер от потери крови",
   "death.attack.bleeding": "%1$s истек кровью",
   "death.attack.bleeding.player": "%1$s истек кровью в бою с %2$s",
-  "gui.pwp_medicine.hud.patient": "Вас лечит %s"
+  "gui.pwp_medicine.hud.patient": "Вас лечит %s",
+  "pwp_medicine.msg.cannot_revive_enemy": "Нельзя поднять врага!",
+  "pwp_medicine.msg.medkit_required": "Нужна аптечка",
+  "pwp_medicine.msg.no_bandage_needed": "Игроку не нужен бинт",
+  "pwp_medicine.msg.ally_revived": "Союзник поднят!",
+  "pwp_medicine.msg.target_bleeding": "Нельзя лечить: цель истекает кровью!"
 }

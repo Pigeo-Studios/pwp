@@ -50,7 +50,7 @@ public class PacketOpenKitEditor {
                             player,
                             new MenuProvider() {
                                 public Component getDisplayName() {
-                                    return Component.literal("Edit Kit: " + kit.name);
+                                    return Component.translatable("pwpwarfare.msg.kit_editor.title", kit.name);
                                 }
 
                                 public AbstractContainerMenu createMenu(int id, Inventory inv, Player p) {

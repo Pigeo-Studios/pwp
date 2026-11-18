@@ -1,6 +1,5 @@
 package com.pigeostudios.pwp.medicine;
 
-import com.pigeostudios.pwp.medicine.client.ModClientSetup;
 import com.pigeostudios.pwp.medicine.config.PWPConfig;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
 import com.pigeostudios.pwp.medicine.item.ModItems;
@@ -11,14 +10,12 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.IConfigSpec;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.loading.FMLEnvironment;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 
@@ -46,10 +43,8 @@ public class PWPMedicine {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         // Регистрация конфига
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, (IConfigSpec) PWPConfig.SPEC);
-        // Экран настроек для клиента
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            ModClientSetup.registerConfigScreen();
-        }
+        // Экрана настроек в меню модов больше нет (18.11.2026): кровотечение/аптечки — правила сервера,
+        // клиентская копия конфига на выделенном сервере ни на что не влияет.
         // Регистрация всех подсистем
         ModItems.register(modEventBus);
         ModSounds.register(modEventBus);

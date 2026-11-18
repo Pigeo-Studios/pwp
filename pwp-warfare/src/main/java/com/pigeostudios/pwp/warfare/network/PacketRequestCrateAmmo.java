@@ -60,17 +60,18 @@ public class PacketRequestCrateAmmo {
                         if (msg.type == 0) {
                             String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                             if (kitName.isEmpty()) {
-                                player.sendSystemMessage(
-                                        Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
+                                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.kit.not_equipped")
+                                        .withStyle(ChatFormatting.RED));
                             } else {
                                 long lastFobUse = WarfareData.of(player).getLong(WarfareKeys.LAST_FOB_RESUPPLY);
                                 long currentTime = GameClock.worldTicks(player.level());
                                 if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
-                                    player.sendSystemMessage(Component.literal("Пополнение кита на кулдауне!")
-                                            .withStyle(ChatFormatting.RED));
+                                    player.sendSystemMessage(
+                                            Component.translatable("pwpwarfare.msg.resupply.kit_cooldown")
+                                                    .withStyle(ChatFormatting.RED));
                                 } else if (!player.isCreative() && crate.getMaterials() < cost) {
                                     player.sendSystemMessage(
-                                            Component.literal("Недостаточно материалов в ящике! Нужно: " + cost)
+                                            Component.translatable("pwpwarfare.msg.resupply.crate_not_enough", cost)
                                                     .withStyle(ChatFormatting.RED));
                                 } else {
                                     WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
@@ -87,11 +88,11 @@ public class PacketRequestCrateAmmo {
                                                         .putLong(WarfareKeys.LAST_FOB_RESUPPLY, currentTime);
                                             }
 
-                                            player.sendSystemMessage(
-                                                    Component.literal("Кит пополнен! (-" + cost + " материалов)")
-                                                            .withStyle(ChatFormatting.GREEN));
+                                            player.sendSystemMessage(Component.translatable(
+                                                            "pwpwarfare.msg.resupply.kit_resupplied", cost)
+                                                    .withStyle(ChatFormatting.GREEN));
                                         } else {
-                                            player.sendSystemMessage(Component.literal("БК уже полон!")
+                                            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.ammo.full")
                                                     .withStyle(ChatFormatting.YELLOW));
                                         }
                                     }
@@ -99,7 +100,7 @@ public class PacketRequestCrateAmmo {
                             }
                         } else if (!player.isCreative() && crate.getMaterials() < cost) {
                             player.sendSystemMessage(
-                                    Component.literal("Недостаточно материалов в ящике! Нужно: " + cost)
+                                    Component.translatable("pwpwarfare.msg.resupply.crate_not_enough", cost)
                                             .withStyle(ChatFormatting.RED));
                         } else {
                             boolean success = false;
@@ -140,7 +141,7 @@ public class PacketRequestCrateAmmo {
                                     crate.setMaterials(0);
                                 }
 
-                                player.sendSystemMessage(Component.literal("Тяжёлый БК пополнен! Ящик израсходован.")
+                                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.resupply.heavy_done")
                                         .withStyle(ChatFormatting.GREEN));
                             }
                         }

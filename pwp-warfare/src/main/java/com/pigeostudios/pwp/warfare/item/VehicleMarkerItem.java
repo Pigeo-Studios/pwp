@@ -44,13 +44,15 @@ public class VehicleMarkerItem extends Item {
 
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
         ChatFormatting color = this.team.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-        tooltip.add(Component.literal("Команда: " + this.team).withStyle(color));
-        tooltip.add(Component.literal("Тип: " + this.type).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.literal("Штраф при потере: -" + this.penalty + " тикетов")
+        tooltip.add(Component.translatable("pwpwarfare.msg.item.marker_team", this.team)
+                .withStyle(color));
+        tooltip.add(Component.translatable("pwpwarfare.msg.item.marker_type", this.type)
+                .withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("pwpwarfare.msg.item.marker_penalty", this.penalty)
                 .withStyle(ChatFormatting.DARK_RED));
         if (this.maxMats > 0) {
-            tooltip.add(
-                    Component.literal("Внутри: " + this.maxMats + " материалов").withStyle(ChatFormatting.YELLOW));
+            tooltip.add(Component.translatable("pwpwarfare.msg.item.marker_mats", this.maxMats)
+                    .withStyle(ChatFormatting.YELLOW));
         }
     }
 }

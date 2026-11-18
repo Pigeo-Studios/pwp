@@ -204,13 +204,18 @@ public class AGS30Entity extends Entity implements GeoEntity {
             if (!shooter.isCreative()) {
                 if (!this.hasMagazine()) {
                     shooter.displayClientMessage(
-                            Component.literal("Нет ящика с боеприпасами!").withStyle(ChatFormatting.RED), true);
+                            Component.translatable("pwpwarfare.msg.emplacement.no_ammo_box")
+                                    .withStyle(ChatFormatting.RED),
+                            true);
                     this.shootCooldown = 20;
                     return;
                 }
 
                 if (this.getAmmoCount() <= 0) {
-                    shooter.displayClientMessage(Component.literal("Пусто!").withStyle(ChatFormatting.RED), true);
+                    shooter.displayClientMessage(
+                            Component.translatable("pwpwarfare.msg.emplacement.empty")
+                                    .withStyle(ChatFormatting.RED),
+                            true);
                     this.shootCooldown = 20;
                     return;
                 }
@@ -270,11 +275,11 @@ public class AGS30Entity extends Entity implements GeoEntity {
                     }
 
                     this.playSound((SoundEvent) ModSounds.M2_LOAD.get(), 1.0F, 1.0F);
-                    player.displayClientMessage(Component.literal("АГС заряжен: " + ammo + " выстрелов"), true);
+                    player.displayClientMessage(Component.translatable("pwpwarfare.msg.ags.loaded", ammo), true);
                     return InteractionResult.SUCCESS;
                 }
 
-                player.displayClientMessage(Component.literal("Уже заряжено!"), true);
+                player.displayClientMessage(Component.translatable("pwpwarfare.msg.emplacement.already_loaded"), true);
                 return InteractionResult.FAIL;
             }
 
@@ -286,7 +291,7 @@ public class AGS30Entity extends Entity implements GeoEntity {
                 this.setHasMagazine(false);
                 this.setAmmoCount(0);
                 this.playSound((SoundEvent) ModSounds.M2_UNLOAD.get(), 1.0F, 1.0F);
-                player.displayClientMessage(Component.literal("АГС разряжен (" + remaining + ")"), true);
+                player.displayClientMessage(Component.translatable("pwpwarfare.msg.ags.unloaded", remaining), true);
                 return InteractionResult.SUCCESS;
             }
 

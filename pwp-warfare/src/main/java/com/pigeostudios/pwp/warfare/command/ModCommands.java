@@ -798,10 +798,9 @@ public class ModCommands {
                                                                             data);
                                                                     ((CommandSourceStack) ctx.getSource())
                                                                             .sendSuccess(
-                                                                                    () -> Component.literal(
-                                                                                            "Map world size set to "
-                                                                                                    + size
-                                                                                                    + " blocks."),
+                                                                                    () -> Component.translatable(
+                                                                                            "pwpwarfare.msg.admin_cmd.map_size",
+                                                                                            size),
                                                                                     true);
                                                                     return 1;
                                                                 })))))
@@ -847,9 +846,11 @@ public class ModCommands {
 
                                     data.setDirty();
                                     PacketHandler.sendToAllClients(level, data);
-                                    String status = active ? "started" : "stopped";
+                                    String status = active
+                                            ? "pwpwarfare.msg.admin_cmd.vote_started"
+                                            : "pwpwarfare.msg.admin_cmd.vote_stopped";
                                     ((CommandSourceStack) ctx.getSource())
-                                            .sendSuccess(() -> Component.literal("Voting process " + status), true);
+                                            .sendSuccess(() -> Component.translatable(status), true);
                                     return 1;
                                 })))
                 .then(Commands.literal("voicemute")
@@ -901,14 +902,14 @@ public class ModCommands {
                     WarfareWorldData data = WarfareWorldData.get(level);
 
                     if (!data.match.isGameStarted) {
-                        player.sendSystemMessage(
-                                Component.literal("Игра не активна!").withStyle(ChatFormatting.RED));
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.game_inactive")
+                                .withStyle(ChatFormatting.RED));
                         return 0;
                     }
 
                     String team = player.getTeam() != null ? player.getTeam().getName() : "";
                     if (!team.equalsIgnoreCase("Blue") && !team.equalsIgnoreCase("Red")) {
-                        player.sendSystemMessage(Component.literal("Вы должны быть в команде, чтобы использовать это!")
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.need_team")
                                 .withStyle(ChatFormatting.RED));
                         return 0;
                     }
@@ -920,9 +921,9 @@ public class ModCommands {
 
                     if (elapsed < cooldownTicks && !player.isCreative()) {
                         long remaining = (cooldownTicks - elapsed) / 20;
-                        player.sendSystemMessage(Component.literal(
-                                        "Подождите " + remaining + "с перед повторным использованием /pwp respawn.")
-                                .withStyle(ChatFormatting.RED));
+                        player.sendSystemMessage(
+                                Component.translatable("pwpwarfare.msg.admin_cmd.respawn_cooldown", remaining)
+                                        .withStyle(ChatFormatting.RED));
                         return 0;
                     }
 
@@ -942,13 +943,13 @@ public class ModCommands {
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
             if (!data.match.voteActive || data.match.isGameStarted) {
-                player.sendSystemMessage(
-                        Component.literal("Нет активного голосования.").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.no_vote")
+                        .withStyle(ChatFormatting.RED));
                 return 0;
             }
             data.match.votes.put(player.getUUID(), true);
-            player.sendSystemMessage(
-                    Component.literal("Вы проголосовали ЗА старт матча!").withStyle(ChatFormatting.GREEN));
+            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.voted_ready")
+                    .withStyle(ChatFormatting.GREEN));
             PacketHandler.sendToAllClients(level, data);
             return 1;
         }));
@@ -960,7 +961,7 @@ public class ModCommands {
                     if (vehicle != null && WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) {
                         PacketVehicleDriveRequest.handleRequest(player, vehicle.getId());
                     } else {
-                        player.sendSystemMessage(Component.literal("Вы не в технике или это не наша техника")
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.not_in_vehicle")
                                 .withStyle(ChatFormatting.RED));
                     }
                     return 1;
@@ -1063,7 +1064,7 @@ public class ModCommands {
         data.setDirty();
         syncDataToAll(level, data);
         source.sendSuccess(
-                () -> Component.literal("Таймер возрождения установлен на " + seconds + "с для этого мира")
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.respawn_timer_set", seconds)
                         .withStyle(ChatFormatting.GREEN),
                 true);
         return 1;
@@ -1094,7 +1095,9 @@ public class ModCommands {
         data.setDirty();
         syncDataToAll(level, data);
         source.sendSuccess(
-                () -> Component.literal("Death cost set to " + amount).withStyle(ChatFormatting.GOLD), true);
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.death_cost_set", amount)
+                        .withStyle(ChatFormatting.GOLD),
+                true);
         return 1;
     }
 
@@ -1130,19 +1133,18 @@ public class ModCommands {
                     : data.match.redSpawns.get(currentDim);
             if (mainSpawn != null) {
                 player.teleportTo(mainSpawn.getX() + 0.5, mainSpawn.getY(), mainSpawn.getZ() + 0.5);
-                player.sendSystemMessage(Component.literal("Матч идёт! Телепортация на главную базу...")
+                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.tp_main")
                         .withStyle(ChatFormatting.YELLOW));
             } else {
-                player.sendSystemMessage(
-                        Component.literal("Внимание: точка спавна главной базы не установлена для этой команды!")
-                                .withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.no_main_spawn")
+                        .withStyle(ChatFormatting.RED));
             }
         }
 
-        player.sendSystemMessage(Component.literal("Вы присоединились к команде " + internalTeamName + "!")
+        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.joined_team", internalTeamName)
                 .withStyle(color));
         source.sendSuccess(
-                () -> Component.literal("Игрок присоединился к " + internalTeamName)
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.player_joined_team", internalTeamName)
                         .withStyle(color),
                 true);
         return 1;
@@ -1185,8 +1187,8 @@ public class ModCommands {
                 name, area, bp, rp, time, penalty, captureDeduct, shape.toUpperCase(), lockMinutes, gainNeut, gainCap));
         data.setDirty();
         source.sendSuccess(
-                () -> Component.literal("Point '" + name + "' (" + shape + ") added! Lock: " + lockMinutes
-                        + " min. Gain: " + gainNeut + "/" + gainCap),
+                () -> Component.translatable(
+                        "pwpwarfare.msg.admin_cmd.point_added", name, shape, lockMinutes, gainNeut, gainCap),
                 true);
         PacketHandler.sendToAllClients(level, data);
         return 1;
@@ -1200,13 +1202,15 @@ public class ModCommands {
             data.setDirty();
             syncDataToAll(level, data);
             source.sendSuccess(
-                    () -> Component.literal("Point '" + name + "' removed from "
-                                    + level.dimension().location())
+                    () -> Component.translatable(
+                                    "pwpwarfare.msg.admin_cmd.point_removed",
+                                    name,
+                                    level.dimension().location().toString())
                             .withStyle(ChatFormatting.RED),
                     true);
             return 1;
         } else {
-            source.sendFailure(Component.literal("Точка '" + name + "' не найдена в ЭТОМ мире!"));
+            source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.point_not_found", name));
             return 0;
         }
     }
@@ -1223,14 +1227,14 @@ public class ModCommands {
                 data.setDirty();
                 syncDataToAll(level, data);
                 source.sendSuccess(
-                        () -> Component.literal("Точка '" + name + "' сброшена на НЕЙТРАЛЬНУЮ в этом мире!")
+                        () -> Component.translatable("pwpwarfare.msg.admin_cmd.point_reset", name)
                                 .withStyle(ChatFormatting.YELLOW),
                         true);
                 return 1;
             }
         }
 
-        source.sendFailure(Component.literal("Точка '" + name + "' не найдена в ЭТОМ мире!"));
+        source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.point_not_found", name));
         return 0;
     }
 
@@ -1239,7 +1243,7 @@ public class ModCommands {
         WarfareWorldData data = WarfareWorldData.get(level);
         String targetTeam = teamInput.toUpperCase();
         if (!targetTeam.equals("BLUE") && !targetTeam.equals("RED")) {
-            source.sendFailure(Component.literal("Неверная команда! Используйте 'blue' или 'red'."));
+            source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.bad_team"));
             return 0;
         }
 
@@ -1252,22 +1256,21 @@ public class ModCommands {
                 syncDataToAll(level, data);
                 ChatFormatting color = targetTeam.equals("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
                 source.sendSuccess(
-                        () -> Component.literal(
-                                        "Точка '" + name + "' принудительно захвачена командой " + targetTeam + "!")
+                        () -> Component.translatable("pwpwarfare.msg.admin_cmd.point_forced", name, targetTeam)
                                 .withStyle(color),
                         true);
                 level.getServer()
                         .getPlayerList()
                         .broadcastSystemMessage(
-                                Component.literal("[АДМИН] Точка " + name + " принудительно захвачена командой "
-                                                + targetTeam)
+                                Component.translatable(
+                                                "pwpwarfare.msg.admin_cmd.point_forced_broadcast", name, targetTeam)
                                         .withStyle(color),
                                 false);
                 return 1;
             }
         }
 
-        source.sendFailure(Component.literal("Точка '" + name + "' не найдена в ЭТОМ мире!"));
+        source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.point_not_found", name));
         return 0;
     }
 
@@ -1286,7 +1289,9 @@ public class ModCommands {
         data.setDirty();
         syncDataToAll(level, data);
         source.sendSuccess(
-                () -> Component.literal("Спавн установлен для этого измерения.").withStyle(ChatFormatting.GREEN), true);
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.spawn_set")
+                        .withStyle(ChatFormatting.GREEN),
+                true);
         return 1;
     }
 
@@ -1294,13 +1299,14 @@ public class ModCommands {
         target.connection.send(new ClientboundSetTitlesAnimationPacket(10, 140, 20));
         target.connection.send(
                 new ClientboundSetSubtitleTextPacket(Component.literal(message).withStyle(ChatFormatting.YELLOW)));
-        target.connection.send(new ClientboundSetTitleTextPacket(Component.literal("!ВНИМАНИЕ!")
-                .withStyle(new ChatFormatting[] {ChatFormatting.DARK_RED, ChatFormatting.BOLD})));
+        target.connection.send(
+                new ClientboundSetTitleTextPacket(Component.translatable("pwpwarfare.msg.teamkill.warning_title")
+                        .withStyle(new ChatFormatting[] {ChatFormatting.DARK_RED, ChatFormatting.BOLD})));
         target.playNotifySound(SoundEvents.ANVIL_LAND, SoundSource.MASTER, 1.0F, 0.8F);
-        target.sendSystemMessage(Component.literal("[АДМИН ПРЕДУПРЕЖДЕНИЕ] " + message)
+        target.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.warning", message)
                 .withStyle(new ChatFormatting[] {ChatFormatting.RED, ChatFormatting.BOLD}));
         source.sendSuccess(
-                () -> Component.literal("Игрок " + target.getScoreboardName() + " успешно предупреждён!")
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.warned", target.getScoreboardName())
                         .withStyle(ChatFormatting.GREEN),
                 true);
         return 1;
@@ -1309,7 +1315,7 @@ public class ModCommands {
     private static int voiceMutePlayer(CommandSourceStack source, ServerPlayer target, int minutes, String reason) {
         ServerPlayer admin = source.getPlayer();
         if (admin == null) {
-            source.sendFailure(Component.literal("Эту команду могут использовать только игроки."));
+            source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.players_only"));
             return 0;
         }
         ServerThread.thenOnServer(
@@ -1340,20 +1346,22 @@ public class ModCommands {
             JsonObject result) {
         if (result != null && result.has("success") && result.get("success").getAsBoolean()) {
             WarfareVoicechatPlugin.invalidateMuteCache(targetUuid);
-            String duration = minutes > 0 ? " на " + minutes + " мин." : " навсегда";
+            Component duration = minutes > 0
+                    ? Component.translatable("pwpwarfare.msg.admin_cmd.mute_for", minutes)
+                    : Component.translatable("pwpwarfare.msg.admin_cmd.mute_forever");
             ServerPlayer target = source.getServer().getPlayerList().getPlayer(targetUuid);
             if (target != null) {
                 target.sendSystemMessage(
-                        Component.literal("Ваш голосовой чат отключён администратором " + adminName + duration)
+                        Component.translatable("pwpwarfare.msg.admin_cmd.muted_you", adminName, duration)
                                 .withStyle(ChatFormatting.RED));
             }
             source.sendSuccess(
-                    () -> Component.literal("Голосовой чат игрока " + targetName + " отключён" + duration)
+                    () -> Component.translatable("pwpwarfare.msg.admin_cmd.muted", targetName, duration)
                             .withStyle(ChatFormatting.GREEN),
                     true);
             return;
         }
-        source.sendFailure(Component.literal("Ошибка при выполнении мута"));
+        source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.mute_failed"));
     }
 
     private static int voiceUnmutePlayer(CommandSourceStack source, ServerPlayer target) {
@@ -1370,16 +1378,16 @@ public class ModCommands {
             WarfareVoicechatPlugin.invalidateMuteCache(targetUuid);
             ServerPlayer target = source.getServer().getPlayerList().getPlayer(targetUuid);
             if (target != null) {
-                target.sendSystemMessage(
-                        Component.literal("Ваш голосовой чат снова включён").withStyle(ChatFormatting.GREEN));
+                target.sendSystemMessage(Component.translatable("pwpwarfare.msg.admin_cmd.unmuted_you")
+                        .withStyle(ChatFormatting.GREEN));
             }
             source.sendSuccess(
-                    () -> Component.literal("Голосовой чат игрока " + targetName + " включён")
+                    () -> Component.translatable("pwpwarfare.msg.admin_cmd.unmuted", targetName)
                             .withStyle(ChatFormatting.GREEN),
                     true);
             return;
         }
-        source.sendFailure(Component.literal("Ошибка при снятии мута"));
+        source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.unmute_failed"));
     }
 
     private static int voiceMuteList(CommandSourceStack source) {
@@ -1397,41 +1405,53 @@ public class ModCommands {
             JsonArray list = result.getAsJsonArray("data");
             if (list.size() == 0) {
                 source.sendSuccess(
-                        () -> Component.literal("Нет активных мутов").withStyle(ChatFormatting.YELLOW), false);
+                        () -> Component.translatable("pwpwarfare.msg.admin_cmd.no_mutes")
+                                .withStyle(ChatFormatting.YELLOW),
+                        false);
                 return;
             }
             source.sendSuccess(
-                    () -> Component.literal("=== Активные Voice Mute ===").withStyle(ChatFormatting.GOLD), false);
+                    () -> Component.translatable("pwpwarfare.msg.admin_cmd.mutes_header")
+                            .withStyle(ChatFormatting.GOLD),
+                    false);
             for (int idx = 0; idx < list.size(); idx++) {
                 final int displayIdx = idx + 1;
                 JsonObject mute = list.get(idx).getAsJsonObject();
                 String nickname = mute.has("mutedByNickname")
                         ? mute.get("mutedByNickname").getAsString()
                         : "?";
-                String reason =
+                Object reason =
                         mute.has("reason") && !mute.get("reason").getAsString().isEmpty()
                                 ? mute.get("reason").getAsString()
-                                : "не указана";
+                                : Component.translatable("pwpwarfare.msg.admin_cmd.mute_no_reason");
                 String targetUuid = mute.get("uuid").getAsString();
                 ServerPlayer target = source.getServer().getPlayerList().getPlayer(UUID.fromString(targetUuid));
                 String targetName = target != null ? target.getScoreboardName() : targetUuid.substring(0, 8) + "...";
                 boolean permanent =
                         mute.has("expiresAt") && mute.get("expiresAt").getAsLong() == 0;
-                String duration = permanent ? "навсегда" : "временный";
+                Component duration = Component.translatable(
+                        permanent
+                                ? "pwpwarfare.msg.admin_cmd.mute_forever"
+                                : "pwpwarfare.msg.admin_cmd.mute_temporary");
                 int fIdx = displayIdx;
                 String fTargetName = targetName;
                 String fNickname = nickname;
-                String fDuration = duration;
-                String fReason = reason;
+                Component fDuration = duration;
+                Object fReason = reason;
                 source.sendSuccess(
-                        () -> Component.literal(fIdx + ". " + fTargetName + " | мут от: " + fNickname + " | "
-                                        + fDuration + " | причина: " + fReason)
+                        () -> Component.translatable(
+                                        "pwpwarfare.msg.admin_cmd.mute_entry",
+                                        fIdx,
+                                        fTargetName,
+                                        fNickname,
+                                        fDuration,
+                                        fReason)
                                 .withStyle(ChatFormatting.WHITE),
                         false);
             }
             return;
         }
-        source.sendFailure(Component.literal("Не удалось получить список мутов"));
+        source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.mutes_failed"));
     }
 
     private static void syncDataToAll(ServerLevel level, WarfareWorldData data) {
@@ -1463,7 +1483,7 @@ public class ModCommands {
                 new WarfareWorldData.MainProtectionZone(team.toUpperCase(), shape.toUpperCase(), area));
         data.setDirty();
         source.sendSuccess(
-                () -> Component.literal(team.toUpperCase() + " Main Protection Zone successfully added!")
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.zone_added", team.toUpperCase())
                         .withStyle(ChatFormatting.GREEN),
                 true);
         return 1;
@@ -1476,11 +1496,11 @@ public class ModCommands {
         if (removed) {
             data.setDirty();
             source.sendSuccess(
-                    () -> Component.literal(team.toUpperCase() + " — защитная зона базы удалена!")
+                    () -> Component.translatable("pwpwarfare.msg.admin_cmd.zone_removed", team.toUpperCase())
                             .withStyle(ChatFormatting.GREEN),
                     true);
         } else {
-            source.sendFailure(Component.literal("Защитная зона не найдена для команды: " + team.toUpperCase()));
+            source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.zone_not_found", team.toUpperCase()));
         }
 
         return 1;
@@ -1513,7 +1533,7 @@ public class ModCommands {
         data.setDirty();
         PacketHandler.sendToAllClients(level, data);
         source.sendSuccess(
-                () -> Component.literal("Cleared squads and CMD for " + targetTeam)
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.squads_cleared", targetTeam)
                         .withStyle(ChatFormatting.GREEN),
                 true);
         return 1;
@@ -1522,7 +1542,7 @@ public class ModCommands {
     private static int clearTeamkill(CommandSourceStack source, ServerPlayer target) {
         DownedHandler.clearTeamkillPunishment(target);
         source.sendSuccess(
-                () -> Component.literal("Cleared teamkill punishment for " + target.getScoreboardName())
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.teamkill_cleared", target.getScoreboardName())
                         .withStyle(ChatFormatting.GREEN),
                 true);
         return 1;
@@ -1540,7 +1560,7 @@ public class ModCommands {
             }
         }
         if (team == null) {
-            source.sendFailure(Component.literal("Отряд не найден"));
+            source.sendFailure(Component.translatable("pwpwarfare.msg.admin_cmd.squad_not_found"));
             return 0;
         }
         boolean isBlue = team.toUpperCase().contains("BLUE");
@@ -1550,7 +1570,7 @@ public class ModCommands {
         PacketHandler.sendToAllClients(level, data);
         String finalTeam = team;
         source.sendSuccess(
-                () -> Component.literal("КМД назначен отряду " + squadId + " (" + finalTeam + ")")
+                () -> Component.translatable("pwpwarfare.msg.admin_cmd.cmd_assigned", squadId, finalTeam)
                         .withStyle(ChatFormatting.GREEN),
                 true);
         return 1;

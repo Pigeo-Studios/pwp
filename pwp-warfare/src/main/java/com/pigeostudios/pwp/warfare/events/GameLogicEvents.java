@@ -181,14 +181,14 @@ public class GameLogicEvents {
                         event.setCanceled(true);
                         player.getInventory().add(event.getEntity().getItem());
                         player.displayClientMessage(
-                                Component.literal("Выбрасывание предметов ОТКЛЮЧЕНО во время игры!")
+                                Component.translatable("pwpwarfare.msg.item.drop_disabled")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     } else if (isHeavyItem(event.getEntity().getItem().getItem())) {
                         event.setCanceled(true);
                         player.getInventory().add(event.getEntity().getItem());
                         player.displayClientMessage(
-                                Component.literal("Нельзя выбрасывать тяжёлый БК во время боя!")
+                                Component.translatable("pwpwarfare.msg.item.drop_heavy")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     }
@@ -260,7 +260,7 @@ public class GameLogicEvents {
                             if (!hasCorrectKit(vType, pKit)) {
                                 player.stopRiding();
                                 player.displayClientMessage(
-                                        Component.literal("Вам нужен кит Механик/Пилот")
+                                        Component.translatable("pwpwarfare.msg.vehicle.crew_kit_required")
                                                 .withStyle(ChatFormatting.RED),
                                         true);
                             } else {
@@ -445,7 +445,9 @@ public class GameLogicEvents {
                                     1.0F,
                                     2.0F);
                             broadcastMessage(
-                                    level, "§e[PWP] §fФаза подготовки: осталось §e1 минута!", ChatFormatting.GOLD);
+                                    level,
+                                    Component.translatable("pwpwarfare.msg.invasion.setup_1min"),
+                                    ChatFormatting.GOLD);
                         }
                         if (secs == 30) {
                             level.playSound(
@@ -456,7 +458,9 @@ public class GameLogicEvents {
                                     1.0F,
                                     2.0F);
                             broadcastMessage(
-                                    level, "§e[PWP] §fФаза подготовки: осталось §e30 секунд!", ChatFormatting.GOLD);
+                                    level,
+                                    Component.translatable("pwpwarfare.msg.invasion.setup_30s"),
+                                    ChatFormatting.GOLD);
                         }
                         if (secs <= 10 && secs > 0) {
                             level.playSound(
@@ -471,10 +475,13 @@ public class GameLogicEvents {
                             data.match.invasionSetupActive = false;
                             data.setDirty();
                             sendSyncPacket(level, data);
-                            sendTitleToLevel(level, "§aАТАКА!", ChatFormatting.GREEN);
+                            sendTitleToLevel(
+                                    level,
+                                    Component.translatable("pwpwarfare.msg.invasion.attack_title"),
+                                    ChatFormatting.GREEN);
                             broadcastMessage(
                                     level,
-                                    "§a[PWP] Фаза подготовки окончена! Атакующие освобождены!",
+                                    Component.translatable("pwpwarfare.msg.invasion.setup_over"),
                                     ChatFormatting.GREEN);
                         }
                     }
@@ -768,7 +775,8 @@ public class GameLogicEvents {
                             if (data.match.countdownTicks % 20 == 0) {
                                 int seconds = data.match.countdownTicks / 20;
                                 StagingPackets.broadcastState(level, data);
-                                sendTitleToLevel(level, String.valueOf(seconds), ChatFormatting.YELLOW);
+                                sendTitleToLevel(
+                                        level, Component.literal(String.valueOf(seconds)), ChatFormatting.YELLOW);
                                 level.playSound(
                                         null,
                                         new BlockPos(0, 100, 0),
@@ -788,9 +796,15 @@ public class GameLogicEvents {
 
                             if ("invasion".equals(data.match.gameMode)) {
                                 data.match.invasionSetupActive = true;
-                                sendTitleToLevel(level, "ПОДГОТОВКА!", ChatFormatting.GOLD);
+                                sendTitleToLevel(
+                                        level,
+                                        Component.translatable("pwpwarfare.msg.invasion.setup_title"),
+                                        ChatFormatting.GOLD);
                             } else {
-                                sendTitleToLevel(level, "GO!", ChatFormatting.GREEN);
+                                sendTitleToLevel(
+                                        level,
+                                        Component.translatable("pwpwarfare.msg.match.go_title"),
+                                        ChatFormatting.GREEN);
                             }
 
                             data.setDirty();
@@ -1394,10 +1408,10 @@ public class GameLogicEvents {
                                             int secLeft = 10 - ticks / 20;
                                             player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 30, 0));
                                             player.connection.send(new ClientboundSetSubtitleTextPacket(
-                                                    Component.literal("Вы будете убиты через " + secLeft + "с!")
+                                                    Component.translatable("pwpwarfare.msg.main.enemy_kill_in", secLeft)
                                                             .withStyle(ChatFormatting.RED)));
                                             player.connection.send(new ClientboundSetTitleTextPacket(
-                                                    Component.literal("ВРАЖЕСКАЯ ОСНОВНАЯ БАЗА")
+                                                    Component.translatable("pwpwarfare.msg.main.enemy_title")
                                                             .withStyle(new ChatFormatting[] {
                                                                 ChatFormatting.DARK_RED, ChatFormatting.BOLD
                                                             })));
@@ -1428,9 +1442,9 @@ public class GameLogicEvents {
                                             for (Entity passenger : entity.getPassengers()) {
                                                 if (passenger instanceof ServerPlayer p) {
                                                     p.displayClientMessage(
-                                                            Component.literal(
-                                                                            "WARNING! Enemy base! Vehicle destroyed in "
-                                                                                    + secLeft + "s!")
+                                                            Component.translatable(
+                                                                            "pwpwarfare.msg.main.enemy_vehicle",
+                                                                            secLeft)
                                                                     .withStyle(new ChatFormatting[] {
                                                                         ChatFormatting.RED, ChatFormatting.BOLD
                                                                     }),
@@ -1556,7 +1570,7 @@ public class GameLogicEvents {
             WarfareWorldData data = WarfareWorldData.get(level);
             SquadActions.leaveCurrentSquad(player, data);
             PacketHandler.syncSquadsAll(data.squadRegistry.squads);
-            player.sendSystemMessage(Component.literal("Вы покинули отряд, потому что сменили мир.")
+            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.squad.left_world_change")
                     .withStyle(ChatFormatting.YELLOW));
         }
     }
@@ -1860,12 +1874,16 @@ public class GameLogicEvents {
                                 data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                                 ticketsChanged = true;
                                 broadcastMessage(
-                                        level, "BLUE lost " + vType + " (-" + penalty + ")", ChatFormatting.BLUE);
+                                        level,
+                                        Component.translatable("pwpwarfare.msg.vehicle.lost.blue", vType, penalty),
+                                        ChatFormatting.BLUE);
                             } else if (vTeam.equalsIgnoreCase("RED")) {
                                 data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                                 ticketsChanged = true;
                                 broadcastMessage(
-                                        level, "RED lost " + vType + " (-" + penalty + ")", ChatFormatting.RED);
+                                        level,
+                                        Component.translatable("pwpwarfare.msg.vehicle.lost.red", vType, penalty),
+                                        ChatFormatting.RED);
                             }
                         }
                     }
@@ -1938,11 +1956,17 @@ public class GameLogicEvents {
                 if (vTeam.equalsIgnoreCase("BLUE")) {
                     data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     ticketsChanged = true;
-                    broadcastMessage(level, "BLUE lost " + vType + " (-" + penalty + ")", ChatFormatting.BLUE);
+                    broadcastMessage(
+                            level,
+                            Component.translatable("pwpwarfare.msg.vehicle.lost.blue", vType, penalty),
+                            ChatFormatting.BLUE);
                 } else if (vTeam.equalsIgnoreCase("RED")) {
                     data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     ticketsChanged = true;
-                    broadcastMessage(level, "RED lost " + vType + " (-" + penalty + ")", ChatFormatting.RED);
+                    broadcastMessage(
+                            level,
+                            Component.translatable("pwpwarfare.msg.vehicle.lost.red", vType, penalty),
+                            ChatFormatting.RED);
                 }
                 if (ticketsChanged || markerRemoved) {
                     if (ticketsChanged) {
@@ -2293,15 +2317,19 @@ public class GameLogicEvents {
         return faction.replace("_", " ").toUpperCase();
     }
 
-    private static String formatTime(int totalSecs) {
+    private static Component formatTime(int totalSecs) {
         int m = totalSecs / 60;
         int s = totalSecs % 60;
-        if (m >= 1) return "\u00a7e" + m + " \u043C\u0438\u043D " + (s > 0 ? "\u00a77" + s + " \u0441" : "");
-        return "\u00a7e" + s + " \u0441";
+        Component c = m >= 1
+                ? (s > 0
+                        ? Component.translatable("pwpwarfare.msg.time.min_sec", m, s)
+                        : Component.translatable("pwpwarfare.msg.time.min", m))
+                : Component.translatable("pwpwarfare.msg.time.sec", s);
+        return c.copy().withStyle(ChatFormatting.YELLOW);
     }
 
-    private static void sendTitleToLevel(ServerLevel level, String text, ChatFormatting color) {
-        Component title = Component.literal(text).withStyle(color).withStyle(ChatFormatting.BOLD);
+    private static void sendTitleToLevel(ServerLevel level, Component text, ChatFormatting color) {
+        Component title = text.copy().withStyle(color).withStyle(ChatFormatting.BOLD);
 
         for (ServerPlayer player : level.players()) {
             player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 20, 10));
@@ -2309,8 +2337,8 @@ public class GameLogicEvents {
         }
     }
 
-    private static void sendTitleToAll(MinecraftServer server, String text, ChatFormatting color) {
-        Component title = Component.literal(text).withStyle(color).withStyle(ChatFormatting.BOLD);
+    private static void sendTitleToAll(MinecraftServer server, Component text, ChatFormatting color) {
+        Component title = text.copy().withStyle(color).withStyle(ChatFormatting.BOLD);
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 20, 10));
@@ -2331,10 +2359,8 @@ public class GameLogicEvents {
         return false;
     }
 
-    private static void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
-        level.getServer()
-                .getPlayerList()
-                .broadcastSystemMessage(Component.literal(text).withStyle(color), false);
+    private static void broadcastMessage(ServerLevel level, Component text, ChatFormatting color) {
+        level.getServer().getPlayerList().broadcastSystemMessage(text.copy().withStyle(color), false);
     }
 
     private static void sendSyncPacket(ServerLevel level, WarfareWorldData data) {
@@ -2420,7 +2446,8 @@ public class GameLogicEvents {
         player.inventoryMenu.broadcastChanges();
         player.containerMenu.broadcastChanges();
         SquadActions.removePlayerTags(player);
-        player.displayClientMessage(Component.literal("§eВы вышли из отряда. Кит и брони очищены."), true);
+        player.displayClientMessage(
+                Component.translatable("pwpwarfare.msg.squad.left_kit_cleared").withStyle(ChatFormatting.YELLOW), true);
         data.setDirty();
         PacketHandler.sendToAllClients(player.serverLevel(), data);
     }
@@ -2530,7 +2557,7 @@ public class GameLogicEvents {
                         }
 
                         player.displayClientMessage(
-                                Component.literal("Можно нести максимум 8 миномётных снарядов!")
+                                Component.translatable("pwpwarfare.msg.item.mortar_limit")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     }
@@ -2575,10 +2602,16 @@ public class GameLogicEvents {
                     }
 
                     broadcastTeamMessage(
-                            level, team, team + " COMMANDER ASSIGNED: " + candidateName, ChatFormatting.GREEN);
+                            level,
+                            team,
+                            Component.translatable("pwpwarfare.msg.cmd.assigned", team, candidateName),
+                            ChatFormatting.GREEN);
                 } else {
                     broadcastTeamMessage(
-                            level, team, team + " CMD Application rejected or timed out.", ChatFormatting.RED);
+                            level,
+                            team,
+                            Component.translatable("pwpwarfare.msg.cmd.rejected", team),
+                            ChatFormatting.RED);
                 }
 
                 if (isBlue) {
@@ -2595,8 +2628,8 @@ public class GameLogicEvents {
         }
     }
 
-    private static void broadcastTeamMessage(ServerLevel level, String team, String text, ChatFormatting color) {
-        Component message = Component.literal(text).withStyle(color);
+    private static void broadcastTeamMessage(ServerLevel level, String team, Component text, ChatFormatting color) {
+        Component message = text.copy().withStyle(color);
 
         for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
             if (player.getTeam() != null && player.getTeam().getName().equalsIgnoreCase(team)) {

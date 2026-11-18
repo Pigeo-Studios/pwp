@@ -125,15 +125,16 @@ public class PacketSaveFactionVehicle {
                         (online, resp) -> {
                             if (resp == null) {
                                 online.displayClientMessage(
-                                        Component.literal("§cCore API: техника не сохранена"), true);
+                                        Component.translatable("pwpwarfare.msg.save.vehicle_failed")
+                                                .withStyle(net.minecraft.ChatFormatting.RED),
+                                        true);
                             } else {
                                 online.displayClientMessage(
                                         Component.translatable("gui.pwpwarfare.faction_vehicle.saved"), true);
                             }
                         });
                 if (!started) {
-                    player.displayClientMessage(
-                            Component.literal("Подождите, предыдущее сохранение ещё выполняется"), true);
+                    player.displayClientMessage(Component.translatable("pwpwarfare.msg.save.in_progress"), true);
                 }
             }
         });

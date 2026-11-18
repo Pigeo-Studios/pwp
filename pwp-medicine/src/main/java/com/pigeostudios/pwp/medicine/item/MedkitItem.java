@@ -60,7 +60,8 @@ public class MedkitItem extends Item implements GeoItem {
             Player player2 = toHeal = target != null ? target : player;
             if (toHeal.hasEffect(ModEffects.BLEEDING.get())) {
                 if (player.tickCount % 20 == 0) {
-                    player.sendSystemMessage(Component.literal("§cНельзя лечить: цель истекает кровью!"));
+                    player.sendSystemMessage(Component.translatable("pwp_medicine.msg.target_bleeding")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
                 }
                 return;
             }

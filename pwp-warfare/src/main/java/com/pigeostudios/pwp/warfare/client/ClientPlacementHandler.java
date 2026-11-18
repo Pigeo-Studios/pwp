@@ -305,7 +305,7 @@ public class ClientPlacementHandler {
                                 stopPlacing();
                             } else {
                                 mc.player.displayClientMessage(
-                                        Component.literal("Недостаточно материалов или вне досягаемости!")
+                                        Component.translatable("pwpwarfare.msg.build.no_mats_or_range")
                                                 .withStyle(ChatFormatting.RED),
                                         true);
                             }

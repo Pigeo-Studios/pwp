@@ -20,10 +20,8 @@ public class VehicleSpawnerRenderer implements BlockEntityRenderer<VehicleSpawne
         this.font = context.getFont();
     }
 
-    private String formatTime(long seconds) {
-        long m = seconds / 60L;
-        long s = seconds % 60L;
-        return String.format("%dм %dс", m, s);
+    private Component formatTime(long seconds) {
+        return Component.translatable("pwpwarfare.msg.time.m_s", seconds / 60L, seconds % 60L);
     }
 
     public void render(
@@ -41,23 +39,25 @@ public class VehicleSpawnerRenderer implements BlockEntityRenderer<VehicleSpawne
             poseStack.scale(-0.025F, -0.025F, 0.025F);
             long currentTick = entity.getLevel().getGameTime();
             long timeLeft = Math.max(0L, (entity.targetSpawnTick - currentTick) / 20L);
-            String respawnText;
+            Component respawnText;
             int respawnColor;
             if (entity.hasSpawnedOnce && entity.targetSpawnTick > currentTick) {
-                respawnText = "Возрождение: " + this.formatTime(timeLeft);
+                respawnText = Component.translatable("pwpwarfare.msg.spawner.respawn_in", this.formatTime(timeLeft));
                 respawnColor = 16755200;
             } else {
-                respawnText = "Таймер возрождения: " + this.formatTime(entity.respawnTimeSettings);
+                respawnText = Component.translatable(
+                        "pwpwarfare.msg.spawner.respawn_timer", this.formatTime(entity.respawnTimeSettings));
                 respawnColor = 11184810;
             }
 
-            String initialText;
+            Component initialText;
             int initialColor;
             if (!entity.hasSpawnedOnce && entity.targetSpawnTick > currentTick) {
-                initialText = "Старт: " + this.formatTime(timeLeft);
+                initialText = Component.translatable("pwpwarfare.msg.spawner.start_in", this.formatTime(timeLeft));
                 initialColor = 5635925;
             } else {
-                initialText = "Таймер старта: " + this.formatTime(entity.initialTimeSettings);
+                initialText = Component.translatable(
+                        "pwpwarfare.msg.spawner.start_timer", this.formatTime(entity.initialTimeSettings));
                 initialColor = 11184810;
             }
 
@@ -65,7 +65,7 @@ public class VehicleSpawnerRenderer implements BlockEntityRenderer<VehicleSpawne
             float bgOpacity = 0.25F;
             float x1 = -this.font.width(respawnText) / 2.0F;
             this.font.drawInBatch(
-                    Component.literal(respawnText),
+                    respawnText,
                     x1,
                     -10.0F,
                     respawnColor,
@@ -76,19 +76,10 @@ public class VehicleSpawnerRenderer implements BlockEntityRenderer<VehicleSpawne
                     (int) (bgOpacity * 255.0F) << 24,
                     packedLight);
             this.font.drawInBatch(
-                    Component.literal(respawnText),
-                    x1,
-                    -10.0F,
-                    respawnColor,
-                    false,
-                    matrix,
-                    buffer,
-                    DisplayMode.NORMAL,
-                    0,
-                    packedLight);
+                    respawnText, x1, -10.0F, respawnColor, false, matrix, buffer, DisplayMode.NORMAL, 0, packedLight);
             float x2 = -this.font.width(initialText) / 2.0F;
             this.font.drawInBatch(
-                    Component.literal(initialText),
+                    initialText,
                     x2,
                     0.0F,
                     initialColor,
@@ -99,16 +90,7 @@ public class VehicleSpawnerRenderer implements BlockEntityRenderer<VehicleSpawne
                     (int) (bgOpacity * 255.0F) << 24,
                     packedLight);
             this.font.drawInBatch(
-                    Component.literal(initialText),
-                    x2,
-                    0.0F,
-                    initialColor,
-                    false,
-                    matrix,
-                    buffer,
-                    DisplayMode.NORMAL,
-                    0,
-                    packedLight);
+                    initialText, x2, 0.0F, initialColor, false, matrix, buffer, DisplayMode.NORMAL, 0, packedLight);
             poseStack.popPose();
         }
     }

@@ -103,7 +103,8 @@ public class MainSupplyBlockEntity extends BlockEntity {
                                 WarfareData.of(vehicle).putInt(WarfareKeys.TRUCK_RELOAD_TIMER, 0);
                                 sendChatMessageToPassengers(
                                         vehicle,
-                                        "[Снабжение] +1 ящик загружен (" + (currentAmmo + 1) + "/" + maxCrates + ")",
+                                        Component.translatable(
+                                                "pwpwarfare.msg.supply.crate_loaded", currentAmmo + 1, maxCrates),
                                         ChatFormatting.GOLD);
                                 spawnEffects(level, vehicle);
                             } else {
@@ -175,7 +176,7 @@ public class MainSupplyBlockEntity extends BlockEntity {
                                 WarfareData.of(vehicle).putLong(WarfareKeys.NEXT_SUPPLY_TIME, currentTime + 600L);
                                 sendChatMessageToPassengers(
                                         vehicle,
-                                        "[База] Техника полностью пополнена и отремонтирована!",
+                                        Component.translatable("pwpwarfare.msg.supply.vehicle_restored"),
                                         ChatFormatting.GREEN);
                                 spawnEffects(level, vehicle);
                             } else {
@@ -211,10 +212,10 @@ public class MainSupplyBlockEntity extends BlockEntity {
         }
     }
 
-    private static void sendChatMessageToPassengers(Entity vehicle, String msg, ChatFormatting color) {
+    private static void sendChatMessageToPassengers(Entity vehicle, Component msg, ChatFormatting color) {
         for (Entity passenger : vehicle.getPassengers()) {
             if (passenger instanceof Player player) {
-                player.displayClientMessage(Component.literal(msg).withStyle(color), false);
+                player.displayClientMessage(msg.copy().withStyle(color), false);
             }
         }
     }

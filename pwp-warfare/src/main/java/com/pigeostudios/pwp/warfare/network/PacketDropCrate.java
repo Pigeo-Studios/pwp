@@ -29,7 +29,7 @@ public class PacketDropCrate {
                 if (vehicle != null && WarfareData.of(vehicle).getBoolean(WarfareKeys.IS_SUPPLY_TRUCK)) {
                     if (vehicle.getFirstPassenger() != player) {
                         player.displayClientMessage(
-                                Component.literal("Сбрасывать припасы может только водитель!")
+                                Component.translatable("pwpwarfare.msg.crate.driver_only")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                         return;
@@ -51,10 +51,12 @@ public class PacketDropCrate {
                                 new SupplyCrateEntity(player.level(), x, y, z, team, player.getUUID());
                         player.level().addFreshEntity(crate);
                         player.displayClientMessage(
-                                Component.literal("Ящик снабжения сброшен!").withStyle(ChatFormatting.YELLOW), true);
+                                Component.translatable("pwpwarfare.msg.crate.dropped")
+                                        .withStyle(ChatFormatting.YELLOW),
+                                true);
                     } else {
                         player.displayClientMessage(
-                                Component.literal("Нет припасов! Вернитесь на основную базу.")
+                                Component.translatable("pwpwarfare.msg.crate.empty")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     }

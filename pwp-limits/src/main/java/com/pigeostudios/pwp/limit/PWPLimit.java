@@ -1,7 +1,5 @@
 package com.pigeostudios.pwp.limit;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.IConfigSpec;
@@ -17,8 +15,8 @@ public class PWPLimit {
         // Регистрация серверной конфигурации (кулдаун прыжка и т.д.)
         ModLoadingContext.get()
                 .registerConfig(net.minecraftforge.fml.config.ModConfig.Type.SERVER, (IConfigSpec) ModConfig.SPEC);
-        // Загрузка экрана настроек только на клиенте
-        DistExecutor.unsafeRunWhenOn((Dist) Dist.CLIENT, () -> ClientRegistration::registerConfigScreen);
+        // Экрана настроек в меню модов больше нет (18.11.2026): это SERVER-конфиг — до входа на сервер
+        // он не загружен (открытие из меню падало), а на клиенте правила сервера всё равно не меняются.
         LOG.info("PWP Limits загружен с серверным конфигом");
     }
 }

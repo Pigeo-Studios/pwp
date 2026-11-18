@@ -187,9 +187,7 @@ public class ClientHooks {
             openRadioMenu();
         } else if (player.getTeam() == null) {
             player.displayClientMessage(
-                    Component.literal("Сначала вступите в КОМАНДУ (Синяя/Красная)!")
-                            .withStyle(ChatFormatting.RED),
-                    true);
+                    Component.translatable("pwpwarfare.msg.team.join_first").withStyle(ChatFormatting.RED), true);
         } else {
             String playerName = player.getScoreboardName();
             boolean isInSquad = false;
@@ -207,12 +205,12 @@ public class ClientHooks {
 
             if (!isInSquad) {
                 player.displayClientMessage(
-                        Component.literal("Сначала вступите в ОТРЯД! Нажмите 'K'.")
+                        Component.translatable("pwpwarfare.msg.squad.join_first")
                                 .withStyle(ChatFormatting.RED),
                         true);
             } else if (!isLeader) {
                 player.displayClientMessage(
-                        Component.literal("Для этого нужно быть командиром отряда!")
+                        Component.translatable("pwpwarfare.msg.squad.leader_required")
                                 .withStyle(ChatFormatting.RED),
                         true);
             } else {

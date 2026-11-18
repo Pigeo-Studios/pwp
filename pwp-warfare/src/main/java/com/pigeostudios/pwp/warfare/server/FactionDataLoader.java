@@ -88,7 +88,7 @@ public final class FactionDataLoader {
             ServerPlayer p = serverLevel.getServer().getPlayerList().getPlayer(id);
             if (p != null && !p.hasDisconnected()) {
                 p.displayClientMessage(
-                        Component.literal("Матч перезапущен — нажмите «Деплой» снова")
+                        Component.translatable("pwpwarfare.msg.deploy.match_restarted")
                                 .withStyle(ChatFormatting.YELLOW),
                         true);
             }
@@ -123,13 +123,14 @@ public final class FactionDataLoader {
      */
     public static void deferDeploy(ServerPlayer player, String spawnType) {
         PENDING_DEPLOYS.put(player.getUUID(), snapshot(player, spawnType));
-        player.displayClientMessage(Component.literal("Загрузка китов…").withStyle(ChatFormatting.YELLOW), true);
+        player.displayClientMessage(
+                Component.translatable("pwpwarfare.msg.deploy.loading_kits").withStyle(ChatFormatting.YELLOW), true);
     }
 
     /** Отменить ожидание (смена кита/команды). Нет ожидания — ничего не делает. */
     public static void cancelDeploy(ServerPlayer player, String reason) {
         if (PENDING_DEPLOYS.remove(player.getUUID()) != null) {
-            player.displayClientMessage(Component.literal(reason).withStyle(ChatFormatting.YELLOW), true);
+            player.displayClientMessage(Component.translatable(reason).withStyle(ChatFormatting.YELLOW), true);
         }
     }
 
@@ -245,7 +246,7 @@ public final class FactionDataLoader {
             it.remove();
             String reason = waiting.cancelReason(snapshot(p, waiting.spawnType()));
             if (reason != null) {
-                p.displayClientMessage(Component.literal(reason).withStyle(ChatFormatting.YELLOW), true);
+                p.displayClientMessage(Component.translatable(reason).withStyle(ChatFormatting.YELLOW), true);
                 continue;
             }
             PacketRespawnRequest.process(p, waiting.spawnType());

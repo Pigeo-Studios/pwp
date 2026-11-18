@@ -471,8 +471,9 @@ public class PacketBuildRequest {
                                         mortar.setTeam(team);
                                     }
 
-                                    player.sendSystemMessage(Component.literal("Блюпринт миномёта установлен!")
-                                            .withStyle(ChatFormatting.GREEN));
+                                    player.sendSystemMessage(
+                                            Component.translatable("pwpwarfare.msg.build.mortar_placed")
+                                                    .withStyle(ChatFormatting.GREEN));
                                 }
                             }
                         } else if (msg.structureId == 23) {
@@ -499,7 +500,7 @@ public class PacketBuildRequest {
                                         tow.setTeam(team);
                                     }
 
-                                    player.sendSystemMessage(Component.literal("Блюпринт ПТРК установлен!")
+                                    player.sendSystemMessage(Component.translatable("pwpwarfare.msg.build.tow_placed")
                                             .withStyle(ChatFormatting.GREEN));
                                 }
                             }
@@ -516,14 +517,14 @@ public class PacketBuildRequest {
                             // Нельзя строить РЭБ внутри уже стоящей сущности РЭБ
                             // (визуал большой — сущность 1x2 хитбоксом не перекрывает место)
                             if (!rebAreaFree(level, msg.pos, mini)) {
-                                player.sendSystemMessage(Component.literal("Здесь уже стоит РЭБ!")
+                                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.build.reb_exists")
                                         .withStyle(ChatFormatting.RED));
                                 return;
                             }
 
                             if (!isCreative
                                     && countTeamRebs(level, team) >= (Integer) WarfareConfig.REB_MAX_PER_TEAM.get()) {
-                                player.sendSystemMessage(Component.literal("Слишком много РЭБ у команды!")
+                                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.build.reb_limit")
                                         .withStyle(ChatFormatting.RED));
                                 return;
                             }
@@ -546,7 +547,7 @@ public class PacketBuildRequest {
                                         reb.setTeam(team);
                                     }
 
-                                    player.sendSystemMessage(Component.literal("Блюпринт РЭБ установлен!")
+                                    player.sendSystemMessage(Component.translatable("pwpwarfare.msg.build.reb_placed")
                                             .withStyle(ChatFormatting.GREEN));
                                 }
                             }
@@ -604,12 +605,13 @@ public class PacketBuildRequest {
     }
 
     private static void sendBlockedMessage(ServerPlayer player) {
-        player.sendSystemMessage(Component.literal("Место занято!").withStyle(ChatFormatting.RED));
+        player.sendSystemMessage(
+                Component.translatable("pwpwarfare.msg.build.blocked").withStyle(ChatFormatting.RED));
     }
 
     private static void sendNoMaterialsMessage(ServerPlayer player, int cost) {
         player.sendSystemMessage(
-                Component.literal("Нужно " + cost + " материалов!").withStyle(ChatFormatting.RED));
+                Component.translatable("pwpwarfare.msg.build.need_mats", cost).withStyle(ChatFormatting.RED));
     }
 
     private static BlockPos getRelativePos(BlockPos start, Direction facing) {

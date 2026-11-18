@@ -558,7 +558,7 @@ public class ClientEvents {
                             || event.getScreen() instanceof AbstractContainerScreen)) {
                 event.setCanceled(true);
                 mc.player.displayClientMessage(
-                        Component.literal("Инвентарь отключён, пока вы в технике!")
+                        Component.translatable("pwpwarfare.msg.vehicle.inventory_disabled")
                                 .withStyle(ChatFormatting.RED),
                         true);
             }

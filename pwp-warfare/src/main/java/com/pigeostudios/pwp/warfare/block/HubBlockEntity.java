@@ -304,11 +304,15 @@ public class HubBlockEntity extends BlockEntity {
                     if (hubTeam.equalsIgnoreCase("BLUE")) {
                         data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                         broadcastMessage(
-                                serverLevel, "BLUE player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.BLUE);
+                                serverLevel,
+                                Component.translatable("pwpwarfare.msg.fob.dismantled.blue", penalty),
+                                ChatFormatting.BLUE);
                     } else if (hubTeam.equalsIgnoreCase("RED")) {
                         data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                         broadcastMessage(
-                                serverLevel, "RED player dismantled Friendly FOB! (-10 Tickets)", ChatFormatting.RED);
+                                serverLevel,
+                                Component.translatable("pwpwarfare.msg.fob.dismantled.red", penalty),
+                                ChatFormatting.RED);
                     }
                     data.setDirty();
                     PacketHandler.sendToAllClients(serverLevel, data);
@@ -319,10 +323,8 @@ public class HubBlockEntity extends BlockEntity {
         level.destroyBlock(pos, false);
     }
 
-    private static void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
-        level.getServer()
-                .getPlayerList()
-                .broadcastSystemMessage(Component.literal(text).withStyle(color), false);
+    private static void broadcastMessage(ServerLevel level, Component text, ChatFormatting color) {
+        level.getServer().getPlayerList().broadcastSystemMessage(text.copy().withStyle(color), false);
     }
 
     public void setRemoved() {

@@ -395,7 +395,7 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
     }
 
     public Component getDisplayName() {
-        return Component.literal("Vehicle Spawner Config");
+        return Component.translatable("pwpwarfare.container.vehicle_spawner_config");
     }
 
     @Nullable

@@ -45,7 +45,7 @@ public class VehicleSpawnerBlock extends BaseEntityBlock {
                     NetworkHooks.openScreen((ServerPlayer) player, spawner, pos);
                 }
             } else {
-                player.displayClientMessage(Component.literal("Доступ запрещён: только администратор"), true);
+                player.displayClientMessage(Component.translatable("pwpwarfare.msg.access.admin_only"), true);
             }
         }
 

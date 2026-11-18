@@ -71,13 +71,13 @@ public final class SpawnRules {
     public record PlayerState(boolean dead, boolean spectator, boolean downed, boolean teamKillPunished) {}
 
     /**
-     * null — деплой разрешён (или, для нока, разрешена сдача), иначе причина отказа. Живой
+     * null — деплой разрешён (или, для нока, разрешена сдача), иначе ключ локализации причины отказа. Живой
      * игрок на поле не может телепортироваться к рали/ФОБ и получить новый кит по запросу.
      */
     public static String denyReason(PlayerState s) {
-        if (s.teamKillPunished()) return "Деплой недоступен: наказание за тимкилл";
+        if (s.teamKillPunished()) return "pwpwarfare.msg.spawn.deny_teamkill";
         if (s.downed()) return null;
         if (s.dead() || s.spectator()) return null;
-        return "Вы уже на поле — деплой доступен только после смерти";
+        return "pwpwarfare.msg.spawn.deny_alive";
     }
 }

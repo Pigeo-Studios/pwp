@@ -107,8 +107,8 @@ public class AmmoBagBlock extends Block {
             if (!level.isClientSide) {
                 String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                 if (kitName.isEmpty() || kitName.equals("Unassigned")) {
-                    player.sendSystemMessage(
-                            Component.literal("Кит не назначен!").withStyle(ChatFormatting.RED));
+                    player.sendSystemMessage(Component.translatable("pwpwarfare.msg.kit.not_assigned")
+                            .withStyle(ChatFormatting.RED));
                     return InteractionResult.SUCCESS;
                 }
 
@@ -118,7 +118,7 @@ public class AmmoBagBlock extends Block {
                         t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
                 if (kit != null) {
                     if (ResupplyHandler.resupplyPlayer((ServerPlayer) player, kit, true)) {
-                        player.sendSystemMessage(Component.literal("Кит пополнен! (Мешки БК не пополняются)")
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.ammo_bag.resupplied")
                                 .withStyle(ChatFormatting.GREEN));
                         level.playSound(null, pos, SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F);
                         int currentUses = state.getValue(USES);
@@ -128,8 +128,8 @@ public class AmmoBagBlock extends Block {
                             level.setBlock(pos, state.setValue(USES, currentUses - 1), 3);
                         }
                     } else {
-                        player.sendSystemMessage(
-                                Component.literal("БК уже полон!").withStyle(ChatFormatting.YELLOW));
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.ammo.full")
+                                .withStyle(ChatFormatting.YELLOW));
                     }
                 }
             }

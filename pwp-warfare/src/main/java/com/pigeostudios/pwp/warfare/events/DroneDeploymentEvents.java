@@ -124,7 +124,7 @@ public class DroneDeploymentEvents {
         WarfareWorldData data = WarfareWorldData.get(level);
         if (!data.match.isGameStarted && !player.isCreative()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Игра ещё не началась!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.match.not_started")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -142,8 +142,7 @@ public class DroneDeploymentEvents {
             String kit = KitUtil.getEffectiveKit(player);
             if (!DRONE_KITS.contains(kit)) {
                 player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal(
-                                        "Дроны доступны только оператору дрона/разведчику!")
+                        net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.role_required")
                                 .withStyle(net.minecraft.ChatFormatting.RED),
                         true);
                 return;
@@ -154,7 +153,7 @@ public class DroneDeploymentEvents {
         // не должен показывать «Кулдаун» вместо «Установка уже идёт»).
         if (!WarfareData.of(player).getString(P_DEPLOY_TYPE).isEmpty()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Установка уже идёт!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.deploy_in_progress")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -173,7 +172,7 @@ public class DroneDeploymentEvents {
         if (!player.isCreative() && now < cdUntil) {
             long sec = (cdUntil - now) / 20L;
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Кулдаун деплоя: " + sec + "с")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.deploy_cooldown", sec)
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -197,14 +196,14 @@ public class DroneDeploymentEvents {
         }
         if (activeTotal >= WarfareConfig.DRONE_MAX_ACTIVE_PER_PLAYER.get()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Слишком много активных дронов!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.too_many")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
         if (activeType >= WarfareConfig.DRONE_MAX_ACTIVE_PER_TYPE.get()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Дрон этого типа уже активен!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.type_active")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -254,7 +253,7 @@ public class DroneDeploymentEvents {
         level.playSound(null, x, y, z, sound("pwpwarfare:drone_deploy_start"), SoundSource.PLAYERS, 1.0F, 1.0F);
         sendDeployState(player, true, 0.0F, x, y, z, droneId, 0);
         player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("Установка дрона...")
+                net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.deploying")
                         .withStyle(net.minecraft.ChatFormatting.YELLOW),
                 true);
     }
@@ -355,12 +354,12 @@ public class DroneDeploymentEvents {
         returnDroneItem(player, droneId);
         sendDeployState(player, false, 0.0F, 0, 0, 0, "", 0);
         player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal(
+                net.minecraft.network.chat.Component.translatable(
                                 inMainZone
-                                        ? "Установка прервана — вход в мейн-зону!"
+                                        ? "pwpwarfare.msg.drone.deploy_cancel_main"
                                         : movedAway
-                                                ? "Установка прервана — вы сдвинулись с места!"
-                                                : "Установка прервана!")
+                                                ? "pwpwarfare.msg.drone.deploy_cancel_moved"
+                                                : "pwpwarfare.msg.drone.deploy_cancel")
                         .withStyle(net.minecraft.ChatFormatting.RED),
                 true);
     }
@@ -427,7 +426,7 @@ public class DroneDeploymentEvents {
 
         sendDeployState(player, false, 1.0F, 0, 0, 0, "", 0);
         player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("Дрон готов! Подключите монитор.")
+                net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.ready")
                         .withStyle(net.minecraft.ChatFormatting.GREEN),
                 true);
     }
@@ -482,7 +481,7 @@ public class DroneDeploymentEvents {
             event.setCancellationResult(InteractionResult.SUCCESS);
             if (!event.getLevel().isClientSide && player instanceof ServerPlayer sp) {
                 sp.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("Дрон не разбирается!")
+                        net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.no_dismantle")
                                 .withStyle(net.minecraft.ChatFormatting.RED),
                         true);
             }
@@ -497,7 +496,7 @@ public class DroneDeploymentEvents {
             event.setCancellationResult(InteractionResult.SUCCESS);
             if (!event.getLevel().isClientSide && player instanceof ServerPlayer sp) {
                 sp.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("Дрон устанавливается!")
+                        net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.being_deployed")
                                 .withStyle(net.minecraft.ChatFormatting.RED),
                         true);
             }
@@ -523,7 +522,7 @@ public class DroneDeploymentEvents {
         ResourceLocation eid = ForgeRegistries.ENTITY_TYPES.getKey(drone.getType());
         if (eid == null || !"uncomplicatedfpv:mavic_drone_with_drop".equals(eid.toString())) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Перезарядить можно только мавик с боезапасом!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.reload_wrong_type")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -531,35 +530,35 @@ public class DroneDeploymentEvents {
         String owner = WarfareData.of(drone).getString(E_OWNER);
         if (owner == null || owner.isEmpty() || !player.getStringUUID().equals(owner)) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Это не ваш дрон!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.not_yours")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
         if (!drone.onGround()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Мавик должен приземлиться!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.must_land")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
         if (isDroneControlled(drone)) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Мавик под управлением!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.controlled")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
         if (com.pigeostudios.pwp.warfare.util.DroneCompat.isFullyLoaded(drone)) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Мавик уже заряжен!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.already_loaded")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
         if (WarfareData.of(drone).getBoolean(E_DEPLOYING)) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Мавик ещё устанавливается!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.still_deploying")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -567,14 +566,14 @@ public class DroneDeploymentEvents {
         var data = WarfareData.of(player);
         if (!data.getString(P_DEPLOY_TYPE).isEmpty()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Сначала завершите установку дрона!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.finish_deploy_first")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
         }
         if (!data.getString(P_RELOAD_TYPE).isEmpty()) {
             player.displayClientMessage(
-                    net.minecraft.network.chat.Component.literal("Перезарядка уже идёт!")
+                    net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.reload_in_progress")
                             .withStyle(net.minecraft.ChatFormatting.RED),
                     true);
             return;
@@ -588,7 +587,7 @@ public class DroneDeploymentEvents {
             ItemStack stack = player.getMainHandItem();
             if (stack.isEmpty() || !stack.is(ModItems.DRONE_AMMO_POUCH.get())) {
                 player.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("Нужен дрон-подсумок!")
+                        net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.pouch_required")
                                 .withStyle(net.minecraft.ChatFormatting.RED),
                         true);
                 return;
@@ -618,7 +617,7 @@ public class DroneDeploymentEvents {
                 1.0F);
         sendDeployState(player, true, 0.0F, drone.getX(), drone.getY(), drone.getZ(), eid.toString(), 1);
         player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("Перезарядка мавика...")
+                net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.reloading")
                         .withStyle(net.minecraft.ChatFormatting.YELLOW),
                 true);
     }
@@ -678,7 +677,7 @@ public class DroneDeploymentEvents {
         data.remove(P_RELOAD_ENTITY);
         sendDeployState(player, false, 0.0F, 0, 0, 0, "", 1);
         player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("Перезарядка прервана!")
+                net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.reload_cancel")
                         .withStyle(net.minecraft.ChatFormatting.RED),
                 true);
     }
@@ -731,7 +730,7 @@ public class DroneDeploymentEvents {
                 1.0F);
         sendDeployState(player, false, 1.0F, 0, 0, 0, "", 1);
         player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("Мавик перезаряжен!")
+                net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.reloaded")
                         .withStyle(net.minecraft.ChatFormatting.GREEN),
                 true);
     }
@@ -757,8 +756,8 @@ public class DroneDeploymentEvents {
                 e.remove(Entity.RemovalReason.DISCARDED);
                 if (owner != null) {
                     owner.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal(
-                                            "Установка дрона прервана — дрон демонтирован.")
+                            net.minecraft.network.chat.Component.translatable(
+                                            "pwpwarfare.msg.drone.deploy_cancel_removed")
                                     .withStyle(net.minecraft.ChatFormatting.RED),
                             true);
                 }
@@ -778,7 +777,7 @@ public class DroneDeploymentEvents {
                 ServerPlayer owner = findOwner(level, e);
                 if (owner != null) {
                     owner.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("Дрон деактивирован (простаивает).")
+                            net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.idle_despawn")
                                     .withStyle(net.minecraft.ChatFormatting.RED),
                             true);
                     sendDeployState(owner, false, 0.0F, 0, 0, 0, "", 0);
@@ -817,7 +816,7 @@ public class DroneDeploymentEvents {
             ServerPlayer owner = findOwner(level, e);
             if (owner != null) {
                 owner.displayClientMessage(
-                        net.minecraft.network.chat.Component.literal("Связь с дроном потеряна!")
+                        net.minecraft.network.chat.Component.translatable("pwpwarfare.msg.drone.signal_lost")
                                 .withStyle(net.minecraft.ChatFormatting.RED),
                         true);
                 sendDeployState(owner, false, 0.0F, 0, 0, 0, "", 0);

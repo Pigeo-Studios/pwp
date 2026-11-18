@@ -63,7 +63,7 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                 WarfareData.of(player).getBoolean(WarfareKeys.IS_DOWNED),
                 WarfareData.of(player).getBoolean(WarfareKeys.TEAM_KILL_SPECTATOR)));
         if (denied != null) {
-            player.sendSystemMessage(Component.literal(denied).withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(Component.translatable(denied).withStyle(ChatFormatting.RED));
             return;
         }
         process(player, type);
@@ -116,22 +116,22 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                 WarfareWorldData.Squad mySquad = getPlayerSquad(pName, data);
                 if (mySquad != null && mySquad.rallyPos != null) {
                     if (mySquad.isRallyBlocked && !player.isCreative()) {
-                        player.sendSystemMessage(Component.literal("Спавн невозможен: рали отряда ПОД УГРОЗОЙ!")
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.rally_threat")
                                 .withStyle(ChatFormatting.RED));
                         return;
                     }
 
                     String rallyDim = mySquad.rallyDimension != null ? mySquad.rallyDimension : "minecraft:overworld";
                     if (!rallyDim.equals(currentDim)) {
-                        player.sendSystemMessage(
-                                Component.literal("Рали в другом измерении!").withStyle(ChatFormatting.RED));
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.rally_other_dim")
+                                .withStyle(ChatFormatting.RED));
                         return;
                     }
 
                     if (!level.isLoaded(mySquad.rallyPos)
                             || !(level.getBlockState(mySquad.rallyPos).getBlock() instanceof RallyPointBlock)) {
-                        player.sendSystemMessage(
-                                Component.literal("Рали уничтожено!").withStyle(ChatFormatting.RED));
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.rally_destroyed")
+                                .withStyle(ChatFormatting.RED));
                         return;
                     }
 
@@ -139,9 +139,8 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                     useCustomSpawn = true;
                     if (targetPos == null) {
                         targetPos = mainSpawns.get(currentDim);
-                        player.sendSystemMessage(
-                                Component.literal("Спавн у рали заблокирован! Перенаправление на основную базу.")
-                                        .withStyle(ChatFormatting.YELLOW));
+                        player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.rally_blocked")
+                                .withStyle(ChatFormatting.YELLOW));
                     }
                 }
             } else if (spawn.kind() == SpawnRules.SpawnType.Kind.HUB) {
@@ -153,7 +152,7 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                         int hubEnemiesReq = (Integer) WarfareConfig.HUB_BLOCK_ENEMY_COUNT.get();
                         int enemyCount = GameLogicEvents.getEnemyCount(level, reqPos, team);
                         if ((h.isBlocked || enemyCount >= hubEnemiesReq) && !player.isCreative()) {
-                            player.sendSystemMessage(Component.literal("Спавн невозможен: ФОБ ПОД УГРОЗОЙ!")
+                            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.fob_threat")
                                     .withStyle(ChatFormatting.RED));
                             return;
                         }
@@ -163,14 +162,14 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                         if (spawnCosts) {
                             level.getChunkSource().getChunk(reqPos.getX() >> 4, reqPos.getZ() >> 4, true);
                             if (!(level.getBlockEntity(reqPos) instanceof HubBlockEntity hubBe)) {
-                                player.sendSystemMessage(Component.literal("Спавн невозможен: блок ФОБ отсутствует!")
+                                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.fob_missing")
                                         .withStyle(ChatFormatting.RED));
                                 return;
                             }
 
                             if (hubBe.getMaterials() < spawnCost) {
-                                player.sendSystemMessage(Component.literal("Спавн невозможен: не хватает материалов! ("
-                                                + hubBe.getMaterials() + "/" + spawnCost + ")")
+                                player.sendSystemMessage(Component.translatable(
+                                                "pwpwarfare.msg.spawn.fob_no_mats", hubBe.getMaterials(), spawnCost)
                                         .withStyle(ChatFormatting.RED));
                                 return;
                             }
@@ -185,9 +184,8 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                         useCustomSpawn = true;
                         if (targetPos == null) {
                             targetPos = mainSpawns.get(currentDim);
-                            player.sendSystemMessage(
-                                    Component.literal("Спавн у ФОБ заблокирован! Перенаправление на основную базу.")
-                                            .withStyle(ChatFormatting.YELLOW));
+                            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.fob_blocked")
+                                    .withStyle(ChatFormatting.YELLOW));
                         }
                         break;
                     }
@@ -218,8 +216,8 @@ public record PacketRespawnRequest(String type) implements Net.C2S {
                     }
                 }
             } else {
-                player.sendSystemMessage(
-                        Component.literal("Точка спавна сейчас недоступна!").withStyle(ChatFormatting.RED));
+                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.spawn.unavailable")
+                        .withStyle(ChatFormatting.RED));
             }
         }
     }

@@ -206,13 +206,18 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
             if (!shooter.isCreative()) {
                 if (!this.hasMagazine()) {
                     shooter.displayClientMessage(
-                            Component.literal("Нет магазина!").withStyle(ChatFormatting.RED), true);
+                            Component.translatable("pwpwarfare.msg.emplacement.no_magazine")
+                                    .withStyle(ChatFormatting.RED),
+                            true);
                     this.shootCooldown = 20;
                     return;
                 }
 
                 if (this.getAmmoCount() <= 0) {
-                    shooter.displayClientMessage(Component.literal("Пусто!").withStyle(ChatFormatting.RED), true);
+                    shooter.displayClientMessage(
+                            Component.translatable("pwpwarfare.msg.emplacement.empty")
+                                    .withStyle(ChatFormatting.RED),
+                            true);
                     this.shootCooldown = 20;
                     return;
                 }
@@ -292,7 +297,7 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
                 this.setHasMagazine(false);
                 this.setAmmoCount(0);
                 this.playSound((SoundEvent) ModSounds.M2_UNLOAD.get(), 1.0F, 1.0F);
-                player.displayClientMessage(Component.literal("Разряжен (" + remainingAmmo + ")"), true);
+                player.displayClientMessage(Component.translatable("pwpwarfare.msg.m2.unloaded", remainingAmmo), true);
                 return InteractionResult.SUCCESS;
             }
 
@@ -306,11 +311,11 @@ public class M2BrowningEntity extends Entity implements GeoEntity {
                     }
 
                     this.playSound((SoundEvent) ModSounds.M2_LOAD.get(), 1.0F, 1.0F);
-                    player.displayClientMessage(Component.literal("Заряжено: " + ammoInBox + " патронов"), true);
+                    player.displayClientMessage(Component.translatable("pwpwarfare.msg.m2.loaded", ammoInBox), true);
                     return InteractionResult.SUCCESS;
                 }
 
-                player.displayClientMessage(Component.literal("Уже заряжено!"), true);
+                player.displayClientMessage(Component.translatable("pwpwarfare.msg.emplacement.already_loaded"), true);
                 return InteractionResult.FAIL;
             }
 

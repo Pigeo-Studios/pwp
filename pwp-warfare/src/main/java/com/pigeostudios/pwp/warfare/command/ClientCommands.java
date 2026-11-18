@@ -26,10 +26,13 @@ public class ClientCommands {
                                     int val = IntegerArgumentType.getInteger(context, "value");
                                     WarfareConfig.COMPASS_SCALE.set(val);
                                     WarfareConfig.CLIENT_SPEC.save();
-                                    String sizeText = val == 1 ? "Small" : (val == 3 ? "Large" : "Normal");
+                                    String sizeText = val == 1 ? "small" : (val == 3 ? "large" : "normal");
                                     ((CommandSourceStack) context.getSource())
                                             .sendSuccess(
-                                                    () -> Component.literal("Compass scale saved: " + sizeText)
+                                                    () -> Component.translatable(
+                                                                    "pwpwarfare.msg.compass.saved",
+                                                                    Component.translatable(
+                                                                            "pwpwarfare.msg.compass.size." + sizeText))
                                                             .withStyle(ChatFormatting.GREEN),
                                                     false);
                                     return 1;

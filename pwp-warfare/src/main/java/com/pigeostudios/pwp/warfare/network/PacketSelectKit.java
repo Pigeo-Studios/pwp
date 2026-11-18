@@ -89,7 +89,7 @@ public record PacketSelectKit(String kitName, Map<String, Integer> slotSelection
         WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, kitName);
         if (!previous.equals(kitName)) {
             // Ожидание деплоя (киты грузились) отменяется — игрок подтвердит заново
-            FactionDataLoader.cancelDeploy(player, "Выбор кита изменён — нажмите «Деплой» снова");
+            FactionDataLoader.cancelDeploy(player, "pwpwarfare.msg.deploy.cancel_kit");
         }
         CompoundTag selTag = new CompoundTag();
         for (var e : slotSelections.entrySet()) {

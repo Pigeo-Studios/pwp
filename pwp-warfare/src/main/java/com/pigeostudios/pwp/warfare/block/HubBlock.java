@@ -69,7 +69,7 @@ public class HubBlock extends BaseEntityBlock {
                 if (!hubTeam.equals("NEUTRAL") && !playerTeam.equalsIgnoreCase(hubTeam)) {
                     if (level.isClientSide) {
                         player.displayClientMessage(
-                                Component.literal("Нельзя получить доступ к хабу врага!")
+                                Component.translatable("pwpwarfare.msg.hub.enemy_access")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                     }
@@ -105,13 +105,13 @@ public class HubBlock extends BaseEntityBlock {
                     data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                     this.broadcastMessage(
                             serverLevel,
-                            "BLUE player dismantled Friendly FOB! (-" + penalty + " Tickets)",
+                            Component.translatable("pwpwarfare.msg.fob.dismantled.blue", penalty),
                             ChatFormatting.BLUE);
                 } else if (hubTeam.equalsIgnoreCase("RED")) {
                     data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                     this.broadcastMessage(
                             serverLevel,
-                            "RED player dismantled Friendly FOB! (-" + penalty + " Tickets)",
+                            Component.translatable("pwpwarfare.msg.fob.dismantled.red", penalty),
                             ChatFormatting.RED);
                 }
 
@@ -137,11 +137,15 @@ public class HubBlock extends BaseEntityBlock {
                     if (hubTeam.equalsIgnoreCase("BLUE")) {
                         data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
                         this.broadcastMessage(
-                                serverLevel, "BLUE FOB Destroyed! (-" + penalty + " Tickets)", ChatFormatting.BLUE);
+                                serverLevel,
+                                Component.translatable("pwpwarfare.msg.fob.destroyed.blue", penalty),
+                                ChatFormatting.BLUE);
                     } else if (hubTeam.equalsIgnoreCase("RED")) {
                         data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
                         this.broadcastMessage(
-                                serverLevel, "RED FOB Destroyed! (-" + penalty + " Tickets)", ChatFormatting.RED);
+                                serverLevel,
+                                Component.translatable("pwpwarfare.msg.fob.destroyed.red", penalty),
+                                ChatFormatting.RED);
                     }
                 }
             }
@@ -156,10 +160,8 @@ public class HubBlock extends BaseEntityBlock {
     }
 
     // Отправляет сообщение всем игрокам на сервере
-    private void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
-        level.getServer()
-                .getPlayerList()
-                .broadcastSystemMessage(Component.literal(text).withStyle(color), false);
+    private void broadcastMessage(ServerLevel level, Component text, ChatFormatting color) {
+        level.getServer().getPlayerList().broadcastSystemMessage(text.copy().withStyle(color), false);
     }
 
     public float getDestroySpeed(BlockState state, BlockGetter level, BlockPos pos) {

@@ -12,9 +12,10 @@ import com.pwp.lobby.match.MatchAllocator;
 import com.pwp.lobby.match.MatchAllocator.MatchInfo;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Collectors;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
@@ -489,20 +490,18 @@ public class LobbyMod {
         MatchAllocator.playerJoined(uuid);
         int online = MatchAllocator.getLobbyPlayerCount();
 
-        serverBroadcast("§7[PWP] §e" + name + " §fзашёл в лобби. §7Онлайн: §e" + online);
+        broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.player_joined", name, online);
 
         // Сразу отправляем актуальное состояние новому игроку
         sendLobbyStateToPlayer(player);
         broadcastLobbyState();
 
         if (VotingManager.isActive()) {
-            serverBroadcast("§7[PWP] Идёт голосование за карту! §e/votemap §7<карта> — осталось §e"
-                    + VotingManager.getRemainingSeconds() + "с");
+            broadcastPwp(ChatFormatting.GRAY, "pwp_lobby.msg.map_vote_running", VotingManager.getRemainingSeconds());
         } else if (modeVoteActive) {
-            serverBroadcast("§7[PWP] Идёт голосование за режим! §e/votemode §7<aas/invasion> — осталось §e"
-                    + getModeVoteRemainingSeconds() + "с");
+            broadcastPwp(ChatFormatting.GRAY, "pwp_lobby.msg.mode_vote_running", getModeVoteRemainingSeconds());
         } else if (FactionVotingManager.isActive()) {
-            serverBroadcast("§7[PWP] Идёт голосование за фракции! §e/votefaction §7<синие> <красные>");
+            broadcastPwp(ChatFormatting.GRAY, "pwp_lobby.msg.faction_vote_running");
         }
 
         // Автозапуск голосования: автостарт + свободное лобби + minPlayers (раньше minPlayers тут не
@@ -537,13 +536,13 @@ public class LobbyMod {
                         .then(Commands.literal("start")
                                 .executes(ctx -> {
                                     if (MatchAllocator.hasActiveMatch()) {
-                                        ctx.getSource().sendFailure(Component.literal("Матч уже запущен"));
+                                        ctx.getSource()
+                                                .sendFailure(Component.translatable("pwp_lobby.msg.cmd.match_running"));
                                         return 0;
                                     }
                                     if (isAnyVoteActive()) {
                                         ctx.getSource()
-                                                .sendFailure(Component.literal(
-                                                        "Уже идёт голосование (карта/режим/фракции)"));
+                                                .sendFailure(Component.translatable("pwp_lobby.msg.cmd.vote_running"));
                                         return 0;
                                     }
                                     if (MatchAllocator.isCycleBusy()) {
@@ -558,7 +557,11 @@ public class LobbyMod {
                                         return 0;
                                     }
                                     autoVoteNotBefore = 0;
-                                    ctx.getSource().sendSuccess(() -> Component.literal("§aГолосование начато"), false);
+                                    ctx.getSource()
+                                            .sendSuccess(
+                                                    () -> Component.translatable("pwp_lobby.msg.cmd.vote_started")
+                                                            .withStyle(ChatFormatting.GREEN),
+                                                    false);
                                     return Command.SINGLE_SUCCESS;
                                 })
                                 // /pwp server start <map> — force map
@@ -574,14 +577,15 @@ public class LobbyMod {
                                                     ctx, "map");
                                             MapConfig map = MapRegistry.get(mn);
                                             if (map == null) {
-                                                ctx.getSource().sendFailure(Component.literal("Карта не найдена"));
+                                                ctx.getSource()
+                                                        .sendFailure(Component.translatable(
+                                                                "pwp_lobby.msg.cmd.map_not_found"));
                                                 return 0;
                                             }
                                             if (modeVoteActive || FactionVotingManager.isActive()) {
                                                 ctx.getSource()
-                                                        .sendFailure(
-                                                                Component.literal(
-                                                                        "Сначала остановите текущее голосование (/pwp server stopvote)"));
+                                                        .sendFailure(Component.translatable(
+                                                                "pwp_lobby.msg.cmd.stop_vote_first"));
                                                 return 0;
                                             }
                                             VotingManager.stopVoting();
@@ -593,8 +597,10 @@ public class LobbyMod {
                                             }
                                             ctx.getSource()
                                                     .sendSuccess(
-                                                            () -> Component.literal(
-                                                                    "§aКарта форсирована: " + map.displayName),
+                                                            () -> Component.translatable(
+                                                                            "pwp_lobby.msg.cmd.map_forced",
+                                                                            map.displayName)
+                                                                    .withStyle(ChatFormatting.GREEN),
                                                             false);
                                             return Command.SINGLE_SUCCESS;
                                         })
@@ -616,28 +622,31 @@ public class LobbyMod {
                                                                     ctx, "mode");
                                                     if (!md.equals("aas") && !md.equals("invasion")) {
                                                         ctx.getSource()
-                                                                .sendFailure(Component.literal(
-                                                                        "Режим должен быть aas или invasion"));
+                                                                .sendFailure(Component.translatable(
+                                                                        "pwp_lobby.msg.cmd.mode_invalid"));
                                                         return 0;
                                                     }
                                                     MapConfig map = MapRegistry.get(mn);
                                                     if (map == null) {
                                                         ctx.getSource()
-                                                                .sendFailure(Component.literal("Карта не найдена"));
+                                                                .sendFailure(Component.translatable(
+                                                                        "pwp_lobby.msg.cmd.map_not_found"));
                                                         return 0;
                                                     }
                                                     if (isAnyVoteActive()) {
                                                         ctx.getSource()
-                                                                .sendFailure(
-                                                                        Component.literal(
-                                                                                "Сначала остановите текущее голосование (/pwp server stopvote)"));
+                                                                .sendFailure(Component.translatable(
+                                                                        "pwp_lobby.msg.cmd.stop_vote_first"));
                                                         return 0;
                                                     }
                                                     // Force map + mode: simulate vote results
                                                     pendingMapName = mn;
                                                     modeVoteWinner = md;
-                                                    LobbyMod.serverBroadcast("§e[PWP] §aКарта: §e" + map.displayName
-                                                            + " §aРежим: §e" + md.toUpperCase());
+                                                    LobbyMod.broadcastPwp(
+                                                            ChatFormatting.GREEN,
+                                                            "pwp_lobby.msg.forced_map_mode",
+                                                            map.displayName,
+                                                            md.toUpperCase());
                                                     String err = prewarmIfEnabled(map);
                                                     List<String> available = getAvailableFactions(map);
                                                     if (err == null && available.size() >= 2) {
@@ -651,8 +660,9 @@ public class LobbyMod {
                                                     }
                                                     ctx.getSource()
                                                             .sendSuccess(
-                                                                    () -> Component.literal(
-                                                                            "§aКарта+режим форсированы, голосование за фракции"),
+                                                                    () -> Component.translatable(
+                                                                                    "pwp_lobby.msg.cmd.map_mode_forced")
+                                                                            .withStyle(ChatFormatting.GREEN),
                                                                     false);
                                                     return Command.SINGLE_SUCCESS;
                                                 })
@@ -676,22 +686,24 @@ public class LobbyMod {
                                                                             .StringArgumentType.getString(ctx, "red");
                                                                     if (!md.equals("aas") && !md.equals("invasion")) {
                                                                         ctx.getSource()
-                                                                                .sendFailure(Component.literal(
-                                                                                        "Режим: aas или invasion"));
+                                                                                .sendFailure(
+                                                                                        Component.translatable(
+                                                                                                "pwp_lobby.msg.cmd.mode_invalid_short"));
                                                                         return 0;
                                                                     }
                                                                     MapConfig map = MapRegistry.get(mn);
                                                                     if (map == null) {
                                                                         ctx.getSource()
-                                                                                .sendFailure(Component.literal(
-                                                                                        "Карта не найдена"));
+                                                                                .sendFailure(
+                                                                                        Component.translatable(
+                                                                                                "pwp_lobby.msg.cmd.map_not_found"));
                                                                         return 0;
                                                                     }
                                                                     if (isAnyVoteActive()) {
                                                                         ctx.getSource()
                                                                                 .sendFailure(
-                                                                                        Component.literal(
-                                                                                                "Сначала остановите текущее голосование (/pwp server stopvote)"));
+                                                                                        Component.translatable(
+                                                                                                "pwp_lobby.msg.cmd.stop_vote_first"));
                                                                         return 0;
                                                                     }
                                                                     pendingMapName = mn;
@@ -708,11 +720,14 @@ public class LobbyMod {
                                                                     }
                                                                     ctx.getSource()
                                                                             .sendSuccess(
-                                                                                    () -> Component.literal(
-                                                                                            "§aМатч запущен: "
-                                                                                                    + map.displayName
-                                                                                                    + " (" + bl + " vs "
-                                                                                                    + re + ")"),
+                                                                                    () -> Component.translatable(
+                                                                                                    "pwp_lobby.msg.cmd.match_started",
+                                                                                                    map.displayName,
+                                                                                                    bl,
+                                                                                                    re)
+                                                                                            .withStyle(
+                                                                                                    ChatFormatting
+                                                                                                            .GREEN),
                                                                                     false);
                                                                     return Command.SINGLE_SUCCESS;
                                                                 }))))))
@@ -720,20 +735,23 @@ public class LobbyMod {
                         .then(Commands.literal("stop").executes(ctx -> {
                             MatchInfo mi = MatchAllocator.getActiveMatch();
                             if (mi == null) {
-                                ctx.getSource().sendFailure(Component.literal("Нет активного матча"));
+                                ctx.getSource().sendFailure(Component.translatable("pwp_lobby.msg.cmd.no_match"));
                                 return 0;
                             }
                             MatchAllocator.requestMatchStop(mi.serverId);
-                            ctx.getSource().sendSuccess(() -> Component.literal("Остановка матча..."), true);
+                            ctx.getSource()
+                                    .sendSuccess(() -> Component.translatable("pwp_lobby.msg.cmd.stopping"), true);
                             return Command.SINGLE_SUCCESS;
                         }))
                         // /pwp server stopvote
                         .then(Commands.literal("stopvote").executes(ctx -> {
                             if (stopAllVotes()) {
-                                ctx.getSource().sendSuccess(() -> Component.literal("Голосование остановлено"), true);
+                                ctx.getSource()
+                                        .sendSuccess(
+                                                () -> Component.translatable("pwp_lobby.msg.cmd.vote_stopped"), true);
                                 return Command.SINGLE_SUCCESS;
                             }
-                            ctx.getSource().sendFailure(Component.literal("Нет активного голосования"));
+                            ctx.getSource().sendFailure(Component.translatable("pwp_lobby.msg.cmd.no_vote"));
                             return 0;
                         }))
                         // /pwp server prewarm on|off — предпрогрев матч-сервера (этап 5, по умолчанию выкл.)
@@ -742,14 +760,17 @@ public class LobbyMod {
                                     ServerConfig.setPrewarm(
                                             true, ctx.getSource().hasPermission(4));
                                     ctx.getSource()
-                                            .sendSuccess(() -> Component.literal("Предпрогрев матча включён"), true);
+                                            .sendSuccess(
+                                                    () -> Component.translatable("pwp_lobby.msg.cmd.prewarm_on"), true);
                                     return Command.SINGLE_SUCCESS;
                                 }))
                                 .then(Commands.literal("off").executes(ctx -> {
                                     ServerConfig.setPrewarm(
                                             false, ctx.getSource().hasPermission(4));
                                     ctx.getSource()
-                                            .sendSuccess(() -> Component.literal("Предпрогрев матча выключен"), true);
+                                            .sendSuccess(
+                                                    () -> Component.translatable("pwp_lobby.msg.cmd.prewarm_off"),
+                                                    true);
                                     return Command.SINGLE_SUCCESS;
                                 })))
                         // /pwp server autostart on|off
@@ -757,13 +778,19 @@ public class LobbyMod {
                                 .then(Commands.literal("on").executes(ctx -> {
                                     ServerConfig.setAutoStartEnabled(
                                             true, ctx.getSource().hasPermission(4));
-                                    ctx.getSource().sendSuccess(() -> Component.literal("Авто-старт включён"), true);
+                                    ctx.getSource()
+                                            .sendSuccess(
+                                                    () -> Component.translatable("pwp_lobby.msg.cmd.autostart_on"),
+                                                    true);
                                     return Command.SINGLE_SUCCESS;
                                 }))
                                 .then(Commands.literal("off").executes(ctx -> {
                                     ServerConfig.setAutoStartEnabled(
                                             false, ctx.getSource().hasPermission(4));
-                                    ctx.getSource().sendSuccess(() -> Component.literal("Авто-старт отключён"), true);
+                                    ctx.getSource()
+                                            .sendSuccess(
+                                                    () -> Component.translatable("pwp_lobby.msg.cmd.autostart_off"),
+                                                    true);
                                     return Command.SINGLE_SUCCESS;
                                 })))
                         // /pwp server maxmatches <n>
@@ -776,41 +803,73 @@ public class LobbyMod {
                                             ServerConfig.setMaxMatches(
                                                     n, ctx.getSource().hasPermission(4));
                                             ctx.getSource()
-                                                    .sendSuccess(() -> Component.literal("Макс. матчей: " + n), true);
+                                                    .sendSuccess(
+                                                            () -> Component.translatable(
+                                                                    "pwp_lobby.msg.cmd.max_matches", n),
+                                                            true);
                                             return Command.SINGLE_SUCCESS;
                                         })))
                         // /pwp server status
                         .then(Commands.literal("status").executes(ctx -> {
                             MatchInfo mi = MatchAllocator.getActiveMatch();
-                            StringBuffer sb = new StringBuffer();
-                            sb.append("§e[PWP] §fСтатус сервера:\n");
-                            sb.append("§fМатчей: §e"
-                                    + MatchAllocator.getActiveMatches().size() + "§7/" + ServerConfig.getMaxMatches()
-                                    + "\n");
-                            sb.append("§fАвто-старт: §e" + (ServerConfig.isAutoStartEnabled() ? "ВКЛ" : "ВЫКЛ") + "\n");
-                            sb.append("§fПредпрогрев: §e" + (ServerConfig.isPrewarm() ? "ВКЛ" : "ВЫКЛ")
-                                    + " §fМин. игроков: §e" + ServerConfig.getMinPlayers() + "\n");
+                            MutableComponent sb = Component.empty();
+                            sb.append(pwpMsg(ChatFormatting.WHITE, "pwp_lobby.msg.status.title"))
+                                    .append("\n");
+                            sb.append(Component.translatable(
+                                            "pwp_lobby.msg.status.matches",
+                                            MatchAllocator.getActiveMatches().size(),
+                                            ServerConfig.getMaxMatches()))
+                                    .append("\n");
+                            sb.append(Component.translatable(
+                                            "pwp_lobby.msg.status.autostart",
+                                            Component.translatable(
+                                                    ServerConfig.isAutoStartEnabled()
+                                                            ? "pwp_lobby.msg.status.on"
+                                                            : "pwp_lobby.msg.status.off")))
+                                    .append("\n");
+                            sb.append(Component.translatable(
+                                            "pwp_lobby.msg.status.prewarm",
+                                            Component.translatable(
+                                                    ServerConfig.isPrewarm()
+                                                            ? "pwp_lobby.msg.status.on"
+                                                            : "pwp_lobby.msg.status.off"),
+                                            ServerConfig.getMinPlayers()))
+                                    .append("\n");
                             MatchAllocator.PrepView pv = MatchAllocator.prepView();
                             if (pv.state() != 0) {
-                                sb.append("§fПодготовка: §e" + pv.state() + " §7" + pv.percent() + "%"
-                                        + (pv.errorKey() != null ? " " + pv.errorKey() : "") + "\n");
+                                sb.append(Component.translatable(
+                                                "pwp_lobby.msg.status.prep",
+                                                pv.state(),
+                                                pv.percent(),
+                                                pv.errorKey() != null ? Component.translatable(pv.errorKey()) : ""))
+                                        .append("\n");
                             }
                             if (mi != null) {
-                                sb.append("§fАктивный матч: §e" + mi.displayName + "§7 (" + mi.blueFaction + " vs "
-                                        + mi.redFaction + ")\n");
-                                sb.append("§fФаза: §e" + mi.phase + " §fИгроки: §e" + mi.playerCount + "§7/"
-                                        + mi.maxPlayers);
+                                sb.append(Component.translatable(
+                                                "pwp_lobby.msg.status.active",
+                                                mi.displayName,
+                                                mi.blueFaction,
+                                                mi.redFaction))
+                                        .append("\n");
+                                sb.append(Component.translatable(
+                                        "pwp_lobby.msg.status.phase",
+                                        String.valueOf(mi.phase),
+                                        mi.playerCount,
+                                        mi.maxPlayers));
                             } else if (VotingManager.isActive()) {
-                                sb.append("§fГолосование за карту: §e" + VotingManager.getRemainingSeconds() + "с");
+                                sb.append(Component.translatable(
+                                        "pwp_lobby.msg.status.map_vote", VotingManager.getRemainingSeconds()));
                             } else if (modeVoteActive) {
-                                sb.append("§fГолосование за режим: §e" + getModeVoteRemainingSeconds() + "с");
+                                sb.append(Component.translatable(
+                                        "pwp_lobby.msg.status.mode_vote", getModeVoteRemainingSeconds()));
                             } else if (FactionVotingManager.isActive()) {
-                                sb.append("§fГолосование за фракции: §e" + FactionVotingManager.getRemainingSeconds()
-                                        + "с");
+                                sb.append(Component.translatable(
+                                        "pwp_lobby.msg.status.faction_vote",
+                                        FactionVotingManager.getRemainingSeconds()));
                             } else {
-                                sb.append("§fНет активного матча или голосования");
+                                sb.append(Component.translatable("pwp_lobby.msg.status.idle"));
                             }
-                            ctx.getSource().sendSuccess(() -> Component.literal(sb.toString()), false);
+                            ctx.getSource().sendSuccess(() -> sb, false);
                             return Command.SINGLE_SUCCESS;
                         })))
                 .executes(ctx -> {
@@ -831,19 +890,26 @@ public class LobbyMod {
                         .executes(ctx -> {
                             String mapName = ctx.getArgument("name", String.class);
                             if (MapRegistry.get(mapName) == null) {
-                                ctx.getSource().sendFailure(Component.literal("Неизвестная карта: " + mapName));
+                                ctx.getSource()
+                                        .sendFailure(Component.translatable("pwp_lobby.msg.cmd.unknown_map", mapName));
                                 return 0;
                             }
                             if (!VotingManager.isActive()) {
-                                ctx.getSource().sendFailure(Component.literal("Голосование не активно"));
+                                ctx.getSource().sendFailure(Component.translatable("pwp_lobby.msg.cmd.vote_inactive"));
                                 return 0;
                             }
                             ServerPlayer player = ctx.getSource().getPlayerOrException();
                             if (!VotingManager.vote(player.getUUID(), mapName)) {
-                                ctx.getSource().sendFailure(Component.literal("§cГолос не принят (уже голосовали?)"));
+                                ctx.getSource()
+                                        .sendFailure(Component.translatable("pwp_lobby.msg.cmd.vote_rejected")
+                                                .withStyle(ChatFormatting.RED));
                                 return 0;
                             }
-                            ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + mapName), false);
+                            ctx.getSource()
+                                    .sendSuccess(
+                                            () -> Component.translatable("pwp_lobby.msg.cmd.voted_for", mapName)
+                                                    .withStyle(ChatFormatting.GREEN),
+                                            false);
                             return Command.SINGLE_SUCCESS;
                         })));
 
@@ -858,12 +924,17 @@ public class LobbyMod {
                         .executes(ctx -> {
                             String modeName = ctx.getArgument("mode", String.class);
                             if (!modeVoteActive) {
-                                ctx.getSource().sendFailure(Component.literal("Голосование за режим не активно"));
+                                ctx.getSource()
+                                        .sendFailure(Component.translatable("pwp_lobby.msg.cmd.mode_vote_inactive"));
                                 return 0;
                             }
                             ServerPlayer player = ctx.getSource().getPlayerOrException();
                             voteMode(player.getUUID(), modeName);
-                            ctx.getSource().sendSuccess(() -> Component.literal("§aГолос отдан за " + modeName), false);
+                            ctx.getSource()
+                                    .sendSuccess(
+                                            () -> Component.translatable("pwp_lobby.msg.cmd.voted_for", modeName)
+                                                    .withStyle(ChatFormatting.GREEN),
+                                            false);
                             return Command.SINGLE_SUCCESS;
                         })));
 
@@ -875,24 +946,59 @@ public class LobbyMod {
                                     String red = ctx.getArgument("red", String.class);
                                     if (!FactionVotingManager.isActive()) {
                                         ctx.getSource()
-                                                .sendFailure(Component.literal("Голосование за фракции не активно"));
+                                                .sendFailure(Component.translatable(
+                                                        "pwp_lobby.msg.cmd.faction_vote_inactive"));
                                         return 0;
                                     }
                                     ServerPlayer player = ctx.getSource().getPlayerOrException();
                                     FactionVotingManager.vote(player.getUUID(), blue, red);
                                     ctx.getSource()
                                             .sendSuccess(
-                                                    () -> Component.literal("§aГолос отдан за " + blue + " / " + red),
+                                                    () -> Component.translatable(
+                                                                    "pwp_lobby.msg.cmd.voted_for_factions", blue, red)
+                                                            .withStyle(ChatFormatting.GREEN),
                                                     false);
                                     return Command.SINGLE_SUCCESS;
                                 }))));
     }
 
-    public static void serverBroadcast(String msg) {
+    public static void serverBroadcast(Component msg) {
         var server = ServerLifecycleHooks.getCurrentServer();
         if (server != null) {
-            server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(Component.literal(msg), false));
+            server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(msg, false));
         }
+    }
+
+    /** «[PWP] текст» из lang: префикс жёлтый, текст цвета color, аргументы-не-компоненты — жёлтые. */
+    public static MutableComponent pwpMsg(ChatFormatting color, String key, Object... args) {
+        Object[] a = new Object[args.length];
+        for (int i = 0; i < args.length; i++) {
+            a[i] = args[i] instanceof Component c
+                    ? c
+                    : Component.literal(String.valueOf(args[i])).withStyle(ChatFormatting.YELLOW);
+        }
+        return Component.literal("[PWP] ")
+                .withStyle(ChatFormatting.YELLOW)
+                .append(Component.translatable(key, a).withStyle(color));
+    }
+
+    public static void broadcastPwp(ChatFormatting color, String key, Object... args) {
+        serverBroadcast(pwpMsg(color, key, args));
+    }
+
+    /** Список «имя (N гол.[, P%])» через « | » для итогов голосований; total <= 0 — без процентов. */
+    public static MutableComponent voteList(List<Map.Entry<String, Integer>> entries, int total) {
+        MutableComponent out = Component.empty();
+        for (int i = 0; i < entries.size(); i++) {
+            Map.Entry<String, Integer> e = entries.get(i);
+            if (i > 0) out.append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY));
+            out.append(Component.literal(e.getKey() + " ").withStyle(ChatFormatting.YELLOW));
+            Component cnt = total > 0
+                    ? Component.translatable("pwp_lobby.msg.vote.count_pct", e.getValue(), e.getValue() * 100 / total)
+                    : Component.translatable("pwp_lobby.msg.vote.count", e.getValue());
+            out.append(cnt.copy().withStyle(ChatFormatting.GRAY));
+        }
+        return out;
     }
 
     /** Карта выбрана (голосованием или форсом). null — цикл продолжается, иначе ключ ошибки. */
@@ -936,9 +1042,9 @@ public class LobbyMod {
         modeVoteLastTimerBroadcast = 0;
         modeVoteLastBroadcastedRemaining = -1;
 
-        String modeList = String.join("§7, §e", MODE_DISPLAY_NAMES);
-        serverBroadcast("§e[PWP] §fГолосование за режим! §7Режимы: §e" + modeList);
-        serverBroadcast("§7Напишите §e/votemode <название> §7чтобы проголосовать");
+        String modeList = String.join(", ", MODE_DISPLAY_NAMES);
+        broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.mode_vote_started", modeList);
+        serverBroadcast(Component.translatable("pwp_lobby.msg.mode_vote_hint").withStyle(ChatFormatting.GRAY));
         broadcastLobbyState();
     }
 
@@ -972,7 +1078,7 @@ public class LobbyMod {
                     || remaining == 60
                     || (remaining <= 120 && remaining % 60 == 0)) {
                 if (remaining > 0) {
-                    serverBroadcast("§e[PWP] §fГолосование за режим закончится через §e" + remaining + "с");
+                    broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.mode_vote_ends_in", remaining);
                 }
                 modeVoteLastTimerBroadcast = now;
                 modeVoteLastBroadcastedRemaining = remaining;
@@ -995,11 +1101,13 @@ public class LobbyMod {
         }
 
         if (!counts.isEmpty()) {
-            String results = counts.entrySet().stream()
-                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-                    .map(e -> "§e" + e.getKey() + " §7(" + e.getValue() + "гол.)")
-                    .collect(Collectors.joining(" §8| "));
-            serverBroadcast("§e[PWP] §fРезультаты голосования за режим: " + results);
+            MutableComponent results = voteList(
+                    counts.entrySet().stream()
+                            .sorted(Map.Entry.<String, Integer>comparingByValue()
+                                    .reversed())
+                            .toList(),
+                    0);
+            broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.mode_vote_results", results);
         }
 
         modeVoteWinner = counts.entrySet().stream()
@@ -1007,7 +1115,7 @@ public class LobbyMod {
                 .map(Map.Entry::getKey)
                 .orElse("aas");
 
-        serverBroadcast("§e[PWP] §aРежим: §e" + modeVoteWinner.toUpperCase() + " §a— дальше голосование за фракции");
+        broadcastPwp(ChatFormatting.GREEN, "pwp_lobby.msg.mode_winner", modeVoteWinner.toUpperCase());
         recordResult("MODE", modeVoteWinner, counts.getOrDefault(modeVoteWinner, 0));
         broadcastLobbyState();
 
@@ -1059,7 +1167,10 @@ public class LobbyMod {
         int patternIndex = -1;
         if (map.capturePointPatterns != null && !map.capturePointPatterns.isEmpty()) {
             patternIndex = new Random().nextInt(map.capturePointPatterns.size());
-            serverBroadcast("§7[PWP] Выбран паттерн точек: §e" + map.capturePointPatterns.get(patternIndex).name);
+            broadcastPwp(
+                    ChatFormatting.GRAY,
+                    "pwp_lobby.msg.pattern_chosen",
+                    map.capturePointPatterns.get(patternIndex).name);
         }
 
         String err = MatchAllocator.startMatch(
@@ -1102,7 +1213,7 @@ public class LobbyMod {
         MatchAllocator.cancelPreparing();
         if (any) {
             autoVoteNotBefore = com.pwp.api.time.GameClock.realMillis() + AUTO_VOTE_PAUSE_AFTER_STOP_MS;
-            serverBroadcast("§e[PWP] §fГолосование остановлено администратором");
+            broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.vote_stopped_admin");
         }
         broadcastLobbyState();
         return any;

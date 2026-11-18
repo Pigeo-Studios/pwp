@@ -216,7 +216,10 @@ public class SupplyCrateEntity extends Entity {
                     if (needsService) {
                         this.currentTargetUUID = vehicle.getUUID();
                         WarfareData.of(vehicle).putInt(WarfareKeys.CRATE_TIMER, 0);
-                        sendMessageToPassengers(vehicle, "Подключение к ящику снабжения...", ChatFormatting.YELLOW);
+                        sendMessageToPassengers(
+                                vehicle,
+                                Component.translatable("pwpwarfare.msg.crate.connecting"),
+                                ChatFormatting.YELLOW);
                         return;
                     }
                 }
@@ -274,7 +277,8 @@ public class SupplyCrateEntity extends Entity {
 
                 WarfareData.of(vehicle)
                         .putLong(WarfareKeys.NEXT_SUPPLY_TIME, GameClock.worldTicks(this.level()) + 600L);
-                sendMessageToPassengers(vehicle, "Техника отремонтирована и пополнена ящиком!", ChatFormatting.GREEN);
+                sendMessageToPassengers(
+                        vehicle, Component.translatable("pwpwarfare.msg.crate.vehicle_restored"), ChatFormatting.GREEN);
                 actionDone = true;
             }
 
@@ -323,10 +327,10 @@ public class SupplyCrateEntity extends Entity {
         }
     }
 
-    private static void sendMessageToPassengers(Entity vehicle, String msg, ChatFormatting color) {
+    private static void sendMessageToPassengers(Entity vehicle, Component msg, ChatFormatting color) {
         for (Entity passenger : vehicle.getPassengers()) {
             if (passenger instanceof Player player) {
-                player.displayClientMessage(Component.literal(msg).withStyle(color), true);
+                player.displayClientMessage(msg.copy().withStyle(color), true);
             }
         }
     }
@@ -365,7 +369,8 @@ public class SupplyCrateEntity extends Entity {
                                             ? ChatFormatting.BLUE
                                             : ChatFormatting.RED;
                                     player.displayClientMessage(
-                                            Component.literal("ФОБ пополнен! (+" + this.getMaterials() + " материалов)")
+                                            Component.translatable(
+                                                            "pwpwarfare.msg.crate.fob_resupplied", this.getMaterials())
                                                     .withStyle(color),
                                             true);
                                     if (player instanceof net.minecraft.server.level.ServerPlayer sp) {

@@ -96,7 +96,7 @@ public class InteractionEvents {
                             int cost = (Integer) WarfareConfig.HUB_RESUPPLY_COST.get();
                             if (currentMats < cost) {
                                 sPlayer.displayClientMessage(
-                                        Component.literal("Недостаточно материалов в технике! (" + currentMats + ")")
+                                        Component.translatable("pwpwarfare.msg.vehicle.not_enough_mats", currentMats)
                                                 .withStyle(ChatFormatting.RED),
                                         true);
                                 event.setCanceled(true);
@@ -119,8 +119,7 @@ public class InteractionEvents {
                                     }
 
                                     sPlayer.displayClientMessage(
-                                            Component.literal("Новый кит надет! Материалы техники: "
-                                                            + (currentMats - cost))
+                                            Component.translatable("pwpwarfare.msg.vehicle.kit_new", currentMats - cost)
                                                     .withStyle(ChatFormatting.GREEN),
                                             true);
                                     sPlayer.level()
@@ -143,8 +142,9 @@ public class InteractionEvents {
                                             }
 
                                             sPlayer.displayClientMessage(
-                                                    Component.literal("Кит пополнен! Материалы техники: "
-                                                                    + (currentMats - cost))
+                                                    Component.translatable(
+                                                                    "pwpwarfare.msg.vehicle.kit_resupplied",
+                                                                    currentMats - cost)
                                                             .withStyle(ChatFormatting.GREEN),
                                                     true);
                                             sPlayer.level()
@@ -157,7 +157,8 @@ public class InteractionEvents {
                                                             1.0F);
                                         } else {
                                             sPlayer.displayClientMessage(
-                                                    Component.literal("БК уже полон! Материалы техники: " + currentMats)
+                                                    Component.translatable(
+                                                                    "pwpwarfare.msg.vehicle.ammo_full", currentMats)
                                                             .withStyle(ChatFormatting.YELLOW),
                                                     true);
                                         }
@@ -170,7 +171,9 @@ public class InteractionEvents {
                             }
 
                             sPlayer.displayClientMessage(
-                                    Component.literal("Кит не надет!").withStyle(ChatFormatting.RED), true);
+                                    Component.translatable("pwpwarfare.msg.kit.not_equipped")
+                                            .withStyle(ChatFormatting.RED),
+                                    true);
                             event.setCanceled(true);
                             event.setCancellationResult(InteractionResult.SUCCESS);
                             return;
@@ -182,7 +185,7 @@ public class InteractionEvents {
                         event.setCancellationResult(InteractionResult.SUCCESS);
                         if (event.getLevel().isClientSide) {
                             player.displayClientMessage(
-                                    Component.literal("Доступ к инвентарю отключён!")
+                                    Component.translatable("pwpwarfare.msg.inventory.disabled")
                                             .withStyle(ChatFormatting.RED),
                                     true);
                         }
@@ -328,9 +331,8 @@ public class InteractionEvents {
                                 ? sPlayer.getTeam().getName().toUpperCase()
                                 : "";
                         if (!pTeam.equalsIgnoreCase(data.match.invasionDefender)) {
-                            sPlayer.sendSystemMessage(
-                                    Component.literal("Основное снабжение недоступно во время подготовки!")
-                                            .withStyle(ChatFormatting.RED));
+                            sPlayer.sendSystemMessage(Component.translatable("pwpwarfare.msg.main_supply.setup")
+                                    .withStyle(ChatFormatting.RED));
                             event.setCanceled(true);
                             return;
                         }
@@ -341,7 +343,7 @@ public class InteractionEvents {
                     if (!sPlayer.isCreative() && currentTime < lastMainUse + 1200L) {
                         long secondsLeft = (lastMainUse + 1200L - currentTime) / 20L;
                         sPlayer.displayClientMessage(
-                                Component.literal("Кулдаун основной базы: " + secondsLeft + "с")
+                                Component.translatable("pwpwarfare.msg.main_supply.cooldown", secondsLeft)
                                         .withStyle(ChatFormatting.RED),
                                 true);
                         event.setCanceled(true);
@@ -359,8 +361,8 @@ public class InteractionEvents {
                                     t.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
                             if (kit != null) {
                                 if (ResupplyHandler.resupplyPlayer(sPlayer, kit, false)) {
-                                    sPlayer.sendSystemMessage(
-                                            Component.literal("Кит пополнен!").withStyle(ChatFormatting.GREEN));
+                                    sPlayer.sendSystemMessage(Component.translatable("pwpwarfare.msg.kit.resupplied")
+                                            .withStyle(ChatFormatting.GREEN));
                                     sPlayer.level()
                                             .playSound(
                                                     null,
@@ -371,8 +373,8 @@ public class InteractionEvents {
                                                     1.0F);
                                     WarfareData.of(sPlayer).putLong(WarfareKeys.LAST_MAIN_RESUPPLY, currentTime);
                                 } else {
-                                    sPlayer.sendSystemMessage(
-                                            Component.literal("Кит уже полон!").withStyle(ChatFormatting.YELLOW));
+                                    sPlayer.sendSystemMessage(Component.translatable("pwpwarfare.msg.kit.full")
+                                            .withStyle(ChatFormatting.YELLOW));
                                 }
                             }
                         }
@@ -518,7 +520,7 @@ public class InteractionEvents {
                             event.setCanceled(true);
                             event.setCancellationResult(InteractionResult.FAIL);
                             player.displayClientMessage(
-                                    Component.literal("Доступ запрещён: техника врага!")
+                                    Component.translatable("pwpwarfare.msg.vehicle.enemy")
                                             .withStyle(ChatFormatting.RED),
                                     true);
                         }
@@ -549,7 +551,7 @@ public class InteractionEvents {
         if (!hasCorrectKit(vType, pKit)) {
             event.setCanceled(true);
             player.displayClientMessage(
-                    Component.literal("Вам нужен кит Механик/Пилот для этой техники")
+                    Component.translatable("pwpwarfare.msg.vehicle.crew_kit_required_this")
                             .withStyle(ChatFormatting.RED),
                     true);
             return;
@@ -558,7 +560,8 @@ public class InteractionEvents {
         int squadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
         if (squadId == 0) {
             event.setCanceled(true);
-            player.displayClientMessage(Component.literal("Вы не в отряде").withStyle(ChatFormatting.RED), true);
+            player.displayClientMessage(
+                    Component.translatable("pwpwarfare.msg.squad.not_in_squad").withStyle(ChatFormatting.RED), true);
             return;
         }
 
@@ -579,19 +582,22 @@ public class InteractionEvents {
             long remaining = (cooldownUntil - GameClock.worldTicks(player.level())) / 20L;
             event.setCanceled(true);
             player.displayClientMessage(
-                    Component.literal("Запрос отклонён. Повтор через " + remaining + "с")
+                    Component.translatable("pwpwarfare.msg.vehicle.request_cooldown", remaining)
                             .withStyle(ChatFormatting.RED),
                     true);
             return;
         }
 
         event.setCanceled(true);
-        Component requestMsg = Component.literal("Нужно разрешение командира отряда. ")
+        Component requestMsg = Component.translatable("pwpwarfare.msg.vehicle.need_sl_permission")
                 .withStyle(ChatFormatting.YELLOW)
-                .append(Component.literal("[ОТПРАВИТЬ ЗАПРОС]").withStyle(style -> style.withColor(ChatFormatting.GREEN)
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/vrequest " + vehicle.getId()))
-                        .withHoverEvent(new HoverEvent(
-                                HoverEvent.Action.SHOW_TEXT, Component.literal("Запросить разрешение у SL")))));
+                .append(Component.translatable("pwpwarfare.msg.vehicle.send_request")
+                        .withStyle(style -> style.withColor(ChatFormatting.GREEN)
+                                .withClickEvent(
+                                        new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/vrequest " + vehicle.getId()))
+                                .withHoverEvent(new HoverEvent(
+                                        HoverEvent.Action.SHOW_TEXT,
+                                        Component.translatable("pwpwarfare.msg.vehicle.send_request_hover")))));
         player.sendSystemMessage(requestMsg);
     }
 

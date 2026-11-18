@@ -249,8 +249,7 @@ public class MatchAllocator {
         if (cycleMatch != null && cycleMap != null && cycleMap.name.equals(map.name) && !cycle.delivered()) {
             cycleSettings = s;
             applySettingsToInfo(cycleMatch, s);
-            LobbyMod.serverBroadcast(
-                    "§e[PWP] §fНастройки матча выбраны §7(" + blueFaction + " vs " + redFaction + ", " + mode + ")");
+            LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.settings_chosen", blueFaction, redFaction, mode);
             LobbyMod.broadcastLobbyState();
             return null; // доставка — на ближайшем шаге цикла (DELIVER_SETTINGS)
         }
@@ -260,7 +259,7 @@ public class MatchAllocator {
             broadcastKey(err, ChatFormatting.RED);
             return err;
         }
-        LobbyMod.serverBroadcast("§e[PWP] §fЗапуск матча на карте §e" + map.displayName + "§f...");
+        LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.match_launching", map.displayName);
         return launch(map, s, false);
     }
 
@@ -371,7 +370,8 @@ public class MatchAllocator {
     public static void joinActiveMatch(ServerPlayer player) {
         MatchInfo mi = getActiveMatch();
         if (mi == null || mi.phase != MatchPhase.PLAYING) {
-            player.sendSystemMessage(Component.literal("§cНет активного матча для подключения"), false);
+            player.sendSystemMessage(
+                    Component.translatable("pwp_lobby.msg.no_match_to_join").withStyle(ChatFormatting.RED), false);
             return;
         }
         connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
@@ -380,7 +380,8 @@ public class MatchAllocator {
     public static void joinMatchById(int serverId, ServerPlayer player) {
         MatchInfo mi = activeMatches.get(serverId);
         if (mi == null || mi.phase != MatchPhase.PLAYING) {
-            player.sendSystemMessage(Component.literal("§cМатч недоступен для подключения"), false);
+            player.sendSystemMessage(
+                    Component.translatable("pwp_lobby.msg.match_unavailable").withStyle(ChatFormatting.RED), false);
             return;
         }
         connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
@@ -419,7 +420,7 @@ public class MatchAllocator {
 
             if (!ServerManager.isAlive(mi.serverId)) {
                 log.warn("Match {} server is dead, cleaning up", mi.serverId);
-                LobbyMod.serverBroadcast("§e[PWP] §cМатч " + mi.displayName + " прерван из-за ошибки сервера!");
+                LobbyMod.broadcastPwp(ChatFormatting.RED, "pwp_lobby.msg.match_crashed", mi.displayName);
                 matchEnded(mi.serverId);
             }
         }
@@ -497,7 +498,7 @@ public class MatchAllocator {
                 log.error("Failed to write stop signal for match {}: {}", serverId, e.getMessage());
             }
         }
-        LobbyMod.serverBroadcast("§e[PWP] §fОстановка матча §e" + mi.displayName + "§f...");
+        LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.match_stopping", mi.displayName);
         LobbyMod.broadcastLobbyState();
     }
 
@@ -505,7 +506,7 @@ public class MatchAllocator {
         MatchInfo mi = activeMatches.remove(serverId);
         if (mi != null) {
             ServerManager.stopServer(serverId);
-            LobbyMod.serverBroadcast("§e[PWP] §fМатч §e" + mi.displayName + " §fзавершён. Возвращайтесь в лобби!");
+            LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.match_ended", mi.displayName);
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
         LobbyMod.broadcastLobbyState();

@@ -4,7 +4,6 @@ import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
 import java.util.*;
-import net.minecraftforge.server.ServerLifecycleHooks;
 
 public class FactionVotingManager {
 
@@ -47,7 +46,7 @@ public class FactionVotingManager {
         Collections.shuffle(availableFactions);
         votes.clear();
         LobbyMod.broadcastLobbyState();
-        serverBroadcast("§e[PWP] §fГолосование за фракции началось! Осталось §e" + durationSec + "с");
+        LobbyMod.broadcastPwp(net.minecraft.ChatFormatting.WHITE, "pwp_lobby.msg.faction_vote_started", durationSec);
     }
 
     public static void vote(UUID uuid, String blueFaction, String redFaction) {
@@ -150,11 +149,5 @@ public class FactionVotingManager {
             }
         }
         return t2v;
-    }
-
-    private static void serverBroadcast(String msg) {
-        var server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        server.getPlayerList().broadcastSystemMessage(net.minecraft.network.chat.Component.literal(msg), false);
     }
 }

@@ -179,14 +179,16 @@ public class DownedHandler {
             if (!wd.match.hideDeathMessages) {
                 MutableComponent logMsg;
                 if (killerName != null && !killerName.isEmpty()) {
-                    logMsg = Component.literal(victimName)
-                            .withStyle(ChatFormatting.WHITE)
-                            .append(Component.literal(" был добит игроком ").withStyle(ChatFormatting.GRAY))
-                            .append(Component.literal(killerName).withStyle(ChatFormatting.GOLD));
+                    logMsg = Component.translatable(
+                                    "pwpwarfare.msg.downed.finished_by",
+                                    Component.literal(victimName).withStyle(ChatFormatting.WHITE),
+                                    Component.literal(killerName).withStyle(ChatFormatting.GOLD))
+                            .withStyle(ChatFormatting.GRAY);
                 } else {
-                    logMsg = Component.literal(victimName)
-                            .withStyle(ChatFormatting.WHITE)
-                            .append(Component.literal(" истёк кровью").withStyle(ChatFormatting.GRAY));
+                    logMsg = Component.translatable(
+                                    "pwpwarfare.msg.downed.bled_out",
+                                    Component.literal(victimName).withStyle(ChatFormatting.WHITE))
+                            .withStyle(ChatFormatting.GRAY);
                 }
 
                 player.server.getPlayerList().broadcastSystemMessage(logMsg, false);
@@ -296,8 +298,9 @@ public class DownedHandler {
         target.connection.send(
                 new ClientboundSetSubtitleTextPacket(Component.translatable("pwpwarfare.message.teamkill_warn_subtitle")
                         .withStyle(ChatFormatting.YELLOW)));
-        target.connection.send(new ClientboundSetTitleTextPacket(Component.literal("!ВНИМАНИЕ!")
-                .withStyle(new ChatFormatting[] {ChatFormatting.DARK_RED, ChatFormatting.BOLD})));
+        target.connection.send(
+                new ClientboundSetTitleTextPacket(Component.translatable("pwpwarfare.msg.teamkill.warning_title")
+                        .withStyle(new ChatFormatting[] {ChatFormatting.DARK_RED, ChatFormatting.BOLD})));
         target.playNotifySound(net.minecraft.sounds.SoundEvents.ANVIL_LAND, SoundSource.MASTER, 1.0F, 0.8F);
     }
 
@@ -356,7 +359,7 @@ public class DownedHandler {
             player.setGameMode(GameType.SURVIVAL);
         }
         player.sendSystemMessage(
-                Component.literal("Наказание за тимкилл снято.").withStyle(ChatFormatting.GREEN));
+                Component.translatable("pwpwarfare.msg.teamkill.cleared").withStyle(ChatFormatting.GREEN));
     }
 
     public static void revivePlayer(ServerPlayer player) {

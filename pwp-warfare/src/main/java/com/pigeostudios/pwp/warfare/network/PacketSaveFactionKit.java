@@ -193,12 +193,11 @@ public class PacketSaveFactionKit {
                                 LogUtils.getLogger()
                                         .warn("Core API save failed for faction kit {}/{}", msg.faction, msg.kitName);
                                 online.displayClientMessage(
-                                        Component.literal("Кит не сохранён в core-service — повторите позже"), false);
+                                        Component.translatable("pwpwarfare.msg.save.kit_failed"), false);
                             }
                         });
                 if (!started) {
-                    player.displayClientMessage(
-                            Component.literal("Подождите, предыдущее сохранение ещё выполняется"), true);
+                    player.displayClientMessage(Component.translatable("pwpwarfare.msg.save.in_progress"), true);
                     return;
                 }
 

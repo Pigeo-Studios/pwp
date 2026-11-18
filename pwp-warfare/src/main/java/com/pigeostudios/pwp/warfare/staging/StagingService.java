@@ -127,7 +127,7 @@ public final class StagingService {
         } else if (!TeamBalance.canJoin(target, c[0], c[1])) {
             result = RESULT_FULL;
         } else {
-            FactionDataLoader.cancelDeploy(player, "Команда изменена — деплой отменён");
+            FactionDataLoader.cancelDeploy(player, "pwpwarfare.msg.deploy.cancel_team");
             SquadActions.leaveCurrentSquad(player, data);
             WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
             WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);

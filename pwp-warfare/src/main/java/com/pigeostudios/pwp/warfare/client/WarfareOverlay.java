@@ -36,6 +36,7 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -164,15 +165,32 @@ public class WarfareOverlay {
             int goldLight = -10496;
             gui.fill(xStart, yStart, xStart + uiWidth, yStart + uiHeight, -1879048192);
             gui.fill(xStart, yStart, xStart + 2, yStart + uiHeight, goldLight);
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "Build Mode", xStart + uiWidth / 2, yStart + 4, goldLight);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    I18n.get("gui.pwpwarfare.hud.build_mode"),
+                    xStart + uiWidth / 2,
+                    yStart + 4,
+                    goldLight);
             RenderSystem.enableBlend();
             int row1Y = yStart + 16;
             gui.blit(MOUSE_LEFT, xStart + 8, row1Y, 0.0F, 0.0F, 12, 12, 12, 12);
-            gui.drawString(PWPTheme.Fonts.display(), "Rotate", xStart + 26, row1Y + 2, -1, true);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    I18n.get("gui.pwpwarfare.hud.build_rotate"),
+                    xStart + 26,
+                    row1Y + 2,
+                    -1,
+                    true);
             gui.blit(ICON_ROTATE, xStart + uiWidth - 20, row1Y, 0.0F, 0.0F, 12, 12, 12, 12);
             int row2Y = yStart + 30;
             gui.blit(MOUSE_RIGHT, xStart + 8, row2Y, 0.0F, 0.0F, 12, 12, 12, 12);
-            gui.drawString(PWPTheme.Fonts.display(), "Confirm", xStart + 26, row2Y + 2, -1, true);
+            gui.drawString(
+                    PWPTheme.Fonts.display(),
+                    I18n.get("gui.pwpwarfare.hud.build_confirm"),
+                    xStart + 26,
+                    row2Y + 2,
+                    -1,
+                    true);
             gui.blit(ICON_CONFIRM, xStart + uiWidth - 20, row2Y, 0.0F, 0.0F, 12, 12, 12, 12);
             RenderSystem.disableBlend();
         }
@@ -213,7 +231,7 @@ public class WarfareOverlay {
                     teamColor = -43691;
                 }
 
-                String text = "Материалы: " + mats;
+                String text = I18n.get("gui.pwpwarfare.hud.materials", mats);
                 int textWidth = PWPTheme.Fonts.display().width(text);
                 int textX = (width - textWidth) / 2;
                 int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
@@ -273,10 +291,10 @@ public class WarfareOverlay {
 
             if (record != null && isFriendlyVehicle(record, mc.player)) {
                 if (isSpecialistVehicle(record.type) && !hasCorrectKit(record.type, ClientData.myCurrentKit)) {
-                    text = "Нужен кит Механик/Пилот";
+                    text = I18n.get("gui.pwpwarfare.hud.need_crew_kit");
                     color = -43691;
                 } else {
-                    text = "Шифт+ПКМ — пополнить БК";
+                    text = I18n.get("gui.pwpwarfare.hud.rearm_hint");
                     color = -1;
                 }
                 target = 1.0F;
@@ -311,10 +329,10 @@ public class WarfareOverlay {
     private static String vehicleStatusText(ClientData.VehicleStatus st) {
         int left = Math.max(0, st.secondsLeft - (int) ((System.currentTimeMillis() - st.receivedAt) / 1000L));
         return switch (st.kind) {
-            case PacketVehicleStatus.KIND_REARMING -> "Пополнение БК: " + left + "с";
-            case PacketVehicleStatus.KIND_LOADING_CRATE -> "Загрузка ящика: " + left + "с";
-            case PacketVehicleStatus.KIND_REARM_COOLDOWN -> "Перезарядка БК: " + left + "с";
-            case PacketVehicleStatus.KIND_CRATE_RESUPPLY -> "Пополнение: " + left + "с";
+            case PacketVehicleStatus.KIND_REARMING -> I18n.get("gui.pwpwarfare.hud.veh.rearming", left);
+            case PacketVehicleStatus.KIND_LOADING_CRATE -> I18n.get("gui.pwpwarfare.hud.veh.loading_crate", left);
+            case PacketVehicleStatus.KIND_REARM_COOLDOWN -> I18n.get("gui.pwpwarfare.hud.veh.rearm_cooldown", left);
+            case PacketVehicleStatus.KIND_CRATE_RESUPPLY -> I18n.get("gui.pwpwarfare.hud.veh.crate_resupply", left);
             default -> null;
         };
     }

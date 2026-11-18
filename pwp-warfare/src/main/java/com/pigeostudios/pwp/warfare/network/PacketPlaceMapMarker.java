@@ -76,8 +76,8 @@ public class PacketPlaceMapMarker {
                             int pSqId = WarfareData.of(p).getInt(WarfareKeys.SQUAD_ID);
                             if (WarfareData.of(p).getBoolean(WarfareKeys.IS_SQUAD_LEADER)
                                     || pSqId == cmdId && cmdId != -1) {
-                                p.sendSystemMessage(Component.literal(
-                                                "[СТРАТЕГИЧЕСКИ] Артиллерия запрошена в " + msg.x + ", " + msg.z)
+                                p.sendSystemMessage(Component.translatable(
+                                                "pwpwarfare.msg.marker.artillery_requested", msg.x, msg.z)
                                         .withStyle(ChatFormatting.GOLD));
                             }
                         }

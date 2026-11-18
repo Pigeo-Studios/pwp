@@ -63,16 +63,12 @@ public class PacketVehicleDriveAnswer {
             data.addApprovedDriver(vehicleUUID, requesterUUID);
             WarfareData.of(vehicle).remove(WarfareKeys.FRESH_VEHICLE);
             requester.displayClientMessage(
-                    Component.literal("\u2705 Ваша заявка на управление техникой принята!")
-                            .withStyle(ChatFormatting.GREEN),
-                    true);
+                    Component.translatable("pwpwarfare.msg.drive.accepted").withStyle(ChatFormatting.GREEN), true);
         } else {
             WarfareData.of(requester)
                     .putLong(WarfareKeys.driveRequestCooldown(vehicleId), GameClock.worldTicks(level) + 6000);
             requester.displayClientMessage(
-                    Component.literal("\u274C Заявка отклонена. Повтор через 5 минут.")
-                            .withStyle(ChatFormatting.RED),
-                    true);
+                    Component.translatable("pwpwarfare.msg.drive.denied").withStyle(ChatFormatting.RED), true);
         }
     }
 }

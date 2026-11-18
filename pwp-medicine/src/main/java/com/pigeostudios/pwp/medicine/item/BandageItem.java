@@ -60,7 +60,8 @@ public class BandageItem extends Item implements GeoItem {
         if (target != null && WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
             if (!pLevel.isClientSide
                     && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
-                pPlayer.sendSystemMessage(Component.literal("§cНельзя поднять врага!"));
+                pPlayer.sendSystemMessage(Component.translatable("pwp_medicine.msg.cannot_revive_enemy")
+                        .withStyle(net.minecraft.ChatFormatting.RED));
                 return InteractionResultHolder.fail(pPlayer.getItemInHand(pUsedHand));
             }
             pPlayer.getItemInHand(pUsedHand).getOrCreateTag().putBoolean("Reviving", true);
@@ -79,9 +80,11 @@ public class BandageItem extends Item implements GeoItem {
         if (toHeal.getHealth() >= 14.0f && !toHeal.hasEffect(ModEffects.BLEEDING.get())) {
             if (!pLevel.isClientSide) {
                 if (toHeal == pPlayer) {
-                    pPlayer.sendSystemMessage(Component.literal("§cНужна аптечка"));
+                    pPlayer.sendSystemMessage(Component.translatable("pwp_medicine.msg.medkit_required")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
                 } else {
-                    pPlayer.sendSystemMessage(Component.literal("§cИгроку не нужен бинт"));
+                    pPlayer.sendSystemMessage(Component.translatable("pwp_medicine.msg.no_bandage_needed")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
                 }
             }
             return InteractionResultHolder.fail(pPlayer.getItemInHand(pUsedHand));
@@ -109,7 +112,8 @@ public class BandageItem extends Item implements GeoItem {
                         (net.minecraft.server.level.ServerPlayer) target);
                 com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get()
                         .recordRevive((net.minecraft.server.level.ServerPlayer) player);
-                player.sendSystemMessage(Component.literal("§aСоюзник поднят!"));
+                player.sendSystemMessage(Component.translatable("pwp_medicine.msg.ally_revived")
+                        .withStyle(net.minecraft.ChatFormatting.GREEN));
             } else {
                 float currentHealth = toHeal.getHealth();
                 if (currentHealth < 14.0f) {
@@ -178,7 +182,8 @@ public class BandageItem extends Item implements GeoItem {
             if (WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
                 if (!pPlayer.level().isClientSide
                         && (pPlayer.getTeam() == null || !pPlayer.getTeam().isAlliedTo(target.getTeam()))) {
-                    pPlayer.sendSystemMessage(Component.literal("§cНельзя поднять врага!"));
+                    pPlayer.sendSystemMessage(Component.translatable("pwp_medicine.msg.cannot_revive_enemy")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
                     return InteractionResult.FAIL;
                 }
                 pStack.getOrCreateTag().putBoolean("Reviving", true);
@@ -197,7 +202,8 @@ public class BandageItem extends Item implements GeoItem {
             }
             if (target.getHealth() >= 14.0f && !target.hasEffect(ModEffects.BLEEDING.get())) {
                 if (!pPlayer.level().isClientSide) {
-                    pPlayer.sendSystemMessage(Component.literal("§cИгроку не нужен бинт"));
+                    pPlayer.sendSystemMessage(Component.translatable("pwp_medicine.msg.no_bandage_needed")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
                 }
                 return InteractionResult.FAIL;
             }

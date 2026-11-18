@@ -73,25 +73,29 @@ public class PacketVehicleDriveRequest {
         ServerPlayer slPlayer = level.getServer().getPlayerList().getPlayerByName(playerSquad.leader);
         if (slPlayer == null) return;
 
-        Component approveCmd = Component.literal("[ПРИНЯТЬ \u2705]").withStyle(style -> style.withColor(
-                        ChatFormatting.GREEN)
-                .withClickEvent(new ClickEvent(
-                        ClickEvent.Action.RUN_COMMAND, "/vanswer approve " + vehicleId + " " + player.getUUID()))
-                .withHoverEvent(
-                        new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Разрешить управление"))));
-        Component denyCmd = Component.literal("[ОТКЛОНИТЬ \u274C]").withStyle(style -> style.withColor(
-                        ChatFormatting.RED)
-                .withClickEvent(new ClickEvent(
-                        ClickEvent.Action.RUN_COMMAND, "/vanswer deny " + vehicleId + " " + player.getUUID()))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Отклонить запрос"))));
+        Component approveCmd = Component.translatable("pwpwarfare.msg.drive.approve_button")
+                .withStyle(style -> style.withColor(ChatFormatting.GREEN)
+                        .withClickEvent(new ClickEvent(
+                                ClickEvent.Action.RUN_COMMAND,
+                                "/vanswer approve " + vehicleId + " " + player.getUUID()))
+                        .withHoverEvent(new HoverEvent(
+                                HoverEvent.Action.SHOW_TEXT,
+                                Component.translatable("pwpwarfare.msg.drive.approve_hover"))));
+        Component denyCmd = Component.translatable("pwpwarfare.msg.drive.deny_button")
+                .withStyle(style -> style.withColor(ChatFormatting.RED)
+                        .withClickEvent(new ClickEvent(
+                                ClickEvent.Action.RUN_COMMAND, "/vanswer deny " + vehicleId + " " + player.getUUID()))
+                        .withHoverEvent(new HoverEvent(
+                                HoverEvent.Action.SHOW_TEXT,
+                                Component.translatable("pwpwarfare.msg.drive.deny_hover"))));
 
-        slPlayer.sendSystemMessage(Component.literal("\u26A1 " + pName + " запрашивает управление " + vType + " ")
+        slPlayer.sendSystemMessage(Component.translatable("pwpwarfare.msg.drive.request", pName, vType)
                 .append(approveCmd)
                 .append(" ")
                 .append(denyCmd));
 
         player.displayClientMessage(
-                Component.literal("Запрос отправлен командиру отряда").withStyle(ChatFormatting.GREEN), true);
+                Component.translatable("pwpwarfare.msg.drive.request_sent").withStyle(ChatFormatting.GREEN), true);
     }
 
     private static boolean isSpecialistVehicle(String vType) {

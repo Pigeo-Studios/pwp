@@ -14,9 +14,9 @@ public record DeferredDeploy(String spawnType, String team, boolean spectator, S
 
     /** null — деплой можно выполнять, иначе причина отмены (для сообщения игроку). */
     public String cancelReason(DeferredDeploy now) {
-        if (!team.equals(now.team)) return "Команда изменена — деплой отменён";
-        if (spectator && !now.spectator) return "Вы уже на поле — отложенный деплой отменён";
-        if (!kit.equals(now.kit)) return "Выбор кита изменён — нажмите «Деплой» снова";
+        if (!team.equals(now.team)) return "pwpwarfare.msg.deploy.cancel_team";
+        if (spectator && !now.spectator) return "pwpwarfare.msg.deploy.cancel_alive";
+        if (!kit.equals(now.kit)) return "pwpwarfare.msg.deploy.cancel_kit";
         return null;
     }
 }

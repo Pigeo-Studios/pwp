@@ -61,7 +61,7 @@ public class PacketRequestAmmo {
                                     if (!player.isCreative() && currentTime < lastFobUse + 1200L) {
                                         long secondsLeft = (lastFobUse + 1200L - currentTime) / 20L;
                                         player.sendSystemMessage(
-                                                Component.literal("Пополнение на кулдауне: " + secondsLeft + "с")
+                                                Component.translatable("pwpwarfare.msg.resupply.cooldown", secondsLeft)
                                                         .withStyle(ChatFormatting.RED));
                                         return;
                                     }
@@ -69,7 +69,7 @@ public class PacketRequestAmmo {
                                     cost = (Integer) WarfareConfig.HUB_RESUPPLY_COST.get();
                                     if (!player.isCreative() && hub.getMaterials() < cost) {
                                         player.sendSystemMessage(
-                                                Component.literal("Недостаточно материалов! Нужно: " + cost)
+                                                Component.translatable("pwpwarfare.msg.resupply.not_enough", cost)
                                                         .withStyle(ChatFormatting.RED));
                                         return;
                                     }
@@ -85,7 +85,7 @@ public class PacketRequestAmmo {
                                         player.level()
                                                 .sendBlockUpdated(msg.pos, hub.getBlockState(), hub.getBlockState(), 3);
                                         player.sendSystemMessage(
-                                                Component.literal("Новый кит надет! (-" + cost + " материалов)")
+                                                Component.translatable("pwpwarfare.msg.resupply.kit_new", cost)
                                                         .withStyle(ChatFormatting.GREEN));
                                     } else {
                                         String t = player.getTeam() != null
@@ -105,12 +105,13 @@ public class PacketRequestAmmo {
                                                 player.level()
                                                         .sendBlockUpdated(
                                                                 msg.pos, hub.getBlockState(), hub.getBlockState(), 3);
-                                                player.sendSystemMessage(
-                                                        Component.literal("Кит пополнен! (-" + cost + " материалов)")
-                                                                .withStyle(ChatFormatting.GREEN));
+                                                player.sendSystemMessage(Component.translatable(
+                                                                "pwpwarfare.msg.resupply.kit_resupplied", cost)
+                                                        .withStyle(ChatFormatting.GREEN));
                                             } else {
-                                                player.sendSystemMessage(Component.literal("БК уже полон!")
-                                                        .withStyle(ChatFormatting.YELLOW));
+                                                player.sendSystemMessage(
+                                                        Component.translatable("pwpwarfare.msg.ammo.full")
+                                                                .withStyle(ChatFormatting.YELLOW));
                                             }
                                         }
                                     }
@@ -118,8 +119,8 @@ public class PacketRequestAmmo {
                                     return;
                                 }
 
-                                player.sendSystemMessage(
-                                        Component.literal("Кит не надет!").withStyle(ChatFormatting.RED));
+                                player.sendSystemMessage(Component.translatable("pwpwarfare.msg.kit.not_equipped")
+                                        .withStyle(ChatFormatting.RED));
                                 return;
                             case 3:
                                 cost = 20;
@@ -137,14 +138,14 @@ public class PacketRequestAmmo {
                         }
 
                         if (!player.isCreative() && isOnCooldown) {
-                            player.sendSystemMessage(
-                                    Component.literal("Снабжение на кулдауне!").withStyle(ChatFormatting.RED));
+                            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.resupply.supply_cooldown")
+                                    .withStyle(ChatFormatting.RED));
                             return;
                         }
 
                         if (!player.isCreative() && hub.getMaterials() < cost) {
                             player.sendSystemMessage(
-                                    Component.literal("Недостаточно строительных материалов! Нужно: " + cost)
+                                    Component.translatable("pwpwarfare.msg.resupply.not_enough_build", cost)
                                             .withStyle(ChatFormatting.RED));
                             return;
                         }
@@ -188,7 +189,7 @@ public class PacketRequestAmmo {
                                 hub.setCooldown(msg.type, cooldownTime);
                             }
 
-                            player.sendSystemMessage(Component.literal("Пополнено! (-" + cost + " материалов)")
+                            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.resupply.done", cost)
                                     .withStyle(ChatFormatting.GREEN));
                             player.level().sendBlockUpdated(msg.pos, hub.getBlockState(), hub.getBlockState(), 3);
                         }

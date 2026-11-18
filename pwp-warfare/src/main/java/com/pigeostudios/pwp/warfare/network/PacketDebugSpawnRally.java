@@ -50,12 +50,12 @@ public class PacketDebugSpawnRally {
                 if (msg.team.equals("BLUE")) {
                     player.level().setBlock(pos, ((Block) ModBlocks.BLUE_RALLY_BLOCK.get()).defaultBlockState(), 3);
                     data.structures.blueRallies.add(pos);
-                    player.sendSystemMessage(Component.literal("DEBUG: BLUE Rally spawned at feet & Joined Blue Team")
+                    player.sendSystemMessage(Component.translatable("pwpwarfare.msg.debug.rally_blue")
                             .withStyle(ChatFormatting.BLUE));
                 } else {
                     player.level().setBlock(pos, ((Block) ModBlocks.RED_RALLY_BLOCK.get()).defaultBlockState(), 3);
                     data.structures.redRallies.add(pos);
-                    player.sendSystemMessage(Component.literal("DEBUG: RED Rally spawned at feet & Joined Red Team")
+                    player.sendSystemMessage(Component.translatable("pwpwarfare.msg.debug.rally_red")
                             .withStyle(ChatFormatting.RED));
                 }
 

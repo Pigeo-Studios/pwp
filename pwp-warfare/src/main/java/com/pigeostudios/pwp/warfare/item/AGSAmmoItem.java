@@ -50,6 +50,6 @@ public class AGSAmmoItem extends Item {
     }
 
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("Гранаты: " + getAmmo(stack) + " / 30"));
+        tooltip.add(Component.translatable("pwpwarfare.msg.item.ags_ammo", getAmmo(stack), 30));
     }
 }
