@@ -41,6 +41,12 @@ public record Rect(int x, int y, int w, int h) {
         return px >= x && py >= y && px < x + w && py < y + h;
     }
 
+    /** Пересекается ли с {@code o} по площади (касание краями — не пересечение; пустые — нет). */
+    public boolean intersects(Rect o) {
+        if (w <= 0 || h <= 0 || o.w <= 0 || o.h <= 0) return false;
+        return x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + h;
+    }
+
     /** Внутренний отступ со всех сторон (не схлопывается в отрицательный размер). */
     public Rect inset(int all) {
         return inset(all, all, all, all);

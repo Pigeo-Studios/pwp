@@ -1,13 +1,14 @@
 package com.pigeostudios.pwp.medicine.event;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.medicine.effect.ModEffects;
 import com.pigeostudios.pwp.medicine.item.ModItems;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WHud;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WTheme;
+import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -39,7 +40,12 @@ public class ClientHUDHandler {
     private static final ResourceLocation SHADER_DESATURATE = new ResourceLocation("shaders/post/desaturate.json");
     private static boolean shaderActive = false;
     private static float bleedAnimProgress = 0.0f;
-    private static final float ANIM_SPEED = 0.025f;
+    // Выезд баннера кровотечения — в РЕАЛЬНОМ времени: прежние 0.025/кадр при 60 FPS
+    // = полный выезд за ~667 мс (раньше при 144 FPS выезжал вдвое быстрее).
+    private static final float BLEED_ANIM_MS = 1000.0f / 60.0f / 0.025f;
+    private static long bleedAnimLastMs = -1L;
+    /** Место баннера кровотечения в левом стеке HUD на этот кадр (занято в RenderGuiEvent.Pre). */
+    private static int bleedY = WHud.SIDE_NONE;
 
     @SubscribeEvent
     public static void onCameraSetup(ViewportEvent.ComputeCameraAngles event) {
@@ -71,64 +77,114 @@ public class ClientHUDHandler {
         if (mc.player == null) {
             return;
         }
-        boolean hasBleeding = mc.player.hasEffect(ModEffects.BLEEDING.get());
-        if (hasBleeding && bleedAnimProgress < 1.0f) {
-            bleedAnimProgress += 0.025f;
-        } else if (!hasBleeding && bleedAnimProgress > 0.0f) {
-            bleedAnimProgress -= 0.025f;
-        }
-        bleedAnimProgress = Math.max(0.0f, Math.min(1.0f, bleedAnimProgress));
-        if (bleedAnimProgress > 0.0f) {
-            ClientHUDHandler.drawBleedingMenu(event.getGuiGraphics(), mc, bleedAnimProgress);
+        // общий гейт HUD warfare (F1 скрывает); ч/б шейдер нока — вне гейта (эффект картинки)
+        boolean hud = WHud.hudVisible();
+        if (hud && bleedY != WHud.SIDE_NONE) {
+            ClientHUDHandler.drawBleedingMenu(event.getGuiGraphics(), bleedAnimProgress);
         }
         ClientHUDHandler.handleGrayscaleShader(mc, mc.player);
+        if (!hud) return;
         Player target = ClientHUDHandler.getHudTarget(mc);
-        float screenX = (float) mc.getWindow().getGuiScaledWidth() / 2.0f;
-        float screenY = (float) mc.getWindow().getGuiScaledHeight() / 2.0f;
         if (target != null) {
-            ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, target, target == mc.player, screenX, screenY);
-        } else {
-            Player healer = ClientHUDHandler.getHealerTargetingMe(mc);
-            if (healer != null) {
-                float patientY = (float) mc.getWindow().getGuiScaledHeight() - 65.0f;
-                ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, mc.player, false, screenX, patientY);
+            // центр занят каналом дрона (высший приоритет) — кольца не накладываются
+            if (!WHud.centerBusy()) {
+                ClientHUDHandler.renderHealthHUD(event.getGuiGraphics(), mc, target, target == mc.player);
             }
+        } else if (patientHealer != null) {
+            ClientHUDHandler.renderPatient(event.getGuiGraphics(), mc, patientHealer);
         }
     }
 
-    private static void drawBleedingMenu(GuiGraphics guiGraphics, Minecraft mc, float progress) {
-        MutableComponent text = Component.translatable("gui.pwp_medicine.bleeding");
-        int textWidth = mc.font.width((FormattedText) text);
-        int width = textWidth + 46;
-        int height = 26;
-        int x = (int) ((float) (-width) + progress * (float) (width + 10));
-        int y = 40;
-        RenderSystem.enableBlend();
-        guiGraphics.fill(x, y, x + width, y + height, 0xCC06080A);
-        guiGraphics.fill(x, y, x + 3, y + height, 0xFFA53D3D);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        guiGraphics.blit(BLEEDING_ICON, x + 8, y + 5, 0.0f, 0.0f, 16, 16, 16, 16);
-        guiGraphics.drawString(mc.font, (Component) text, x + 32, y + 9, -1, true);
-        RenderSystem.disableBlend();
+    // ------------------------------------------------------------ пациент (контекстный ярус HUD)
+    /** Кто лечит меня в этом кадре (считается один раз в RenderGuiEvent.Pre). */
+    private static Player patientHealer;
+
+    private static final WHud.Fmt PATIENT_TITLE = new WHud.Fmt("gui.pwp_medicine.hud.patient");
+    private static final WHud.Fmt PATIENT_HP = new WHud.Fmt("gui.pwpwarfare.hud.percent");
+
+    /** Заявка «меня лечат» в контекстный ярус низ-центра (раньше — иконка на h-65 поверх ленты). */
+    @SubscribeEvent
+    public static void onRenderGuiPre(RenderGuiEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        patientHealer = null;
+        bleedY = WHud.SIDE_NONE;
+        if (mc.player == null) return;
+        updateBleedAnim(mc.player.hasEffect(ModEffects.BLEEDING.get()));
+        if (!WHud.hudVisible()) return;
+        // баннер кровотечения — первым в левом стеке HUD (выше голосований и голоса; этап 4)
+        if (bleedAnimProgress > 0.0f) bleedY = WHud.leftClaim(WHud.font());
+        if (ClientHUDHandler.getHudTarget(mc) != null) return;
+        patientHealer = ClientHUDHandler.getHealerTargetingMe(mc);
+        if (patientHealer != null) WHud.contextOffer(WHud.CTX_PATIENT);
     }
 
-    private static void renderHealthHUD(
-            GuiGraphics guiGraphics, Minecraft mc, Player target, boolean isSelf, float centerX, float centerY) {
-        float healthPercent = Math.max(0.0f, Math.min(1.0f, target.getHealth() / target.getMaxHealth()));
-        int redVal = (int) (255.0f * (1.0f - healthPercent));
-        int greenVal = (int) (255.0f * healthPercent);
-        int hpColor = 0xFF000000 | redVal << 16 | greenVal << 8 | 0;
+    private static void renderPatient(GuiGraphics g, Minecraft mc, Player healer) {
+        float hp = Math.max(0.0f, Math.min(1.0f, mc.player.getHealth() / Math.max(1.0f, mc.player.getMaxHealth())));
+        PATIENT_HP.of(Math.round(hp * 100.0f));
+        WHud.contextPlate(
+                g,
+                mc.font,
+                WHud.CTX_PATIENT,
+                WarfareIcon.PLUS,
+                PATIENT_TITLE.of(healer.getGameProfile().getName()),
+                PATIENT_HP.string(),
+                WTheme.HUD_VALUE,
+                hp,
+                WTheme.HUD_MEDIC,
+                1.0f);
+    }
+
+    /** Подпись баннера кровотечения: компонент кэширован (не создаётся в кадре). */
+    private static final Component BLEEDING_TEXT = Component.translatable("gui.pwp_medicine.bleeding");
+
+    /** Выезд/уезд баннера в реальном времени (раз в кадр, в RenderGuiEvent.Pre). */
+    private static void updateBleedAnim(boolean hasBleeding) {
+        long nowMs = Util.getMillis();
+        long dtMs = bleedAnimLastMs < 0L ? 0L : Math.max(0L, Math.min(100L, nowMs - bleedAnimLastMs));
+        bleedAnimLastMs = nowMs;
+        float step = dtMs / BLEED_ANIM_MS;
+        if (hasBleeding && bleedAnimProgress < 1.0f) {
+            bleedAnimProgress += step;
+        } else if (!hasBleeding && bleedAnimProgress > 0.0f) {
+            bleedAnimProgress -= step;
+        }
+        bleedAnimProgress = Math.max(0.0f, Math.min(1.0f, bleedAnimProgress));
+    }
+
+    /** Баннер кровотечения — плашка-тревога левого стека HUD (кит WHud, место занято в Pre). */
+    private static void drawBleedingMenu(GuiGraphics guiGraphics, float progress) {
+        long period = WTheme.SIDE_ALERT_PULSE_MS;
+        double ph = (Util.getMillis() % period) / (double) period * Math.PI * 2.0;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(ph);
+        WHud.sideAlert(
+                guiGraphics,
+                WHud.font(),
+                bleedY,
+                BLEEDING_ICON,
+                WarfareIcon.PLUS,
+                BLEEDING_TEXT,
+                WTheme.HUD_DANGER,
+                progress,
+                pulse);
+    }
+
+    /** Процент HP цели на плашке справа от кольца (строка пересобирается только при смене). */
+    private static final WHud.Fmt TARGET_HP = new WHud.Fmt("gui.pwpwarfare.hud.percent");
+
+    /**
+     * Кольцо HP цели у прицела (этап 5, кит HUD): иконка аптечки/кровотечения в центре цветом HP,
+     * сегментное кольцо (сегменты как у своей полосы HP) и плашка «N%» справа. Своё лечение — только
+     * иконка, как раньше. Центр занят каналом дрона — не рисуется (вызывающий проверяет).
+     */
+    private static void renderHealthHUD(GuiGraphics g, Minecraft mc, Player target, boolean isSelf) {
+        float hp = Math.max(0.0f, Math.min(1.0f, target.getHealth() / Math.max(1.0f, target.getMaxHealth())));
+        int color = hp < WTheme.CENTER_HP_LOW_FRACTION ? WTheme.CENTER_HP_LOW : WTheme.CENTER_HP_FILL;
         ResourceLocation icon = target.hasEffect(ModEffects.BLEEDING.get()) ? BLEEDING_TARGET : ICON_TEXTURE;
-        RenderSystem.enableBlend();
-        RenderSystem.setShaderColor((float) redVal / 255.0f, (float) greenVal / 255.0f, 0.0f, 1.0f);
-        guiGraphics.blit(icon, (int) (centerX - 8.0f), (int) (centerY - 8.0f), 0.0f, 0.0f, 16, 16, 16, 16);
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        if (!isSelf) {
-            int bgColor = 0x64444444;
-            ClientHUDHandler.drawUltraHighQualityArc(guiGraphics, centerX, centerY, 17.0f, 1.0f, bgColor, 1.0f);
-            ClientHUDHandler.drawUltraHighQualityArc(
-                    guiGraphics, centerX, centerY, 17.0f, healthPercent, hpColor, 1.2f);
-        }
+        WHud.crosshairIcon(g, icon, WTheme.CENTER_HP_ICON, color);
+        if (isSelf) return;
+        WHud.crosshairRing(g, WTheme.CENTER_HP_R, WTheme.CENTER_HP_SEGMENTS, hp, color, 1.0f);
+        TARGET_HP.of(Math.round(hp * 100.0f));
+        WHud.crosshairValue(g, WHud.font(), WTheme.CENTER_HP_R, TARGET_HP.string(), color, 1.0f);
     }
 
     private static Player getHudTarget(Minecraft mc) {
@@ -199,28 +255,6 @@ public class ClientHUDHandler {
                 mc.gameRenderer.shutdownEffect();
                 shaderActive = false;
             });
-        }
-    }
-
-    private static void drawUltraHighQualityArc(
-            GuiGraphics guiGraphics, float x, float y, float radius, float percent, int color, float thickness) {
-        if (percent <= 0.0f) {
-            return;
-        }
-        int segments = 360;
-        float angleStep = (float) (Math.PI * 2 / (double) segments);
-        int i = 0;
-        while ((float) i < (float) segments * percent) {
-            float angle = (float) i * angleStep - 1.5707964f;
-            float px = x + (float) Math.cos(angle) * radius;
-            float py = y + (float) Math.sin(angle) * radius;
-            guiGraphics.fill(
-                    (int) (px - thickness / 2.0f),
-                    (int) (py - thickness / 2.0f),
-                    (int) (px + thickness / 2.0f + 1.0f),
-                    (int) (py + thickness / 2.0f + 1.0f),
-                    color);
-            ++i;
         }
     }
 }

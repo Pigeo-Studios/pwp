@@ -1,10 +1,12 @@
 package com.pigeostudios.pwp.movement;
 
+import com.pwp.coreclient.gui.theme.PWPTheme;
+import com.pwp.coreclient.ui.hud.Hud;
+import com.pwp.coreclient.ui.hud.HudHotbar;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
@@ -28,8 +30,8 @@ public class MovementHandler {
     private float prevHotbarAlpha = 0.0f;
     private float hotbarSlide = 0.0f;
     private float prevHotbarSlide = 0.0f;
-    private float[] slotH = new float[9];
-    private float[] prevSlotH = new float[9];
+    /** Вид хотбара — HUD-кит core-client (стеклянные слоты, плавная полоса выбора). */
+    private final HudHotbar hotbar = new HudHotbar();
 
     // onClientTick: обновление наклона камеры, замедление в воздухе,
     // оглушение приземления, усталость спринта, анимация хотбара
@@ -88,11 +90,6 @@ public class MovementHandler {
             this.hotbarSlide = Mth.lerp(0.12f, this.hotbarSlide, 0.0f);
             this.hotbarAlpha = Mth.lerp(0.12f, this.hotbarAlpha, 0.0f);
         }
-        for (int i = 0; i < 9; ++i) {
-            this.prevSlotH[i] = this.slotH[i];
-            float targetH = i == currentSlot ? 10.0f : 0.0f;
-            this.slotH[i] = Mth.lerp(0.4f, this.slotH[i], targetH);
-        }
     }
 
     // onRenderGuiPost: отрисовка кастомного хотбара с анимацией
@@ -102,7 +99,8 @@ public class MovementHandler {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        // F1 скрывает HUD (как общий гейт WHud.hudVisible в warfare; от warfare модуль не зависит)
+        if (mc.player == null || mc.options.hideGui) {
             return;
         }
         float pt = event.getPartialTick();
@@ -112,25 +110,15 @@ public class MovementHandler {
             return;
         }
         GuiGraphics gui = event.getGuiGraphics();
-        int screenWidth = mc.getWindow().getGuiScaledWidth();
-        int screenHeight = mc.getWindow().getGuiScaledHeight();
-        int slotSize = 22;
-        int gap = 4;
-        int totalWidth = 9 * (slotSize + gap);
-        int startX = (screenWidth - totalWidth) / 2;
-        float baseY = (float) (screenHeight + 40) - renderSlide * 72.0f;
-        int alpha = (int) (renderAlpha * 200.0f);
-        int color = alpha << 24;
-        for (int i = 0; i < 9; ++i) {
-            int x = startX + i * (slotSize + gap);
-            float currentH = Mth.lerp(pt, this.prevSlotH[i], this.slotH[i]);
-            float y = baseY - currentH;
-            gui.fill(x, (int) y, x + slotSize, (int) y + slotSize, color);
-            ItemStack stack = mc.player.getInventory().getItem(i);
-            if (stack.isEmpty()) continue;
-            gui.renderItem(stack, x + 3, (int) y + 3);
-            gui.renderItemDecorations(mc.font, stack, x + 3, (int) y + 3);
-        }
+        // зона хотбара — общая сетка HUD (HudZones: учитывает guiScale и масштаб HUD)
+        this.hotbar.render(
+                gui,
+                PWPTheme.Fonts.display(),
+                Hud.zones(),
+                mc.player.getInventory(),
+                mc.player.getInventory().selected,
+                renderAlpha,
+                renderSlide);
     }
 
     // onCameraSetup: наклон камеры и тряска от усталости

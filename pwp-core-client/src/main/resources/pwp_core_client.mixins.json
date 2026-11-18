@@ -12,7 +12,12 @@
     "ConnectScreenAccessor",
     "ScreenInvoker",
     "DisconnectedScreenAccessor",
-    "PauseScreenAccessor"
+    "PauseScreenAccessor",
+    "InventoryScreenAccessor",
+    "AbstractContainerScreenAccessor",
+    "InventoryScreenMixin",
+    "ContainerScreenBgMixin",
+    "AbstractContainerScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -465,20 +465,20 @@ public class ClientEvents {
                 boolean isCandidate = mc.player.getScoreboardName().equals(myCandidateName);
                 if (!isCandidate) {
                     if (event.getAction() == 1
-                            && ModKeyBindings.CMD_VOTE_YES_KEY.matches(event.getKey(), event.getScanCode())) {
+                            && ModKeyBindings.VOTE_CMD_YES_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketCMDVote(true));
                         mc.player.displayClientMessage(
-                                Component.translatable("gui.pwpwarfare.vote.cast_yes")
+                                Component.translatable("gui.pwpwarfare.hud.vote.cast_yes")
                                         .withStyle(ChatFormatting.GREEN),
                                 true);
                         return;
                     }
 
                     if (event.getAction() == 1
-                            && ModKeyBindings.CMD_VOTE_NO_KEY.matches(event.getKey(), event.getScanCode())) {
+                            && ModKeyBindings.VOTE_CMD_NO_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketCMDVote(false));
                         mc.player.displayClientMessage(
-                                Component.translatable("gui.pwpwarfare.vote.cast_no")
+                                Component.translatable("gui.pwpwarfare.hud.vote.cast_no")
                                         .withStyle(ChatFormatting.RED),
                                 true);
                         return;
@@ -490,12 +490,12 @@ public class ClientEvents {
                 tryPlacePingLogic(mc);
             } else {
                 if (ClientData.voteActive && mc.screen == null && event.getAction() == 1) {
-                    if (ModKeyBindings.READY_YES_KEY.matches(event.getKey(), event.getScanCode())) {
+                    if (ModKeyBindings.VOTE_START_YES_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(true));
                         return;
                     }
 
-                    if (ModKeyBindings.READY_NO_KEY.matches(event.getKey(), event.getScanCode())) {
+                    if (ModKeyBindings.VOTE_START_NO_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(false));
                         return;
                     }

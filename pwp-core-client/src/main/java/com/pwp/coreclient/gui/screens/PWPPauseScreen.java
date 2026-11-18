@@ -23,7 +23,6 @@ import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.OptionsScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.controls.KeyBindsScreen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
@@ -139,7 +138,7 @@ public class PWPPauseScreen extends Screen {
                 .icon(UIIcon.SETTINGS));
         buttons.add(new UIButton(
                         Component.translatable("pwp_core.pause.controls"),
-                        () -> mc.setScreen(new KeyBindsScreen(this, mc.options)))
+                        () -> mc.setScreen(new PWPControlsScreen(this)))
                 .style(UIButton.Style.DARK)
                 .icon(UIIcon.KEYBOARD));
         buttons.add(new UIButton(

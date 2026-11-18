@@ -8,3 +8,10 @@ version = "1.0.0"
 displayName = "PWP Movement"
 authors = "Pigeo Studios"
 description = "Добавляет иммерсивное передвижение: наклон камеры, усталость при спринте, оглушение при приземлении и кастомный HUD."
+
+[[dependencies.pwp_movement]]
+modId="pwp_core_client"
+mandatory=true
+versionRange="[1.0,)"
+ordering="AFTER"
+side="BOTH"

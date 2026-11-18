@@ -67,8 +67,8 @@ public final class WarfareHints {
                 },
                 () -> Component.translatable(
                         "gui.pwpwarfare.hint.staging.ready",
-                        k(ModKeyBindings.READY_YES_KEY),
-                        k(ModKeyBindings.READY_NO_KEY),
+                        k(ModKeyBindings.VOTE_START_YES_KEY),
+                        k(ModKeyBindings.VOTE_START_NO_KEY),
                         k(ModKeyBindings.OPEN_SQUAD_MENU_KEY)));
         Hints.register(
                 "staging.map",

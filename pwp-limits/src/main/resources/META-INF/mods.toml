@@ -24,3 +24,10 @@ mandatory=true
 versionRange="[1.20.1,1.21)"
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.pwplimit]]
+modId="pwp_core_client"
+mandatory=true
+versionRange="[1.0,)"
+ordering="AFTER"
+side="BOTH"

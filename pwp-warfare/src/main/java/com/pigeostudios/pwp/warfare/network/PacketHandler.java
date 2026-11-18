@@ -31,7 +31,7 @@ public class PacketHandler {
      * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
      * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "4";
+    private static final String PROTOCOL_VERSION = "5";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),

@@ -4,6 +4,7 @@ import com.pwp.coreclient.gui.theme.PWPTheme;
 import com.pwp.coreclient.gui.theme.PWPTheme.Colors;
 import com.pwp.coreclient.gui.theme.PWPTheme.Spacing;
 import com.pwp.coreclient.gui.theme.PWPTheme.Styles;
+import com.pwp.coreclient.ui.hud.HudTheme;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -376,4 +377,220 @@ public final class WTheme {
     public static final int EDITOR_WORLD_ABOVE = 24;
     /** «Показать где» в мире — сколько мс светится столб. */
     public static final long EDITOR_HIGHLIGHT_MS = 15_000L;
+    // ------------------------------------------------------------ HUD матча (кит WHud поверх HudTheme core-client)
+    // Масштаб HUD — настройка CoreUiSettings.HUD_SCALE (Hud.zones()); общие токены — HudTheme.
+    public static final int HUD_PLATE_BG = HudTheme.PLATE_BG;
+
+    public static final int HUD_PLATE_BORDER = HudTheme.PLATE_BORDER;
+    public static final int HUD_PLATE_STRIPE = HudTheme.PLATE_STRIPE;
+    public static final int HUD_PLATE_PAD_X = HudTheme.PAD_X;
+    public static final int HUD_PLATE_PAD_Y = HudTheme.PAD_Y;
+    public static final int HUD_LABEL = HudTheme.LABEL;
+    public static final int HUD_VALUE = HudTheme.VALUE;
+    public static final int HUD_BAR_TRACK = HudTheme.BAR_TRACK;
+    public static final int HUD_BAR_FILL = Colors.ACCENT;
+    public static final int HUD_BAR_TICK = HudTheme.BAR_TICK;
+    public static final int HUD_BAR_BORDER = HudTheme.BAR_BORDER;
+    /** Обводка текста поверх мира (компас, подписи у прицела). */
+    public static final int HUD_TEXT_OUTLINE = 0xFF000000;
+    /** Иконка в счётчике/плашке HUD и зазор до текста. */
+    public static final int HUD_ICON = HudTheme.ICON;
+
+    public static final int HUD_ICON_GAP = HudTheme.ICON_GAP;
+    /** Значение «опасно» (0 патронов, пустой грузовик, вражеская постройка). */
+    public static final int HUD_DANGER = HudTheme.VALUE_DANGER;
+    /** «Идёт загрузка/пополнение» (грузовик у снабжения). */
+    public static final int HUD_POSITIVE = Colors.SUCCESS_LIGHT;
+    /** Пациент: «вас лечат». */
+    public static final int HUD_MEDIC = Colors.SUCCESS_LIGHT;
+
+    // ------------------------------------------------------------ HUD верх (этап 3: client/hud/TopHud)
+    // Размеры — базовые HUD-единицы внутри HudZones.topBand()/top() (масштаб HUD применяет HudDraw.begin).
+    /** Цвета команд на HUD: светлее токенов меню — читаются поверх мира. */
+    public static final int HUD_TEAM_BLUE = Colors.lerp(TEAM_BLUE, 0xFFFFFFFF, 0.22F);
+
+    public static final int HUD_TEAM_RED = Colors.lerp(TEAM_RED, 0xFFFFFFFF, 0.18F);
+    public static final int HUD_TEAM_NEUTRAL = HudTheme.LABEL;
+    /** Подкраска половин полосы захвата (BLUE слева, RED справа). */
+    public static final float HUD_TEAM_TINT = 0.28F;
+
+    /** Лента компаса: ширина, высота, видимый сектор (градусы). */
+    public static final int TOP_COMPASS_W = 200;
+
+    public static final int TOP_COMPASS_H = 24;
+    public static final float TOP_COMPASS_RANGE = 90F;
+    /** Подложка ленты режется на столько вертикальных полос с фейдом к краям. */
+    public static final int TOP_COMPASS_SLICES = 20;
+
+    public static final int TOP_COMPASS_BG = 0x9A050709;
+    public static final int TOP_COMPASS_LINE = 0x40FFFFFF;
+    public static final int TOP_TICK = 0xE6E8E9EB;
+    public static final int TOP_TICK_MINOR = 0x8CE8E9EB;
+    public static final int TOP_TICK_MAJOR_H = 5;
+    public static final int TOP_TICK_MINOR_H = 2;
+    /** Подписи: Y строки, масштаб чисел градусов (стороны света — в полный размер). */
+    public static final int TOP_LABEL_Y = 6;
+
+    public static final float TOP_NUMBER_SCALE = 0.6667F;
+    public static final int TOP_CARDINAL = Colors.ACCENT;
+    public static final int TOP_NUMBER = 0xD0B8BCC2;
+    /** Метки на ленте (точки, приказы, пинги, ноки): Y и размер иконки. */
+    public static final int TOP_MARK_Y = 15;
+
+    public static final int TOP_MARK = 9;
+    public static final int TOP_MARK_SMALL = 7;
+    /** Центральный маркер (треугольник сверху) и плашка азимута под ним. */
+    public static final int TOP_CENTER = Colors.ACCENT;
+
+    public static final int TOP_CENTER_TRI = 3;
+    public static final int TOP_BEARING_W = 24;
+    public static final int TOP_BEARING_H = 11;
+    public static final int TOP_BEARING_Y = 3;
+    /** Зазор между лентой компаса и полосой тикетов. */
+    public static final int TOP_ROW_GAP = 2;
+
+    /** Полоса тикетов: плашка команды (флаг + число), таймер матча между ними. */
+    public static final int TOP_TICKET_W = 46;
+
+    public static final int TOP_TIMER_W = 40;
+    public static final int TOP_SCORE_H = 13;
+    public static final int TOP_SCORE_GAP = 2;
+    public static final int TOP_FLAG_W = 12;
+    public static final int TOP_FLAG_H = 7;
+    /** Плавное изменение числа тикетов (доля пути за кадр при 60 FPS) и скачок без анимации. */
+    public static final float TOP_TICKET_RATE = 0.12F;
+
+    public static final int TOP_TICKET_SNAP = 300;
+    /** Мигание числа при «кровотечении» тикетов. */
+    public static final long TOP_BLEED_PULSE_MS = 900L;
+
+    /** Стек верх-центра: таймер Invasion, точка захвата, баннер события. */
+    public static final int TOP_PHASE_W = 150;
+
+    public static final int TOP_POINT_W = 180;
+    public static final int TOP_POINT_H = 24;
+    public static final int TOP_POINT_BAR_H = 4;
+    public static final int TOP_POINT_CHEVRONS = 3;
+    public static final int TOP_POINT_CHEVRON_STEP = 4;
+    public static final int TOP_BANNER_W = 210;
+    public static final int TOP_BANNER_H = 22;
+    public static final int TOP_BANNER_BAR_H = 2;
+    /** Баннер: держится duration + HOLD, затем гаснет за FADE. */
+    public static final long TOP_BANNER_HOLD_MS = 2000L;
+
+    public static final long TOP_BANNER_FADE_MS = 1000L;
+    /** Мигание метки нока на компасе. */
+    public static final long TOP_BLINK_MS = 1200L;
+
+    // ------------------------------------------------------------ HUD боковые стеки (этап 4: client/hud/SideHud)
+    // Размеры — базовые HUD-единицы внутри HudZones.left()/right() (масштаб HUD применяет HudDraw.begin).
+    /** Ёмкость списков панелей (голосующие, раненые, говорящие); лишние строки — «+N». */
+    public static final int SIDE_MAX_ROWS = 48;
+    /** Ширина панелей голосований и арты (не шире колонки). */
+    public static final int SIDE_PANEL_W = 165;
+    /** Ширина списка раненых у медика. */
+    public static final int SIDE_LIST_W = 130;
+    /** Максимальная ширина плашки говорящего. */
+    public static final int SIDE_VOICE_W = 130;
+    /** Зазор между строками панели и между плашками голоса. */
+    public static final int SIDE_LINE_GAP = 1;
+
+    public static final int SIDE_VOICE_GAP = 1;
+    /** Полоса прогресса панели (голоса, окно ответа на арту). */
+    public static final int SIDE_BAR_H = 3;
+    /** Деления полосы голосования — по голосу, пока голосующих не больше. */
+    public static final int SIDE_BAR_MAX_SEGMENTS = 12;
+    /** Метка голоса (квадрат) и точка команды. */
+    public static final int SIDE_VOTE_MARK = 5;
+    /** Порог голосования за командира: 50% голосов лидеров отрядов (как в правиле). */
+    public static final float SIDE_CMD_PASS = 0.5F;
+    /** Окно ответа на запрос арты, тики (полоса = остаток; прежнее значение HUD). */
+    public static final int SIDE_ART_WINDOW_TICKS = 200;
+    /** Раненые дальше — не в списке медика (блоки). */
+    public static final int SIDE_MEDIC_RANGE = 100;
+    /** Говорящий пропадает, если пакета голоса нет дольше (мс). */
+    public static final long SIDE_VOICE_TIMEOUT_MS = 1000L;
+    /** Выезд панелей: доля пути за кадр при 60 FPS (реальное время); порог «доехала». */
+    public static final float SIDE_SLIDE_RATE = 0.18F;
+
+    public static final float SIDE_SLIDE_EPS = 0.001F;
+    /** «Эквалайзер» говорящего: столбики, период, сдвиг фазы столбика и строки. */
+    public static final int SIDE_EQ_BARS = 3;
+
+    public static final long SIDE_EQ_PERIOD_MS = 520L;
+    public static final long SIDE_EQ_PHASE_MS = 170L;
+    public static final long SIDE_EQ_ROW_MS = 90L;
+    /** Плашка-тревога (кровотечение): добавка к высоте плашки, иконка, сила и период пульса. */
+    public static final int SIDE_ALERT_EXTRA_H = 6;
+
+    public static final int SIDE_ALERT_ICON = 12;
+    public static final float SIDE_ALERT_PULSE = 0.18F;
+    public static final long SIDE_ALERT_PULSE_MS = 1200L;
+
+    // ------------------------------------------------------------ HUD центр (этап 5: client/hud/CenterHud,
+    // pwp-medicine)
+    // Базовые HUD-единицы от центра экрана (масштаб HUD применяет HudDraw.begin); радиусы ≤ HudZones.CROSSHAIR / 2.
+    /** Кольцо канала дрона: внешний радиус и число сегментов (было 12 точек на r=21). */
+    public static final int CENTER_DRONE_R = 21;
+
+    public static final int CENTER_DRONE_SEGMENTS = 16;
+    /** Лопасти дрона (только установка): три по 120°, оборот за 90 тиков мира (4.5 с, как раньше). */
+    public static final int CENTER_BLADES = 3;
+
+    public static final float CENTER_BLADE_SPIN_TICKS = 90F;
+    /** Лопасть — от радиуса INNER на длину LEN, ширина W; кончик-акцент длиной TIP, ширина TIP_W. */
+    public static final int CENTER_BLADE_INNER = 5;
+
+    public static final int CENTER_BLADE_LEN = 10;
+    public static final int CENTER_BLADE_W = 4;
+    public static final int CENTER_BLADE_TIP = 3;
+    public static final int CENTER_BLADE_TIP_W = 2;
+    public static final int CENTER_BLADE = Colors.multiplyAlpha(PWPTheme.Text.HEADING, 0.8F);
+    public static final int CENTER_BLADE_SHADOW = HudTheme.RING_SHADOW;
+    /** Акцент канала: установка — фирменный, перезарядка мавика — «пополнение». */
+    public static final int CENTER_DRONE_DEPLOY = Colors.ACCENT;
+
+    public static final int CENTER_DRONE_RELOAD = HUD_POSITIVE;
+    /** Маркер над дроном: квадрат-плашка SIZE с ядром CORE, плашка секунд справа через GAP. */
+    public static final int CENTER_MARKER = 9;
+
+    public static final int CENTER_MARKER_CORE = 5;
+    public static final int CENTER_MARKER_GAP = 3;
+    /** Рамка маркера — цвет канала с этой прозрачностью (ядро — полный цвет). */
+    public static final float CENTER_MARKER_FRAME = 0.6F;
+    /** Высота маркера над точкой дрона (блоки): на высоте корпуса, а не на земле (как раньше). */
+    public static final double CENTER_MARKER_LIFT = 1.3;
+    /** Кольцо HP цели (медик с аптечкой): радиус, сегменты как у полосы HP, иконка в центре. */
+    public static final int CENTER_HP_R = 17;
+
+    public static final int CENTER_HP_SEGMENTS = HudTheme.VITALS_SEGMENTS;
+    public static final int CENTER_HP_ICON = 16;
+    /** Плашка значения справа от кольца (зазор от внешнего края кольца). */
+    public static final int CENTER_VALUE_GAP = 4;
+    /** HP цели: цвет полосы выше/ниже порога, как у своей полосы HP. */
+    public static final int CENTER_HP_FILL = HudTheme.HP_FILL;
+
+    public static final int CENTER_HP_LOW = HudTheme.HP_LOW;
+    public static final float CENTER_HP_LOW_FRACTION = HudTheme.HP_LOW_FRACTION;
+
+    // ------------------------------------------------------------ экран смерти (WarfareDeathScreen)
+    /** Затемнение под заголовком (мир за экраном не виден — как раньше, чёрный). */
+    public static final int DEATH_BG = PWPTheme.Colors.BACKGROUND;
+
+    public static final int DEATH_VIGNETTE = Colors.withAlpha(Colors.DANGER, 0x90);
+    public static final float DEATH_VIGNETTE_FRACTION = 0.35F;
+    public static final int DEATH_TITLE = PWPTheme.Text.DANGER;
+    public static final int DEATH_SUB = PWPTheme.Text.MUTED;
+    /** Заголовок увеличен в целое число раз (пиксельный шрифт остаётся чётким). */
+    public static final int DEATH_TITLE_SCALE = 2;
+    /** Акцентная линия под заголовком: ширина и толщина. */
+    public static final int DEATH_LINE_W = 120;
+
+    public static final int DEATH_LINE_H = 2;
+    /** Тайминги прежние: 1 с заголовок, 1 с фейд, затем меню деплоя. */
+    public static final long DEATH_HOLD_MS = 1000L;
+
+    public static final long DEATH_FADE_MS = 1000L;
+    /** Превью тест-стенда: цикл (заголовок → фейд → пауза), деплой не открывается. */
+    public static final long DEATH_PREVIEW_CYCLE_MS = 3500L;
 }
