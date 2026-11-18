@@ -3,18 +3,23 @@ package com.pigeostudios.pwp.warfare.network;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
+import com.pigeostudios.pwp.warfare.match.TeamVisibility;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.scores.Team;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
@@ -494,13 +499,91 @@ public class PacketHandler {
     // Отправляет пакет SyncGameData всем клиентам (перегрузка с WarfareWorldData)
     public static void sendToAllClients(
             WarfareWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
-        INSTANCE.send(PacketDistributor.ALL.noArg(), createSyncPacket(data, blueBleed, redBleed, bBlocked, rBlocked));
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        sendSync(server.getPlayerList().getPlayers(), data, blueBleed, redBleed, bBlocked, rBlocked);
     }
 
     // Отправляет пакет SyncGameData всем игрокам в указанном измерении
     public static void sendToAllClients(ServerLevel level, WarfareWorldData data) {
-        INSTANCE.send(
-                PacketDistributor.DIMENSION.with(level::dimension), createSyncPacket(data, false, false, false, false));
+        sendSync(level.players(), data, false, false, false, false);
+    }
+
+    // ------------------------------------------------------------ рассылка по командам (как в Squad)
+    // Врагу не уходят ФОБы/хабы, маркеры, техника, станции, отряды и запросы арты (TeamVisibility).
+    // На рассылку — не больше 3 сборок/кодирований пакета (BLUE, RED, наблюдатели/без команды),
+    // готовый vanilla-пакет переиспользуется для всех игроков ключа (как PacketDistributor.ALL).
+
+    /** Ключ видимости игрока: креатив/спектатор — наблюдатель (видит всё), иначе по scoreboard-команде. */
+    public static String viewerKey(ServerPlayer p) {
+        String team = p.getTeam() != null ? p.getTeam().getName() : null;
+        return TeamVisibility.viewerKey(team, p.isSpectator() || p.isCreative());
+    }
+
+    /** SyncGameData — каждому игроку версия его команды. */
+    public static void sendSync(
+            Collection<ServerPlayer> targets,
+            WarfareWorldData data,
+            boolean blueBleed,
+            boolean redBleed,
+            boolean bBlocked,
+            boolean rBlocked) {
+        sendByViewer(targets, key -> createSyncPacket(data, blueBleed, redBleed, bBlocked, rBlocked, key));
+    }
+
+    /** Отряды — только своей команды (наблюдателю — все). */
+    public static void syncSquads(Collection<ServerPlayer> targets, List<WarfareWorldData.Squad> squads) {
+        sendByViewer(targets, key -> new PacketSyncSquads(visibleTo(squads, s -> s.team, key)));
+    }
+
+    /** Отряды всем игрокам сервера (каждому — своей команды). */
+    public static void syncSquadsAll(List<WarfareWorldData.Squad> squads) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) syncSquads(server.getPlayerList().getPlayers(), squads);
+    }
+
+    public static void syncSquadsTo(ServerPlayer player, List<WarfareWorldData.Squad> squads) {
+        if (player != null) syncSquads(List.of(player), squads);
+    }
+
+    /**
+     * Состояние нока: своей команде и наблюдателям — всегда (компас медика, раненые на HUD),
+     * врагам — только тем, кто видит сущность (поза лежащего); при входе в обзор досылает
+     * {@code DownedHandler.onStartTracking}.
+     */
+    public static void syncDowned(ServerPlayer subject, boolean downed) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null || subject == null) return;
+        PacketSyncDownedState msg = new PacketSyncDownedState(subject.getId(), downed);
+        Packet<?> vp = INSTANCE.toVanillaPacket(msg, NetworkDirection.PLAY_TO_CLIENT);
+        String team = subject.getTeam() != null ? subject.getTeam().getName() : null;
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (p.connection != null && (p == subject || TeamVisibility.visible(team, viewerKey(p)))) {
+                p.connection.send(vp);
+            }
+        }
+        // враги рядом: повтор своим (они тоже трекают) безвреден — состояние идемпотентно
+        INSTANCE.send(PacketDistributor.TRACKING_ENTITY.with(() -> subject), msg);
+    }
+
+    private static void sendByViewer(Collection<ServerPlayer> targets, Function<String, Object> build) {
+        Map<String, Packet<?>> byKey = new HashMap<>();
+        for (ServerPlayer p : targets) {
+            if (p.connection == null) continue;
+            Packet<?> vp = byKey.computeIfAbsent(
+                    viewerKey(p), key -> INSTANCE.toVanillaPacket(build.apply(key), NetworkDirection.PLAY_TO_CLIENT));
+            p.connection.send(vp);
+        }
+    }
+
+    private static <T> List<T> visibleTo(List<T> list, Function<T, String> teamOf, String key) {
+        if (list == null) return new ArrayList<>();
+        if (TeamVisibility.ALL.equals(key)) return list;
+        List<T> out = new ArrayList<>(list.size());
+        for (T t : list) {
+            if (TeamVisibility.visible(teamOf.apply(t), key)) out.add(t);
+        }
+        return out;
     }
 
     public static void broadcastPlayerSkin(ServerPlayer targetPlayer) {
@@ -531,7 +614,15 @@ public class PacketHandler {
     }
 
     private static PacketSyncGameData createSyncPacket(
-            WarfareWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
+            WarfareWorldData data,
+            boolean blueBleed,
+            boolean redBleed,
+            boolean bBlocked,
+            boolean rBlocked,
+            String viewer) {
+        // запрос арты чужой команды врагу не показываем
+        var blueArt = TeamVisibility.visible("BLUE", viewer) ? data.match.blueArtRequest : null;
+        var redArt = TeamVisibility.visible("RED", viewer) ? data.match.redArtRequest : null;
         boolean hasBlue = !data.structures.blueRallies.isEmpty();
         boolean hasRed = !data.structures.redRallies.isEmpty();
         String bName = getFactionName(data.match.blueFaction, true);
@@ -563,9 +654,9 @@ public class PacketHandler {
                 data.match.mapCenterZ,
                 data.match.mapSizeBlocks,
                 data.match.currentMapImage,
-                data.vehicles.markedVehicles,
-                data.structures.hubs,
-                data.structures.vehicleStations,
+                visibleTo(data.vehicles.markedVehicles, v -> v.team, viewer),
+                visibleTo(data.structures.hubs, h -> h.team, viewer),
+                visibleTo(data.structures.vehicleStations, st -> st.team, viewer),
                 data.match.blueFaction,
                 data.match.redFaction,
                 bName,
@@ -580,7 +671,7 @@ public class PacketHandler {
                 data.match.redSpawns,
                 data.match.neutralSpawns,
                 getPlayerKitsMap(),
-                data.markers.activeMarkers,
+                visibleTo(data.markers.activeMarkers, m -> m.team, viewer),
                 data.match.voteActive,
                 data.match.voteTimer,
                 data.match.votes,
@@ -597,12 +688,12 @@ public class PacketHandler {
                 data.squadRegistry.redCmdVoteTimer,
                 data.squadRegistry.redCmdVotes,
                 data.match.activeStrikes,
-                data.match.blueArtRequest != null ? data.match.blueArtRequest.pos : BlockPos.ZERO,
-                data.match.redArtRequest != null ? data.match.redArtRequest.pos : BlockPos.ZERO,
-                data.match.blueArtRequest != null ? data.match.blueArtRequest.timer : 0,
-                data.match.redArtRequest != null ? data.match.redArtRequest.timer : 0,
-                data.match.blueArtRequest != null ? data.match.blueArtRequest.requesterName : "",
-                data.match.redArtRequest != null ? data.match.redArtRequest.requesterName : "",
+                blueArt != null ? blueArt.pos : BlockPos.ZERO,
+                redArt != null ? redArt.pos : BlockPos.ZERO,
+                blueArt != null ? blueArt.timer : 0,
+                redArt != null ? redArt.timer : 0,
+                blueArt != null ? blueArt.requesterName : "",
+                redArt != null ? redArt.requesterName : "",
                 data.match.blueReady,
                 data.match.redReady);
     }

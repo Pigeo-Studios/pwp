@@ -16,7 +16,6 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.events.DownedHandler;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketOpenSkinInventory;
-import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveAnswer;
 import com.pigeostudios.pwp.warfare.network.PacketVehicleDriveRequest;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
@@ -1123,7 +1122,7 @@ public class ModCommands {
         MarkerManager.syncToPlayer(player);
         PathManager.syncToPlayer(player);
         syncDataToAll(level, data);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
+        PacketHandler.syncSquadsAll(data.squadRegistry.squads);
         if (data.match.isGameStarted) {
             String currentDim = player.level().dimension().location().toString();
             BlockPos mainSpawn = internalTeamName.equals("Blue")

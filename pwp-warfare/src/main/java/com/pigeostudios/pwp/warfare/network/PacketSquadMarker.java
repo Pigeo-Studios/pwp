@@ -7,7 +7,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent.Context;
-import net.minecraftforge.network.PacketDistributor;
 
 // Пакет размещения маркера отряда на карте
 // Отправляется лидерами отделений для указания позиций
@@ -72,9 +71,7 @@ public class PacketSquadMarker {
                         }
 
                         data.setDirty();
-                        PacketHandler.INSTANCE.send(
-                                PacketDistributor.DIMENSION.with(level::dimension),
-                                new PacketSyncSquads(data.squadRegistry.squads));
+                        PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                         break;
                     }
                 }

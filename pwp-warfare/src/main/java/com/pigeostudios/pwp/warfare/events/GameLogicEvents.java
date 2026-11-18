@@ -17,12 +17,9 @@ import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketNotification;
 import com.pigeostudios.pwp.warfare.network.PacketOpenVictoryScreen;
-import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
-import com.pigeostudios.pwp.warfare.network.PacketSyncGameData;
 import com.pigeostudios.pwp.warfare.network.PacketSyncMapPlayers;
 import com.pigeostudios.pwp.warfare.network.PacketSyncPoint;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSpawners;
-import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
@@ -618,9 +615,7 @@ public class GameLogicEvents {
                                 if (squad.isRallyBlocked != currentlyBlocked) {
                                     squad.isRallyBlocked = currentlyBlocked;
                                     data.setDirty();
-                                    PacketHandler.INSTANCE.send(
-                                            PacketDistributor.DIMENSION.with(level::dimension),
-                                            new PacketSyncSquads(data.squadRegistry.squads));
+                                    PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                                 }
                             }
                         }
@@ -699,9 +694,7 @@ public class GameLogicEvents {
 
                                             data.squadRegistry.squads.remove(squad);
                                             data.setDirty();
-                                            PacketHandler.INSTANCE.send(
-                                                    PacketDistributor.DIMENSION.with(level::dimension),
-                                                    new PacketSyncSquads(data.squadRegistry.squads));
+                                            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                                         }
                                     }
                                 }
@@ -736,8 +729,7 @@ public class GameLogicEvents {
 
                     if (squadsChanged) {
                         data.setDirty();
-                        PacketHandler.INSTANCE.send(
-                                PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
+                        PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                     }
 
                     if (globalTick % 200 == 0) {
@@ -753,9 +745,7 @@ public class GameLogicEvents {
 
                         if (anyMarkerRemoved) {
                             data.setDirty();
-                            PacketHandler.INSTANCE.send(
-                                    PacketDistributor.DIMENSION.with(level::dimension),
-                                    new PacketSyncSquads(data.squadRegistry.squads));
+                            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                         }
                     }
 
@@ -1562,7 +1552,7 @@ public class GameLogicEvents {
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
             SquadActions.leaveCurrentSquad(player, data);
-            PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
+            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
             player.sendSystemMessage(Component.literal("Вы покинули отряд, потому что сменили мир.")
                     .withStyle(ChatFormatting.YELLOW));
         }
@@ -1596,10 +1586,8 @@ public class GameLogicEvents {
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
             sendSyncPacket(level, data);
-            PacketHandler.INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> player), new PacketSyncSquads(data.squadRegistry.squads));
-            PacketHandler.INSTANCE.send(
-                    PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+            PacketHandler.syncSquadsTo(player, data.squadRegistry.squads);
+            PacketHandler.syncDowned(player, false);
             MarkerManager.syncToPlayer(player);
             PathManager.syncToPlayer(player);
             // решение 5: без команды — сразу в меньшую (сменить можно в меню K)
@@ -1797,7 +1785,7 @@ public class GameLogicEvents {
         WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_YAW);
         WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_PITCH);
         WarfareData.of(newPlayer).putLong(WarfareKeys.LAST_REVIVE_TIME, 0L);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(newPlayer.getId(), false));
+        PacketHandler.syncDowned(newPlayer, false);
 
         if (event.isWasDeath()) {
             String teamName = oldPlayer.getTeam() != null ? oldPlayer.getTeam().getName() : null;
@@ -2089,9 +2077,7 @@ public class GameLogicEvents {
                 || redBleed) {
             sendSyncPacket(level, data, blueBleed, redBleed, teamBlueBlocked, teamRedBlocked);
             if (anySquadStatusChanged) {
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.DIMENSION.with(level::dimension),
-                        new PacketSyncSquads(data.squadRegistry.squads));
+                PacketHandler.syncSquadsAll(data.squadRegistry.squads);
             }
 
             lastBlueBlockedMap.put(dimKey, teamBlueBlocked);
@@ -2369,100 +2355,8 @@ public class GameLogicEvents {
             boolean redBleed,
             boolean bBlocked,
             boolean rBlocked) {
-        PacketSyncGameData packet = createSyncPacket(data, blueBleed, redBleed, bBlocked, rBlocked);
-        PacketHandler.INSTANCE.send(PacketDistributor.DIMENSION.with(level::dimension), packet);
-    }
-
-    private static PacketSyncGameData createSyncPacket(
-            WarfareWorldData data, boolean blueBleed, boolean redBleed, boolean bBlocked, boolean rBlocked) {
-        boolean hasBlue = !data.structures.blueRallies.isEmpty();
-        boolean hasRed = !data.structures.redRallies.isEmpty();
-        String bName = data.match.blueFaction.equals("none")
-                ? (String) WarfareConfig.BLUE_TEAM_CUSTOM_NAME.get()
-                : data.match.blueFaction.toUpperCase();
-        String rName = data.match.redFaction.equals("none")
-                ? (String) WarfareConfig.RED_TEAM_CUSTOM_NAME.get()
-                : data.match.redFaction.toUpperCase();
-        Map<String, String> pKits = new HashMap<>();
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                String current = WarfareData.of(p).getString(WarfareKeys.CURRENT_KIT);
-                String pending = WarfareData.of(p).getString(WarfareKeys.PENDING_KIT);
-                String displayKit = !pending.isEmpty() ? pending : current;
-                pKits.put(p.getScoreboardName(), displayKit.isEmpty() ? "Unassigned" : displayKit);
-            }
-        }
-
-        int blueCount = 0, redCount = 0;
-        if (server != null) {
-            for (ServerPlayer p : server.getPlayerList().getPlayers()) {
-                String t = p.getTeam() != null ? p.getTeam().getName() : "";
-                if (t.equalsIgnoreCase("Blue")) blueCount++;
-                else if (t.equalsIgnoreCase("Red")) redCount++;
-            }
-        }
-
-        return new PacketSyncGameData(
-                data.match.blueTickets,
-                data.match.redTickets,
-                blueCount,
-                redCount,
-                hasBlue,
-                hasRed,
-                blueBleed,
-                redBleed,
-                data.match.respawnTimer,
-                bBlocked,
-                rBlocked,
-                (Boolean) WarfareConfig.HUB_SPAWN_COSTS_MATERIALS.get(),
-                (Integer) WarfareConfig.HUB_SPAWN_MATERIAL_COST.get(),
-                data.match.mapCenterX,
-                data.match.mapCenterZ,
-                data.match.mapSizeBlocks,
-                data.match.currentMapImage,
-                data.vehicles.markedVehicles,
-                data.structures.hubs,
-                data.structures.vehicleStations,
-                data.match.blueFaction,
-                data.match.redFaction,
-                bName,
-                rName,
-                data.match.gameMode != null ? data.match.gameMode : "aas",
-                data.match.isGameStarted,
-                data.match.invasionSetupActive,
-                data.match.invasionSetupTimer,
-                data.match.invasionDefender != null ? data.match.invasionDefender : "RED",
-                data.match.capturePoints,
-                data.match.blueSpawns,
-                data.match.redSpawns,
-                data.match.neutralSpawns,
-                pKits,
-                data.markers.activeMarkers,
-                data.match.voteActive,
-                data.match.voteTimer,
-                data.match.votes,
-                data.squadRegistry.blueCMDId,
-                data.squadRegistry.redCMDId,
-                data.squadRegistry.blueCmdVoteActive,
-                data.squadRegistry.blueCmdCandidateName,
-                data.squadRegistry.blueCmdCandidateId,
-                data.squadRegistry.blueCmdVoteTimer,
-                data.squadRegistry.blueCmdVotes,
-                data.squadRegistry.redCmdVoteActive,
-                data.squadRegistry.redCmdCandidateName,
-                data.squadRegistry.redCmdCandidateId,
-                data.squadRegistry.redCmdVoteTimer,
-                data.squadRegistry.redCmdVotes,
-                data.match.activeStrikes,
-                data.match.blueArtRequest != null ? data.match.blueArtRequest.pos : BlockPos.ZERO,
-                data.match.redArtRequest != null ? data.match.redArtRequest.pos : BlockPos.ZERO,
-                data.match.blueArtRequest != null ? data.match.blueArtRequest.timer : 0,
-                data.match.redArtRequest != null ? data.match.redArtRequest.timer : 0,
-                data.match.blueArtRequest != null ? data.match.blueArtRequest.requesterName : "",
-                data.match.redArtRequest != null ? data.match.redArtRequest.requesterName : "",
-                data.match.blueReady,
-                data.match.redReady);
+        // единая сборка и рассылка по командам — PacketHandler (тут была копия createSyncPacket)
+        PacketHandler.sendSync(level.players(), data, blueBleed, redBleed, bBlocked, rBlocked);
     }
 
     private static boolean canCapture(WarfareWorldData.CapturePoint target, String team, WarfareWorldData data) {
@@ -2554,9 +2448,7 @@ public class GameLogicEvents {
             ResupplyHandler.clearCurios(player);
             player.inventoryMenu.broadcastChanges();
             data.setDirty();
-            PacketHandler.INSTANCE.send(
-                    PacketDistributor.DIMENSION.with(level::dimension),
-                    new PacketSyncSquads(data.squadRegistry.squads));
+            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
         }
     }
 

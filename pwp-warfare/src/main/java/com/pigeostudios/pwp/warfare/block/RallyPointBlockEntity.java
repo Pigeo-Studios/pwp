@@ -2,7 +2,6 @@ package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.client.ClientHooks;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
 import net.minecraft.core.BlockPos;
@@ -14,7 +13,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.PacketDistributor;
 
 public class RallyPointBlockEntity extends BlockEntity {
     public boolean isDecay = false;
@@ -57,8 +55,7 @@ public class RallyPointBlockEntity extends BlockEntity {
             }
             if (changed) {
                 data.setDirty();
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.ALL.noArg(), new PacketSyncSquads(data.squadRegistry.squads));
+                PacketHandler.syncSquadsAll(data.squadRegistry.squads);
             }
         }
     }

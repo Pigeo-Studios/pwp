@@ -2,7 +2,6 @@ package com.pigeostudios.pwp.warfare.block;
 
 import com.pigeostudios.pwp.warfare.events.GameLogicEvents;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -21,7 +20,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class RallyPointBlock extends BaseEntityBlock {
@@ -101,9 +99,7 @@ public class RallyPointBlock extends BaseEntityBlock {
                 }
                 data.setDirty();
                 PacketHandler.sendToAllClients(serverLevel, data);
-                PacketHandler.INSTANCE.send(
-                        PacketDistributor.DIMENSION.with(() -> level.dimension()),
-                        new PacketSyncSquads(data.squadRegistry.squads));
+                PacketHandler.syncSquadsAll(data.squadRegistry.squads);
             }
         }
         super.playerWillDestroy(level, pos, state, player);

@@ -30,7 +30,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent.Context;
-import net.minecraftforge.network.PacketDistributor;
 
 // Пакет действий с радиостанцией: установка точки сбора, строительство хабов и техники
 // Отправляется лидерами отрядов при использовании радио
@@ -124,9 +123,7 @@ public class PacketRadioAction {
                     }
 
                     data.setDirty();
-                    PacketHandler.INSTANCE.send(
-                            PacketDistributor.DIMENSION.with(player.level()::dimension),
-                            new PacketSyncSquads(data.squadRegistry.squads));
+                    PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                 } else {
                     handleConstructionLogic(msg.actionId, player, currentLevel, data);
                 }
@@ -327,8 +324,7 @@ public class PacketRadioAction {
 
         data.setDirty();
         PacketHandler.sendToAllClients(level, data);
-        PacketHandler.INSTANCE.send(
-                PacketDistributor.DIMENSION.with(level::dimension), new PacketSyncSquads(data.squadRegistry.squads));
+        PacketHandler.syncSquadsAll(data.squadRegistry.squads);
         return true;
     }
 }

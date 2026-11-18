@@ -6,7 +6,6 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
-import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
@@ -15,7 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.network.PacketDistributor;
 
 // Пакет управления отрядом: создание, вступление, выход, кик, повышение, блокировка
 // Содержит всю логику работы с отделениями игроков
@@ -72,9 +70,7 @@ public final class SquadActions {
         if (pTeam.equals("NEUTRAL") && !player.isCreative()) return;
         action.run(player, data, pName, pTeam);
         data.setDirty();
-        PacketHandler.INSTANCE.send(
-                PacketDistributor.DIMENSION.with(player.level()::dimension),
-                new PacketSyncSquads(data.squadRegistry.squads));
+        PacketHandler.syncSquadsAll(data.squadRegistry.squads);
     }
 
     /** Действие отряда #0 (бывший PacketSquadAction action=0). */

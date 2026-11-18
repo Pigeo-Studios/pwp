@@ -4,7 +4,6 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.match.TeamBalance;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
-import com.pigeostudios.pwp.warfare.network.PacketSyncSquads;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
 import com.pigeostudios.pwp.warfare.server.FactionDataLoader;
 import com.pigeostudios.pwp.warfare.squad.SquadActions;
@@ -173,9 +172,7 @@ public final class StagingService {
         player.setGameMode(GameType.SURVIVAL);
         PacketHandler.broadcastPlayerSkin(player);
         PacketHandler.sendToAllClients(player.serverLevel(), data);
-        PacketHandler.INSTANCE.send(
-                PacketDistributor.DIMENSION.with(player.level()::dimension),
-                new PacketSyncSquads(data.squadRegistry.squads));
+        PacketHandler.syncSquadsAll(data.squadRegistry.squads);
         String dim = player.level().dimension().location().toString();
         BlockPos spawn =
                 TeamBalance.BLUE.equals(target) ? data.match.blueSpawns.get(dim) : data.match.redSpawns.get(dim);

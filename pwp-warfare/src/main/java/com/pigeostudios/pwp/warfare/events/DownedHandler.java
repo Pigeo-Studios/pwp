@@ -134,7 +134,7 @@ public class DownedHandler {
                         SoundSource.PLAYERS,
                         1.5F,
                         1.0F);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), true));
+        PacketHandler.syncDowned(player, true);
     }
 
     @SubscribeEvent
@@ -202,7 +202,7 @@ public class DownedHandler {
         WarfareData.of(player).remove(WarfareKeys.KNOCKED_BY);
         WarfareData.of(player).putBoolean(WarfareKeys.GIVING_UP, true);
         WarfareData.of(player).putBoolean(WarfareKeys.IS_DOWNED, false);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+        PacketHandler.syncDowned(player, false);
         player.kill();
     }
 
@@ -352,6 +352,20 @@ public class DownedHandler {
         WarfareData.of(player).putLong(WarfareKeys.LAST_REVIVE_TIME, GameClock.worldTicks(player.level()));
         player.setHealth(2.0F);
         player.setPose(Pose.STANDING);
-        PacketHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
+        PacketHandler.syncDowned(player, false);
+    }
+
+    /**
+     * Враг вошёл в обзор раненого — досылаем состояние нока (поза лежащего). Своей команде
+     * оно уходит сразу из {@code PacketHandler.syncDowned}, врагам — только при видимости.
+     */
+    @SubscribeEvent
+    public static void onStartTracking(net.minecraftforge.event.entity.player.PlayerEvent.StartTracking event) {
+        if (event.getTarget() instanceof ServerPlayer target
+                && event.getEntity() instanceof ServerPlayer tracker
+                && WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
+            PacketHandler.INSTANCE.send(
+                    PacketDistributor.PLAYER.with(() -> tracker), new PacketSyncDownedState(target.getId(), true));
+        }
     }
 }

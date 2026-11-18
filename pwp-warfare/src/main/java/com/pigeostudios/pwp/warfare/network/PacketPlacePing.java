@@ -13,7 +13,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent.Context;
-import net.minecraftforge.network.PacketDistributor;
 
 // Пакет размещения пинга отряда (обычный или маркер перемещения)
 // Отправляется лидерами отделений для указания целей
@@ -80,9 +79,7 @@ public class PacketPlacePing {
                             }
 
                             data.setDirty();
-                            PacketHandler.INSTANCE.send(
-                                    PacketDistributor.DIMENSION.with(player.level()::dimension),
-                                    new PacketSyncSquads(data.squadRegistry.squads));
+                            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
                             break;
                         }
                     }
