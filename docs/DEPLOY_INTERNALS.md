@@ -24,6 +24,8 @@ cd core-service && ..\gradlew shadowJar
 3. Запустить и проверить `https://pigeo.asuscomm.com/api/v1/health`, затем страницу `https://pigeo.asuscomm.com/admin/dashboard` (ввести API-ключ).
 4. На первом старте core сам выполнит: `players.role` DEFAULT `'user'`, `UPDATE players SET role='user' WHERE role IN ('', 'PLAYER') OR role IS NULL`. Таблицы больше НЕ дропаются на старте.
 
+**Важно (18.11.2026):** моды теперь ходят на `http://127.0.0.1:8080` (было `localhost` — под Forge он резолвится в `::1`, и при бинде core на 127.0.0.1 лобби теряло core: «пустые» профили). Обновлять core-service и pwp-api/pwp-core-server ВМЕСТЕ.
+
 ## 3. Серверные моды
 Заменить jar из `*/build/libs` в `mods` лобби и в `match_template/mods` (и в уже созданных `match_*`, если они переиспользуются): pwp-api, pwp-blast-protection, pwp-core-client, pwp-core-server, pwp-cosmetics, pwp-limits (см. п. 4.3), pwp-lobby (только лобби), pwp-medicine, pwp-movement, pwp-warfare, pwp-drone (где он есть), sbwchunkload (только серверы). Старые копии `sbwchunkload-*.jar` удалить.
 

@@ -39,7 +39,20 @@ public class CoreApplication {
             .scheduleAtFixedRate(() -> cleanupExpiredTokens(), 1, 1, java.util.concurrent.TimeUnit.HOURS);
 
         int port = config.server.port;
+        String host = config.server.host == null || config.server.host.isBlank() ? "127.0.0.1" : config.server.host;
+        // На loopback дополнительно слушаем ::1: клиенты с "localhost" (Java на Windows -> IPv6) иначе
+        // получали connection refused (инцидент 18.11.2026). Только если IPv6 loopback есть на машине.
+        boolean alsoV6 = host.equals("127.0.0.1") && ipv6LoopbackUsable();
         Javalin app = Javalin.create(cfg -> {
+            if (alsoV6) {
+                cfg.jetty.addConnector((server, httpConfig) -> {
+                    var c = new org.eclipse.jetty.server.ServerConnector(
+                            server, new org.eclipse.jetty.server.HttpConnectionFactory(httpConfig));
+                    c.setHost("::1");
+                    c.setPort(port);
+                    return c;
+                });
+            }
             cfg.showJavalinBanner = false;
             cfg.http.maxRequestSize = 64L * 1024 * 1024; // скриншоты (base64 BMP ~ 10 МБ)
             cfg.bundledPlugins.enableCors(cors -> cors.addRule(http -> http.anyHost()));
@@ -102,9 +115,8 @@ public class CoreApplication {
             DatabaseManager.shutdown();
         }));
 
-        String host = config.server.host == null || config.server.host.isBlank() ? "127.0.0.1" : config.server.host;
         app.start(host, port);
-        log.info("PWP Core Service running on {}:{}", host, port);
+        log.info("PWP Core Service running on {}:{}{}", host, port, alsoV6 ? " (+ [::1])" : "");
     }
 
     private static void loadVersion() {
@@ -236,5 +248,14 @@ public class CoreApplication {
     public static class LoggingConfig {
         public String level = "INFO";
         public String file = "logs/core-service.log";
+    }
+
+    private static boolean ipv6LoopbackUsable() {
+        try (var s = new java.net.ServerSocket(0, 1, java.net.InetAddress.getByName("::1"))) {
+            return true;
+        } catch (java.io.IOException e) {
+            log.info("IPv6 loopback недоступен — слушаем только 127.0.0.1: {}", e.getMessage());
+            return false;
+        }
     }
 }

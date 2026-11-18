@@ -16,7 +16,8 @@ import org.slf4j.LoggerFactory;
 public class CoreServerMod {
     public static final String MODID = "pwpcore";
     public static final Logger log = LoggerFactory.getLogger(CoreServerMod.class);
-    public static final String API_BASE = "http://localhost:8080";
+    // 127.0.0.1, не localhost (localhost -> ::1 в Java на Windows; инцидент 18.11.2026 — лобби не видело core)
+    public static final String API_BASE = "http://127.0.0.1:8080";
 
     public static boolean isMatchServer = false;
 

@@ -45,7 +45,8 @@ public final class CoreApi {
     private static final HttpClient HTTP =
             HttpClient.newBuilder().connectTimeout(TIMEOUT).executor(EXECUTOR).build();
 
-    private static volatile String baseUrl = "http://localhost:8080";
+    // 127.0.0.1, не localhost: Java на Windows резолвит localhost в ::1, а core слушает IPv4 loopback
+    private static volatile String baseUrl = "http://127.0.0.1:8080";
     private static volatile String apiKey = "";
 
     private CoreApi() {}
