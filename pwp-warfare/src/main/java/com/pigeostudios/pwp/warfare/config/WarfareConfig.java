@@ -42,6 +42,15 @@ public class WarfareConfig {
     public static final ConfigValue<String> REVIVE_ITEM = BUILDER.comment(
                     "Registry name of the item used to revive (e.g. 'pwp_medicine:medkit')")
             .define("reviveItem", "pwp_medicine:medkit");
+    public static final IntValue LOBBY_PORT = BUILDER.comment(
+                    "Port of the lobby server players are sent back to after a match (was hardcoded 25565)")
+            .defineInRange("lobbyPort", 25565, 1, 65535);
+    public static final IntValue REVIVE_TIME_SECONDS = BUILDER.comment(
+                    "How long a medic holds right-click with the revive item to revive a downed teammate (seconds)")
+            .defineInRange("reviveTimeSeconds", 5, 0, 30);
+    public static final IntValue TEAMKILL_SPECTATOR_THRESHOLD = BUILDER.comment(
+                    "Team kills after which the player is moved to spectator")
+            .defineInRange("teamkillSpectatorThreshold", 8, 1, 100);
     public static final IntValue REVIVE_COOLDOWN_SECONDS = BUILDER.comment(
                     "Time in seconds where dying again results in instant death")
             .defineInRange("reviveCooldownSeconds", 120, 0, 600);

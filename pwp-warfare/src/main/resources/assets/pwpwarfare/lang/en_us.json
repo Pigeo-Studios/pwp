@@ -886,5 +886,15 @@
     "gui.pwpwarfare.hud.point.state.neutralizing": "NEUTRALIZING",
     "gui.pwpwarfare.hud.point.state.securing": "SECURING",
     "gui.pwpwarfare.hud.point.state.held": "HELD",
-    "gui.pwpwarfare.hud.point.state.neutral": "NEUTRAL"
+    "gui.pwpwarfare.hud.point.state.neutral": "NEUTRAL",
+    "pwpwarfare.art.confirmed": "STRATEGIC: artillery strike confirmed by the commander!",
+    "pwpwarfare.revive.medic_only": "Only a medic can revive",
+    "pwpwarfare.revive.enemy": "You can't revive an enemy!",
+    "pwpwarfare.revive.progress": "Reviving… %s%%",
+    "pwpwarfare.revive.done": "Teammate revived!",
+    "pwpwarfare.revive.cancelled": "Revive interrupted — stay close and keep the medkit in hand",
+    "pwpwarfare.match.return_to_lobby": "[PWP] Returning to the lobby...",
+    "gui.pwpwarfare.victory.stat.assists": "Assists",
+    "gui.pwpwarfare.victory.stat.xp": "XP earned",
+    "gui.pwpwarfare.victory.stat.coins": "Coins earned"
 }

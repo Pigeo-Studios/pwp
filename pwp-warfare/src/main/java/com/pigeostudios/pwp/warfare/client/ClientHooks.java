@@ -394,6 +394,7 @@ public class ClientHooks {
             int matchHeadshots,
             int matchScore,
             int matchDurationSec) {
+        ClientData.resetMatchRewards();
         Minecraft.getInstance()
                 .setScreen(new VictoryScreen(
                         winnerName,

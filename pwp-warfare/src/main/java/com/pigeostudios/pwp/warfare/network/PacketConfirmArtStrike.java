@@ -47,15 +47,15 @@ public class PacketConfirmArtStrike {
                     if (request != null) {
                         if (msg.accept) {
                             data.match.activeStrikes.add(new WarfareWorldData.ActiveStrike(request.pos, team));
-                            level.getServer()
-                                    .getPlayerList()
-                                    .broadcastSystemMessage(
-                                            Component.literal(
-                                                            "СТРАТЕГИЧЕСКИ: Артиллерийский удар подтверждён командиром!")
-                                                    .withStyle(new ChatFormatting[] {
-                                                        ChatFormatting.DARK_RED, ChatFormatting.BOLD
-                                                    }),
-                                            false);
+                            // только своей команде (раньше слышал весь сервер, включая врага)
+                            Component msgText = Component.translatable("pwpwarfare.art.confirmed")
+                                    .withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD);
+                            for (ServerPlayer p :
+                                    level.getServer().getPlayerList().getPlayers()) {
+                                if (p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(team)) {
+                                    p.sendSystemMessage(msgText);
+                                }
+                            }
                         }
 
                         if (team.equals("BLUE")) {

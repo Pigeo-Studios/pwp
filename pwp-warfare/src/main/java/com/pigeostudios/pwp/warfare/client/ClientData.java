@@ -182,4 +182,21 @@ public class ClientData {
             this.startTime = System.currentTimeMillis();
         }
     }
+
+    // ===== Награды последнего матча (RewardPackets.MatchRewards); -1 — ещё считаются =====
+    public static long lastMatchXp = -1;
+    public static long lastMatchCoins = -1;
+    public static int lastMatchAssists = -1;
+
+    public static void onMatchRewards(long xp, long coins, int assists) {
+        lastMatchXp = xp;
+        lastMatchCoins = coins;
+        lastMatchAssists = assists;
+    }
+
+    public static void resetMatchRewards() {
+        lastMatchXp = -1;
+        lastMatchCoins = -1;
+        lastMatchAssists = -1;
+    }
 }

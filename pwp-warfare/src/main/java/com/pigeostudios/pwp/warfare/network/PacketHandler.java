@@ -36,7 +36,7 @@ public class PacketHandler {
      * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
      * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "5";
+    private static final String PROTOCOL_VERSION = "6";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -373,6 +373,8 @@ public class PacketHandler {
         com.pigeostudios.pwp.warfare.admin.MapEditorPackets.register(v2);
         // этап 4: стейджинг — состояние ожидания, ответ выбора команды, «взять снаряжение», быстрый отряд
         com.pigeostudios.pwp.warfare.staging.StagingPackets.register(v2);
+        // награды за матч на экран победы (только в конец)
+        com.pigeostudios.pwp.warfare.stats.RewardPackets.register(v2);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
@@ -687,7 +689,7 @@ public class PacketHandler {
                 data.squadRegistry.redCmdCandidateId,
                 data.squadRegistry.redCmdVoteTimer,
                 data.squadRegistry.redCmdVotes,
-                data.match.activeStrikes,
+                visibleTo(data.match.activeStrikes, st -> st.team, viewer),
                 blueArt != null ? blueArt.pos : BlockPos.ZERO,
                 redArt != null ? redArt.pos : BlockPos.ZERO,
                 blueArt != null ? blueArt.timer : 0,

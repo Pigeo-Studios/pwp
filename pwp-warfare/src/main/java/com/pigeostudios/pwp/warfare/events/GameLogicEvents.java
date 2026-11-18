@@ -957,12 +957,15 @@ public class GameLogicEvents {
             if (returnToLobbyTimer > 0) {
                 returnToLobbyTimer--;
                 if (returnToLobbyTimer == 0 && returnToLobbyServer != null) {
-                    int lobbyPort = 25565;
+                    int lobbyPort = WarfareConfig.LOBBY_PORT.get();
                     for (ServerPlayer player :
                             returnToLobbyServer.getPlayerList().getPlayers()) {
                         // Локальные игроки получают LAN-адрес лобби, внешние — домен
                         String lobbyHost = TransferHosts.resolveTransferHost(player);
-                        player.sendSystemMessage(Component.literal("§e[PWP] Возврат в лобби..."), false);
+                        player.sendSystemMessage(
+                                Component.translatable("pwpwarfare.match.return_to_lobby")
+                                        .withStyle(ChatFormatting.YELLOW),
+                                false);
                         com.pwp.coreclient.network.PacketHandler.INSTANCE.send(
                                 net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> player),
                                 new ConnectToServerPacket(lobbyHost, lobbyPort));

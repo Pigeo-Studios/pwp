@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.events;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
+import com.pigeostudios.pwp.warfare.match.CombatRules;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketSyncDownedState;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
@@ -216,7 +217,9 @@ public class DownedHandler {
                         || !medic.getTeam().isAlliedTo(target.getTeam())) {
                     if (!medic.level().isClientSide) {
                         medic.displayClientMessage(
-                                Component.literal("Нельзя поднять врага!").withStyle(ChatFormatting.RED), true);
+                                Component.translatable("pwpwarfare.revive.enemy")
+                                        .withStyle(ChatFormatting.RED),
+                                true);
                     }
 
                     event.setCanceled(true);
@@ -233,14 +236,25 @@ public class DownedHandler {
                 String reviveItemName = (String) WarfareConfig.REVIVE_ITEM.get();
                 Item reviveItem = (Item) ForgeRegistries.ITEMS.getValue(new ResourceLocation(reviveItemName));
                 if (held.getItem() == reviveItem) {
-                    revivePlayer(target);
-                    MatchStatsTracker.get().recordRevive(medic);
-                    if (!medic.isCreative()) {
-                        held.shrink(1);
+                    event.setCanceled(true);
+                    // как в Squad: поднимает только медик, удерживая предмет REVIVE_TIME_SECONDS
+                    if (!CombatRules.canRevive(
+                            WarfareData.of(medic).getString(WarfareKeys.CURRENT_KIT), medic.isCreative())) {
+                        medic.displayClientMessage(
+                                Component.translatable("pwpwarfare.revive.medic_only")
+                                        .withStyle(ChatFormatting.RED),
+                                true);
+                        return;
                     }
-
+                    ReviveChannel cur = REVIVES.get(medic.getUUID());
+                    if (cur != null && cur.target.equals(target.getUUID())) return; // уже поднимает
+                    REVIVES.put(
+                            medic.getUUID(),
+                            new ReviveChannel(target.getUUID(), GameClock.serverTicks(medic.server), event.getHand()));
                     medic.displayClientMessage(
-                            Component.literal("Союзник поднят!").withStyle(ChatFormatting.GREEN), true);
+                            Component.translatable("pwpwarfare.revive.progress", 0)
+                                    .withStyle(ChatFormatting.GREEN),
+                            true);
                 }
             }
         }
@@ -251,7 +265,7 @@ public class DownedHandler {
         int teamKills = WarfareData.of(attacker).getInt(WarfareKeys.TEAM_KILLS) + 1;
         WarfareData.of(attacker).putInt(WarfareKeys.TEAM_KILLS, teamKills);
 
-        if (teamKills >= 8) {
+        if (teamKills >= WarfareConfig.TEAMKILL_SPECTATOR_THRESHOLD.get()) {
             attacker.setGameMode(GameType.SPECTATOR);
             WarfareData.of(attacker).putBoolean(WarfareKeys.TEAM_KILL_SPECTATOR, true);
             MutableComponent broadcast = Component.translatable(
@@ -366,6 +380,68 @@ public class DownedHandler {
                 && WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
             PacketHandler.INSTANCE.send(
                     PacketDistributor.PLAYER.with(() -> tracker), new PacketSyncDownedState(target.getId(), true));
+        }
+    }
+
+    // ===== Канал подъёма (в памяти: serverTicks; рестарт сервера = канал сброшен) =====
+
+    private record ReviveChannel(java.util.UUID target, long startTick, net.minecraft.world.InteractionHand hand) {}
+
+    private static final java.util.Map<java.util.UUID, ReviveChannel> REVIVES = new java.util.HashMap<>();
+
+    @SubscribeEvent
+    public static void onReviveTick(net.minecraftforge.event.TickEvent.ServerTickEvent event) {
+        if (event.phase != Phase.END || REVIVES.isEmpty()) return;
+        net.minecraft.server.MinecraftServer server = event.getServer();
+        long now = GameClock.serverTicks(server);
+        long required = WarfareConfig.REVIVE_TIME_SECONDS.get() * 20L;
+        var it = REVIVES.entrySet().iterator();
+        while (it.hasNext()) {
+            var e = it.next();
+            ServerPlayer medic = server.getPlayerList().getPlayer(e.getKey());
+            ServerPlayer target = server.getPlayerList().getPlayer(e.getValue().target());
+            if (medic == null || target == null) {
+                it.remove();
+                continue;
+            }
+            Item reviveItem =
+                    ForgeRegistries.ITEMS.getValue(new ResourceLocation((String) WarfareConfig.REVIVE_ITEM.get()));
+            ItemStack held = medic.getItemInHand(e.getValue().hand());
+            boolean stateOk = WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)
+                    && medic.isAlive()
+                    && !WarfareData.of(medic).getBoolean(WarfareKeys.IS_DOWNED)
+                    && medic.level() == target.level()
+                    && held.getItem() == reviveItem;
+            long elapsed = now - e.getValue().startTick();
+            switch (CombatRules.reviveStep(elapsed, required, medic.distanceToSqr(target), stateOk)) {
+                case CONTINUE -> {
+                    if (elapsed % 10 == 0) {
+                        medic.displayClientMessage(
+                                Component.translatable(
+                                                "pwpwarfare.revive.progress",
+                                                CombatRules.revivePercent(elapsed, required))
+                                        .withStyle(ChatFormatting.GREEN),
+                                true);
+                    }
+                }
+                case DONE -> {
+                    it.remove();
+                    revivePlayer(target);
+                    MatchStatsTracker.get().recordRevive(medic);
+                    if (!medic.isCreative()) held.shrink(1);
+                    medic.displayClientMessage(
+                            Component.translatable("pwpwarfare.revive.done").withStyle(ChatFormatting.GREEN), true);
+                }
+                case CANCEL_DISTANCE, CANCEL_STATE -> {
+                    it.remove();
+                    if (WarfareData.of(target).getBoolean(WarfareKeys.IS_DOWNED)) {
+                        medic.displayClientMessage(
+                                Component.translatable("pwpwarfare.revive.cancelled")
+                                        .withStyle(ChatFormatting.YELLOW),
+                                true);
+                    }
+                }
+            }
         }
     }
 }

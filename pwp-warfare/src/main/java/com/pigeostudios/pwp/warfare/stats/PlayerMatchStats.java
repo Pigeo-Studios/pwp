@@ -13,6 +13,7 @@ public class PlayerMatchStats {
     public int vehicleKills;
     public int captures;
     public int revives;
+    public int assists;
     public double damageDealt;
     public double healingDone;
     public int suppliesDelivered;

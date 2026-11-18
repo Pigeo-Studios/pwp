@@ -1,5 +1,6 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
+import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WDraw;
 import com.pigeostudios.pwp.warfare.client.gui.ui.WarfareIcon;
 import com.pwp.coreclient.gui.theme.PWPTheme;
@@ -91,8 +92,16 @@ public class VictoryScreen extends Screen {
             stat("vehicle_kills", String.valueOf(matchVehicleKills)),
             stat("vehicles_destroyed", String.valueOf(matchVehiclesDestroyed + matchAirVehiclesDestroyed)),
             stat("captures", String.valueOf(matchCaptures)),
-            stat("headshots", String.valueOf(matchHeadshots)),
+            // хедшоты не считаются (всегда 0) — вместо них ассисты и награды из RewardPackets
+            stat("assists", pending(ClientData.lastMatchAssists)),
+            stat("xp", pending(ClientData.lastMatchXp)),
+            stat("coins", pending(ClientData.lastMatchCoins)),
         };
+    }
+
+    /** «…» пока сервер не прислал награды. */
+    private static String pending(long v) {
+        return v < 0 ? "…" : String.format("%,d", v);
     }
 
     private static Component[] stat(String key, String value) {

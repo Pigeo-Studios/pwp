@@ -886,5 +886,15 @@
     "gui.pwpwarfare.hud.point.state.neutralizing": "НЕЙТРАЛИЗАЦИЯ",
     "gui.pwpwarfare.hud.point.state.securing": "УКРЕПЛЕНИЕ",
     "gui.pwpwarfare.hud.point.state.held": "УДЕРЖАНА",
-    "gui.pwpwarfare.hud.point.state.neutral": "НЕЙТРАЛЬНАЯ"
+    "gui.pwpwarfare.hud.point.state.neutral": "НЕЙТРАЛЬНАЯ",
+    "pwpwarfare.art.confirmed": "СТРАТЕГИЧЕСКИ: артиллерийский удар подтверждён командиром!",
+    "pwpwarfare.revive.medic_only": "Поднимать раненых может только медик",
+    "pwpwarfare.revive.enemy": "Нельзя поднять врага!",
+    "pwpwarfare.revive.progress": "Поднимаем… %s%%",
+    "pwpwarfare.revive.done": "Союзник поднят!",
+    "pwpwarfare.revive.cancelled": "Подъём прерван — стойте рядом и держите аптечку в руке",
+    "pwpwarfare.match.return_to_lobby": "[PWP] Возврат в лобби...",
+    "gui.pwpwarfare.victory.stat.assists": "Ассисты",
+    "gui.pwpwarfare.victory.stat.xp": "Получено XP",
+    "gui.pwpwarfare.victory.stat.coins": "Получено монет"
 }

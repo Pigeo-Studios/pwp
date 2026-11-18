@@ -3,6 +3,7 @@ package com.pigeostudios.pwp.warfare.stats;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pwp.api.core.CoreApi;
@@ -54,6 +55,7 @@ public class MatchStatsTracker {
         this.mode = mode;
         this.startedAt = System.currentTimeMillis();
         this.active = true;
+        AssistTracker.clear();
         this.players.clear();
         this.killFeed.clear();
         log.info("Match stats tracking started: {} ({})", mapName, mode);
@@ -88,6 +90,10 @@ public class MatchStatsTracker {
 
         k.recordKill();
         v.recordDeath();
+        for (java.util.UUID helper : AssistTracker.takeAssists(victim, killer.getUUID())) {
+            PlayerMatchStats h = players.get(helper.toString());
+            if (h != null) h.assists++;
+        }
 
         if (distance > k.longestKill) k.longestKill = distance;
 
@@ -254,7 +260,7 @@ public class MatchStatsTracker {
                                 ps.team,
                                 winner,
                                 ps.kills,
-                                0,
+                                ps.assists,
                                 ps.vehicleKills,
                                 ps.captures,
                                 ps.revives,
@@ -277,6 +283,7 @@ public class MatchStatsTracker {
                                 + ps.vehicleKills * 150L
                                 + ps.captures * 100L
                                 + ps.revives * 75L
+                                + ps.assists * 25L
                                 + durationSec / 60 * 10L;
                         coins = ps.kills * 10L + ps.vehicleKills * 30L + ps.captures * 25L + ps.revives * 15L;
                         if (isWin) {
@@ -288,6 +295,7 @@ public class MatchStatsTracker {
                         }
                     }
 
+                    sendRewards(ps.uuid, xp, coins, ps.assists);
                     CoreApi.await(CoreApi.addXp(ps.uuid, xp, "MATCH"));
                     CoreApi.await(CoreApi.addCurrency(ps.uuid, coins, "MATCH_REWARD"));
                     CoreApi.await(CoreApi.checkRank(ps.uuid));
@@ -354,15 +362,21 @@ public class MatchStatsTracker {
                                             // Локальные игроки получают LAN-адрес лобби, внешние — домен
                                             String host = TransferHosts.resolveTransferHost(player);
                                             player.sendSystemMessage(
-                                                    Component.literal("§e[PWP] Возврат в лобби..."), false);
+                                                    Component.translatable("pwpwarfare.match.return_to_lobby")
+                                                            .withStyle(net.minecraft.ChatFormatting.YELLOW),
+                                                    false);
                                             PacketHandler.INSTANCE.send(
                                                     PacketDistributor.PLAYER.with(() -> player),
-                                                    new ConnectToServerPacket(host, 25565));
+                                                    new ConnectToServerPacket(host, WarfareConfig.LOBBY_PORT.get()));
                                         }
-                                        Thread.sleep(2000);
                                     } catch (Exception ex) {
                                         log.warn("Transfer failed, halting anyway: {}", ex.getMessage());
                                     }
+                                });
+                                // 2 с клиентам на переход — ждём ЗДЕСЬ, в фоновом потоке. Раньше
+                                // Thread.sleep(2000) стоял внутри server.execute и вешал главный поток.
+                                Thread.sleep(2000);
+                                server.execute(() -> {
                                     try {
                                         server.halt(false);
                                     } catch (Exception ex) {
@@ -389,5 +403,23 @@ public class MatchStatsTracker {
 
     public Map<String, PlayerMatchStats> getAllPlayers() {
         return players;
+    }
+
+    /** Награды игроку на экран победы (вызывается из фонового потока расчёта). */
+    private static void sendRewards(String uuid, long xp, long coins, int assists) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        server.execute(() -> {
+            try {
+                ServerPlayer p = server.getPlayerList().getPlayer(java.util.UUID.fromString(uuid));
+                if (p != null) {
+                    // канал pwpwarfare (здешний импорт PacketHandler — канал core-client для переброса)
+                    com.pigeostudios.pwp.warfare.network.PacketHandler.INSTANCE.send(
+                            PacketDistributor.PLAYER.with(() -> p), new RewardPackets.MatchRewards(xp, coins, assists));
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("Награды: некорректный uuid {}", uuid);
+            }
+        });
     }
 }
