@@ -129,7 +129,7 @@ public class AuthController {
 
             if (needs2fa) {
                 String code = PlayerRepository.create2faCode(pl.uuid, clientIp);
-                PlayerRepository.log(pl.uuid, "2fa_sent", clientIp, "2fa code: " + code);
+                PlayerRepository.log(pl.uuid, "2fa_sent", clientIp, "2fa code sent"); // сам код в лог НЕ пишем
                 send2faToTelegram(pl.telegramId, code);
                 ctx.json(ApiResponse.ok(Map.of("2fa_required", true, "uuid", pl.uuid, "telegram_id", pl.telegramId)));
             } else {

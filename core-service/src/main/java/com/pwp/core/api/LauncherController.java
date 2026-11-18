@@ -19,6 +19,11 @@ import java.sql.ResultSet;
 import java.util.*;
 
 public class LauncherController {
+    /** Лимиты публичного /launcher/logs. */
+    private static final long MAX_LOG_BODY_BYTES = 2L * 1024 * 1024;
+
+    private static final int MAX_LOG_ENTRIES = 500;
+
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LauncherController.class);
@@ -187,6 +192,11 @@ public class LauncherController {
 
         // ── Upload launcher logs ────────────────────────────
         app.post("/api/v1/launcher/logs", ctx -> {
+            // публичный эндпоинт: ограничиваем размер тела и число записей (раньше — до 64 МБ и без лимита)
+            if (ctx.contentLength() > MAX_LOG_BODY_BYTES) {
+                ctx.status(413).json(ApiResponse.error("logs too large"));
+                return;
+            }
             LogUploadReq req = ctx.bodyAsClass(LogUploadReq.class);
             if (req.logs == null || req.logs.isEmpty()) {
                 ctx.json(ApiResponse.error("logs required"));
@@ -200,7 +210,8 @@ public class LauncherController {
             String sql = "INSERT INTO launcher_logs (account_uuid, level, message) VALUES (?, ?, ?)";
             try (Connection c = DatabaseManager.getConnection();
                  PreparedStatement ps = c.prepareStatement(sql)) {
-                for (var entry : req.logs) {
+                for (var entry : req.logs.subList(0, Math.min(req.logs.size(), MAX_LOG_ENTRIES))) {
+                    if (entry == null) continue;
                     ps.setString(1, finalUuid);
                     String level = entry.level != null ? entry.level : "INFO";
                     if (level.length() > 8) level = level.substring(0, 8);

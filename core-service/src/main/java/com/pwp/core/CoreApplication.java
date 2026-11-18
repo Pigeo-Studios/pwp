@@ -47,6 +47,13 @@ public class CoreApplication {
         });
 
         app.before("/api/*", ctx -> AuthMiddleware.handle(ctx, config.api));
+        // /api/v1/admin/* пропускается AuthMiddleware как «публичный» (веб/лаунчер-админы ходят
+        // Bearer-сессией без HMAC), поэтому право проверяется здесь — ДЛЯ ВСЕХ маршрутов сразу.
+        // Раньше verifyAdmin вызывал каждый хэндлер сам, и find-user/set-role/audit были открыты анонимно.
+        app.before("/api/v1/admin/*", ctx -> {
+            if (ctx.method() == io.javalin.http.HandlerType.OPTIONS) return; // CORS preflight
+            com.pwp.core.api.AdminController.verifyAdmin(ctx);
+        });
 
         app.get("/api/v1/health", ctx -> ctx.json(java.util.Map.of("status", "ok")));
         app.get("/api/v1/version", ctx -> ctx.json(java.util.Map.of(
@@ -88,8 +95,9 @@ public class CoreApplication {
             DatabaseManager.shutdown();
         }));
 
-        app.start(port);
-        log.info("PWP Core Service running on port {}", port);
+        String host = config.server.host == null || config.server.host.isBlank() ? "127.0.0.1" : config.server.host;
+        app.start(host, port);
+        log.info("PWP Core Service running on {}:{}", host, port);
     }
 
     private static void loadVersion() {
@@ -180,7 +188,7 @@ public class CoreApplication {
 
     public static class ServerConfig {
         public int port = 8080;
-        public String host = "0.0.0.0";
+        public String host = "127.0.0.1";
     }
 
     public static class DatabaseConfig {

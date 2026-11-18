@@ -215,16 +215,9 @@ public class DatabaseManager {
                     + "('TEAMKILL', -50, -10, -50)");
             log.info("Database tables verified");
 
-            // Migration: rebuild account FK tables (old INT FK -> new UUID FK)
-            try (Statement d = c.createStatement()) {
-                d.execute("DROP TABLE IF EXISTS broadcast_log");
-                d.execute("DROP TABLE IF EXISTS player_logs");
-                d.execute("DROP TABLE IF EXISTS password_resets");
-                d.execute("DROP TABLE IF EXISTS twofa_codes");
-                // d.execute("DROP TABLE IF EXISTS sessions"); // НЕ ДРОПАТЬ — теряются сессии
-                d.execute("DROP TABLE IF EXISTS trusted_ips");
-                d.execute("DROP TABLE IF EXISTS accounts");
-            } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+            // Была разовая миграция INT FK -> UUID FK, которая DROP'ала player_logs/password_resets/
+            // twofa_codes/trusted_ips/broadcast_log/accounts на КАЖДОМ старте (аудит терялся при рестарте).
+            // Таблицы давно в новой схеме и создаются ниже через CREATE TABLE IF NOT EXISTS — блок удалён.
 
             // Migration: sessions v2 columns
             String[] sessionMigrations = {
