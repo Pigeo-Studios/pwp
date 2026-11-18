@@ -77,11 +77,11 @@ public record PacketSelectKit(String kitName, Map<String, Integer> slotSelection
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
         Map<String, WarfareWorldData.KitInfo> kits = KitAccess.teamKits(player, data);
         WarfareWorldData.KitInfo kit = kits != null ? kits.get(kitName) : null;
-        String reason =
-                kit == null ? "кит не найден у вашей команды" : KitAccess.unavailableReason(player, data, kitName, kit);
+        String reason = kit == null ? KitReasonText.NOT_FOUND : KitAccess.unavailableReason(player, data, kitName, kit);
         if (reason != null) {
-            player.sendSystemMessage(Component.literal("Кит " + kitName + " недоступен: " + reason)
-                    .withStyle(ChatFormatting.RED));
+            player.sendSystemMessage(
+                    Component.translatable("pwpwarfare.message.kit_unavailable", kitName, KitReasonText.of(reason))
+                            .withStyle(ChatFormatting.RED));
             if (kits != null) PacketRequestKitMenu.sendKitMenu(player, data);
             return;
         }
@@ -98,6 +98,12 @@ public record PacketSelectKit(String kitName, Map<String, Integer> slotSelection
         WarfareData.of(player).put(WarfareKeys.SLOT_SELECTIONS, selTag);
         // Синхронизируем выбранный кит клиенту (ClientData.myCurrentKit)
         KitUtil.syncMyKit(player);
+        // Стейджинг (решение 1): живой в своём мейне получает кит сразу, стрельба в мейне и так закрыта
+        if (com.pigeostudios.pwp.warfare.staging.StagingService.issueOnSelect(player, data)) {
+            player.sendSystemMessage(Component.translatable("pwpwarfare.message.kit_issued", kitName)
+                    .withStyle(ChatFormatting.GREEN));
+            return;
+        }
         PacketHandler.sendToAllClients(player.serverLevel(), data);
         String pTeam = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
         boolean isReserved = !data.match.isGameStarted

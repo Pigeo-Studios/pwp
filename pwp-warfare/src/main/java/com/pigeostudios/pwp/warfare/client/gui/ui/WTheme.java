@@ -135,6 +135,9 @@ public final class WTheme {
     // ------------------------------------------------------------ цвета
     public static final int STATUS_OK = Colors.SUCCESS_LIGHT;
     public static final int STATUS_WARN = Colors.WARNING;
+    /** Плашка стейджинга/голосового канала (ClientStaging): верх — ниже тикетов. */
+    public static final int STAGING_BAR_Y = 28;
+
     public static final int STATUS_BAD = PWPTheme.Text.DANGER;
     public static final int TEAM_BLUE = Colors.TEAM_BLUE;
     public static final int TEAM_RED = Colors.TEAM_RED;

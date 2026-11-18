@@ -341,7 +341,7 @@ public class LobbyMod {
             idx++;
         }
 
-        return new LobbyStatePacket(
+        LobbyStatePacket pkt = new LobbyStatePacket(
                 phase,
                 remaining,
                 MatchAllocator.getLobbyPlayerCount(),
@@ -404,6 +404,8 @@ public class LobbyMod {
                 mBlueFactions,
                 mRedFactions,
                 mWorldPaths);
+        pkt.minPlayers = ServerConfig.getMinPlayers();
+        return pkt;
     }
 
     public static void broadcastLobbyState() {

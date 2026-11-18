@@ -29,6 +29,8 @@ public class LobbyStatePacket {
     public final String policyReason;
     public final String mode; // "aas" | "invasion" — для подписей команд
     public final boolean requestOpen; // true — клиент должен открыть GUI (вход на сервер, /pwp)
+    /** Сколько игроков нужно для автостарта голосования (0 — неизвестно). Хвостовое поле, ставит сервер. */
+    public int minPlayers;
 
     // Голосование за карту
     public final String[] mapNames;
@@ -332,6 +334,7 @@ public class LobbyStatePacket {
         writeStringArr(buf, msg.mBlueFactions);
         writeStringArr(buf, msg.mRedFactions);
         writeStringArr(buf, msg.mWorldPaths);
+        buf.writeVarInt(Math.max(0, msg.minPlayers));
     }
 
     private static String opt(String s) {
@@ -408,8 +411,9 @@ public class LobbyStatePacket {
         String[] mBlueFactions = readStringArr(buf);
         String[] mRedFactions = readStringArr(buf);
         String[] mWorldPaths = readStringArr(buf);
+        int minPlayers = buf.readVarInt();
 
-        return new LobbyStatePacket(
+        LobbyStatePacket pkt = new LobbyStatePacket(
                 phase,
                 remainingSeconds,
                 onlinePlayers,
@@ -472,6 +476,8 @@ public class LobbyStatePacket {
                 mBlueFactions,
                 mRedFactions,
                 mWorldPaths);
+        pkt.minPlayers = minPlayers;
+        return pkt;
     }
 
     public static void handle(LobbyStatePacket msg, Supplier<NetworkEvent.Context> ctx) {

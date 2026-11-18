@@ -313,9 +313,12 @@ public class InteractionEvents {
                 if (!level.isClientSide) {
                     ServerPlayer sPlayer = (ServerPlayer) player;
                     WarfareWorldData data = WarfareWorldData.get(sPlayer.serverLevel());
-                    if (!data.match.isGameStarted && !sPlayer.isCreative()) {
-                        sPlayer.sendSystemMessage(
-                                Component.literal("Игра ещё не началась!").withStyle(ChatFormatting.RED));
+                    // в стейджинге склад работает (кит выдаётся уже при выборе роли, этап 4)
+                    if (!data.match.isGameStarted
+                            && !com.pigeostudios.pwp.warfare.staging.StagingService.isStaging(data)
+                            && !sPlayer.isCreative()) {
+                        sPlayer.sendSystemMessage(Component.translatable("pwpwarfare.message.match_not_started")
+                                .withStyle(ChatFormatting.RED));
                         event.setCanceled(true);
                         return;
                     }

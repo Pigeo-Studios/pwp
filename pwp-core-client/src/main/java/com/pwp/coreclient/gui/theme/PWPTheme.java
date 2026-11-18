@@ -212,6 +212,14 @@ public class PWPTheme {
         public static final int SETTING_CAT_MIN_W = 80;
         public static final int SETTING_CAT_MAX_W = 160;
         public static final int SETTINGS_MAX_W = 680;
+        /** Подсказки «что дальше» (hints.Hints): макс. ширина плашки и отступ сверху (ниже верхних полос). */
+        public static final int HINT_MAX_W = 200;
+
+        public static final int HINT_TOP = 34;
+        /** Экран «Как играть»: ширина колонки клавиш и высота карточки цикла матча. */
+        public static final int HOWTO_KEYS_W = 230;
+
+        public static final int HOWTO_CARD_H = 52;
         public static final int SETTING_ACTION_MAX_W = 150;
 
         // --- Редизайн 2026-11 (тактический стиль: строгая сетка, 1px линии) ---

@@ -14,7 +14,7 @@ public class PacketHandler {
 
     // 2 — этап 1: PacketAction вместо PacketApiAction, новый формат LobbyStatePacket.
     // 3 — этап 2: сеть v2 (DataRequest/DataResponse, AdminAction.*), удалены мёртвые Vote*/JoinMatchPacket
-    private static final String PROTOCOL_VERSION = "3";
+    private static final String PROTOCOL_VERSION = "4"; // 4: LobbyStatePacket.minPlayers (этап 4)
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(CoreClientMod.MODID, "network"),
             () -> PROTOCOL_VERSION,

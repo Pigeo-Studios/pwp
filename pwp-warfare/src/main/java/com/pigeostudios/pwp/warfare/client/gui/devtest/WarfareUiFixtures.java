@@ -48,6 +48,15 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.deploy.spawn_selected", () -> deploy(1, true));
         UiGallery.register("warfare.deploy.teams", () -> deploy(0, false));
         UiGallery.register("warfare.deploy.rules", () -> deploy(2, false));
+        // этап 4: экран команды (3 карточки + АВТО) и он же с ошибкой «переполнена» от сервера
+        UiGallery.register(
+                "warfare.team_select",
+                () -> new com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen().preview());
+        UiGallery.register("warfare.team_select.full", () -> {
+            var s = new com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen().preview();
+            s.showError(net.minecraft.network.chat.Component.translatable("pwpwarfare.team.result.full"));
+            return s;
+        });
         UiGallery.register("warfare.kits.select", WarfareUiFixtures::kitSelect);
         UiGallery.register("warfare.kits.preview", WarfareUiFixtures::kitPreview);
         UiGallery.register("warfare.radial.radio", () -> new RadioRadialScreen().asPreview());

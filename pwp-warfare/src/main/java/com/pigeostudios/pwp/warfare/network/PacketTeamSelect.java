@@ -1,20 +1,9 @@
 package com.pigeostudios.pwp.warfare.network;
 
-import com.pigeostudios.pwp.warfare.data.state.WarfareData;
-import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
-import com.pigeostudios.pwp.warfare.squad.SquadActions;
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.function.Supplier;
-import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.GameType;
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.network.NetworkEvent.Context;
-import net.minecraftforge.network.PacketDistributor;
 
 public class PacketTeamSelect {
     private final String teamName;
@@ -28,78 +17,18 @@ public class PacketTeamSelect {
     }
 
     public static PacketTeamSelect decode(FriendlyByteBuf buf) {
-        return new PacketTeamSelect(buf.readUtf());
+        return new PacketTeamSelect(buf.readUtf(8));
     }
 
+    /**
+     * Выбор команды (экран команды, меню K, «АВТО»). Логика и ответ клиенту ({@code TeamResult}) —
+     * {@link com.pigeostudios.pwp.warfare.staging.StagingService#selectTeam}.
+     */
     public static void handle(PacketTeamSelect msg, Supplier<Context> ctx) {
         ctx.get().enqueueWork(() -> {
             ServerPlayer player = ctx.get().getSender();
-            if (player == null) return;
-            WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-
-            // Team balance: block if target team has 2+ more players
-            int blueCount = 0, redCount = 0;
-            for (ServerPlayer p :
-                    player.serverLevel().getServer().getPlayerList().getPlayers()) {
-                if (p == null || p == player) continue;
-                String t = p.getTeam() != null ? p.getTeam().getName() : "";
-                if (t.equalsIgnoreCase("Blue")) blueCount++;
-                else if (t.equalsIgnoreCase("Red")) redCount++;
-            }
-            String targetTeam = msg.teamName.equalsIgnoreCase("BLUE") ? "Blue" : "Red";
-            int targetCount = targetTeam.equals("Blue") ? blueCount : redCount;
-            int otherCount = targetTeam.equals("Blue") ? redCount : blueCount;
-            if (targetCount >= otherCount + 2) {
-                player.sendSystemMessage(
-                        Component.literal("Команда " + targetTeam + " переполнена! Вступите в другую или подождите.")
-                                .withStyle(ChatFormatting.RED));
-                return;
-            }
-
-            com.pigeostudios.pwp.warfare.server.FactionDataLoader.cancelDeploy(
-                    player, "Команда изменена — деплой отменён");
-            SquadActions.leaveCurrentSquad(player, data);
-            WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
-            WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
-            player.getInventory().clearContent();
-            ResupplyHandler.clearCurios(player);
-            player.inventoryMenu.broadcastChanges();
-            data.setDirty();
-            Scoreboard scoreboard = player.getServer().getScoreboard();
-            String internalTeamName = targetTeam;
-            ChatFormatting color = msg.teamName.equalsIgnoreCase("BLUE") ? ChatFormatting.BLUE : ChatFormatting.RED;
-            PlayerTeam team = scoreboard.getPlayerTeam(internalTeamName);
-            if (team == null) {
-                team = scoreboard.addPlayerTeam(internalTeamName);
-                team.setColor(color);
-                team.setSeeFriendlyInvisibles(true);
-            }
-
-            scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
-            player.setGameMode(GameType.SURVIVAL);
-            PacketHandler.broadcastPlayerSkin(player);
-            PacketHandler.sendToAllClients(player.serverLevel(), data);
-            PacketHandler.INSTANCE.send(
-                    PacketDistributor.DIMENSION.with(player.level()::dimension),
-                    new PacketSyncSquads(data.squadRegistry.squads));
-            if (data.match.isGameStarted) {
-                String currentDim = player.level().dimension().location().toString();
-                BlockPos mainSpawn = msg.teamName.equalsIgnoreCase("BLUE")
-                        ? data.match.blueSpawns.get(currentDim)
-                        : data.match.redSpawns.get(currentDim);
-                if (mainSpawn != null) {
-                    player.teleportTo(mainSpawn.getX() + 0.5, mainSpawn.getY(), mainSpawn.getZ() + 0.5);
-                    player.sendSystemMessage(Component.literal("Матч идёт! Телепортация на главную базу...")
-                            .withStyle(ChatFormatting.YELLOW));
-                } else {
-                    player.sendSystemMessage(
-                            Component.literal("Внимание: точка спавна главной базы не установлена для этой команды!")
-                                    .withStyle(ChatFormatting.RED));
-                }
-            }
-
-            player.sendSystemMessage(Component.literal("Вы присоединились к команде " + internalTeamName + "!")
-                    .withStyle(color));
+            if (player == null || msg.teamName.length() > 8) return;
+            com.pigeostudios.pwp.warfare.staging.StagingService.selectTeam(player, msg.teamName);
         });
         ctx.get().setPacketHandled(true);
     }

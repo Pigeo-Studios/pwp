@@ -111,4 +111,21 @@ class KitLimitsTest {
                 new Holder("LMG", "", false)); // другой отряд
         assertEquals(2, KitLimits.fireSupportInSquad(others, k -> cat.getOrDefault(k, "")));
     }
+
+    @Test
+    void reasonCarriesLangKeyAndArgs() {
+        KitLimits.Reason r = KitLimits.reasonOf(in(6, 2, 0, "DIRECT_COMBAT", 6, 0, 4, 0));
+        assertNotNull(r);
+        assertEquals("pwpwarfare.kit.reason.team_full", r.key());
+        assertEquals("pwpwarfare.kit.reason.team_full|6|6", r.encoded());
+        String[] parts = KitLimits.Reason.decode(r.encoded());
+        assertEquals(3, parts.length);
+        assertEquals("pwpwarfare.kit.reason.team_full", parts[0]);
+        assertEquals("6", parts[2]);
+        assertNull(KitLimits.Reason.decode("Team Full (6/6)"));
+        assertEquals("pwpwarfare.kit.reason.leader_only", new KitLimits.Reason("leader_only").encoded());
+        assertEquals(
+                "pwpwarfare.kit.reason.fire_support|3",
+                KitLimits.reasonOf(in(-1, 0, 0, "FIRE_SUPPORT", 0, 0, 9, 3)).encoded());
+    }
 }

@@ -83,6 +83,11 @@ public class PWPMainMenuScreen extends Screen {
                                 .setScreen(new SelectWorldScreen(this)))
                         .style(UIButton.Style.DARK)
                         .icon(UIIcon.SINGLEPLAYER));
+        // «Как играть»: клавиши (реальные KeyMapping) + цикл матча — до входа на сервер
+        menuButtons.add(new UIButton(Component.translatable("pwp_core.main_menu.howto"), () -> Minecraft.getInstance()
+                        .setScreen(new PWPHowToPlayScreen(this)))
+                .style(UIButton.Style.DARK)
+                .icon(UIIcon.INFO));
         menuButtons.add(
                 new UIButton(Component.translatable("pwp_core.main_menu.settings"), () -> Minecraft.getInstance()
                                 .setScreen(new OptionsScreen(this, Minecraft.getInstance().options)))

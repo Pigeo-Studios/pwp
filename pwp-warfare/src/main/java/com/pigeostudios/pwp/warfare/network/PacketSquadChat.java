@@ -44,18 +44,19 @@ public class PacketSquadChat {
         String senderName = sender.getScoreboardName();
         String senderTeam = sender.getTeam() != null ? sender.getTeam().getName() : "NEUTRAL";
         if (mode == 0) {
-            MutableComponent formattedMessage = Component.literal("[ВСЕ] ")
+            MutableComponent formattedMessage = Component.translatable("pwpwarfare.chat.prefix.all")
                     .withStyle(ChatFormatting.LIGHT_PURPLE)
                     .append(Component.literal(senderName + ": ").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal(message).withStyle(ChatFormatting.LIGHT_PURPLE));
             sender.server.getPlayerList().broadcastSystemMessage(formattedMessage, false);
         } else if (mode == 1) {
             if (senderTeam.equals("NEUTRAL")) {
-                sender.sendSystemMessage(Component.literal("Вы не в команде!").withStyle(ChatFormatting.RED));
+                sender.sendSystemMessage(
+                        Component.translatable("pwpwarfare.chat.no_team").withStyle(ChatFormatting.RED));
                 return;
             }
 
-            MutableComponent formattedMessage = Component.literal("[КОМАНДА] ")
+            MutableComponent formattedMessage = Component.translatable("pwpwarfare.chat.prefix.team")
                     .withStyle(ChatFormatting.BLUE)
                     .append(Component.literal(senderName + ": ").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal(message).withStyle(ChatFormatting.BLUE));
@@ -78,11 +79,12 @@ public class PacketSquadChat {
             }
 
             if (playerSquad == null) {
-                sender.sendSystemMessage(Component.literal("Вы не в отряде!").withStyle(ChatFormatting.RED));
+                sender.sendSystemMessage(
+                        Component.translatable("pwpwarfare.chat.no_squad").withStyle(ChatFormatting.RED));
                 return;
             }
 
-            MutableComponent formattedMessage = Component.literal("[ОТРЯД] ")
+            MutableComponent formattedMessage = Component.translatable("pwpwarfare.chat.prefix.squad")
                     .withStyle(ChatFormatting.GREEN)
                     .append(Component.literal(senderName + ": ").withStyle(ChatFormatting.WHITE))
                     .append(Component.literal(message).withStyle(ChatFormatting.GREEN));

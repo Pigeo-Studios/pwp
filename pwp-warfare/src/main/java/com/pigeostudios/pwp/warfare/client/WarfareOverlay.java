@@ -38,6 +38,7 @@ import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -127,6 +128,8 @@ public class WarfareOverlay {
                 int height = mc.getWindow().getGuiScaledHeight();
                 renderTickets(gui, mc, width);
                 renderVotePanel(gui, mc, height);
+                // этап 4: «ПОДГОТОВКА · М:СС» вместо титра + плашка канала рации
+                ClientStaging.renderHud(gui, width);
                 if (ClientData.allCapturePoints != null) {
                     for (WarfareWorldData.CapturePoint cp : ClientData.allCapturePoints) {
                         if (mc.player.getBoundingBox().intersects(cp.area)) {
@@ -671,7 +674,14 @@ public class WarfareOverlay {
 
                 if (!mc.player.getScoreboardName().equals(candidateName)) {
                     gui.drawCenteredString(
-                            PWPTheme.Fonts.display(), "F7: YES | F8: NO", x + pWidth / 2, y + pHeight - 12, -4473925);
+                            PWPTheme.Fonts.display(),
+                            keysLine(
+                                    ModKeyBindings.CMD_VOTE_YES_KEY,
+                                    ModKeyBindings.CMD_VOTE_NO_KEY,
+                                    "gui.pwpwarfare.vote.keys"),
+                            x + pWidth / 2,
+                            y + pHeight - 12,
+                            -4473925);
                 } else {
                     gui.drawCenteredString(
                             PWPTheme.Fonts.display(), "WAITING FOR VOTES", x + pWidth / 2, y + pHeight - 12, -11141291);
@@ -711,7 +721,14 @@ public class WarfareOverlay {
                                 -5592406);
                         gui.pose().popPose();
                         gui.drawCenteredString(
-                                PWPTheme.Fonts.display(), "PgUp: CONFIRM | PgDn: DENY", x + 75, y + 35, -171);
+                                PWPTheme.Fonts.display(),
+                                keysLine(
+                                        ModKeyBindings.ART_CONFIRM_KEY,
+                                        ModKeyBindings.ART_DENY_KEY,
+                                        "gui.pwpwarfare.art.keys"),
+                                x + 75,
+                                y + 35,
+                                -171);
                         float progress = Math.max(0.0F, timer / 200.0F);
                         gui.fill(x + 5, y + 43, x + 5 + (int) (140.0F * progress), y + 44, -1);
                     }
@@ -1454,6 +1471,13 @@ public class WarfareOverlay {
         }
     }
 
+    /** Подпись «[клавиша] ЗА · [клавиша] ПРОТИВ» из реальных KeyMapping (переназначаемых). */
+    private static String keysLine(
+            net.minecraft.client.KeyMapping yes, net.minecraft.client.KeyMapping no, String key) {
+        return Component.translatable(key, yes.getTranslatedKeyMessage(), no.getTranslatedKeyMessage())
+                .getString();
+    }
+
     private static void renderVotePanel(GuiGraphics gui, Minecraft mc, int width) {
         float speed = 0.05F;
         ClientData.voteTransition = Mth.lerp(speed, ClientData.voteTransition, ClientData.voteActive ? 1.0F : 0.0F);
@@ -1475,7 +1499,12 @@ public class WarfareOverlay {
             gui.pose().translate(0.0F, 0.0F, 500.0F);
             gui.fill(xPos, yPos, xPos + panelWidth, yPos + panelHeight, -1442840576);
             gui.renderOutline(xPos, yPos, panelWidth, panelHeight, -1);
-            gui.drawCenteredString(PWPTheme.Fonts.display(), "VOTE TO START", xPos + panelWidth / 2, yPos + 5, -10496);
+            gui.drawCenteredString(
+                    PWPTheme.Fonts.display(),
+                    Component.translatable("gui.pwpwarfare.vote.ready_title").getString(),
+                    xPos + panelWidth / 2,
+                    yPos + 5,
+                    -10496);
             int seconds = Math.max(0, ClientData.voteTimer);
             String timeStr = String.format("%02d:%02d", seconds / 60, seconds % 60);
             gui.drawCenteredString(PWPTheme.Fonts.display(), timeStr, xPos + panelWidth / 2, yPos + 16, -1);
@@ -1486,14 +1515,24 @@ public class WarfareOverlay {
             int redColor = ClientData.redReady ? -11141291 : -43691;
             gui.drawString(
                     PWPTheme.Fonts.display(),
-                    blueName + ": " + (ClientData.blueReady ? "READY" : "WAITING"),
+                    blueName + ": "
+                            + Component.translatable(
+                                            ClientData.blueReady
+                                                    ? "gui.pwpwarfare.vote.ready"
+                                                    : "gui.pwpwarfare.vote.waiting")
+                                    .getString(),
                     xPos + 8,
                     yPos + 32,
                     blueColor,
                     true);
             gui.drawString(
                     PWPTheme.Fonts.display(),
-                    redName + ": " + (ClientData.redReady ? "READY" : "WAITING"),
+                    redName + ": "
+                            + Component.translatable(
+                                            ClientData.redReady
+                                                    ? "gui.pwpwarfare.vote.ready"
+                                                    : "gui.pwpwarfare.vote.waiting")
+                                    .getString(),
                     xPos + 8,
                     yPos + 44,
                     redColor,
@@ -1517,7 +1556,7 @@ public class WarfareOverlay {
 
             gui.drawCenteredString(
                     PWPTheme.Fonts.display(),
-                    "F9: YES | F10: NO",
+                    keysLine(ModKeyBindings.READY_YES_KEY, ModKeyBindings.READY_NO_KEY, "gui.pwpwarfare.vote.keys"),
                     xPos + panelWidth / 2,
                     yPos + panelHeight - 12,
                     -4473925);

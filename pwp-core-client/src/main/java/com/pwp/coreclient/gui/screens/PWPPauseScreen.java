@@ -123,6 +123,11 @@ public class PWPPauseScreen extends Screen {
             buttons.add(mapEditor);
         }
         buttons.add(new UIButton(
+                        Component.translatable("pwp_core.pause.howto"),
+                        () -> mc.setScreen(new PWPHowToPlayScreen(this)))
+                .style(UIButton.Style.DARK)
+                .icon(UIIcon.INFO));
+        buttons.add(new UIButton(
                         Component.translatable("pwp_core.pause.ui_settings"),
                         () -> mc.setScreen(new PWPUiSettingsScreen(this)))
                 .style(UIButton.Style.DARK)

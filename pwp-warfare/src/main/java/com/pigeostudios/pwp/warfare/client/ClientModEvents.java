@@ -45,6 +45,8 @@ public class ClientModEvents {
     public static void onClientSetup(FMLClientSetupEvent event) {
         // настройки карты/HUD в реестре интерфейса core-client (значения из файла применятся сами)
         WarfareUiSettings.init();
+        // этап 4: подсказки «что дальше» матча (реестр core-client, выключатель — в настройках интерфейса)
+        WarfareHints.register();
         // админ-панель core-client: вкладки «Матч» и «Карта»
         com.pigeostudios.pwp.warfare.client.admin.WarfareAdminTabs.register();
         // этап 3: редактор карты (кнопки в паузе и во вкладке «Карта»)

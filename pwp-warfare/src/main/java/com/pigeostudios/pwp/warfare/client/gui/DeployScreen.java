@@ -115,6 +115,9 @@ public class DeployScreen extends Screen {
     private final AnimMap hover = new AnimMap();
 
     private UIButton selectSpawnBtn, createSquadBtn, applyCmdBtn, closeBtn;
+    /** Этап 4: «Быстро вступить», голосование «готовы» ЗА/ПРОТИВ, смена команды (вкладка «Команды»). */
+    private UIButton quickJoinBtn, readyYesBtn, readyNoBtn, switchTeamBtn;
+
     private EditBox squadInput, chatInput;
     private int mySquadId = -1;
     private int lastSquadCount;
@@ -283,6 +286,22 @@ public class DeployScreen extends Screen {
                 })
                 .style(UIButton.Style.DARK);
         applyCmdBtn.setVisible(false);
+        quickJoinBtn = new UIButton(
+                        Component.translatable("gui.pwpwarfare.deploy.squad.quick_join"),
+                        () -> send(new com.pigeostudios.pwp.warfare.staging.StagingPackets.QuickJoinSquad()))
+                .style(UIButton.Style.ACCENT);
+        readyYesBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.ready.yes"), () -> {
+                    send(new com.pigeostudios.pwp.warfare.network.PacketVoteAction(true));
+                })
+                .style(UIButton.Style.ACCENT)
+                .icon(UIIcon.CHECK);
+        readyNoBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.ready.no"), () -> {
+                    send(new com.pigeostudios.pwp.warfare.network.PacketVoteAction(false));
+                })
+                .style(UIButton.Style.DARK)
+                .icon(UIIcon.CLOSE);
+        switchTeamBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.team.switch"), this::switchTeam)
+                .style(UIButton.Style.DARK);
         // Явный выход из меню (кроме Esc и повторного K) — живой/ждущий игрок не должен застревать
         closeBtn = new UIButton(Component.translatable("gui.pwpwarfare.deploy.button.close"), this::onClose)
                 .style(UIButton.Style.GHOST)
@@ -461,8 +480,10 @@ public class DeployScreen extends Screen {
         applyCmdBtn.setVisible(applyCmdVisible());
         boolean dead = p.isDeadOrDying() || ClientData.DOWNED_PLAYERS.contains(p.getId());
         if (!dead) {
-            selectSpawnBtn.setEnabled(false);
-            selectSpawnBtn.label(Component.translatable("gui.pwpwarfare.deploy.button.alive"));
+            boolean take = canTakeKit();
+            selectSpawnBtn.setEnabled(take);
+            selectSpawnBtn.label(Component.translatable(
+                    take ? "gui.pwpwarfare.deploy.button.take_kit" : "gui.pwpwarfare.deploy.button.alive"));
             return;
         }
         int s = secondsLeft();
@@ -500,6 +521,11 @@ public class DeployScreen extends Screen {
         boolean deployTab = activeTab == TAB_DEPLOY;
         if (activeTab == TAB_TEAMS) {
             roster.render(g, l.content(), getPlayerTeam(), o);
+            switchTeamBtn.setVisible(com.pigeostudios.pwp.warfare.client.ClientStaging.hasTeam());
+            if (switchTeamBtn.isVisible()) {
+                switchTeamBtn.setBounds(l.deployButton());
+                switchTeamBtn.render(g, mx, my, 0F);
+            }
         } else if (activeTab == TAB_RULES) {
             Rect c = WDraw.panel(
                     g, font, l.content(), WDraw.headerHeight(height), WarfareIcon.RULES, tabLabel(TAB_RULES), null, o);
@@ -699,17 +725,22 @@ public class DeployScreen extends Screen {
         // создание отряда (только без отряда)
         if (mySquadId < 0 && l.createRow().h() > 0) {
             Rect row = l.createRow();
-            int bw = Math.min(createSquadBtn.preferredWidth(), row.w() / 2);
-            Rect[] parts = Flow.row(row, Spacing.XS, Flow.Justify.START, Flow.flex(1), bw);
+            int bw = Math.min(createSquadBtn.preferredWidth(), row.w() / 3);
+            int qw = Math.min(quickJoinBtn.preferredWidth(), row.w() / 3);
+            Rect[] parts = Flow.row(row, Spacing.XS, Flow.Justify.START, Flow.flex(1), bw, qw);
             WDraw.field(g, parts[0], squadInput.isFocused(), o);
             placeField(squadInput, parts[0]);
             squadInput.setVisible(true);
             createSquadBtn.setVisible(true);
             createSquadBtn.setBounds(parts[1]);
             createSquadBtn.render(g, mx, my, 0F);
+            quickJoinBtn.setVisible(true);
+            quickJoinBtn.setBounds(parts[2]);
+            quickJoinBtn.render(g, mx, my, 0F);
         } else {
             squadInput.setVisible(false);
             createSquadBtn.setVisible(false);
+            quickJoinBtn.setVisible(false);
         }
 
         // чат: история + [канал][поле]
@@ -943,13 +974,28 @@ public class DeployScreen extends Screen {
         DeployData.SpawnPoint sp = spawnById(selectedSpawn);
         if (!dead) {
             colorOut[0] = WTheme.DEPLOY_STEP_IDLE;
+            if (canTakeKit()) {
+                colorOut[0] = WTheme.DEPLOY_STEP_TODO;
+                return Component.translatable(
+                        "gui.pwpwarfare.deploy.hint.take_kit",
+                        Component.translatable("gui.pwpwarfare.deploy.button.take_kit"));
+            }
+            if (com.pigeostudios.pwp.warfare.client.ClientStaging.isWaiting()) {
+                colorOut[0] = PWPTheme.Text.BODY;
+                return Component.translatable(
+                        "gui.pwpwarfare.deploy.hint.staging",
+                        com.pigeostudios.pwp.warfare.client.ClientStaging.mmss(
+                                com.pigeostudios.pwp.warfare.client.ClientStaging.secondsLeft()));
+            }
             return Component.translatable("gui.pwpwarfare.deploy.hint.alive");
         }
         if (kit.isPresent() && !kit.get().available()) {
             String reason = kit.get().reason();
             return reason == null || reason.isEmpty()
                     ? Component.translatable("gui.pwpwarfare.deploy.hint.kit_unavailable")
-                    : Component.translatable("gui.pwpwarfare.deploy.hint.kit_reason", reason);
+                    : Component.translatable(
+                            "gui.pwpwarfare.deploy.hint.kit_reason",
+                            com.pigeostudios.pwp.warfare.network.KitReasonText.of(reason));
         }
         if (sp == null) return Component.translatable("gui.pwpwarfare.deploy.hint.pick_spawn");
         if (SpawnPanel.blocked(sp)) return Component.translatable("gui.pwpwarfare.deploy.hint.spawn_blocked");
@@ -979,6 +1025,52 @@ public class DeployScreen extends Screen {
             weapon.isEmpty() ? Component.translatable("gui.pwpwarfare.deploy.step.default") : weapon.getHoverName()
         };
         boolean[] done = {spawnOk, kitOk, kitOk};
+        String[] stepKeys = {
+            "gui.pwpwarfare.deploy.step.1", "gui.pwpwarfare.deploy.step.2", "gui.pwpwarfare.deploy.step.3"
+        };
+        var self = Minecraft.getInstance().player;
+        boolean alive = self != null && !self.isDeadOrDying() && !ClientData.DOWNED_PLAYERS.contains(self.getId());
+        if (alive) {
+            // чек-лист стейджинга: команда ✓ / отряд ✓ / роль ✓ (живому деплой не нужен)
+            var sq = com.pigeostudios.pwp.warfare.client.ClientStaging.mySquad();
+            boolean teamOk = com.pigeostudios.pwp.warfare.client.ClientStaging.hasTeam();
+            boolean roleOk = com.pigeostudios.pwp.warfare.client.ClientStaging.hasKit()
+                    || (kitOk && !"Unassigned".equals(selectedKit));
+            String team = getPlayerTeam().toUpperCase();
+            String custom = team.contains("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
+            values = new Component[] {
+                teamOk
+                        ? Component.literal(custom == null || custom.isEmpty() ? team : custom)
+                        : Component.translatable("gui.pwpwarfare.deploy.step.none"),
+                sq != null ? Component.literal(sq.name) : Component.translatable("gui.pwpwarfare.deploy.step.none"),
+                Component.literal(DeployData.getDisplayName(
+                        com.pigeostudios.pwp.warfare.client.ClientStaging.hasKit()
+                                ? ClientData.myCurrentKit
+                                : selectedKit))
+            };
+            done = new boolean[] {teamOk, sq != null, roleOk};
+            stepKeys = new String[] {
+                "gui.pwpwarfare.deploy.check.team",
+                "gui.pwpwarfare.deploy.check.squad",
+                "gui.pwpwarfare.deploy.check.role"
+            };
+        }
+        // голосование «готовы» (ожидание): ЗА/ПРОТИВ прямо в меню K, слева от главной кнопки
+        boolean vote = ClientData.voteActive;
+        readyYesBtn.setVisible(vote);
+        readyNoBtn.setVisible(vote);
+        if (vote) {
+            int vw = Math.min(Math.max(readyYesBtn.preferredWidth(), readyNoBtn.preferredWidth()), area.w() / 4);
+            Rect vr = Rect.of(area.right() - vw, area.y() + Spacing.XXS, vw, area.h() / 2 - Spacing.XXS);
+            Rect nr = Rect.of(area.right() - vw, vr.bottom() + Spacing.XXS, vw, area.h() / 2 - Spacing.XXS);
+            readyYesBtn.setBounds(vr);
+            readyNoBtn.setBounds(nr);
+            readyYesBtn.render(g, mx, my, 0F);
+            readyNoBtn.render(g, mx, my, 0F);
+            area = Rect.of(area.x(), area.y(), Math.max(0, vr.x() - area.x() - Spacing.SM), area.h());
+            lines = Flow.column(area, Spacing.XXS, Flow.Justify.CENTER, lh + Spacing.XXS, lh);
+        }
+        final Component[] shownValues = values;
         Rect[] cells = Flow.row(lines[0], Spacing.SM, Flow.Justify.START, Flow.flex(1), Flow.flex(1), Flow.flex(1));
         int dot = WTheme.DEPLOY_STEP_DOT;
         for (int i = 0; i < cells.length; i++) {
@@ -990,9 +1082,9 @@ public class DeployScreen extends Screen {
             UIDraw.rect(g, d, UIDraw.fade(Colors.multiplyAlpha(col, 0.25F), o));
             UIDraw.outline(g, d, UIDraw.fade(col, o));
             WDraw.text(g, font, Component.literal(String.valueOf(i + 1)), d.outset(1), Align.CENTER, col, false, o);
-            Component t = Component.translatable("gui.pwpwarfare.deploy.step." + (i + 1))
+            Component t = Component.translatable(stepKeys[i])
                     .append(Component.literal(": ").withStyle(st -> st.withColor(PWPTheme.Text.MUTED)))
-                    .append(values[i].copy().withStyle(st -> st.withColor(valueColor)));
+                    .append(shownValues[i].copy().withStyle(st -> st.withColor(valueColor)));
             Rect tr = Rect.of(d.right() + Spacing.XS, c.y(), Math.max(0, c.right() - d.right() - Spacing.XS), c.h());
             WDraw.text(g, font, t, tr, Align.START, col, false, o);
         }
@@ -1075,7 +1167,11 @@ public class DeployScreen extends Screen {
         }
         Layout l = layout();
         if (btn == 0 && closeBtn.mouseClicked(mx, my, btn)) return true;
+        if (activeTab == TAB_TEAMS && switchTeamBtn.isVisible() && switchTeamBtn.mouseClicked(mx, my, btn)) return true;
         if (activeTab == TAB_DEPLOY) {
+            if (readyYesBtn.isVisible() && readyYesBtn.mouseClicked(mx, my, btn)) return true;
+            if (readyNoBtn.isVisible() && readyNoBtn.mouseClicked(mx, my, btn)) return true;
+            if (quickJoinBtn.isVisible() && quickJoinBtn.mouseClicked(mx, my, btn)) return true;
             if (selectSpawnBtn.isVisible() && selectSpawnBtn.mouseClicked(mx, my, btn)) return true;
             if (applyCmdBtn.isVisible() && applyCmdBtn.mouseClicked(mx, my, btn)) return true;
             if (createSquadBtn.isVisible() && createSquadBtn.mouseClicked(mx, my, btn)) return true;
@@ -1241,6 +1337,10 @@ public class DeployScreen extends Screen {
         selectSpawnBtn.mouseReleased(mx, my, btn);
         applyCmdBtn.mouseReleased(mx, my, btn);
         createSquadBtn.mouseReleased(mx, my, btn);
+        quickJoinBtn.mouseReleased(mx, my, btn);
+        readyYesBtn.mouseReleased(mx, my, btn);
+        readyNoBtn.mouseReleased(mx, my, btn);
+        switchTeamBtn.mouseReleased(mx, my, btn);
         portrait.stopDrag();
         if (activeTab == TAB_DEPLOY) rightMapRenderer.mouseReleased(btn);
         return super.mouseReleased(mx, my, btn);
@@ -1474,7 +1574,37 @@ public class DeployScreen extends Screen {
         activeSquadId = -1;
     }
 
+    /**
+     * Живой, в мейн-зоне (клиентское зеркало; сервер проверит СВОЙ мейн), без кита, роль выбрана —
+     * кнопка деплоя становится «ВЗЯТЬ СНАРЯЖЕНИЕ». Это не деплой: SpawnRules не участвуют.
+     */
+    private boolean canTakeKit() {
+        var p = Minecraft.getInstance().player;
+        if (p == null || p.isSpectator() || !com.pigeostudios.pwp.warfare.client.ClientStaging.hasTeam()) return false;
+        var kit = kitRecord();
+        return com.pigeostudios.pwp.warfare.client.ClientSafetyState.inMainZone
+                && !com.pigeostudios.pwp.warfare.client.ClientStaging.hasKit()
+                && kit.isPresent()
+                && kit.get().available()
+                && !"Unassigned".equals(selectedKit);
+    }
+
+    /** Смена команды из меню K: на другую команду (своя — сервер ничего не делает). */
+    private void switchTeam() {
+        String my = getPlayerTeam().toUpperCase();
+        send(new com.pigeostudios.pwp.warfare.network.PacketTeamSelect(my.contains("BLUE") ? "RED" : "BLUE"));
+    }
+
     private void doDeploy() {
+        var self = Minecraft.getInstance().player;
+        boolean alive = self != null && !self.isDeadOrDying() && !ClientData.DOWNED_PLAYERS.contains(self.getId());
+        if (alive) {
+            if (canTakeKit() && !preview) {
+                send(new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
+                send(new com.pigeostudios.pwp.warfare.staging.StagingPackets.TakeKit());
+            }
+            return;
+        }
         if (selectedSpawn.isEmpty() || preview) return;
         send(new PacketSelectKit(selectedKit, DeployData.getSlotSelections(selectedKit)));
         send(new PacketRespawnRequest(selectedSpawn));

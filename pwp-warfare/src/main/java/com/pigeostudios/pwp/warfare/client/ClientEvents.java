@@ -448,11 +448,11 @@ public class ClientEvents {
                 ClientData.currentVoiceChannel =
                         pressed ? PacketVoiceChannelState.Channel.COMMAND : PacketVoiceChannelState.Channel.LOCAL;
             }
-            if (event.getKey() == 266 && event.getAction() == 1) {
+            if (event.getAction() == 1 && ModKeyBindings.ART_CONFIRM_KEY.matches(event.getKey(), event.getScanCode())) {
                 PacketHandler.INSTANCE.sendToServer(new PacketConfirmArtStrike(true));
             }
 
-            if (event.getKey() == 267 && event.getAction() == 1) {
+            if (event.getAction() == 1 && ModKeyBindings.ART_DENY_KEY.matches(event.getKey(), event.getScanCode())) {
                 PacketHandler.INSTANCE.sendToServer(new PacketConfirmArtStrike(false));
             }
 
@@ -464,17 +464,23 @@ public class ClientEvents {
             if (myTeamCmdActive && mc.screen == null) {
                 boolean isCandidate = mc.player.getScoreboardName().equals(myCandidateName);
                 if (!isCandidate) {
-                    if (event.getKey() == 296 && event.getAction() == 1) {
+                    if (event.getAction() == 1
+                            && ModKeyBindings.CMD_VOTE_YES_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketCMDVote(true));
                         mc.player.displayClientMessage(
-                                Component.literal("Голос: ЗА").withStyle(ChatFormatting.GREEN), true);
+                                Component.translatable("gui.pwpwarfare.vote.cast_yes")
+                                        .withStyle(ChatFormatting.GREEN),
+                                true);
                         return;
                     }
 
-                    if (event.getKey() == 297 && event.getAction() == 1) {
+                    if (event.getAction() == 1
+                            && ModKeyBindings.CMD_VOTE_NO_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketCMDVote(false));
                         mc.player.displayClientMessage(
-                                Component.literal("Голос: ПРОТИВ").withStyle(ChatFormatting.RED), true);
+                                Component.translatable("gui.pwpwarfare.vote.cast_no")
+                                        .withStyle(ChatFormatting.RED),
+                                true);
                         return;
                     }
                 }
@@ -484,12 +490,12 @@ public class ClientEvents {
                 tryPlacePingLogic(mc);
             } else {
                 if (ClientData.voteActive && mc.screen == null && event.getAction() == 1) {
-                    if (event.getKey() == 298) {
+                    if (ModKeyBindings.READY_YES_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(true));
                         return;
                     }
 
-                    if (event.getKey() == 299) {
+                    if (ModKeyBindings.READY_NO_KEY.matches(event.getKey(), event.getScanCode())) {
                         PacketHandler.INSTANCE.sendToServer(new PacketVoteAction(false));
                         return;
                     }
@@ -516,7 +522,10 @@ public class ClientEvents {
                     }
                 }
 
-                if (event.getKey() == 77 && event.getAction() == 1 && mc.screen == null && !ClientData.isMapOpen) {
+                if (event.getAction() == 1
+                        && ModKeyBindings.OPEN_MAP_KEY.matches(event.getKey(), event.getScanCode())
+                        && mc.screen == null
+                        && !ClientData.isMapOpen) {
                     mc.setScreen(new SquadMapScreen());
                 }
 
@@ -528,7 +537,10 @@ public class ClientEvents {
                     }
                 }
 
-                if (event.getKey() == 298 && event.getAction() == 1 && mc.player.isCreative() && mc.screen == null) {
+                if (event.getAction() == 1
+                        && ModKeyBindings.DEBUG_FILL_KEY.matches(event.getKey(), event.getScanCode())
+                        && mc.player.isCreative()
+                        && mc.screen == null) {
                     PacketHandler.INSTANCE.sendToServer(new PacketDebugFill());
                 }
             }

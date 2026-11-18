@@ -19,8 +19,16 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public class MarkerManager {
     private static final List<MapMarker> all = new ArrayList<>();
 
+    /** Команда владельца маркера (считается на сервере; поле {@code team} маркера — видимость). */
+    private static final Map<UUID, String> ownerTeams = new HashMap<>();
+
     public static void add(MapMarker m) {
         all.add(m);
+    }
+
+    public static void add(MapMarker m, String ownerTeam) {
+        all.add(m);
+        ownerTeams.put(m.id, ownerTeam);
     }
 
     public static void remove(MapMarker m) {
@@ -29,10 +37,12 @@ public class MarkerManager {
 
     public static void removeById(UUID id) {
         all.removeIf(m -> m.id.equals(id));
+        ownerTeams.remove(id);
     }
 
     public static void clearAll() {
         all.clear();
+        ownerTeams.clear();
     }
 
     public static MapMarker findById(UUID id) {
@@ -57,7 +67,7 @@ public class MarkerManager {
     public static void syncToPlayer(ServerPlayer player) {
         String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
         for (MapMarker m : all) {
-            if (m.team.equalsIgnoreCase(teamName))
+            if (ownerTeams.getOrDefault(m.id, m.team).equalsIgnoreCase(teamName))
                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> player), new PacketSyncMarker(m));
         }
     }
@@ -96,6 +106,7 @@ public class MarkerManager {
             MapMarker m = it.next();
             if (m.isExpired(now)) {
                 broadcastRemoval(m.id);
+                ownerTeams.remove(m.id);
                 it.remove();
                 changed = true;
             }

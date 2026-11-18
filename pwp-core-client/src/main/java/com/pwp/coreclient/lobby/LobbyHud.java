@@ -90,6 +90,15 @@ public final class LobbyHud {
         return last != null && System.currentTimeMillis() - lastAt < LOBBY_STALE_MS;
     }
 
+    /** Последнее состояние лобби (null — не на лобби); для подсказок. */
+    public static LobbyStatePacket lastState() {
+        return isOnLobby() ? last : null;
+    }
+
+    public static boolean isVoting() {
+        return isOnLobby() && isVotePhase(last.phase);
+    }
+
     /** Открыть меню лобби с последним известным состоянием. */
     public static void openLobby() {
         if (isOnLobby()) PWPLobbyScreen.openManually(last);
@@ -132,7 +141,12 @@ public final class LobbyHud {
         boolean voting = isVotePhase(last.phase);
         Component text = voting
                 ? Component.translatable("pwp_core.lobby.hint.voting", keyName(), last.remainingSeconds)
-                : Component.translatable("pwp_core.lobby.hint.open", keyName());
+                : last.phase == LobbyStatePacket.PHASE_IDLE
+                                && last.minPlayers > 0
+                                && last.onlinePlayers < last.minPlayers
+                        ? Component.translatable(
+                                "pwp_core.lobby.hint.waiting_players", keyName(), last.onlinePlayers, last.minPlayers)
+                        : Component.translatable("pwp_core.lobby.hint.open", keyName());
         var font = mc.font;
         int w = font.width(text) + 2 * Spacing.MD;
         int h = font.lineHeight + 2 * Spacing.SM;

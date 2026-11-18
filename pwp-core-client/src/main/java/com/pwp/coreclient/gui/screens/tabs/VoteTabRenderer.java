@@ -547,7 +547,10 @@ public class VoteTabRenderer implements LobbyTabView {
         UIDraw.sectionTitle(g, font, titleR, phaseTitle(), PWPTheme.Text.HEADING, fade);
         Component hint = st != null && !st.canStartNewMatch && notBlank(st.policyReason)
                 ? Component.literal(st.policyReason)
-                : Component.translatable("pwp_core.lobby.vote.idle_hint");
+                : st != null && st.minPlayers > 0 && st.onlinePlayers < st.minPlayers
+                        // голосование ждёт людей: «Ждём игроков: M/N»
+                        ? Component.translatable("pwp_core.lobby.vote.waiting_players", st.onlinePlayers, st.minPlayers)
+                        : Component.translatable("pwp_core.lobby.vote.idle_hint");
         UIDraw.emptyState(g, font, bodyR, UIIcon.INFO, Component.translatable("pwp_core.lobby.vote.idle"), hint, fade);
     }
 

@@ -56,6 +56,7 @@ public final class CoreUiFixtures {
                                 true),
                         com.pwp.coreclient.admin.AdminBackend.PREVIEW));
         UiGallery.register("core.main_menu", PWPMainMenuScreen::new);
+        UiGallery.register("core.howto", () -> new com.pwp.coreclient.gui.screens.PWPHowToPlayScreen(null));
         UiGallery.register("core.loading.connecting", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
         UiGallery.register("core.loading.world", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.LOADING_WORLD));
         UiGallery.register(

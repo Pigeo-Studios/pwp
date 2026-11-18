@@ -366,6 +366,8 @@ public class PacketHandler {
         com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.register(v2);
         // этап 3: редактор карты (только в конец)
         com.pigeostudios.pwp.warfare.admin.MapEditorPackets.register(v2);
+        // этап 4: стейджинг — состояние ожидания, ответ выбора команды, «взять снаряжение», быстрый отряд
+        com.pigeostudios.pwp.warfare.staging.StagingPackets.register(v2);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

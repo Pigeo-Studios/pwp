@@ -101,6 +101,17 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
 
             Channel channel = playerChannels.getOrDefault(playerUuid, Channel.LOCAL);
             WarfareWorldData data = WarfareWorldData.get(sender.serverLevel());
+            // Канал, которым игрок пользоваться не может (G без лидерства, B без отряда), голос НЕ глушит:
+            // остаётся близость (LOCAL), клиент показывает подсказку (решение 6, этап 4)
+            WarfareWorldData.Squad own = getPlayerSquad(pName, data);
+            if (channel == Channel.SQUAD && own == null) channel = Channel.LOCAL;
+            if (channel == Channel.COMMAND
+                    && !(own != null
+                            && ((own.leader != null && own.leader.equals(pName))
+                                    || (own.bravoLeader != null && own.bravoLeader.equals(pName))
+                                    || (own.charlieLeader != null && own.charlieLeader.equals(pName))))) {
+                channel = Channel.LOCAL;
+            }
 
             // Эксклюзивная рация (как в Squad): при активном радио-канале голос идёт только по рации,
             // отмена исходной рассылки SVC глушит локальную трансляцию всем рядом

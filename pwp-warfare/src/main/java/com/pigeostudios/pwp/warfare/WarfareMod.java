@@ -351,12 +351,24 @@ public class WarfareMod {
                         data.match.invasionSetupTimer);
             }
 
-            // Start waiting phase (5 min timer), then voting
+            // Фаза ожидания (стейджинг, этап 4): таймер + голосование «готовы» сразу (решение 4)
             data.match.waitingActive = true;
             data.match.waitingTimer = WarfareConfig.WAITING_PHASE_SECONDS.get();
-            data.match.voteActive = false;
+            data.match.voteActive = true;
+            data.match.voteTimer = data.match.waitingTimer;
+            data.match.blueReady = false;
+            data.match.redReady = false;
             data.match.votes.clear();
+            // маркеры/пути прошлого матча стираются здесь, а не на GO (решение 2: план стейджинга живёт весь матч)
+            com.pigeostudios.pwp.warfare.server.MarkerManager.clearAll();
+            com.pigeostudios.pwp.warfare.server.PathManager.clearAll();
+            data.markers.savedMarkers.clear();
+            data.markers.savedPaths.clear();
+            // техника — с начала ожидания (решение 8; выезд из мейна до GO закрыт удержанием)
+            com.pigeostudios.pwp.warfare.staging.StagingService.onWaitingStart(level, data);
+            data.setDirty();
             PacketHandler.sendToAllClients(level, data);
+            com.pigeostudios.pwp.warfare.staging.StagingPackets.broadcastState(level, data);
         } catch (IOException e) {
             LOGGER.error("Failed to read map_config.json", e);
         }

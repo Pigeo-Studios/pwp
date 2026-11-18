@@ -127,7 +127,8 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
                 be.loadTimer--;
             } else {
                 WarfareWorldData data = WarfareWorldData.get((ServerLevel) level);
-                if (data.match.isGameStarted) {
+                // стейджинг (этап 4): техника стоит в мейне с начала ожидания, выезд до GO держит удержание мейна
+                if (data.match.isGameStarted || data.match.waitingActive || data.match.countdownActive) {
                     // During invasion setup: skip vehicle spawn for attackers
                     if (data.match.invasionSetupActive) {
                         String vTeam = getSpawnerTeam(be);

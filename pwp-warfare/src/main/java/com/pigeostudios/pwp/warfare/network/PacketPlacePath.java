@@ -62,8 +62,12 @@ public class PacketPlacePath {
                 }
             }
             if (!authorized) return;
-            PathManager.add(msg);
-            PathManager.broadcastToTeam(p, msg);
+            // команда пути — с сервера, не из пакета клиента (иначе путь «за другую команду»)
+            String team = p.getTeam() != null ? p.getTeam().getName() : "";
+            if (team.isEmpty() || msg.type.length() > 32 || msg.points.size() > 256) return;
+            PacketPlacePath safe = new PacketPlacePath(msg.pathId, team, msg.type, msg.squadNum, msg.points);
+            PathManager.add(safe);
+            PathManager.broadcastToTeam(p, safe);
         });
         ctx.get().setPacketHandled(true);
     }

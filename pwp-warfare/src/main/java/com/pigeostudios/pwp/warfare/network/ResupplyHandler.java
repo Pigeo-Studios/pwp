@@ -342,8 +342,9 @@ public class ResupplyHandler {
             applyKitToPlayer(player, kit);
             return;
         }
-        player.sendSystemMessage(Component.literal("Кит " + kitName + " недоступен (" + reason + ")! Спавн без кита.")
-                .withStyle(ChatFormatting.RED));
+        player.sendSystemMessage(
+                Component.translatable("pwpwarfare.message.kit_unavailable_spawn", kitName, KitReasonText.of(reason))
+                        .withStyle(ChatFormatting.RED));
         WarfareWorldData.KitInfo unassigned = kits.get(KitAccess.UNASSIGNED);
         if (unassigned != null) {
             applyKitToPlayer(player, unassigned);

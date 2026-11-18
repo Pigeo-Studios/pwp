@@ -62,7 +62,7 @@ public final class KitAccess {
         return out;
     }
 
-    /** null — кит доступен игроку, иначе причина. */
+    /** null — кит доступен игроку, иначе причина в виде {@code key|a|b} ({@link KitReasonText#of}). */
     public static String unavailableReason(
             ServerPlayer player, WarfareWorldData data, String kitName, WarfareWorldData.KitInfo kit) {
         return unavailableReason(player, data, kitName, kit, others(player, data));
@@ -84,7 +84,7 @@ public final class KitAccess {
                     return info != null ? info.category : "";
                 })
                 : 0;
-        return KitLimits.unavailableReason(new KitLimits.Input(
+        KitLimits.Reason r = KitLimits.reasonOf(new KitLimits.Input(
                 kitName,
                 kit.maxPerTeam,
                 kit.maxPerSquad,
@@ -96,5 +96,7 @@ public final class KitAccess {
                 occ.squad(),
                 mySquad == null ? -1 : mySquad.members.size(),
                 fireSupport));
+        // Игроку уходит ключ lang + аргументы ({@code key|a|b}); текст — KitReasonText.of
+        return r == null ? null : r.encoded();
     }
 }

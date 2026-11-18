@@ -142,7 +142,9 @@ public class RoleGrid {
         if (hovKit != null && System.currentTimeMillis() - hoverSince >= UITooltip.delayMs()) {
             List<Component> lines = new ArrayList<>();
             if (!hovKit.available() && !hovKit.reason().isEmpty()) {
-                lines.add(Component.literal(hovKit.reason()).withStyle(s -> s.withColor(WTheme.STATUS_BAD)));
+                lines.add(com.pigeostudios.pwp.warfare.network.KitReasonText.of(hovKit.reason())
+                        .copy()
+                        .withStyle(s -> s.withColor(WTheme.STATUS_BAD)));
             }
             if (hovKit.maxInTeam() > 0) {
                 lines.add(Component.translatable(

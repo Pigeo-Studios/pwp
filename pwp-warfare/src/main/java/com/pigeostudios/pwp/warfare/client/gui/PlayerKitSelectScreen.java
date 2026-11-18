@@ -66,7 +66,7 @@ public class PlayerKitSelectScreen extends CardGridScreen {
                             Component.translatable("gui.pwpwarfare.kit_select.preview"),
                             () -> Minecraft.getInstance().setScreen(new KitPreviewScreen(this, kit.name, kit.items))));
             if (cat != null) c = c.accent(cat.roleColor());
-            if (!kit.available) c = c.disabled(Component.literal(kit.reason == null ? "" : kit.reason));
+            if (!kit.available) c = c.disabled(com.pigeostudios.pwp.warfare.network.KitReasonText.of(kit.reason));
             out.add(c);
         }
         return out;

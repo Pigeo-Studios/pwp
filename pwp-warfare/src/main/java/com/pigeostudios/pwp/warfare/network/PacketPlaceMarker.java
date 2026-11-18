@@ -48,10 +48,17 @@ public class PacketPlaceMarker {
                 }
             }
             if (!authorized) return;
-            long tick = GameClock.worldTicks(p.serverLevel());
+            // поле team из пакета — ВИДИМОСТЬ маркера (squad/team/enemy), не команда: команду берёт сервер
+            String scope = msg.team;
+            if (!"squad".equals(scope) && !"team".equals(scope) && !"enemy".equals(scope)) return;
+            if (msg.category.length() > 32 || msg.iconType.length() > 32) return;
+            String ownerTeam = p.getTeam() != null ? p.getTeam().getName() : "";
+            if (ownerTeam.isEmpty()) return;
+            // время маркеров — серверные тики (MarkerManager.onTick считает возраст в них же)
+            long tick = GameClock.serverTicks(p.getServer());
             MapMarker m =
-                    new MapMarker(UUID.randomUUID(), msg.team, msg.category, msg.iconType, msg.pos, p.getUUID(), tick);
-            MarkerManager.add(m);
+                    new MapMarker(UUID.randomUUID(), scope, msg.category, msg.iconType, msg.pos, p.getUUID(), tick);
+            MarkerManager.add(m, ownerTeam);
             MarkerManager.broadcastToTeam(p, m);
         });
         ctx.get().setPacketHandled(true);

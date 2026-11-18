@@ -197,8 +197,11 @@ public class MatchAllocator {
     }
 
     private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
+        // адрес хоста в чат не пишем (светит LAN-адрес) — только карта
         player.sendSystemMessage(
-                Component.literal("§e[PWP] Подключение к матчу на " + host + ":" + mi.port + "..."), false);
+                Component.translatable("pwp_core.lobby.transfer", mi.displayName != null ? mi.displayName : mi.mapName)
+                        .withStyle(net.minecraft.ChatFormatting.YELLOW),
+                false);
         PacketHandler.INSTANCE.send(
                 PacketDistributor.PLAYER.with(() -> player), new ConnectToServerPacket(host, mi.port));
     }
@@ -250,7 +253,10 @@ public class MatchAllocator {
             if (!lobbyPlayers.contains(player.getStringUUID())) continue;
             String host = TransferHosts.resolveTransferHost(player);
             player.sendSystemMessage(
-                    Component.literal("§e[PWP] Teleporting to match server on " + host + ":" + mi.port + "..."), false);
+                    Component.translatable(
+                                    "pwp_core.lobby.transfer", mi.displayName != null ? mi.displayName : mi.mapName)
+                            .withStyle(net.minecraft.ChatFormatting.YELLOW),
+                    false);
             PacketHandler.INSTANCE.send(
                     PacketDistributor.PLAYER.with(() -> player), new ConnectToServerPacket(host, mi.port));
         }

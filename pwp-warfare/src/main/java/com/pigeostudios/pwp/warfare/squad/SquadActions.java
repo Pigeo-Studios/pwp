@@ -144,6 +144,29 @@ public final class SquadActions {
         }
     }
 
+    /**
+     * «Быстро вступить»: первый открытый отряд своей команды в этом измерении со свободным местом
+     * (по id), иначе — новый отряд с автоименем. Уже в отряде — ничего не меняется.
+     */
+    public static void quickJoin(ServerPlayer player) {
+        perform(player, (pl, d, n, t) -> {
+            if (getPlayerSquad(n, d) != null) {
+                pl.sendSystemMessage(Component.translatable("pwpwarfare.squad.quick_join.already")
+                        .withStyle(ChatFormatting.YELLOW));
+                return;
+            }
+            String dim = pl.level().dimension().location().toString();
+            WarfareWorldData.Squad best = null;
+            for (WarfareWorldData.Squad s : d.squadRegistry.squads) {
+                if (!s.team.equalsIgnoreCase(t) || s.isLocked || s.members.size() >= 9) continue;
+                if (s.dimension != null && !s.dimension.equals(dim)) continue;
+                if (best == null || s.id < best.id) best = s;
+            }
+            if (best != null) join(pl, d, n, t, best.id, "");
+            else create(pl, d, n, t, 0, "");
+        });
+    }
+
     /** Действие отряда #2 (бывший PacketSquadAction action=2). */
     static void leave(
             ServerPlayer player, WarfareWorldData data, String pName, String pTeam, int squadId, String stringData) {

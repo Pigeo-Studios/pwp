@@ -29,28 +29,69 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
             new ResourceLocation("pwpwarfare", "textures/gui/flags/insurgency.png");
     private static final ResourceLocation FLAG_PMC = new ResourceLocation("pwpwarfare", "textures/gui/flags/pmc.png");
 
+    /** Тест-стенд: клики не шлют пакетов. */
+    private boolean preview;
+
+    public TeamSelectionScreen preview() {
+        this.preview = true;
+        return this;
+    }
+
     public TeamSelectionScreen() {
         super(
                 Component.translatable("gui.pwpwarfare.team_select.title").getString(),
                 null,
-                List.of("BLUE", "RED"),
+                List.of("BLUE", "RED", "AUTO"),
                 TeamSelectionScreen::renderTeamCard,
                 TeamSelectionScreen::onTeamSelected,
                 -1,
-                160,
+                130,
                 140,
-                30,
+                16,
                 TeamSelectionScreen::isTeamDisabled,
                 true);
     }
 
+    /** Ошибка последнего выбора (S2C TeamResult) — показывается в самом экране, а не в чате. */
+    private Component error;
+
+    public void showError(Component c) {
+        this.error = c;
+    }
+
+    /** Без команды экран не закрывается (Esc) — иначе тупик до следующего sync-пакета. */
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return com.pigeostudios.pwp.warfare.client.ClientStaging.hasTeam();
+    }
+
+    @Override
+    public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        super.render(gui, mouseX, mouseY, partialTick);
+        var font = PWPTheme.Fonts.display();
+        Component line = error != null
+                ? error
+                : Component.translatable(
+                        "gui.pwpwarfare.team_select.hint",
+                        com.pigeostudios.pwp.warfare.client.ModKeyBindings.OPEN_SQUAD_MENU_KEY
+                                .getTranslatedKeyMessage());
+        int color = error != null ? PWPTheme.Text.DANGER : PWPTheme.Text.MUTED;
+        int y = height - PWPTheme.Spacing.XXL - font.lineHeight;
+        gui.drawString(font, line, (width - font.width(line)) / 2, y, color, true);
+    }
+
     private static boolean isTeamDisabled(int index) {
+        if (index == 2) return false; // АВТО — всегда в меньшую
         return index == 0
                 ? ClientData.BLUE_PLAYER_COUNT >= ClientData.RED_PLAYER_COUNT + 2
                 : ClientData.RED_PLAYER_COUNT >= ClientData.BLUE_PLAYER_COUNT + 2;
     }
 
     private static void renderTeamCard(GuiGraphics gui, SelectionItem si) {
+        if (si.index == 2) {
+            renderAutoCard(gui, si);
+            return;
+        }
         boolean isBlue = si.index == 0;
         int cx = si.x + si.w / 2;
 
@@ -119,12 +160,43 @@ public class TeamSelectionScreen extends PWPSelectionScreen {
                 false);
     }
 
+    /** Карточка «АВТО»: в меньшую команду (баланс решает сервер). */
+    private static void renderAutoCard(GuiGraphics gui, SelectionItem si) {
+        var font = PWPTheme.Fonts.display();
+        int cx = si.x + si.w / 2;
+        Component t = Component.translatable("gui.pwpwarfare.team_select.auto");
+        gui.drawString(font, t, cx - font.width(t) / 2, si.y + 8, PWPTheme.Colors.TEXT_ACCENT, false);
+        Component d = Component.translatable("gui.pwpwarfare.team_select.auto_desc");
+        int lw = si.w - 2 * PWPTheme.Spacing.SM;
+        int y = si.y + 30;
+        for (var line : font.split(d, lw)) {
+            gui.drawString(font, line, cx - font.width(line) / 2, y, PWPTheme.Colors.TEXT_SECONDARY, false);
+            y += font.lineHeight + 1;
+        }
+        Component j = Component.translatable("gui.pwpwarfare.team_select.join");
+        gui.drawString(
+                font,
+                j,
+                cx - font.width(j) / 2,
+                si.y + 78,
+                si.hovered ? PWPTheme.Colors.TEXT_PRIMARY : PWPTheme.Colors.TEXT_ACCENT,
+                false);
+    }
+
+    /** Экран не закрывается сам: ответ сервера (TeamResult) откроет меню K или покажет ошибку здесь. */
     private static void onTeamSelected(int index) {
-        String team = index == 0 ? "BLUE" : "RED";
+        String team = index == 0 ? "BLUE" : index == 1 ? "RED" : "AUTO";
         ClientData.teamSelectSent = true;
         ClientData.teamSelectSentTime = System.currentTimeMillis();
+        if (Minecraft.getInstance().screen instanceof TeamSelectionScreen ts) {
+            ts.error = null;
+            if (ts.preview) {
+                org.slf4j.LoggerFactory.getLogger(TeamSelectionScreen.class)
+                        .info("[PWPUI] team_select: {} (preview — без пакета)", team);
+                return;
+            }
+        }
         PacketHandler.INSTANCE.sendToServer(new PacketTeamSelect(team));
-        Minecraft.getInstance().setScreen(null);
     }
 
     private static String formatFactionName(String faction, String customName) {

@@ -28,6 +28,8 @@ import com.pigeostudios.pwp.warfare.server.MarkerManager;
 import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.squad.SquadActions;
+import com.pigeostudios.pwp.warfare.staging.StagingPackets;
+import com.pigeostudios.pwp.warfare.staging.StagingService;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
@@ -145,6 +147,8 @@ public class GameLogicEvents {
                     decision.errors().size());
         }
         data.match.waitingActive = false;
+        // голосование «готовы» живёт только до старта (иначе панель висела бы весь матч после «пропустить ожидание»)
+        data.match.voteActive = false;
         data.match.countdownTicks = 100;
         data.match.countdownActive = true;
         data.setDirty();
@@ -343,15 +347,9 @@ public class GameLogicEvents {
                             data.match.waitingTimer--;
                             data.setDirty();
                             int secs = data.match.waitingTimer;
-                            String timeStr = formatTime(secs);
-                            String title =
-                                    "\u00a76\u23F3 \u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0438\u0433\u0440\u043E\u043A\u043E\u0432";
-                            String subtitle = "\u00a7e" + timeStr;
-                            for (ServerPlayer p : level.players()) {
-                                p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 25, 10));
-                                p.connection.send(new ClientboundSetTitleTextPacket(Component.literal(title)));
-                                p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(subtitle)));
-                            }
+                            // вместо ванильного титра — плашка «ПОДГОТОВКА · М:СС» на клиенте (этап 4)
+                            StagingPackets.broadcastState(level, data);
+                            StagingService.tickVehicles(level, data);
                             if (secs == 300 || secs == 240 || secs == 180 || secs == 120) {
                                 level.playSound(
                                         null,
@@ -369,10 +367,7 @@ public class GameLogicEvents {
                                         SoundSource.MASTER,
                                         1.0F,
                                         2.0F);
-                                broadcastMessage(
-                                        level,
-                                        "\u00a7e[PWP] \u00a7f\u041C\u0430\u0442\u0447 \u043D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u00a7e1 \u043C\u0438\u043D\u0443\u0442\u0443!",
-                                        ChatFormatting.GOLD);
+                                broadcastTranslatable(level, "pwpwarfare.staging.one_minute", ChatFormatting.GOLD);
                             }
                             if (secs == 30) {
                                 level.playSound(
@@ -382,10 +377,7 @@ public class GameLogicEvents {
                                         SoundSource.MASTER,
                                         1.0F,
                                         2.0F);
-                                broadcastMessage(
-                                        level,
-                                        "\u00a7e[PWP] \u00a7f\u041C\u0430\u0442\u0447 \u043D\u0430\u0447\u043D\u0451\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 \u00a7e30 \u0441\u0435\u043A\u0443\u043D\u0434!",
-                                        ChatFormatting.GOLD);
+                                broadcastTranslatable(level, "pwpwarfare.staging.thirty_seconds", ChatFormatting.GOLD);
                             }
                             if (secs <= 10 && secs > 0) {
                                 level.playSound(
@@ -399,23 +391,22 @@ public class GameLogicEvents {
                         }
                         if (data.match.waitingTimer <= 0) {
                             data.match.waitingActive = false;
+                            // голосование «готовы» живёт только в ожидании
+                            data.match.voteActive = false;
                             data.setDirty();
-                            for (ServerPlayer p : level.players()) {
-                                p.connection.send(new ClientboundSetTitlesAnimationPacket(0, 0, 0));
-                                p.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("")));
-                                p.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
-                            }
                             // старт может заблокировать валидатор раскладки — «Игра начинается» только при успехе
                             if (!startGameCountdown(level).blocked()) {
-                                broadcastMessage(
-                                        level,
-                                        "\u00a7a[PWP] \u0418\u0433\u0440\u0430 \u043D\u0430\u0447\u0438\u043D\u0430\u0435\u0442\u0441\u044F!",
-                                        ChatFormatting.GREEN);
+                                broadcastTranslatable(level, "pwpwarfare.staging.starting", ChatFormatting.GREEN);
                             }
+                            StagingPackets.broadcastState(level, data);
+                            PacketHandler.sendToAllClients(level, data);
                         }
                     }
 
                     if (data.match.voteActive && !data.match.isGameStarted) {
+                        // в ожидании голосование «готовы» идёт само (решение 4): таймер = таймер ожидания,
+                        // по таймеру старт делает ветка ожидания, здесь — только досрочный старт
+                        if (data.match.waitingActive) data.match.voteTimer = data.match.waitingTimer;
                         if (globalTick % 20 == 0 && data.match.voteTimer > 0) {
                             data.match.voteTimer--;
                             data.setDirty();
@@ -431,10 +422,14 @@ public class GameLogicEvents {
                             }
                         }
 
-                        if (data.match.blueReady && data.match.redReady || data.match.voteTimer <= 0) {
+                        boolean allReady = data.match.blueReady && data.match.redReady && anyTeamPlayers(level);
+                        if (allReady || (!data.match.waitingActive && data.match.voteTimer <= 0)) {
                             data.match.voteActive = false;
                             data.setDirty();
-                            startGameCountdown(level);
+                            if (!startGameCountdown(level).blocked() && allReady) {
+                                broadcastTranslatable(level, "pwpwarfare.staging.all_ready", ChatFormatting.GREEN);
+                            }
+                            StagingPackets.broadcastState(level, data);
                             PacketHandler.sendToAllClients(level, data);
                         }
                     }
@@ -779,6 +774,7 @@ public class GameLogicEvents {
                         if (data.match.countdownTicks > 0) {
                             if (data.match.countdownTicks % 20 == 0) {
                                 int seconds = data.match.countdownTicks / 20;
+                                StagingPackets.broadcastState(level, data);
                                 sendTitleToLevel(level, String.valueOf(seconds), ChatFormatting.YELLOW);
                                 level.playSound(
                                         null,
@@ -793,11 +789,8 @@ public class GameLogicEvents {
                             data.setDirty();
                         } else {
                             data.match.countdownActive = false;
-                            // Clear markers and paths from previous match
-                            com.pigeostudios.pwp.warfare.server.MarkerManager.clearAll();
-                            com.pigeostudios.pwp.warfare.server.PathManager.clearAll();
-                            data.markers.savedMarkers.clear();
-                            data.markers.savedPaths.clear();
+                            // Маркеры и пути стейджинга НЕ стираются на GO (решение 2) — чистка в начале
+                            // ожидания нового матча (WarfareMod, вместе со сбросом голосов)
                             data.match.isGameStarted = true;
 
                             if ("invasion".equals(data.match.gameMode)) {
@@ -860,7 +853,9 @@ public class GameLogicEvents {
                                 }
                             }
 
-                            data.fillVehicleSpawnersFromFactionDefaults(level);
+                            // техника стоит с начала ожидания (решение 8) — повторно не заполняем
+                            StagingService.onGo(level, data);
+                            StagingPackets.broadcastState(level, data);
 
                             sendSyncPacket(level, data);
                         }
@@ -1326,7 +1321,11 @@ public class GameLogicEvents {
 
                             for (WarfareWorldData.MainProtectionZone zone : data.structures.mainZones) {
                                 if (zone.team.equalsIgnoreCase(pTeam)) {
-                                    if (!zone.isInside(player.position())) {
+                                    if (zone.isInside(player.position())) {
+                                        StagingService.rememberInside(player);
+                                    } else {
+                                        // техника с игроками тоже не выезжает до GO: высадить, вернуть
+                                        StagingService.holdVehicle(player);
                                         String dim =
                                                 level.dimension().location().toString();
                                         BlockPos spawn = pTeam.equals("BLUE")
@@ -1334,13 +1333,15 @@ public class GameLogicEvents {
                                                 : data.match.redSpawns.get(dim);
                                         if (spawn != null) {
                                             player.teleportTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);
-                                            String msg = data.match.invasionSetupActive
-                                                    ? "§cВы не можете покинуть базу во время подготовки! Осталось: "
-                                                            + formatTime(data.match.invasionSetupTimer)
-                                                    : "§cThe match hasn't started yet! Wait in the Main Base.";
+                                            Component msg = data.match.invasionSetupActive
+                                                    ? Component.translatable(
+                                                            "pwpwarfare.main.hold_setup",
+                                                            formatTime(data.match.invasionSetupTimer))
+                                                    : Component.translatable(
+                                                            "pwpwarfare.main.hold_waiting",
+                                                            formatTime(data.match.waitingTimer));
                                             player.displayClientMessage(
-                                                    Component.literal(msg)
-                                                            .withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
+                                                    msg.copy().withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
                                                     true);
                                             player.playNotifySound(
                                                     SoundEvents.ENDERMAN_TELEPORT, SoundSource.MASTER, 1.0F, 1.0F);
@@ -1598,16 +1599,20 @@ public class GameLogicEvents {
                     PacketDistributor.ALL.noArg(), new PacketSyncDownedState(player.getId(), false));
             MarkerManager.syncToPlayer(player);
             PathManager.syncToPlayer(player);
+            // решение 5: без команды — сразу в меньшую (сменить можно в меню K)
+            StagingService.autoAssign(player);
             String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
             if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
                 player.setGameMode(GameType.ADVENTURE);
-                player.sendSystemMessage(Component.literal("Выберите команду, чтобы начать игру!")
+                player.sendSystemMessage(Component.translatable(
+                                "pwpwarfare.team.choose", Component.keybind("key.pwpwarfare.open_squad_menu"))
                         .withStyle(ChatFormatting.GOLD));
             }
+            StagingPackets.sendState(player, data);
             if (!data.match.isGameStarted && !data.match.waitingActive && player.hasPermissions(2)) {
-                player.sendSystemMessage(
-                        Component.literal("PWP Warfare на паузе. /pwpwarfare gamestart true для старта.")
-                                .withStyle(ChatFormatting.YELLOW));
+                player.sendSystemMessage(Component.translatable(
+                                "pwpwarfare.admin.paused_hint", Component.keybind("key.pwp_core.admin_panel"))
+                        .withStyle(ChatFormatting.YELLOW));
             }
         }
     }
@@ -2322,6 +2327,19 @@ public class GameLogicEvents {
             player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 20, 10));
             player.connection.send(new ClientboundSetTitleTextPacket(title));
         }
+    }
+
+    private static void broadcastTranslatable(ServerLevel level, String key, ChatFormatting color) {
+        Component c = Component.translatable(key).withStyle(color);
+        for (ServerPlayer p : level.players()) p.sendSystemMessage(c);
+    }
+
+    /** Есть ли хоть один игрок в командах (пустой сервер не «готов» к досрочному старту). */
+    private static boolean anyTeamPlayers(ServerLevel level) {
+        for (ServerPlayer p : level.players()) {
+            if (!StagingService.teamOf(p).isEmpty()) return true;
+        }
+        return false;
     }
 
     private static void broadcastMessage(ServerLevel level, String text, ChatFormatting color) {
