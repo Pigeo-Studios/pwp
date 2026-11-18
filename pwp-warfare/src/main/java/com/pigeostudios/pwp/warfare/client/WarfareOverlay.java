@@ -1057,6 +1057,13 @@ public class WarfareOverlay {
                     target = 1.0F;
                 }
             }
+        } else if (mc.hitResult instanceof BlockHitResult bh
+                && mc.hitResult.getType() == Type.BLOCK
+                && mc.level.getBlockState(bh.getBlockPos()).getBlock() instanceof MainSupplyBlock) {
+            // этап 4 (хвост): что делает «Главный склад» — техника рядом пополняется, игроки лечатся
+            text = Component.translatable("pwpwarfare.hint.main_supply").getString();
+            color = -1;
+            target = 1.0F;
         } else if (mc.hitResult != null && mc.hitResult.getType() == Type.ENTITY) {
             Entity targetEntity = ((EntityHitResult) mc.hitResult).getEntity();
             WarfareWorldData.VehicleRecord record = null;

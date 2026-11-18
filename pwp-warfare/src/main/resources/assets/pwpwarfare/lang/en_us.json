@@ -822,5 +822,10 @@
     "gui.pwpwarfare.hint.staging.map": "[%s] — map: staging markers and paths stay after the start",
     "gui.pwpwarfare.hint.battle.take_kit": "No kit: [%s] → TAKE KIT",
     "gui.pwpwarfare.hint.battle.voice": "[%s] — squad radio, [%s] — leaders channel",
-    "gui.pwpwarfare.hint.battle.ping": "[%s] — ping marker for your squad"
+    "gui.pwpwarfare.hint.battle.ping": "[%s] — ping marker for your squad",
+    "squad.disbanded_broadcast": "Squad %s disbanded: the leader is not using a Leader kit!",
+    "squad.disbanded_no_officer": "Your squad was disbanded (no Officer kit)!",
+    "pwpwarfare.hint.main_supply": "Main supply — vehicles nearby are rearmed, players are healed",
+    "gui.pwpwarfare.deploy.roles.leader_tag": "SL",
+    "gui.pwpwarfare.deploy.roles.leader_needed": "Needed by the squad leader — without it the squad disbands"
 }

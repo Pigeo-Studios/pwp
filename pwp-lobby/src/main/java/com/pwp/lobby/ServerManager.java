@@ -3,16 +3,12 @@ package com.pwp.lobby;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.pwp.api.config.MatchConfig;
+import com.pwp.api.lobby.MatchHandoff;
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
-import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +42,6 @@ public class ServerManager {
         volatile String phase; // "template","map","config","booting", or null when done
         volatile long phaseStartedAt;
         volatile long logDoneAt; // when "Done" was found in log file (0 = not yet)
-        volatile long portOpenAt; // when port was detected open (0 = not yet)
-        long lastBroadcastMs;
 
         ServerInstance(int serverId, int port, Path directory) {
             this.serverId = serverId;
@@ -64,11 +58,19 @@ public class ServerManager {
     }
 
     public static StartResult startMatchServer(String mapName, int maxPlayers, String mapWorldPath) {
-        return startMatchServer(mapName, maxPlayers, mapWorldPath, null);
+        return startMatchServer(mapName, maxPlayers, mapWorldPath, null, false);
     }
 
+    /**
+     * Копия шаблона + мира и запуск процесса (в фоне). {@code awaitSettings} — предпрогрев (этап 5): пишется
+     * {@link MatchHandoff#AWAIT_FLAG}, матч-сервер не начинает фазу ожидания до файла настроек лобби.
+     */
     public static StartResult startMatchServer(
-            String mapName, int maxPlayers, String mapWorldPath, Consumer<Path> configCustomizer) {
+            String mapName,
+            int maxPlayers,
+            String mapWorldPath,
+            Consumer<Path> configCustomizer,
+            boolean awaitSettings) {
         StartResult result = new StartResult();
 
         Path templatePath = Paths.get(TEMPLATE_PATH).toAbsolutePath().normalize();
@@ -123,6 +125,12 @@ public class ServerManager {
 
                 instance.phase = "config";
                 instance.phaseStartedAt = System.currentTimeMillis();
+
+                // файлы канала лобби↔матч из шаблона/прошлого запуска не должны «дожить» до этого матча
+                Files.deleteIfExists(serverDir.resolve(MatchHandoff.SETTINGS_FILE));
+                Files.deleteIfExists(serverDir.resolve(MatchHandoff.STATUS_FILE));
+                Files.deleteIfExists(serverDir.resolve(MatchHandoff.AWAIT_FLAG));
+                if (awaitSettings) Files.writeString(serverDir.resolve(MatchHandoff.AWAIT_FLAG), "prewarm");
 
                 // Apply custom config overrides (factions, mode, etc.)
                 if (configCustomizer != null) {
@@ -262,80 +270,83 @@ public class ServerManager {
             }
         }
 
-        // Detect boot via logs/latest.log "Done", fallback to port-based timeout
+        // Загрузка: строка "Done" в logs/latest.log (раз в секунду — раньше файл читался целиком КАЖДЫЙ тик,
+        // а порт проверялся блокирующим connect на главном потоке со стектрейсом в лог на каждый тик)
+        if (now - lastBootCheckMs < 1000) return;
+        lastBootCheckMs = now;
         for (ServerInstance si : servers.values()) {
-            if (si.phase == "booting" && !si.booted && !si.failed) {
-                Path logFile = si.directory.resolve("logs/latest.log");
-                // Method 1: read log file line-by-line looking for "Done"
-                if (si.logDoneAt == 0 && Files.exists(logFile)) {
-                    try (BufferedReader br = new BufferedReader(new FileReader(logFile.toFile()))) {
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            if (line.contains("Done") && line.contains("For help")) {
-                                si.logDoneAt = System.currentTimeMillis();
-                                log.info("Server {} detected 'Done' in log", si.serverId);
-                                break;
-                            }
+            if (!"booting".equals(si.phase) || si.booted || si.failed) continue;
+            Path logFile = si.directory.resolve("logs/latest.log");
+            if (si.logDoneAt == 0 && Files.exists(logFile)) {
+                try (BufferedReader br =
+                        Files.newBufferedReader(logFile, java.nio.charset.StandardCharsets.ISO_8859_1)) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        if (line.contains("Done") && line.contains("For help")) {
+                            si.logDoneAt = now;
+                            log.info("Server {} detected 'Done' in log", si.serverId);
+                            break;
                         }
-                    } catch (IOException ignored) {
-                        log.warn("ServerManager.tick: исключение", ignored);
                     }
+                } catch (IOException e) {
+                    com.pwp.api.util.LogOnce.warn(log, "match-log-" + si.serverId, "Cannot read " + logFile, e);
                 }
-                // Method 2: fallback — port open + 55s (covers ~44s from port to "Done")
-                if (si.logDoneAt == 0 && si.portOpenAt == 0) {
-                    try (Socket s = new Socket()) {
-                        s.connect(new InetSocketAddress("127.0.0.1", si.port), 200);
-                        si.portOpenAt = System.currentTimeMillis();
-                        log.info("Server {} port open, fallback boot in 55s", si.serverId);
-                    } catch (IOException ignored) {
-                        log.warn("ServerManager.tick: исключение", ignored);
-                    }
-                }
-                boolean logReady = si.logDoneAt != 0 && now - si.logDoneAt >= 2000;
-                boolean portReady = si.portOpenAt != 0 && now - si.portOpenAt >= 55000;
-                if (logReady || portReady) {
-                    si.booted = true;
-                    log.info("Server {} fully booted (log={})", si.serverId, si.logDoneAt != 0);
-                }
+            }
+            if (si.logDoneAt != 0 && now - si.logDoneAt >= 2000) {
+                si.booted = true;
+                si.phase = null;
+                log.info("Server {} fully booted", si.serverId);
             }
         }
+    }
 
-        // Broadcast progress to lobby players (throttled to every 2s per server)
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
-        for (ServerInstance si : servers.values()) {
-            if (si.phase != null && !si.failed && now - si.lastBroadcastMs > 2000) {
-                si.lastBroadcastMs = now;
-                long elapsed = (now - si.phaseStartedAt) / 1000;
-                String msg =
-                        switch (si.phase) {
-                            case "template" -> "§7[PWP] Copying server template... §e" + elapsed + "s";
-                            case "map" -> "§7[PWP] Copying map world... §e" + elapsed + "s";
-                            case "config" -> "§7[PWP] Preparing config... §e" + elapsed + "s";
-                            case "booting" -> "§7[PWP] Starting server... §e" + elapsed + "s";
-                            default -> null;
-                        };
-                if (msg != null) {
-                    String finalMsg = msg;
-                    server.getPlayerList()
-                            .getPlayers()
-                            .forEach(p -> p.sendSystemMessage(Component.literal(finalMsg), false));
-                }
-            }
-            if (si.booted && si.phase != null) {
-                si.phase = null;
-                server.getPlayerList()
-                        .getPlayers()
-                        .forEach(p -> p.sendSystemMessage(
-                                Component.literal("§a[PWP] Match server ready! §7(port " + si.port + ")"), false));
-            }
+    private static long lastBootCheckMs;
+
+    /** Стадия подготовки процесса: template/map/config/booting; null — загружен или нет такого. */
+    public static String getStage(int serverId) {
+        ServerInstance si = servers.get(serverId);
+        return si != null ? si.phase : null;
+    }
+
+    /** Текст ошибки процесса (таймаут/падение) или null. */
+    public static String getError(int serverId) {
+        ServerInstance si = servers.get(serverId);
+        return si != null ? si.error : null;
+    }
+
+    /** Отчёт матч-сервера ({@link MatchHandoff#STATUS_FILE}); null — ещё нет/читается в момент записи. */
+    public static MatchHandoff.Status readStatus(int serverId) {
+        Path dir = getServerDirectory(serverId);
+        if (dir == null) return null;
+        Path f = dir.resolve(MatchHandoff.STATUS_FILE);
+        if (!Files.isRegularFile(f)) return null;
+        try {
+            return MatchHandoff.Status.fromJson(
+                    com.google.gson.JsonParser.parseString(Files.readString(f)).getAsJsonObject());
+        } catch (IOException | RuntimeException e) {
+            return null; // файл переписывается атомарно, но на Windows move может совпасть с чтением
+        }
+    }
+
+    /** Записать настройки лобби в папку матча (атомарно). false — не удалось. */
+    public static boolean writeSettings(int serverId, MatchHandoff.Settings settings) {
+        Path dir = getServerDirectory(serverId);
+        if (dir == null) return false;
+        try {
+            Path tmp = dir.resolve(MatchHandoff.SETTINGS_FILE + ".tmp");
+            Files.writeString(tmp, settings.toJson().toString());
+            Files.move(tmp, dir.resolve(MatchHandoff.SETTINGS_FILE), StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException e) {
+            log.error("Cannot write lobby settings for match {}", serverId, e);
+            return false;
         }
     }
 
     public static void stopServer(int serverId) {
         ServerInstance si = servers.remove(serverId);
         if (si == null) return;
-        if (si.process.isAlive()) {
+        if (si.process != null && si.process.isAlive()) {
             si.process.destroy();
             try {
                 si.process.waitFor(10, TimeUnit.SECONDS);

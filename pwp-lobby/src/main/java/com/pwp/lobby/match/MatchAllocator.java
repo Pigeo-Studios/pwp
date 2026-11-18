@@ -1,23 +1,29 @@
 package com.pwp.lobby.match;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.core.MatchPolicy;
+import com.pwp.api.lobby.LobbyCycle;
+import com.pwp.api.lobby.MatchHandoff;
+import com.pwp.api.time.GameClock;
 import com.pwp.api.util.ServerThread;
 import com.pwp.coreclient.network.ConnectToServerPacket;
+import com.pwp.coreclient.network.LobbyStatePacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.coreserver.TransferHosts;
 import com.pwp.lobby.LobbyMod;
 import com.pwp.lobby.ServerConfig;
 import com.pwp.lobby.ServerManager;
-import com.pwp.lobby.VotingManager;
 import com.pwp.lobby.maps.MapConfig;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +32,14 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Матчи лобби. Этап 5 — цикл подготовки ({@link LobbyCycle}): карта выбрана → сервер поднимается сразу
+ * (предпрогрев, флаг {@code prewarm} в {@code config/pwp_lobby.json}) → голосования за режим/фракции идут
+ * параллельно → настройки доставляются файлом ({@link MatchHandoff}) → матч-сервер применил их и
+ * пререндерил карту → игроки перебрасываются. Без предпрогрева сервер запускается после голосований уже с
+ * настройками (прежний порядок), но готовность и сбои идут тем же циклом. Сбой — один повтор, затем понятная
+ * ошибка в лобби (чат + LobbyStatePacket) и авто-голосование после паузы.
+ */
 public class MatchAllocator {
 
     private static final Logger log = LoggerFactory.getLogger(MatchAllocator.class);
@@ -46,6 +60,7 @@ public class MatchAllocator {
         lobbyPlayers.remove(uuid);
     }
 
+    /** Матч запущен/идёт/останавливается (предпрогрев PREPARING сюда НЕ входит — голосования продолжаются). */
     public static boolean hasActiveMatch() {
         return activeMatches.values().stream()
                 .anyMatch(m -> m.phase == MatchPhase.STARTING
@@ -60,19 +75,161 @@ public class MatchAllocator {
                 .orElse(null);
     }
 
-    public static synchronized void startMatch(MapConfig map) {
-        startMatch(
-                map,
-                map.teams.BLUE.faction,
-                map.teams.RED.faction,
-                map.mode,
-                map.teams.BLUE.tickets,
-                map.teams.RED.tickets,
-                true,
-                -1);
+    // ====== Цикл подготовки (этап 5) ======
+
+    /** Ключи ошибок/статусов — lang core-client {@code pwp_core.lobby.prep.*}. */
+    public static final String K = "pwp_core.lobby.prep.";
+
+    private static final LobbyCycle cycle = new LobbyCycle(LobbyCycle.Config.DEFAULT);
+    /** Оценка «копия + запуск до загрузки мира» для процента (тест-стенд 17.11.2026: старт → Done ≈ 50 с). */
+    private static final long BOOT_ESTIMATE_MS = 90_000;
+
+    private static final long SHOW_RESULT_MS = 30_000;
+
+    private static MatchInfo cycleMatch;
+    private static MapConfig cycleMap;
+    private static MatchHandoff.Settings cycleSettings;
+    private static LobbyCycle.Observed lastObserved;
+    private static long lastCycleStepMs;
+    private static long resultUntil;
+    private static int resultState;
+    private static String resultError;
+
+    /** Состояние подготовки для LobbyStatePacket: state — {@code LobbyStatePacket.PREP_*}. */
+    public record PrepView(int state, int percent, String errorKey) {}
+
+    public static PrepView prepView() {
+        long now = GameClock.realMillis();
+        if (cycleMatch != null) {
+            int pct = LobbyCycle.percent(now - cycle.launchedAt(), BOOT_ESTIMATE_MS, lastObserved);
+            int st =
+                    switch (cycle.phase()) {
+                        case PREPARING -> LobbyStatePacket.PREP_PREPARING;
+                        case WAITING_VOTES -> LobbyStatePacket.PREP_WAITING_VOTES;
+                        case FINISHING -> LobbyStatePacket.PREP_FINISHING;
+                        default -> LobbyStatePacket.PREP_NONE;
+                    };
+            if (st != LobbyStatePacket.PREP_NONE) return new PrepView(st, pct, null);
+        }
+        if (now < resultUntil) return new PrepView(resultState, 100, resultError);
+        return new PrepView(LobbyStatePacket.PREP_NONE, 0, null);
     }
 
-    public static synchronized void startMatch(
+    /** Идёт подготовка сервера текущего цикла (до переброса). */
+    public static boolean isCycleBusy() {
+        return cycleMatch != null;
+    }
+
+    /** Общие проверки перед запуском процесса; null — можно. */
+    private static String launchBlocker() {
+        if (lobbyPlayers.size() < minPlayersToStart) return K + "error.not_enough_players";
+        if (activeMatches.size() >= ServerConfig.getMaxMatches()) return K + "error.max_matches";
+        if (!MatchPolicy.canStartNewMatch()) return K + "error.policy";
+        return null;
+    }
+
+    /**
+     * Предпрогрев: карта выбрана — сервер поднимается, пока идут голосования за режим/фракции. null — запущен
+     * (или уже готовится), иначе ключ ошибки (уже разослан в чат).
+     */
+    public static synchronized String prepare(MapConfig map) {
+        if (cycleMatch != null) return null;
+        String err = launchBlocker();
+        if (err != null) {
+            broadcastKey(err, ChatFormatting.RED);
+            return err;
+        }
+        err = launch(map, null, false);
+        if (err != null) return err;
+        broadcastKey(K + "started", ChatFormatting.GRAY);
+        return null;
+    }
+
+    /** Запуск процесса для цикла; settings == null — предпрогрев (настройки придут файлом). */
+    private static String launch(MapConfig map, MatchHandoff.Settings settings, boolean retry) {
+        ServerManager.StartResult sr = ServerManager.startMatchServer(
+                map.name,
+                map.maxPlayers,
+                map.worldPath,
+                settings == null ? null : dir -> writeSettingsBeforeBoot(dir, map, settings),
+                settings == null);
+        if (sr.error != null) {
+            log.error("Failed to start match server: {}", sr.error);
+            broadcastKey(K + "error.start", ChatFormatting.RED);
+            return K + "error.start";
+        }
+        MatchInfo mi = new MatchInfo();
+        mi.serverId = sr.serverId;
+        mi.mapName = map.name;
+        mi.displayName = map.displayName;
+        mi.modeDisplayName = map.modeDisplayName;
+        mi.port = sr.port;
+        mi.maxPlayers = map.maxPlayers;
+        mi.playerCount = lobbyPlayers.size();
+        mi.blueFaction = map.teams.BLUE.faction;
+        mi.redFaction = map.teams.RED.faction;
+        mi.blueTickets = map.teams.BLUE.tickets;
+        mi.redTickets = map.teams.RED.tickets;
+        mi.worldPath = map.worldPath;
+        mi.mode = map.mode;
+        mi.startedAt = System.currentTimeMillis();
+        mi.phase = MatchPhase.PREPARING;
+        cycleMatch = mi;
+        cycleMap = map;
+        lastObserved = null;
+        activeMatches.put(mi.serverId, mi);
+        long now = GameClock.realMillis();
+        cycle.launched(now, retry);
+        if (settings != null) {
+            cycleSettings = settings;
+            applySettingsToInfo(mi, settings);
+            cycle.settingsDelivered(now);
+        }
+        log.info(
+                "Match {}: {} on port {} ({})",
+                mi.serverId,
+                map.displayName,
+                sr.port,
+                settings == null ? "prewarm" : "with settings");
+        LobbyMod.broadcastLobbyState();
+        return null;
+    }
+
+    /** Запуск с известными настройками: файл для матч-сервера + (для старых jar матча) правка map_config. */
+    private static void writeSettingsBeforeBoot(Path matchDir, MapConfig map, MatchHandoff.Settings s) {
+        try {
+            Files.writeString(
+                    matchDir.resolve(MatchHandoff.SETTINGS_FILE), s.toJson().toString());
+            Path configPath = matchDir.resolve("map_config.json");
+            if (!Files.exists(configPath)) configPath = Path.of(matchDir.toString(), map.name, "map_config.json");
+            if (Files.exists(configPath)) {
+                JsonObject root =
+                        JsonParser.parseString(Files.readString(configPath)).getAsJsonObject();
+                s.applyTo(root);
+                Files.writeString(
+                        configPath,
+                        new GsonBuilder().setPrettyPrinting().create().toJson(root));
+            }
+        } catch (IOException | RuntimeException e) {
+            log.error("Failed to write lobby settings into {}", matchDir, e);
+        }
+    }
+
+    private static void applySettingsToInfo(MatchInfo mi, MatchHandoff.Settings s) {
+        mi.blueFaction = s.blueFaction();
+        mi.redFaction = s.redFaction();
+        mi.blueTickets = s.blueTickets();
+        mi.redTickets = s.redTickets();
+        mi.mode = s.mode();
+        mi.modeDisplayName = s.invasion() ? "INVASION" : "Advance and Secure";
+        mi.phase = MatchPhase.STARTING;
+    }
+
+    /**
+     * Голосования закончились: доставить настройки на уже поднимающийся сервер (или запустить его сейчас, если
+     * предпрогрева не было). null — принято, иначе ключ ошибки (разослан в чат; команда показывает его же).
+     */
+    public static synchronized String startMatch(
             MapConfig map,
             String blueFaction,
             String redFaction,
@@ -81,102 +238,135 @@ public class MatchAllocator {
             int redTickets,
             boolean invasionDefenderIsRed,
             int patternIndex) {
+        MatchHandoff.Settings s = new MatchHandoff.Settings(
+                blueFaction, redFaction, mode, blueTickets, redTickets, invasionDefenderIsRed, patternIndex);
         if (lobbyPlayers.size() < minPlayersToStart) {
-            LobbyMod.serverBroadcast("§e[PWP] §cНедостаточно игроков для запуска матча (" + lobbyPlayers.size() + "/"
-                    + minPlayersToStart + ")");
             log.info("Not enough players: {}/{}", lobbyPlayers.size(), minPlayersToStart);
-            return;
+            if (cycleMatch != null) abortCycle(K + "error.not_enough_players");
+            else broadcastKey(K + "error.not_enough_players", ChatFormatting.RED);
+            return K + "error.not_enough_players";
         }
-        if (activeMatches.size() >= ServerConfig.getMaxMatches()) {
+        if (cycleMatch != null && cycleMap != null && cycleMap.name.equals(map.name) && !cycle.delivered()) {
+            cycleSettings = s;
+            applySettingsToInfo(cycleMatch, s);
             LobbyMod.serverBroadcast(
-                    "§e[PWP] §cДостигнут лимит активных матчей (" + ServerConfig.getMaxMatches() + ")");
-            log.info("Max matches reached: {}/{}", activeMatches.size(), ServerConfig.getMaxMatches());
-            return;
+                    "§e[PWP] §fНастройки матча выбраны §7(" + blueFaction + " vs " + redFaction + ", " + mode + ")");
+            LobbyMod.broadcastLobbyState();
+            return null; // доставка — на ближайшем шаге цикла (DELIVER_SETTINGS)
         }
-
+        if (cycleMatch != null) abortCycle(null); // предпрогрев другой карты (форс-старт) — заменяем
+        String err = launchBlocker();
+        if (err != null) {
+            broadcastKey(err, ChatFormatting.RED);
+            return err;
+        }
         LobbyMod.serverBroadcast("§e[PWP] §fЗапуск матча на карте §e" + map.displayName + "§f...");
-        log.info("Starting match on {} with {} players", map.displayName, lobbyPlayers.size());
-
-        ServerManager.StartResult sr =
-                ServerManager.startMatchServer(map.name, map.maxPlayers, map.worldPath, (matchDir) -> {
-                    try {
-                        Path configPath = matchDir.resolve("map_config.json");
-                        if (!Files.exists(configPath)) {
-                            configPath = Path.of(matchDir.toString(), map.name, "map_config.json");
-                        }
-                        if (Files.exists(configPath)) {
-                            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                            String content = Files.readString(configPath);
-                            JsonObject root = gson.fromJson(content, JsonObject.class);
-
-                            // Override factions
-                            root.getAsJsonObject("teams")
-                                    .getAsJsonObject("BLUE")
-                                    .addProperty("faction", blueFaction);
-                            root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("faction", redFaction);
-                            root.getAsJsonObject("teams")
-                                    .getAsJsonObject("BLUE")
-                                    .addProperty("tickets", blueTickets);
-                            root.getAsJsonObject("teams").getAsJsonObject("RED").addProperty("tickets", redTickets);
-
-                            // Set mode
-                            root.addProperty("mode", mode);
-                            root.addProperty(
-                                    "modeDisplayName", mode.equals("invasion") ? "INVASION" : "Advance and Secure");
-
-                            // Invasion defender
-                            root.addProperty("invasionDefender", invasionDefenderIsRed ? "RED" : "BLUE");
-
-                            // Capture point pattern index (patterns array is already in the original config)
-                            if (patternIndex >= 0) {
-                                root.addProperty("capturePointPatternIndex", patternIndex);
-                            }
-
-                            Files.writeString(configPath, gson.toJson(root));
-                            log.info(
-                                    "Customized map_config.json for match (factions: {}/{}, mode: {})",
-                                    blueFaction,
-                                    redFaction,
-                                    mode);
-                        }
-                    } catch (Exception e) {
-                        log.error("Failed to customize map_config.json: {}", e.getMessage());
-                    }
-                });
-        if (sr.error != null) {
-            LobbyMod.serverBroadcast("§e[PWP] §cОшибка запуска матча: " + sr.error);
-            log.error("Failed to start match: {}", sr.error);
-            return;
-        }
-
-        MatchInfo mi = new MatchInfo();
-        mi.serverId = sr.serverId;
-        mi.mapName = map.name;
-        mi.displayName = map.displayName;
-        mi.modeDisplayName = mode.equals("invasion") ? "INVASION" : map.modeDisplayName;
-        mi.port = sr.port;
-        mi.maxPlayers = map.maxPlayers;
-        mi.playerCount = lobbyPlayers.size();
-        mi.blueFaction = blueFaction;
-        mi.redFaction = redFaction;
-        mi.blueTickets = blueTickets;
-        mi.redTickets = redTickets;
-        mi.worldPath = map.worldPath;
-        mi.mode = mode;
-        mi.startedAt = System.currentTimeMillis();
-        activeMatches.put(mi.serverId, mi);
-
-        LobbyMod.broadcastLobbyState();
-        log.info(
-                "Match {}: {} ({}) on port {} ({} players, {} vs {})",
-                mi.serverId,
-                map.displayName,
-                mode,
-                sr.port,
-                lobbyPlayers.size(),
-                blueFaction,
-                redFaction);
+        return launch(map, s, false);
     }
+
+    /** Голосование остановлено до доставки настроек — подготовленный сервер не нужен. */
+    public static synchronized void cancelPreparing() {
+        if (cycleMatch == null || cycle.delivered()) return;
+        log.info("Prewarmed match {} cancelled (vote stopped)", cycleMatch.serverId);
+        abortCycle(null);
+    }
+
+    /** Сбой без повтора (или отмена при errorKey == null): сервер снять, причину показать. */
+    private static void abortCycle(String errorKey) {
+        if (cycleMatch != null) {
+            int id = cycleMatch.serverId;
+            activeMatches.remove(id);
+            ServerManager.stopServer(id);
+        }
+        cycleMatch = null;
+        cycleMap = null;
+        cycleSettings = null;
+        lastObserved = null;
+        cycle.reset();
+        if (errorKey != null) {
+            resultState = LobbyStatePacket.PREP_FAILED;
+            resultError = errorKey;
+            resultUntil = GameClock.realMillis() + SHOW_RESULT_MS;
+            broadcast(Component.translatable(K + "failed", Component.translatable(errorKey))
+                    .withStyle(ChatFormatting.RED));
+            LobbyMod.onCycleAborted();
+        }
+        LobbyMod.broadcastLobbyState();
+    }
+
+    /** Шаг цикла раз в секунду (главный поток; статус-файл < 1 КБ). */
+    private static void stepCycle() {
+        long now = GameClock.realMillis();
+        if (cycleMatch == null || now - lastCycleStepMs < 1000) return;
+        lastCycleStepMs = now;
+        MatchInfo mi = cycleMatch;
+        MatchHandoff.Status st = ServerManager.readStatus(mi.serverId);
+        boolean booted = ServerManager.isBooted(mi.serverId);
+        // старый jar матча без статус-файла: «Done» в логе = загружен, настройки (шли до запуска) применены
+        boolean applied = st != null ? st.settingsApplied() : booted && cycle.delivered();
+        String srvErr = st != null && st.stage() == MatchHandoff.Stage.ERROR ? st.error() : null;
+        lastObserved = new LobbyCycle.Observed(
+                ServerManager.isAlive(mi.serverId),
+                st != null || booted,
+                applied,
+                st != null ? st.prerenderDone() : 0,
+                st != null ? st.prerenderTotal() : 0,
+                srvErr);
+        switch (cycle.step(now, lastObserved, cycleSettings != null)) {
+            case DELIVER_SETTINGS -> {
+                if (ServerManager.writeSettings(mi.serverId, cycleSettings)) {
+                    cycle.settingsDelivered(now);
+                    log.info("Lobby settings delivered to match {}", mi.serverId);
+                } else {
+                    abortCycle(K + "error.server");
+                }
+            }
+            case TRANSFER -> {
+                cycleMatch = null;
+                cycleMap = null;
+                cycleSettings = null;
+                cycle.reset();
+                mi.phase = MatchPhase.PLAYING;
+                mi.startedAt = System.currentTimeMillis();
+                resultState = LobbyStatePacket.PREP_TRANSFERRING;
+                resultError = null;
+                resultUntil = now + 10_000;
+                broadcastKey(K + "ready", ChatFormatting.GREEN);
+                log.info("Match {} ready on port {}, transferring players", mi.serverId, mi.port);
+                transferPlayers(mi);
+                LobbyMod.broadcastLobbyState();
+            }
+            case RETRY -> {
+                String code = cycle.error();
+                log.warn("Match {} failed ({}, {}) — retrying", mi.serverId, code, ServerManager.getError(mi.serverId));
+                broadcast(Component.translatable(K + "retry", Component.translatable(K + "error." + code))
+                        .withStyle(ChatFormatting.YELLOW));
+                activeMatches.remove(mi.serverId);
+                ServerManager.stopServer(mi.serverId);
+                MatchHandoff.Settings s = cycle.delivered() ? cycleSettings : null;
+                String err = launch(cycleMap, s, true);
+                if (err != null) abortCycle(err);
+            }
+            case ABORT -> {
+                String code = cycle.error();
+                log.error(
+                        "Match {} failed ({}, {}) — giving up", mi.serverId, code, ServerManager.getError(mi.serverId));
+                abortCycle(K + "error." + code);
+            }
+            case NONE -> {}
+        }
+    }
+
+    private static void broadcastKey(String key, ChatFormatting color) {
+        broadcast(Component.translatable(key).withStyle(color));
+    }
+
+    private static void broadcast(Component c) {
+        var server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) server.getPlayerList().getPlayers().forEach(p -> p.sendSystemMessage(c, false));
+    }
+
+    // ====== Подключение к матчу ======
 
     public static void joinActiveMatch(ServerPlayer player) {
         MatchInfo mi = getActiveMatch();
@@ -200,7 +390,7 @@ public class MatchAllocator {
         // адрес хоста в чат не пишем (светит LAN-адрес) — только карта
         player.sendSystemMessage(
                 Component.translatable("pwp_core.lobby.transfer", mi.displayName != null ? mi.displayName : mi.mapName)
-                        .withStyle(net.minecraft.ChatFormatting.YELLOW),
+                        .withStyle(ChatFormatting.YELLOW),
                 false);
         PacketHandler.INSTANCE.send(
                 PacketDistributor.PLAYER.with(() -> player), new ConnectToServerPacket(host, mi.port));
@@ -208,12 +398,14 @@ public class MatchAllocator {
 
     public static void tick() {
         ServerManager.tick();
+        stepCycle();
         if (++statusPollTicks >= 200) {
             statusPollTicks = 0;
             updateMatchOnlineFromCore();
         }
 
         for (MatchInfo mi : activeMatches.values()) {
+            if (mi == cycleMatch) continue; // подготовку ведёт stepCycle
             if (mi.phase == MatchPhase.ENDING) {
                 if (!ServerManager.isAlive(mi.serverId)) {
                     log.info("Match {} stopped gracefully", mi.serverId);
@@ -229,16 +421,6 @@ public class MatchAllocator {
                 log.warn("Match {} server is dead, cleaning up", mi.serverId);
                 LobbyMod.serverBroadcast("§e[PWP] §cМатч " + mi.displayName + " прерван из-за ошибки сервера!");
                 matchEnded(mi.serverId);
-                continue;
-            }
-
-            if (mi.phase == MatchPhase.STARTING && ServerManager.isBooted(mi.serverId)) {
-                mi.phase = MatchPhase.PLAYING;
-                LobbyMod.serverBroadcast(
-                        "§e[PWP] §aСервер матча готов! §7Перенос игроков на §e" + mi.mapName + "§7...");
-                log.info("Match {} ready on port {}, transferring players", mi.serverId, mi.port);
-                LobbyMod.broadcastLobbyState();
-                transferPlayers(mi);
             }
         }
     }
@@ -251,14 +433,7 @@ public class MatchAllocator {
         // теряет обратные пакеты после первого соединения), внешние — домен
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!lobbyPlayers.contains(player.getStringUUID())) continue;
-            String host = TransferHosts.resolveTransferHost(player);
-            player.sendSystemMessage(
-                    Component.translatable(
-                                    "pwp_core.lobby.transfer", mi.displayName != null ? mi.displayName : mi.mapName)
-                            .withStyle(net.minecraft.ChatFormatting.YELLOW),
-                    false);
-            PacketHandler.INSTANCE.send(
-                    PacketDistributor.PLAYER.with(() -> player), new ConnectToServerPacket(host, mi.port));
+            connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
         }
         log.info("Transferring {} players to match {} on port {}", lobbyPlayers.size(), mi.mapName, mi.port);
     }
@@ -291,7 +466,7 @@ public class MatchAllocator {
                 int port = s.get("port").getAsInt();
                 int online = s.get("online").getAsInt();
                 for (MatchInfo mi : activeMatches.values()) {
-                    if (mi.port != port) continue;
+                    if (mi.port != port || mi == cycleMatch) continue;
                     mi.playerCount = online;
                     JsonObject m = s.getAsJsonObject("match");
                     if (m.has("blueScore")) mi.blueTickets = m.get("blueScore").getAsInt();
@@ -306,6 +481,11 @@ public class MatchAllocator {
     public static void requestMatchStop(int serverId) {
         MatchInfo mi = activeMatches.get(serverId);
         if (mi == null) return;
+        if (mi == cycleMatch) {
+            // остановка ещё не начавшегося матча = отмена подготовки
+            abortCycle(null);
+            return;
+        }
         mi.phase = MatchPhase.ENDING;
         mi.stopRequestedAt = System.currentTimeMillis();
         Path dir = ServerManager.getServerDirectory(serverId);
@@ -329,12 +509,7 @@ public class MatchAllocator {
             log.info("Match ended: {} on port {}", mi.mapName, mi.port);
         }
         LobbyMod.broadcastLobbyState();
-        if (!hasActiveMatch()
-                && !lobbyPlayers.isEmpty()
-                && !LobbyMod.isAnyVoteActive()
-                && ServerConfig.isAutoStartEnabled()) {
-            VotingManager.startVoting();
-        }
+        LobbyMod.maybeAutoStartVote();
     }
 
     public static Map<Integer, MatchInfo> getActiveMatches() {
@@ -345,7 +520,13 @@ public class MatchAllocator {
         return lobbyPlayers.size();
     }
 
+    public static int getMinPlayers() {
+        return minPlayersToStart;
+    }
+
     public enum MatchPhase {
+        /** Предпрогрев: сервер поднимается, голосования за режим/фракции ещё идут (не «активный матч»). */
+        PREPARING,
         STARTING,
         PLAYING,
         ENDING

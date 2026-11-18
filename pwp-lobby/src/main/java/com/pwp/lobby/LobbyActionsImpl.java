@@ -29,8 +29,8 @@ final class LobbyActionsImpl implements LobbyActions {
         if (LobbyMod.isAnyVoteActive()) return "pwp_core.admin.lobby.error.vote_active";
         if (MapRegistry.getVotable().isEmpty()) return "pwp_core.admin.lobby.error.no_maps";
         if (!com.pwp.api.core.MatchPolicy.canStartNewMatch()) return "pwp_core.admin.lobby.error.policy";
-        VotingManager.startVoting();
-        // startVoting молча выходит при запретах — проверяем результат, а не рапортуем «успех»
+        String err = VotingManager.startVoting();
+        if (err != null) return err;
         return VotingManager.isActive() ? null : "pwp_core.admin.error.internal";
     }
 

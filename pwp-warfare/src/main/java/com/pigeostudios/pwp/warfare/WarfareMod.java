@@ -72,6 +72,7 @@ public class WarfareMod {
         ModSounds.register(modEventBus);
         MinecraftForge.EVENT_BUS.register(this);
         MatchHeartbeatSender.register();
+        com.pigeostudios.pwp.warfare.server.LobbyHandoff.register();
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -92,6 +93,8 @@ public class WarfareMod {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("PWP Warfare Server starting...");
+        // этап 5: настройки лобби (файл) вливаются в map_config до применения; предпрогрев — ждём их
+        com.pigeostudios.pwp.warfare.server.LobbyHandoff.beforeApply();
         applyMapConfig(event.getServer().overworld());
         MatchConfigLoader.load(event.getServer().overworld());
         // этап 3: правка «на этот матч» (SavedData) или последняя версия «навсегда» из БД (асинхронно)
@@ -104,10 +107,8 @@ public class WarfareMod {
         ModCommands.register(event.getDispatcher());
     }
 
-    public static void applyMapConfig(ServerLevel level) {
-        WarfareWorldData data = WarfareWorldData.get(level);
-        if (data.match.configApplied) return;
-
+    /** map_config матча: {@code <level-name>/map_config.json} → {@code world/} → корень; null — нет. */
+    public static Path resolveMapConfigPath() {
         String levelName = "world";
         try {
             Path propsPath = Path.of("server.properties");
@@ -130,7 +131,15 @@ public class WarfareMod {
         if (!Files.exists(configPath)) {
             configPath = Path.of("map_config.json");
         }
-        if (!Files.exists(configPath)) {
+        return Files.exists(configPath) ? configPath : null;
+    }
+
+    public static void applyMapConfig(ServerLevel level) {
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (data.match.configApplied) return;
+
+        Path configPath = resolveMapConfigPath();
+        if (configPath == null) {
             LOGGER.warn("map_config.json not found, skipping config apply");
             return;
         }
@@ -253,7 +262,11 @@ public class WarfareMod {
                 }
             }
 
-            if (ModList.get().isLoaded("pwpcore")) {
+            // предпрогрев (этап 5): фракции ещё не выбраны — киты/технику грузим после настроек лобби
+            boolean awaitingLobby = com.pigeostudios.pwp.warfare.server.LobbyHandoff.isAwaitingSettings();
+            if (awaitingLobby) {
+                LOGGER.info("Lobby prewarm: kits/vehicles and waiting phase deferred until lobby settings arrive");
+            } else if (ModList.get().isLoaded("pwpcore")) {
                 // Киты и пулы техники — из API асинхронно; применяются на главном потоке,
                 // задолго до конца фазы ожидания (300 с)
                 FactionDataLoader.start(level, data);
@@ -351,6 +364,11 @@ public class WarfareMod {
                         data.match.invasionSetupTimer);
             }
 
+            if (awaitingLobby) {
+                // предпрогрев: ожидание (таймер 300 с, техника) начнётся при живом повторном применении
+                data.setDirty();
+                return;
+            }
             // Фаза ожидания (стейджинг, этап 4): таймер + голосование «готовы» сразу (решение 4)
             data.match.waitingActive = true;
             data.match.waitingTimer = WarfareConfig.WAITING_PHASE_SECONDS.get();

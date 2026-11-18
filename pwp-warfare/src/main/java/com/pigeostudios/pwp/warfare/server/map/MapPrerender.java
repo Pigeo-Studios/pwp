@@ -187,8 +187,8 @@ public final class MapPrerender {
         if (a != null) out.add(new double[] {(a.minX + a.maxX) / 2, (a.minZ + a.maxZ) / 2});
     }
 
-    /** Прогресс для обзора: {готово, всего}; всего 0 — пререндер не идёт. */
-    static int[] progress() {
+    /** Прогресс для обзора и отчёта лобби (этап 5): {готово, всего}; всего 0 — пререндер не идёт. */
+    public static int[] progress() {
         return new int[] {Math.min(DONE.get(), total), total};
     }
 }

@@ -104,6 +104,27 @@ public final class LobbyHud {
         if (isOnLobby()) PWPLobbyScreen.openManually(last);
     }
 
+    /**
+     * Строка подготовки матч-сервера (этап 5): «сервер готовится N%», «ждём голосование», «переброс», ошибка.
+     * null — подготовки нет. Общая для HUD и подвала PWPLobbyScreen.
+     */
+    public static Component prepLine(LobbyStatePacket p) {
+        if (p == null) return null;
+        return switch (p.prepState) {
+            case LobbyStatePacket.PREP_PREPARING -> Component.translatable(
+                    "pwp_core.lobby.prep.state.preparing", p.prepPercent);
+            case LobbyStatePacket.PREP_WAITING_VOTES -> Component.translatable(
+                    "pwp_core.lobby.prep.state.waiting_votes");
+            case LobbyStatePacket.PREP_FINISHING -> Component.translatable(
+                    "pwp_core.lobby.prep.state.finishing", p.prepPercent);
+            case LobbyStatePacket.PREP_TRANSFERRING -> Component.translatable("pwp_core.lobby.prep.state.transferring");
+            case LobbyStatePacket.PREP_FAILED -> Component.translatable(
+                    "pwp_core.lobby.prep.state.failed",
+                    Component.translatable(p.prepError != null ? p.prepError : "pwp_core.lobby.prep.error.server"));
+            default -> null;
+        };
+    }
+
     public static Component keyName() {
         return LOBBY_KEY.getTranslatedKeyMessage();
     }
@@ -139,7 +160,8 @@ public final class LobbyHud {
         UIToast.render(g, screenW);
         if (mc.options.hideGui || !isOnLobby()) return;
         boolean voting = isVotePhase(last.phase);
-        Component text = voting
+        Component prep = prepLine(last);
+        Component base = voting
                 ? Component.translatable("pwp_core.lobby.hint.voting", keyName(), last.remainingSeconds)
                 : last.phase == LobbyStatePacket.PHASE_IDLE
                                 && last.minPlayers > 0
@@ -147,13 +169,15 @@ public final class LobbyHud {
                         ? Component.translatable(
                                 "pwp_core.lobby.hint.waiting_players", keyName(), last.onlinePlayers, last.minPlayers)
                         : Component.translatable("pwp_core.lobby.hint.open", keyName());
+        Component text = prep == null ? base : base.copy().append(" · ").append(prep);
+        boolean failed = last.prepState == LobbyStatePacket.PREP_FAILED;
         var font = mc.font;
         int w = font.width(text) + 2 * Spacing.MD;
         int h = font.lineHeight + 2 * Spacing.SM;
         Rect r = Rect.of((screenW - w) / 2, Spacing.SM, w, h);
         UIDraw.glass(g, r, voting ? 1F : 0.7F, voting);
         if (voting) UIDraw.accentBarH(g, r.x(), r.bottom() - 1, r.w(), 1, PWPTheme.Colors.ACCENT);
-        int color = voting ? PWPTheme.Text.ACCENT : PWPTheme.Text.MUTED;
+        int color = failed ? PWPTheme.Text.DANGER : voting || prep != null ? PWPTheme.Text.ACCENT : PWPTheme.Text.MUTED;
         UIDraw.text(g, font, text, r.x() + Spacing.MD, r.y() + Spacing.SM + 1, color, true);
     }
 }

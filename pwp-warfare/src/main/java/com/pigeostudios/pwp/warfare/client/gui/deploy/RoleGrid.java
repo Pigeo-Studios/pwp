@@ -146,6 +146,10 @@ public class RoleGrid {
                         .copy()
                         .withStyle(s -> s.withColor(WTheme.STATUS_BAD)));
             }
+            if (DeployData.isLeaderRole(hovKit.name())) {
+                lines.add(Component.translatable("gui.pwpwarfare.deploy.roles.leader_needed")
+                        .withStyle(s -> s.withColor(Colors.TEXT_ACCENT)));
+            }
             if (hovKit.maxInTeam() > 0) {
                 lines.add(Component.translatable(
                         "gui.pwpwarfare.deploy.roles.occupancy", hovKit.inTeamCount(), hovKit.maxInTeam()));
@@ -215,6 +219,17 @@ public class RoleGrid {
                     r.y() + Spacing.XXS,
                     WTheme.ICON_SMALL,
                     UIDraw.fade(WTheme.STATUS_BAD, o));
+        }
+        if (avail && DeployData.isLeaderRole(kit.name())) {
+            // «нужна лидеру»: короткая метка в левом верхнем углу (там же замок у недоступных)
+            UIDraw.text(
+                    g,
+                    font,
+                    Component.translatable("gui.pwpwarfare.deploy.roles.leader_tag"),
+                    r.x() + Spacing.XXS + 1,
+                    r.y() + Spacing.XXS + 1,
+                    UIDraw.fade(Colors.TEXT_ACCENT, o),
+                    true);
         }
         if (showCount) {
             boolean full = kit.inTeamCount() >= kit.maxInTeam();

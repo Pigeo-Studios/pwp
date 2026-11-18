@@ -157,6 +157,14 @@ public class DeployData {
         KIT_DISPLAY_NAMES.put("SUPPORT", "ПОДДЕРЖКА");
     }
 
+    /**
+     * Роль лидера отряда (группа COMMANDER: Officer / Pilot Officer / Mechanic Officer) — без неё у лидера
+     * отряд распадается ({@code requireOfficerForSL}). Метка в сетке ролей; формат пакета не меняется.
+     */
+    public static boolean isLeaderRole(String kitName) {
+        return "COMMANDER".equals(KIT_GROUP.get(kitName));
+    }
+
     public static String getDisplayName(String en) {
         return KIT_DISPLAY_NAMES.getOrDefault(en, en);
     }

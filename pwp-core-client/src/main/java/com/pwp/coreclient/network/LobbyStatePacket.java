@@ -19,6 +19,19 @@ public class LobbyStatePacket {
     public static final int PHASE_MATCH_STARTING = 4;
     public static final int PHASE_MATCH_PLAYING = 5;
 
+    // Подготовка матч-сервера (этап 5): prepState
+    public static final int PREP_NONE = 0;
+    /** Копия мира/запуск/загрузка — prepPercent. */
+    public static final int PREP_PREPARING = 1;
+    /** Сервер готов, ждём конца голосований. */
+    public static final int PREP_WAITING_VOTES = 2;
+    /** Настройки доставлены, сервер применяет их и дорисовывает карту — prepPercent. */
+    public static final int PREP_FINISHING = 3;
+
+    public static final int PREP_TRANSFERRING = 4;
+    /** Сбой — prepError (ключ перевода причины). */
+    public static final int PREP_FAILED = 5;
+
     // Общее
     public final int phase;
     public final int remainingSeconds;
@@ -31,6 +44,11 @@ public class LobbyStatePacket {
     public final boolean requestOpen; // true — клиент должен открыть GUI (вход на сервер, /pwp)
     /** Сколько игроков нужно для автостарта голосования (0 — неизвестно). Хвостовое поле, ставит сервер. */
     public int minPlayers;
+    /** Подготовка матч-сервера (PREP_*), процент 0..100, ключ ошибки (null — нет). Хвостовые поля, протокол 5. */
+    public int prepState;
+
+    public int prepPercent;
+    public String prepError;
 
     // Голосование за карту
     public final String[] mapNames;
@@ -335,6 +353,9 @@ public class LobbyStatePacket {
         writeStringArr(buf, msg.mRedFactions);
         writeStringArr(buf, msg.mWorldPaths);
         buf.writeVarInt(Math.max(0, msg.minPlayers));
+        buf.writeVarInt(Math.max(0, msg.prepState));
+        buf.writeVarInt(Math.max(0, Math.min(100, msg.prepPercent)));
+        buf.writeUtf(msg.prepError != null ? msg.prepError : "", 256);
     }
 
     private static String opt(String s) {
@@ -412,6 +433,9 @@ public class LobbyStatePacket {
         String[] mRedFactions = readStringArr(buf);
         String[] mWorldPaths = readStringArr(buf);
         int minPlayers = buf.readVarInt();
+        int prepState = buf.readVarInt();
+        int prepPercent = buf.readVarInt();
+        String prepError = opt(buf.readUtf(256));
 
         LobbyStatePacket pkt = new LobbyStatePacket(
                 phase,
@@ -477,6 +501,9 @@ public class LobbyStatePacket {
                 mRedFactions,
                 mWorldPaths);
         pkt.minPlayers = minPlayers;
+        pkt.prepState = prepState;
+        pkt.prepPercent = prepPercent;
+        pkt.prepError = prepError;
         return pkt;
     }
 

@@ -822,5 +822,10 @@
     "gui.pwpwarfare.hint.staging.map": "[%s] — карта: маркеры и пути подготовки сохранятся после старта",
     "gui.pwpwarfare.hint.battle.take_kit": "Нет снаряжения: [%s] → «ВЗЯТЬ СНАРЯЖЕНИЕ»",
     "gui.pwpwarfare.hint.battle.voice": "[%s] — рация отряда, [%s] — канал лидеров",
-    "gui.pwpwarfare.hint.battle.ping": "[%s] — пинг-метка для отряда"
+    "gui.pwpwarfare.hint.battle.ping": "[%s] — пинг-метка для отряда",
+    "squad.disbanded_broadcast": "Отряд %s расформирован: лидер без кита Офицера!",
+    "squad.disbanded_no_officer": "Ваш отряд расформирован (нет кита Офицера)!",
+    "pwpwarfare.hint.main_supply": "Главный склад — техника рядом пополняется, игроки лечатся",
+    "gui.pwpwarfare.deploy.roles.leader_tag": "ЛИД",
+    "gui.pwpwarfare.deploy.roles.leader_needed": "Нужна лидеру отряда — без неё отряд распадётся"
 }

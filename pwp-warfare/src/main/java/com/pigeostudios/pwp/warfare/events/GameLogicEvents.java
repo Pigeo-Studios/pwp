@@ -664,11 +664,14 @@ public class GameLogicEvents {
                                                         new PacketNotification("squad.leader_kit_warning", (byte) 0));
                                             }
                                         } else {
-                                            broadcastMessage(
-                                                    level,
-                                                    "Squad " + squad.name
-                                                            + " disbanded: Leader is not using a Leader kit!",
-                                                    ChatFormatting.RED);
+                                            // рассылка на языке каждого игрока (раньше — английский литерал)
+                                            level.getServer()
+                                                    .getPlayerList()
+                                                    .broadcastSystemMessage(
+                                                            Component.translatable(
+                                                                            "squad.disbanded_broadcast", squad.name)
+                                                                    .withStyle(ChatFormatting.RED),
+                                                            false);
 
                                             for (String memberName : new ArrayList<>(squad.members)) {
                                                 ServerPlayer m =
@@ -688,8 +691,8 @@ public class GameLogicEvents {
                                                     m.inventoryMenu.broadcastChanges();
                                                     m.containerMenu.broadcastChanges();
                                                     m.displayClientMessage(
-                                                            Component.literal(
-                                                                    "§cВаш отряд расформирован (нет кита Офицера)!"),
+                                                            Component.translatable("squad.disbanded_no_officer")
+                                                                    .withStyle(ChatFormatting.RED),
                                                             true);
                                                 }
                                             }

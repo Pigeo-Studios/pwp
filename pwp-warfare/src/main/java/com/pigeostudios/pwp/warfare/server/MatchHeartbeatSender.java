@@ -47,7 +47,7 @@ public class MatchHeartbeatSender {
             if (port <= 0) port = 25565;
 
             String dir = Path.of("").toAbsolutePath().getFileName().toString();
-            CoreApi.sendHeartbeat(new Heartbeat("match_" + dir, online)
+            CoreApi.sendHeartbeat(LobbyHandoff.withPrep(new Heartbeat("match_" + dir, online)
                     .port(port)
                     .match(
                             data.match.currentMapImage != null ? data.match.currentMapImage : "",
@@ -59,7 +59,7 @@ public class MatchHeartbeatSender {
                             data.match.isGameStarted ? "PLAYING" : "STARTING",
                             server.getPlayerList().getMaxPlayers(),
                             MatchStatsTracker.get().getStartedAt(),
-                            online));
+                            online)));
         } catch (RuntimeException e) {
             // heartbeat не должен ломать тик, но ошибку сборки данных видно в логе
             LOG.warn("Не удалось отправить heartbeat матча", e);

@@ -29,6 +29,22 @@ public final class ServerConfig {
     private static volatile LobbySettings settings = LobbySettings.DEFAULT;
     /** Что лежит в файле (после load/save). */
     private static volatile LobbySettings onDisk = LobbySettings.DEFAULT;
+    /**
+     * Предпрогрев матч-сервера (этап 5): поднимать сервер сразу после выбора карты. Отдельный ключ файла
+     * (не поле LobbySettings — тот уходит пакетом админ-панели), по умолчанию ВЫКЛ до проверки в игре.
+     */
+    private static volatile boolean prewarm = false;
+
+    private static volatile boolean prewarmOnDisk = false;
+
+    public static boolean isPrewarm() {
+        return prewarm;
+    }
+
+    public static void setPrewarm(boolean v, boolean persist) {
+        prewarm = v;
+        if (persist) save();
+    }
 
     private ServerConfig() {}
 
@@ -55,7 +71,7 @@ public final class ServerConfig {
 
     /** Текущие значения совпадают с файлом (нет изменений «до рестарта»). */
     public static boolean isPersisted() {
-        return settings.equals(onDisk);
+        return settings.equals(onDisk) && prewarm == prewarmOnDisk;
     }
 
     public static int getMinPlayers() {
@@ -81,6 +97,14 @@ public final class ServerConfig {
                         .getAsJsonObject();
                 List<String> warnings = new ArrayList<>();
                 loaded = LobbySettings.fromJson(o, warnings);
+                if (o.has("prewarm")) {
+                    if (o.get("prewarm").isJsonPrimitive()
+                            && o.getAsJsonPrimitive("prewarm").isBoolean()) {
+                        prewarm = o.get("prewarm").getAsBoolean();
+                    } else {
+                        warnings.add("prewarm: expected true/false, got " + o.get("prewarm"));
+                    }
+                }
                 for (String w : warnings) LOG.warn("{}: {} — взят дефолт", FILE, w);
             } catch (IOException | JsonParseException | IllegalStateException e) {
                 LOG.warn("{} не прочитан — настройки лобби по умолчанию", FILE, e);
@@ -88,12 +112,14 @@ public final class ServerConfig {
         }
         settings = loaded;
         onDisk = loaded;
+        prewarmOnDisk = prewarm;
         MatchAllocator.configure(loaded.minPlayers());
         LOG.info(
-                "Настройки лобби: autostart={}, maxMatches={}, minPlayers={}",
+                "Настройки лобби: autostart={}, maxMatches={}, minPlayers={}, prewarm={}",
                 loaded.autostart(),
                 loaded.maxMatches(),
-                loaded.minPlayers());
+                loaded.minPlayers(),
+                prewarm);
         if (!Files.isRegularFile(FILE)) save();
     }
 
@@ -101,9 +127,12 @@ public final class ServerConfig {
         try {
             Files.createDirectories(FILE.toAbsolutePath().getParent());
             Path tmp = FILE.resolveSibling(FILE.getFileName() + ".tmp");
-            Files.writeString(tmp, settings.toJson().toString(), StandardCharsets.UTF_8);
+            JsonObject o = settings.toJson();
+            o.addProperty("prewarm", prewarm);
+            Files.writeString(tmp, o.toString(), StandardCharsets.UTF_8);
             Files.move(tmp, FILE, StandardCopyOption.REPLACE_EXISTING);
             onDisk = settings;
+            prewarmOnDisk = prewarm;
             return true;
         } catch (IOException e) {
             LOG.warn("Не удалось записать {}", FILE, e);

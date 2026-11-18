@@ -24,22 +24,28 @@ public class VotingManager {
     private static long lastLeaderBroadcast = 0;
     private static int lastBroadcastedRemaining = -1;
 
-    public static void startVoting() {
-        if (MatchAllocator.hasActiveMatch() || LobbyMod.isAnyVoteActive()) {
-            log.warn("Cannot start voting while a match or another vote is active");
-            return;
-        }
+    /**
+     * Начать голосование за карту. null — началось, иначе ключ причины отказа (раньше отказ был только в логе,
+     * а команды/панель рапортовали успех — «молчащий» старт).
+     */
+    public static String startVoting() {
+        if (MatchAllocator.hasActiveMatch()) return "pwp_core.admin.lobby.error.match_active";
+        if (LobbyMod.isAnyVoteActive()) return "pwp_core.admin.lobby.error.vote_active";
+        if (MatchAllocator.isCycleBusy()) return "pwp_core.lobby.prep.error.busy";
         if (!com.pwp.api.core.MatchPolicy.canStartNewMatch()) {
             String reason = com.pwp.api.core.MatchPolicy.reason();
             LobbyMod.serverBroadcast("§e[PWP] §cНовые матчи приостановлены"
                     + (reason != null && !reason.isEmpty() ? ": " + reason : ""));
             log.info("Voting start blocked by match policy");
-            return;
+            return "pwp_core.admin.lobby.error.policy";
         }
         List<MapConfig> maps = MapRegistry.getVotable();
         if (maps.size() < 1) {
             log.warn("No maps available for voting");
-            return;
+            return "pwp_core.admin.lobby.error.no_maps";
+        }
+        if (MatchAllocator.getLobbyPlayerCount() < MatchAllocator.getMinPlayers()) {
+            return "pwp_core.lobby.prep.error.not_enough_players";
         }
         active = true;
         finished = false;
@@ -56,6 +62,7 @@ public class VotingManager {
         LobbyMod.serverBroadcast("§7Напишите §e/votemap <название> §7или откройте GUI чтобы проголосовать");
         LobbyMod.broadcastLobbyState();
         log.info("Voting started: {} maps available, {} seconds", maps.size(), voteDurationSec);
+        return null;
     }
 
     public static boolean vote(UUID playerUuid, String mapName) {

@@ -126,6 +126,48 @@ public class LobbyMod {
     }
 
     private int heartbeatTicks = 0;
+    private int autoVoteTicks = 0;
+
+    /** Авто-голосование не раньше этого момента (пауза после сбоя подготовки / ручной остановки). */
+    private static long autoVoteNotBefore = 0;
+
+    private static final long AUTO_VOTE_PAUSE_AFTER_FAIL_MS = 60_000;
+    private static final long AUTO_VOTE_PAUSE_AFTER_STOP_MS = 300_000;
+
+    /**
+     * Авто-цикл (этап 5): автостарт вкл., лобби свободно, игроков ≥ minPlayers, пауза прошла — начать
+     * голосование. Зовётся при входе игрока, конце матча и раз в 5 с (лобби «добрало» игроков — цикл пошёл сам).
+     */
+    public static void maybeAutoStartVote() {
+        boolean busy = MatchAllocator.hasActiveMatch() || isAnyVoteActive() || MatchAllocator.isCycleBusy();
+        if (!com.pwp.api.lobby.LobbyCycle.autoVoteAllowed(
+                ServerConfig.isAutoStartEnabled(),
+                busy,
+                MatchAllocator.getLobbyPlayerCount(),
+                ServerConfig.getMinPlayers(),
+                com.pwp.api.time.GameClock.realMillis(),
+                autoVoteNotBefore)) return;
+        if (!com.pwp.api.core.MatchPolicy.canStartNewMatch()) return; // причина видна в GUI (policyReason)
+        if (MapRegistry.getVotable().isEmpty()) return;
+        VotingManager.startVoting();
+    }
+
+    /** Подготовка матча сорвалась окончательно: голосования этого цикла снять, авто-цикл — после паузы. */
+    public static void onCycleAborted() {
+        autoVoteNotBefore = com.pwp.api.time.GameClock.realMillis() + AUTO_VOTE_PAUSE_AFTER_FAIL_MS;
+        stopVotesQuietly();
+    }
+
+    private static void stopVotesQuietly() {
+        if (VotingManager.isActive()) VotingManager.stopVoting();
+        if (modeVoteActive) {
+            modeVoteActive = false;
+            modeVotes.clear();
+        }
+        if (FactionVotingManager.isActive()) FactionVotingManager.stop();
+        pendingMapName = null;
+    }
+
     private int stateBroadcastTicks = 0;
 
     @SubscribeEvent
@@ -135,6 +177,10 @@ public class LobbyMod {
         FactionVotingManager.tick();
         tickModeVote();
         MatchAllocator.tick();
+        if (++autoVoteTicks >= 100) {
+            autoVoteTicks = 0;
+            maybeAutoStartVote();
+        }
 
         // Авторитетное состояние лобби — раз в секунду всем игрокам
         if (++stateBroadcastTicks >= 20) {
@@ -318,6 +364,7 @@ public class LobbyMod {
         List<MatchInfo> list = new ArrayList<>();
         for (MatchInfo m : matches.values()) {
             if (mi != null && m.serverId == mi.serverId) continue;
+            if (m.phase == MatchAllocator.MatchPhase.PREPARING) continue; // предпрогрев — в prepState
             list.add(m);
         }
         int mc = list.size();
@@ -405,6 +452,10 @@ public class LobbyMod {
                 mRedFactions,
                 mWorldPaths);
         pkt.minPlayers = ServerConfig.getMinPlayers();
+        MatchAllocator.PrepView prep = MatchAllocator.prepView();
+        pkt.prepState = prep.state();
+        pkt.prepPercent = prep.percent();
+        pkt.prepError = prep.errorKey();
         return pkt;
     }
 
@@ -453,11 +504,11 @@ public class LobbyMod {
             serverBroadcast("§7[PWP] Идёт голосование за фракции! §e/votefaction §7<синие> <красные>");
         }
 
-        // Автозапуск голосования, если включён автостарт, ничего не активно и политика разрешает
-        // (раньше флаг autostart здесь не проверялся — голосование стартовало при каждом входе)
-        if (ServerConfig.isAutoStartEnabled() && !MatchAllocator.hasActiveMatch() && !isAnyVoteActive()) {
-            VotingManager.startVoting();
-            sendLobbyStateToPlayer(player);
+        // Автозапуск голосования: автостарт + свободное лобби + minPlayers (раньше minPlayers тут не
+        // проверялся — голосование шло с 1 игроком и молча упиралось в «мало игроков» только в конце)
+        if (!isAnyVoteActive()) {
+            maybeAutoStartVote();
+            if (isAnyVoteActive()) sendLobbyStateToPlayer(player);
         }
     }
 
@@ -494,12 +545,18 @@ public class LobbyMod {
                                                         "Уже идёт голосование (карта/режим/фракции)"));
                                         return 0;
                                     }
-                                    List<MapConfig> votable = MapRegistry.getVotable();
-                                    if (votable.isEmpty()) {
-                                        ctx.getSource().sendFailure(Component.literal("Нет карт для голосования"));
+                                    if (MatchAllocator.isCycleBusy()) {
+                                        ctx.getSource()
+                                                .sendFailure(Component.translatable("pwp_core.lobby.prep.error.busy"));
                                         return 0;
                                     }
-                                    VotingManager.startVoting();
+                                    String err = VotingManager.startVoting();
+                                    if (err != null) {
+                                        // раньше startVoting молча выходил, а команда рапортовала «начато»
+                                        ctx.getSource().sendFailure(Component.translatable(err));
+                                        return 0;
+                                    }
+                                    autoVoteNotBefore = 0;
                                     ctx.getSource().sendSuccess(() -> Component.literal("§aГолосование начато"), false);
                                     return Command.SINGLE_SUCCESS;
                                 })
@@ -528,7 +585,11 @@ public class LobbyMod {
                                             }
                                             VotingManager.stopVoting();
                                             // Immediately finish map vote with forced map
-                                            onVoteFinished(mn);
+                                            String err = onVoteFinished(mn);
+                                            if (err != null) {
+                                                ctx.getSource().sendFailure(Component.translatable(err));
+                                                return 0;
+                                            }
                                             ctx.getSource()
                                                     .sendSuccess(
                                                             () -> Component.literal(
@@ -576,11 +637,16 @@ public class LobbyMod {
                                                     modeVoteWinner = md;
                                                     LobbyMod.serverBroadcast("§e[PWP] §aКарта: §e" + map.displayName
                                                             + " §aРежим: §e" + md.toUpperCase());
+                                                    String err = prewarmIfEnabled(map);
                                                     List<String> available = getAvailableFactions(map);
-                                                    if (available.size() >= 2) {
+                                                    if (err == null && available.size() >= 2) {
                                                         FactionVotingManager.startFactionVoting(mn, available);
-                                                    } else {
-                                                        startMatchAfterFactionVote(map, "usa", "russia");
+                                                    } else if (err == null) {
+                                                        err = startMatchAfterFactionVote(map, "usa", "russia");
+                                                    }
+                                                    if (err != null) {
+                                                        ctx.getSource().sendFailure(Component.translatable(err));
+                                                        return 0;
                                                     }
                                                     ctx.getSource()
                                                             .sendSuccess(
@@ -629,7 +695,16 @@ public class LobbyMod {
                                                                     }
                                                                     pendingMapName = mn;
                                                                     modeVoteWinner = md;
-                                                                    startMatchAfterFactionVote(map, bl, re);
+                                                                    String err =
+                                                                            startMatchAfterFactionVote(map, bl, re);
+                                                                    if (err != null) {
+                                                                        // раньше: «Матч запущен» при отказе (мало
+                                                                        // игроков)
+                                                                        ctx.getSource()
+                                                                                .sendFailure(
+                                                                                        Component.translatable(err));
+                                                                        return 0;
+                                                                    }
                                                                     ctx.getSource()
                                                                             .sendSuccess(
                                                                                     () -> Component.literal(
@@ -660,6 +735,22 @@ public class LobbyMod {
                             ctx.getSource().sendFailure(Component.literal("Нет активного голосования"));
                             return 0;
                         }))
+                        // /pwp server prewarm on|off — предпрогрев матч-сервера (этап 5, по умолчанию выкл.)
+                        .then(Commands.literal("prewarm")
+                                .then(Commands.literal("on").executes(ctx -> {
+                                    ServerConfig.setPrewarm(
+                                            true, ctx.getSource().hasPermission(4));
+                                    ctx.getSource()
+                                            .sendSuccess(() -> Component.literal("Предпрогрев матча включён"), true);
+                                    return Command.SINGLE_SUCCESS;
+                                }))
+                                .then(Commands.literal("off").executes(ctx -> {
+                                    ServerConfig.setPrewarm(
+                                            false, ctx.getSource().hasPermission(4));
+                                    ctx.getSource()
+                                            .sendSuccess(() -> Component.literal("Предпрогрев матча выключен"), true);
+                                    return Command.SINGLE_SUCCESS;
+                                })))
                         // /pwp server autostart on|off
                         .then(Commands.literal("autostart")
                                 .then(Commands.literal("on").executes(ctx -> {
@@ -696,6 +787,13 @@ public class LobbyMod {
                                     + MatchAllocator.getActiveMatches().size() + "§7/" + ServerConfig.getMaxMatches()
                                     + "\n");
                             sb.append("§fАвто-старт: §e" + (ServerConfig.isAutoStartEnabled() ? "ВКЛ" : "ВЫКЛ") + "\n");
+                            sb.append("§fПредпрогрев: §e" + (ServerConfig.isPrewarm() ? "ВКЛ" : "ВЫКЛ")
+                                    + " §fМин. игроков: §e" + ServerConfig.getMinPlayers() + "\n");
+                            MatchAllocator.PrepView pv = MatchAllocator.prepView();
+                            if (pv.state() != 0) {
+                                sb.append("§fПодготовка: §e" + pv.state() + " §7" + pv.percent() + "%"
+                                        + (pv.errorKey() != null ? " " + pv.errorKey() : "") + "\n");
+                            }
                             if (mi != null) {
                                 sb.append("§fАктивный матч: §e" + mi.displayName + "§7 (" + mi.blueFaction + " vs "
                                         + mi.redFaction + ")\n");
@@ -796,15 +894,29 @@ public class LobbyMod {
         }
     }
 
-    public static void onVoteFinished(String mapName) {
+    /** Карта выбрана (голосованием или форсом). null — цикл продолжается, иначе ключ ошибки. */
+    public static String onVoteFinished(String mapName) {
         MapConfig map = MapRegistry.get(mapName);
-        if (map == null) return;
+        if (map == null) return "pwp_core.lobby.prep.error.no_map";
 
         var server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return;
+        if (server == null) return "pwp_core.admin.error.internal";
 
+        // этап 5: сервер начинает подниматься сразу — режим/фракции дотянутся файлом настроек
+        String err = prewarmIfEnabled(map);
+        if (err != null) {
+            pendingMapName = null;
+            autoVoteNotBefore = com.pwp.api.time.GameClock.realMillis() + AUTO_VOTE_PAUSE_AFTER_FAIL_MS;
+            broadcastLobbyState();
+            return err;
+        }
         pendingMapName = mapName;
         startModeVoting();
+        return null;
+    }
+
+    private static String prewarmIfEnabled(MapConfig map) {
+        return ServerConfig.isPrewarm() ? MatchAllocator.prepare(map) : null;
     }
 
     // ====== MODE VOTING ======
@@ -925,7 +1037,8 @@ public class LobbyMod {
                 : new ArrayList<>(Arrays.asList("ukraine", "russia", "usa", "nato", "insurgency", "pmc"));
     }
 
-    public static void startMatchAfterFactionVote(MapConfig map, String blueFaction, String redFaction) {
+    /** Все голосования завершены: настройки → матч-серверу. null — принято, иначе ключ ошибки (уже в чате). */
+    public static String startMatchAfterFactionVote(MapConfig map, String blueFaction, String redFaction) {
         boolean isInvasion = modeVoteWinner != null && modeVoteWinner.equals("invasion");
         boolean invasionDefenderIsRed = true;
 
@@ -948,11 +1061,11 @@ public class LobbyMod {
             serverBroadcast("§7[PWP] Выбран паттерн точек: §e" + map.capturePointPatterns.get(patternIndex).name);
         }
 
-        MatchAllocator.startMatch(
+        String err = MatchAllocator.startMatch(
                 map,
                 blueFaction,
                 redFaction,
-                modeVoteWinner,
+                modeVoteWinner != null ? modeVoteWinner : "aas",
                 blueTickets,
                 redTickets,
                 invasionDefenderIsRed,
@@ -960,6 +1073,8 @@ public class LobbyMod {
 
         pendingMapName = null;
         modeVotes.clear();
+        if (err != null) autoVoteNotBefore = com.pwp.api.time.GameClock.realMillis() + AUTO_VOTE_PAUSE_AFTER_FAIL_MS;
+        return err;
     }
 
     /**
@@ -981,7 +1096,13 @@ public class LobbyMod {
             FactionVotingManager.stop();
             any = true;
         }
-        if (any) serverBroadcast("§e[PWP] §fГолосование остановлено администратором");
+        pendingMapName = null;
+        // сервер, поднятый под эти голосования, не нужен; авто-цикл не перезапускает голосование 5 мин
+        MatchAllocator.cancelPreparing();
+        if (any) {
+            autoVoteNotBefore = com.pwp.api.time.GameClock.realMillis() + AUTO_VOTE_PAUSE_AFTER_STOP_MS;
+            serverBroadcast("§e[PWP] §fГолосование остановлено администратором");
+        }
         broadcastLobbyState();
         return any;
     }

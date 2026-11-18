@@ -35,6 +35,7 @@ public class NetworkController {
                     req.mapName, req.mode, req.blueFaction, req.redFaction,
                     req.blueScore, req.redScore, req.phase, req.maxPlayers,
                     req.matchStartedAt, req.matchPlayers,
+                    req.prepStage, req.prepSettingsApplied, req.prepDone, req.prepTotal,
                     System.currentTimeMillis()));
             int total = currentTotalOnline();
             if (total > recordOnline) {
@@ -92,6 +93,15 @@ public class NetworkController {
                         match.put("maxPlayers", h.maxPlayers);
                         match.put("duration", h.matchStartedAt > 0 ? formatUptime(now - h.matchStartedAt) : "");
                         srv.put("match", match);
+                    }
+                    // этап 5: подготовка матч-сервера (предпрогрев) — только в памяти, без таблицы
+                    if (h.prepStage != null && !h.prepStage.isEmpty()) {
+                        Map<String, Object> prep = new HashMap<>();
+                        prep.put("stage", h.prepStage);
+                        prep.put("settingsApplied", h.prepSettingsApplied);
+                        prep.put("done", h.prepDone);
+                        prep.put("total", h.prepTotal);
+                        srv.put("prep", prep);
                     }
                     serverList.add(srv);
                 }
@@ -233,6 +243,10 @@ public class NetworkController {
         public int maxPlayers;
         public long matchStartedAt;
         public int matchPlayers;
+        public String prepStage;
+        public boolean prepSettingsApplied;
+        public int prepDone;
+        public int prepTotal;
     }
 
     public static class BotHeartbeatReq {
@@ -254,17 +268,26 @@ public class NetworkController {
         final int maxPlayers;
         final long matchStartedAt;
         final int matchPlayers;
+        final String prepStage;
+        final boolean prepSettingsApplied;
+        final int prepDone;
+        final int prepTotal;
         final long lastSeen;
         ServerHeartbeat(String server, int online, String ip, int port,
                         String mapName, String mode, String blueFaction, String redFaction,
                         int blueScore, int redScore, String phase, int maxPlayers,
                         long matchStartedAt, int matchPlayers,
+                        String prepStage, boolean prepSettingsApplied, int prepDone, int prepTotal,
                         long lastSeen) {
             this.server = server; this.online = online; this.ip = ip; this.port = port;
             this.mapName = mapName; this.mode = mode; this.blueFaction = blueFaction; this.redFaction = redFaction;
             this.blueScore = blueScore; this.redScore = redScore; this.phase = phase; this.maxPlayers = maxPlayers;
             this.matchStartedAt = matchStartedAt;
             this.matchPlayers = matchPlayers;
+            this.prepStage = prepStage;
+            this.prepSettingsApplied = prepSettingsApplied;
+            this.prepDone = prepDone;
+            this.prepTotal = prepTotal;
             this.lastSeen = lastSeen;
         }
     }

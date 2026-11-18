@@ -822,5 +822,10 @@
     "gui.pwpwarfare.hint.staging.map": "[%s] — мапа: маркери й шляхи підготовки залишаться після старту",
     "gui.pwpwarfare.hint.battle.take_kit": "Немає спорядження: [%s] → «ВЗЯТИ СПОРЯДЖЕННЯ»",
     "gui.pwpwarfare.hint.battle.voice": "[%s] — рація загону, [%s] — канал лідерів",
-    "gui.pwpwarfare.hint.battle.ping": "[%s] — пінг-мітка для загону"
+    "gui.pwpwarfare.hint.battle.ping": "[%s] — пінг-мітка для загону",
+    "squad.disbanded_broadcast": "Загін %s розформовано: лідер без кита Офіцера!",
+    "squad.disbanded_no_officer": "Ваш загін розформовано (немає кита Офіцера)!",
+    "pwpwarfare.hint.main_supply": "Головний склад — техніка поруч поповнюється, гравці лікуються",
+    "gui.pwpwarfare.deploy.roles.leader_tag": "ЛІД",
+    "gui.pwpwarfare.deploy.roles.leader_needed": "Потрібна лідеру загону — без неї загін розпадеться"
 }

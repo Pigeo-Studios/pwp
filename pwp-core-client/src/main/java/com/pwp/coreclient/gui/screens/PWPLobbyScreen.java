@@ -325,7 +325,15 @@ public class PWPLobbyScreen extends Screen {
         layer.render(gui, mouseX, mouseY, partialTick, width, height);
         view().render(gui, mouseX, mouseY, partialTick);
         renderTabSwitchFade(gui, now);
-        PWPChrome.footer(gui, font, width, height, d, Component.translatable("pwp_core.lobby.status"), null);
+        // этап 5: состояние подготовки матч-сервера — справа в подвале
+        PWPChrome.footer(
+                gui,
+                font,
+                width,
+                height,
+                d,
+                Component.translatable("pwp_core.lobby.status"),
+                com.pwp.coreclient.lobby.LobbyHud.prepLine(com.pwp.coreclient.lobby.LobbyHud.lastState()));
         renderOpenFade(gui, now);
         PWPToastManager.render(gui);
     }
