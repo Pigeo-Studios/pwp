@@ -1,6 +1,5 @@
 package com.pigeostudios.pwp.limit.client;
 
-import com.pigeostudios.pwp.limit.ModConfig;
 import com.pwp.coreclient.ui.hud.Hud;
 import com.pwp.coreclient.ui.hud.HudVitals;
 import net.minecraft.Util;
@@ -70,10 +69,10 @@ public class ClientOverlay {
         long lastJump = 0;
         long elapsed = 0;
         long cooldownMs = 0;
-        if (ModConfig.ENABLE_JUMP_COOLDOWN.get()) {
+        if (LimitsConfigCache.isJumpCooldownEnabled()) {
             Long storedJump = ClientEvents.sprintJumpCooldown.get(player.getUUID());
             if (storedJump != null) {
-                cooldownMs = (long) (ModConfig.JUMP_COOLDOWN_SECONDS.get() * 1000.0);
+                cooldownMs = (long) (LimitsConfigCache.getJumpCooldownSeconds() * 1000.0);
                 elapsed = System.currentTimeMillis() - storedJump;
                 if (elapsed < cooldownMs) {
                     cdActive = true;

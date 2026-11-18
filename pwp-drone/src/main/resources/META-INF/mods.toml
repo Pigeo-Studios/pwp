@@ -6,6 +6,8 @@ license="All Rights Reserved"
 modId="pwpdrone"
 version="1.0.0"
 displayName="PWP Drone FPV"
+# Чисто клиентский мод (эффекты FPV, без сети): серверу не нужен, в списке серверов не помечать несовместимость
+displayTest="IGNORE_ALL_VERSION"
 credits="Pigeo Studios"
 authors="Pigeo Studios"
 description="FPV-style effects for superwarfare drones. Adds signal noise, scanlines, distortion and signal loss."

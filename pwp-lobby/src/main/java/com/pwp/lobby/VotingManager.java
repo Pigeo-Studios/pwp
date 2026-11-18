@@ -61,6 +61,12 @@ public class VotingManager {
         lastLeaderBroadcast = 0;
         lastBroadcastedRemaining = -1;
 
+        if (maps.size() == 1) {
+            // одна карта — голосовать не за что: сразу «победитель» и следующий шаг лобби
+            log.info("Voting skipped: single map {}", maps.get(0).name);
+            finishVoting();
+            return null;
+        }
         String mapList = maps.stream().map(m -> m.displayName).collect(Collectors.joining(", "));
         LobbyMod.broadcastPwp(ChatFormatting.WHITE, "pwp_lobby.msg.map_vote_started", mapList);
         LobbyMod.serverBroadcast(

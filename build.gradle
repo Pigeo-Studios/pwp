@@ -32,7 +32,7 @@ dependencies {
 def pwpModules = [
     'pwp-api', 'pwp-core-server', 'pwp-core-client', 'pwp-cosmetics', 'pwp-limits',
     'pwp-lobby', 'pwp-medicine', 'pwp-movement', 'pwp-warfare', 'pwp-blast-protection',
-    'sbwchunkload'
+    'sbwchunkload', 'pwp-drone'
 ]
 
 def forgeVersion = '1.20.1-47.3.0'

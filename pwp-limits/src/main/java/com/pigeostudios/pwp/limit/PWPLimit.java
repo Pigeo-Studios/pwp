@@ -17,6 +17,15 @@ public class PWPLimit {
                 .registerConfig(net.minecraftforge.fml.config.ModConfig.Type.SERVER, (IConfigSpec) ModConfig.SPEC);
         // Экрана настроек в меню модов больше нет (18.11.2026): это SERVER-конфиг — до входа на сервер
         // он не загружен (открытие из меню падало), а на клиенте правила сервера всё равно не меняются.
+        com.pigeostudios.pwp.limit.network.NetworkHandler.register();
+        // Перезагрузка serverconfig на лету — разослать новые значения игрокам
+        net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get()
+                .getModEventBus()
+                .addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Reloading e) -> {
+                    if (e.getConfig().getSpec() == ModConfig.SPEC) {
+                        com.pigeostudios.pwp.limit.network.LimitsConfigPacket.broadcast();
+                    }
+                });
         LOG.info("PWP Limits загружен с серверным конфигом");
     }
 }

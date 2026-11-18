@@ -27,12 +27,12 @@ cd core-service && ..\gradlew shadowJar
 **Важно (18.11.2026):** моды теперь ходят на `http://127.0.0.1:8080` (было `localhost` — под Forge он резолвится в `::1`, и при бинде core на 127.0.0.1 лобби теряло core: «пустые» профили). Обновлять core-service и pwp-api/pwp-core-server ВМЕСТЕ.
 
 ## 3. Серверные моды
-Заменить jar из `*/build/libs` в `mods` лобби и в `match_template/mods` (и в уже созданных `match_*`, если они переиспользуются): pwp-api, pwp-blast-protection, pwp-core-client, pwp-core-server, pwp-cosmetics, pwp-limits (см. п. 4.3), pwp-lobby (только лобби), pwp-medicine, pwp-movement, pwp-warfare, pwp-drone (где он есть), sbwchunkload (только серверы). Старые копии `sbwchunkload-*.jar` удалить.
+Заменить jar из `*/build/libs` в `mods` лобби и в `match_template/mods` (и в уже созданных `match_*`, если они переиспользуются): pwp-api, pwp-blast-protection, pwp-core-client, pwp-core-server, pwp-cosmetics, pwp-limits (см. п. 4.3), pwp-lobby (только лобби), pwp-medicine, pwp-movement, pwp-warfare, sbwchunkload (только серверы). pwp-drone на серверы не класть: он только клиентский. Старые копии `sbwchunkload-*.jar` удалить.
 
 ## 4. Клиент (Pwpfiles → лаунчер)
 1. В `Pwpfiles/mods` заменить jar на новые и **добавить `pwp-api-1.0.0.jar`** (сейчас его там нет, а от него зависят warfare, lobby и core-client — без него игра не запустится).
 2. Закоммитить и уже лежащие в индексе удаления `tacz/endlessammo.zip`, `gucci_vuitton_attachment.zip`, `maxstuff.zip`, `tacz_default_gun.zip` — это битые паки (инцидент 16.11.2026).
-3. **`pwp-limits`:** в Pwpfiles лежит `1.0.3` (в нём есть `LimitsConfigPacket`/`ServerEvents`/`LimitsConfigCache`), а в репо исходники только `1.0.2`, без этого кода. Решить до релиза: найти исходники 1.0.3 и закоммитить их в репо, либо сознательно откатиться на 1.0.2 (на серверах и у клиентов должна быть ОДНА версия).
+3. **`pwp-limits` → 1.0.4** (решено 18.11.2026): код синхронизации конфига из 1.0.3 восстановлен в репо. Удалить `pwp-limits-1.0.3.jar` и любые старые `pwp-limits-*.jar` из `Pwpfiles/mods`, с лобби и из `match_template`, положить `pwp-limits-1.0.4.jar`. Добавить в `Pwpfiles/mods` `pwp-drone-1.0.0.jar` (клиентский мод FPV-эффектов, на серверы не нужен). В `Pwpfiles/optional_mods/.metadata.json` удалить записи Explosion-Overhaul, Gunfire Overhaul, survival_instinct, PassableFoliage: эти моды стоят на серверах и лежат в `mods/`, поэтому обязательны и не должны выключаться в лаунчере. `tacticalmovement` (только клиент) оставить опциональным.
 4. `powershell -File gen.ps1` → `manifest.json` + `manifest_seed.sql`.
 5. Подписать: `node <PWP-Launcher>\scripts\sign-file.mjs manifest.json` (ключ `%APPDATA%\.pwplauncher\.private\ed25519-private.pem`) → `manifest.json.sig`.
 6. `manifest_seed.sql` выполнить в боевой БД: `cmd /c "mysql ... pwp_core < manifest_seed.sql"`.
