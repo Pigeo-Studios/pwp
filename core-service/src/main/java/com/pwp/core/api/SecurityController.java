@@ -28,7 +28,7 @@ public class SecurityController {
         app.post("/api/v1/auth/verify-ip", ctx -> {
             var body = ctx.bodyAsClass(VerifyIpReq.class);
             String uuid = body.uuid;
-            String clientIp = body.ip != null ? body.ip : ctx.ip();
+            String clientIp = body.ip != null ? body.ip : com.pwp.core.auth.ClientIp.of(ctx);
 
             Player pl = PlayerRepository.findByUuid(uuid);
             if (pl == null) {

@@ -47,12 +47,6 @@ public class AuthMiddleware {
             if (path.startsWith(p)) return;
         }
 
-        // IP-based rate limiting
-        if (!checkIpRateLimit(ctx.ip(), 300)) {
-            log.warn("IP rate limit exceeded: {}", ctx.ip());
-            throw new TooManyRequestsResponse("Rate limit exceeded");
-        }
-
         // ── Агент античита: аутентификация по launch-токену (X-Launch-Token) ──
         // Агент ходит на сервер напрямую (архитектура PJM) и не может подписать
         // X-PWP-Sign. Валидность токена проверяется по anticheat_sessions. Если токен
@@ -63,9 +57,11 @@ public class AuthMiddleware {
                 && !path.startsWith("/api/v1/launcher/anticheat/artifact/")) {
             String launchToken = ctx.header("X-Launch-Token");
             if (launchToken != null && validLaunchToken(launchToken)) {
+                ctx.attribute(AUTH_KIND, "launchToken");
                 return;
             }
             if (launchToken != null && path.endsWith("/heartbeat") && launchTokenExists(launchToken)) {
+                ctx.attribute(AUTH_KIND, "launchToken");
                 return;
             }
         }
@@ -79,8 +75,16 @@ public class AuthMiddleware {
                     log.warn("Rate limit exceeded for key");
                     throw new TooManyRequestsResponse("Rate limit exceeded");
                 }
+                ctx.attribute(AUTH_KIND, "apiKey");
                 return;
             }
+        }
+
+        // IP-based rate limiting (сессии лаунчера; IP — настоящий, из X-Forwarded-For от Caddy)
+        String ip = ClientIp.of(ctx);
+        if (!checkIpRateLimit(ip, 300)) {
+            log.warn("IP rate limit exceeded: {}", ip);
+            throw new TooManyRequestsResponse("Rate limit exceeded");
         }
 
         // ── Launcher session HMAC ──
@@ -111,13 +115,48 @@ public class AuthMiddleware {
         String sessionSecret = findSessionSecret(ctx);
 
         if (sessionSecret == null) {
-            log.warn("No session secret for {} from {} (path={})", ctx.method(), ctx.ip(), path);
+            log.warn("No session secret for {} from {} (path={})", ctx.method(), ip, path);
             throw new UnauthorizedResponse("Access denied: no valid session");
         }
 
         if (!hmacVerify(signData, signature, sessionSecret)) {
-            log.warn("Invalid signature for {} from {} (path={})", ctx.method(), ctx.ip(), path);
+            log.warn("Invalid signature for {} from {} (path={})", ctx.method(), ip, path);
             throw new UnauthorizedResponse("Access denied: invalid signature");
+        }
+
+        // Сессия игрока: серверные эндпоинты запрещены, менять можно только своё (AccessPolicy)
+        String sessionUuid = findSessionUuid(ctx);
+        ctx.attribute(AUTH_KIND, "session");
+        if (sessionUuid != null) ctx.attribute(SESSION_UUID, sessionUuid);
+        String deny = AccessPolicy.denyReason(ctx.method().name(), path, ctx.body(), sessionUuid);
+        if (deny != null) {
+            log.warn("Session denied ({}) for {} {} from {}", deny, ctx.method(), path, ip);
+            throw new io.javalin.http.ForbiddenResponse("Access denied: " + deny);
+        }
+    }
+
+    /** Атрибуты контекста для хэндлеров: способ аутентификации и uuid владельца сессии. */
+    public static final String AUTH_KIND = "authKind";
+
+    public static final String SESSION_UUID = "sessionUuid";
+
+    /** uuid игрока по access-токену запроса (тот же, по которому найден hmac-секрет). */
+    private static String findSessionUuid(Context ctx) {
+        try {
+            String token = null;
+            String body = ctx.body();
+            if (body != null && !body.isBlank() && body.trim().startsWith("{")) {
+                JsonObject json = GSON.fromJson(body, JsonObject.class);
+                if (json.has("accessToken")) token = json.get("accessToken").getAsString();
+                else if (json.has("access_token")) token = json.get("access_token").getAsString();
+            }
+            if (token == null) token = ctx.queryParam("accessToken");
+            if (token == null) token = ctx.queryParam("access_token");
+            if (token == null) token = ctx.queryParam("token");
+            return token == null ? null : PlayerRepository.findSessionPlayer(token);
+        } catch (Exception e) {
+            log.debug("Failed to find session uuid: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -194,8 +233,14 @@ public class AuthMiddleware {
 
     private static final Map<String, RateBucket> ipBuckets = new ConcurrentHashMap<>();
 
+    private static volatile long lastIpCleanup = 0;
+
     public static boolean checkIpRateLimit(String ip, int maxPerMinute) {
         long now = System.currentTimeMillis();
+        if (now - lastIpCleanup > 300_000) { // без чистки карта росла бесконечно
+            lastIpCleanup = now;
+            ipBuckets.entrySet().removeIf(e -> now - e.getValue().windowStart > 120_000);
+        }
         RateBucket bucket = ipBuckets.computeIfAbsent(ip, k -> new RateBucket(now));
         synchronized (bucket) {
             if (now - bucket.windowStart > 60_000) { bucket.windowStart = now; bucket.count = 0; }

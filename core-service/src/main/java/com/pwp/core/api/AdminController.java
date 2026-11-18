@@ -72,7 +72,7 @@ public class AdminController {
                     ? new java.sql.Timestamp(System.currentTimeMillis() + durationMinutes * 60000L) : null;
             PlayerRepository.setBan(req.uuid, true, req.reason, expiresTs);
             banDevice(req.uuid, req.reason, expiresClause);
-            PlayerRepository.log(req.uuid, "ban", ctx.ip(), "reason: " + req.reason);
+            PlayerRepository.log(req.uuid, "ban", com.pwp.core.auth.ClientIp.of(ctx), "reason: " + req.reason);
             try {
                 PunishmentRepository.addRecord(req.uuid, "BAN", req.reason,
                         ctx.attribute("adminUuid"), durationMinutes, expiresTs);
@@ -87,7 +87,7 @@ public class AdminController {
                 ctx.json(ApiResponse.error("user not found")); return;
             }
             PlayerRepository.setBan(req.uuid, false, null);
-            PlayerRepository.log(req.uuid, "unban", ctx.ip(), null);
+            PlayerRepository.log(req.uuid, "unban", com.pwp.core.auth.ClientIp.of(ctx), null);
             try {
                 PlayerRepository.clearBans(req.uuid);
             } catch (Exception ignored) { log.warn("AdminController.AdminController: исключение", ignored); }
@@ -109,7 +109,7 @@ public class AdminController {
                 ctx.json(ApiResponse.error("invalid role: " + String.join(", ", valid))); return;
             }
             PlayerRepository.setRole(req.uuid, req.role);
-            PlayerRepository.log(req.uuid, "role_change", ctx.ip(), "new role: " + req.role);
+            PlayerRepository.log(req.uuid, "role_change", com.pwp.core.auth.ClientIp.of(ctx), "new role: " + req.role);
             ctx.json(ApiResponse.ok("role changed to " + req.role));
         });
 
@@ -139,7 +139,7 @@ public class AdminController {
                 ctx.json(ApiResponse.error("message and admin_uuid required")); return;
             }
             List<Long> tgIds = PlayerRepository.getTelegramIdsForBroadcast();
-            PlayerRepository.log(req.adminUuid, "broadcast", ctx.ip(), "sent to " + tgIds.size() + " users");
+            PlayerRepository.log(req.adminUuid, "broadcast", com.pwp.core.auth.ClientIp.of(ctx), "sent to " + tgIds.size() + " users");
             ctx.json(ApiResponse.ok(Map.of("recipient_count", tgIds.size())));
         });
 

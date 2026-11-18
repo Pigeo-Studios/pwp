@@ -124,7 +124,7 @@ public class LauncherController {
                 ctx.json(ApiResponse.error("invalid session"));
                 return;
             }
-            updateHwidHistory(playerUuid, req.hwid, req.hwidComponents, req.pcName, ctx.ip(), req.flags);
+            updateHwidHistory(playerUuid, req.hwid, req.hwidComponents, req.pcName, com.pwp.core.auth.ClientIp.of(ctx), req.flags);
             try (Connection c = DatabaseManager.getConnection();
                  PreparedStatement ps = c.prepareStatement("UPDATE players SET hwid = ? WHERE uuid = ?")) {
                 ps.setString(1, req.hwid);
@@ -241,10 +241,10 @@ public class LauncherController {
             }
             ctx.contentType(guessMime(relPath));
             ctx.header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"");
-            try (var in = new java.io.FileInputStream(file)) {
-                ctx.result(in.readAllBytes());
-            }
-            log.info("Served: {} ({} bytes)", relPath, file.length());
+            // потоком, а не readAllBytes: jar по 100+ МБ при -Xmx512M и параллельных загрузках давали OOM
+            ctx.header("Content-Length", String.valueOf(file.length()));
+            ctx.result(new java.io.FileInputStream(file)); // Javalin закроет поток после отправки
+            log.debug("Served: {} ({} bytes)", relPath, file.length());
         });
 
         // ── Check session by UUID (только UUID, без nickname fallback) ─

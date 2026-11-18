@@ -30,7 +30,7 @@ public class AuthController {
 
         // ── Check availability (rate-limited) ─────────────
         app.get("/api/v1/auth/check-login", ctx -> {
-            checkRateLimit(ctx.ip(), "check", 30, config);
+            checkRateLimit(com.pwp.core.auth.ClientIp.of(ctx), "check", 30, config);
             String login = ctx.queryParam("login");
             boolean taken = false;
             Player byLogin = PlayerRepository.findByLogin(login);
@@ -47,7 +47,7 @@ public class AuthController {
         });
 
         app.get("/api/v1/auth/check-email", ctx -> {
-            checkRateLimit(ctx.ip(), "check", 30, config);
+            checkRateLimit(com.pwp.core.auth.ClientIp.of(ctx), "check", 30, config);
             String email = ctx.queryParam("email");
             boolean taken = email != null && PlayerRepository.findByEmail(email) != null;
             ctx.json(ApiResponse.ok(Map.of("available", !taken)));
@@ -87,7 +87,7 @@ public class AuthController {
             if (pl == null) {
                 ctx.json(ApiResponse.error("registration failed")); return;
             }
-            PlayerRepository.log(uuid, "register", ctx.ip(), "registered via telegram");
+            PlayerRepository.log(uuid, "register", com.pwp.core.auth.ClientIp.of(ctx), "registered via telegram");
             ctx.json(ApiResponse.ok(Map.of("uuid", uuid, "login", req.login)));
         });
 
@@ -99,13 +99,13 @@ public class AuthController {
                 ctx.json(ApiResponse.error("player not found")); return;
             }
             PlayerRepository.acceptPrivacy(req.uuid);
-            PlayerRepository.log(req.uuid, "accept_privacy", ctx.ip(), null);
+            PlayerRepository.log(req.uuid, "accept_privacy", com.pwp.core.auth.ClientIp.of(ctx), null);
             ctx.json(ApiResponse.ok("ok"));
         });
 
         // ── Login (rate-limited per IP) ──────────────────
         app.post("/api/v1/auth/login", ctx -> {
-            checkRateLimit(ctx.ip(), "login", 10, config);
+            checkRateLimit(com.pwp.core.auth.ClientIp.of(ctx), "login", 10, config);
             LoginReq req = ctx.bodyAsClass(LoginReq.class);
             if (req.login == null || req.password == null) {
                 ctx.json(ApiResponse.error("login and password required")); return;
@@ -124,7 +124,7 @@ public class AuthController {
                 ctx.json(ApiResponse.error("privacy policy not accepted")); return;
             }
 
-            String clientIp = ctx.ip();
+            String clientIp = com.pwp.core.auth.ClientIp.of(ctx);
             boolean needs2fa = pl.launcher2faEnabled && !PlayerRepository.isIpTrusted(pl.uuid, clientIp);
 
             if (needs2fa) {
@@ -160,7 +160,7 @@ public class AuthController {
 
         // ── Verify 2FA (rate-limited) ────────────────────
         app.post("/api/v1/auth/verify-2fa", ctx -> {
-            checkRateLimit(ctx.ip(), "2fa", 10, config);
+            checkRateLimit(com.pwp.core.auth.ClientIp.of(ctx), "2fa", 10, config);
             Verify2faReq req = ctx.bodyAsClass(Verify2faReq.class);
             if (req.uuid == null || req.code == null) {
                 ctx.json(ApiResponse.error("uuid and code required")); return;
@@ -172,7 +172,7 @@ public class AuthController {
             if (pl == null || pl.isBanned) {
                 ctx.json(ApiResponse.error("player not found or banned")); return;
             }
-            String clientIp = ctx.ip();
+            String clientIp = com.pwp.core.auth.ClientIp.of(ctx);
             String accessToken = PlayerRepository.generateTokenPart();
             String refreshToken = PlayerRepository.generateTokenPart();
             String sessionKey = PlayerRepository.generateSessionKey();
@@ -204,7 +204,7 @@ public class AuthController {
             if (pl == null) {
                 ctx.json(ApiResponse.error("player not found")); return;
             }
-            String ip = req.ip != null ? req.ip : ctx.ip();
+            String ip = req.ip != null ? req.ip : com.pwp.core.auth.ClientIp.of(ctx);
             PlayerRepository.trustIp(pl.uuid, ip);
             PlayerRepository.log(pl.uuid, "ip_confirmed", ip, "user confirmed IP via telegram");
             ctx.json(ApiResponse.ok("ip trusted"));
@@ -278,7 +278,7 @@ public class AuthController {
             }
             String newHash = BCrypt.hashpw(req.newPassword, BCrypt.gensalt(12));
             PlayerRepository.updatePassword(req.uuid, newHash);
-            PlayerRepository.log(req.uuid, "change_password", ctx.ip(), "password changed");
+            PlayerRepository.log(req.uuid, "change_password", com.pwp.core.auth.ClientIp.of(ctx), "password changed");
             ctx.json(ApiResponse.ok("password changed"));
         });
 
@@ -291,7 +291,7 @@ public class AuthController {
                 ctx.json(ApiResponse.error("player not found")); return;
             }
             int rid = PlayerRepository.createResetRequest(req.uuid);
-            PlayerRepository.log(req.uuid, "forgot_password", ctx.ip(), "reset request #" + rid);
+            PlayerRepository.log(req.uuid, "forgot_password", com.pwp.core.auth.ClientIp.of(ctx), "reset request #" + rid);
             ctx.json(ApiResponse.ok(Map.of("reset_id", rid, "status", "pending")));
         });
 
@@ -317,7 +317,7 @@ public class AuthController {
                 String newHash = BCrypt.hashpw(req.newPassword, BCrypt.gensalt(12));
                 PlayerRepository.updatePassword(req.uuid, newHash);
                 PlayerRepository.markResetUsed(approved.id);
-                PlayerRepository.log(req.uuid, "reset_password_set", ctx.ip(), "new password set after reset approval");
+                PlayerRepository.log(req.uuid, "reset_password_set", com.pwp.core.auth.ClientIp.of(ctx), "new password set after reset approval");
                 ctx.json(ApiResponse.ok("password updated"));
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("internal error: " + e.getMessage()));
@@ -332,7 +332,7 @@ public class AuthController {
                 ctx.json(ApiResponse.error("player not found")); return;
             }
             PlayerRepository.toggle2fa(req.uuid, req.enabled);
-            PlayerRepository.log(req.uuid, "toggle_2fa", ctx.ip(), "2fa: " + req.enabled);
+            PlayerRepository.log(req.uuid, "toggle_2fa", com.pwp.core.auth.ClientIp.of(ctx), "2fa: " + req.enabled);
             ctx.json(ApiResponse.ok("2fa " + (req.enabled ? "enabled" : "disabled")));
         });
 
@@ -363,7 +363,7 @@ public class AuthController {
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("link failed")); return;
             }
-            PlayerRepository.log(pl.uuid, "link_telegram", ctx.ip(), "telegram linked via login");
+            PlayerRepository.log(pl.uuid, "link_telegram", com.pwp.core.auth.ClientIp.of(ctx), "telegram linked via login");
             ctx.json(ApiResponse.ok(Map.of("uuid", pl.uuid, "login", pl.login, "role", pl.role)));
         });
 
@@ -385,7 +385,7 @@ public class AuthController {
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("unlink failed")); return;
             }
-            PlayerRepository.log(req.uuid, "unlink_telegram", ctx.ip(), "telegram unlinked");
+            PlayerRepository.log(req.uuid, "unlink_telegram", com.pwp.core.auth.ClientIp.of(ctx), "telegram unlinked");
             ctx.json(ApiResponse.ok("unlinked"));
         });
 
@@ -452,7 +452,7 @@ public class AuthController {
                     }
                 }
                 PlayerRepository.updateHeartbeat(req.accessToken);
-                PlayerRepository.log(uuid, "heartbeat", ctx.ip(), null);
+                PlayerRepository.log(uuid, "heartbeat", com.pwp.core.auth.ClientIp.of(ctx), null);
                 ctx.json(ApiResponse.ok(Map.of("extended", true, "expires_in", 30)));
             } catch (Exception e) {
                 ctx.json(ApiResponse.error("heartbeat failed"));
@@ -469,7 +469,7 @@ public class AuthController {
                 String uuid = PlayerRepository.findUuidByAccessToken(req.accessToken);
                 if (uuid != null) {
                     PlayerRepository.deleteSessionsByUuid(uuid);
-                    PlayerRepository.log(uuid, "revoke_sessions", ctx.ip(), "all sessions revoked");
+                    PlayerRepository.log(uuid, "revoke_sessions", com.pwp.core.auth.ClientIp.of(ctx), "all sessions revoked");
                 }
                 ctx.json(ApiResponse.ok("sessions revoked"));
             } catch (Exception e) {
@@ -519,8 +519,8 @@ public class AuthController {
             if (pl.telegramId == null) {
                 ctx.json(ApiResponse.error("no telegram linked")); return;
             }
-            String code = PlayerRepository.create2faCode(pl.uuid, ctx.ip());
-            PlayerRepository.log(pl.uuid, "2fa_external", ctx.ip(), "2fa sent externally");
+            String code = PlayerRepository.create2faCode(pl.uuid, com.pwp.core.auth.ClientIp.of(ctx));
+            PlayerRepository.log(pl.uuid, "2fa_external", com.pwp.core.auth.ClientIp.of(ctx), "2fa sent externally");
             send2faToTelegram(pl.telegramId, code);
             ctx.json(ApiResponse.ok(Map.of("sent", true)));
         });
@@ -528,8 +528,14 @@ public class AuthController {
 
     }
 
+    private static volatile long lastLoginCleanup = 0;
+
     private static void checkRateLimit(String key, String prefix, int max, CoreApplication.Config cfg) {
         long now = System.currentTimeMillis();
+        if (now - lastLoginCleanup > 300_000) {
+            lastLoginCleanup = now;
+            loginBuckets.entrySet().removeIf(e -> now - e.getValue().windowStart > 120_000);
+        }
         String fullKey = prefix + ":" + key;
         RateBucket bucket = loginBuckets.computeIfAbsent(fullKey, k -> new RateBucket(now));
         synchronized (bucket) {

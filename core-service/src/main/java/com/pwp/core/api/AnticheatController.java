@@ -32,6 +32,13 @@ import java.util.Map;
  * Любой сбой = fail-open: пускаем, но пишем в лог.
  */
 public class AnticheatController {
+    /** Лимиты публичных путей античита. */
+    private static final int MAX_INIT_DETECTIONS = 50;
+
+    private static final long SHOT_MIN_INTERVAL_MS = 30_000L;
+    private static final java.util.concurrent.ConcurrentHashMap<String, Long> LAST_SHOT =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AnticheatController.class);
@@ -144,7 +151,14 @@ public class AnticheatController {
             }
             // Логируем детекты, пришедшие с init
             List<Map<String, Object>> detections = req.detections != null ? req.detections : Collections.emptyList();
+            // кап: init приходит до launch-токена, без лимита таблица заливалась одним запросом
+            int n = 0;
             for (Map<String, Object> d : detections) {
+                if (d == null) continue;
+                if (++n > MAX_INIT_DETECTIONS) {
+                    log.warn("AC init: {} детектов, записаны первые {}", detections.size(), MAX_INIT_DETECTIONS);
+                    break;
+                }
                 insertDetection(playerUuid, null, "launcher", str(d.get("kind")), str(d.get("signature")), "", 0);
             }
             // Выдаём launch-token (30 мин)
@@ -310,6 +324,15 @@ public class AnticheatController {
                 ctx.json(ApiResponse.error("data required"));
                 return;
             }
+            // не чаще одного кадра в SHOT_MIN_INTERVAL_MS на токен (base64 до десятков МБ → BufferedImage)
+            String shotKey = req.launchToken != null ? req.launchToken : com.pwp.core.auth.ClientIp.of(ctx);
+            long nowMs = System.currentTimeMillis();
+            Long prev = LAST_SHOT.put(shotKey, nowMs);
+            if (prev != null && nowMs - prev < SHOT_MIN_INTERVAL_MS) {
+                ctx.status(429).json(ApiResponse.error("screenshot too frequent"));
+                return;
+            }
+            if (LAST_SHOT.size() > 10_000) LAST_SHOT.entrySet().removeIf(e -> nowMs - e.getValue() > SHOT_MIN_INTERVAL_MS);
             try {
                 byte[] bmp = java.util.Base64.getMimeDecoder().decode(req.data);
                 java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(bmp));

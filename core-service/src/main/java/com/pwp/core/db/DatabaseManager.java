@@ -49,7 +49,7 @@ public class DatabaseManager {
             + "last_join DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
             + "last_ip VARCHAR(45) DEFAULT NULL,"
             + "donate_tier VARCHAR(32) DEFAULT NULL,"
-            + "role VARCHAR(32) DEFAULT 'PLAYER',"
+            + "role VARCHAR(32) DEFAULT 'user',"
             + "is_banned BOOLEAN NOT NULL DEFAULT FALSE,"
             + "ban_reason TEXT DEFAULT NULL)",
 
@@ -231,13 +231,13 @@ public class DatabaseManager {
                 "ALTER TABLE sessions ADD INDEX idx_refresh_token (refresh_token)"
             };
             for (String sql : sessionMigrations) {
-                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+                try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
             }
 
             // Migration: drop server_tokens table (replaced by auth_tokens)
-            try { s.execute("DROP TABLE IF EXISTS server_tokens"); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+            try { s.execute("DROP TABLE IF EXISTS server_tokens"); } catch (Exception ignored) { migrationFailed(ignored); }
             // Migration: add accountId as permanent player identity
-            try { s.execute("ALTER TABLE players ADD COLUMN id BIGINT AUTO_INCREMENT UNIQUE FIRST"); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+            try { s.execute("ALTER TABLE players ADD COLUMN id BIGINT AUTO_INCREMENT UNIQUE FIRST"); } catch (Exception ignored) { migrationFailed(ignored); }
 
             // Migration: add missing columns to player_stats (safe, ignores duplicates)
             String[] migrations = {
@@ -288,8 +288,11 @@ public class DatabaseManager {
                 "ALTER TABLE ip_blocks ADD COLUMN reason VARCHAR(256) DEFAULT NULL",
                 "ALTER TABLE skin_definitions ADD COLUMN price INT NOT NULL DEFAULT 0"
             };
+            // роли: валидны user/support/admin/owner (AccessLevel); старый дефолт 'PLAYER' -> 'user'
+            try { s.execute("ALTER TABLE players ALTER COLUMN role SET DEFAULT 'user'"); } catch (Exception ignored) { migrationFailed(ignored); }
+            try { s.execute("UPDATE players SET role = 'user' WHERE role IS NULL OR role = '' OR UPPER(role) = 'PLAYER'"); } catch (Exception ignored) { migrationFailed(ignored); }
             for (String sql : migrations) {
-                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+                try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
             }
 
             // Recreate account FK tables after drop
@@ -341,7 +344,7 @@ public class DatabaseManager {
                 + "FOREIGN KEY (admin_uuid) REFERENCES players(uuid) ON DELETE CASCADE)"
             };
             for (String sql : accountTables) {
-                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+                try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
             }
 
             // Launcher tables
@@ -455,7 +458,7 @@ public class DatabaseManager {
                 + "INDEX idx_ac_shot (created_at))"
             };
             for (String sql : launcherTables) {
-                try { s.execute(sql); } catch (Exception ignored) { log.warn("DatabaseManager.createTables: исключение", ignored); }
+                try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
             }
 
             // ── Миграции античита для существующих БД ──
@@ -505,5 +508,22 @@ public class DatabaseManager {
             dataSource.close();
             log.info("Database pool shut down");
         }
+    }
+
+    /**
+     * Ошибка идемпотентной миграции. «Уже есть» (дубль колонки/индекса/таблицы, нечего дропать) —
+     * штатно при каждом старте, пишем в debug; остальное — warn. Раньше ~40 warn со стектрейсом
+     * на каждый рестарт топили реальные ошибки.
+     */
+    private static void migrationFailed(Exception e) {
+        if (e instanceof java.sql.SQLException sql) {
+            int code = sql.getErrorCode();
+            // 1050 table exists, 1060 dup column, 1061 dup key, 1091 can't drop, 1826 dup FK
+            if (code == 1050 || code == 1060 || code == 1061 || code == 1091 || code == 1826) {
+                log.debug("migration skipped: {}", sql.getMessage());
+                return;
+            }
+        }
+        log.warn("DatabaseManager.createTables: миграция не применена: {}", e.getMessage());
     }
 }
