@@ -43,12 +43,46 @@ class ControlsConflictsTest {
     }
 
     @Test
-    void contextsMustOverlap() {
+    void disjointContextsCompareKeyOnly() {
+        // Forge 47.3.0 KeyMapping.same: контексты не пересекаются -> key.equals (модификатор не важен)
         KeyInfo game = key("a", KeyInput.key(K), IN_GAME);
         KeyInfo gui = key("b", KeyInput.key(K), GUI);
-        assertFalse(conflicts(game, gui, FORGE));
-        // свой предикат: всё пересекается
-        assertTrue(conflicts(game, gui, (x, y) -> true));
+        KeyInfo guiCtrl = key("c", KeyInput.key(K, KeyInput.Modifier.CONTROL), GUI);
+        assertTrue(conflicts(game, gui, FORGE));
+        assertTrue(conflicts(game, guiCtrl, FORGE));
+        assertFalse(conflicts(game, key("d", KeyInput.key(R), GUI), FORGE));
+        // модификатор-конфликт в непересекающихся контекстах не считается
+        assertFalse(conflicts(
+                key("e", KeyInput.key(R, KeyInput.Modifier.CONTROL), GUI),
+                key("f", KeyInput.key(LCTRL), IN_GAME),
+                FORGE));
+    }
+
+    @Test
+    void forgeContextRelation() {
+        assertTrue(FORGE.overlap(UNIVERSAL, GUI));
+        assertFalse(FORGE.overlap(GUI, UNIVERSAL));
+        assertFalse(FORGE.overlap(GUI, IN_GAME));
+        assertTrue(FORGE.overlap(IN_GAME, IN_GAME));
+    }
+
+    @Test
+    void inGameRuleLooksAtFirstContextOnly() {
+        // a=GUI, b=UNIVERSAL: пересекаются (UNIVERSAL->GUI), модификаторы разные;
+        // GUI.conflicts(IN_GAME)=false -> a не подсвечен, а b (UNIVERSAL) подсвечен
+        KeyInfo a = key("a", KeyInput.key(R), GUI);
+        KeyInfo b = key("b", KeyInput.key(R, KeyInput.Modifier.CONTROL), UNIVERSAL);
+        assertFalse(conflicts(a, b, FORGE));
+        assertTrue(conflicts(b, a, FORGE));
+    }
+
+    @Test
+    void modifierMatchIgnoresInputKindAndHonoursOsx() {
+        KeyInput ctrlScan = new KeyInput(KeyInput.Kind.SCANCODE, LCTRL, KeyInput.Modifier.NONE);
+        assertTrue(KeyInput.Modifier.CONTROL.matches(ctrlScan));
+        assertFalse(KeyInput.Modifier.CONTROL.matches(KeyInput.key(LCTRL), true));
+        assertTrue(KeyInput.Modifier.CONTROL.matches(KeyInput.key(343), true));
+        assertFalse(KeyInput.Modifier.NONE.matches(KeyInput.key(-1)));
     }
 
     @Test

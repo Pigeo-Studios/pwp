@@ -61,12 +61,20 @@ public record KeyInput(Kind kind, int code, Modifier modifier) {
             this.right = right;
         }
 
-        /** Является ли клавиша этим модификатором (левая/правая; коды GLFW KEY_LEFT_*). */
+        /**
+         * Является ли клавиша этим модификатором (левая/правая; коды GLFW KEY_LEFT_*). Как Forge
+         * {@code KeyModifier.matches}: сравнивается только код, тип ввода не проверяется. На macOS
+         * Forge считает CONTROL клавишей Super (343/347) — см. {@link #matches(KeyInput, boolean)}.
+         */
         public boolean matches(KeyInput key) {
-            return this != NONE
-                    && key != null
-                    && key.kind() == Kind.KEYSYM
-                    && (key.code() == left || key.code() == right);
+            return matches(key, false);
+        }
+
+        /** То же с учётом macOS ({@code Minecraft.ON_OSX}): CONTROL = левый/правый Super. */
+        public boolean matches(KeyInput key, boolean osx) {
+            if (this == NONE || key == null) return false;
+            if (osx && this == CONTROL) return key.code() == 343 || key.code() == 347;
+            return key.code() == left || key.code() == right;
         }
     }
 }

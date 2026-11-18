@@ -68,6 +68,8 @@ public final class CoreUiFixtures {
         // меню паузы (превью: «Отключиться» только пишет в лог) и настройки интерфейса
         UiGallery.register("core.pause", () -> new com.pwp.coreclient.gui.screens.PWPPauseScreen(true));
         UiGallery.register("core.ui_settings", () -> new com.pwp.coreclient.gui.screens.PWPUiSettingsScreen(null));
+        // экран «Управление» на копии клавиш (реальные назначения не трогаются)
+        UiGallery.register("core.controls", ControlsFixtures::screen);
         UiGallery.register("core.ui_settings.long", () -> {
             UiSettingsFixtures.ensureRegistered();
             return new com.pwp.coreclient.gui.screens.PWPUiSettingsScreen(null, UiSettingsFixtures.CATEGORY_ID);

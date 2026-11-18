@@ -114,8 +114,8 @@ public class PWPUiSettingsScreen extends Screen {
         buildRows(d);
 
         // действия снизу
-        int aw = Math.min(Spacing.SETTING_ACTION_MAX_W, (actions.w() - 2 * pad) / 3);
-        Rect[] a = Flow.row(actions, pad, Flow.Justify.START, aw, aw, Flow.flex(1), aw);
+        int aw = Math.min(Spacing.SETTING_ACTION_MAX_W, (actions.w() - 3 * pad) / 4);
+        Rect[] a = Flow.row(actions, pad, Flow.Justify.START, aw, aw, Flow.flex(1), aw, aw);
         layer.add(new UIButton(Component.translatable("pwp_core.ui_settings.reset_category"), this::resetCategory)
                         .style(UIButton.Style.DARK)
                         .icon(UIIcon.BACK))
@@ -123,10 +123,16 @@ public class PWPUiSettingsScreen extends Screen {
         layer.add(new UIButton(Component.translatable("pwp_core.ui_settings.reset_all"), this::confirmResetAll)
                         .style(UIButton.Style.GHOST))
                 .setBounds(a[1]);
+        // вход в экран «Управление» (наши клавиши, белый список)
+        layer.add(new UIButton(Component.translatable("pwp_core.ui_settings.controls"), () -> Minecraft.getInstance()
+                                .setScreen(new PWPControlsScreen(this)))
+                        .style(UIButton.Style.DARK)
+                        .icon(UIIcon.KEYBOARD))
+                .setBounds(a[3]);
         layer.add(new UIButton(Component.translatable("pwp_core.ui_settings.done"), this::onClose)
                         .style(UIButton.Style.ACCENT)
                         .icon(UIIcon.CHECK))
-                .setBounds(a[3]);
+                .setBounds(a[4]);
     }
 
     private void selectCategory(int idx) {
