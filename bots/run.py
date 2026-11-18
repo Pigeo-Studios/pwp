@@ -79,11 +79,32 @@ def _kill_port(port: int):
         shell=True, capture_output=True,
     )
 
+STATUS_FILE = Path(os.environ.get("PWP_SCHEDULER_STATUS", Path(__file__).parent / "scheduler_status.json"))
+
+async def scheduler_status_loop(shared: SharedState):
+    """Статус расписания для Discord-эмбеда и TG-рассылки. Раньше SharedState никто не заполнял
+    (bots/scheduler_loop.py не запускался) — уведомления «игра началась» молчали. Источник один —
+    pwp-scheduler, который и управляет сервером. Устаревший файл (>2 мин) — шедулер не работает."""
+    import json, time
+    last_mtime = None
+    while True:
+        try:
+            if STATUS_FILE.exists():
+                mtime = STATUS_FILE.stat().st_mtime
+                if time.time() - mtime > 120:
+                    await shared.set_status({})
+                elif mtime != last_mtime:
+                    await shared.set_status(json.loads(STATUS_FILE.read_text(encoding="utf-8")))
+                    last_mtime = mtime
+        except Exception as e:
+            print(f"[run] scheduler_status.json: {e}")
+        await asyncio.sleep(5)
+
 async def main():
     await ensure_infrastructure()
 
     shared = SharedState()
-    tasks = []
+    tasks = [scheduler_status_loop(shared)]
 
     if config.DISCORD_TOKEN:
         import discord_bot
@@ -93,7 +114,7 @@ async def main():
         import telegram_bot
         tasks.append(telegram_bot.start(shared))
 
-    if not tasks:
+    if len(tasks) == 1:
         print("No tokens set. Add TELEGRAM_TOKEN and/or DISCORD_TOKEN to .env")
         return
 

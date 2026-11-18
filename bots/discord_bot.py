@@ -25,21 +25,34 @@ def _sign(path):
     sig = hmac.new(LAUNCHER_SECRET, data, hashlib.sha256).hexdigest()
     return f"{ts}:{sig}"
 
+_HTTP = None
+
+def _http():
+    """Один клиент на процесс: раньше AsyncClient создавался на каждый вызов и не закрывался."""
+    global _HTTP
+    if _HTTP is None or _HTTP.is_closed:
+        _HTTP = httpx.AsyncClient(timeout=5)
+    return _HTTP
+
 async def api_get(path):
     try:
         url = f"{API_BASE}{path}"
         headers = {**H, "X-PWP-Sign": _sign(path)}
-        r = await httpx.AsyncClient(timeout=5).get(url, headers=headers)
+        r = await _http().get(url, headers=headers)
         return r.json()
-    except: return None
+    except Exception as e:
+        print(f"[Discord] GET {path}: {e}")
+        return None
 
 async def api_post(path, body):
     try:
         url = f"{API_BASE}{path}"
         headers = {**H, "Content-Type": "application/json", "X-PWP-Sign": _sign(path)}
-        r = await httpx.AsyncClient(timeout=5).post(url, headers=headers, json=body)
+        r = await _http().post(url, headers=headers, json=body)
         return r.json()
-    except: return None
+    except Exception as e:
+        print(f"[Discord] POST {path}: {e}")
+        return None
 
 @bot.event
 async def on_ready():

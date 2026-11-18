@@ -150,8 +150,18 @@ async def notify_loop():
         await asyncio.sleep(10)
 
 async def _notify_all(ids, text):
+    from telegram.error import Forbidden, BadRequest
+    from auth_handlers.screens.notify import unsubscribe
     for uid in ids:
         try:
             await app.bot.send_message(uid, text, parse_mode="HTML")
-        except Exception:
-            pass
+        except Forbidden:
+            unsubscribe(uid)  # бот заблокирован — иначе вечные повторы рассылки
+            print(f"[TG] подписчик {uid} заблокировал бота — отписан")
+        except BadRequest as e:
+            if "chat not found" in str(e).lower():
+                unsubscribe(uid)
+            print(f"[TG] рассылка {uid}: {e}")
+        except Exception as e:
+            print(f"[TG] рассылка {uid}: {e}")
+        await asyncio.sleep(0.05)  # лимит Telegram ~30 сообщений/с

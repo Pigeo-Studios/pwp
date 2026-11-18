@@ -15,9 +15,11 @@ def _load():
 
 def _save(ids):
     try:
-        SUBS_FILE.write_text(json.dumps(ids), encoding="utf-8")
-    except Exception:
-        pass
+        tmp = SUBS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(ids), encoding="utf-8")
+        tmp.replace(SUBS_FILE)  # атомарно: оборванная запись не обнуляет подписчиков
+    except Exception as e:
+        print(f"[notify] не удалось сохранить подписчиков: {e}")
 
 def is_subscribed(uid: int) -> bool:
     return uid in _load()
@@ -35,6 +37,13 @@ def toggle_subscription(uid: int) -> bool:
 
 def subscribers():
     return [int(x) for x in _load()]
+
+def unsubscribe(uid: int):
+    """Убрать подписчика (заблокировал бота / удалил чат)."""
+    ids = _load()
+    if uid in ids:
+        ids.remove(uid)
+        _save(ids)
 
 class NotifyScreen(Screen):
     name = "notify"

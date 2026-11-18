@@ -269,9 +269,9 @@ def main():
             }
 
             status_file.parent.mkdir(parents=True, exist_ok=True)
-            status_file.write_text(
-                json.dumps(status, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
+            tmp = status_file.with_suffix(".tmp")
+            tmp.write_text(json.dumps(status, indent=2, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(status_file)  # атомарно: боты читают файл раз в 5 с
 
             if state != last_state:
                 print(
