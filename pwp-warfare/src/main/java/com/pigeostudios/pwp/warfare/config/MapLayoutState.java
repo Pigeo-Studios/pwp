@@ -17,6 +17,8 @@ public final class MapLayoutState {
     private static volatile MapLayout layout;
     private static volatile List<Issue> issues = List.of();
     private static volatile String source = "";
+    /** Явная раскладка до авто-вывода (база для редактора и для слияния версий, этап 3); null — не загружалась. */
+    private static volatile MapLayout explicit;
 
     private MapLayoutState() {}
 
@@ -24,6 +26,20 @@ public final class MapLayoutState {
         layout = resolved;
         issues = List.copyOf(found);
         source = from == null ? "" : from;
+    }
+
+    /** Явная раскладка (как в конфиге / последней применённой правке) — то, что правит редактор. */
+    public static void setExplicit(MapLayout l) {
+        explicit = l;
+    }
+
+    public static MapLayout explicit() {
+        return explicit;
+    }
+
+    /** Откуда взята текущая раскладка (файл / БД / правка матча). */
+    public static String source() {
+        return source;
     }
 
     /** Разрешённая раскладка (после авто-вывода); null — map_config не загружался. */

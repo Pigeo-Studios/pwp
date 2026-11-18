@@ -14,7 +14,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Вкладка «Карта» (ADMIN+): замечания валидатора раскладки текущего map_config (ERROR блокируют старт
- * матча, WARN — подсказки) и кнопка «Редактор карты» — неактивна до этапа 3. Набор рядов зависит от числа
+ * матча, WARN — подсказки) и кнопка «Редактор карты» (этап 3, {@code client/editor/MapEditorScreen}). Набор рядов зависит от числа
  * замечаний, поэтому при изменении списка вкладка пересобирается.
  */
 @OnlyIn(Dist.CLIENT)
@@ -59,11 +59,20 @@ public class MapAdminTab implements AdminTab {
     @Override
     public void init(Host host, Rect area) {
         this.host = host;
-        UIButton editor = new UIButton(Component.translatable("pwp_core.pause.map_editor"), () -> {})
+        UIButton editor = new UIButton(Component.translatable("pwp_core.pause.map_editor"), () -> {
+                    net.minecraft.client.gui.screens.Screen parent =
+                            net.minecraft.client.Minecraft.getInstance().screen;
+                    if (host.preview()) {
+                        net.minecraft.client.Minecraft.getInstance()
+                                .setScreen(new com.pigeostudios.pwp.warfare.client.editor.MapEditorScreen(
+                                        parent, com.pwp.coreclient.admin.AdminBackend.PREVIEW));
+                    } else {
+                        com.pwp.coreclient.admin.AdminPanel.openMapEditor(parent);
+                    }
+                })
                 .style(UIButton.Style.DARK)
                 .icon(UIIcon.SETTINGS);
-        editor.setEnabled(false);
-        editor.tooltip(UITooltip.Content.of(Component.translatable("pwp_core.admin.map_editor.soon")));
+        editor.tooltip(UITooltip.Content.of(Component.translatable("pwpwarfare.admin.map.editor.tip")));
         AdminForm f = new AdminForm().section(Component.translatable("pwpwarfare.admin.map.validator"));
         if (data == null) {
             f.text(() -> Component.translatable("pwp_core.admin.lobby.phase.unknown"), () -> PWPTheme.Text.MUTED);

@@ -323,6 +323,36 @@ public final class CoreApi {
         return send("DELETE", "/api/v1/factions/" + enc(faction.toLowerCase()) + "/vehicles/" + enc(vehicleName), null);
     }
 
+    // ====== MAP LAYOUTS (этап 3: редактор карты) ======
+
+    /** Версии раскладки карты без JSON: {@code {data: [{id, mapName, authorUuid, authorName, createdAt, comment}]}}. */
+    public static CompletableFuture<JsonObject> listMapLayouts(String mapName) {
+        return get("/api/v1/maps/" + enc(mapName) + "/layouts");
+    }
+
+    /** Последняя версия с JSON: {@code {data: {id, …, json}}}; версий нет — {@code {data: null}}. */
+    public static CompletableFuture<JsonObject> getLatestMapLayout(String mapName) {
+        return get("/api/v1/maps/" + enc(mapName) + "/layouts/latest");
+    }
+
+    public static CompletableFuture<JsonObject> getMapLayout(long id) {
+        return get("/api/v1/maps/layouts/" + id);
+    }
+
+    /** Новая версия; {@code json} — раскладка в формате MapLayoutCodec (строкой). Ответ — сохранённая версия. */
+    public static CompletableFuture<JsonObject> saveMapLayout(
+            String mapName, String json, String authorUuid, String authorName, String comment) {
+        return post(
+                "/api/v1/maps/" + enc(mapName) + "/layouts",
+                map("json", json, "authorUuid", authorUuid, "authorName", authorName, "comment", comment));
+    }
+
+    /** Откат = новая версия-копия {@code id}. Ответ — новая версия с JSON. */
+    public static CompletableFuture<JsonObject> rollbackMapLayout(long id, String authorUuid, String authorName) {
+        return post(
+                "/api/v1/maps/layouts/" + id + "/rollback", map("authorUuid", authorUuid, "authorName", authorName));
+    }
+
     // ====== VOICE MUTE ======
 
     public static CompletableFuture<JsonObject> voiceMute(

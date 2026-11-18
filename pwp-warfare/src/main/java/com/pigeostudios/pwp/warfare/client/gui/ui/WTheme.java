@@ -348,4 +348,29 @@ public final class WTheme {
 
     public static final int SKIN_CAT_H = 16;
     public static final int SKIN_ROW_H = 16;
+
+    // ---- редактор карты (этап 3): контуры в мире и на карте ----
+    public static final int EDITOR_MAIN_BLUE = Colors.TEAM_BLUE;
+    public static final int EDITOR_MAIN_RED = Colors.TEAM_RED;
+    public static final int EDITOR_POINT = Colors.ACCENT;
+    public static final int EDITOR_SELECTED = Colors.SUCCESS_LIGHT;
+    public static final int EDITOR_BORDER = 0xFFE2E4E6;
+    public static final int EDITOR_HIGHLIGHT = 0xFFF0C070;
+    public static final int EDITOR_CHAIN = 0xCCF0C070;
+    /** Заливка зоны на карте — цвет объекта с этой прозрачностью. */
+    public static final float EDITOR_FILL_ALPHA = 0.18F;
+    /** Ширина колонок экрана редактора (список / свойства). */
+    public static final int EDITOR_LIST_W = 150;
+
+    public static final int EDITOR_SIDE_W = 170;
+    /** Радиус «попадания» по маркеру на карте, px. */
+    public static final int EDITOR_HIT_R = 6;
+    /** Маркер спавна/слота на карте, px. */
+    public static final int EDITOR_MARK = 3;
+    /** Высота контуров в мире вокруг игрока (блоки вниз/вверх) — зоны часто от -64 до 320. */
+    public static final int EDITOR_WORLD_BELOW = 6;
+
+    public static final int EDITOR_WORLD_ABOVE = 24;
+    /** «Показать где» в мире — сколько мс светится столб. */
+    public static final long EDITOR_HIGHLIGHT_MS = 15_000L;
 }

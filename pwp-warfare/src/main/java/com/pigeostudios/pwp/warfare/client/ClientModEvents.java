@@ -47,6 +47,8 @@ public class ClientModEvents {
         WarfareUiSettings.init();
         // админ-панель core-client: вкладки «Матч» и «Карта»
         com.pigeostudios.pwp.warfare.client.admin.WarfareAdminTabs.register();
+        // этап 3: редактор карты (кнопки в паузе и во вкладке «Карта»)
+        com.pigeostudios.pwp.warfare.client.editor.MapEditorClient.init();
         com.pigeostudios.pwp.warfare.client.map.MapTileClient.init();
         // Ответы единой системы данных core-client → кэши warfare (ClientData)
         com.pwp.coreclient.network.data.ClientDataResponses.listen(

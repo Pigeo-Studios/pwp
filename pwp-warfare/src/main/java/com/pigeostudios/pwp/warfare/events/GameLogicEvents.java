@@ -2154,6 +2154,8 @@ public class GameLogicEvents {
     private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
         try {
             data.match.isGameStarted = false;
+            // этап 3: правка раскладки «только на этот матч» пропадает с концом матча
+            com.pigeostudios.pwp.warfare.server.map.MapLayoutService.onMatchEnded(level);
             data.setDirty();
 
             String winner = blueWon ? "BLUE" : "RED";

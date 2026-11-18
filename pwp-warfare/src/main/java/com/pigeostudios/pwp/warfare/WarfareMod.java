@@ -81,6 +81,7 @@ public class WarfareMod {
             com.pigeostudios.pwp.warfare.network.WarfareDataRequests.register();
             // админ-панель: тип adminMatch + разделы match/map
             com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerData();
+            com.pigeostudios.pwp.warfare.admin.MapEditorPackets.registerData();
             // тайлы динамической карты (mapTile): отвечает только на запросы клиентов с включённой картой
             com.pigeostudios.pwp.warfare.server.map.MapTileService.register();
         });
@@ -93,6 +94,9 @@ public class WarfareMod {
         LOGGER.info("PWP Warfare Server starting...");
         applyMapConfig(event.getServer().overworld());
         MatchConfigLoader.load(event.getServer().overworld());
+        // этап 3: правка «на этот матч» (SavedData) или последняя версия «навсегда» из БД (асинхронно)
+        com.pigeostudios.pwp.warfare.server.map.MapLayoutService.onServerStarted(
+                event.getServer().overworld());
     }
 
     @SubscribeEvent
@@ -167,6 +171,7 @@ public class WarfareMod {
             issues.addAll(resolved.notes());
             issues.addAll(LayoutValidator.validate(layout));
             MapLayoutState.set(layout, issues, configPath.toString());
+            MapLayoutState.setExplicit(parsed.layout());
             MapLayoutState.log("map_config load");
 
             Border border = layout.border();
@@ -368,7 +373,7 @@ public class WarfareMod {
     }
 
     /** Точка из раскладки → состояние матча. Приоритет, который не удалось вывести, — прежний дефолт 10. */
-    private static WarfareWorldData.CapturePoint toCapturePoint(MapLayout.CapturePointDef p) {
+    public static WarfareWorldData.CapturePoint toCapturePoint(MapLayout.CapturePointDef p) {
         int legacy = MapLayout.CapturePointDef.LEGACY_DEFAULT_PRIORITY;
         return new WarfareWorldData.CapturePoint(
                 p.name(),
@@ -385,7 +390,7 @@ public class WarfareMod {
     }
 
     /** Бокс как его строил прежний парсер: углы pos1/pos2 как есть (AABB сам нормализует min/max). */
-    private static AABB aabb(Box b) {
+    public static AABB aabb(Box b) {
         return new AABB(
                 b.pos1().x(),
                 b.pos1().y(),

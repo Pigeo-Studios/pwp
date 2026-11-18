@@ -35,6 +35,9 @@ public class WarfareWorldData extends SavedData {
     public final StructureRegistry structures = new StructureRegistry();
     public final MarkerRegistry markers = new MarkerRegistry();
     public final VehicleRegistry vehicles = new VehicleRegistry();
+    /** Раскладка «только на этот матч» из редактора карты (этап 3). */
+    public final MapEditRegistry mapEdit = new MapEditRegistry();
+
     public Map<String, WarfareWorldData.KitInfo> blueKits = new HashMap<>();
     public Map<String, WarfareWorldData.KitInfo> redKits = new HashMap<>();
 
@@ -394,6 +397,7 @@ public class WarfareWorldData extends SavedData {
         this.structures.save(tag);
         this.markers.save(tag);
         this.vehicles.save(tag);
+        this.mapEdit.save(tag);
         return tag;
     }
 
@@ -404,6 +408,7 @@ public class WarfareWorldData extends SavedData {
         data.structures.load(tag);
         data.markers.load(tag);
         data.vehicles.load(tag);
+        data.mapEdit.load(tag);
         if (tag.contains("BlueKits")) {
             CompoundTag bk = tag.getCompound("BlueKits");
 

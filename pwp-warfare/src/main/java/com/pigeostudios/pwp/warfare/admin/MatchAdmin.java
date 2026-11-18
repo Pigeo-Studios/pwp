@@ -113,7 +113,10 @@ public final class MatchAdmin {
                 || data.match.invasionSetupActive
                 || data.match.waitingActive;
         if (!running) return ERR_NOTHING_RUNNING;
+        boolean wasPlaying = data.match.isGameStarted;
         data.match.isGameStarted = false;
+        // этап 3: остановленный бой = конец матча для правки «только на этот матч»
+        if (wasPlaying) com.pigeostudios.pwp.warfare.server.map.MapLayoutService.onMatchEnded(level);
         data.match.invasionSetupActive = false;
         clearWaitingTitles(level, data);
         GameLogicEvents.cancelCountdown(level);

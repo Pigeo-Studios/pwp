@@ -79,6 +79,7 @@ public class CoreApplication {
         new AuthLibController(app);
         new HWIDBanController(app);
         new MatchPolicyController(app);
+        new MapLayoutController(app);
         new SecurityController(app, config);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

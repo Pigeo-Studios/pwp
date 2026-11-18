@@ -167,6 +167,27 @@ public final class AdminPanel {
         return features;
     }
 
+    /** Открывашка редактора карты (ставит warfare, этап 3): parent → экран редактора. */
+    private static volatile java.util.function.Function<Screen, Screen> mapEditor;
+
+    public static void setMapEditor(java.util.function.Function<Screen, Screen> opener) {
+        mapEditor = opener;
+    }
+
+    /** Редактор доступен: мод его зарегистрировал, уровень ADMIN+ и сервер объявил раздел «Карта». */
+    public static boolean mapEditorAvailable() {
+        return mapEditor != null
+                && level.atLeast(AccessLevel.ADMIN)
+                && features.contains(com.pwp.coreclient.network.data.AdminInfo.FEATURE_MAP);
+    }
+
+    /** Открыть редактор карты (права всё равно проверяет сервер в каждом пакете). */
+    public static void openMapEditor(Screen parent) {
+        java.util.function.Function<Screen, Screen> f = mapEditor;
+        if (f == null) return;
+        Minecraft.getInstance().setScreen(f.apply(parent));
+    }
+
     /** Спросить сервер (не чаще раза в 2 с). */
     public static void refresh() {
         Minecraft mc = Minecraft.getInstance();

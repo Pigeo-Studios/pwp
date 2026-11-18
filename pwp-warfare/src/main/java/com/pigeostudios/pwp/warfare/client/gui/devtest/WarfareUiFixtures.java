@@ -57,6 +57,66 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.radial.hub", () -> new HubRadialScreen(BlockPos.ZERO).asPreview());
         UiGallery.register("warfare.radial.markers", () -> new SquadMarkerRadialScreen(0, 0, null).asPreview());
         UiGallery.register("warfare.radial.tactical", () -> new TacticalMapRadialScreen(0, 0, null).asPreview());
+        UiGallery.register("warfare.map_editor", WarfareUiFixtures::mapEditor);
+    }
+
+    /** Редактор карты (этап 3) на фикстуре: два мейна, цепочка точек, слоты; «пустые данные» — пустая раскладка. */
+    static net.minecraft.client.gui.screens.Screen mapEditor() {
+        com.pigeostudios.pwp.warfare.layout.MapLayout l =
+                com.pigeostudios.pwp.warfare.client.editor.MapEditorSession.emptyLayout();
+        if (!UiGallery.emptyData()) {
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.setMainCorner(
+                    l,
+                    com.pigeostudios.pwp.warfare.layout.Team.BLUE,
+                    1,
+                    new com.pigeostudios.pwp.warfare.layout.Pos(-1200, 60, -900));
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.setMainCorner(
+                    l,
+                    com.pigeostudios.pwp.warfare.layout.Team.BLUE,
+                    2,
+                    new com.pigeostudios.pwp.warfare.layout.Pos(-1060, 120, -720));
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.setMainCorner(
+                    l,
+                    com.pigeostudios.pwp.warfare.layout.Team.RED,
+                    1,
+                    new com.pigeostudios.pwp.warfare.layout.Pos(1060, 60, 720));
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.setMainCorner(
+                    l,
+                    com.pigeostudios.pwp.warfare.layout.Team.RED,
+                    2,
+                    new com.pigeostudios.pwp.warfare.layout.Pos(1200, 120, 900));
+            for (int i = 0; i < 5; i++) {
+                int x = -800 + i * 400, z = -600 + i * 300;
+                l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.addPoint(
+                        l,
+                        name(i == 0 ? "Ферма" : "Точка " + (i + 1), i),
+                        com.pigeostudios.pwp.warfare.layout.Box.of(x - 40, 50, z - 40, x + 40, 120, z + 40));
+            }
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.addSlot(
+                    l,
+                    com.pigeostudios.pwp.warfare.layout.Team.BLUE,
+                    new com.pigeostudios.pwp.warfare.layout.Pos(-1100, 64, -800),
+                    "TANK",
+                    90f);
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.addSlot(
+                    l,
+                    com.pigeostudios.pwp.warfare.layout.Team.RED,
+                    new com.pigeostudios.pwp.warfare.layout.Pos(1100, 64, 800),
+                    null,
+                    -90f);
+            l = com.pigeostudios.pwp.warfare.layout.LayoutEdits.setBorder(l, 0, 0, 2600);
+        }
+        com.pigeostudios.pwp.warfare.client.editor.MapEditorSession.setDraft(l);
+        com.pigeostudios.pwp.warfare.client.editor.MapEditorSession.previewFlags(
+                "takmachka",
+                true,
+                List.of(
+                        new com.pigeostudios.pwp.warfare.client.editor.MapEditorSession.VersionRow(
+                                3, "Owner", System.currentTimeMillis(), name("правка точки 3", 0)),
+                        new com.pigeostudios.pwp.warfare.client.editor.MapEditorSession.VersionRow(
+                                2, "Admin", System.currentTimeMillis() - 86_400_000L, "")));
+        return new com.pigeostudios.pwp.warfare.client.editor.MapEditorScreen(
+                null, com.pwp.coreclient.admin.AdminBackend.PREVIEW);
     }
 
     // ------------------------------------------------------------ киты

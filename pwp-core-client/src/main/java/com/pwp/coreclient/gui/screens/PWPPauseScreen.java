@@ -105,12 +105,21 @@ public class PWPPauseScreen extends Screen {
                     })
                     .style(UIButton.Style.DARK)
                     .icon(UIIcon.SERVER));
-            UIButton mapEditor = new UIButton(Component.translatable("pwp_core.pause.map_editor"), () -> {})
+            UIButton mapEditor = new UIButton(Component.translatable("pwp_core.pause.map_editor"), () -> {
+                        if (preview) {
+                            LOG.info("[PWPUI] pause: map editor (preview — без действия)");
+                        } else {
+                            com.pwp.coreclient.admin.AdminPanel.openMapEditor(this);
+                        }
+                    })
                     .style(UIButton.Style.DARK)
                     .icon(UIIcon.SETTINGS);
-            mapEditor.setEnabled(false);
-            mapEditor.tooltip(com.pwp.coreclient.ui.UITooltip.Content.of(
-                    Component.translatable("pwp_core.admin.map_editor.soon")));
+            // редактор — уровень ADMIN+ и раздел «Карта» на сервере (этап 3); права проверяет сервер
+            if (!preview && !com.pwp.coreclient.admin.AdminPanel.mapEditorAvailable()) {
+                mapEditor.setEnabled(false);
+                mapEditor.tooltip(com.pwp.coreclient.ui.UITooltip.Content.of(
+                        Component.translatable("pwp_core.admin.map_editor.unavailable")));
+            }
             buttons.add(mapEditor);
         }
         buttons.add(new UIButton(

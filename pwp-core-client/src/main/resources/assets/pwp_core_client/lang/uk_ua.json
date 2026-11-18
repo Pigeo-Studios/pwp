@@ -275,7 +275,7 @@
     "pwp_core.admin.lobby.error.no_vote": "Голосування не йде",
     "pwp_core.admin.lobby.error.save_failed": "Не вдалося записати config/pwp_lobby.json (див. лог сервера)",
     "pwp_core.pause.map_editor": "Редактор мапи",
-    "pwp_core.admin.map_editor.soon": "Буде на етапі 3: редактор мапи в грі (точки, мейни, порядок AAS, спавни, межа)",
+    "pwp_core.admin.map_editor.unavailable": "Редактор мапи: потрібен рівень ADMIN і матч-сервер з PWP Warfare",
     "pwp_core.admin.owner_only": "Лише власник (op 4 або роль owner)",
     "pwp_core.admin.tab.moderation": "Модерація",
     "pwp_core.admin.lobby.apply": "Застосувати",

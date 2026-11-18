@@ -275,7 +275,7 @@
     "pwp_core.admin.lobby.error.no_vote": "No vote is in progress",
     "pwp_core.admin.lobby.error.save_failed": "Could not write config/pwp_lobby.json (see server log)",
     "pwp_core.pause.map_editor": "Map editor",
-    "pwp_core.admin.map_editor.soon": "Coming in stage 3: in-game map editor (points, mains, AAS order, spawns, border)",
+    "pwp_core.admin.map_editor.unavailable": "Map editor: needs ADMIN and a match server with PWP Warfare",
     "pwp_core.admin.owner_only": "Owner only (op 4 or role owner)",
     "pwp_core.admin.tab.moderation": "Moderation",
     "pwp_core.admin.lobby.apply": "Apply",
