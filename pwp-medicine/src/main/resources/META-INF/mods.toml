@@ -18,3 +18,10 @@ description='''
     versionRange="[1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.pwp_medicine]]
+    modId="geckolib"
+    mandatory=true
+    versionRange="[4.4.9,)"
+    ordering="AFTER"
+    side="BOTH"

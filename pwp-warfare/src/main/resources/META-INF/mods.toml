@@ -64,3 +64,33 @@ side="SERVER"
     versionRange="[1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+# 18.11.2026: классы этих модов используются напрямую — без них понятный экран «не хватает мода», а не NoClassDefFoundError
+
+[[dependencies.pwpwarfare]]
+    modId="geckolib"
+    mandatory=true
+    versionRange="[4.4.9,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="curios"
+    mandatory=true
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="tacz"
+    mandatory=true
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="superbwarfare"
+    mandatory=true
+    versionRange="[0.8.9,)"
+    ordering="AFTER"
+    side="BOTH"

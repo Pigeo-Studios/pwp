@@ -17,3 +17,10 @@ Cosmetics system for PWP. Knife skins, weapon skins, uniforms, effects.
     versionRange="[1.0,)"
     ordering="AFTER"
     side="BOTH"
+
+[[dependencies.pwp_cosmetics]]
+    modId="pwp_core_client"
+    mandatory=true
+    versionRange="[1.0,)"
+    ordering="AFTER"
+    side="BOTH"
