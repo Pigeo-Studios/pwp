@@ -12,14 +12,6 @@ public final class WarfareMigration {
 
     public static final int VERSION = 1;
 
-    /**
-     * Старые ключи в persistentData ещё поддерживаются для отката на старый мод (пока не
-     * вызывается {@link #removeLegacy}). Пока true — при смерти ключи {@link
-     * PlayerCloneRules#SURVIVE_DEATH} дублируются в persistentData нового игрока
-     * ({@link PlayerCloneRules#mirrorToLegacy}). УДАЛИТЬ вместе с переходом на removeLegacy.
-     */
-    public static final boolean LEGACY_KEYS_KEPT = true;
-
     private WarfareMigration() {}
 
     /**
@@ -27,10 +19,8 @@ public final class WarfareMigration {
      * вождения) из persistentData в тег capability — ОДИН раз на игрока (маркер
      * {@link #MIGRATED_MARKER}). Значение, уже лежащее в capability, не перетирается.
      *
-     * <p>Старые ключи в persistentData НЕ удаляются ещё одну версию — для отката на старый мод
-     * (он увидит снимок состояния на момент миграции). Маркер нужен, чтобы этот снимок не
-     * вернулся в capability при следующем входе (например, удалённый PendingKit). Удаление —
-     * {@link #removeLegacy} в следующей версии.
+     * <p>Сразу после переноса {@code PlayerWarfareData.of} удаляет старые ключи ({@link #removeLegacy}):
+     * откат на старый мод не поддерживается с 18.11.2026. Маркер остаётся — повторный перенос не нужен.
      *
      * @return сколько ключей перенесено (0 — миграция уже была)
      */
@@ -46,7 +36,7 @@ public final class WarfareMigration {
         return moved;
     }
 
-    /** Следующая версия: удалить старые ключи из persistentData (сейчас не вызывается). */
+    /** Удаляет старые ключи {@code WARFARE_*} из persistentData ИГРОКА (у прочих сущностей это живое хранилище!). */
     public static int removeLegacy(CompoundTag persistent) {
         int removed = 0;
         for (String key : persistent.getAllKeys().toArray(new String[0])) {

@@ -64,17 +64,4 @@ class PlayerCloneRulesTest {
         assertEquals(99_000L, WarfareKeys.DRONE_DEPLOY_CD.read(to), "кулдаун деплоя дрона остаётся");
         assertEquals(4, WarfareKeys.SQUAD_ID.read(to));
     }
-
-    @Test
-    void deathMirrorsSurvivingKeysToLegacyPersistentData() {
-        CompoundTag cap = new CompoundTag();
-        PlayerCloneRules.copy(oldPlayer(), cap, true);
-        CompoundTag persistent = new CompoundTag();
-        PlayerCloneRules.mirrorToLegacy(cap, persistent);
-        assertEquals(4, WarfareKeys.SQUAD_ID.read(persistent), "старый мод после отката видит отряд");
-        assertEquals("Medic", WarfareKeys.CURRENT_KIT.read(persistent));
-        assertEquals(1234L, WarfareKeys.LAST_FOB_RESUPPLY.read(persistent));
-        assertFalse(persistent.contains(WarfareKeys.IS_DOWNED.name()));
-        assertFalse(persistent.contains(WarfareMigration.MIGRATED_MARKER), "маркер — только в capability");
-    }
 }

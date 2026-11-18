@@ -690,7 +690,7 @@ public class WarfareOverlay {
             gui.blit(flagTex, startX, contentY, flagW, flagH, 0.0F, 0.0F, 64, 36, 64, 36);
         }
 
-        ResourceLocation ticketIcon = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
+        ResourceLocation ticketIcon = com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/minimap_tickets.png");
         int iconX = startX + flagW + gap;
         RenderSystem.enableBlend();
         gui.blit(ticketIcon, iconX, contentY, iconSize, iconSize, 0.0F, 0.0F, 16, 16, 16, 16);

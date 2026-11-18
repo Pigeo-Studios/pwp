@@ -55,11 +55,14 @@ public final class PlayerWarfareData extends WarfareData {
         if (!data.migrated) {
             data.migrated = true;
             int moved = WarfareMigration.migratePlayer(player.getPersistentData(), data.tag);
-            if (moved > 0)
+            // откат на старый мод больше не поддерживается (18.11.2026) — старые ключи удаляем
+            int removed = WarfareMigration.removeLegacy(player.getPersistentData());
+            if (moved > 0 || removed > 0)
                 LOG.info(
-                        "Миграция {}: {} ключей WARFARE_* скопировано в capability (старые оставлены для отката)",
+                        "Миграция {}: {} ключей WARFARE_* перенесено в capability, {} удалено из persistentData",
                         player.getScoreboardName(),
-                        moved);
+                        moved,
+                        removed);
         }
         return data;
     }
@@ -76,15 +79,6 @@ public final class PlayerWarfareData extends WarfareData {
      */
     public static void copyOnClone(Player oldPlayer, Player newPlayer, boolean wasDeath) {
         PlayerCloneRules.copy(of(oldPlayer).tag, of(newPlayer).tag, wasDeath);
-    }
-
-    /**
-     * После смерти: дублирует переживающие смерть ключи в persistentData нового игрока — для
-     * отката на старый мод ({@link PlayerCloneRules#mirrorToLegacy}). УДАЛИТЬ вместе с
-     * {@link WarfareMigration#removeLegacy}.
-     */
-    public static void mirrorLegacyAfterDeath(Player newPlayer) {
-        PlayerCloneRules.mirrorToLegacy(of(newPlayer).tag, newPlayer.getPersistentData());
     }
 
     /** Полная копия данных (для клона игрока при смене измерения и тестов). */

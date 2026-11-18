@@ -25,6 +25,10 @@ import net.minecraftforge.registries.ForgeRegistries;
 // - Снифт+ПКМ: демонтаж своей командой БЕЗ возврата предмета (штатный
 //   UFPV-возврат блокируется). Чужой команде — запрещено.
 // - Обычный ПКМ (вкл/выкл глушилки): только своей команде.
+// Подписка на шину Forge: раньше аннотации не было — правила РЭБ НЕ работали (найдено аудитом 18.11.2026)
+@net.minecraftforge.fml.common.Mod.EventBusSubscriber(
+        modid = "pwpwarfare",
+        bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE)
 public class RebDeploymentEvents {
     private static final Set<String> REB_ITEMS = Set.of("uncomplicatedfpv:reb", "uncomplicatedfpv:reb_mini");
     private static final Set<String> REB_ENTITIES = Set.of("uncomplicatedfpv:reb", "uncomplicatedfpv:reb_mini");

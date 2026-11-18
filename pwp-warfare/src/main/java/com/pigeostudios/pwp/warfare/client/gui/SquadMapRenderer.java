@@ -367,7 +367,7 @@ public class SquadMapRenderer {
 
     private ResourceLocation getFlagTexture(String faction) {
         return faction != null && !faction.equalsIgnoreCase("none")
-                ? new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png")
+                ? com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/flags/" + faction.toLowerCase() + ".png")
                 : null;
     }
 
@@ -837,7 +837,7 @@ public class SquadMapRenderer {
                     case 3 -> "marker_build_bravo";
                     default -> "marker_move_bravo";
                 };
-        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + pre + ".png");
+        return com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/" + pre + ".png");
     }
 
     private ResourceLocation getCharlieMarkerIcon(int type) {
@@ -848,7 +848,7 @@ public class SquadMapRenderer {
                     case 3 -> "marker_build_charlie";
                     default -> "marker_move_charlie";
                 };
-        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + pre + ".png");
+        return com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/" + pre + ".png");
     }
 
     private void renderTacticalMarkers(GuiGraphics g, double cx, double cz, double bpp) {
@@ -880,7 +880,7 @@ public class SquadMapRenderer {
 
     private ResourceLocation getMarkerIcon(String type) {
         String path = type.toLowerCase().replace("enemy ", "").replace(" ", "_");
-        return new ResourceLocation("pwpwarfare", "textures/gui/map_icons/" + path + "_marker.png");
+        return com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/" + path + "_marker.png");
     }
 
     private void renderSquadRhombusMarkers(GuiGraphics g, double cx, double cz, double bpp) {
@@ -898,7 +898,7 @@ public class SquadMapRenderer {
             if (s1.id == teamCMDIdForNums && teamCMDIdForNums != -1) return -1;
             return s2.id == teamCMDIdForNums && teamCMDIdForNums != -1 ? 1 : Integer.compare(s1.id, s2.id);
         });
-        var rhombusTex = new ResourceLocation("pwpwarfare", "textures/gui/map_icons/squad_rhombus.png");
+        var rhombusTex = com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/squad_rhombus.png");
         var f = PWPTheme.Fonts.display();
         for (var squad : ClientData.clientSquads) {
             if (!squad.team.equalsIgnoreCase(myTeam)) continue;
@@ -954,7 +954,7 @@ public class SquadMapRenderer {
             drawPingOnMap(
                     g,
                     mySquad.pingPos,
-                    new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye.png"),
+                    com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/ping_eye.png"),
                     cx,
                     cz,
                     bpp);
@@ -962,7 +962,7 @@ public class SquadMapRenderer {
             drawPingOnMap(
                     g,
                     mySquad.bravoPingPos,
-                    new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_bravo.png"),
+                    com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/ping_eye_bravo.png"),
                     cx,
                     cz,
                     bpp);
@@ -970,7 +970,7 @@ public class SquadMapRenderer {
             drawPingOnMap(
                     g,
                     mySquad.charliePingPos,
-                    new ResourceLocation("pwpwarfare", "textures/gui/map_icons/ping_eye_charlie.png"),
+                    com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/map_icons/ping_eye_charlie.png"),
                     cx,
                     cz,
                     bpp);

@@ -62,8 +62,8 @@ public class SquadUIHelper {
 
     public static void renderVoiceActivity(GuiGraphics gui, int x, int y) {
         long now = System.currentTimeMillis();
-        ResourceLocation radioIcon = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon_radio.png");
-        ResourceLocation voiceIcon = new ResourceLocation("pwpwarfare", "textures/gui/voice_icon.png");
+        ResourceLocation radioIcon = com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/voice_icon_radio.png");
+        ResourceLocation voiceIcon = com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/voice_icon.png");
 
         for (var entry : ClientData.RADIO_SPEAKERS.entrySet()) {
             if (now - entry.getValue() >= 500) continue;
@@ -94,7 +94,7 @@ public class SquadUIHelper {
         String faction = teamName.contains("BLUE") ? ClientData.BLUE_FACTION : ClientData.RED_FACTION;
         String customName = teamName.contains("BLUE") ? ClientData.customBlueName : ClientData.customRedName;
         ResourceLocation flagTex = getFlagTexture(faction);
-        ResourceLocation ticketIcon = new ResourceLocation("pwpwarfare", "textures/gui/minimap_tickets.png");
+        ResourceLocation ticketIcon = com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/minimap_tickets.png");
 
         if (flagTex != null) {
             RenderSystem.enableBlend();
@@ -183,7 +183,7 @@ public class SquadUIHelper {
 
     private static ResourceLocation getFlagTexture(String faction) {
         if (faction == null || faction.equalsIgnoreCase("none")) return null;
-        return new ResourceLocation("pwpwarfare", "textures/gui/flags/" + faction.toLowerCase() + ".png");
+        return com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/flags/" + faction.toLowerCase() + ".png");
     }
 
     public static int getSidebarWidth() {

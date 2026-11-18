@@ -70,22 +70,6 @@ public final class PlayerCloneRules {
         }
     }
 
-    /**
-     * Откат на старый мод после смерти: Forge не копирует persistentData при смерти (кроме
-     * {@code PlayerPersisted}), и у нового игрока старых ключей нет — старый мод потерял бы
-     * отряд и кит. Копирует ключи {@link #SURVIVE_DEATH} из тега capability в persistentData
-     * нового игрока. Действует, пока {@link WarfareMigration#LEGACY_KEYS_KEPT}; УДАЛИТЬ вместе
-     * с {@link WarfareMigration#removeLegacy}.
-     */
-    public static void mirrorToLegacy(CompoundTag capability, CompoundTag persistent) {
-        if (!WarfareMigration.LEGACY_KEYS_KEPT) return;
-        for (WarfareKey<?> key : SURVIVE_DEATH) {
-            if (capability.contains(key.name())) {
-                persistent.put(key.name(), capability.get(key.name()).copy());
-            }
-        }
-    }
-
     private static boolean isResetOnEndReturn(String key) {
         for (WarfareKey<?> k : RESET_ON_END_RETURN) {
             if (k.name().equals(key)) return true;
