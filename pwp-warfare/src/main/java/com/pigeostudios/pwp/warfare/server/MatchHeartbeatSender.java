@@ -49,6 +49,7 @@ public class MatchHeartbeatSender {
             String dir = Path.of("").toAbsolutePath().getFileName().toString();
             CoreApi.sendHeartbeat(LobbyHandoff.withPrep(new Heartbeat("match_" + dir, online)
                     .port(port)
+                    .perf(server.getAverageTickTime())
                     .match(
                             data.match.currentMapImage != null ? data.match.currentMapImage : "",
                             data.match.gameMode != null ? data.match.gameMode : "aas",

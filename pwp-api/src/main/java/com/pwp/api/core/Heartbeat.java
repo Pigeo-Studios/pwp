@@ -12,10 +12,27 @@ public final class Heartbeat {
     private int port;
     private JsonObject match;
     private JsonObject prep;
+    private JsonObject perf;
 
     public Heartbeat(String server, int online) {
         this.server = server;
         this.online = online;
+    }
+
+    /**
+     * Производительность сервера для дашборда core ({@code /admin/dashboard}): средний MSPT
+     * ({@code MinecraftServer.getAverageTickTime()}), TPS из него и heap JVM.
+     */
+    public Heartbeat perf(double avgTickMs) {
+        JsonObject p = new JsonObject();
+        double mspt = Double.isFinite(avgTickMs) && avgTickMs > 0 ? avgTickMs : 0;
+        p.addProperty("mspt", Math.round(mspt * 10.0) / 10.0);
+        p.addProperty("tps", mspt <= 0 ? 0 : Math.round(Math.min(20.0, 1000.0 / mspt) * 10.0) / 10.0);
+        Runtime rt = Runtime.getRuntime();
+        p.addProperty("heapUsedMb", (rt.totalMemory() - rt.freeMemory()) >> 20);
+        p.addProperty("heapMaxMb", rt.maxMemory() >> 20);
+        this.perf = p;
+        return this;
     }
 
     /** Порт матч-сервера — лобби сверяет по нему матч. */
@@ -73,6 +90,9 @@ public final class Heartbeat {
         }
         if (prep != null) {
             for (String key : prep.keySet()) body.add(key, prep.get(key));
+        }
+        if (perf != null) {
+            for (String key : perf.keySet()) body.add(key, perf.get(key));
         }
         return body;
     }

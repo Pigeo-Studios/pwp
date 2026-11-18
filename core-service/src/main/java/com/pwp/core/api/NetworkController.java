@@ -31,6 +31,8 @@ public class NetworkController {
                 ctx.json(ApiResponse.error("server name required"));
                 return;
             }
+            com.pwp.core.metrics.Metrics.recordServer(
+                    req.server, req.online, req.mspt, req.tps, req.heapUsedMb, req.heapMaxMb);
             heartbeats.put(req.server, new ServerHeartbeat(req.server, req.online, req.ip, req.port,
                     req.mapName, req.mode, req.blueFaction, req.redFaction,
                     req.blueScore, req.redScore, req.phase, req.maxPlayers,
@@ -247,6 +249,11 @@ public class NetworkController {
         public boolean prepSettingsApplied;
         public int prepDone;
         public int prepTotal;
+        // производительность сервера (с 18.11.2026; старые серверы шлют 0)
+        public double mspt;
+        public double tps;
+        public long heapUsedMb;
+        public long heapMaxMb;
     }
 
     public static class BotHeartbeatReq {

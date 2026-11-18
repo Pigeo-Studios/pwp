@@ -200,6 +200,7 @@ public class LobbyMod {
                 MatchInfo mi = MatchAllocator.getActiveMatch();
                 if (mi != null) {
                     CoreApi.sendHeartbeat(new Heartbeat("lobby", online)
+                            .perf(lobbyTickMs())
                             .match(
                                     mi.mapName,
                                     mi.mode,
@@ -212,7 +213,7 @@ public class LobbyMod {
                                     mi.startedAt,
                                     mi.playerCount));
                 } else {
-                    CoreApi.sendHeartbeat(new Heartbeat("lobby", online));
+                    CoreApi.sendHeartbeat(new Heartbeat("lobby", online).perf(lobbyTickMs()));
                 }
             } catch (RuntimeException e) {
                 log.warn("Не удалось отправить heartbeat лобби", e);
@@ -1116,5 +1117,11 @@ public class LobbyMod {
         long elapsed = System.currentTimeMillis() - modeVoteStartTime;
         int remaining = modeVoteDurationSec - (int) (elapsed / 1000);
         return Math.max(0, remaining);
+    }
+
+    /** Средний MSPT лобби для heartbeat (0 — сервер не найден). */
+    private static double lobbyTickMs() {
+        net.minecraft.server.MinecraftServer srv = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        return srv == null ? 0 : srv.getAverageTickTime();
     }
 }

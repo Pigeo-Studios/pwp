@@ -46,7 +46,14 @@ public class CoreApplication {
             com.pwp.core.api.GsonMapper.apply(cfg);
         });
 
+        com.pwp.core.metrics.Metrics.install(app); // замер времени — до авторизации, чтобы считать и отказы
         app.before("/api/*", ctx -> AuthMiddleware.handle(ctx, config.api));
+        // дашборд: сама страница данных не содержит, данные — /api/v1/admin/metrics по токену админа
+        app.get("/admin/dashboard", ctx -> {
+            try (var in = CoreApplication.class.getResourceAsStream("/dashboard.html")) {
+                ctx.contentType("text/html; charset=utf-8").result(in == null ? "no dashboard" : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            }
+        });
         // /api/v1/admin/* пропускается AuthMiddleware как «публичный» (веб/лаунчер-админы ходят
         // Bearer-сессией без HMAC), поэтому право проверяется здесь — ДЛЯ ВСЕХ маршрутов сразу.
         // Раньше verifyAdmin вызывал каждый хэндлер сам, и find-user/set-role/audit были открыты анонимно.

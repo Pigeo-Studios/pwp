@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PWP Метрики</title>
+<style>
+  :root { --bg:#0f1214; --panel:#171b1e; --line:#2a3035; --text:#e2e4e6; --muted:#8a9399; --ok:#57b607; --warn:#f0c070; --bad:#ed4040; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+  header { display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:16px; margin:0; letter-spacing:.08em; text-transform:uppercase; }
+  input, button { background:var(--panel); color:var(--text); border:1px solid var(--line); padding:6px 10px; border-radius:4px; }
+  button { cursor:pointer; }
+  main { padding:16px; display:grid; gap:16px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; }
+  .card, section { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:12px; }
+  .card b { display:block; font-size:22px; }
+  .card span, th { color:var(--muted); font-weight:normal; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td.n, th.n { text-align:right; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  #err { color:var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>PWP · метрики</h1>
+  <input id="tok" type="password" placeholder="API-ключ или токен админа" size="34">
+  <button id="go">Показать</button>
+  <span id="err"></span>
+</header>
+<main>
+  <div class="cards" id="cards"></div>
+  <section><h2>Игровые серверы</h2><div class="scroll"><table id="srv"></table></div></section>
+  <section><h2>Маршруты API</h2><div class="scroll"><table id="rt"></table></div></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let token = '';
+try { token = sessionStorage.getItem('pwpTok') || ''; } catch (e) {}
+$('tok').value = token;
+$('go').onclick = () => { token = $('tok').value.trim(); try { sessionStorage.setItem('pwpTok', token); } catch (e) {} load(); };
+function cls(v, warn, bad) { return v >= bad ? 'bad' : v >= warn ? 'warn' : 'ok'; }
+async function load() {
+  if (!token) return;
+  try {
+    const r = await fetch('/api/v1/admin/metrics', { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) { $('err').textContent = 'Ошибка ' + r.status; return; }
+    const d = await r.json(); $('err').textContent = '';
+    const p = d.dbPool || {};
+    $('cards').innerHTML = [
+      ['Аптайм core', Math.floor(d.uptimeSec / 3600) + ' ч ' + Math.floor(d.uptimeSec % 3600 / 60) + ' мин'],
+      ['Память core', d.heapUsedMb + ' / ' + d.heapMaxMb + ' МБ'],
+      ['Пул БД', (p.active ?? '?') + ' акт / ' + (p.total ?? '?') + ' (макс ' + (p.max ?? '?') + ')'],
+      ['Ждут соединения', p.waiting ?? '?'],
+    ].map(([k, v]) => `<div class="card"><span>${k}</span><b>${esc(v)}</b></div>`).join('');
+    const s = Object.entries(d.servers || {});
+    $('srv').innerHTML = '<tr><th>Сервер</th><th class="n">Онлайн</th><th class="n">MSPT</th><th class="n">TPS</th><th class="n">Память, МБ</th><th class="n">Heartbeat</th></tr>' +
+      (s.length ? s.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="n">${v.online}</td>` +
+        `<td class="n ${cls(v.mspt, 40, 50)}">${v.mspt || '—'}</td><td class="n">${v.tps || '—'}</td>` +
+        `<td class="n">${v.heapMaxMb ? v.heapUsedMb + ' / ' + v.heapMaxMb : '—'}</td>` +
+        `<td class="n ${cls(v.ageSec, 30, 60)}">${v.ageSec} с назад</td></tr>`).join('')
+        : '<tr><td colspan="6">Нет heartbeat от серверов</td></tr>');
+    $('rt').innerHTML = '<tr><th>Маршрут</th><th class="n">Запросов</th><th class="n">5xx</th><th class="n">p50, мс</th><th class="n">p95, мс</th><th class="n">max, мс</th></tr>' +
+      (d.routes || []).map(r => `<tr><td>${esc(r.route)}</td><td class="n">${r.count}</td>` +
+        `<td class="n ${r.errors5xx ? 'bad' : ''}">${r.errors5xx}</td><td class="n">${r.p50ms}</td>` +
+        `<td class="n ${cls(r.p95ms, 200, 1000)}">${r.p95ms}</td><td class="n">${r.maxMs}</td></tr>`).join('');
+  } catch (e) { $('err').textContent = 'Нет связи: ' + e.message; }
+}
+load(); setInterval(load, 5000);
+</script>
+</body>
+</html>
