@@ -45,13 +45,18 @@ public class CoreApplication {
         boolean alsoV6 = host.equals("127.0.0.1") && ipv6LoopbackUsable();
         Javalin app = Javalin.create(cfg -> {
             if (alsoV6) {
-                cfg.jetty.addConnector((server, httpConfig) -> {
-                    var c = new org.eclipse.jetty.server.ServerConnector(
-                            server, new org.eclipse.jetty.server.HttpConnectionFactory(httpConfig));
-                    c.setHost("::1");
-                    c.setPort(port);
-                    return c;
-                });
+                // Javalin создаёт свой коннектор host:port ТОЛЬКО если других нет: добавив лишь ::1, мы
+                // теряли 127.0.0.1 (инцидент 19.11.2026: core слушал только [::1], моды и стенд не видели его).
+                // Поэтому при двух адресах объявляем оба коннектора явно.
+                for (String h : new String[] {host, "::1"}) {
+                    cfg.jetty.addConnector((server, httpConfig) -> {
+                        var c = new org.eclipse.jetty.server.ServerConnector(
+                                server, new org.eclipse.jetty.server.HttpConnectionFactory(httpConfig));
+                        c.setHost(h);
+                        c.setPort(port);
+                        return c;
+                    });
+                }
             }
             cfg.showJavalinBanner = false;
             cfg.http.maxRequestSize = 64L * 1024 * 1024; // скриншоты (base64 BMP ~ 10 МБ)
