@@ -51,6 +51,11 @@ public final class CoreApi {
 
     private CoreApi() {}
 
+    /** Ключ API задан (сервер с pwp-core-server) — иначе запросы core заведомо отклонятся. */
+    public static boolean isConfigured() {
+        return apiKey != null && !apiKey.isEmpty();
+    }
+
     public static void configure(String url, String key) {
         baseUrl = url;
         apiKey = key;
@@ -276,6 +281,11 @@ public final class CoreApi {
     /** Статус всех серверов из core-service (heartbeat'ы) — для живого онлайна матчей. */
     public static CompletableFuture<JsonObject> fetchServersStatus() {
         return get("/api/v1/network/status");
+    }
+
+    /** Метрики core и heartbeat всех серверов (MSPT/TPS/heap/онлайн) — для вкладки «Сервер» админ-панели. */
+    public static CompletableFuture<JsonObject> getAdminMetrics() {
+        return get("/api/v1/admin/metrics");
     }
 
     /** Heartbeat сервера (лобби или матч). Тело собирает {@link Heartbeat}. */

@@ -143,6 +143,15 @@ public final class AdminPanel {
                         : new ModerationTab(),
                 c -> c.has(AdminInfo.FEATURE_MODERATION));
         registerTab(
+                "server",
+                "pwp_core.admin.tab.server",
+                50,
+                AccessLevel.MODERATOR,
+                c -> new ServerAdminTab(
+                        c.atLeast(AccessLevel.ADMIN),
+                        c.preview() ? ServerAdminTab.fixture(UiGallery.emptyData()) : null),
+                null);
+        registerTab(
                 "lobby",
                 "pwp_core.admin.tab.lobby",
                 30,

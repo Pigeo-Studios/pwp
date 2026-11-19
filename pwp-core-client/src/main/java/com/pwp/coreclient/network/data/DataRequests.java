@@ -64,6 +64,7 @@ public final class DataRequests {
     static {
         register(AdminInfo.TYPE, AdminInfo.HANDLER);
         register(ModerationAction.PLAYERS_TYPE, ModerationAction.PLAYERS);
+        register(ServerAdmin.TYPE, ServerAdmin.DATA);
         register("profile", (p, q) -> CoreApi.loadPlayer(p.getStringUUID()));
         register("leaderboard", (p, q) -> CoreApi.getLeaderboard(str(q, "orderBy", "kills"), page(q), 20));
         register("skins", withDefault((p, q) -> CoreApi.getSkins(), "{\"data\":[]}"));

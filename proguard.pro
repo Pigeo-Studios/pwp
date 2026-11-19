@@ -63,3 +63,7 @@
 #    Страховка: держим весь пакет voicechat целиком.
 # ------------------------------------------------------------
 -keep class com.pigeostudios.pwp.warfare.voicechat.** { *; }
+
+# 7. Аппендер log4j2 вкладки «Сервер» (19.11.2026): переопределяет AbstractAppender.append, а log4j-core
+#    не входит в libraryjars — без keep ProGuard переименует append и хвост ошибок молча опустеет.
+-keep class com.pwp.coreclient.network.data.ServerLogTail$Appender { *; }

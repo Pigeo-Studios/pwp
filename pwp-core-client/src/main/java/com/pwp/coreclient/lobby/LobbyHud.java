@@ -110,17 +110,23 @@ public final class LobbyHud {
      */
     public static Component prepLine(LobbyStatePacket p) {
         if (p == null) return null;
-        return switch (p.prepState) {
+        return prepLine(p.prepState, p.prepPercent, p.prepError);
+    }
+
+    /** То же по полям (вкладка «Лобби» админ-панели получает их в adminLobby). */
+    public static Component prepLine(int state, int percent, String error) {
+        String err = error == null || error.isEmpty() ? null : error;
+        return switch (state) {
             case LobbyStatePacket.PREP_PREPARING -> Component.translatable(
-                    "pwp_core.lobby.prep.state.preparing", p.prepPercent);
+                    "pwp_core.lobby.prep.state.preparing", percent);
             case LobbyStatePacket.PREP_WAITING_VOTES -> Component.translatable(
                     "pwp_core.lobby.prep.state.waiting_votes");
             case LobbyStatePacket.PREP_FINISHING -> Component.translatable(
-                    "pwp_core.lobby.prep.state.finishing", p.prepPercent);
+                    "pwp_core.lobby.prep.state.finishing", percent);
             case LobbyStatePacket.PREP_TRANSFERRING -> Component.translatable("pwp_core.lobby.prep.state.transferring");
             case LobbyStatePacket.PREP_FAILED -> Component.translatable(
                     "pwp_core.lobby.prep.state.failed",
-                    Component.translatable(p.prepError != null ? p.prepError : "pwp_core.lobby.prep.error.server"));
+                    Component.translatable(err != null ? err : "pwp_core.lobby.prep.error.server"));
             default -> null;
         };
     }

@@ -113,6 +113,7 @@ public class LobbyAdminTab implements AdminTab {
                         Component.translatable("pwp_core.admin.lobby.matches"),
                         () -> Component.translatable(
                                 "pwp_core.admin.lobby.matches.value", str("activeMatches"), pending.maxMatches()))
+                .value(Component.translatable("pwp_core.admin.lobby.prep"), this::prepText)
                 .buttons(
                         new UIButton(Component.translatable("pwp_core.admin.lobby.start_vote"), () -> host.backend()
                                         .perform(
@@ -187,5 +188,15 @@ public class LobbyAdminTab implements AdminTab {
     private String str(String key) {
         if (data == null || !data.has(key) || data.get(key).isJsonNull()) return "—";
         return data.get(key).getAsString();
+    }
+
+    /** Предпрогрев матч-сервера: тот же текст, что в HUD лобби (причина сбоя — переведённый ключ). */
+    private Component prepText() {
+        if (data == null || !data.has("prepState")) return Component.translatable("pwp_core.admin.lobby.prep.none");
+        Component line = com.pwp.coreclient.lobby.LobbyHud.prepLine(
+                data.get("prepState").getAsInt(),
+                data.has("prepPercent") ? data.get("prepPercent").getAsInt() : 0,
+                data.has("prepError") ? data.get("prepError").getAsString() : "");
+        return line == null ? Component.translatable("pwp_core.admin.lobby.prep.none") : line;
     }
 }

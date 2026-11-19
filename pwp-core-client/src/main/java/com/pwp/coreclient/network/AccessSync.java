@@ -57,6 +57,12 @@ public final class AccessSync {
         PwpPermissions.forget(id);
     }
 
+    /** Хвост WARN/ERROR для вкладки «Сервер» админ-панели (один аппендер на процесс). */
+    @SubscribeEvent
+    public static void onServerStarting(net.minecraftforge.event.server.ServerStartingEvent event) {
+        com.pwp.coreclient.network.data.ServerLogTail.install();
+    }
+
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         SENT.clear();

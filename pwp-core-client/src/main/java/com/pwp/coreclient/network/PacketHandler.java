@@ -88,6 +88,10 @@ public class PacketHandler {
                 .c2s(
                         ModerationAction.Spectate.class,
                         ModerationAction.Spectate::encode,
-                        ModerationAction.Spectate::decode);
+                        ModerationAction.Spectate::decode)
+                .c2s(
+                        com.pwp.coreclient.network.data.ServerAdmin.Announce.class,
+                        com.pwp.coreclient.network.data.ServerAdmin.Announce::encode,
+                        com.pwp.coreclient.network.data.ServerAdmin.Announce::decode);
     }
 }

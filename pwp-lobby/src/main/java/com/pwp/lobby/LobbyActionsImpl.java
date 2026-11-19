@@ -84,6 +84,11 @@ final class LobbyActionsImpl implements LobbyActions {
                 o.addProperty("activeMatches", MatchAllocator.getActiveMatches().size());
                 o.add("settings", ServerConfig.get().toJson());
                 o.addProperty("persisted", ServerConfig.isPersisted());
+                // предпрогрев матч-сервера: состояние и ключ причины сбоя (текст — LobbyHud.prepLine на клиенте)
+                MatchAllocator.PrepView prep = MatchAllocator.prepView();
+                o.addProperty("prepState", prep.state());
+                o.addProperty("prepPercent", prep.percent());
+                o.addProperty("prepError", prep.errorKey() == null ? "" : prep.errorKey());
                 return o.toString();
             }
         });
