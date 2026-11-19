@@ -1,3 +1,29 @@
+# Деплой `rewrite/playable` (19.11.2026) — поверх `rewrite/internals`
+
+Ветка содержит всё из `rewrite/internals` (раздел ниже выполняется целиком, если он ещё не выкатывался) +
+играбельность и админ-панель (`docs/PLAYABLE_PLAN.md`). **В игре не проверено** — сначала тест-сервер
+по `docs/TEST_CHECKLIST.md`.
+
+**Протоколы снова подняты: `pwpwarfare:main` 7, `pwp_core_client:network` 7** — клиент (Pwpfiles) и все
+серверы обновляются одновременно, иначе вход отклоняется.
+
+Порядок:
+1. Сборка как в п. 1 ниже (+ проверка SRG). GeckoLib теперь компилируется 4.8.4 — в `mods` серверов и
+   Pwpfiles должна лежать `geckolib-forge-1.20.1-4.8.4.jar` (уже так).
+2. core-service — без изменений кода в этой ветке (только новый вызов `GET /api/v1/admin/metrics` с API-ключом
+   из модов; маршрут уже есть с `rewrite/internals`).
+3. Серверы (лобби, `match_template`, живые `match_*`): заменить pwp-api, pwp-core-client, pwp-lobby (лобби),
+   pwp-warfare, pwp-medicine, pwp-cosmetics и остальные pwp-* из `*/build/libs`.
+4. Клиенты: те же jar в `Pwpfiles/mods` → `gen.ps1` → подпись → `manifest_seed.sql` → push (п. 4 ниже).
+5. После старта: на сервере появляется `logs/pwp-admin-audit.log` (аудит админ-действий, ротации нет —
+   файл маленький, при желании чистить вручную). В F6 — новая вкладка «Сервер».
+6. Обфусцированный релиз: в `proguard.pro` добавлен keep для `ServerLogTail$Appender` — пересобирать через
+   `build-obfuscate.bat` как обычно.
+
+Откат: прежние jar (протокол 6) на все серверы и в Pwpfiles одновременно.
+
+---
+
 # Деплой `rewrite/internals` (с машины сервера)
 
 Для агента или человека на машине боевого сервера (`C:\Users\maska\OneDrive\Desktop\...`): там лежат ключ подписи манифеста, боевая БД и живой сервер. Ветка: `rewrite/internals`, что в ней — `docs/AUDIT_INTERNALS.md`, раздел «Сделано».
