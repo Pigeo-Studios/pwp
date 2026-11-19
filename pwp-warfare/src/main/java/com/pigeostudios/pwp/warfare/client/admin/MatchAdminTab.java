@@ -164,6 +164,41 @@ public class MatchAdminTab implements AdminTab {
                                 UIIcon.SETTINGS,
                                 () -> send(MatchAdminPackets.PAUSE, new MatchAdminPackets.TogglePause())),
                         stop)
+                .buttons(
+                        confirmed("restart", UIIcon.REPLAY, MatchAdminPackets.RESTART, new MatchAdminPackets.Restart()),
+                        action(
+                                "extend_waiting",
+                                UIButton.Style.DARK,
+                                UIIcon.PLAY,
+                                () -> send(MatchAdminPackets.EXTEND_WAITING, new MatchAdminPackets.ExtendWaiting())))
+                .buttons(
+                        confirmed(
+                                "win_blue",
+                                UIIcon.CHECK,
+                                MatchAdminPackets.FORCE_WIN,
+                                new MatchAdminPackets.ForceWin("BLUE")),
+                        confirmed(
+                                "win_red",
+                                UIIcon.CHECK,
+                                MatchAdminPackets.FORCE_WIN,
+                                new MatchAdminPackets.ForceWin("RED")))
+                .gap()
+                .section(Component.translatable("pwpwarfare.admin.match.reload"))
+                .value(Component.translatable("pwpwarfare.admin.match.last_reload"), this::reportText)
+                .value(Component.translatable("pwpwarfare.admin.match.faction_data"), this::factionDataText)
+                .buttons(
+                        confirmed(
+                                "reload_config",
+                                UIIcon.REPLAY,
+                                MatchAdminPackets.RELOAD_CONFIG,
+                                new MatchAdminPackets.ReloadConfig()),
+                        action(
+                                "reload_faction_data",
+                                UIButton.Style.DARK,
+                                UIIcon.REPLAY,
+                                () -> send(
+                                        MatchAdminPackets.RELOAD_FACTION_DATA,
+                                        new MatchAdminPackets.ReloadFactionData())))
                 .gap()
                 .section(Component.translatable("pwpwarfare.admin.match.settings"))
                 .control(
@@ -218,6 +253,59 @@ public class MatchAdminTab implements AdminTab {
                 .buttons(saveWaiting)
                 .text(() -> Component.translatable("pwpwarfare.admin.match.hint"), () -> PWPTheme.Text.MUTED);
         host.add(f.build(area));
+    }
+
+    /** Опасное действие: модал «Отмена / подтвердить» с текстом {@code pwpwarfare.admin.match.<id>_confirm}. */
+    private UIButton confirmed(String id, UIIcon icon, String actionId, Object packet) {
+        Component label = Component.translatable("pwpwarfare.admin.match." + id);
+        return action(
+                id,
+                UIButton.Style.DANGER,
+                icon,
+                () -> host.showModal(
+                        new UIModal(label, Component.translatable("pwpwarfare.admin.match." + id + "_confirm"))
+                                .button(Component.translatable("pwp_core.ui.cancel"), UIButton.Style.DARK, null)
+                                .button(label, UIButton.Style.DANGER, () -> send(actionId, packet))));
+    }
+
+    /** Итог последней перезагрузки map_config (с сервера, уже переведён). */
+    private Component reportText() {
+        String r = data == null ? "" : data.str("lastReport", "");
+        return r.isEmpty() ? Component.translatable("pwpwarfare.admin.match.no_reload") : Component.literal(r);
+    }
+
+    /** Киты/техника фракций: «BLUE usa: киты ✔ техника ✔ · RED …» (попытки, если не загружено). */
+    private Component factionDataText() {
+        if (data == null
+                || !data.raw.has("factionData")
+                || !data.raw.get("factionData").isJsonObject())
+            return Component.translatable("pwpwarfare.admin.match.faction_data.none");
+        JsonObject fd = data.raw.getAsJsonObject("factionData");
+        if (fd.size() == 0) return Component.translatable("pwpwarfare.admin.match.faction_data.none");
+        net.minecraft.network.chat.MutableComponent out = Component.empty();
+        boolean first = true;
+        for (String team : fd.keySet()) {
+            JsonObject t = fd.getAsJsonObject(team);
+            if (!first) out.append(" · ");
+            first = false;
+            out.append(team + " ");
+            out.append(slot(t, "kits", "pwpwarfare.admin.match.faction_data.kits"));
+            out.append(" ");
+            out.append(slot(t, "vehicles", "pwpwarfare.admin.match.faction_data.vehicles"));
+        }
+        return out;
+    }
+
+    private static Component slot(JsonObject t, String kind, String key) {
+        if (!t.has(kind)) return Component.translatable(key, "—");
+        JsonObject s = t.getAsJsonObject(kind);
+        boolean ready = s.has("ready") && s.get("ready").getAsBoolean();
+        int attempts = s.has("attempts") ? s.get("attempts").getAsInt() : 0;
+        return Component.translatable(
+                key,
+                ready
+                        ? Component.translatable("pwpwarfare.admin.match.faction_data.ready")
+                        : Component.translatable("pwpwarfare.admin.match.faction_data.loading", attempts));
     }
 
     private UIButton action(String id, UIButton.Style style, UIIcon icon, Runnable run) {

@@ -249,4 +249,93 @@ public final class MatchAdminPackets {
                 .c2s(SetTickets.class, SetTickets::encode, SetTickets::decode)
                 .c2s(SetWaitingSeconds.class, SetWaitingSeconds::encode, SetWaitingSeconds::decode);
     }
+
+    // ---------- 19.11.2026 (протокол 7): рестарт, продление ожидания, победа, перезагрузка ----------
+
+    public static final String RESTART = "match.restart";
+    public static final String EXTEND_WAITING = "match.extendWaiting";
+    public static final String FORCE_WIN = "match.forceWin";
+    public static final String RELOAD_CONFIG = "match.reloadConfig";
+    public static final String RELOAD_FACTION_DATA = "match.reloadFactionData";
+
+    public record Restart() implements Net.C2S {
+        public static void encode(Restart m, FriendlyByteBuf b) {}
+
+        public static Restart decode(FriendlyByteBuf b) {
+            return new Restart();
+        }
+
+        @Override
+        public void handle(ServerPlayer s) {
+            run(s, this, RESTART, AccessLevel.ADMIN, () -> MatchAdmin.restart(s.serverLevel()));
+        }
+    }
+
+    public record ExtendWaiting() implements Net.C2S {
+        public static void encode(ExtendWaiting m, FriendlyByteBuf b) {}
+
+        public static ExtendWaiting decode(FriendlyByteBuf b) {
+            return new ExtendWaiting();
+        }
+
+        @Override
+        public void handle(ServerPlayer s) {
+            run(s, this, EXTEND_WAITING, AccessLevel.ADMIN, () -> MatchAdmin.extendWaiting(s.serverLevel()));
+        }
+    }
+
+    public record ForceWin(String team) implements Net.C2S {
+        public static void encode(ForceWin m, FriendlyByteBuf b) {
+            b.writeUtf(m.team, 8);
+        }
+
+        public static ForceWin decode(FriendlyByteBuf b) {
+            return new ForceWin(b.readUtf(8));
+        }
+
+        @Override
+        public String validate() {
+            return Validate.oneOf("team", team, "BLUE", "RED");
+        }
+
+        @Override
+        public void handle(ServerPlayer s) {
+            run(s, this, FORCE_WIN, AccessLevel.ADMIN, () -> MatchAdmin.forceWin(s.serverLevel(), team));
+        }
+    }
+
+    public record ReloadConfig() implements Net.C2S {
+        public static void encode(ReloadConfig m, FriendlyByteBuf b) {}
+
+        public static ReloadConfig decode(FriendlyByteBuf b) {
+            return new ReloadConfig();
+        }
+
+        @Override
+        public void handle(ServerPlayer s) {
+            run(s, this, RELOAD_CONFIG, AccessLevel.ADMIN, () -> MatchAdmin.reloadMapConfig(s.serverLevel()));
+        }
+    }
+
+    public record ReloadFactionData() implements Net.C2S {
+        public static void encode(ReloadFactionData m, FriendlyByteBuf b) {}
+
+        public static ReloadFactionData decode(FriendlyByteBuf b) {
+            return new ReloadFactionData();
+        }
+
+        @Override
+        public void handle(ServerPlayer s) {
+            run(s, this, RELOAD_FACTION_DATA, AccessLevel.ADMIN, () -> MatchAdmin.reloadFactionData(s.serverLevel()));
+        }
+    }
+
+    /** Регистрация пакетов протокола 7 — В КОНЕЦ канала (после PlayerAdminPackets). */
+    public static void registerV7(Net.Registrar r) {
+        r.c2s(Restart.class, Restart::encode, Restart::decode)
+                .c2s(ExtendWaiting.class, ExtendWaiting::encode, ExtendWaiting::decode)
+                .c2s(ForceWin.class, ForceWin::encode, ForceWin::decode)
+                .c2s(ReloadConfig.class, ReloadConfig::encode, ReloadConfig::decode)
+                .c2s(ReloadFactionData.class, ReloadFactionData::encode, ReloadFactionData::decode);
+    }
 }

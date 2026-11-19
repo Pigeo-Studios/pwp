@@ -247,6 +247,147 @@ public final class MatchAdmin {
         PacketHandler.sendToAllClients(level, data);
     }
 
+    // ---------- рестарт, победа, перезагрузка (19.11.2026) ----------
+
+    static final String ERR_NOT_PLAYING = E + "not_playing";
+    static final String ERR_MATCH_RUNNING = E + "match_running";
+    static final String ERR_RETURNING = E + "returning_to_lobby";
+    static final String ERR_NO_CONFIG = E + "no_config";
+    static final String ERR_APPLY_FAILED = E + "apply_failed";
+    static final String ERR_NO_CORE = E + "no_core";
+    static final String ERR_NO_FACTIONS = E + "no_factions";
+    /** Шаг «продлить ожидание». */
+    public static final int EXTEND_SECONDS = 60;
+
+    /** Итог последней перезагрузки map_config (строка вкладки «Матч»). */
+    private static String lastReport = "";
+
+    /** Матч в активной фазе (бой, отсчёт, подготовка Invasion) — перезагрузка конфига запрещена. */
+    private static boolean fighting(WarfareWorldData data) {
+        return data.match.isGameStarted || data.match.countdownActive || data.match.invasionSetupActive;
+    }
+
+    /**
+     * Рестарт матча: идущий бой останавливается без итогов (статистика отбрасывается, в core не уходит),
+     * игроки команд — в свой мейн без снаряжения (кит сброшен, роль выбирается заново), затем map_config
+     * применяется заново → тикеты/точки из конфига, фаза ожидания, загрузка китов и техники.
+     */
+    public static String restart(ServerLevel level) {
+        if (GameLogicEvents.returningToLobby()) return ERR_RETURNING;
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (fighting(data) || data.match.waitingActive) {
+            String err = stop(level);
+            if (err != null && !err.equals(ERR_NOTHING_RUNNING)) return err;
+        }
+        com.pigeostudios.pwp.warfare.stats.MatchStatsTracker.get().endMatch();
+        data.match.isPaused = false;
+        String dim = level.dimension().location().toString();
+        for (ServerPlayer p : level.players()) {
+            String team = p.getTeam() == null ? "" : p.getTeam().getName().toUpperCase(java.util.Locale.ROOT);
+            net.minecraft.core.BlockPos spawn = team.equals("BLUE")
+                    ? data.match.blueSpawns.get(dim)
+                    : team.equals("RED") ? data.match.redSpawns.get(dim) : null;
+            if (spawn == null) continue;
+            if (!p.isCreative() && !p.isSpectator()) {
+                p.getInventory().clearContent();
+                com.pigeostudios.pwp.warfare.network.ResupplyHandler.clearCurios(p);
+                p.inventoryMenu.broadcastChanges();
+                var wd = com.pigeostudios.pwp.warfare.data.state.WarfareData.of(p);
+                wd.putString(
+                        com.pigeostudios.pwp.warfare.data.state.WarfareKeys.CURRENT_KIT,
+                        com.pigeostudios.pwp.warfare.network.KitAccess.UNASSIGNED);
+                wd.remove(com.pigeostudios.pwp.warfare.data.state.WarfareKeys.PENDING_KIT);
+                com.pigeostudios.pwp.warfare.events.KitUtil.syncMyKit(p);
+            }
+            if (p.isAlive()) p.teleportTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5);
+        }
+        String err = reloadMapConfig(level);
+        if (err != null) return err;
+        level.getServer()
+                .getPlayerList()
+                .broadcastSystemMessage(
+                        Component.translatable("pwpwarfare.admin.match.restarted_chat")
+                                .withStyle(ChatFormatting.GOLD),
+                        false);
+        return null;
+    }
+
+    /** Продлить ожидание на {@link #EXTEND_SECONDS} (не выше {@code AdminInput.WAITING_MAX}). */
+    public static String extendWaiting(ServerLevel level) {
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (!data.match.waitingActive) return ERR_NOT_WAITING;
+        int t = Math.min(AdminInput.WAITING_MAX, data.match.waitingTimer + EXTEND_SECONDS);
+        data.match.waitingTimer = t;
+        // голосование «готовы» живёт столько же, сколько ожидание (этап 4)
+        if (data.match.voteActive) data.match.voteTimer = t;
+        sync(level, data);
+        com.pigeostudios.pwp.warfare.staging.StagingPackets.broadcastState(level, data);
+        return null;
+    }
+
+    /** Принудительная победа команды {@code team} — тот же путь, что окончание тикетов (итоги, награды). */
+    public static String forceWin(ServerLevel level, String team) {
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (!data.match.isGameStarted) return ERR_NOT_PLAYING;
+        String t = AdminInput.team(team);
+        if (t == null) return ERR_BAD_TEAM;
+        GameLogicEvents.forceVictory(level, data, t.equals("BLUE"));
+        return null;
+    }
+
+    /**
+     * Перезагрузить map_config без рестарта сервера (только пока бой не идёт): раскладка, тикеты, точки,
+     * спавны, слоты техники, фаза ожидания, киты/техника из core. Отчёт — {@code lastReport} в adminMatch,
+     * замечания валидатора — во вкладке «Карта».
+     */
+    public static String reloadMapConfig(ServerLevel level) {
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (fighting(data)) return ERR_MATCH_RUNNING;
+        if (com.pigeostudios.pwp.warfare.WarfareMod.resolveMapConfigPath() == null) return ERR_NO_CONFIG;
+        clearWaitingTitles(level, data);
+        data.match.configApplied = false;
+        // слоты техники добавляются заново (applyMapConfig их только дописывает) — как в LobbyHandoff
+        data.vehicles.configVehicleSpawners.clear();
+        data.vehicles.pendingVehicleSpawners.clear();
+        com.pigeostudios.pwp.warfare.WarfareMod.applyMapConfig(level);
+        com.pigeostudios.pwp.warfare.server.map.MapLayoutService.onServerStarted(level);
+        if (!data.match.configApplied) return ERR_APPLY_FAILED;
+        int errors = 0;
+        int warns = 0;
+        for (Issue i : MapLayoutState.issues()) {
+            if (i.severity() == Issue.Severity.ERROR) errors++;
+            else warns++;
+        }
+        lastReport = Component.translatable(
+                        "pwpwarfare.admin.match.reload_report",
+                        data.match.capturePoints.size(),
+                        data.match.blueTickets,
+                        data.match.redTickets,
+                        data.vehicles.configVehicleSpawners.size(),
+                        errors,
+                        warns)
+                .getString();
+        LOG.info(
+                "[MatchAdmin] map_config перезагружен: точек {}, тикеты {}/{}, слотов {}, ошибок {}, замечаний {}",
+                data.match.capturePoints.size(),
+                data.match.blueTickets,
+                data.match.redTickets,
+                data.vehicles.configVehicleSpawners.size(),
+                errors,
+                warns);
+        sync(level, data);
+        return null;
+    }
+
+    /** Перезагрузить киты и пулы техники фракций из core-service (асинхронно; статус — в adminMatch). */
+    public static String reloadFactionData(ServerLevel level) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("pwpcore")) return ERR_NO_CORE;
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (data.match.blueFaction == null && data.match.redFaction == null) return ERR_NO_FACTIONS;
+        com.pigeostudios.pwp.warfare.server.FactionDataLoader.start(level, data);
+        return null;
+    }
+
     // ---------- данные для вкладок «Матч» и «Карта» ----------
 
     /** JSON типа {@code adminMatch}: состояние матча + замечания раскладки. */
@@ -281,6 +422,9 @@ public final class MatchAdmin {
         o.add("factions", factions);
         o.add("issues", issuesJson());
         o.addProperty("layoutLoaded", MapLayoutState.layout() != null);
+        o.addProperty("lastReport", lastReport);
+        o.addProperty("returning", GameLogicEvents.returningToLobby());
+        o.add("factionData", com.pigeostudios.pwp.warfare.server.FactionDataLoader.statusJson());
         return o;
     }
 

@@ -109,6 +109,24 @@ public final class FactionDataLoader {
         SLOTS.put(team, m);
     }
 
+    /** Состояние загрузки для админ-панели: команда → kits/vehicles → {faction, ready, attempts, inFlight}. */
+    public static com.google.gson.JsonObject statusJson() {
+        com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+        SLOTS.forEach((team, m) -> {
+            com.google.gson.JsonObject t = new com.google.gson.JsonObject();
+            m.forEach((kind, s) -> {
+                com.google.gson.JsonObject e = new com.google.gson.JsonObject();
+                e.addProperty("faction", s.faction);
+                e.addProperty("ready", s.ready);
+                e.addProperty("attempts", s.attempts);
+                e.addProperty("inFlight", s.inFlight);
+                t.add(kind.name().toLowerCase(java.util.Locale.ROOT), e);
+            });
+            o.add(team.name(), t);
+        });
+        return o;
+    }
+
     /** true — киты команды можно использовать (загружены или загрузка не требуется). */
     public static boolean kitsReady(String team) {
         Team t = parse(team);

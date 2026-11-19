@@ -377,6 +377,7 @@ public class PacketHandler {
         com.pigeostudios.pwp.warfare.stats.RewardPackets.register(v2);
         // 19.11.2026 (протокол 7): админ-панель — действия над игроком, матч (рестарт/победа/перезагрузка)
         com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.register(v2);
+        com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerV7(v2);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

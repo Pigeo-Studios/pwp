@@ -117,6 +117,12 @@ public class GameLogicEvents {
     private static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(GameLogicEvents.class);
     private static int returnToLobbyTimer = -1;
+
+    /** Матч окончен и сервер уходит в лобби (экран победы) — админ-рестарт в это время запрещён. */
+    public static boolean returningToLobby() {
+        return returnToLobbyTimer > 0;
+    }
+
     private static MinecraftServer returnToLobbyServer = null;
 
     /** Запуск обратного отсчёта без force (автоматические пути: конец ожидания, голосование «готовы»). */
@@ -2170,6 +2176,13 @@ public class GameLogicEvents {
             data.match.redTickets = 0;
             executeVictory(level, data, true);
         }
+    }
+
+    /** Принудительная победа (админ-панель): тот же путь, что окончание тикетов. */
+    public static void forceVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
+        if (blueWon) data.match.redTickets = 0;
+        else data.match.blueTickets = 0;
+        executeVictory(level, data, blueWon);
     }
 
     private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
