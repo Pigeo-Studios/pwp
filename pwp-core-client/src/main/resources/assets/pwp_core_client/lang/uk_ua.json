@@ -277,7 +277,7 @@
     "pwp_core.pause.map_editor": "Редактор мапи",
     "pwp_core.admin.map_editor.unavailable": "Редактор мапи: потрібен рівень ADMIN і матч-сервер з PWP Warfare",
     "pwp_core.admin.owner_only": "Лише власник (op 4 або роль owner)",
-    "pwp_core.admin.tab.moderation": "Модерація",
+    "pwp_core.admin.tab.moderation": "Гравці",
     "pwp_core.admin.lobby.apply": "Застосувати",
     "pwp_core.admin.lobby.save.tip": "Застосувати й записати в config/pwp_lobby.json (переживе рестарт)",
     "pwp_core.admin.lobby.not_persisted": "Застосовано до рестарту лобі (у файл не записано)",
@@ -413,5 +413,14 @@
     "pwp_core.controls.footer": "Натисніть на клавішу, щоб перепризначити",
     "pwp_core.controls.footer.waiting": "Натисніть клавішу або кнопку миші · Esc — скасувати · Backspace/Del — зняти",
     "pwp_core.ui_settings.controls": "Керування…",
-    "pwp_core.admin.error.core_down": "core-service недоступний — повторіть пізніше"
+    "pwp_core.admin.error.core_down": "core-service недоступний — повторіть пізніше",
+    "pwp_core.admin.mod.teleport": "Телепорт до гравця",
+    "pwp_core.admin.mod.spectate": "Спостерігати / повернутися",
+    "pwp_core.admin.mod.details": "%s · %s · %s · %s",
+    "pwp_core.admin.mod.squad": "Загін %s",
+    "pwp_core.admin.mod.squad_leader": "Загін %s (лідер)",
+    "pwp_core.admin.mod.no_squad": "Без загону",
+    "pwp_core.admin.mod.no_kit": "Без кіта",
+    "pwp_core.admin.mod.ping": "%s мс",
+    "pwp_core.admin.mod.error.self": "Оберіть іншого гравця, не себе"
 }

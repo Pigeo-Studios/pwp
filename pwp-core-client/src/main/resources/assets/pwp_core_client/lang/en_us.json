@@ -277,7 +277,7 @@
     "pwp_core.pause.map_editor": "Map editor",
     "pwp_core.admin.map_editor.unavailable": "Map editor: needs ADMIN and a match server with PWP Warfare",
     "pwp_core.admin.owner_only": "Owner only (op 4 or role owner)",
-    "pwp_core.admin.tab.moderation": "Moderation",
+    "pwp_core.admin.tab.moderation": "Players",
     "pwp_core.admin.lobby.apply": "Apply",
     "pwp_core.admin.lobby.save.tip": "Apply and write to config/pwp_lobby.json (kept after restart)",
     "pwp_core.admin.lobby.not_persisted": "Applied until lobby restart (not saved to file)",
@@ -413,5 +413,14 @@
     "pwp_core.controls.footer": "Click a key to rebind",
     "pwp_core.controls.footer.waiting": "Press a key or mouse button · Esc: cancel · Backspace/Del: unbind",
     "pwp_core.ui_settings.controls": "Controls…",
-    "pwp_core.admin.error.core_down": "core-service is unavailable — try again later"
+    "pwp_core.admin.error.core_down": "core-service is unavailable — try again later",
+    "pwp_core.admin.mod.teleport": "Teleport to",
+    "pwp_core.admin.mod.spectate": "Spectate / back",
+    "pwp_core.admin.mod.details": "%s · %s · %s · %s",
+    "pwp_core.admin.mod.squad": "Squad %s",
+    "pwp_core.admin.mod.squad_leader": "Squad %s (leader)",
+    "pwp_core.admin.mod.no_squad": "No squad",
+    "pwp_core.admin.mod.no_kit": "No kit",
+    "pwp_core.admin.mod.ping": "%s ms",
+    "pwp_core.admin.mod.error.self": "Pick another player, not yourself"
 }

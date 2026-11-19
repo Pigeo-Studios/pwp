@@ -1177,5 +1177,16 @@
     "pwpwarfare.msg.marker.not_owner": "Видалити може лише автор або командир",
     "pwpwarfare.msg.squad.choose_team_first": "Спершу оберіть команду (меню загонів)",
     "pwpwarfare.msg.no_permission": "Недостатньо прав",
-    "pwpwarfare.msg.cmd.forced": "Командира призначено: загін %s"
+    "pwpwarfare.msg.cmd.forced": "Командира призначено: загін %s",
+    "pwpwarfare.admin.player.reset_kit": "Скинути кіт",
+    "pwpwarfare.admin.player.reset_cooldowns": "Скинути кулдауни",
+    "pwpwarfare.admin.player.give_leader": "Зробити лідером",
+    "pwpwarfare.admin.player.take_leader": "Зняти лідерство",
+    "pwpwarfare.admin.player.kit_reset_you": "Адмін скинув ваш кіт — оберіть роль знову",
+    "pwpwarfare.admin.player.cooldowns_reset_you": "Адмін скинув ваші кулдауни",
+    "pwpwarfare.admin.player.leader_taken_you": "Адмін передав лідерство загону іншому гравцю",
+    "pwpwarfare.admin.player.error.no_squad": "Гравець не в загоні",
+    "pwpwarfare.admin.player.error.already_leader": "Гравець уже лідер загону",
+    "pwpwarfare.admin.player.error.not_leader": "Гравець не лідер загону",
+    "pwpwarfare.admin.player.error.alone": "У загоні немає інших гравців у мережі"
 }

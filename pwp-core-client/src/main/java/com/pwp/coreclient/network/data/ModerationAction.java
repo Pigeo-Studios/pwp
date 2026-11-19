@@ -7,10 +7,18 @@ import com.pwp.api.net.Validate;
 import com.pwp.api.security.AccessLevel;
 import com.pwp.api.security.ModerationInput;
 import com.pwp.api.security.PwpPermissions;
+import com.pwp.api.util.LogOnce;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -225,10 +233,116 @@ public final class ModerationAction {
                 e.addProperty("name", pl.getGameProfile().getName());
                 e.addProperty("team", pl.getTeam() == null ? "" : pl.getTeam().getName());
                 e.addProperty("level", PwpPermissions.level(pl).name());
+                e.addProperty("ping", pl.latency);
+                e.addProperty("spectating", SPECTATE_PREV.containsKey(pl.getUUID()));
+                for (BiConsumer<ServerPlayer, JsonObject> extra : PLAYER_INFO) {
+                    try {
+                        extra.accept(pl, e);
+                    } catch (RuntimeException ex) {
+                        LogOnce.warn(LOG, "admin_player_info", "Расширение списка игроков упало", ex);
+                    }
+                }
                 arr.add(e);
             }
             o.add("players", arr);
+            o.add("actions", ACTIONS.deepCopy());
             return o.toString();
         }
     };
+
+    // ---------- расширения модов ----------
+
+    private static final List<BiConsumer<ServerPlayer, JsonObject>> PLAYER_INFO = new CopyOnWriteArrayList<>();
+    /** Объявленные модами кнопки вкладки (id, минимальный уровень) — клиент показывает только доступные. */
+    private static final JsonArray ACTIONS = new JsonArray();
+
+    /**
+     * Мод (warfare) дописывает поля игрока в {@code adminPlayers}: отряд, кит, лидер… Поля — строки/числа;
+     * вкладка показывает {@code squad}, {@code kit}, {@code leader} (остальные игнорирует).
+     */
+    public static void addPlayerInfo(BiConsumer<ServerPlayer, JsonObject> extra) {
+        PLAYER_INFO.add(extra);
+    }
+
+    /** Сервер объявляет действие вкладки (клиентская кнопка с тем же id регистрирует мод на клиенте). */
+    public static synchronized void declareAction(String id) {
+        for (var e : ACTIONS) if (e.getAsString().equals(id)) return;
+        ACTIONS.add(id);
+    }
+
+    // ---------- телепорт и наблюдение (MODERATOR) ----------
+
+    public static final String TELEPORT = "mod.teleport";
+    public static final String SPECTATE = "mod.spectate";
+    static final String ERR_SELF = "pwp_core.admin.mod.error.self";
+
+    /** Прежний режим игры модератора, ушедшего в наблюдение (до повторного нажатия / выхода). */
+    private static final Map<UUID, GameType> SPECTATE_PREV = new ConcurrentHashMap<>();
+
+    /** Телепорт модератора к игроку (в его измерение). */
+    public record Teleport(String target) implements Net.C2S {
+        public static void encode(Teleport m, FriendlyByteBuf b) {
+            b.writeUtf(m.target, 16);
+        }
+
+        public static Teleport decode(FriendlyByteBuf b) {
+            return new Teleport(b.readUtf(16));
+        }
+
+        @Override
+        public void handle(ServerPlayer sender) {
+            AdminAction.runLocal(sender, TELEPORT, AccessLevel.MODERATOR, target, () -> {
+                ServerPlayer t = online(sender, target);
+                if (t == null) return ERR_OFFLINE;
+                if (t == sender) return ERR_SELF;
+                sender.teleportTo(t.serverLevel(), t.getX(), t.getY(), t.getZ(), t.getYRot(), t.getXRot());
+                return null;
+            });
+        }
+    }
+
+    /**
+     * Наблюдать за игроком: режим наблюдателя + камера игрока (видит всё, как креатив/спектатор в
+     * TeamVisibility). Повторное нажатие (цель любая) — вернуть прежний режим и свою камеру.
+     */
+    public record Spectate(String target) implements Net.C2S {
+        public static void encode(Spectate m, FriendlyByteBuf b) {
+            b.writeUtf(m.target, 16);
+        }
+
+        public static Spectate decode(FriendlyByteBuf b) {
+            return new Spectate(b.readUtf(16));
+        }
+
+        @Override
+        public void handle(ServerPlayer sender) {
+            AdminAction.runLocal(sender, SPECTATE, AccessLevel.MODERATOR, target, () -> {
+                GameType prev = SPECTATE_PREV.remove(sender.getUUID());
+                if (prev != null) {
+                    sender.setCamera(sender);
+                    sender.setGameMode(prev);
+                    return null;
+                }
+                ServerPlayer t = online(sender, target);
+                if (t == null) return ERR_OFFLINE;
+                if (t == sender) return ERR_SELF;
+                SPECTATE_PREV.put(sender.getUUID(), sender.gameMode.getGameModeForPlayer());
+                sender.setGameMode(GameType.SPECTATOR);
+                sender.teleportTo(t.serverLevel(), t.getX(), t.getY(), t.getZ(), t.getYRot(), t.getXRot());
+                sender.setCamera(t);
+                return null;
+            });
+        }
+    }
+
+    /** Выход модератора в режиме наблюдения: вернуть прежний режим до сохранения игрока. */
+    public static void onLogout(ServerPlayer player) {
+        GameType prev = SPECTATE_PREV.remove(player.getUUID());
+        if (prev != null) player.setGameMode(prev);
+    }
+
+    private static ServerPlayer online(ServerPlayer sender, String name) {
+        if (!ModerationInput.validName(name)) return null;
+        return sender.server.getPlayerList().getPlayerByName(name);
+    }
 }

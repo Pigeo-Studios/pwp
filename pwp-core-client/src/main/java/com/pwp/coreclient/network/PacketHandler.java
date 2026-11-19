@@ -15,7 +15,7 @@ public class PacketHandler {
     // 2 — этап 1: PacketAction вместо PacketApiAction, новый формат LobbyStatePacket.
     // 3 — этап 2: сеть v2 (DataRequest/DataResponse, AdminAction.*), удалены мёртвые Vote*/JoinMatchPacket
     // 4: LobbyStatePacket.minPlayers (этап 4); 5: LobbyStatePacket.prepState/prepPercent/prepError (этап 5)
-    private static final String PROTOCOL_VERSION = "6";
+    private static final String PROTOCOL_VERSION = "7";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(CoreClientMod.MODID, "network"),
             () -> PROTOCOL_VERSION,
@@ -79,6 +79,15 @@ public class PacketHandler {
                 .c2s(
                         ModerationAction.ClearTeamkill.class,
                         ModerationAction.ClearTeamkill::encode,
-                        ModerationAction.ClearTeamkill::decode);
+                        ModerationAction.ClearTeamkill::decode)
+                // 19.11.2026 (протокол 7): игроки в админ-панели, сервер, объявления
+                .c2s(
+                        ModerationAction.Teleport.class,
+                        ModerationAction.Teleport::encode,
+                        ModerationAction.Teleport::decode)
+                .c2s(
+                        ModerationAction.Spectate.class,
+                        ModerationAction.Spectate::encode,
+                        ModerationAction.Spectate::decode);
     }
 }

@@ -49,6 +49,9 @@ public final class AccessSync {
 
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        // модератор вышел в режиме наблюдения — вернуть прежний режим (иначе зайдёт спектатором)
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer sp)
+            com.pwp.coreclient.network.data.ModerationAction.onLogout(sp);
         UUID id = event.getEntity().getUUID();
         SENT.remove(id);
         PwpPermissions.forget(id);

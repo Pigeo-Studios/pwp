@@ -1177,5 +1177,16 @@
     "pwpwarfare.msg.marker.not_owner": "Only the author or the commander can remove this",
     "pwpwarfare.msg.squad.choose_team_first": "Choose a team first (squad menu)",
     "pwpwarfare.msg.no_permission": "Not enough permissions",
-    "pwpwarfare.msg.cmd.forced": "Commander assigned: squad %s"
+    "pwpwarfare.msg.cmd.forced": "Commander assigned: squad %s",
+    "pwpwarfare.admin.player.reset_kit": "Reset kit",
+    "pwpwarfare.admin.player.reset_cooldowns": "Reset cooldowns",
+    "pwpwarfare.admin.player.give_leader": "Make squad leader",
+    "pwpwarfare.admin.player.take_leader": "Remove leader",
+    "pwpwarfare.admin.player.kit_reset_you": "An admin reset your kit — choose a role again",
+    "pwpwarfare.admin.player.cooldowns_reset_you": "An admin reset your cooldowns",
+    "pwpwarfare.admin.player.leader_taken_you": "An admin passed your squad leadership to another player",
+    "pwpwarfare.admin.player.error.no_squad": "The player is not in a squad",
+    "pwpwarfare.admin.player.error.already_leader": "The player is already the squad leader",
+    "pwpwarfare.admin.player.error.not_leader": "The player is not a squad leader",
+    "pwpwarfare.admin.player.error.alone": "Nobody else online in the squad to take over"
 }

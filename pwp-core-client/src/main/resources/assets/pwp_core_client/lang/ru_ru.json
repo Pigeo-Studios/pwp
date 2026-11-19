@@ -277,7 +277,7 @@
     "pwp_core.pause.map_editor": "Редактор карты",
     "pwp_core.admin.map_editor.unavailable": "Редактор карты: нужен уровень ADMIN и матч-сервер с PWP Warfare",
     "pwp_core.admin.owner_only": "Только владелец (op 4 или роль owner)",
-    "pwp_core.admin.tab.moderation": "Модерация",
+    "pwp_core.admin.tab.moderation": "Игроки",
     "pwp_core.admin.lobby.apply": "Применить",
     "pwp_core.admin.lobby.save.tip": "Применить и записать в config/pwp_lobby.json (переживёт рестарт)",
     "pwp_core.admin.lobby.not_persisted": "Применено до рестарта лобби (в файл не записано)",
@@ -413,5 +413,14 @@
     "pwp_core.controls.footer": "Нажмите на клавишу, чтобы переназначить",
     "pwp_core.controls.footer.waiting": "Нажмите клавишу или кнопку мыши · Esc — отмена · Backspace/Del — снять",
     "pwp_core.ui_settings.controls": "Управление…",
-    "pwp_core.admin.error.core_down": "core-service недоступен — повторите позже"
+    "pwp_core.admin.error.core_down": "core-service недоступен — повторите позже",
+    "pwp_core.admin.mod.teleport": "Телепорт к игроку",
+    "pwp_core.admin.mod.spectate": "Наблюдать / вернуться",
+    "pwp_core.admin.mod.details": "%s · %s · %s · %s",
+    "pwp_core.admin.mod.squad": "Отряд %s",
+    "pwp_core.admin.mod.squad_leader": "Отряд %s (лидер)",
+    "pwp_core.admin.mod.no_squad": "Без отряда",
+    "pwp_core.admin.mod.no_kit": "Без кита",
+    "pwp_core.admin.mod.ping": "%s мс",
+    "pwp_core.admin.mod.error.self": "Выберите другого игрока, не себя"
 }

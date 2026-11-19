@@ -1177,5 +1177,16 @@
     "pwpwarfare.msg.marker.not_owner": "Удалить может только автор или командир",
     "pwpwarfare.msg.squad.choose_team_first": "Сначала выберите команду (меню отрядов)",
     "pwpwarfare.msg.no_permission": "Недостаточно прав",
-    "pwpwarfare.msg.cmd.forced": "Командир назначен: отряд %s"
+    "pwpwarfare.msg.cmd.forced": "Командир назначен: отряд %s",
+    "pwpwarfare.admin.player.reset_kit": "Сбросить кит",
+    "pwpwarfare.admin.player.reset_cooldowns": "Сбросить кулдауны",
+    "pwpwarfare.admin.player.give_leader": "Сделать лидером",
+    "pwpwarfare.admin.player.take_leader": "Снять лидерство",
+    "pwpwarfare.admin.player.kit_reset_you": "Админ сбросил ваш кит — выберите роль заново",
+    "pwpwarfare.admin.player.cooldowns_reset_you": "Админ сбросил ваши кулдауны",
+    "pwpwarfare.admin.player.leader_taken_you": "Админ передал лидерство отряда другому игроку",
+    "pwpwarfare.admin.player.error.no_squad": "Игрок не в отряде",
+    "pwpwarfare.admin.player.error.already_leader": "Игрок уже лидер отряда",
+    "pwpwarfare.admin.player.error.not_leader": "Игрок не лидер отряда",
+    "pwpwarfare.admin.player.error.alone": "В отряде нет других игроков в сети"
 }

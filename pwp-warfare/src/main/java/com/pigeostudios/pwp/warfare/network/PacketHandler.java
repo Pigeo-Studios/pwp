@@ -36,7 +36,7 @@ public class PacketHandler {
      * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
      * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "6";
+    private static final String PROTOCOL_VERSION = "7";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -375,6 +375,8 @@ public class PacketHandler {
         com.pigeostudios.pwp.warfare.staging.StagingPackets.register(v2);
         // награды за матч на экран победы (только в конец)
         com.pigeostudios.pwp.warfare.stats.RewardPackets.register(v2);
+        // 19.11.2026 (протокол 7): админ-панель — действия над игроком, матч (рестарт/победа/перезагрузка)
+        com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.register(v2);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {
