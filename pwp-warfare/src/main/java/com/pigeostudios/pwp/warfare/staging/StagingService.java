@@ -31,6 +31,8 @@ import net.minecraftforge.network.PacketDistributor;
  * Состояние — только {@link WarfareWorldData}/{@link WarfareData}; время — {@link GameClock}.
  */
 public final class StagingService {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(StagingService.class);
+
     /** Кулдаун «взять снаряжение» = кулдаун главного склада (InteractionEvents). */
     public static final long TAKE_KIT_COOLDOWN_TICKS = 1200L;
 
@@ -102,7 +104,17 @@ public final class StagingService {
     public static void autoAssign(ServerPlayer player) {
         if (!teamOf(player).isEmpty() || player.isCreative() || player.isSpectator()) return;
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-        if (!matchConfigured(player.serverLevel(), data)) return;
+        if (!matchConfigured(player.serverLevel(), data)) {
+            // раньше молча: игрок оставался без команды, админ не знал почему
+            com.pwp.api.util.LogOnce.warn(
+                    LOG,
+                    "staging.no_main_spawn",
+                    "Автоназначение команды пропущено: у карты нет спавна мейна в "
+                            + player.serverLevel().dimension().location()
+                            + " (раскладка не применена?)",
+                    null);
+            return;
+        }
         int[] c = counts(player);
         String team = TeamBalance.smaller(c[0], c[1]);
         applyTeam(player, data, team);

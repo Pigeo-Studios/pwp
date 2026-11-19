@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
 import java.util.UUID;
@@ -46,16 +47,25 @@ public class PacketVehicleDriveAnswer {
     }
 
     public static void handleAnswer(ServerPlayer slPlayer, boolean accept, int vehicleId, UUID requesterUUID) {
-        if (!WarfareData.of(slPlayer).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) return;
+        if (!WarfareData.of(slPlayer).getBoolean(WarfareKeys.IS_SQUAD_LEADER)) {
+            PlayerFeedback.deny(slPlayer, "pwpwarfare.msg.drive.only_leader");
+            return;
+        }
 
         ServerLevel level = slPlayer.serverLevel();
         WarfareWorldData data = WarfareWorldData.get(level);
         Entity vehicle = level.getEntity(vehicleId);
-        if (vehicle == null) return;
+        if (vehicle == null) {
+            PlayerFeedback.deny(slPlayer, "pwpwarfare.msg.drive.vehicle_gone");
+            return;
+        }
 
         ServerPlayer requester =
                 (ServerPlayer) level.getServer().getPlayerList().getPlayer(requesterUUID);
-        if (requester == null) return;
+        if (requester == null) {
+            PlayerFeedback.deny(slPlayer, "pwpwarfare.msg.drive.requester_offline");
+            return;
+        }
 
         UUID vehicleUUID = vehicle.getUUID();
 

@@ -990,8 +990,9 @@ public class GameLogicEvents {
             }
 
             // Check for admin stop signal from lobby
+            // файл проверяется раз в секунду (раньше — Files.exists каждый тик главного потока)
             Path stopSignal = Path.of("stop.signal");
-            if (Files.exists(stopSignal)) {
+            if (GameClock.serverTicks(server) % 20 == 0 && Files.exists(stopSignal)) {
                 LOGGER.info("Stop signal received, shutting down gracefully");
                 try {
                     MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
@@ -1617,7 +1618,9 @@ public class GameLogicEvents {
                         .withStyle(ChatFormatting.GOLD));
             }
             StagingPackets.sendState(player, data);
-            if (!data.match.isGameStarted && !data.match.waitingActive && player.hasPermissions(2)) {
+            if (!data.match.isGameStarted
+                    && !data.match.waitingActive
+                    && com.pwp.api.security.PwpPermissions.isAdmin(player)) {
                 player.sendSystemMessage(Component.translatable(
                                 "pwpwarfare.admin.paused_hint", Component.keybind("key.pwp_core.admin_panel"))
                         .withStyle(ChatFormatting.YELLOW));

@@ -19,6 +19,7 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,17 @@ public class PacketBuildRequest {
             ServerPlayer player = ctx.get().getSender();
             if (player != null) {
                 ServerLevel level = player.serverLevel();
+                // раньше оба отказа были молчаливыми — игрок не понимал, почему стройка не ставится
+                if (player.distanceToSqr(msg.pos.getX(), msg.pos.getY(), msg.pos.getZ()) > 64.0) {
+                    PlayerFeedback.deny(player, "pwpwarfare.msg.build.too_far");
+                    return;
+                }
+                if (!player.isCreative()
+                        && player.getMainHandItem().getItem() != ModItems.SQUAD_LEADER_RADIO.get()
+                        && player.getOffhandItem().getItem() != ModItems.SQUAD_LEADER_RADIO.get()) {
+                    PlayerFeedback.deny(player, "pwpwarfare.msg.build.need_radio");
+                    return;
+                }
                 if (!(player.distanceToSqr(msg.pos.getX(), msg.pos.getY(), msg.pos.getZ()) > 64.0)) {
                     boolean hasRadio = player.getMainHandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get()
                             || player.getOffhandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get();

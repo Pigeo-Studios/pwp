@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
 import java.util.function.Supplier;
@@ -50,15 +51,31 @@ public class PacketVehicleDriveRequest {
         if (!isSpecialistVehicle(vType)) return;
 
         String pKit = com.pigeostudios.pwp.warfare.events.KitUtil.getEffectiveKit(player);
-        if (!hasCorrectKit(vType, pKit)) return;
+        if (!hasCorrectKit(vType, pKit)) {
+            PlayerFeedback.deny(player, "pwpwarfare.msg.vehicle.crew_kit_required_this");
+            return;
+        }
 
         int squadId = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
-        if (squadId == 0) return;
+        if (squadId == 0) {
+            PlayerFeedback.deny(player, "pwpwarfare.msg.squad.not_in_squad");
+            return;
+        }
 
-        if (!WarfareData.of(vehicle).getBoolean(WarfareKeys.FRESH_VEHICLE)) return;
+        if (!WarfareData.of(vehicle).getBoolean(WarfareKeys.FRESH_VEHICLE)) {
+            // машина уже «разблокирована» — разрешение лидера не нужно
+            PlayerFeedback.info(player, "pwpwarfare.msg.drive.not_needed");
+            return;
+        }
 
         long cooldownUntil = WarfareData.of(player).getLong(WarfareKeys.driveRequestCooldown(vehicleId));
-        if (cooldownUntil > GameClock.worldTicks(level)) return;
+        if (cooldownUntil > GameClock.worldTicks(level)) {
+            PlayerFeedback.deny(
+                    player,
+                    "pwpwarfare.msg.vehicle.request_cooldown",
+                    (cooldownUntil - GameClock.worldTicks(level)) / 20L);
+            return;
+        }
 
         WarfareWorldData data = WarfareWorldData.get(level);
         String pName = player.getScoreboardName();
@@ -68,10 +85,16 @@ public class PacketVehicleDriveRequest {
                 .filter(s -> s.id == squadId && s.team.equalsIgnoreCase(team))
                 .findFirst()
                 .orElse(null);
-        if (playerSquad == null) return;
+        if (playerSquad == null) {
+            PlayerFeedback.deny(player, "pwpwarfare.msg.squad.not_in_squad");
+            return;
+        }
 
         ServerPlayer slPlayer = level.getServer().getPlayerList().getPlayerByName(playerSquad.leader);
-        if (slPlayer == null) return;
+        if (slPlayer == null) {
+            PlayerFeedback.deny(player, "pwpwarfare.msg.drive.leader_offline");
+            return;
+        }
 
         Component approveCmd = Component.translatable("pwpwarfare.msg.drive.approve_button")
                 .withStyle(style -> style.withColor(ChatFormatting.GREEN)

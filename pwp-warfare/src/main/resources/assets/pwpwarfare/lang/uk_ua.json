@@ -1164,5 +1164,18 @@
     "gui.pwpwarfare.hud.veh.rearming": "Поповнення БК: %sс",
     "gui.pwpwarfare.hud.veh.loading_crate": "Завантаження ящика: %sс",
     "gui.pwpwarfare.hud.veh.rearm_cooldown": "Перезарядка БК: %sс",
-    "gui.pwpwarfare.hud.veh.crate_resupply": "Поповнення: %sс"
+    "gui.pwpwarfare.hud.veh.crate_resupply": "Поповнення: %sс",
+    "pwpwarfare.msg.build.too_far": "Занадто далеко — підійдіть ближче (до 8 блоків)",
+    "pwpwarfare.msg.build.need_radio": "Щоб будувати, тримайте в руці рацію лідера",
+    "pwpwarfare.msg.drive.not_needed": "Техніку вже розблоковано — сідайте без дозволу",
+    "pwpwarfare.msg.drive.leader_offline": "Лідер загону не в мережі — запит не надіслано",
+    "pwpwarfare.msg.drive.only_leader": "Відповідати на запити техніки може лише лідер загону",
+    "pwpwarfare.msg.drive.vehicle_gone": "Цієї техніки більше немає",
+    "pwpwarfare.msg.drive.requester_offline": "Гравець, що надіслав запит, вийшов з гри",
+    "pwpwarfare.msg.marker.leaders_only": "Мітки ставлять лише лідери загонів і командири вогневих груп",
+    "pwpwarfare.msg.marker.no_team": "Спершу оберіть команду",
+    "pwpwarfare.msg.marker.not_owner": "Видалити може лише автор або командир",
+    "pwpwarfare.msg.squad.choose_team_first": "Спершу оберіть команду (меню загонів)",
+    "pwpwarfare.msg.no_permission": "Недостатньо прав",
+    "pwpwarfare.msg.cmd.forced": "Командира призначено: загін %s"
 }

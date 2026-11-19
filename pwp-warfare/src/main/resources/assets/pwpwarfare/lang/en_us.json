@@ -1164,5 +1164,18 @@
     "gui.pwpwarfare.hud.veh.rearming": "Rearming: %ss",
     "gui.pwpwarfare.hud.veh.loading_crate": "Loading crate: %ss",
     "gui.pwpwarfare.hud.veh.rearm_cooldown": "Rearm cooldown: %ss",
-    "gui.pwpwarfare.hud.veh.crate_resupply": "Resupply: %ss"
+    "gui.pwpwarfare.hud.veh.crate_resupply": "Resupply: %ss",
+    "pwpwarfare.msg.build.too_far": "Too far away — come closer to build (8 blocks max)",
+    "pwpwarfare.msg.build.need_radio": "Hold the squad leader radio to build",
+    "pwpwarfare.msg.drive.not_needed": "This vehicle is already unlocked — just get in",
+    "pwpwarfare.msg.drive.leader_offline": "Your squad leader is offline — request not sent",
+    "pwpwarfare.msg.drive.only_leader": "Only the squad leader can answer vehicle requests",
+    "pwpwarfare.msg.drive.vehicle_gone": "That vehicle no longer exists",
+    "pwpwarfare.msg.drive.requester_offline": "The player who asked is offline",
+    "pwpwarfare.msg.marker.leaders_only": "Only squad leaders and fireteam leaders can place markers",
+    "pwpwarfare.msg.marker.no_team": "Choose a team first",
+    "pwpwarfare.msg.marker.not_owner": "Only the author or the commander can remove this",
+    "pwpwarfare.msg.squad.choose_team_first": "Choose a team first (squad menu)",
+    "pwpwarfare.msg.no_permission": "Not enough permissions",
+    "pwpwarfare.msg.cmd.forced": "Commander assigned: squad %s"
 }

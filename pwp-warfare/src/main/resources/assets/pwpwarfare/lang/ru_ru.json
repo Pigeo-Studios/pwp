@@ -1164,5 +1164,18 @@
     "gui.pwpwarfare.hud.veh.rearming": "Пополнение БК: %sс",
     "gui.pwpwarfare.hud.veh.loading_crate": "Загрузка ящика: %sс",
     "gui.pwpwarfare.hud.veh.rearm_cooldown": "Перезарядка БК: %sс",
-    "gui.pwpwarfare.hud.veh.crate_resupply": "Пополнение: %sс"
+    "gui.pwpwarfare.hud.veh.crate_resupply": "Пополнение: %sс",
+    "pwpwarfare.msg.build.too_far": "Слишком далеко — подойдите ближе (до 8 блоков)",
+    "pwpwarfare.msg.build.need_radio": "Чтобы строить, держите в руке рацию лидера",
+    "pwpwarfare.msg.drive.not_needed": "Техника уже разблокирована — садитесь без разрешения",
+    "pwpwarfare.msg.drive.leader_offline": "Лидер отряда не в сети — запрос не отправлен",
+    "pwpwarfare.msg.drive.only_leader": "Отвечать на запросы техники может только лидер отряда",
+    "pwpwarfare.msg.drive.vehicle_gone": "Этой техники больше нет",
+    "pwpwarfare.msg.drive.requester_offline": "Запросивший игрок вышел из игры",
+    "pwpwarfare.msg.marker.leaders_only": "Метки ставят только лидеры отрядов и командиры огневых групп",
+    "pwpwarfare.msg.marker.no_team": "Сначала выберите команду",
+    "pwpwarfare.msg.marker.not_owner": "Удалить может только автор или командир",
+    "pwpwarfare.msg.squad.choose_team_first": "Сначала выберите команду (меню отрядов)",
+    "pwpwarfare.msg.no_permission": "Недостаточно прав",
+    "pwpwarfare.msg.cmd.forced": "Командир назначен: отряд %s"
 }

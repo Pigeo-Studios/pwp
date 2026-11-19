@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.client.MarkerClientCache;
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.UUID;
@@ -48,7 +49,10 @@ public class PacketRemoveMarker {
                         }
                     }
                 }
-                if (!isOwner && !isCMD) return;
+                if (!isOwner && !isCMD) {
+                    PlayerFeedback.deny(p, "pwpwarfare.msg.marker.not_owner");
+                    return;
+                }
                 MarkerManager.removeById(msg.id);
                 MarkerManager.broadcastRemoval(msg.id);
             } else {

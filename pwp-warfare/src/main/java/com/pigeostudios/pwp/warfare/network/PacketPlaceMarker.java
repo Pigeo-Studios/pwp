@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.server.MarkerManager;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.MapMarker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
@@ -47,13 +48,19 @@ public class PacketPlaceMarker {
                     break;
                 }
             }
-            if (!authorized) return;
+            if (!authorized) {
+                PlayerFeedback.deny(p, "pwpwarfare.msg.marker.leaders_only");
+                return;
+            }
             // поле team из пакета — ВИДИМОСТЬ маркера (squad/team/enemy), не команда: команду берёт сервер
             String scope = msg.team;
             if (!"squad".equals(scope) && !"team".equals(scope) && !"enemy".equals(scope)) return;
             if (msg.category.length() > 32 || msg.iconType.length() > 32) return;
             String ownerTeam = p.getTeam() != null ? p.getTeam().getName() : "";
-            if (ownerTeam.isEmpty()) return;
+            if (ownerTeam.isEmpty()) {
+                PlayerFeedback.deny(p, "pwpwarfare.msg.marker.no_team");
+                return;
+            }
             // время маркеров — серверные тики (MarkerManager.onTick считает возраст в них же)
             long tick = GameClock.serverTicks(p.getServer());
             MapMarker m =

@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.network.PacketHandler;
 import com.pigeostudios.pwp.warfare.network.PacketRequestKitMenu;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
 import net.minecraft.ChatFormatting;
@@ -67,7 +68,10 @@ public final class SquadActions {
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
         String pName = player.getScoreboardName();
         String pTeam = player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
-        if (pTeam.equals("NEUTRAL") && !player.isCreative()) return;
+        if (pTeam.equals("NEUTRAL") && !player.isCreative()) {
+            PlayerFeedback.deny(player, "pwpwarfare.msg.squad.choose_team_first");
+            return;
+        }
         action.run(player, data, pName, pTeam);
         data.setDirty();
         PacketHandler.syncSquadsAll(data.squadRegistry.squads);

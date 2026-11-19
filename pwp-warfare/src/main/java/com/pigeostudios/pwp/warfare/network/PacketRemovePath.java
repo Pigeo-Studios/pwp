@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.client.PathCache;
 import com.pigeostudios.pwp.warfare.server.PathManager;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import java.util.UUID;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
@@ -33,7 +34,10 @@ public class PacketRemovePath {
                 String pName = p.getScoreboardName();
                 boolean isCMD = PathManager.isTeamCMD(p, stored.team());
                 boolean isOwner = stored.owner().equals(pName);
-                if (!isOwner && !isCMD) return;
+                if (!isOwner && !isCMD) {
+                    PlayerFeedback.deny(p, "pwpwarfare.msg.marker.not_owner");
+                    return;
+                }
                 PathManager.removeById(msg.pathId);
                 PathManager.broadcastRemovalToTeam(p, msg.pathId);
             } else {

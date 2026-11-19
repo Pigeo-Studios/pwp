@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.network;
 
 import com.pigeostudios.pwp.warfare.server.PathManager;
+import com.pigeostudios.pwp.warfare.util.PlayerFeedback;
 import com.pigeostudios.pwp.warfare.world.PathPoint;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import java.util.ArrayList;
@@ -61,7 +62,10 @@ public class PacketPlacePath {
                     break;
                 }
             }
-            if (!authorized) return;
+            if (!authorized) {
+                PlayerFeedback.deny(p, "pwpwarfare.msg.marker.leaders_only");
+                return;
+            }
             // команда пути — с сервера, не из пакета клиента (иначе путь «за другую команду»)
             String team = p.getTeam() != null ? p.getTeam().getName() : "";
             if (team.isEmpty() || msg.type.length() > 32 || msg.points.size() > 256) return;
