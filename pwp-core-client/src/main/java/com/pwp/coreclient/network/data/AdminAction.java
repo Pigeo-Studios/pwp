@@ -1,6 +1,7 @@
 package com.pwp.coreclient.network.data;
 
 import com.google.gson.JsonObject;
+import com.pwp.api.admin.AuditTrail;
 import com.pwp.api.config.LobbySettings;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.lobby.LobbyActions;
@@ -39,6 +40,8 @@ public final class AdminAction {
     public static final String ERR_NO_PERMISSION = "pwp_core.admin.error.no_permission";
     public static final String ERR_BUSY = "pwp_core.admin.error.busy";
     public static final String ERR_INTERNAL = "pwp_core.admin.error.internal";
+    /** core-service не ответил (раньше — русский литерал вместо ключа). */
+    public static final String ERR_CORE_DOWN = "pwp_core.admin.error.core_down";
 
     /** Лобби: начать голосование за карту (полный цикл карта → режим → фракции). */
     public record LobbyStartVote() implements Net.C2S {
@@ -118,7 +121,17 @@ public final class AdminAction {
      * ключ перевода ошибки. Общий путь для пакетов других модов (warfare: вкладка «Матч»).
      */
     public static void runLocal(ServerPlayer player, String action, AccessLevel required, Supplier<String> body) {
+        runLocal(player, action, required, "", body);
+    }
+
+    /**
+     * То же с {@code details} для аудит-лога (цель/параметры: ник, команда, значение). Каждый вызов —
+     * запись в {@link AdminAudit} (успех, ошибка или отказ по правам).
+     */
+    public static void runLocal(
+            ServerPlayer player, String action, AccessLevel required, String details, Supplier<String> body) {
         if (!PwpPermissions.has(player, required)) {
+            AdminAudit.record(player, action, details, AuditTrail.Result.DENIED, required.name());
             LOG.warn(
                     "Игрок {} (уровень {}) без прав {} прислал админ-действие {}",
                     player.getGameProfile().getName(),
@@ -145,6 +158,8 @@ public final class AdminAction {
         }
         LOG.info(
                 "Админ-действие {} от {}: {}", action, player.getGameProfile().getName(), error == null ? "OK" : error);
+        AdminAudit.record(
+                player, action, details, error == null ? AuditTrail.Result.OK : AuditTrail.Result.FAILED, error);
         reply(player, action, error == null, error == null ? "" : error);
     }
 
@@ -256,7 +271,8 @@ public final class AdminAction {
                     "Игрок {} без прав прислал админ-действие {}",
                     player.getGameProfile().getName(),
                     action);
-            reply(player, action, false, "Недостаточно прав");
+            AdminAudit.record(player, action, "", AuditTrail.Result.DENIED, AccessLevel.ADMIN.name());
+            reply(player, action, false, ERR_NO_PERMISSION);
             return;
         }
         boolean started = ServerThread.guardedForPlayer(GUARD, action, player, call, (online, resp) -> {
@@ -264,10 +280,12 @@ public final class AdminAction {
             String error =
                     resp != null && resp.has("error") && !resp.get("error").isJsonNull()
                             ? resp.get("error").getAsString()
-                            : "core-service недоступен";
+                            : ERR_CORE_DOWN;
+            AdminAudit.record(
+                    online, action, "", ok ? AuditTrail.Result.OK : AuditTrail.Result.FAILED, ok ? "" : error);
             reply(online, action, ok, ok ? "" : error);
         });
-        if (!started) reply(player, action, false, "Подождите, предыдущий запрос ещё выполняется");
+        if (!started) reply(player, action, false, ERR_BUSY);
     }
 
     /** Ответ {@code actionResult}; {@code error} — текст или ключ перевода (клиент переводит, если ключ есть). */

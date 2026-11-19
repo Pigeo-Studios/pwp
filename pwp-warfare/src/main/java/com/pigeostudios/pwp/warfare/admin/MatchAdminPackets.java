@@ -54,8 +54,10 @@ public final class MatchAdminPackets {
         });
     }
 
-    private static void run(ServerPlayer sender, String action, AccessLevel level, Supplier<String> body) {
-        AdminAction.runLocal(sender, action, level, body);
+    private static void run(
+            ServerPlayer sender, Object packet, String action, AccessLevel level, Supplier<String> body) {
+        // запись пакета (record toString: поля действия) уходит в аудит-лог как details
+        AdminAction.runLocal(sender, action, level, packet.toString(), body);
         // свежее состояние сразу (не ждать опроса вкладки)
         if (PwpPermissions.has(sender, AccessLevel.ADMIN)) {
             DataRequests.send(
@@ -76,7 +78,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, START, AccessLevel.ADMIN, () -> MatchAdmin.start(s.serverLevel(), force));
+            run(s, this, START, AccessLevel.ADMIN, () -> MatchAdmin.start(s.serverLevel(), force));
         }
     }
 
@@ -89,7 +91,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, STOP, AccessLevel.ADMIN, () -> MatchAdmin.stop(s.serverLevel()));
+            run(s, this, STOP, AccessLevel.ADMIN, () -> MatchAdmin.stop(s.serverLevel()));
         }
     }
 
@@ -102,7 +104,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, PAUSE, AccessLevel.ADMIN, () -> {
+            run(s, this, PAUSE, AccessLevel.ADMIN, () -> {
                 MatchAdmin.togglePause(s.serverLevel());
                 return null;
             });
@@ -120,7 +122,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, SKIP_WAITING, AccessLevel.ADMIN, () -> MatchAdmin.skipWaiting(s.serverLevel(), force));
+            run(s, this, SKIP_WAITING, AccessLevel.ADMIN, () -> MatchAdmin.skipWaiting(s.serverLevel(), force));
         }
     }
 
@@ -140,7 +142,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, SET_MODE, AccessLevel.ADMIN, () -> MatchAdmin.setMode(s.serverLevel(), mode));
+            run(s, this, SET_MODE, AccessLevel.ADMIN, () -> MatchAdmin.setMode(s.serverLevel(), mode));
         }
     }
 
@@ -160,7 +162,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, SET_DEFENDER, AccessLevel.ADMIN, () -> MatchAdmin.setDefender(s.serverLevel(), team));
+            run(s, this, SET_DEFENDER, AccessLevel.ADMIN, () -> MatchAdmin.setDefender(s.serverLevel(), team));
         }
     }
 
@@ -181,7 +183,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, SET_FACTION, AccessLevel.ADMIN, () -> MatchAdmin.setFaction(s.serverLevel(), team, faction));
+            run(s, this, SET_FACTION, AccessLevel.ADMIN, () -> MatchAdmin.setFaction(s.serverLevel(), team, faction));
         }
     }
 
@@ -204,7 +206,7 @@ public final class MatchAdminPackets {
 
         @Override
         public void handle(ServerPlayer s) {
-            run(s, SET_TICKETS, AccessLevel.ADMIN, () -> MatchAdmin.setTickets(s.serverLevel(), team, amount));
+            run(s, this, SET_TICKETS, AccessLevel.ADMIN, () -> MatchAdmin.setTickets(s.serverLevel(), team, amount));
         }
     }
 
@@ -228,6 +230,7 @@ public final class MatchAdminPackets {
         public void handle(ServerPlayer s) {
             run(
                     s,
+                    this,
                     SET_WAITING,
                     persist ? AccessLevel.OWNER : AccessLevel.ADMIN,
                     () -> MatchAdmin.setWaitingSeconds(s.serverLevel(), seconds, persist));

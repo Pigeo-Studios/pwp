@@ -8,6 +8,7 @@ import com.pigeostudios.pwp.warfare.layout.LayoutTransfer;
 import com.pigeostudios.pwp.warfare.layout.MapLayout;
 import com.pigeostudios.pwp.warfare.server.map.MapLayoutService;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.admin.AuditTrail;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.net.Net;
 import com.pwp.api.net.Validate;
@@ -16,6 +17,7 @@ import com.pwp.api.security.PwpPermissions;
 import com.pwp.api.util.RequestGuard;
 import com.pwp.api.util.ServerThread;
 import com.pwp.coreclient.network.data.AdminAction;
+import com.pwp.coreclient.network.data.AdminAudit;
 import com.pwp.coreclient.network.data.DataRequests;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.network.FriendlyByteBuf;
@@ -176,6 +178,7 @@ public final class MapEditorPackets {
                 LOG.warn(
                         "{} без OWNER пытался сохранить раскладку навсегда",
                         s.getGameProfile().getName());
+                AdminAudit.record(s, SAVE_PERMANENT, MapLayoutService.mapName(), AuditTrail.Result.DENIED, "OWNER");
                 AdminAction.reply(s, SAVE_PERMANENT, false, AdminAction.ERR_NO_PERMISSION);
                 return;
             }
@@ -228,6 +231,7 @@ public final class MapEditorPackets {
         @Override
         public void handle(ServerPlayer s) {
             if (!PwpPermissions.has(s, AccessLevel.OWNER)) {
+                AdminAudit.record(s, ROLLBACK, "id=" + id, AuditTrail.Result.DENIED, "OWNER");
                 AdminAction.reply(s, ROLLBACK, false, AdminAction.ERR_NO_PERMISSION);
                 return;
             }
@@ -250,6 +254,7 @@ public final class MapEditorPackets {
     private static void onSaved(ServerPlayer p, String action, JsonObject resp, String what) {
         JsonObject v = MapLayoutService.data(resp);
         if (v == null) {
+            AdminAudit.record(p, action, what, AuditTrail.Result.FAILED, MapLayoutService.ERR_CORE);
             AdminAction.reply(p, action, false, MapLayoutService.ERR_CORE);
             return;
         }
@@ -272,6 +277,12 @@ public final class MapEditorPackets {
                 data.setDirty();
             }
         }
+        AdminAudit.record(
+                p,
+                action,
+                MapLayoutService.mapName() + " v" + id,
+                err == null ? AuditTrail.Result.OK : AuditTrail.Result.FAILED,
+                err);
         AdminAction.reply(p, action, err == null, err == null ? "" : err);
         refresh(p);
     }

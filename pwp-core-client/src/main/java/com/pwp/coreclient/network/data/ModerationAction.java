@@ -177,7 +177,7 @@ public final class ModerationAction {
             String target,
             boolean punish,
             java.util.function.Supplier<String> cmd) {
-        AdminAction.runLocal(sender, action, AccessLevel.MODERATOR, () -> {
+        AdminAction.runLocal(sender, action, AccessLevel.MODERATOR, target, () -> {
             if (!ModerationInput.validName(target)) return ERR_NAME;
             MinecraftServer server = sender.getServer();
             if (server == null) return ERR_FAILED;

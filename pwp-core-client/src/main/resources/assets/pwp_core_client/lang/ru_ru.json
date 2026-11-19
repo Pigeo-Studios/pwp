@@ -412,5 +412,6 @@
     "pwp_core.controls.preview_only": "Недоступно в превью",
     "pwp_core.controls.footer": "Нажмите на клавишу, чтобы переназначить",
     "pwp_core.controls.footer.waiting": "Нажмите клавишу или кнопку мыши · Esc — отмена · Backspace/Del — снять",
-    "pwp_core.ui_settings.controls": "Управление…"
+    "pwp_core.ui_settings.controls": "Управление…",
+    "pwp_core.admin.error.core_down": "core-service недоступен — повторите позже"
 }
