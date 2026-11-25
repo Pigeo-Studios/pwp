@@ -2127,32 +2127,19 @@ public class GameLogicEvents {
     }
 
     private static boolean canCapture(WarfareWorldData.CapturePoint target, String team, WarfareWorldData data) {
-        // Invasion locked points cannot be recaptured by the former owner
-        if ("invasion".equals(data.match.gameMode)) {
-            if (target.invLocked && !team.equals(target.owner)) {
-                return false;
-            }
-            // Neutral points cannot be captured by the defender
-            if (target.owner.equals("NEUTRAL") && team.equals(data.match.invasionDefender)) {
-                return false;
-            }
-        }
+        // правило порядка захвата — реестр режимов (AAS: цепочка, Invasion: + блокировки, Стычка: любой порядок)
+        java.util.List<com.pwp.api.match.GameModes.PointState> all = new java.util.ArrayList<>();
+        for (WarfareWorldData.CapturePoint p : data.match.capturePoints) all.add(pointState(p));
+        return com.pwp.api.match.GameModes.canCapture(
+                com.pwp.api.match.GameModes.orAas(data.match.gameMode),
+                pointState(target),
+                team,
+                all,
+                data.match.invasionDefender);
+    }
 
-        int currentPriority = team.equals("BLUE") ? target.bluePriority : target.redPriority;
-        if (currentPriority <= 1) {
-            return true;
-        }
-
-        int requiredPriority = currentPriority - 1;
-
-        for (WarfareWorldData.CapturePoint p : data.match.capturePoints) {
-            int pPriority = team.equals("BLUE") ? p.bluePriority : p.redPriority;
-            if (pPriority == requiredPriority && p.owner.equals(team)) {
-                return true;
-            }
-        }
-
-        return false;
+    private static com.pwp.api.match.GameModes.PointState pointState(WarfareWorldData.CapturePoint p) {
+        return new com.pwp.api.match.GameModes.PointState(p.bluePriority, p.redPriority, p.owner, p.invLocked);
     }
 
     public static void leaveCurrentSquad(ServerPlayer player, WarfareWorldData data) {

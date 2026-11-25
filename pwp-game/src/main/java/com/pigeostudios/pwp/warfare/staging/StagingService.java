@@ -274,6 +274,7 @@ public final class StagingService {
     /** Раз в секунду ожидания: выставить технику, как только пулы фракций загружены (БД асинхронно). */
     public static void tickVehicles(ServerLevel level, WarfareWorldData data) {
         if (vehiclesFilled) return;
+        if (!com.pwp.api.match.GameModes.orAas(data.match.gameMode).vehicles()) return; // режим без техники
         if (data.vehicles.blueFactionVehicles.isEmpty() && data.vehicles.redFactionVehicles.isEmpty()) return;
         data.fillVehicleSpawnersFromFactionDefaults(level);
         data.setDirty();
@@ -282,6 +283,11 @@ public final class StagingService {
 
     /** GO: техника уже стоит с ожидания — повторно не заполняем (только догоняем незагруженные чанки). */
     public static void onGo(ServerLevel level, WarfareWorldData data) {
+        if (!com.pwp.api.match.GameModes.orAas(data.match.gameMode).vehicles()) {
+            vehiclesFilled = false;
+            lastInside.clear();
+            return; // режим без техники (Стычка)
+        }
         if (vehiclesFilled) data.retryPendingVehicleSpawners(level);
         else data.fillVehicleSpawnersFromFactionDefaults(level);
         vehiclesFilled = false;

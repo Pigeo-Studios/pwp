@@ -33,11 +33,11 @@ public final class AdminInput {
         IDLE
     }
 
-    /** "aas"/"invasion" в любом регистре; иначе null. */
+    /** Режим из реестра {@link com.pwp.api.match.GameModes} (aas/invasion/skirmish) в любом регистре; иначе null. */
     public static String mode(String s) {
         if (s == null) return null;
         String m = s.trim().toLowerCase(Locale.ROOT);
-        return m.equals(MODE_AAS) || m.equals(MODE_INVASION) ? m : null;
+        return com.pwp.api.match.GameModes.byId(m) == null ? null : m;
     }
 
     /** "blue"/"red" в любом регистре → BLUE/RED; иначе null. */

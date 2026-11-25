@@ -71,7 +71,7 @@ public final class MatchHandoff {
             int before = errors.size();
             if (blue == null || !FACTION.matcher(blue).matches()) errors.add("blueFaction");
             if (red == null || !FACTION.matcher(red).matches()) errors.add("redFaction");
-            if (!"aas".equals(mode) && !"invasion".equals(mode)) errors.add("mode");
+            if (com.pwp.api.match.GameModes.byId(mode) == null) errors.add("mode");
             if (!"RED".equals(def) && !"BLUE".equals(def)) errors.add("invasionDefender");
             if (bt == null || bt < 0 || bt > MAX_TICKETS) errors.add("blueTickets");
             if (rt == null || rt < 0 || rt > MAX_TICKETS) errors.add("redTickets");

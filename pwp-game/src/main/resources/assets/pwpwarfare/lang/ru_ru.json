@@ -1228,5 +1228,6 @@
     "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Пошаговые подсказки первого матча: команда → отряд → роль → деплой → захват. Выкл. — пропустить",
     "pwpwarfare.admin.match.division_blue": "Дивизия BLUE",
     "pwpwarfare.admin.match.division_red": "Дивизия RED",
-    "pwpwarfare.admin.match.division.auto": "Авто (режим и размер карты)"
+    "pwpwarfare.admin.match.division.auto": "Авто (режим и размер карты)",
+    "pwpwarfare.admin.match.mode.skirmish": "Стычка"
 }

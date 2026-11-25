@@ -48,12 +48,25 @@ public class LobbyMod {
     private static long modeVoteLastTimerBroadcast = 0;
     private static int modeVoteLastBroadcastedRemaining = -1;
 
-    private static final String[] MODE_NAMES = {"aas", "invasion"};
-    private static final String[] MODE_DISPLAY_NAMES = {"Advance and Secure", "INVASION"};
-    private static final String[] MODE_DESCRIPTIONS = {
-        "Обе команды на равных. Захватывайте точки в порядке очереди, чтобы обнулить тикеты противника. Есть ticket bleed — команда без точек теряет тикеты.",
-        "Одна команда защищает все точки, вторая штурмует. Захваченные точки блокируются. Нет ticket bleed. Атакующие получают +100 билетов за захват, защитники теряют всё при потере последней точки."
+    // Режимы голосования — из реестра GameModes (этап 7 ROADMAP): всегда AAS/Invasion, «Стычка» — если карта
+    // объявила её в modes своего map_config (маленькие карты под малый онлайн)
+    private static String[] MODE_NAMES = {"aas", "invasion"};
+    private static String[] MODE_DISPLAY_NAMES = {"Advance and Secure", "INVASION"};
+    private static String[] MODE_DESCRIPTIONS = {
+        com.pwp.api.match.GameModes.AAS.description(), com.pwp.api.match.GameModes.INVASION.description()
     };
+
+    /** Режимы голосования для карты (вызывается перед голосованием за режим). */
+    private static void setModesFor(MapConfig map) {
+        var modes = com.pwp.api.match.GameModes.votable(map == null || map.modes == null ? null : map.modes.keySet());
+        MODE_NAMES = modes.stream().map(com.pwp.api.match.GameModes.Mode::id).toArray(String[]::new);
+        MODE_DISPLAY_NAMES = modes.stream()
+                .map(com.pwp.api.match.GameModes.Mode::displayName)
+                .toArray(String[]::new);
+        MODE_DESCRIPTIONS = modes.stream()
+                .map(com.pwp.api.match.GameModes.Mode::description)
+                .toArray(String[]::new);
+    }
 
     // Результаты последнего завершённого голосования (для экрана итогов)
     private static String resMap = null, resMode = null, resF1 = null, resF2 = null;
@@ -613,8 +626,9 @@ public class LobbyMod {
                                                         "mode",
                                                         com.mojang.brigadier.arguments.StringArgumentType.word())
                                                 .suggests((ctx, builder) -> {
-                                                    builder.suggest("aas");
-                                                    builder.suggest("invasion");
+                                                    for (var m : com.pwp.api.match.GameModes.all()) {
+                                                        builder.suggest(m.id());
+                                                    }
                                                     return builder.buildFuture();
                                                 })
                                                 .executes(ctx -> {
@@ -624,7 +638,7 @@ public class LobbyMod {
                                                     String md =
                                                             com.mojang.brigadier.arguments.StringArgumentType.getString(
                                                                     ctx, "mode");
-                                                    if (!md.equals("aas") && !md.equals("invasion")) {
+                                                    if (com.pwp.api.match.GameModes.byId(md) == null) {
                                                         ctx.getSource()
                                                                 .sendFailure(Component.translatable(
                                                                         "pwp_lobby.msg.cmd.mode_invalid"));
@@ -688,7 +702,7 @@ public class LobbyMod {
                                                                             .StringArgumentType.getString(ctx, "blue");
                                                                     String re = com.mojang.brigadier.arguments
                                                                             .StringArgumentType.getString(ctx, "red");
-                                                                    if (!md.equals("aas") && !md.equals("invasion")) {
+                                                                    if (com.pwp.api.match.GameModes.byId(md) == null) {
                                                                         ctx.getSource()
                                                                                 .sendFailure(
                                                                                         Component.translatable(
@@ -1037,6 +1051,7 @@ public class LobbyMod {
             return;
         }
         if (pendingMapName == null) return;
+        setModesFor(MapRegistry.get(pendingMapName));
 
         modeVoteActive = true;
         modeVoteFinished = false;

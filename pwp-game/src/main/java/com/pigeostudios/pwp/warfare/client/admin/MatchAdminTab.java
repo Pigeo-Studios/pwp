@@ -205,7 +205,9 @@ public class MatchAdminTab implements AdminTab {
                         Component.translatable("pwpwarfare.admin.match.mode"),
                         cycle(
                                 "mode",
-                                List.of(AdminInput.MODE_AAS, AdminInput.MODE_INVASION),
+                                com.pwp.api.match.GameModes.all().stream()
+                                        .map(com.pwp.api.match.GameModes.Mode::id)
+                                        .toList(),
                                 "pwpwarfare.admin.match.mode."),
                         apply(() -> new MatchAdminPackets.SetMode(pick("mode")), MatchAdminPackets.SET_MODE, "mode"))
                 .control(

@@ -1228,5 +1228,6 @@
     "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Покрокові підказки першого матчу: команда → загін → роль → деплой → захоплення. Вимк. — пропустити",
     "pwpwarfare.admin.match.division_blue": "Дивізія BLUE",
     "pwpwarfare.admin.match.division_red": "Дивізія RED",
-    "pwpwarfare.admin.match.division.auto": "Авто (режим і розмір мапи)"
+    "pwpwarfare.admin.match.division.auto": "Авто (режим і розмір мапи)",
+    "pwpwarfare.admin.match.mode.skirmish": "Сутичка"
 }

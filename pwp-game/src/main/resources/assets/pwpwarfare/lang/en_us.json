@@ -1228,5 +1228,6 @@
     "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Step-by-step hints for the first match: team → squad → role → deploy → capture. Off = skip",
     "pwpwarfare.admin.match.division_blue": "BLUE division",
     "pwpwarfare.admin.match.division_red": "RED division",
-    "pwpwarfare.admin.match.division.auto": "Auto (mode and map size)"
+    "pwpwarfare.admin.match.division.auto": "Auto (mode and map size)",
+    "pwpwarfare.admin.match.mode.skirmish": "Skirmish"
 }

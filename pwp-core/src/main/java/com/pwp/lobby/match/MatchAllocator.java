@@ -221,7 +221,7 @@ public class MatchAllocator {
         mi.blueTickets = s.blueTickets();
         mi.redTickets = s.redTickets();
         mi.mode = s.mode();
-        mi.modeDisplayName = s.invasion() ? "INVASION" : "Advance and Secure";
+        mi.modeDisplayName = com.pwp.api.match.GameModes.orAas(s.mode()).displayName();
         mi.phase = MatchPhase.STARTING;
     }
 
