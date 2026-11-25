@@ -334,6 +334,21 @@ public final class CoreApi {
         return send("DELETE", "/api/v1/factions/" + enc(faction.toLowerCase()) + "/vehicles/" + enc(vehicleName), null);
     }
 
+    // ====== ДИВИЗИИ (составы) ФРАКЦИЙ — этап 6 ROADMAP ======
+
+    /** {@code {data: [{faction, divisionId, displayName, modes, mapSizes, vehicles: [...]}]}}. */
+    public static CompletableFuture<JsonObject> getFactionDivisions(String faction) {
+        return get("/api/v1/factions/" + enc(faction.toLowerCase()) + "/divisions");
+    }
+
+    public static CompletableFuture<JsonObject> saveFactionDivision(String faction, String divisionId, JsonObject data) {
+        return put("/api/v1/factions/" + enc(faction.toLowerCase()) + "/divisions/" + enc(divisionId), data);
+    }
+
+    public static CompletableFuture<JsonObject> deleteFactionDivision(String faction, String divisionId) {
+        return send("DELETE", "/api/v1/factions/" + enc(faction.toLowerCase()) + "/divisions/" + enc(divisionId), null);
+    }
+
     // ====== MAP LAYOUTS (этап 3: редактор карты) ======
 
     /** Версии раскладки карты без JSON: {@code {data: [{id, mapName, authorUuid, authorName, createdAt, comment}]}}. */

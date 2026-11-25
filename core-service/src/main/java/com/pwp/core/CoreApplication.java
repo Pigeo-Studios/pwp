@@ -102,6 +102,7 @@ public class CoreApplication {
         new RewardController(app);
         new KitController(app);
         new FactionVehicleController(app);
+        new DivisionController(app);
         new VoiceMuteController(app);
         new AuthController(app, config);
         new AdminController(app);

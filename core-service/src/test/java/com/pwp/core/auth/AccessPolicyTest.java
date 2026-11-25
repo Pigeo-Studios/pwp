@@ -21,6 +21,9 @@ class AccessPolicyTest {
         assertTrue(AccessPolicy.serverOnly("PUT", "/api/v1/kits/faction/usa/Rifleman"));
         assertTrue(AccessPolicy.serverOnly("DELETE", "/api/v1/factions/usa/vehicles/m1a2"));
         assertTrue(AccessPolicy.serverOnly("POST", "/api/v1/maps/takmachka/layouts"));
+        assertTrue(AccessPolicy.serverOnly("PUT", "/api/v1/factions/usa/divisions/mech"));
+        assertTrue(AccessPolicy.serverOnly("DELETE", "/api/v1/factions/usa/divisions/mech"));
+        assertFalse(AccessPolicy.serverOnly("GET", "/api/v1/factions/usa/divisions"));
         assertEquals("server only", AccessPolicy.denyReason("POST", "/api/v1/currency/add", "{}", ME));
     }
 

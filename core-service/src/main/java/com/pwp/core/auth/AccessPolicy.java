@@ -39,7 +39,8 @@ public final class AccessPolicy {
             p("(PUT|DELETE) /api/v1/factions/[^/]+/vehicles/[^/]+"),
             p("POST /api/v1/network/(heartbeat|bot-heartbeat|match-policy)"),
             p("POST /api/v1/maps/[^/]+/layouts"),
-            p("POST /api/v1/maps/layouts/[^/]+/rollback"));
+            p("POST /api/v1/maps/layouts/[^/]+/rollback"),
+            p("(PUT|DELETE) /api/v1/factions/[^/]+/divisions/[^/]+"));
 
     static final List<String> UUID_FIELDS = List.of("uuid", "playerUuid", "player_uuid", "targetUuid", "target_uuid");
 

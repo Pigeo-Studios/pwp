@@ -455,7 +455,19 @@ public class DatabaseManager {
                 + "height INT NOT NULL DEFAULT 0, "
                 + "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "
                 + "FOREIGN KEY (player_uuid) REFERENCES players(uuid) ON DELETE SET NULL, "
-                + "INDEX idx_ac_shot (created_at))"
+                + "INDEX idx_ac_shot (created_at))",
+
+                // дивизии (составы) фракций, этап 6 ROADMAP — то же, что sql/migration_add_faction_divisions.sql
+                "CREATE TABLE IF NOT EXISTS faction_divisions ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "faction VARCHAR(64) NOT NULL, "
+                + "division_id VARCHAR(64) NOT NULL, "
+                + "display_name VARCHAR(128) NOT NULL, "
+                + "modes VARCHAR(255) NOT NULL DEFAULT '', "
+                + "map_sizes VARCHAR(64) NOT NULL DEFAULT '', "
+                + "vehicles MEDIUMTEXT NOT NULL, "
+                + "updated_at BIGINT NOT NULL, "
+                + "UNIQUE KEY uq_faction_division (faction, division_id))"
             };
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
