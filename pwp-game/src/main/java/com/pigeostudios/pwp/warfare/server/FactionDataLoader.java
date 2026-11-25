@@ -199,8 +199,21 @@ public final class FactionDataLoader {
     private static void load(MinecraftServer server, Team team, Kind kind, Slot slot) {
         slot.inFlight = true;
         slot.attempts++;
-        CompletableFuture<JsonObject> call =
-                kind == Kind.KITS ? CoreApi.getFactionKits(slot.faction) : CoreApi.getFactionVehicles(slot.faction);
+        // Пул техники и дивизии фракции (этап 6 ROADMAP) — одним результатом: техника выставляется сразу по
+        // дивизии. Дивизии не загрузились (старый core-service, ошибка) — общий пул, как раньше.
+        CompletableFuture<JsonObject> call = kind == Kind.KITS
+                ? CoreApi.getFactionKits(slot.faction)
+                : CoreApi.getFactionVehicles(slot.faction)
+                        .thenCompose(veh -> veh == null
+                                ? CompletableFuture.completedFuture(null)
+                                : CoreApi.getFactionDivisions(slot.faction).handle((div, err) -> {
+                                    if (div != null
+                                            && div.has("data")
+                                            && div.get("data").isJsonArray()) {
+                                        veh.add("divisions", div.getAsJsonArray("data"));
+                                    }
+                                    return veh;
+                                }));
         ServerLevel target = level;
         ServerThread.thenOnServer(call, server, response -> {
             slot.inFlight = false;
@@ -230,6 +243,11 @@ public final class FactionDataLoader {
                 current.loadKitsFromApi(team.name(), response);
             } else {
                 current.loadFactionVehiclesFromApi(team.name(), response);
+                current.applyDivisions(
+                        team.name(),
+                        response.has("divisions") && response.get("divisions").isJsonArray()
+                                ? response.getAsJsonArray("divisions")
+                                : new com.google.gson.JsonArray());
             }
             current.setDirty();
             PacketHandler.sendToAllClients(target, current);

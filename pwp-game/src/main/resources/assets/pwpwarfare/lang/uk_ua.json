@@ -1225,5 +1225,8 @@
     "gui.pwpwarfare.tutorial.capture": "Захопіть точку: станьте в зону наступної точки (компас, мапа [%s])",
     "gui.pwpwarfare.tutorial.done": "Навчання пройдено! Тримайтеся загону та йдіть за мітками лідера",
     "gui.pwpwarfare.ui_settings.hud.tutorial": "Навчання новачка",
-    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Покрокові підказки першого матчу: команда → загін → роль → деплой → захоплення. Вимк. — пропустити"
+    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Покрокові підказки першого матчу: команда → загін → роль → деплой → захоплення. Вимк. — пропустити",
+    "pwpwarfare.admin.match.division_blue": "Дивізія BLUE",
+    "pwpwarfare.admin.match.division_red": "Дивізія RED",
+    "pwpwarfare.admin.match.division.auto": "Авто (режим і розмір мапи)"
 }

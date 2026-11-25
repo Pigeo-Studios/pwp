@@ -22,6 +22,10 @@ public final class MatchState {
     public int deathTicketCost = 2;
     public String blueFaction = "none";
     public String redFaction = "none";
+    /** Дивизия команды (этап 6 ROADMAP): id выбранной/запрошенной; "" — выбрать автоматически под режим и карту. */
+    public String blueDivision = "";
+
+    public String redDivision = "";
     public boolean isGameStarted = false;
     public int countdownTicks = 0;
     public String gameMode = "aas";
@@ -65,6 +69,8 @@ public final class MatchState {
         tag.putInt("DeathTicketCost", this.deathTicketCost);
         tag.putString("BlueFaction", this.blueFaction);
         tag.putString("RedFaction", this.redFaction);
+        tag.putString("BlueDivision", this.blueDivision != null ? this.blueDivision : "");
+        tag.putString("RedDivision", this.redDivision != null ? this.redDivision : "");
         tag.putBoolean("IsGameStarted", this.isGameStarted);
         tag.putInt("CountdownTicks", this.countdownTicks);
         tag.putBoolean("CountdownActive", this.countdownActive);
@@ -146,6 +152,8 @@ public final class MatchState {
         this.deathTicketCost = tag.getInt("DeathTicketCost");
         this.blueFaction = tag.getString("BlueFaction");
         this.redFaction = tag.getString("RedFaction");
+        this.blueDivision = tag.getString("BlueDivision");
+        this.redDivision = tag.getString("RedDivision");
         this.isGameStarted = tag.getBoolean("IsGameStarted");
         this.countdownTicks = tag.getInt("CountdownTicks");
         this.countdownActive = tag.getBoolean("CountdownActive");

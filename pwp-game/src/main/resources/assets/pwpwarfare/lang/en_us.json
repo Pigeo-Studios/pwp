@@ -1225,5 +1225,8 @@
     "gui.pwpwarfare.tutorial.capture": "Capture a point: stand inside the next point zone (compass, map [%s])",
     "gui.pwpwarfare.tutorial.done": "Tutorial complete! Stick with your squad and follow the leader's markers",
     "gui.pwpwarfare.ui_settings.hud.tutorial": "Newcomer tutorial",
-    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Step-by-step hints for the first match: team → squad → role → deploy → capture. Off = skip"
+    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Step-by-step hints for the first match: team → squad → role → deploy → capture. Off = skip",
+    "pwpwarfare.admin.match.division_blue": "BLUE division",
+    "pwpwarfare.admin.match.division_red": "RED division",
+    "pwpwarfare.admin.match.division.auto": "Auto (mode and map size)"
 }

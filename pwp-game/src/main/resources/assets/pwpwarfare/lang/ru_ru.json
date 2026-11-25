@@ -1225,5 +1225,8 @@
     "gui.pwpwarfare.tutorial.capture": "Захватите точку: встаньте в зону следующей точки (компас, карта [%s])",
     "gui.pwpwarfare.tutorial.done": "Обучение пройдено! Держитесь отряда и идите по меткам лидера",
     "gui.pwpwarfare.ui_settings.hud.tutorial": "Обучение новичка",
-    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Пошаговые подсказки первого матча: команда → отряд → роль → деплой → захват. Выкл. — пропустить"
+    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Пошаговые подсказки первого матча: команда → отряд → роль → деплой → захват. Выкл. — пропустить",
+    "pwpwarfare.admin.match.division_blue": "Дивизия BLUE",
+    "pwpwarfare.admin.match.division_red": "Дивизия RED",
+    "pwpwarfare.admin.match.division.auto": "Авто (режим и размер карты)"
 }

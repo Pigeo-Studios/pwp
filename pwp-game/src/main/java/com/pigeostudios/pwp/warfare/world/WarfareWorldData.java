@@ -239,25 +239,104 @@ public class WarfareWorldData extends SavedData {
         if (!this.vehicles.pendingVehicleSpawners.isEmpty()) setDirty();
     }
 
+    /**
+     * Дивизии фракции команды пришли вместе с пулом (этап 6 ROADMAP): выбрать дивизию — запрошенную
+     * ({@code match.<team>Division}), иначе под режим и размер карты — и запомнить выбор в состоянии матча.
+     */
+    public void applyDivisions(String team, JsonArray arr) {
+        boolean blue = team.equalsIgnoreCase("BLUE");
+        List<String> warnings = new ArrayList<>();
+        List<com.pigeostudios.pwp.warfare.vehicles.Division> list =
+                com.pigeostudios.pwp.warfare.vehicles.Division.listFromJson(arr, warnings);
+        for (String w : warnings) PWP_LOG.warn("Дивизии {}: {}", team, w);
+        if (blue) this.vehicles.blueDivisions = list;
+        else this.vehicles.redDivisions = list;
+        chooseDivision(team);
+    }
+
+    /** Выбрать дивизию команды из загруженных (после загрузки или смены в админ-панели). */
+    public void chooseDivision(String team) {
+        boolean blue = team.equalsIgnoreCase("BLUE");
+        List<com.pigeostudios.pwp.warfare.vehicles.Division> list =
+                blue ? this.vehicles.blueDivisions : this.vehicles.redDivisions;
+        String requested = blue ? this.match.blueDivision : this.match.redDivision;
+        var size = this.match.mapSizeBlocks > 0
+                ? com.pigeostudios.pwp.warfare.vehicles.Division.MapSize.of(
+                        this.match.mapSizeBlocks, this.match.mapSizeBlocks)
+                : null;
+        var chosen = com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.choose(
+                list, requested, this.match.gameMode, size, new Random());
+        if (blue) {
+            this.vehicles.blueDivision = chosen;
+            this.match.blueDivision = chosen == null ? "" : chosen.id();
+        } else {
+            this.vehicles.redDivision = chosen;
+            this.match.redDivision = chosen == null ? "" : chosen.id();
+        }
+        if (chosen != null) {
+            var slots = divisionSlots(team);
+            Map<String, String> pool = poolRoles(team);
+            PWP_LOG.info(
+                    "Дивизия {}: {} ({}), замечания: {}",
+                    team,
+                    chosen.id(),
+                    chosen.displayName(),
+                    com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.problems(slots, pool, chosen));
+        } else if (!list.isEmpty()) {
+            PWP_LOG.warn("Дивизия {}: не выбрана — общий пул фракции", team);
+        }
+        setDirty();
+    }
+
+    /** Слоты техники команды из map_config в порядке конфига (для раздачи дивизии). */
+    private List<com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.Slot> divisionSlots(String team) {
+        List<com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.Slot> out = new ArrayList<>();
+        for (ConfigVehicleSpawner c : this.vehicles.configVehicleSpawners) {
+            if (c.team.equalsIgnoreCase(team)) {
+                out.add(new com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.Slot(c.role, c.vehicleName));
+            }
+        }
+        return out;
+    }
+
+    /** Пул фракции команды: имя машины → роль (category). */
+    private Map<String, String> poolRoles(String team) {
+        Map<String, FactionVehicleData> factionData =
+                team.equalsIgnoreCase("BLUE") ? this.vehicles.blueFactionVehicles : this.vehicles.redFactionVehicles;
+        Map<String, String> pool = new HashMap<>();
+        factionData.forEach((name, v) -> pool.put(name, v.category == null ? "" : v.category));
+        return pool;
+    }
+
     private void applyConfigVehicleSpawner(ConfigVehicleSpawner cfg, ServerLevel level) {
         BlockPos pos = new BlockPos(cfg.x, cfg.y, cfg.z);
         Map<String, FactionVehicleData> factionData = cfg.team.equalsIgnoreCase("BLUE")
                 ? this.vehicles.blueFactionVehicles
                 : this.vehicles.redFactionVehicles;
-        FactionVehicleData veh = null;
-        if (cfg.vehicleName != null && !cfg.vehicleName.isEmpty()) {
-            // Слот с явно указанной машиной (обратная совместимость)
-            veh = factionData.get(cfg.vehicleName);
-        } else if (cfg.role != null && !cfg.role.isEmpty()) {
-            // Squad-стиль: слот задаёт роль, машину подставляет пул фракции из БД
-            for (FactionVehicleData candidate : factionData.values()) {
-                if (cfg.role.equalsIgnoreCase(candidate.category)
-                        && (veh == null || candidate.vehicleName.compareTo(veh.vehicleName) < 0)) {
-                    veh = candidate;
-                }
-            }
+        // Слот задаёт роль, машину — дивизия команды (этап 6 ROADMAP) или, без дивизий, пул фракции
+        // (первая по алфавиту машина роли, как раньше); явная машина слота не меняется
+        var division = cfg.team.equalsIgnoreCase("BLUE") ? this.vehicles.blueDivision : this.vehicles.redDivision;
+        int index = 0;
+        for (ConfigVehicleSpawner c : this.vehicles.configVehicleSpawners) {
+            if (c == cfg) break;
+            if (c.team.equalsIgnoreCase(cfg.team)) index++;
         }
-        if (veh == null) return;
+        var picks = com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.assign(
+                divisionSlots(cfg.team), poolRoles(cfg.team), division);
+        var pick =
+                index < picks.size() ? picks.get(index) : com.pigeostudios.pwp.warfare.vehicles.DivisionPlan.Pick.EMPTY;
+        FactionVehicleData veh = pick.vehicleName() == null ? null : factionData.get(pick.vehicleName());
+        if (veh == null) {
+            // в составе дивизии нет машины для этого слота — уже стоящий спавнер гасим (пустой id = не спавнит)
+            if (division != null
+                    && !cfg.fixed
+                    && level.getBlockEntity(pos) instanceof VehicleSpawnerBlockEntity spawner) {
+                spawner.vehicleName = "";
+                spawner.vehicleIdString = "";
+                spawner.setChanged();
+            }
+            return;
+        }
 
         // Имя машины, выбранной по роли, фиксируем в конфиге (стабильный выбор)
         String effectiveVehicleName =
@@ -269,6 +348,7 @@ public class WarfareWorldData extends SavedData {
                 spawner.vehicleName = effectiveVehicleName;
                 spawner.loadDefaultsFromFactionVehicle(veh);
                 if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
+                if (pick.respawnSeconds() > 0) spawner.respawnTimeSettings = pick.respawnSeconds();
             }
         } else {
             level.setBlock(
@@ -282,6 +362,7 @@ public class WarfareWorldData extends SavedData {
                 spawner.vehicleName = effectiveVehicleName;
                 spawner.loadDefaultsFromFactionVehicle(veh);
                 if (cfg.yaw != 0) spawner.vehicleYaw = cfg.yaw;
+                if (pick.respawnSeconds() > 0) spawner.respawnTimeSettings = pick.respawnSeconds();
             }
         }
     }

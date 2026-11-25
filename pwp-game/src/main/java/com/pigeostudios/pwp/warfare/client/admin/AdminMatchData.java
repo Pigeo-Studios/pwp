@@ -69,6 +69,17 @@ public final class AdminMatchData {
         return out;
     }
 
+    /** Варианты дивизии команды («auto» + загруженные id); нет данных — только «auto». */
+    public List<String> divisions(String team) {
+        List<String> out = new ArrayList<>();
+        String key = team.equalsIgnoreCase("BLUE") ? "blueDivisions" : "redDivisions";
+        if (raw.has(key) && raw.get(key).isJsonArray()) {
+            for (JsonElement e : raw.getAsJsonArray(key)) out.add(e.getAsString());
+        }
+        if (!out.contains("auto")) out.add(0, "auto");
+        return out;
+    }
+
     public List<IssueRow> issues() {
         List<IssueRow> out = new ArrayList<>();
         if (!raw.has("issues") || !raw.get("issues").isJsonArray()) return out;

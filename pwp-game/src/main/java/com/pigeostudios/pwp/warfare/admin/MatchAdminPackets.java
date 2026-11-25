@@ -257,6 +257,7 @@ public final class MatchAdminPackets {
     public static final String FORCE_WIN = "match.forceWin";
     public static final String RELOAD_CONFIG = "match.reloadConfig";
     public static final String RELOAD_FACTION_DATA = "match.reloadFactionData";
+    public static final String SET_DIVISION = "match.setDivision";
 
     public record Restart() implements Net.C2S {
         public static void encode(Restart m, FriendlyByteBuf b) {}
@@ -328,6 +329,38 @@ public final class MatchAdminPackets {
         public void handle(ServerPlayer s) {
             run(s, this, RELOAD_FACTION_DATA, AccessLevel.ADMIN, () -> MatchAdmin.reloadFactionData(s.serverLevel()));
         }
+    }
+
+    /** Дивизия команды (этап 6 ROADMAP); {@code division} — id или «auto». */
+    public record SetDivision(String team, String division) implements Net.C2S {
+        public static void encode(SetDivision m, FriendlyByteBuf b) {
+            b.writeUtf(m.team, 8);
+            b.writeUtf(m.division, 64);
+        }
+
+        public static SetDivision decode(FriendlyByteBuf b) {
+            return new SetDivision(b.readUtf(8), b.readUtf(64));
+        }
+
+        @Override
+        public String validate() {
+            return Validate.first(Validate.oneOf("team", team, "BLUE", "RED"), Validate.id("division", division, 64));
+        }
+
+        @Override
+        public void handle(ServerPlayer s) {
+            run(
+                    s,
+                    this,
+                    SET_DIVISION,
+                    AccessLevel.ADMIN,
+                    () -> MatchAdmin.setDivision(s.serverLevel(), team, division));
+        }
+    }
+
+    /** Протокол 8 (25.11.2026) — в конец канала, перед пакетом лимитов. */
+    public static void registerV8(Net.Registrar r) {
+        r.c2s(SetDivision.class, SetDivision::encode, SetDivision::decode);
     }
 
     /** Регистрация пакетов протокола 7 — В КОНЕЦ канала (после PlayerAdminPackets). */

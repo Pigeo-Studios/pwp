@@ -229,6 +229,21 @@ public class MatchAdminTab implements AdminTab {
                                 () -> new MatchAdminPackets.SetFaction("RED", pick("redFaction")),
                                 MatchAdminPackets.SET_FACTION,
                                 "redFaction"))
+                // дивизии (этап 6 ROADMAP): «авто» или состав фракции из БД
+                .control(
+                        Component.translatable("pwpwarfare.admin.match.division_blue"),
+                        divisionCycle("blueDivision", "BLUE"),
+                        apply(
+                                () -> new MatchAdminPackets.SetDivision("BLUE", pick("blueDivision")),
+                                MatchAdminPackets.SET_DIVISION,
+                                "blueDivision"))
+                .control(
+                        Component.translatable("pwpwarfare.admin.match.division_red"),
+                        divisionCycle("redDivision", "RED"),
+                        apply(
+                                () -> new MatchAdminPackets.SetDivision("RED", pick("redDivision")),
+                                MatchAdminPackets.SET_DIVISION,
+                                "redDivision"))
                 .control(
                         Component.translatable("pwpwarfare.admin.match.tickets_blue"),
                         stepper("blueTickets", 50, 0, AdminInput.TICKETS_MAX),
@@ -335,6 +350,23 @@ public class MatchAdminTab implements AdminTab {
                 d -> {
                     List<String> opts =
                             fixed != null ? fixed : (data == null ? AdminInput.DEFAULT_FACTIONS : data.factions());
+                    int i = Math.max(0, opts.indexOf(pick(field)));
+                    pending.put(field, opts.get(Math.floorMod(i + d, opts.size())));
+                });
+    }
+
+    /** Выбор дивизии: варианты — из состояния матча (загруженные дивизии фракции команды). */
+    private UIChoice divisionCycle(String field, String team) {
+        return new UIChoice(
+                () -> {
+                    String v = pick(field);
+                    Component c = v.isEmpty() || v.equals("auto")
+                            ? Component.translatable("pwpwarfare.admin.match.division.auto")
+                            : Component.literal(v);
+                    return pending.containsKey(field) ? c.copy().append(" *") : c;
+                },
+                d -> {
+                    List<String> opts = data == null ? List.of("auto") : data.divisions(team);
                     int i = Math.max(0, opts.indexOf(pick(field)));
                     pending.put(field, opts.get(Math.floorMod(i + d, opts.size())));
                 });

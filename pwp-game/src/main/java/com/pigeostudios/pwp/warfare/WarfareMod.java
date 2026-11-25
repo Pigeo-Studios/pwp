@@ -160,11 +160,16 @@ public class WarfareMod {
                     JsonObject blue = teams.getAsJsonObject("BLUE");
                     data.match.blueFaction = blue.get("faction").getAsString();
                     data.match.blueTickets = blue.get("tickets").getAsInt();
+                    // дивизия (этап 6 ROADMAP): нет ключа — авто-выбор под режим и карту
+                    data.match.blueDivision =
+                            blue.has("division") ? blue.get("division").getAsString() : "";
                 }
                 if (teams.has("RED")) {
                     JsonObject red = teams.getAsJsonObject("RED");
                     data.match.redFaction = red.get("faction").getAsString();
                     data.match.redTickets = red.get("tickets").getAsInt();
+                    data.match.redDivision =
+                            red.has("division") ? red.get("division").getAsString() : "";
                 }
             }
 

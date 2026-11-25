@@ -364,6 +364,8 @@ public class PacketHandler {
         // 19.11.2026 (протокол 7): админ-панель — действия над игроком, матч (рестарт/победа/перезагрузка)
         com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.register(v2);
         com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerV7(v2);
+        // 8 (25.11.2026): дивизия команды в админ-панели
+        com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerV8(v2);
         // 8 (25.11.2026, pwp-game): лимиты (бывший канал pwplimit:network) — в конец
         id = com.pigeostudios.pwp.limit.network.NetworkHandler.register(INSTANCE, v2.nextId());
     }

@@ -207,6 +207,26 @@ public final class MatchAdmin {
         return null;
     }
 
+    /** Значение «авто» в админ-панели: дивизия выбирается под режим и размер карты. */
+    public static final String DIVISION_AUTO = "auto";
+
+    /**
+     * Дивизия команды (этап 6 ROADMAP). Действует сразу, если дивизии фракции уже загружены: до GO пустые
+     * слоты перевыставляются, стоящая техника доживает до своего респавна.
+     */
+    public static String setDivision(ServerLevel level, String team, String division) {
+        String t = AdminInput.team(team);
+        if (t == null) return ERR_BAD_TEAM;
+        String id = division == null || division.equalsIgnoreCase(DIVISION_AUTO) ? "" : division.trim();
+        WarfareWorldData data = WarfareWorldData.get(level);
+        if (t.equals("BLUE")) data.match.blueDivision = id;
+        else data.match.redDivision = id;
+        data.chooseDivision(t);
+        if (!data.match.isGameStarted) data.fillVehicleSpawnersFromFactionDefaults(level);
+        sync(level, data);
+        return null;
+    }
+
     public static String setTickets(ServerLevel level, String team, int amount) {
         String t = AdminInput.team(team);
         if (t == null) return ERR_BAD_TEAM;
@@ -413,6 +433,12 @@ public final class MatchAdmin {
         o.addProperty("defender", m.invasionDefender == null ? "RED" : m.invasionDefender);
         o.addProperty("blueFaction", m.blueFaction);
         o.addProperty("redFaction", m.redFaction);
+        // дивизии (этап 6): текущий выбор + варианты из загруженных дивизий фракции («auto» — первым)
+        o.addProperty(
+                "blueDivision", m.blueDivision == null || m.blueDivision.isEmpty() ? DIVISION_AUTO : m.blueDivision);
+        o.addProperty("redDivision", m.redDivision == null || m.redDivision.isEmpty() ? DIVISION_AUTO : m.redDivision);
+        o.add("blueDivisions", divisionIds(data.vehicles.blueDivisions));
+        o.add("redDivisions", divisionIds(data.vehicles.redDivisions));
         o.addProperty("blueTickets", m.blueTickets);
         o.addProperty("redTickets", m.redTickets);
         o.addProperty("waitingDefault", WarfareConfig.WAITING_PHASE_SECONDS.get());
@@ -426,6 +452,13 @@ public final class MatchAdmin {
         o.addProperty("returning", GameLogicEvents.returningToLobby());
         o.add("factionData", com.pigeostudios.pwp.warfare.server.FactionDataLoader.statusJson());
         return o;
+    }
+
+    private static JsonArray divisionIds(java.util.List<com.pigeostudios.pwp.warfare.vehicles.Division> list) {
+        JsonArray arr = new JsonArray();
+        arr.add(DIVISION_AUTO);
+        for (var d : list) arr.add(d.id());
+        return arr;
     }
 
     public static JsonArray issuesJson() {
