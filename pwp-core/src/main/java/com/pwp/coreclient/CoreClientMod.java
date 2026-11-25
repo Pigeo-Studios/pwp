@@ -41,6 +41,8 @@ public class CoreClientMod {
     private void commonSetup(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             PacketHandler.register();
+            // магазин за Coins (этап 8 ROADMAP): тип данных shop
+            com.pwp.coreclient.network.data.ShopData.registerData();
         });
     }
 }

@@ -116,6 +116,20 @@ public final class DataRequests {
         });
     }
 
+    /**
+     * Сервер сам обновляет данные игрока (после его действия: покупка, экипировка) — без антиспама запросов;
+     * пустые параметры.
+     */
+    public static void refresh(ServerPlayer player, String type) {
+        Handler handler = HANDLERS.get(type);
+        if (handler == null) return;
+        JsonObject params = new JsonObject();
+        ServerThread.thenForPlayer(
+                handler.fetch(player, params),
+                player,
+                (online, response) -> send(online, type, handler.toJson(online, params, response)));
+    }
+
     /** Отправка ответа; слишком большой ответ заменяется пустым с ошибкой в логе (а не крашем канала). */
     public static void send(ServerPlayer player, String type, String json) {
         if (!Payloads.fits(json)) {

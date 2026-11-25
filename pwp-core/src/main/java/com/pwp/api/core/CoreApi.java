@@ -334,6 +334,23 @@ public final class CoreApi {
         return send("DELETE", "/api/v1/factions/" + enc(faction.toLowerCase()) + "/vehicles/" + enc(vehicleName), null);
     }
 
+    // ====== МАГАЗИН (этап 8 ROADMAP) ======
+
+    /** Витрина {@code {data: [{skinId, name, description, slotType, rarity, priceCoins, priceReal, ...}]}}. */
+    public static CompletableFuture<JsonObject> getShop() {
+        return get("/api/v1/shop");
+    }
+
+    /** Баланс Coins {@code {data: {balance, totalEarned, totalSpent}}}. */
+    public static CompletableFuture<JsonObject> getBalance(String uuid) {
+        return get("/api/v1/currency/" + enc(uuid));
+    }
+
+    /** Покупка за Coins одной транзакцией в core (только сервер): {@code {data: {balance, itemUuid}}} или error. */
+    public static CompletableFuture<JsonObject> shopBuy(String uuid, String skinId) {
+        return post("/api/v1/shop/buy", map("uuid", uuid, "skinId", skinId));
+    }
+
     // ====== ДИВИЗИИ (составы) ФРАКЦИЙ — этап 6 ROADMAP ======
 
     /** {@code {data: [{faction, divisionId, displayName, modes, mapSizes, vehicles: [...]}]}}. */

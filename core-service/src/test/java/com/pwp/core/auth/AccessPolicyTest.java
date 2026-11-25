@@ -24,6 +24,8 @@ class AccessPolicyTest {
         assertTrue(AccessPolicy.serverOnly("PUT", "/api/v1/factions/usa/divisions/mech"));
         assertTrue(AccessPolicy.serverOnly("DELETE", "/api/v1/factions/usa/divisions/mech"));
         assertFalse(AccessPolicy.serverOnly("GET", "/api/v1/factions/usa/divisions"));
+        assertTrue(AccessPolicy.serverOnly("POST", "/api/v1/shop/buy"));
+        assertFalse(AccessPolicy.serverOnly("GET", "/api/v1/shop"));
         assertEquals("server only", AccessPolicy.denyReason("POST", "/api/v1/currency/add", "{}", ME));
     }
 

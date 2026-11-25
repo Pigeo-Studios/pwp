@@ -121,6 +121,14 @@ public class PWPPauseScreen extends Screen {
             }
             buttons.add(mapEditor);
         }
+        // магазин за Coins (этап 8 ROADMAP) — только на сервере (в одиночке core нет)
+        if (!mc.isLocalServer()) {
+            buttons.add(new UIButton(
+                            Component.translatable("pwp_core.pause.shop"),
+                            () -> mc.setScreen(preview ? PWPShopScreen.preview(false) : new PWPShopScreen(this)))
+                    .style(UIButton.Style.DARK)
+                    .icon(UIIcon.PROFILE));
+        }
         buttons.add(new UIButton(
                         Component.translatable("pwp_core.pause.howto"),
                         () -> mc.setScreen(new PWPHowToPlayScreen(this)))

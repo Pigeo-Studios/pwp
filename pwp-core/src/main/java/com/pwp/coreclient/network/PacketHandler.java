@@ -96,5 +96,12 @@ public class PacketHandler {
                         com.pwp.coreclient.network.data.ServerAdmin.Announce::decode);
         // 8: косметика (раньше — свой канал pwp_cosmetics:main)
         id = com.pwp.cosmetics.CosmeticsMod.registerPackets(INSTANCE, v2.nextId());
+        // 8: игровой магазин за Coins (этап 8 ROADMAP)
+        id = new Net.Registrar(INSTANCE, id)
+                .c2s(
+                        com.pwp.coreclient.network.data.ShopData.Buy.class,
+                        com.pwp.coreclient.network.data.ShopData.Buy::encode,
+                        com.pwp.coreclient.network.data.ShopData.Buy::decode)
+                .nextId();
     }
 }

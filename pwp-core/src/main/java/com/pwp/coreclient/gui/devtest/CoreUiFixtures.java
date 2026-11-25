@@ -57,6 +57,8 @@ public final class CoreUiFixtures {
                         com.pwp.coreclient.admin.AdminBackend.PREVIEW));
         UiGallery.register("core.main_menu", PWPMainMenuScreen::new);
         UiGallery.register("core.howto", () -> new com.pwp.coreclient.gui.screens.PWPHowToPlayScreen(null));
+        UiGallery.register(
+                "core.shop", () -> com.pwp.coreclient.gui.screens.PWPShopScreen.preview(UiGallery.emptyData()));
         UiGallery.register("core.inventory.player", InventoryStylePreviewScreen::player);
         UiGallery.register("core.inventory.chest", InventoryStylePreviewScreen::chest);
         UiGallery.register("core.loading.connecting", () -> new PWPLoadingScreen(PWPLoadingScreen.Context.CONNECTING));
