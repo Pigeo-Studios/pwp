@@ -1216,5 +1216,14 @@
     "pwpwarfare.admin.match.error.no_config": "map_config.json не найден",
     "pwpwarfare.admin.match.error.apply_failed": "map_config не применился — смотрите лог сервера",
     "pwpwarfare.admin.match.error.no_core": "На сервере нет core-service — киты берутся из мира",
-    "pwpwarfare.admin.match.error.no_factions": "Фракции не заданы"
+    "pwpwarfare.admin.match.error.no_factions": "Фракции не заданы",
+    "gui.pwpwarfare.tutorial.prefix": "Обучение %s/%s · %s",
+    "gui.pwpwarfare.tutorial.team": "Выберите команду — «АВТО» отправит в меньшую",
+    "gui.pwpwarfare.tutorial.squad": "Вступите в отряд: [%s] → «БЫСТРО». Побеждают отряды, а не одиночки",
+    "gui.pwpwarfare.tutorial.role": "Выберите роль: [%s] → сетка ролей. Для начала — стрелок",
+    "gui.pwpwarfare.tutorial.deploy": "После старта выходите из мейна с отрядом. Погибли — [%s] → точка на карте → «Деплой»",
+    "gui.pwpwarfare.tutorial.capture": "Захватите точку: встаньте в зону следующей точки (компас, карта [%s])",
+    "gui.pwpwarfare.tutorial.done": "Обучение пройдено! Держитесь отряда и идите по меткам лидера",
+    "gui.pwpwarfare.ui_settings.hud.tutorial": "Обучение новичка",
+    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Пошаговые подсказки первого матча: команда → отряд → роль → деплой → захват. Выкл. — пропустить"
 }

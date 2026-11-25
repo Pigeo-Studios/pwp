@@ -1,6 +1,7 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.pigeostudios.pwp.warfare.client.gui.TeamSelectionScreen;
+import com.pigeostudios.pwp.warfare.tutorial.Tutorial;
 import com.pwp.coreclient.hints.Hints;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -26,17 +27,19 @@ public final class WarfareHints {
     }
 
     public static void register() {
+        registerTutorial();
         Hints.register(
                 "match.team",
                 90,
                 false,
-                () -> Minecraft.getInstance().screen instanceof TeamSelectionScreen,
+                () -> !TutorialClient.active() && Minecraft.getInstance().screen instanceof TeamSelectionScreen,
                 () -> Component.translatable("gui.pwpwarfare.hint.team"));
         Hints.register(
                 "staging.squad",
                 80,
                 false,
-                () -> inWorldNoScreen()
+                () -> !TutorialClient.active()
+                        && inWorldNoScreen()
                         && ClientStaging.isWaiting()
                         && ClientStaging.hasTeam()
                         && ClientStaging.mySquad() == null,
@@ -46,7 +49,8 @@ public final class WarfareHints {
                 "staging.role",
                 70,
                 false,
-                () -> inWorldNoScreen()
+                () -> !TutorialClient.active()
+                        && inWorldNoScreen()
                         && ClientStaging.isWaiting()
                         && ClientStaging.mySquad() != null
                         && !ClientStaging.hasKit(),
@@ -102,5 +106,58 @@ public final class WarfareHints {
                 true,
                 () -> inWorldNoScreen() && ClientData.isGameStarted && ClientStaging.hasKit(),
                 () -> Component.translatable("gui.pwpwarfare.hint.battle.ping", k(ModKeyBindings.PLACE_PING_KEY)));
+    }
+
+    /**
+     * Обучение новичка (этап 5 ROADMAP): по подсказке на шаг, приоритет выше всех прочих (100+), «Обучение N/5»
+     * в тексте. Шаг ведёт {@link TutorialClient}; подсказка повторяется, пока шаг не выполнен (как обычные).
+     */
+    private static void registerTutorial() {
+        Hints.register(
+                "tutorial.team",
+                110,
+                false,
+                () -> TutorialClient.showing(Tutorial.Step.TEAM)
+                        && (Minecraft.getInstance().screen instanceof TeamSelectionScreen || inWorldNoScreen()),
+                () -> step(Tutorial.Step.TEAM));
+        Hints.register(
+                "tutorial.squad",
+                109,
+                false,
+                () -> TutorialClient.showing(Tutorial.Step.SQUAD) && inWorldNoScreen(),
+                () -> step(Tutorial.Step.SQUAD, k(ModKeyBindings.OPEN_SQUAD_MENU_KEY)));
+        Hints.register(
+                "tutorial.role",
+                108,
+                false,
+                () -> TutorialClient.showing(Tutorial.Step.ROLE) && inWorldNoScreen(),
+                () -> step(Tutorial.Step.ROLE, k(ModKeyBindings.OPEN_SQUAD_MENU_KEY)));
+        Hints.register(
+                "tutorial.deploy",
+                107,
+                false,
+                () -> TutorialClient.showing(Tutorial.Step.DEPLOY) && inWorldNoScreen(),
+                () -> step(Tutorial.Step.DEPLOY, k(ModKeyBindings.OPEN_SQUAD_MENU_KEY)));
+        Hints.register(
+                "tutorial.capture",
+                106,
+                false,
+                () -> TutorialClient.showing(Tutorial.Step.CAPTURE) && inWorldNoScreen(),
+                () -> step(Tutorial.Step.CAPTURE, k(ModKeyBindings.OPEN_MAP_KEY)));
+        Hints.register(
+                "tutorial.done",
+                105,
+                true,
+                () -> TutorialClient.justFinished() && inWorldNoScreen(),
+                () -> Component.translatable("gui.pwpwarfare.tutorial.done"));
+    }
+
+    /** «Обучение N/5 · текст шага». */
+    private static Component step(Tutorial.Step s, Object... args) {
+        return Component.translatable(
+                "gui.pwpwarfare.tutorial.prefix",
+                s.number(),
+                Tutorial.TOTAL,
+                Component.translatable(s.langKey(), args));
     }
 }

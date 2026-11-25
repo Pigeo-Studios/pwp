@@ -132,6 +132,11 @@ public final class WarfareUiSettings {
             .tooltip("gui.pwpwarfare.ui_settings.hud.side_map_bg.tip");
 
     /** Лента компаса сверху (с метками): TopHud.compass; выключено — полоса тикетов поднимается на её место. */
+    /** Обучение новичка (TutorialClient → подсказки tutorial.* в WarfareHints); выкл = пропустить. */
+    public static final UiSettings.Toggle TUTORIAL = UiSettings.toggle(
+                    "hud.tutorial", HUD, "gui.pwpwarfare.ui_settings.hud.tutorial", true)
+            .tooltip("gui.pwpwarfare.ui_settings.hud.tutorial.tip");
+
     public static final UiSettings.Toggle COMPASS = UiSettings.toggle(
                     "hud.compass", HUD, "gui.pwpwarfare.ui_settings.hud.compass", true)
             .tooltip("gui.pwpwarfare.ui_settings.hud.compass.tip");

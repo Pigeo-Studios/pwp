@@ -1216,5 +1216,14 @@
     "pwpwarfare.admin.match.error.no_config": "map_config.json not found",
     "pwpwarfare.admin.match.error.apply_failed": "map_config was not applied — see the server log",
     "pwpwarfare.admin.match.error.no_core": "No core-service on this server — kits come from the world",
-    "pwpwarfare.admin.match.error.no_factions": "Factions are not set"
+    "pwpwarfare.admin.match.error.no_factions": "Factions are not set",
+    "gui.pwpwarfare.tutorial.prefix": "Tutorial %s/%s · %s",
+    "gui.pwpwarfare.tutorial.team": "Pick a team — AUTO puts you into the smaller one",
+    "gui.pwpwarfare.tutorial.squad": "Join a squad: [%s] → QUICK JOIN. Squads win games, lone wolves don't",
+    "gui.pwpwarfare.tutorial.role": "Pick a role: [%s] → role grid. Rifleman is a good start",
+    "gui.pwpwarfare.tutorial.deploy": "After GO leave the main with your squad. Dead? [%s] → spawn point on the map → Deploy",
+    "gui.pwpwarfare.tutorial.capture": "Capture a point: stand inside the next point zone (compass, map [%s])",
+    "gui.pwpwarfare.tutorial.done": "Tutorial complete! Stick with your squad and follow the leader's markers",
+    "gui.pwpwarfare.ui_settings.hud.tutorial": "Newcomer tutorial",
+    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Step-by-step hints for the first match: team → squad → role → deploy → capture. Off = skip"
 }

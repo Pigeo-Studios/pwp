@@ -1216,5 +1216,14 @@
     "pwpwarfare.admin.match.error.no_config": "map_config.json не знайдено",
     "pwpwarfare.admin.match.error.apply_failed": "map_config не застосувався — дивіться лог сервера",
     "pwpwarfare.admin.match.error.no_core": "На сервері немає core-service — кіти беруться зі світу",
-    "pwpwarfare.admin.match.error.no_factions": "Фракції не задані"
+    "pwpwarfare.admin.match.error.no_factions": "Фракції не задані",
+    "gui.pwpwarfare.tutorial.prefix": "Навчання %s/%s · %s",
+    "gui.pwpwarfare.tutorial.team": "Оберіть команду — «АВТО» відправить до меншої",
+    "gui.pwpwarfare.tutorial.squad": "Вступіть у загін: [%s] → «ШВИДКО». Перемагають загони, а не одинаки",
+    "gui.pwpwarfare.tutorial.role": "Оберіть роль: [%s] → сітка ролей. Для початку — стрілець",
+    "gui.pwpwarfare.tutorial.deploy": "Після старту виходьте з мейну із загоном. Загинули — [%s] → точка на мапі → «Деплой»",
+    "gui.pwpwarfare.tutorial.capture": "Захопіть точку: станьте в зону наступної точки (компас, мапа [%s])",
+    "gui.pwpwarfare.tutorial.done": "Навчання пройдено! Тримайтеся загону та йдіть за мітками лідера",
+    "gui.pwpwarfare.ui_settings.hud.tutorial": "Навчання новачка",
+    "gui.pwpwarfare.ui_settings.hud.tutorial.tip": "Покрокові підказки першого матчу: команда → загін → роль → деплой → захоплення. Вимк. — пропустити"
 }
