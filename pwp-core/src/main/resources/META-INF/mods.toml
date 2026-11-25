@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All rights reserved"
+
+# PWP Core: CoreApi (core-service), UI-кит и меню, сеть данных GUI, админ-панель, баны,
+# лобби (само выключается на матч-серверах match_*), косметика.
+# Бывшие моды pwpapi, pwp_core_client, pwpcore, pwp_lobby, pwp_cosmetics (слиты 25.11.2026);
+# неймспейсы ассетов (pwp_core_client/pwp_lobby/pwp_cosmetics) и lang-ключи прежние.
+[[mods]]
+modId="pwpcore"
+version="2.0.0"
+displayName="PWP Core"
+credits="Pigeo Studios"
+authors="Pigeo Studios"
+description='''
+PWP core: lobby, menus, UI kit, admin panel, cosmetics and the core-service client.
+'''
+
+[[dependencies.pwpcore]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.pwpcore]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"

@@ -18,7 +18,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
@@ -238,7 +237,7 @@ public class MatchStatsTracker {
 
     /** Отправка матча, наград и статистики игроков в core-service. Только фоновый поток. */
     private void persistResults(JsonObject match, String winner, int durationSec) {
-        if (ModList.get().isLoaded("pwpcore")) {
+        if (com.pwp.api.core.CoreApi.isConfigured()) {
             log.info("Saving match result to Core API...");
             try {
                 JsonObject response = CoreApi.await(CoreApi.saveMatch(match));

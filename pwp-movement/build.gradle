@@ -36,7 +36,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
     // HUD-кит (HudZones/HudDraw/HudTheme, этап 2 редизайна HUD)
-    implementation project(':pwp-core-client')
+    implementation project(':pwp-core')
 }
 
 jar {

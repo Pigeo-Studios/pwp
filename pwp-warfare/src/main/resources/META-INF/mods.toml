@@ -38,34 +38,9 @@ side="BOTH"
 [[dependencies.pwpwarfare]]
 modId="pwpcore"
 mandatory=true
-versionRange="[1.0,)"
-ordering="BEFORE"
-side="SERVER"
-
-[[dependencies.pwpwarfare]]
-    modId="pwpapi"
-    mandatory=true
-    versionRange="[1.0,)"
-    ordering="AFTER"
-    side="BOTH"
-
-# Классы core-client (сеть лобби, единая система данных GUI, UI) и косметики используются
-# напрямую — без этих модов Forge падал с NoClassDefFoundError вместо понятной ошибки
-[[dependencies.pwpwarfare]]
-    modId="pwp_core_client"
-    mandatory=true
-    versionRange="[1.0,)"
-    ordering="AFTER"
-    side="BOTH"
-
-[[dependencies.pwpwarfare]]
-    modId="pwp_cosmetics"
-    mandatory=true
-    versionRange="[1.0,)"
-    ordering="AFTER"
-    side="BOTH"
-
-# 18.11.2026: классы этих модов используются напрямую — без них понятный экран «не хватает мода», а не NoClassDefFoundError
+versionRange="[2.0,)"
+ordering="AFTER"
+side="BOTH"
 
 [[dependencies.pwpwarfare]]
     modId="geckolib"

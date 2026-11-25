@@ -381,7 +381,7 @@ public final class MatchAdmin {
 
     /** Перезагрузить киты и пулы техники фракций из core-service (асинхронно; статус — в adminMatch). */
     public static String reloadFactionData(ServerLevel level) {
-        if (!net.minecraftforge.fml.ModList.get().isLoaded("pwpcore")) return ERR_NO_CORE;
+        if (!com.pwp.api.core.CoreApi.isConfigured()) return ERR_NO_CORE;
         WarfareWorldData data = WarfareWorldData.get(level);
         if (data.match.blueFaction == null && data.match.redFaction == null) return ERR_NO_FACTIONS;
         com.pigeostudios.pwp.warfare.server.FactionDataLoader.start(level, data);

@@ -30,8 +30,7 @@ dependencies {
 }
 
 def pwpModules = [
-    'pwp-api', 'pwp-core-server', 'pwp-core-client', 'pwp-cosmetics', 'pwp-limits',
-    'pwp-lobby', 'pwp-medicine', 'pwp-movement', 'pwp-warfare', 'pwp-blast-protection',
+    'pwp-core', 'pwp-limits', 'pwp-medicine', 'pwp-movement', 'pwp-warfare', 'pwp-blast-protection',
     'sbwchunkload', 'pwp-drone'
 ]
 

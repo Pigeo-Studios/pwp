@@ -42,7 +42,6 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig.Type;
@@ -267,7 +266,7 @@ public class WarfareMod {
             boolean awaitingLobby = com.pigeostudios.pwp.warfare.server.LobbyHandoff.isAwaitingSettings();
             if (awaitingLobby) {
                 LOGGER.info("Lobby prewarm: kits/vehicles and waiting phase deferred until lobby settings arrive");
-            } else if (ModList.get().isLoaded("pwpcore")) {
+            } else if (com.pwp.api.core.CoreApi.isConfigured()) {
                 // Киты и пулы техники — из API асинхронно; применяются на главном потоке,
                 // задолго до конца фазы ожидания (300 с)
                 FactionDataLoader.start(level, data);

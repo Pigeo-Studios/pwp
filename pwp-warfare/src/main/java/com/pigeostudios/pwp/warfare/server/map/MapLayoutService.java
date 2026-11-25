@@ -25,7 +25,6 @@ import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
 
 /**
@@ -74,7 +73,7 @@ public final class MapLayoutService {
     }
 
     public static boolean coreAvailable() {
-        return ModList.get().isLoaded("pwpcore");
+        return com.pwp.api.core.CoreApi.isConfigured();
     }
 
     /** Матч уже идёт (отсчёт, подготовка Invasion, бой) — точки на лету не меняем. */

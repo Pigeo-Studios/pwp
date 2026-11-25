@@ -44,7 +44,7 @@ public class ResupplyHandler {
                     itemToGive.setTag(savedTags.get(i));
                 }
 
-                if (ModList.get().isLoaded("pwp_cosmetics")) {
+                { // косметика — часть pwp-core, есть всегда
                     String currentKit = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
                     List<String> allowed = kit.slotSkins != null ? kit.slotSkins.get(i) : null;
                     if (allowed != null && !allowed.isEmpty()) {

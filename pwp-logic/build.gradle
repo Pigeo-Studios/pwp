@@ -2,8 +2,8 @@
 // Тесты идут за секунды: gradlew :pwp-logic:test (без ForgeGradle-задач).
 //
 // Исходники НЕ публикуются отдельным jar: каждая папка src/<модуль>/java подключена
-// как srcDir в свой Forge-модуль (api -> pwp-api, warfare -> pwp-warfare,
-// coreclient -> pwp-core-client) и компилируется ВНУТРЬ его jar. Пакеты прежние,
+// как srcDir в свой Forge-модуль (api, coreclient -> pwp-core; warfare -> pwp-warfare)
+// и компилируется ВНУТРЬ его jar. Пакеты прежние,
 // split-package между модами нет, runClient/обфускация/упаковка не меняются.
 // Правило: здесь не должно быть импортов net.minecraft / net.minecraftforge / io.netty.
 plugins {

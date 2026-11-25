@@ -10,8 +10,8 @@ authors = "Pigeo Studios"
 description = "Добавляет иммерсивное передвижение: наклон камеры, усталость при спринте, оглушение при приземлении и кастомный HUD."
 
 [[dependencies.pwp_movement]]
-modId="pwp_core_client"
+modId="pwpcore"
 mandatory=true
-versionRange="[1.0,)"
+versionRange="[2.0,)"
 ordering="AFTER"
 side="BOTH"
