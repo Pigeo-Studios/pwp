@@ -19,6 +19,8 @@ public class PwpCoreMod {
     public static final String MODID = "pwpcore";
 
     public PwpCoreMod() {
+        // единый конфиг сервера: на выделенном сервере читается (и создаётся с дефолтами) до всех частей
+        if (FMLEnvironment.dist.isDedicatedServer()) ServerRole.settings();
         new CoreClientMod();
         new CosmeticsMod();
         new CoreServerMod();

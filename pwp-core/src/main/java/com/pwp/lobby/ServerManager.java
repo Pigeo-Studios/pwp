@@ -16,9 +16,7 @@ public class ServerManager {
 
     private static final Logger log = LoggerFactory.getLogger(ServerManager.class);
 
-    private static final String TEMPLATE_PATH = "../PWP-Server/match_template";
-    private static final int BASE_PORT = 25566;
-    private static final int MAX_SERVERS = 10;
+    // Шаблон и порты матчей — из config/pwp-server.json (matchServers.template/basePort; раньше зашиты здесь)
     private static final long SERVER_START_TIMEOUT_MS = 300_000;
 
     private static final Map<Integer, ServerInstance> servers = new ConcurrentHashMap<>();
@@ -73,14 +71,16 @@ public class ServerManager {
             boolean awaitSettings) {
         StartResult result = new StartResult();
 
-        Path templatePath = Paths.get(TEMPLATE_PATH).toAbsolutePath().normalize();
+        Path templatePath = Paths.get(com.pwp.api.ServerRole.settings().matchTemplate())
+                .toAbsolutePath()
+                .normalize();
         if (!Files.exists(templatePath)) {
             result.error = "Template not found: " + templatePath;
             return result;
         }
 
         int serverId = nextServerId++;
-        int port = BASE_PORT + serverId - 1;
+        int port = com.pwp.api.ServerRole.settings().basePort() + serverId - 1;
         String dirName = "match_" + String.format("%02d", serverId);
         Path serverDir = Paths.get(dirName).toAbsolutePath();
 

@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Вкладка «Лобби» (только на лобби-сервере, раздел {@code lobby}): фаза голосования, старт/стоп
  * голосования, настройки автостарта/лимита матчей/минимума игроков. Настройки сохраняет сервер в
- * {@code config/pwp_lobby.json}. Данные — тип {@code adminLobby} (регистрирует pwp-lobby).
+ * {@code config/pwp-server.json} (секция lobby). Данные — тип {@code adminLobby} (регистрирует pwp-lobby).
  *
  * <p>UI живёт в core-client (как и {@code PWPLobbyScreen}): pwp-lobby — серверный мод.
  */

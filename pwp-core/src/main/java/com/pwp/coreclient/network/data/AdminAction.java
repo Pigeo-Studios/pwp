@@ -79,7 +79,7 @@ public final class AdminAction {
 
     /**
      * Лобби: применить настройки (автостарт, лимит матчей, минимум игроков). ADMIN — до рестарта лобби;
-     * {@code persist} (только OWNER) — ещё и записать в {@code config/pwp_lobby.json} «навсегда».
+     * {@code persist} (только OWNER) — ещё и записать в {@code config/pwp-server.json} «навсегда».
      */
     public record LobbySaveSettings(boolean autostart, int maxMatches, int minPlayers, boolean persist)
             implements Net.C2S {

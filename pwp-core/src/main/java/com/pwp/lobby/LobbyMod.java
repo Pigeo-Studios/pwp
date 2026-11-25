@@ -101,7 +101,11 @@ public class LobbyMod {
                 return;
             }
 
-            String[] tryPaths = {"../maps", "../PWP-Server/maps", "maps"};
+            // папка карт: mapsDir из config/pwp-server.json, пусто — прежний авто-поиск
+            String configured = com.pwp.api.ServerRole.settings().mapsDir();
+            String[] tryPaths = configured.isBlank()
+                    ? new String[] {"../maps", "../PWP-Server/maps", "maps"}
+                    : new String[] {configured};
             String foundPath = null;
             for (String p : tryPaths) {
                 var f = new java.io.File(p);
@@ -110,11 +114,14 @@ public class LobbyMod {
                     break;
                 }
             }
-            if (foundPath == null) foundPath = "../PWP-Server/maps";
+            if (foundPath == null) {
+                foundPath = configured.isBlank() ? "../PWP-Server/maps" : configured;
+                log.warn("Папка карт не найдена: {} (mapsDir в config/pwp-server.json)", foundPath);
+            }
 
             MapRegistry.configure(foundPath);
             MapRegistry.loadAll();
-            // настройки лобби из config/pwp_lobby.json (раньше minPlayers=1 был зашит здесь)
+            // настройки лобби — секция lobby файла config/pwp-server.json (до 25.11.2026 — config/pwp_lobby.json)
             ServerConfig.load();
             // админ-панель: вкладка «Лобби» видна только на лобби-сервере
             LobbyActionsImpl.registerData();

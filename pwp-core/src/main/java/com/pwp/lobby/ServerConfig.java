@@ -1,30 +1,20 @@
 package com.pwp.lobby;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
+import com.pwp.api.ServerRole;
 import com.pwp.api.config.LobbySettings;
+import com.pwp.api.config.ServerSettings;
 import com.pwp.lobby.match.MatchAllocator;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Настройки лобби-сервера (автостарт, лимит матчей, минимум игроков). Раньше жили только в памяти и
- * сбрасывались при рестарте; теперь — {@code config/pwp_lobby.json} (относительно папки сервера),
- * загрузка в {@link #load()} при старте лобби. ADMIN меняет значения до рестарта, запись в файл
- * («навсегда») — только OWNER (op 4 или роль owner): кнопка панели и команды от op 4.
+ * Настройки лобби-сервера (автостарт, лимит матчей, минимум игроков, предпрогрев) — секция {@code lobby}
+ * единого файла {@code config/pwp-server.json} ({@link com.pwp.api.ServerRole}); до 25.11.2026 —
+ * {@code config/pwp_lobby.json} (переносится один раз автоматически). ADMIN меняет значения до рестарта,
+ * запись в файл («навсегда») — только OWNER (op 4 или роль owner): кнопка панели и команды от op 4.
  */
 public final class ServerConfig {
     private static final Logger LOG = LoggerFactory.getLogger(ServerConfig.class);
-    private static final Path FILE = Paths.get("config", "pwp_lobby.json");
 
     private static volatile LobbySettings settings = LobbySettings.DEFAULT;
     /** Что лежит в файле (после load/save). */
@@ -88,28 +78,11 @@ public final class ServerConfig {
         return !persist || save();
     }
 
-    /** Чтение файла при старте лобби; нет файла — дефолт и создание файла. */
+    /** Чтение при старте лобби (файл создаёт {@link com.pwp.api.ServerRole} на выделенном сервере). */
     public static void load() {
-        LobbySettings loaded = LobbySettings.DEFAULT;
-        if (Files.isRegularFile(FILE)) {
-            try {
-                JsonObject o = JsonParser.parseString(Files.readString(FILE, StandardCharsets.UTF_8))
-                        .getAsJsonObject();
-                List<String> warnings = new ArrayList<>();
-                loaded = LobbySettings.fromJson(o, warnings);
-                if (o.has("prewarm")) {
-                    if (o.get("prewarm").isJsonPrimitive()
-                            && o.getAsJsonPrimitive("prewarm").isBoolean()) {
-                        prewarm = o.get("prewarm").getAsBoolean();
-                    } else {
-                        warnings.add("prewarm: expected true/false, got " + o.get("prewarm"));
-                    }
-                }
-                for (String w : warnings) LOG.warn("{}: {} — взят дефолт", FILE, w);
-            } catch (IOException | JsonParseException | IllegalStateException e) {
-                LOG.warn("{} не прочитан — настройки лобби по умолчанию", FILE, e);
-            }
-        }
+        ServerSettings s = ServerRole.settings();
+        LobbySettings loaded = s.lobby();
+        prewarm = s.prewarm();
         settings = loaded;
         onDisk = loaded;
         prewarmOnDisk = prewarm;
@@ -120,23 +93,13 @@ public final class ServerConfig {
                 loaded.maxMatches(),
                 loaded.minPlayers(),
                 prewarm);
-        if (!Files.isRegularFile(FILE)) save();
     }
 
     private static boolean save() {
-        try {
-            Files.createDirectories(FILE.toAbsolutePath().getParent());
-            Path tmp = FILE.resolveSibling(FILE.getFileName() + ".tmp");
-            JsonObject o = settings.toJson();
-            o.addProperty("prewarm", prewarm);
-            Files.writeString(tmp, o.toString(), StandardCharsets.UTF_8);
-            Files.move(tmp, FILE, StandardCopyOption.REPLACE_EXISTING);
-            onDisk = settings;
-            prewarmOnDisk = prewarm;
-            return true;
-        } catch (IOException e) {
-            LOG.warn("Не удалось записать {}", FILE, e);
-            return false;
-        }
+        ServerSettings next = ServerRole.settings().withLobby(settings).withPrewarm(prewarm);
+        if (!ServerRole.file().save(next, LOG::warn)) return false;
+        onDisk = settings;
+        prewarmOnDisk = prewarm;
+        return true;
     }
 }
