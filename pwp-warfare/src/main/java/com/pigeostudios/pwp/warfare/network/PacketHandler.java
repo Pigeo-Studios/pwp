@@ -36,7 +36,7 @@ public class PacketHandler {
      * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
      * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "7";
+    private static final String PROTOCOL_VERSION = "8";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -63,12 +63,6 @@ public class PacketHandler {
                 PacketApplyMarker::encode,
                 PacketApplyMarker::decode,
                 PacketApplyMarker::handle);
-        INSTANCE.registerMessage(
-                id++,
-                PacketDebugSpawnRally.class,
-                PacketDebugSpawnRally::encode,
-                PacketDebugSpawnRally::decode,
-                PacketDebugSpawnRally::handle);
         INSTANCE.registerMessage(
                 id++,
                 PacketSpawnGhost.class,
@@ -205,12 +199,6 @@ public class PacketHandler {
                 PacketVoteAction::handle);
         INSTANCE.registerMessage(
                 id++,
-                PacketRequestVehicleAmmo.class,
-                PacketRequestVehicleAmmo::encode,
-                PacketRequestVehicleAmmo::decode,
-                PacketRequestVehicleAmmo::handle);
-        INSTANCE.registerMessage(
-                id++,
                 PacketCaptureNotification.class,
                 PacketCaptureNotification::encode,
                 PacketCaptureNotification::decode,
@@ -333,8 +321,6 @@ public class PacketHandler {
                 PacketRemovePath::encode,
                 PacketRemovePath::decode,
                 PacketRemovePath::handle);
-        INSTANCE.registerMessage(
-                id++, PacketForceCMD.class, PacketForceCMD::encode, PacketForceCMD::decode, PacketForceCMD::handle);
         INSTANCE.registerMessage(
                 id++,
                 PacketMainZoneState.class,

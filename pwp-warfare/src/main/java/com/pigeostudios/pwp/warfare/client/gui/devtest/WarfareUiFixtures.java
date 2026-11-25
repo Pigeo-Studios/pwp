@@ -6,14 +6,11 @@ import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.KitPreviewScreen;
-import com.pigeostudios.pwp.warfare.client.gui.PlayerKitSelectScreen;
 import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMarkerRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.StaticGunRadialScreen;
-import com.pigeostudios.pwp.warfare.client.gui.TacticalMapRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.WallRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
-import com.pigeostudios.pwp.warfare.network.PacketOpenPlayerKitMenu;
 import com.pwp.coreclient.gui.devtest.UiGallery;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +56,6 @@ public final class WarfareUiFixtures {
             s.showError(net.minecraft.network.chat.Component.translatable("pwpwarfare.team.result.full"));
             return s;
         });
-        UiGallery.register("warfare.kits.select", WarfareUiFixtures::kitSelect);
         UiGallery.register("warfare.kits.preview", WarfareUiFixtures::kitPreview);
         UiGallery.register("warfare.radial.radio", () -> new RadioRadialScreen().asPreview());
         UiGallery.register("warfare.radial.defense", () -> new DefenseRadialScreen(null).asPreview());
@@ -67,7 +63,6 @@ public final class WarfareUiFixtures {
         UiGallery.register("warfare.radial.static_guns", () -> new StaticGunRadialScreen(null).asPreview());
         UiGallery.register("warfare.radial.hub", () -> new HubRadialScreen(BlockPos.ZERO).asPreview());
         UiGallery.register("warfare.radial.markers", () -> new SquadMarkerRadialScreen(0, 0, null).asPreview());
-        UiGallery.register("warfare.radial.tactical", () -> new TacticalMapRadialScreen(0, 0, null).asPreview());
         UiGallery.register("warfare.map_editor", WarfareUiFixtures::mapEditor);
         // низ HUD матча (хотбар, HP/броня, БК, припасы, контекстный ярус) на фикстурах
         UiGallery.register("hud", HudPreviewScreen::new);
@@ -148,29 +143,6 @@ public final class WarfareUiFixtures {
             items.add(new ItemStack(Items.IRON_CHESTPLATE));
         }
         return new KitPreviewScreen(null, name("Rifleman", 0), items);
-    }
-
-    private static PlayerKitSelectScreen kitSelect() {
-        List<PacketOpenPlayerKitMenu.KitDTO> list = new ArrayList<>();
-        if (!UiGallery.emptyData()) {
-            String[][] kits = {
-                {"Rifleman", "DIRECT_COMBAT"}, {"Medic", "SUPPORT"}, {"LAT", "SPECIALIST"},
-                {"Machine Gunner", "FIRE_SUPPORT"}, {"Marksman", "SPECIALIST"}, {"Engineer", "SUPPORT"},
-                {"Squad Leader", "DIRECT_COMBAT"}, {"Crewman", "SUPPORT"}
-            };
-            for (int i = 0; i < kits.length; i++) {
-                boolean avail = i % 3 != 2;
-                list.add(new PacketOpenPlayerKitMenu.KitDTO(
-                        name(kits[i][0], i),
-                        kits[i][1],
-                        "",
-                        avail,
-                        avail ? "" : name("Лимит роли в отряде исчерпан", i),
-                        i == 0,
-                        List.of(new ItemStack(Items.CROSSBOW))));
-            }
-        }
-        return new PlayerKitSelectScreen(list).asPreview();
     }
 
     // ------------------------------------------------------------ деплой
