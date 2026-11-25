@@ -341,7 +341,8 @@ public final class CoreApi {
         return get("/api/v1/factions/" + enc(faction.toLowerCase()) + "/divisions");
     }
 
-    public static CompletableFuture<JsonObject> saveFactionDivision(String faction, String divisionId, JsonObject data) {
+    public static CompletableFuture<JsonObject> saveFactionDivision(
+            String faction, String divisionId, JsonObject data) {
         return put("/api/v1/factions/" + enc(faction.toLowerCase()) + "/divisions/" + enc(divisionId), data);
     }
 
