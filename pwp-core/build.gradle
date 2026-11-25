@@ -108,6 +108,12 @@ tasks.named('jar') {
             throw new GradleException("FAIL: $jarFile.name — в $refmapName нет записи ScreenInvoker (addRenderableWidget)")
         }
         println "OK: $jarFile.name — рефмап + запись ScreenInvoker присутствуют"
+            // Гигиена: в build/libs только свежий jar — build.bat копирует все *.jar (старые версии и
+            // jar бывших модулей при смене имени остаются в папке, Forge грузил бы случайный)
+            jarFile.parentFile.listFiles().findAll { it.name.endsWith('.jar') && it != jarFile }.each {
+                println "Удалён старый jar: ${it.name}"
+                it.delete()
+            }
     }
 }
 

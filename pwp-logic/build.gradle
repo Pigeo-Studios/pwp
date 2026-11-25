@@ -2,7 +2,7 @@
 // Тесты идут за секунды: gradlew :pwp-logic:test (без ForgeGradle-задач).
 //
 // Исходники НЕ публикуются отдельным jar: каждая папка src/<модуль>/java подключена
-// как srcDir в свой Forge-модуль (api, coreclient -> pwp-core; warfare -> pwp-warfare)
+// как srcDir в свой Forge-модуль (api, coreclient -> pwp-core; warfare -> pwp-game)
 // и компилируется ВНУТРЬ его jar. Пакеты прежние,
 // split-package между модами нет, runClient/обфускация/упаковка не меняются.
 // Правило: здесь не должно быть импортов net.minecraft / net.minecraftforge / io.netty.
@@ -41,4 +41,9 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Тесты читают боевые файлы (карты, lang, белый список клавиш) — они входы теста, иначе Gradle
+    // считает тест «up-to-date» и не замечает сломанный путь (после слияния модулей так и было)
+    inputs.dir('../maps').withPropertyName('maps')
+    inputs.dir('../pwp-game/src/main/resources/assets/pwpwarfare/lang').withPropertyName('warfareLang')
+    inputs.dir('../pwp-core/src/main/resources/assets/pwp_core_client/controls').withPropertyName('controls')
 }

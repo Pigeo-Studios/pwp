@@ -7,7 +7,7 @@
 силуэты 16x16, цвет задаётся при рисовании через shader color — WarfareIcon / WDraw.icon).
 Результат детерминирован.
 
-Выход: pwp-warfare/src/main/resources/assets/pwpwarfare/textures/gui/ui/icons.png  (128x64, 8x4)
+Выход: pwp-game/src/main/resources/assets/pwpwarfare/textures/gui/ui/icons.png  (128x64, 8x4)
 
 Раскладка (индекс = col + row*8) — ДОЛЖНА совпадать с client/gui/ui/WarfareIcon.java:
    0 SPAWN_MAIN  1 SPAWN_RALLY  2 SPAWN_FOB  3 LOCK     4 CLOCK   5 MAP     6 SQUAD   7 CHAT
@@ -29,7 +29,7 @@ _spec.loader.exec_module(K)
 
 rect, circle, ring, poly, union, minus = K.rect, K.circle, K.ring, K.poly, K.union, K.minus
 CELL = K.CELL
-OUT = os.path.join(BASE, "pwp-warfare", "src", "main", "resources", "assets", "pwpwarfare", "textures", "gui", "ui")
+OUT = os.path.join(BASE, "pwp-game", "src", "main", "resources", "assets", "pwpwarfare", "textures", "gui", "ui")
 
 
 def line(x0, y0, x1, y1, w):

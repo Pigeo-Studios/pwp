@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.pwp.blastprotection.mixin",
+  "refmap": "pwpwarfare.refmap.json",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "EntityShouldBlockExplodeMixin",
+    "ExplosionDamageCalculatorMixin"
+  ],
+  "client": [],
+  "server": []
+}

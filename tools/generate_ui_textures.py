@@ -7,7 +7,7 @@
 GuiGraphics.setColor (shader color), поэтому палитра меняется без перегенерации.
 Результат детерминирован (фиксированный seed) — повторный запуск даёт те же байты.
 
-Выход: pwp-core-client/src/main/resources/assets/pwp_core_client/textures/gui/ui/
+Выход: pwp-core/src/main/resources/assets/pwp_core_client/textures/gui/ui/
   noise.png      64x64  — тайл шума (белые/чёрные точки низкой альфы), рисуется повтором
   scanlines.png  64x64  — тайл скан-лайнов (каждая 2-я строка чёрная, низкая альфа)
   frame.png      32x32  — 9-slice рамка (угол 6): 1px линия + уголки-скобы; центр пустой
@@ -31,7 +31,7 @@ import zlib
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(
-    BASE, "pwp-core-client", "src", "main", "resources", "assets", "pwp_core_client", "textures", "gui", "ui"
+    BASE, "pwp-core", "src", "main", "resources", "assets", "pwp_core_client", "textures", "gui", "ui"
 )
 
 CELL = 16

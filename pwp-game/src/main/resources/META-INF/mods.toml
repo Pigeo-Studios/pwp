@@ -1,0 +1,72 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="pwpwarfare"
+version="2.0.0"
+displayName="PWP Game"
+credits="Pigeo Studios"
+authors="Pigeo Studios"
+description='''
+PWP game: capture points, squads, FOB/rally, vehicles, drones, medicine, movement and combat limits.
+'''
+# pwp-game (25.11.2026): бывшие моды pwpwarfare, pwp_medicine, pwplimit, pwp_movement, pwpblast, pwpdrone.
+# modid pwpwarfare сохранён: это неймспейс блоков/предметов в мирах, БД китов и maps/*.json.
+# Неймспейсы pwp_medicine/pwpdrone/pwpblast (реестры, ассеты, data) прежние.
+
+[[dependencies.pwpwarfare]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.pwpwarfare]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.pwpwarfare]]
+modId="voicechat"
+mandatory=false
+versionRange="[1.20.1,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.pwpwarfare]]
+modId="pwpcore"
+mandatory=true
+versionRange="[2.0,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="geckolib"
+    mandatory=true
+    versionRange="[4.4.9,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="curios"
+    mandatory=true
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="tacz"
+    mandatory=true
+    versionRange="[0,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.pwpwarfare]]
+    modId="superbwarfare"
+    mandatory=true
+    versionRange="[0.8.9,)"
+    ordering="AFTER"
+    side="BOTH"

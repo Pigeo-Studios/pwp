@@ -96,7 +96,7 @@ class ControlsCatalogTest {
     void realWhitelist() throws Exception {
         Path p = Path.of(
                 "..",
-                "pwp-core-client",
+                "pwp-core",
                 "src",
                 "main",
                 "resources",

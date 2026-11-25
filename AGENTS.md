@@ -2,6 +2,11 @@
 
 PWP — тактический шутер «Squad в Minecraft» (Forge 1.20.1, Java 17), мультимодульный Gradle-проект (`com.pigeostudios.pwp`). Игра про командную тактику, а не киллы: тикеты, точки захвата, отряды, фобы/ралики, медицина, техника 4 фракций, прогрессия (Coins/XP/20 рангов/престижи/скины/боевой пропуск). Режимы: AAS (обе команды захватывают точки по порядку) и Invasion (асимметричный).
 
+> **С 25.11.2026 (ветка `rewrite/unified`) модов PWP три:** `pwp-core` (modid `pwpcore`: бывшие pwp-api,
+> pwp-core-client, pwp-core-server, pwp-lobby, pwp-cosmetics), `pwp-game` (modid `pwpwarfare`: бывшие pwp-warfare,
+> pwp-medicine, pwp-limits, pwp-movement, pwp-blast-protection, pwp-drone), `sbwchunkload`. Пакеты Java прежние —
+> описание модулей ниже по-прежнему верно по пакетам; план и миграция — `docs/ROADMAP.md`.
+
 ## Репозитории экосистемы (вне этого репо)
 
 - `Pigeo-Studios/pwp` — **этот** репозиторий: код модов + core-service + боты + карты

@@ -30,8 +30,7 @@ dependencies {
 }
 
 def pwpModules = [
-    'pwp-core', 'pwp-limits', 'pwp-medicine', 'pwp-movement', 'pwp-warfare', 'pwp-blast-protection',
-    'sbwchunkload', 'pwp-drone'
+    'pwp-core', 'pwp-game', 'sbwchunkload'
 ]
 
 def forgeVersion = '1.20.1-47.3.0'
@@ -55,7 +54,7 @@ def findSrgJar(String forgeVersion) {
 // Прод-жарники модов-зависимостей (уже SRG) — для распознавания переопределений
 // их интерфейсов (GeckoLib GeoItem/GeoEntity, Curios API, Voicechat API).
 def findProdModJars() {
-    def pwpfiles = System.getenv('PWPFILES_DIR') ?: 'C:/Users/maska/OneDrive/Desktop/Pwpfiles'
+    def pwpfiles = System.getenv('PWPFILES_DIR') ?: "${rootProject.rootDir}/../Pwpfiles"
     def names = [
         'geckolib-forge-1.20.1-4.8.4.jar',
         'curios-forge-5.14.1+1.20.1.jar',
@@ -129,6 +128,39 @@ subprojects {
             removeUnusedImports()
             trimTrailingWhitespace()
             endWithNewline()
+        }
+    }
+}
+
+// ============================================================
+//  reobf-гарантия (инцидент 16.11.2026: в build/libs оказался mojmap-jar → NoSuchMethodError в проде)
+//  1) jar ВСЕГДА завершается reobfJar — даже при прямом вызове `gradlew :pwp-core:jar`;
+//  2) после reobfJar jar проверяется: в классах должны быть SRG-имена (m_NNN_/f_NNN_), иначе сборка падает.
+//  Ручная проверка готовых jar: py -3 tools/check_reobf.py
+// ============================================================
+static void checkSrgJar(File jar) {
+    def srg = ~/[mf]_\d+_/
+    int classes = 0, withSrg = 0
+    new java.util.zip.ZipFile(jar).withCloseable { zf ->
+        zf.entries().each { e ->
+            if (!e.name.endsWith('.class')) return
+            classes++
+            if (withSrg < 1 && srg.matcher(new String(zf.getInputStream(e).bytes, 'ISO-8859-1')).find()) withSrg++
+        }
+    }
+    if (classes > 0 && withSrg == 0) {
+        throw new GradleException("FAIL: ${jar.name} — ни одного SRG-имени в классах: jar НЕ reobf (mojmap), в прод нельзя")
+    }
+    println "OK: ${jar.name} — reobf (SRG-имена в классах есть)"
+}
+
+subprojects {
+    plugins.withId('net.minecraftforge.gradle') {
+        afterEvaluate { p ->
+            p.tasks.named('jar') { finalizedBy 'reobfJar' }
+            p.tasks.named('reobfJar') { t ->
+                t.doLast { checkSrgJar(p.tasks.jar.archiveFile.get().asFile) }
+            }
         }
     }
 }

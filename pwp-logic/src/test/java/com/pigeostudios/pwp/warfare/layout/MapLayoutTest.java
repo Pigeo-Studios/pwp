@@ -378,7 +378,7 @@ class MapLayoutTest {
     void everyIssueCodeIsLocalized() throws IOException {
         for (String lang : List.of("en_us", "ru_ru", "uk_ua")) {
             Path p = Path.of(
-                    "..", "pwp-warfare", "src", "main", "resources", "assets", "pwpwarfare", "lang", lang + ".json");
+                    "..", "pwp-game", "src", "main", "resources", "assets", "pwpwarfare", "lang", lang + ".json");
             JsonObject json = JsonParser.parseString(Files.readString(p, StandardCharsets.UTF_8))
                     .getAsJsonObject();
             for (Issue.Code c : Issue.Code.values()) {

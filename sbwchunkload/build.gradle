@@ -52,7 +52,7 @@ mixin {
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 // Прод-жарники модов-таргетов для компиляции миксинов (compileOnly, в jar не кладутся)
-def pwpfiles = System.getenv('PWPFILES_DIR') ?: 'C:/Users/maska/OneDrive/Desktop/Pwpfiles'
+def pwpfiles = System.getenv('PWPFILES_DIR') ?: "${rootProject.rootDir}/../Pwpfiles"
 def sbwJar = file("${pwpfiles}/mods/superbwarfare-0.8.9-final-mc1.20.1-6effe4385-all.jar")
 def pbJar = file("${pwpfiles}/mods/pointblank-forge-1.20.1-1.11.1.jar")
 

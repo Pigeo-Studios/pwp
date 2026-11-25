@@ -110,7 +110,7 @@ core-service/   HTTP API + БД (shadowJar), bots/, pwp-scheduler/ — экос�
 | 0 | Аудит + этот план | ROADMAP.md в репо | — | S | ✅ |
 | 1 | Чистка без смены поведения | мёртвые классы/пакеты/экраны, пустые mixin-конфиги, вложенные wrapper'ы, `__pycache__`, мусорные файлы и устаревшие docs удалены; сборка+тесты зелёные | Н | S | ✅ |
 | 2a | Слияние `pwp-core` | один jar `pwp-core` (modid `pwpcore`), один `@Mod`, канал core v8 с пакетами cosmetics; lobby/core-server выключены на клиенте | С | M | ✅ |
-| 2b | Слияние `pwp-game` | один jar `pwp-game` (modid `pwpwarfare`), канал warfare v8 с пакетами limits, имена конфигов прежние; ProGuard/CI обновлены; reobf проверен | С | M | ⬜ |
+| 2b | Слияние `pwp-game` | один jar `pwp-game` (modid `pwpwarfare`), канал warfare v8 с пакетами limits, имена конфигов прежние; ProGuard/CI обновлены; reobf проверен | С | M | ✅ |
 | 3 | Один конфиг сервера | `config/pwp-server.toml`: роль (auto/lobby/match), путь шаблона матча, ключи лобби/матча; старые файлы читаются один раз как фолбэк | С | M | ⬜ |
 | 4 | Цикл матча сам | трассировка «лобби → голосование → матч → итоги → лобби» без ручных шагов: автостарт по `minPlayers`, перезапуск после сбоя, таймауты фаз, нет зашитых путей; чистая машина состояний цикла в pwp-logic с тестами | С | M | ⬜ |
 | 5 | Обучение новичка | чистый `Tutorial` (шаги команда → отряд → роль → деплой → точка) с тестами + показ через `Hints`; «пропустить», раз на аккаунт | Н | S | ⬜ |
@@ -145,6 +145,23 @@ core-service/   HTTP API + БД (shadowJar), bots/, pwp-scheduler/ — экос�
   Остальные моды зависят от `pwpcore` [2.0,). **Проверить в игре:** главное меню/лобби/F6 открываются;
   экипировка скина в лобби (пакет косметики по новому каналу); в лобби идут голосования, на матч-сервере лобби
   молчит (в логе нет «Lobby…» строк); вход на сервер со старым клиентом — отказ версии канала.
+- 25.11.2026 — этап 2b ✅: `pwp-game` (jar `pwp-game-2.0.0.jar`, modid `pwpwarfare`) = pwp-warfare + medicine +
+  limits + movement + blast-protection + drone. Один `@Mod` — `WarfareMod`, остальные создаются из него
+  (`PWPMedicine`, `PWPLimit`, `PWPMovement`, `BlastProtectionMod`; `PWPDroneMod` был пустым — удалён).
+  Реестры `pwp_medicine:*`, ассеты `pwp_medicine`/`pwpdrone`, data `pwp_medicine`/`pwpblast` — прежние.
+  Конфиги с прежними именами: `pwp_medicine-common.toml`, `pwplimit-server.toml`, `pwpblast.toml`. Пакет
+  лимитов — в конце `pwpwarfare:main` (протокол **8**), канал `pwplimit:network` удалён. Миксины blast —
+  второй конфиг в том же jar, общий рефмап `pwpwarfare.refmap.json`; `BlockExplosionResistanceMixin` не был
+  в конфиге (не применялся) — удалён. `@EventBusSubscriber(modid=…)` бывших модов → `pwpwarfare`.
+  Сборка: **reobf-гарантия** в корневом `build.gradle` (`jar` всегда завершается `reobfJar`, после него —
+  проверка SRG-имён; прямой `gradlew :pwp-core:jar` раньше оставлял mojmap-jar — воспроизведено и
+  исправлено); гигиена `build/libs` (старые jar удаляются); путь Pwpfiles по умолчанию — `../Pwpfiles`
+  рядом с репо; тесты pwp-logic видят боевые файлы как входы (пути после переезда были сломаны, а тест
+  считался up-to-date). Итог: **3 jar** — `pwp-core-2.0.0`, `pwp-game-2.0.0`, `sbwchunkload-2.2.1`.
+  **Проверить в игре:** бинт/аптечка/кровотечение (предметы в старых китах находятся), спринт-прыжок и
+  блок F3/F5 (+ правка `pwplimit-server.toml` на лету доходит до клиента), взрывы (блоки `hard_blast`
+  держат), FPV-шейдер дрона, хотбар; в логе сервера нет «Missing registry entries».
+  Дальше — этап 3 (один конфиг сервера).
 
 ---
 

@@ -33,7 +33,7 @@ import zipfile
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TMP = os.path.join(os.environ.get("TEMP", "/tmp"), "opencode")
-ASSETS = os.path.join(BASE, "pwp-warfare", "src", "main", "resources", "assets", "pwpwarfare")
+ASSETS = os.path.join(BASE, "pwp-game", "src", "main", "resources", "assets", "pwpwarfare")
 OUT_MODELS = os.path.join(ASSETS, "models", "block")
 OUT_TEXTURES = os.path.join(ASSETS, "textures", "block")
 
