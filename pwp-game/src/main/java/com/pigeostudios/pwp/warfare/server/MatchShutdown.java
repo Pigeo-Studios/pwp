@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
@@ -67,32 +66,35 @@ public final class MatchShutdown {
         if (GameClock.serverTicks(server) % 20 == 0 && Files.exists(stopSignal)) {
             LOGGER.info("Stop signal received, shutting down gracefully");
             try {
-                MinecraftServer srv = ServerLifecycleHooks.getCurrentServer();
-                WarfareWorldData matchData = null;
-                for (ServerLevel sl : srv.getAllLevels()) {
-                    matchData = WarfareWorldData.get(sl);
-                    break;
-                }
-                if (matchData != null) {
-                    if (matchData.match.isGameStarted) {
-                        String leader = matchData.match.blueTickets > matchData.match.redTickets
-                                ? "BLUE"
-                                : (matchData.match.redTickets > matchData.match.blueTickets ? "RED" : "NONE");
-                        MatchStatsTracker.get()
-                                .finalizeMatch(leader, matchData.match.blueTickets, matchData.match.redTickets);
-                    } else {
-                        MatchStatsTracker tracker = MatchStatsTracker.get();
-                        if (tracker.isActive()) {
-                            tracker.finalizeMatch("NONE", matchData.match.blueTickets, matchData.match.redTickets);
-                        } else if (timer <= 0) {
-                            timer = 10;
-                            target = srv;
-                        }
-                    }
-                }
+                stopGracefully(ServerLifecycleHooks.getCurrentServer());
                 Files.delete(stopSignal);
             } catch (Exception e) {
                 LOGGER.warn("Failed to process stop signal: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Корректная остановка матч-сервера (сигнал лобби или сторож {@link MatchWatchdogTicker}): идущий матч
+     * завершается с итогами по тикетам (статистика уходит в core, дальше обычный возврат в лобби), без матча —
+     * через 10 тиков все в лобби и halt.
+     */
+    public static void stopGracefully(MinecraftServer srv) {
+        if (srv == null) return;
+        WarfareWorldData matchData = WarfareWorldData.get(srv.overworld());
+        if (matchData.match.isGameStarted) {
+            String leader = matchData.match.blueTickets > matchData.match.redTickets
+                    ? "BLUE"
+                    : (matchData.match.redTickets > matchData.match.blueTickets ? "RED" : "NONE");
+            // finalizeMatch сам планирует остановку сервера (scheduleServerShutdown)
+            MatchStatsTracker.get().finalizeMatch(leader, matchData.match.blueTickets, matchData.match.redTickets);
+        } else {
+            MatchStatsTracker tracker = MatchStatsTracker.get();
+            if (tracker.isActive()) {
+                tracker.finalizeMatch("NONE", matchData.match.blueTickets, matchData.match.redTickets);
+            } else if (timer <= 0) {
+                timer = 10;
+                target = srv;
             }
         }
     }

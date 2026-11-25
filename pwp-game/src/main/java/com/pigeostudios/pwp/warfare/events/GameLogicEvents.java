@@ -965,6 +965,8 @@ public class GameLogicEvents {
 
             // возврат в лобби по таймеру + stop.signal от лобби (M5: server/MatchShutdown)
             com.pigeostudios.pwp.warfare.server.MatchShutdown.tick(server);
+            // сторож: пустой/никем не занятый/слишком долгий матч не держит слот лобби (этап 4 ROADMAP)
+            com.pigeostudios.pwp.warfare.server.MatchWatchdogTicker.tick(server);
         }
     }
 

@@ -160,6 +160,16 @@ public class WarfareConfig {
     public static final IntValue WAITING_PHASE_SECONDS = BUILDER.comment(
                     "Waiting-for-players phase before the match countdown, seconds (was hardcoded 300)")
             .defineInRange("waitingPhaseSeconds", 300, 0, 3600);
+    // этап 4 ROADMAP (25.11.2026): сторож матч-сервера — цикл лобби не встаёт из-за пустого/бесконечного матча
+    public static final IntValue EMPTY_MATCH_SHUTDOWN_MINUTES = BUILDER.comment(
+                    "Match server: shut down after everyone left for this many minutes (0 = never)")
+            .defineInRange("emptyMatchShutdownMinutes", 3, 0, 120);
+    public static final IntValue NO_SHOW_SHUTDOWN_MINUTES = BUILDER.comment(
+                    "Match server: shut down if nobody joined within this many minutes after it got ready (0 = never)")
+            .defineInRange("noShowShutdownMinutes", 15, 0, 240);
+    public static final IntValue MATCH_MAX_MINUTES = BUILDER.comment(
+                    "Battle time limit in minutes; on timeout the team with more tickets wins (0 = no limit)")
+            .defineInRange("matchMaxMinutes", 120, 0, 600);
     public static final IntValue FOB_DISMANTLE_PENALTY = BUILDER.comment(
                     "Tickets lost when a team dismantles its own FOB (was hardcoded 10)")
             .defineInRange("fobDismantlePenalty", 10, 0, 1000);
