@@ -36,7 +36,7 @@ public class PacketHandler {
      * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
      * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "8";
+    private static final String PROTOCOL_VERSION = "9";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -368,6 +368,8 @@ public class PacketHandler {
         com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerV8(v2);
         // 8 (25.11.2026, pwp-game): лимиты (бывший канал pwplimit:network) — в конец
         id = com.pigeostudios.pwp.limit.network.NetworkHandler.register(INSTANCE, v2.nextId());
+        // 9 (26.11.2026): редактор дивизий в F6 — в самый конец
+        id = com.pigeostudios.pwp.warfare.admin.DivisionAdmin.register(INSTANCE, id);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

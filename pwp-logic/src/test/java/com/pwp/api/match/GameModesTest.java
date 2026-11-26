@@ -57,4 +57,13 @@ class GameModesTest {
                 List.of(GameModes.AAS, GameModes.INVASION, GameModes.SKIRMISH),
                 GameModes.votable(Set.of("invasion", "SKIRMISH")));
     }
+
+    @Test
+    void smallModeHasShorterBattleByDefault() {
+        assertEquals(800, GameModes.ticketsFor("aas", 800));
+        assertEquals(800, GameModes.ticketsFor("invasion", 800));
+        assertEquals(400, GameModes.ticketsFor("skirmish", 800));
+        assertEquals(GameModes.SMALL_MODE_MIN_TICKETS, GameModes.ticketsFor("skirmish", 120));
+        assertEquals(500, GameModes.ticketsFor("unknown", 500));
+    }
 }

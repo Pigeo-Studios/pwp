@@ -84,6 +84,19 @@ public final class GameModes {
     }
 
     /** Режимы голосования для карты: все не-optIn + optIn, объявленные картой ({@code map_config.modes}). */
+    /** Минимум тикетов малого режима. */
+    public static final int SMALL_MODE_MIN_TICKETS = 100;
+
+    /**
+     * Тикеты режима по умолчанию из тикетов карты (этап 7b): у малого режима без техники («Стычка») бой короче —
+     * половина тикетов карты (не меньше {@link #SMALL_MODE_MIN_TICKETS}); AAS/Invasion — как в карте.
+     */
+    public static int ticketsFor(String modeId, int mapTickets) {
+        Mode m = orAas(modeId);
+        if (m.vehicles()) return mapTickets;
+        return Math.max(SMALL_MODE_MIN_TICKETS, mapTickets / 2);
+    }
+
     public static List<Mode> votable(Collection<String> mapModes) {
         List<Mode> out = new ArrayList<>();
         for (Mode m : ALL) {

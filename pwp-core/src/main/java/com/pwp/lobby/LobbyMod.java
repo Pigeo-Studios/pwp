@@ -1179,8 +1179,10 @@ public class LobbyMod {
         boolean isInvasion = modeVoteWinner != null && modeVoteWinner.equals("invasion");
         boolean invasionDefenderIsRed = true;
 
-        int blueTickets = map.teams.BLUE.tickets;
-        int redTickets = map.teams.RED.tickets;
+        // тикеты режима по умолчанию (этап 7b): у «Стычки» — половина тикетов карты
+        String modeId = modeVoteWinner != null ? modeVoteWinner : "aas";
+        int blueTickets = com.pwp.api.match.GameModes.ticketsFor(modeId, map.teams.BLUE.tickets);
+        int redTickets = com.pwp.api.match.GameModes.ticketsFor(modeId, map.teams.RED.tickets);
         if (isInvasion && map.modes != null && map.modes.containsKey("invasion")) {
             var invConfig = map.modes.get("invasion");
             if (invasionDefenderIsRed) {

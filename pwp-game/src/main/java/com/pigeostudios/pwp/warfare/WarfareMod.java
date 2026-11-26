@@ -86,6 +86,7 @@ public class WarfareMod {
             com.pigeostudios.pwp.warfare.network.WarfareDataRequests.register();
             // админ-панель: тип adminMatch + разделы match/map
             com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerData();
+            com.pigeostudios.pwp.warfare.admin.DivisionAdmin.registerData();
             com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.registerData();
             com.pigeostudios.pwp.warfare.admin.MapEditorPackets.registerData();
             // тайлы динамической карты (mapTile): отвечает только на запросы клиентов с включённой картой

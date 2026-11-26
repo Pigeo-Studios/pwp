@@ -58,6 +58,14 @@ public final class WarfareAdminTabs {
                         c.atLeast(AccessLevel.OWNER),
                         c.preview() ? AdminMatchData.fixture(UiGallery.emptyData()) : null),
                 c -> c.has(AdminInfo.FEATURE_MATCH));
+        // этап 6d: редактор состава дивизий фракций матча
+        AdminPanel.registerTab(
+                "divisions",
+                "pwpwarfare.admin.tab.divisions",
+                30,
+                AccessLevel.ADMIN,
+                c -> new DivisionAdminTab(c.preview() ? DivisionAdminTab.fixture(UiGallery.emptyData()) : null),
+                c -> c.has(AdminInfo.FEATURE_MATCH));
         AdminPanel.registerTab(
                 "map",
                 "pwpwarfare.admin.tab.map",
