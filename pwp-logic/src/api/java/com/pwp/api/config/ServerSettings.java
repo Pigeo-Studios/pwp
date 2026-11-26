@@ -15,7 +15,8 @@ import java.util.Locale;
  *   "role": "auto",                       // auto | lobby | match; auto — папка match_* = матч, иначе лобби
  *   "lobby": {"autostart": true, "maxMatches": 2, "minPlayers": 1, "prewarm": false},
  *   "matchServers": {"template": "../PWP-Server/match_template", "basePort": 25566},
- *   "mapsDir": ""                         // пусто — авто: ../maps, ../PWP-Server/maps, maps
+ *   "mapsDir": "",                        // пусто — авто: ../maps, ../PWP-Server/maps, maps
+ *   "community": {...}                    // правила публичного сервера, см. CommunitySettings
  * }
  * </pre>
  *
@@ -23,7 +24,13 @@ import java.util.Locale;
  * {@code serverconfig/*.toml}): у них есть горячая перезагрузка и синхронизация клиентам.
  */
 public record ServerSettings(
-        Role role, LobbySettings lobby, boolean prewarm, String matchTemplate, int basePort, String mapsDir) {
+        Role role,
+        LobbySettings lobby,
+        boolean prewarm,
+        String matchTemplate,
+        int basePort,
+        String mapsDir,
+        CommunitySettings community) {
 
     public enum Role {
         AUTO,
@@ -44,25 +51,32 @@ public record ServerSettings(
     public static final int PORT_MAX = 65000;
 
     /** Значения по умолчанию = прежнее поведение (шаблон и порты были зашиты в ServerManager). */
-    public static final ServerSettings DEFAULT =
-            new ServerSettings(Role.AUTO, LobbySettings.DEFAULT, false, "../PWP-Server/match_template", 25566, "");
+    public static final ServerSettings DEFAULT = new ServerSettings(
+            Role.AUTO,
+            LobbySettings.DEFAULT,
+            false,
+            "../PWP-Server/match_template",
+            25566,
+            "",
+            CommunitySettings.DEFAULT);
 
     public ServerSettings {
         if (role == null) role = Role.AUTO;
         if (lobby == null) lobby = LobbySettings.DEFAULT;
         if (matchTemplate == null || matchTemplate.isBlank()) matchTemplate = DEFAULT_TEMPLATE;
         if (mapsDir == null) mapsDir = "";
+        if (community == null) community = CommunitySettings.DEFAULT;
         basePort = Math.max(PORT_MIN, Math.min(PORT_MAX, basePort));
     }
 
     private static final String DEFAULT_TEMPLATE = "../PWP-Server/match_template";
 
     public ServerSettings withLobby(LobbySettings v) {
-        return new ServerSettings(role, v, prewarm, matchTemplate, basePort, mapsDir);
+        return new ServerSettings(role, v, prewarm, matchTemplate, basePort, mapsDir, community);
     }
 
     public ServerSettings withPrewarm(boolean v) {
-        return new ServerSettings(role, lobby, v, matchTemplate, basePort, mapsDir);
+        return new ServerSettings(role, lobby, v, matchTemplate, basePort, mapsDir, community);
     }
 
     /**
@@ -91,6 +105,7 @@ public record ServerSettings(
         m.addProperty("basePort", basePort);
         o.add("matchServers", m);
         o.addProperty("mapsDir", mapsDir);
+        o.add("community", community.toJson());
         return o;
     }
 
@@ -129,7 +144,13 @@ public record ServerSettings(
             }
         }
         String maps = str(o, "mapsDir", DEFAULT.mapsDir, "", warnings);
-        return new ServerSettings(role, lobby, prewarm, template, basePort, maps);
+        CommunitySettings community = CommunitySettings.DEFAULT;
+        JsonElement ce = o.get("community");
+        if (ce != null) {
+            if (ce.isJsonObject()) community = CommunitySettings.fromJson(ce.getAsJsonObject(), warnings);
+            else warnings.add("community: expected object, got " + ce);
+        }
+        return new ServerSettings(role, lobby, prewarm, template, basePort, maps, community);
     }
 
     /** Миграция: содержимое старого {@code config/pwp_lobby.json} (autostart/maxMatches/minPlayers/prewarm). */

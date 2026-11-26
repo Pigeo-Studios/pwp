@@ -51,6 +51,8 @@ public final class ServerSettingsFile {
                 raw = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8))
                         .getAsJsonObject();
                 current = ServerSettings.fromJson(raw, warnings);
+                // файл старше этапа 10: дописать секцию community, чтобы админ видел ключи
+                if (create && !raw.has("community")) save(current, log);
             } catch (IOException | JsonParseException | IllegalStateException e) {
                 log.accept(file + " не прочитан (" + e.getMessage() + ") — настройки по умолчанию, файл не трогаю");
                 current = ServerSettings.DEFAULT;
