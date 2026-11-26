@@ -118,7 +118,9 @@ public final class CommunityCommands {
 
     private static int adminChat(CommandSourceStack src, String message) {
         String name = src.getTextName();
-        String text = clip(message);
+        // все каналы чата — через ChatGuard (фильтр мата; модераторы без антиспама); консоль — как есть
+        String text = src.getPlayer() == null ? clip(message) : ChatGuard.filter(src.getPlayer(), clip(message));
+        if (text == null) return 0;
         MutableComponent line = Component.translatable("pwp_core.chat.admin_prefix")
                 .withStyle(ChatFormatting.RED)
                 .append(Component.literal(" " + name + ": ").withStyle(ChatFormatting.WHITE))

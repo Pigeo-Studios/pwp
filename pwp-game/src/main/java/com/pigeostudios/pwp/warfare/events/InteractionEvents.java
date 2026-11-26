@@ -630,8 +630,8 @@ public class InteractionEvents {
         int mySquad = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
         // id отрядов уникальны только внутри команды: чужая команда не совпадает никогда
         int mine = claimTeam.isEmpty() || claimTeam.equalsIgnoreCase(team) ? mySquad : -1;
-        boolean staff = player.isCreative()
-                || com.pwp.api.security.PwpPermissions.has(player, com.pwp.api.security.AccessLevel.MODERATOR);
+        // isCreative() правом не является (AGENTS.md): водить чужую закреплённую машину — только модератор+
+        boolean staff = com.pwp.api.security.PwpPermissions.has(player, com.pwp.api.security.AccessLevel.MODERATOR);
         switch (com.pigeostudios.pwp.warfare.vehicles.VehicleClaim.decide(claim, owner != null, mine, staff)) {
             case DENY -> {
                 event.setCanceled(true);
