@@ -88,6 +88,7 @@ public class WarfareMod {
             com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerData();
             com.pigeostudios.pwp.warfare.admin.DivisionAdmin.registerData();
             com.pigeostudios.pwp.warfare.stats.ScoreboardData.register();
+            com.pigeostudios.pwp.warfare.server.VehicleActionService.register();
             com.pigeostudios.pwp.warfare.server.CommanderAbilities.init();
             com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.registerData();
             com.pigeostudios.pwp.warfare.admin.MapEditorPackets.registerData();

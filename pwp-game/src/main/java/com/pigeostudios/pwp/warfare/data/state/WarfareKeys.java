@@ -99,6 +99,9 @@ public final class WarfareKeys {
     public static final WarfareKey<Integer> VEHICLE_CLAIM_SQUAD = reg(WarfareKey.integer(PREFIX + "VehicleClaimSquad"));
 
     public static final WarfareKey<String> VEHICLE_CLAIM_TEAM = reg(WarfareKey.string(PREFIX + "VehicleClaimTeam"));
+    /** Замок «только мой отряд» (этап 17a): чужие не садятся даже пассажирами, пока отряд-владелец жив. */
+    public static final WarfareKey<Boolean> VEHICLE_LOCKED = reg(WarfareKey.bool(PREFIX + "VehicleLocked"));
+
     public static final WarfareKey<Integer> DRONE_FALLBACK_TICKS =
             reg(WarfareKey.integer(PREFIX + "DroneFallbackTicks"));
 

@@ -32,4 +32,16 @@ public final class VehicleClaim {
         }
         return playerSquad != 0 ? Decision.CLAIM : Decision.ALLOW;
     }
+
+    /**
+     * Любое место, с учётом замка «только мой отряд» (этап 17a). Водитель — по {@link #decide}; пассажир
+     * запертой машины живого отряда — только из этого отряда (модераторы и выше — всегда).
+     */
+    public static Decision decideSeat(
+            int claimSquad, boolean claimSquadAlive, int playerSquad, boolean staff, boolean locked, boolean driver) {
+        if (driver) return decide(claimSquad, claimSquadAlive, playerSquad, staff);
+        boolean claimed = claimSquad != 0 && claimSquadAlive;
+        if (locked && claimed && playerSquad != claimSquad && !staff) return Decision.DENY;
+        return Decision.ALLOW;
+    }
 }

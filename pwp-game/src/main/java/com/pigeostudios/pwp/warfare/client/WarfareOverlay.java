@@ -290,7 +290,9 @@ public class WarfareOverlay {
             }
 
             if (record != null && isFriendlyVehicle(record, mc.player)) {
-                if (isSpecialistVehicle(record.type) && !hasCorrectKit(record.type, ClientData.myCurrentKit)) {
+                if (com.pigeostudios.pwp.warfare.vehicles.CrewRules.isSpecialist(record.type)
+                        && !com.pigeostudios.pwp.warfare.vehicles.CrewRules.hasCorrectKit(
+                                record.type, ClientData.myCurrentKit)) {
                     text = I18n.get("gui.pwpwarfare.hud.need_crew_kit");
                     color = -43691;
                 } else {
@@ -349,30 +351,6 @@ public class WarfareOverlay {
         if (record.team == null || record.team.isEmpty() || record.team.equalsIgnoreCase("NEUTRAL")) return true;
         String pTeam = player.getTeam() != null ? player.getTeam().getName() : "";
         return record.team.equalsIgnoreCase(pTeam);
-    }
-
-    // Те же условия, что на сервере (InteractionEvents) — подсказка информационная,
-    // сервер всё равно валидирует посадку
-    private static boolean isSpecialistVehicle(String vType) {
-        if (vType == null) return false;
-        if (vType.equalsIgnoreCase("TANK")) return true;
-        if (vType.equalsIgnoreCase("APC")) return true;
-        if (vType.equalsIgnoreCase("Mobile ZU")) return true;
-        if (vType.equalsIgnoreCase("HELICOPTER")) return true;
-        if (vType.toUpperCase().contains("CAS")) return true;
-        return vType.toUpperCase().contains("SUPPLY HELICOPTER");
-    }
-
-    private static boolean hasCorrectKit(String vType, String kit) {
-        if (vType.equalsIgnoreCase("HELICOPTER")
-                || vType.toUpperCase().contains("CAS")
-                || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
-            return kit.equals("Pilot") || kit.equals("Pilot Officer");
-        }
-        if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
-            return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
-        }
-        return true;
     }
 
     // ------------------------------------------------------------ прогресс стройки (контекстный ярус)

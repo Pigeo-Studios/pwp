@@ -67,7 +67,18 @@ public class PacketVehicleDriveAnswer {
             return;
         }
 
+        // отвечать может только лидер отряда просившего (раньше — любой лидер любому игроку)
+        String slTeam = slPlayer.getTeam() == null ? "" : slPlayer.getTeam().getName();
+        String reqTeam = requester.getTeam() == null ? "" : requester.getTeam().getName();
+        if (!slTeam.equalsIgnoreCase(reqTeam)
+                || WarfareData.of(requester).getInt(WarfareKeys.SQUAD_ID)
+                        != WarfareData.of(slPlayer).getInt(WarfareKeys.SQUAD_ID)) {
+            PlayerFeedback.deny(slPlayer, "pwpwarfare.vehicle_menu.error.not_your_squad");
+            return;
+        }
+
         UUID vehicleUUID = vehicle.getUUID();
+        com.pigeostudios.pwp.warfare.server.VehicleActionService.noteAnswer(vehicle, requesterUUID);
 
         if (accept) {
             data.addApprovedDriver(vehicleUUID, requesterUUID);

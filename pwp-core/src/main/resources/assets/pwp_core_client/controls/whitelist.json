@@ -89,6 +89,7 @@
         {"id": "key.sbw_ew_addon.hack_drone", "category": "drone", "order": 20, "advanced": true},
         {"id": "key.warbornrenewed.reb_backpack_toggle", "category": "drone", "order": 30, "advanced": true},
         {"id": "key.pwpwarfare.open_squad_menu", "category": "squad", "order": 10},
+        {"id": "key.pwpwarfare.vehicle_menu", "category": "vehicles", "order": 5},
         {"id": "key.pwpwarfare.place_ping", "category": "squad", "order": 20},
         {"id": "key.pwpwarfare.drop_supply", "category": "squad", "order": 30},
         {"id": "key.pwpwarfare.show_nicknames", "category": "squad", "order": 40, "hintKey": "pwp_core.controls.hint.hold"},

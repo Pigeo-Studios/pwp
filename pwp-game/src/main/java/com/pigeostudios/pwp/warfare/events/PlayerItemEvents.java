@@ -139,7 +139,7 @@ public final class PlayerItemEvents {
                                 return;
                             }
                             String pKit = KitUtil.getEffectiveKit(player);
-                            if (!hasCorrectKit(vType, pKit)) {
+                            if (!com.pigeostudios.pwp.warfare.vehicles.CrewRules.hasCorrectKit(vType, pKit)) {
                                 player.stopRiding();
                                 player.displayClientMessage(
                                         Component.translatable("pwpwarfare.msg.vehicle.crew_kit_required")

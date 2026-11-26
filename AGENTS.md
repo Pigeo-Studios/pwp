@@ -56,7 +56,7 @@ PWP — «Squad в Minecraft» (Forge 1.20.1-47.3.0, Java 17, official mappings,
 
 ### Сеть
 - Новый пакет — сеть v2: record `Net.C2S` (с `validate()`) / `Net.S2C`, регистрация через `Net.Registrar` **в конец** канала. Один пакет = одно действие. Большие строки S→C — `Payloads.writeLarge`.
-- Каналы: `pwpwarfare:main`=9, `pwp_core_client:network`=9. Удаление/перестановка/новый пакет, без которого старый клиент сломается, — поднять `PROTOCOL_VERSION`.
+- Каналы: `pwpwarfare:main`=10, `pwp_core_client:network`=9. Удаление/перестановка/новый пакет, без которого старый клиент сломается, — поднять `PROTOCOL_VERSION`.
 - Данные для GUI — тип в `DataRequests.register`, не новый пакет.
 - Все `Packet*` warfare обязаны быть в `PacketHandler.register()` (иначе краш при первой отправке).
 

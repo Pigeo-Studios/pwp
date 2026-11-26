@@ -122,18 +122,6 @@ public final class VehicleLossEvents {
         }
     }
 
-    static boolean hasCorrectKit(String vType, String kit) {
-        if (vType.equalsIgnoreCase("HELICOPTER")
-                || vType.toUpperCase().contains("CAS")
-                || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
-            return kit.equals("Pilot") || kit.equals("Pilot Officer");
-        }
-        if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
-            return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
-        }
-        return true;
-    }
-
     static float getVehicleHealth(Entity entity) {
         try {
             Object result = entity.getClass().getMethod("getHealth").invoke(entity);

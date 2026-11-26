@@ -48,10 +48,10 @@ public class PacketVehicleDriveRequest {
         if (!WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) return;
 
         String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
-        if (!isSpecialistVehicle(vType)) return;
+        if (!com.pigeostudios.pwp.warfare.vehicles.CrewRules.isSpecialist(vType)) return;
 
         String pKit = com.pigeostudios.pwp.warfare.events.KitUtil.getEffectiveKit(player);
-        if (!hasCorrectKit(vType, pKit)) {
+        if (!com.pigeostudios.pwp.warfare.vehicles.CrewRules.hasCorrectKit(vType, pKit)) {
             PlayerFeedback.deny(player, "pwpwarfare.msg.vehicle.crew_kit_required_this");
             return;
         }
@@ -118,28 +118,15 @@ public class PacketVehicleDriveRequest {
                 .append(denyCmd));
 
         player.displayClientMessage(
-                Component.translatable("pwpwarfare.msg.drive.request_sent").withStyle(ChatFormatting.GREEN), true);
+                Component.translatable("pwpwarfare.msg.drive.request_sent").withStyle(ChatFormatting.GREEN),
+                true); // запрос виден лидеру и в радиалке техники (этап 17a)
+        com.pigeostudios.pwp.warfare.server.VehicleActionService.noteRequest(vehicle, player);
     }
 
-    private static boolean isSpecialistVehicle(String vType) {
-        if (vType.equalsIgnoreCase("TANK")) return true;
-        if (vType.equalsIgnoreCase("APC")) return true;
-        if (vType.equalsIgnoreCase("Mobile ZU")) return true;
-        if (vType.equalsIgnoreCase("HELICOPTER")) return true;
-        if (vType.toUpperCase().contains("CAS")) return true;
-        if (vType.toUpperCase().contains("SUPPLY HELICOPTER")) return true;
-        return false;
-    }
-
-    private static boolean hasCorrectKit(String vType, String kit) {
-        if (vType.equalsIgnoreCase("HELICOPTER")
-                || vType.toUpperCase().contains("CAS")
-                || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
-            return kit.equals("Pilot") || kit.equals("Pilot Officer");
-        }
-        if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
-            return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
-        }
-        return true;
+    /** Нужна ли машине разрешение лидера на вождение (машина специалиста и правило включено в конфиге). */
+    public static boolean needsLeaderPermission(Entity vehicle) {
+        return (Boolean) com.pigeostudios.pwp.warfare.config.WarfareConfig.REQUIRE_SL_PERMISSION_TO_DRIVE.get()
+                && com.pigeostudios.pwp.warfare.vehicles.CrewRules.isSpecialist(
+                        WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE));
     }
 }

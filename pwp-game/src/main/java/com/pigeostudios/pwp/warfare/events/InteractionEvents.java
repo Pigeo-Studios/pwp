@@ -543,12 +543,12 @@ public class InteractionEvents {
         if (!WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) return;
 
         String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
-        if (!isSpecialistVehicle(vType)) return;
+        if (!com.pigeostudios.pwp.warfare.vehicles.CrewRules.isSpecialist(vType)) return;
 
         if (!vehicle.getPassengers().isEmpty()) return;
 
         String pKit = KitUtil.getEffectiveKit(player);
-        if (!hasCorrectKit(vType, pKit)) {
+        if (!com.pigeostudios.pwp.warfare.vehicles.CrewRules.hasCorrectKit(vType, pKit)) {
             event.setCanceled(true);
             player.displayClientMessage(
                     Component.translatable("pwpwarfare.msg.vehicle.crew_kit_required_this")
@@ -604,21 +604,24 @@ public class InteractionEvents {
     /**
      * Закрепление техники за отрядом, как в Squad (этап 10c, {@code community.vehicleClaim}): садится ВОДИТЕЛЕМ
      * игрок отряда — машина за этим отрядом; водить её может только он, пока отряд жив (модераторы — всегда).
-     * Пассажиром — можно всем. Решение — {@link com.pigeostudios.pwp.warfare.vehicles.VehicleClaim}. Идёт после
-     * проверки кита/разрешения лидера (HIGHEST), отменённую посадку не трогает.
+     * Пассажиром — можно всем, кроме машины с замком «только мой отряд» (этап 17a, радиалка техники).
+     * Закрепление вручную (радиалка) действует и при выключенном авто-закреплении. Решение —
+     * {@link com.pigeostudios.pwp.warfare.vehicles.VehicleClaim#decideSeat}. Идёт после проверки кита/разрешения
+     * лидера (HIGHEST), отменённую посадку не трогает.
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onMountClaim(EntityMountEvent event) {
         if (!event.isMounting() || event.getLevel().isClientSide()) return;
         if (!(event.getEntityMounting() instanceof ServerPlayer player)) return;
-        if (!com.pwp.api.ServerRole.settings().community().vehicleClaim()) return;
+        boolean autoClaim = com.pwp.api.ServerRole.settings().community().vehicleClaim();
         Entity vehicle = event.getEntityBeingMounted();
         if (!WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) return;
-        if (!vehicle.getPassengers().isEmpty()) return; // не водитель
         if (player.isSpectator()) return;
+        boolean driver = vehicle.getPassengers().isEmpty();
 
         String team = player.getTeam() == null ? "" : player.getTeam().getName();
         int claim = WarfareData.of(vehicle).getInt(WarfareKeys.VEHICLE_CLAIM_SQUAD);
+        if (!autoClaim && claim == 0) return; // авто-закрепление выключено, вручную не закрепляли
         String claimTeam = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_CLAIM_TEAM);
         WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
         WarfareWorldData.Squad owner = claim == 0
@@ -632,11 +635,17 @@ public class InteractionEvents {
         int mine = claimTeam.isEmpty() || claimTeam.equalsIgnoreCase(team) ? mySquad : -1;
         // isCreative() правом не является (AGENTS.md): водить чужую закреплённую машину — только модератор+
         boolean staff = com.pwp.api.security.PwpPermissions.has(player, com.pwp.api.security.AccessLevel.MODERATOR);
-        switch (com.pigeostudios.pwp.warfare.vehicles.VehicleClaim.decide(claim, owner != null, mine, staff)) {
+        boolean locked = WarfareData.of(vehicle).getBoolean(WarfareKeys.VEHICLE_LOCKED);
+        var decision = com.pigeostudios.pwp.warfare.vehicles.VehicleClaim.decideSeat(
+                claim, owner != null, mine, staff, locked, driver);
+        if (decision == com.pigeostudios.pwp.warfare.vehicles.VehicleClaim.Decision.CLAIM && !autoClaim) return;
+        switch (decision) {
             case DENY -> {
                 event.setCanceled(true);
                 com.pigeostudios.pwp.warfare.util.PlayerFeedback.deny(
-                        player, "pwpwarfare.msg.vehicle.claimed", owner == null ? "?" : owner.name);
+                        player,
+                        driver ? "pwpwarfare.msg.vehicle.claimed" : "pwpwarfare.vehicle_menu.locked_deny",
+                        owner == null ? "?" : owner.name);
             }
             case CLAIM -> {
                 WarfareData.of(vehicle).putInt(WarfareKeys.VEHICLE_CLAIM_SQUAD, mySquad);
@@ -651,27 +660,5 @@ public class InteractionEvents {
             }
             case ALLOW -> {}
         }
-    }
-
-    private static boolean isSpecialistVehicle(String vType) {
-        if (vType.equalsIgnoreCase("TANK")) return true;
-        if (vType.equalsIgnoreCase("APC")) return true;
-        if (vType.equalsIgnoreCase("Mobile ZU")) return true;
-        if (vType.equalsIgnoreCase("HELICOPTER")) return true;
-        if (vType.toUpperCase().contains("CAS")) return true;
-        if (vType.toUpperCase().contains("SUPPLY HELICOPTER")) return true;
-        return false;
-    }
-
-    private static boolean hasCorrectKit(String vType, String kit) {
-        if (vType.equalsIgnoreCase("HELICOPTER")
-                || vType.toUpperCase().contains("CAS")
-                || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
-            return kit.equals("Pilot") || kit.equals("Pilot Officer");
-        }
-        if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
-            return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
-        }
-        return true;
     }
 }
