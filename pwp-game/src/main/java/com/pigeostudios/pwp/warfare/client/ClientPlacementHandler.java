@@ -82,13 +82,21 @@ public class ClientPlacementHandler {
         }
     }
 
+    /** Лидер отряда ставит постройки и без рации в руке (тактическая радиалка, этап 17d). */
+    private static boolean isSquadLeader(Minecraft mc) {
+        String me = mc.player.getScoreboardName();
+        for (var s : ClientData.clientSquads) if (me.equals(s.leader)) return true;
+        return false;
+    }
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (isPlacing && event.getStage() == Stage.AFTER_TRANSLUCENT_BLOCKS) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.player != null && mc.level != null) {
                 boolean holdingRadio = mc.player.getMainHandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get()
-                        || mc.player.getOffhandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get();
+                        || mc.player.getOffhandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get()
+                        || isSquadLeader(mc);
                 if (!holdingRadio) {
                     stopPlacing();
                 } else {

@@ -55,6 +55,7 @@ public class ClientModEvents {
         com.pigeostudios.pwp.warfare.client.hud.StaminaClient.init();
         com.pigeostudios.pwp.warfare.client.hud.FobHud.init();
         com.pigeostudios.pwp.warfare.client.gui.VehicleRadialScreen.register();
+        com.pigeostudios.pwp.warfare.client.gui.TacticalRadialScreen.register();
         // админ-панель core-client: вкладки «Матч» и «Карта»
         com.pigeostudios.pwp.warfare.client.admin.WarfareAdminTabs.register();
         // этап 3: редактор карты (кнопки в паузе и во вкладке «Карта»)

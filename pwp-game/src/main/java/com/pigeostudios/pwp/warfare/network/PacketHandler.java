@@ -36,7 +36,7 @@ public class PacketHandler {
      * 4 — PacketRespawnRequest/PacketSelectKit переведены на сеть v2 (старые регистрации удалены,
      * новые — в конце списка).
      */
-    private static final String PROTOCOL_VERSION = "10";
+    private static final String PROTOCOL_VERSION = "11";
 
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("pwpwarfare:main"),
@@ -374,6 +374,8 @@ public class PacketHandler {
         id = com.pigeostudios.pwp.warfare.server.CommanderAbilities.register(INSTANCE, id);
         // 10 (26.11.2026): радиальное меню техники (этап 17a) — в конец
         id = com.pigeostudios.pwp.warfare.server.VehicleActionService.register(INSTANCE, id);
+        // 11 (26.11.2026): тактическая радиалка — метка врага и запросы отряду (этап 17d)
+        id = com.pigeostudios.pwp.warfare.server.TacticalActions.register(INSTANCE, id);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

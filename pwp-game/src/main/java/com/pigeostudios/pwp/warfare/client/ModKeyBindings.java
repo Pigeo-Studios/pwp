@@ -60,6 +60,10 @@ public class ModKeyBindings {
             com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(),
             "key.categories.pwpwarfare");
 
+    /** Тактическая радиалка — коммо-роза как в Squad (этап 17d): всё по роли. По умолчанию Y. */
+    public static final KeyMapping TACTICAL_KEY = new KeyMapping(
+            "key.pwpwarfare.tactical", KeyConflictContext.IN_GAME, Type.KEYSYM, 89, "key.categories.pwpwarfare");
+
     /** Радиальное меню техники (этап 17a): в машине или глядя на неё. По умолчанию J. */
     public static final KeyMapping VEHICLE_MENU_KEY = new KeyMapping(
             "key.pwpwarfare.vehicle_menu", KeyConflictContext.IN_GAME, Type.KEYSYM, 74, "key.categories.pwpwarfare");
@@ -69,6 +73,7 @@ public class ModKeyBindings {
         event.register(OPEN_MAP_KEY);
         event.register(DEBUG_FILL_KEY);
         event.register(VEHICLE_MENU_KEY);
+        event.register(TACTICAL_KEY);
         event.register(DROP_SUPPLY_KEY);
         event.register(OPEN_SQUAD_MENU_KEY);
         event.register(SHOW_MAP_KEY);

@@ -282,6 +282,7 @@ public final class PlayerLifecycleEvents {
             ServerPlayer player = (ServerPlayer) event.getEntity();
             com.pigeostudios.pwp.warfare.server.AfkTicker.forget(player);
             com.pigeostudios.pwp.warfare.server.VehicleActionService.forget(player);
+            com.pigeostudios.pwp.warfare.server.TacticalActions.forget(player);
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
             if (data.match.isGameStarted) {

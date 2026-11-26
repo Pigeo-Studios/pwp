@@ -75,7 +75,11 @@ public class PacketBuildRequest {
                     PlayerFeedback.deny(player, "pwpwarfare.msg.build.too_far");
                     return;
                 }
+                // лидер отряда строит из тактической радиалки без рации в руке, как в Squad (этап 17d)
+                boolean squadLeader = com.pigeostudios.pwp.warfare.data.state.WarfareData.of(player)
+                        .getBoolean(com.pigeostudios.pwp.warfare.data.state.WarfareKeys.IS_SQUAD_LEADER);
                 if (!player.isCreative()
+                        && !squadLeader
                         && player.getMainHandItem().getItem() != ModItems.SQUAD_LEADER_RADIO.get()
                         && player.getOffhandItem().getItem() != ModItems.SQUAD_LEADER_RADIO.get()) {
                     PlayerFeedback.deny(player, "pwpwarfare.msg.build.need_radio");
@@ -84,7 +88,7 @@ public class PacketBuildRequest {
                 if (!(player.distanceToSqr(msg.pos.getX(), msg.pos.getY(), msg.pos.getZ()) > 64.0)) {
                     boolean hasRadio = player.getMainHandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get()
                             || player.getOffhandItem().getItem() == ModItems.SQUAD_LEADER_RADIO.get();
-                    if (hasRadio || player.isCreative()) {
+                    if (hasRadio || squadLeader || player.isCreative()) {
                         int r = msg.rotation % 360;
                         if (r < 0) {
                             r += 360;
