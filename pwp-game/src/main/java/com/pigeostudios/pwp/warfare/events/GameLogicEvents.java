@@ -301,26 +301,32 @@ public class GameLogicEvents {
 
                     if (globalTick % 2 == 0) {
                         List<MapPlayerInfo> allPlayersInfo = buildPlayerInfo(level.players(), data);
-                        PacketSyncMapPlayers allPlayersPacket = new PacketSyncMapPlayers(allPlayersInfo);
-
+                        long nowTicks = com.pwp.api.time.GameClock.serverTicks(level.getServer());
                         // кто кого видит — TeamVisibility через PacketHandler.viewerKey (этап 12): всё — только
-                        // модератор-наблюдатель; наказанный спектатор и игроки — только своя команда
+                        // модератор-наблюдатель; наказанный спектатор и игроки — только своя команда (+ разведка
+                        // командира). Пакет собирается и кодируется ОДИН раз на ключ зрителя, а не на каждого игрока
+                        // (10 раз в секунду × все игроки — раньше это было N кодирований одинаковых списков).
+                        java.util.Map<String, net.minecraft.network.protocol.Packet<?>> byKey =
+                                new java.util.HashMap<>();
                         for (ServerPlayer p : level.players()) {
                             String key = PacketHandler.viewerKey(p);
-                            if (com.pigeostudios.pwp.warfare.match.TeamVisibility.ALL.equals(key)) {
-                                PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), allPlayersPacket);
-                            } else if (!com.pigeostudios.pwp.warfare.match.TeamVisibility.NONE.equals(key)) {
-                                List<MapPlayerInfo> teamOnly = new java.util.ArrayList<>(allPlayersInfo.stream()
-                                        .filter(info -> key.equalsIgnoreCase(info.team))
-                                        .toList());
-                                // разведка с воздуха командира (этап 15): враги в её радиусе — только этой команде
-                                teamOnly.addAll(com.pigeostudios.pwp.warfare.server.CommanderAbilities.revealedFor(
-                                        key,
-                                        allPlayersInfo,
-                                        com.pwp.api.time.GameClock.serverTicks(level.getServer())));
-                                PacketHandler.INSTANCE.send(
-                                        PacketDistributor.PLAYER.with(() -> p), new PacketSyncMapPlayers(teamOnly));
-                            }
+                            if (com.pigeostudios.pwp.warfare.match.TeamVisibility.NONE.equals(key)) continue;
+                            net.minecraft.network.protocol.Packet<?> vp = byKey.computeIfAbsent(key, k -> {
+                                List<MapPlayerInfo> list;
+                                if (com.pigeostudios.pwp.warfare.match.TeamVisibility.ALL.equals(k)) {
+                                    list = allPlayersInfo;
+                                } else {
+                                    list = new java.util.ArrayList<>(allPlayersInfo.stream()
+                                            .filter(info -> k.equalsIgnoreCase(info.team))
+                                            .toList());
+                                    list.addAll(com.pigeostudios.pwp.warfare.server.CommanderAbilities.revealedFor(
+                                            k, allPlayersInfo, nowTicks));
+                                }
+                                return PacketHandler.INSTANCE.toVanillaPacket(
+                                        new PacketSyncMapPlayers(list),
+                                        net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT);
+                            });
+                            p.connection.send(vp);
                         }
 
                         if (globalTick % 5 == 0) {
