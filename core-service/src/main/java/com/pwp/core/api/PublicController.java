@@ -73,6 +73,15 @@ public class PublicController {
         });
 
         app.get("/api/v1/public/bans", ctx -> ctx.json(ApiResponse.ok(CommunityRepository.activeBans(500))));
+
+        // ссылки для главной сайта (лаунчер, Discord) — из config.json → site
+        app.get("/api/v1/public/site", ctx -> {
+            var s = com.pwp.core.CoreApplication.config.site;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("launcherUrl", s == null ? "" : s.launcherUrl);
+            m.put("discordUrl", s == null ? "" : s.discordUrl);
+            ctx.json(ApiResponse.ok(m));
+        });
     }
 
     private static Map<String, Object> stats(String nickname, PlayerStats s) {

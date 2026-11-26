@@ -22,6 +22,9 @@ public class AuthMiddleware {
     private static final Map<String, RateBucket> rateBuckets = new ConcurrentHashMap<>();
     private static long lastCleanup = System.currentTimeMillis();
 
+    /** Лимит публичного API на IP в минуту (сайт делает 3–4 запроса на страницу). */
+    static final int PUBLIC_PER_MINUTE = 120;
+
     private static final String[] PUBLIC_PATHS = {
         "/api/v1/health",
         "/api/v1/auth/login",
@@ -42,6 +45,15 @@ public class AuthMiddleware {
 
     public static void handle(Context ctx, CoreApplication.ApiConfig apiConfig) {
         String path = ctx.path();
+
+        // Публичное API сайта (этап 10d/13): без ключа, но со своим лимитом по IP — раньше публичные пути
+        // возвращались до любой проверки и не ограничивались вовсе
+        if (path.startsWith("/api/v1/public/")) {
+            if (!checkIpRateLimit("public:" + ClientIp.of(ctx), PUBLIC_PER_MINUTE)) {
+                throw new TooManyRequestsResponse("Rate limit exceeded");
+            }
+            return;
+        }
 
         // Public endpoints — no auth required (rate limit only)
         for (String p : PUBLIC_PATHS) {

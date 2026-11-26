@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PWP — Squad в Minecraft</title>
+<meta name="description" content="PWP — тактический командный шутер в Minecraft: отряды, ФОБы, техника, 40 на 40.">
+<style>
+:root{--bg:#0e1113;--panel:#161a1d;--panel2:#1c2125;--line:#2a3035;--text:#e4e6e8;--muted:#8d969c;--acc:#c9a227;--blue:#4c8dff;--red:#ff5a4f;--ok:#57b607;--bad:#ed4040}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--acc)}
+header{position:sticky;top:0;z-index:5;background:rgba(14,17,19,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.bar{display:flex;align-items:center;gap:16px;height:56px}
+.logo{font-weight:800;letter-spacing:.12em;font-size:20px}
+.logo span{color:var(--acc)}
+nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+nav a{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:6px;font-size:14px}
+nav a.on,nav a:hover{color:var(--text);background:var(--panel2)}
+main{padding:24px 0 48px}
+section{display:none}
+section.on{display:block}
+h1{font-size:30px;margin:8px 0 8px}
+h2{font-size:20px;margin:28px 0 12px}
+.lead{color:var(--muted);max-width:640px}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+.btn{display:inline-block;padding:10px 18px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);text-decoration:none;font-weight:600;cursor:pointer;font:inherit}
+.btn.acc{background:var(--acc);border-color:var(--acc);color:#14120a}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card b{display:block;margin-bottom:4px}
+.muted{color:var(--muted)}
+.big{font-size:34px;font-weight:800}
+.tickets{display:flex;justify-content:space-between;font-weight:700;margin-top:6px}
+.blue{color:var(--blue)}.red{color:var(--red)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{color:var(--muted);font-weight:600;background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+.tbl{overflow-x:auto}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+.tabs button.on{color:var(--text);border-color:var(--acc)}
+input{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font:inherit;min-width:0;flex:1}
+.row{display:flex;gap:8px;max-width:480px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px}
+.empty{color:var(--muted);padding:24px;text-align:center;background:var(--panel);border:1px dashed var(--line);border-radius:10px}
+ol.rules li{margin:6px 0}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;padding:18px 0}
+@media (max-width:640px){h1{font-size:24px}.bar{height:auto;flex-wrap:wrap;padding-top:8px;padding-bottom:8px}nav{margin-left:0}}
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <div class="logo">P<span>W</span>P</div>
+  <nav id="nav">
+    <a href="#home" data-s="home">Главная</a>
+    <a href="#online" data-s="online">Онлайн</a>
+    <a href="#top" data-s="top">Топ</a>
+    <a href="#player" data-s="player">Игрок</a>
+    <a href="#bans" data-s="bans">Банлист</a>
+    <a href="#rules" data-s="rules">Правила</a>
+  </nav>
+</div></header>
+
+<main class="wrap">
+  <section id="home">
+    <h1>Squad в Minecraft</h1>
+    <p class="lead">Тактический командный шутер: две армии до 40 человек, отряды с лидерами, ФОБы и ралли, техника по
+      дивизиям фракций, медицина и тикеты. Побеждает команда, а не самый быстрый кликер.</p>
+    <div class="cta">
+      <a class="btn acc" id="dl" href="https://github.com/Pigeo-Studios/Pwpfiles/releases/latest">Скачать лаунчер</a>
+      <a class="btn" id="ds" href="#" hidden>Discord</a>
+    </div>
+    <div class="grid">
+      <div class="card"><b>Сейчас играют</b><div class="big" id="homeOnline">—</div><span class="muted" id="homeMatch">загрузка…</span></div>
+      <div class="card"><b>Отряды и роли</b><span class="muted">Стрелок, медик, пулемётчик, гранатомёт, снайпер, механик, пилот, оператор дронов — 19 ролей у 6 фракций.</span></div>
+      <div class="card"><b>ФОБы и снабжение</b><span class="muted">Строй передовые базы, вози материалы, ставь укрепления и точки возрождения.</span></div>
+      <div class="card"><b>Техника</b><span class="muted">Транспорт, БТР, танки, вертолёты и авиация — машиной управляет отряд, который её занял.</span></div>
+    </div>
+    <h2>Как начать</h2>
+    <ol>
+      <li>Скачай лаунчер и создай аккаунт.</li>
+      <li>«Играть» — попадёшь в лобби: голосование за карту и режим.</li>
+      <li>В матче: выбери команду, вступи в отряд (K), возьми роль, выбери точку и деплойся. Подсказки обучения проведут.</li>
+    </ol>
+  </section>
+
+  <section id="online">
+    <h1>Онлайн</h1>
+    <p class="muted" id="onlineTotal">загрузка…</p>
+    <div class="grid" id="servers"></div>
+  </section>
+
+  <section id="top">
+    <h1>Таблица лидеров</h1>
+    <div class="tabs" id="topTabs">
+      <button data-by="kd" class="on">K/D</button><button data-by="kills">Убийства</button>
+      <button data-by="wins">Победы</button><button data-by="playtime">Время в игре</button>
+    </div>
+    <div class="tbl"><table><thead><tr><th>#</th><th>Игрок</th><th>Ур.</th><th>K/D</th><th>Убийства</th><th>Победы</th><th>Матчи</th><th>Часы</th></tr></thead><tbody id="topBody"></tbody></table></div>
+  </section>
+
+  <section id="player">
+    <h1>Профиль игрока</h1>
+    <form class="row" id="pForm"><input id="pNick" placeholder="Ник в игре" maxlength="16" autocomplete="off"><button class="btn acc">Найти</button></form>
+    <div id="pOut"></div>
+  </section>
+
+  <section id="bans">
+    <h1>Банлист</h1>
+    <p class="muted">Активные баны. Не согласен с баном — напиши в Discord, канал апелляций.</p>
+    <div class="tbl"><table><thead><tr><th>Игрок</th><th>Причина</th><th>С</th><th>До</th></tr></thead><tbody id="banBody"></tbody></table></div>
+  </section>
+
+  <section id="rules">
+    <h1>Правила</h1>
+    <ol class="rules">
+      <li><b>Командная игра.</b> Слушай лидера отряда, не занимай роль, которую не играешь, не уходи AFK в слоте (кик через 10 минут).</li>
+      <li><b>Тимкилл и саботаж запрещены.</b> Случайный тимкилл — извинись. Повторные — ограничение, затем автоматический бан.</li>
+      <li><b>Читы, макросы, баги ради выгоды</b> — бан без предупреждения.</li>
+      <li><b>Чат и голос.</b> Без оскорблений, национальной розни и спама. Мат в чате скрывается автоматически.</li>
+      <li><b>Техника.</b> Машину, которую занял отряд, водит этот отряд. Не угоняй и не уничтожай свою технику.</li>
+      <li><b>Жалобы</b> — в игре: Esc → «Меню PWP» → «Жалоба». Модераторы видят их сразу.</li>
+      <li><b>Донат</b> — только косметика: скины меняют вид, но не характеристики.</li>
+    </ol>
+  </section>
+</main>
+
+<footer><div class="wrap">PWP · Pigeo Studios · данные обновляются автоматически</div></footer>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const api = async p => { try { const r = await fetch('/api/v1/public/' + p); const j = await r.json(); return j && j.success ? j.data : null; } catch (e) { return null; } };
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = String(text); if (cls) e.className = cls; return e; };
+const date = ms => ms ? new Date(ms).toLocaleDateString('ru-RU') : 'навсегда';
+const MODES = {aas: 'Advance and Secure', invasion: 'Invasion', skirmish: 'Стычка'};
+
+function show(name) {
+  if (!document.getElementById(name)) name = 'home';
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === name));
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.s === name));
+  if (name === 'online') loadOnline();
+  if (name === 'top') loadTop(currentBy);
+  if (name === 'bans') loadBans();
+}
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+
+async function loadSite() {
+  const s = await api('site');
+  if (!s) return;
+  if (s.launcherUrl) $('dl').href = s.launcherUrl;
+  if (s.discordUrl) { $('ds').href = s.discordUrl; $('ds').hidden = false; }
+}
+
+async function loadOnline() {
+  const d = await api('online');
+  const box = $('servers'); box.replaceChildren();
+  if (!d) { $('onlineTotal').textContent = 'Сервер недоступен'; $('homeOnline').textContent = '—'; $('homeMatch').textContent = 'нет связи'; return; }
+  $('onlineTotal').textContent = 'Всего игроков: ' + d.online;
+  $('homeOnline').textContent = d.online;
+  const match = (d.servers || []).find(s => s.map);
+  $('homeMatch').textContent = match ? ('идёт бой: ' + match.map) : 'ждём игроков в лобби';
+  if (!d.servers || !d.servers.length) { box.append(el('div', 'Серверы выключены — смотри расписание в Discord.', 'empty')); return; }
+  for (const s of d.servers) {
+    const c = el('div', null, 'card');
+    c.append(el('b', s.map ? s.map : 'Лобби'));
+    c.append(el('div', (s.online || 0) + (s.maxPlayers ? ' / ' + s.maxPlayers : '') + ' игроков', 'muted'));
+    if (s.map) {
+      c.append(el('div', (MODES[(s.mode || '').toLowerCase()] || s.mode || '') + (s.phase ? ' · ' + s.phase : ''), 'muted'));
+      const t = el('div', null, 'tickets');
+      t.append(el('span', (s.blueFaction || 'BLUE').toUpperCase() + ' ' + s.blueTickets, 'blue'));
+      t.append(el('span', s.redTickets + ' ' + (s.redFaction || 'RED').toUpperCase(), 'red'));
+      c.append(t);
+    }
+    box.append(c);
+  }
+}
+
+let currentBy = 'kd';
+async function loadTop(by) {
+  currentBy = by;
+  document.querySelectorAll('#topTabs button').forEach(b => b.classList.toggle('on', b.dataset.by === by));
+  const body = $('topBody'); body.replaceChildren();
+  const d = await api('top?by=' + encodeURIComponent(by) + '&limit=50');
+  if (!d || !d.length) { const tr = el('tr'); const td = el('td', d ? 'Пока пусто — сыграй первый матч!' : 'Сервер недоступен', 'muted'); td.colSpan = 8; tr.append(td); body.append(tr); return; }
+  for (const p of d) {
+    const tr = el('tr');
+    const name = el('td'); const a = el('a', p.nickname); a.href = '#player'; a.onclick = () => { $('pNick').value = p.nickname; findPlayer(p.nickname); }; name.append(a);
+    tr.append(el('td', p.place), name, el('td', p.level), el('td', Number(p.kd).toFixed(2)), el('td', p.kills), el('td', p.wins), el('td', p.matches), el('td', p.playtimeHours));
+    body.append(tr);
+  }
+}
+$('topTabs').onclick = e => { if (e.target.dataset.by) loadTop(e.target.dataset.by); };
+
+async function findPlayer(nick) {
+  const out = $('pOut'); out.replaceChildren();
+  if (!/^[A-Za-z0-9_]{1,16}$/.test(nick)) { out.append(el('div', 'Ник — латиница, цифры и _, до 16 символов', 'empty')); return; }
+  const p = await api('player/' + encodeURIComponent(nick));
+  if (!p) { out.append(el('div', 'Игрок не найден', 'empty')); return; }
+  const card = el('div', null, 'card'); card.style.marginTop = '14px';
+  card.append(el('h2', p.nickname));
+  if (p.banned) card.append(el('div', 'Заблокирован', 'red'));
+  card.append(el('div', 'Место в топе по K/D: ' + (p.rankKd || '—') + (p.firstJoin ? ' · в игре с ' + new Date(String(p.firstJoin).replace(' ', 'T')).toLocaleDateString('ru-RU') : ''), 'muted'));
+  const st = el('div', null, 'stats');
+  const items = [['K/D', Number(p.kd).toFixed(2)], ['Убийства', p.kills], ['Смерти', p.deaths], ['Победы', p.wins], ['Поражения', p.losses], ['Матчи', p.matches], ['Оживления', p.revives], ['Захваты', p.captures], ['Уничтожено техники', p.vehiclesDestroyed], ['Часов в игре', p.playtimeHours]];
+  for (const [k, v] of items) { const c = el('div', null, 'card'); c.append(el('div', k, 'muted'), el('div', v, 'big')); st.append(c); }
+  card.append(st); out.append(card);
+}
+$('pForm').onsubmit = e => { e.preventDefault(); findPlayer($('pNick').value.trim()); };
+
+async function loadBans() {
+  const body = $('banBody'); body.replaceChildren();
+  const d = await api('bans');
+  if (!d || !d.length) { const tr = el('tr'); const td = el('td', d ? 'Активных банов нет' : 'Сервер недоступен', 'muted'); td.colSpan = 4; tr.append(td); body.append(tr); return; }
+  for (const b of d) { const tr = el('tr'); tr.append(el('td', b.nickname), el('td', b.reason || '—'), el('td', date(b.createdAt)), el('td', date(b.expiresAt))); body.append(tr); }
+}
+
+loadSite();
+show(location.hash.slice(1) || 'home');
+loadOnline();
+setInterval(() => { if (document.getElementById('online').classList.contains('on') || document.getElementById('home').classList.contains('on')) loadOnline(); }, 30000);
+</script>
+</body>
+</html>

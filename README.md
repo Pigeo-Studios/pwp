@@ -111,7 +111,8 @@ powershell -ExecutionPolicy Bypass -File tools\pwp-local.ps1 -Build -Start
 | Закрепление техники | Машину, которую повёл отряд, водит только он, пока отряд жив. Пассажиром садиться можно всем. |
 | Discord | Esc → «Сообщество» → «Привязать Discord» → код в чат → боту `/link <код>`. |
 | Бэкап БД | core каждую ночь (после 04:00) делает `mysqldump` → `backups/pwp_core-*.sql.gz`, хранит 14 дней. Настройка — `backup` в `core-service/config.json`; статус и «снять сейчас» — `GET`/`POST /api/v1/admin/backup[/run]`. |
-| Сайт | Публичное API без ключа: `/api/v1/public/online`, `/top`, `/player/{ник}`, `/bans`. |
+| Сайт | Отдаёт сам core: `https://<домен>/` — онлайн, топ, профиль игрока, банлист, правила. Ссылки на лаунчер и Discord — `site` в `core-service/config.json`. Публичное API без ключа (лимит 120 запросов в минуту с IP): `/api/v1/public/online`, `/top`, `/player/{ник}`, `/bans`, `/site`. |
+| Веб-модерация | `https://<домен>/admin/moderation`: жалобы (закрыть, забанить по жалобе), баны (разбан), бэкап БД (статус, «снять сейчас»). Вход — API-ключ или токен admin/owner. |
 
 Боты: в `bots/config.py` задаются чаты для жалоб — `TG_REPORTS_CHAT_ID` и `DISCORD_REPORTS_CHANNEL_ID`. Роль после привязки — `DISCORD_LINKED_ROLE_ID`, по желанию.
 

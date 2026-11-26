@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>PWP Модерация</title>
+<style>
+:root{--bg:#0e1113;--panel:#161a1d;--panel2:#1c2125;--line:#2a3035;--text:#e4e6e8;--muted:#8d969c;--acc:#c9a227;--ok:#57b607;--bad:#ed4040}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font:inherit}
+button{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:6px;cursor:pointer;font:inherit}
+button.acc{background:var(--acc);border-color:var(--acc);color:#14120a;font-weight:600}
+button.bad{border-color:var(--bad);color:#ffb3ad}
+.tabs{display:flex;gap:6px;margin:14px 0}
+.tabs button.on{border-color:var(--acc)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line)}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);background:var(--panel2);font-weight:600}
+.tbl{overflow-x:auto}
+.muted{color:var(--muted)}
+.msg{margin:10px 0;min-height:20px}
+.ok{color:var(--ok)}.err{color:var(--bad)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+section{display:none}section.on{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PWP · модерация</h1>
+  <div class="row">
+    <input id="tok" type="password" placeholder="API-ключ или токен admin/owner" size="40" autocomplete="off">
+    <button class="acc" id="go">Войти</button>
+    <span class="muted">Ключ хранится только в этой вкладке.</span>
+  </div>
+  <div class="tabs">
+    <button data-t="reports" class="on">Жалобы</button>
+    <button data-t="bans">Баны</button>
+    <button data-t="backup">Бэкап БД</button>
+  </div>
+  <div class="msg" id="msg"></div>
+
+  <section id="reports" class="on">
+    <div class="row"><select id="rStatus"><option value="open">Открытые</option><option value="closed">Закрытые</option><option value="all">Все</option></select><button id="rLoad">Обновить</button></div>
+    <div class="tbl" style="margin-top:10px"><table><thead><tr><th>#</th><th>Когда</th><th>Сервер</th><th>На кого</th><th>Причина</th><th>От кого</th><th>Подробности</th><th></th></tr></thead><tbody id="rBody"></tbody></table></div>
+  </section>
+
+  <section id="bans">
+    <div class="card">
+      <b>Забанить по жалобе</b> — кнопка «Бан» в строке жалобы подставит игрока сюда.
+      <div class="row" style="margin-top:8px">
+        <input id="bUuid" placeholder="uuid игрока" size="38">
+        <select id="bDur"><option>1h</option><option>6h</option><option selected>1d</option><option>7d</option><option>30d</option><option>perm</option></select>
+        <input id="bReason" placeholder="причина" size="30" maxlength="200">
+        <button class="bad" id="bGo">Забанить</button>
+      </div>
+    </div>
+    <div class="row"><button id="bLoad">Обновить список</button></div>
+    <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Игрок</th><th>Статус</th><th>Причина</th><th>С</th><th>До</th><th></th></tr></thead><tbody id="bBody"></tbody></table></div>
+  </section>
+
+  <section id="backup">
+    <div class="card" id="bkInfo">загрузка…</div>
+    <div class="row"><button id="bkLoad">Обновить</button><button class="acc" id="bkRun">Снять бэкап сейчас</button></div>
+  </section>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+let token = '';
+try { token = sessionStorage.getItem('pwpTok') || ''; } catch (e) {}
+$('tok').value = token;
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text != null) e.textContent = String(text); if (cls) e.className = cls; return e; };
+const when = ms => ms ? new Date(typeof ms === 'string' ? ms.replace(' ', 'T') : ms).toLocaleString('ru-RU') : '—';
+const REASONS = {teamkill: 'Тимкилл', grief: 'Гриф', cheat: 'Читы', toxic: 'Оскорбления', spam: 'Спам', afk: 'AFK', rules: 'Другое'};
+function say(text, ok) { const m = $('msg'); m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err'); }
+async function call(method, path, body) {
+  if (!token) { say('Введите ключ', false); return null; }
+  try {
+    const r = await fetch(path, { method, headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    if (r.status === 401 || r.status === 403) { say('Нет доступа: неверный ключ или не admin/owner', false); return null; }
+    const j = await r.json();
+    if (!j.success) { say(j.error || 'Ошибка', false); return null; }
+    return j.data === undefined ? {} : j.data;
+  } catch (e) { say('core-service недоступен', false); return null; }
+}
+
+document.querySelector('.tabs').onclick = e => {
+  const t = e.target.dataset.t; if (!t) return;
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === t));
+  ({reports: loadReports, bans: loadBans, backup: loadBackup})[t]();
+};
+$('go').onclick = () => { token = $('tok').value.trim(); try { sessionStorage.setItem('pwpTok', token); } catch (e) {} say('', true); loadReports(); };
+
+async function loadReports() {
+  const d = await call('GET', '/api/v1/admin/reports?status=' + $('rStatus').value + '&limit=200');
+  const body = $('rBody'); body.replaceChildren();
+  if (!d) return;
+  if (!d.length) { const tr = el('tr'); const td = el('td', 'Жалоб нет', 'muted'); td.colSpan = 8; tr.append(td); body.append(tr); return; }
+  for (const r of d) {
+    const tr = el('tr');
+    const act = el('td');
+    if (r.status === 'open') {
+      const close = el('button', 'Закрыть'); close.onclick = async () => { if (await call('POST', '/api/v1/admin/reports/' + r.id + '/close', { by: 'web' })) { say('Жалоба #' + r.id + ' закрыта', true); loadReports(); } };
+      act.append(close);
+    } else act.append(el('span', 'закрыта' + (r.handledBy ? ' (' + r.handledBy + ')' : ''), 'muted'));
+    const ban = el('button', 'Бан', 'bad'); ban.style.marginLeft = '6px';
+    ban.onclick = () => { $('bUuid').value = r.targetUuid || ''; $('bReason').value = (REASONS[r.reason] || r.reason) + ' (жалоба #' + r.id + ')'; document.querySelector('.tabs [data-t=bans]').click(); };
+    act.append(ban);
+    tr.append(el('td', r.id), el('td', when(r.createdAt)), el('td', r.server), el('td', r.target), el('td', REASONS[r.reason] || r.reason), el('td', r.reporter), el('td', r.details || '—'), act);
+    body.append(tr);
+  }
+}
+$('rLoad').onclick = loadReports;
+$('rStatus').onchange = loadReports;
+
+async function loadBans() {
+  const d = await call('GET', '/api/v1/admin/anticheat/bans');
+  const body = $('bBody'); body.replaceChildren();
+  if (!d) return;
+  const items = Array.isArray(d) ? d : (d.items || []);
+  if (!items.length) { const tr = el('tr'); const td = el('td', 'Пусто', 'muted'); td.colSpan = 6; tr.append(td); body.append(tr); return; }
+  for (const b of items) {
+    const tr = el('tr'); const act = el('td');
+    if (b.type === 'BAN' && b.uuid) {
+      const un = el('button', 'Разбанить'); un.onclick = async () => { if (!confirm('Разбанить ' + b.nickname + '?')) return; if (await call('POST', '/api/v1/admin/unban', { uuid: b.uuid })) { say(b.nickname + ' разбанен', true); loadBans(); } };
+      act.append(un);
+    }
+    tr.append(el('td', b.nickname || b.uuid || '—'), el('td', b.type === 'BAN' ? 'бан' : 'снят'), el('td', b.reason || '—'), el('td', when(b.created_at || b.createdAt)), el('td', b.expires_at || b.expiresAt ? when(b.expires_at || b.expiresAt) : 'навсегда'), act);
+    body.append(tr);
+  }
+}
+$('bLoad').onclick = loadBans;
+$('bGo').onclick = async () => {
+  const uuid = $('bUuid').value.trim(), reason = $('bReason').value.trim(), duration = $('bDur').value;
+  if (!/^[0-9a-fA-F-]{32,36}$/.test(uuid)) { say('Нужен uuid игрока (из жалобы)', false); return; }
+  if (!reason) { say('Укажите причину', false); return; }
+  if (!confirm('Забанить ' + uuid + ' на ' + duration + '?')) return;
+  if (await call('POST', '/api/v1/admin/ban', { uuid, reason, duration })) { say('Забанен', true); loadBans(); }
+};
+
+async function loadBackup() {
+  const d = await call('GET', '/api/v1/admin/backup');
+  const box = $('bkInfo'); box.replaceChildren();
+  if (!d) { box.textContent = '—'; return; }
+  box.append(el('div', d.enabled ? 'Ночной бэкап включён' : 'Бэкап выключен (backup.enabled=false)', d.enabled ? 'ok' : 'err'));
+  box.append(el('div', 'Папка: ' + d.dir, 'muted'));
+  box.append(el('div', 'Последний: ' + (d.lastFile || '—') + (d.lastAt ? ' · ' + when(d.lastAt) : '')));
+  if (d.lastError) box.append(el('div', 'Ошибка: ' + d.lastError, 'err'));
+  if (d.running) box.append(el('div', 'Идёт снятие бэкапа…', 'muted'));
+  box.append(el('div', 'Файлов: ' + (d.files || []).length + ((d.files || []).length ? ' (последний ' + d.files[d.files.length - 1] + ')' : ''), 'muted'));
+}
+$('bkLoad').onclick = loadBackup;
+$('bkRun').onclick = async () => { if (await call('POST', '/api/v1/admin/backup/run')) { say('Бэкап запущен — обновите через минуту', true); } };
+
+if (token) loadReports();
+</script>
+</body>
+</html>

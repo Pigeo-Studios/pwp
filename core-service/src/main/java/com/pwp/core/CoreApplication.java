@@ -67,6 +67,12 @@ public class CoreApplication {
         com.pwp.core.metrics.Metrics.install(app); // замер времени — до авторизации, чтобы считать и отказы
         app.before("/api/*", ctx -> AuthMiddleware.handle(ctx, config.api));
         // дашборд: сама страница данных не содержит, данные — /api/v1/admin/metrics по токену админа
+        // сайт (этап 13): главная — публичные страницы на /api/v1/public, /admin/moderation — жалобы/баны/бэкап
+        // (ключ вводится на странице, права — тот же verifyAdmin у /api/v1/admin/*)
+        if (config.site == null || config.site.enabled) {
+            app.get("/", ctx -> serveResource(ctx, "/site/index.html"));
+            app.get("/admin/moderation", ctx -> serveResource(ctx, "/site/admin.html"));
+        }
         app.get("/admin/dashboard", ctx -> {
             try (var in = CoreApplication.class.getResourceAsStream("/dashboard.html")) {
                 ctx.contentType("text/html; charset=utf-8").result(in == null ? "no dashboard" : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
@@ -162,6 +168,19 @@ public class CoreApplication {
         }
     }
 
+    private static void serveResource(io.javalin.http.Context ctx, String path) throws java.io.IOException {
+        try (var in = CoreApplication.class.getResourceAsStream(path)) {
+            if (in == null) {
+                ctx.status(404).result("not found");
+                return;
+            }
+            ctx.header("X-Content-Type-Options", "nosniff");
+            ctx.header("Referrer-Policy", "same-origin");
+            ctx.contentType("text/html; charset=utf-8")
+                    .result(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+    }
+
     private static void loadConfig(String path) {
         // Search order: explicit path -> cwd -> next to the JAR (../.. from build/libs)
         List<java.nio.file.Path> candidates = new java.util.ArrayList<>();
@@ -197,6 +216,7 @@ public class CoreApplication {
         public LauncherConfig launcher = new LauncherConfig();
         public AnticheatConfig anticheat = new AnticheatConfig();
         public BackupConfig backup = new BackupConfig();
+        public SiteConfig site = new SiteConfig();
 
     }
 
@@ -208,6 +228,13 @@ public class CoreApplication {
         public int heartbeatTimeoutSec = 60;
         public String screenshotDir = "C:/Users/maska/OneDrive/Desktop/PWP-Server/anticheat-screenshots";
         public String artifactsDir = "C:/Users/maska/OneDrive/Desktop/Pwpfiles/anticheat";
+    }
+
+    /** Сайт (этап 13): ссылки на главной. Пустое — кнопка не показывается. */
+    public static class SiteConfig {
+        public boolean enabled = true;
+        public String launcherUrl = "https://github.com/Pigeo-Studios/Pwpfiles/releases/latest";
+        public String discordUrl = "";
     }
 
     /** Ночной бэкап БД (этап 10a). mysqldump пусто — ищется XAMPP, затем mysqldump/mariadb-dump в PATH. */

@@ -65,6 +65,7 @@ PWP — «Squad в Minecraft» (Forge 1.20.1-47.3.0, Java 17, official mappings,
 - HTTP к core — только `CoreApi`. На главном потоке сервера не ждать: `ServerThread.thenOnServer`; с игроком — `thenForPlayer` (игрок ищется заново по UUID); из пакета игрока — `guardedForPlayer` + `RequestGuard`. `CoreApi.await` — только в фоне.
 - Адрес core в модах — `http://127.0.0.1:8080`, не `localhost` (на Windows резолвится в `::1`).
 - В core: `/api/v1/admin/*` проверяет один `verifyAdmin` (сессия admin/owner или API-ключ); изменения экономики/матча/модерации/контента — в `AccessPolicy.SERVER_ONLY`; сессия меняет только свой uuid; `/api/v1/public/*` — без ключа, без uuid/IP/портов. IP клиента — `ClientIp.of(ctx)`.
+- Сайт и веб-модерация — `core-service/src/main/resources/site/` (отдаёт core на `/` и `/admin/moderation`); только публичное API или `/api/v1/admin/*` с ключом, вывод — `textContent`.
 - Новые таблицы — `CREATE TABLE IF NOT EXISTS` в `DatabaseManager` (+ `.sql` в `core-service/sql`). **Удалять таблицы/данные — только с «ок» владельца.** Импорт SQL с кириллицей — `cmd /c "mysql … < file.sql"`, не PowerShell-пайп.
 
 ### Данные и состояние
