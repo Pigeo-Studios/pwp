@@ -90,6 +90,7 @@
         {"id": "key.warbornrenewed.reb_backpack_toggle", "category": "drone", "order": 30, "advanced": true},
         {"id": "key.pwpwarfare.open_squad_menu", "category": "squad", "order": 10},
         {"id": "key.pwpwarfare.tactical", "category": "squad", "order": 5},
+        {"id": "key.pwpwarfare.help", "category": "interface", "order": 5},
         {"id": "key.pwpwarfare.vehicle_menu", "category": "vehicles", "order": 5},
         {"id": "key.pwpwarfare.place_ping", "category": "squad", "order": 20},
         {"id": "key.pwpwarfare.drop_supply", "category": "squad", "order": 30},

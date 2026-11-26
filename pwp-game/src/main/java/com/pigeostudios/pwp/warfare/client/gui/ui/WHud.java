@@ -75,6 +75,7 @@ public final class WHud {
     public static final int CTX_DRONE = HudZones.ContextTier.DRONE_CHANNEL;
     public static final int CTX_CONSTRUCTION = HudZones.ContextTier.CONSTRUCTION;
     public static final int CTX_PATIENT = HudZones.ContextTier.PATIENT;
+    public static final int CTX_LOOK_AT = HudZones.ContextTier.LOOK_AT;
 
     /** Заявка в контекстный ярус на этот кадр (вызывать в {@code RenderGuiEvent.Pre}). */
     public static void contextOffer(int priority) {
@@ -130,7 +131,9 @@ public final class WHud {
         }
         HudDraw.text(g, font, value, vx, ty, UIDraw.fade(valueColor, o), true);
         int by = ty + font.lineHeight + HudTheme.PAD_Y;
-        HudDraw.bar(g, pad, by, w - pad - HudTheme.PAD_X, HudTheme.CONTEXT_BAR_H, frac, -1F, 10, accent, o);
+        // frac < 0 — без полосы (подсказка при наведении), как у stackPlate
+        if (frac >= 0F)
+            HudDraw.bar(g, pad, by, w - pad - HudTheme.PAD_X, HudTheme.CONTEXT_BAR_H, frac, -1F, 10, accent, o);
         HudDraw.end(g);
         return true;
     }

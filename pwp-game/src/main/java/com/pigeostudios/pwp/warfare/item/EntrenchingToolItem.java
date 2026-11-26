@@ -54,9 +54,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public float getDestroySpeed(ItemStack stack, BlockState state) {
-        return this.isWarfareConstruction(state) && !this.isConstructed(state)
-                ? 20.0F
-                : super.getDestroySpeed(stack, state);
+        return isWarfareConstruction(state) && !isConstructed(state) ? 20.0F : super.getDestroySpeed(stack, state);
     }
 
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
@@ -95,7 +93,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         HitResult hit = player.pick(4.5, 0.0F, false);
         if (hit.getType() == Type.BLOCK) {
             BlockState state = level.getBlockState(((BlockHitResult) hit).getBlockPos());
-            if (this.isWarfareConstruction(state)) {
+            if (isWarfareConstruction(state)) {
                 if (!level.isClientSide) {
                     long id = this.getOrAssignID(itemstack, level);
                     this.triggerAnim(player, id, "ShovelController", "dig");
@@ -115,11 +113,11 @@ public class EntrenchingToolItem extends Item implements GeoItem {
                 BlockPos pos = blockHit.getBlockPos();
                 BlockState state = level.getBlockState(pos);
                 BlockEntity be = level.getBlockEntity(pos);
-                if (this.isWarfareConstruction(state)) {
+                if (isWarfareConstruction(state)) {
                     String playerTeam =
                             player.getTeam() != null ? player.getTeam().getName() : "NEUTRAL";
-                    String structureTeam = this.getStructureTeam(be);
-                    boolean isConstructed = this.isConstructed(state);
+                    String structureTeam = getStructureTeam(be);
+                    boolean isConstructed = isConstructed(state);
                     boolean isEnemy = !structureTeam.equals("NEUTRAL")
                             && !structureTeam.equalsIgnoreCase(playerTeam)
                             && !player.isCreative();
@@ -219,7 +217,8 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         });
     }
 
-    private boolean isWarfareConstruction(BlockState state) {
+    /** Постройка PWP, с которой работает лопата (и подсказка при наведении). */
+    public static boolean isWarfareConstruction(BlockState state) {
         return state.is((Block) ModBlocks.HUB_BLOCK.get())
                 || state.is((Block) ModBlocks.WALL_BLOCK.get())
                 || state.is((Block) ModBlocks.WALL_SLAB_BLOCK.get())
@@ -233,7 +232,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
                 || state.is((Block) ModBlocks.VEHICLE_STATION_BLOCK.get());
     }
 
-    private String getStructureTeam(BlockEntity be) {
+    public static String getStructureTeam(BlockEntity be) {
         if (be instanceof HubBlockEntity h) {
             return h.getTeam();
         } else if (be instanceof WallBlockEntity w) {
@@ -277,7 +276,7 @@ public class EntrenchingToolItem extends Item implements GeoItem {
         }
     }
 
-    private boolean isConstructed(BlockState state) {
+    public static boolean isConstructed(BlockState state) {
         if (state.is((Block) ModBlocks.CAMO_NET_BLOCK.get())) {
             return true;
         }
