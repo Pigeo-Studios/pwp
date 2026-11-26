@@ -52,10 +52,17 @@ class GameModesTest {
         assertEquals(GameModes.INVASION, GameModes.byId(" Invasion "));
         assertNull(GameModes.byId("tdm"));
         assertEquals(GameModes.AAS, GameModes.orAas(null));
-        assertEquals(List.of(GameModes.AAS, GameModes.INVASION), GameModes.votable(null));
+        assertEquals(List.of(GameModes.AAS, GameModes.INVASION, GameModes.RAAS), GameModes.votable(null));
         assertEquals(
-                List.of(GameModes.AAS, GameModes.INVASION, GameModes.SKIRMISH),
+                List.of(GameModes.AAS, GameModes.INVASION, GameModes.SKIRMISH, GameModes.RAAS),
                 GameModes.votable(Set.of("invasion", "SKIRMISH")));
+        // стрельбище — только если карта объявила
+        assertEquals(
+                List.of(GameModes.AAS, GameModes.INVASION, GameModes.RAAS, GameModes.TRAINING),
+                GameModes.votable(Set.of("training")));
+        assertTrue(GameModes.isTraining(" training"));
+        assertTrue(GameModes.isRaas("RAAS"));
+        assertFalse(GameModes.isRaas("aas"));
     }
 
     @Test

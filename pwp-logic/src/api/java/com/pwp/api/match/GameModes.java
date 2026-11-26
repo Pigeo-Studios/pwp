@@ -15,6 +15,10 @@ import java.util.Locale;
  *   <li>{@code invasion} — защитник держит все точки, атакующий берёт по цепочке;
  *   <li>{@code skirmish} — «Стычка» для малого онлайна и маленьких карт: любая точка в любом порядке, без техники.
  *       Предлагается в голосовании, только если карта объявила его в {@code modes} map_config.
+ *   <li>{@code raas} — Random AAS: как AAS, но цепочка точек каждый матч новая (по одной точке из каждого «слоя»
+ *       между мейнами, см. {@code RaasChain}); одна карта — разные бои.
+ *   <li>{@code training} — «Стрельбище»: тренировка без счёта — тикеты не тратятся, лимиты ролей сняты, быстрый
+ *       респаун. Только если карта объявила {@code modes.training}.
  * </ul>
  */
 public final class GameModes {
@@ -61,7 +65,36 @@ public final class GameModes {
             false,
             true);
 
-    private static final List<Mode> ALL = List.of(AAS, INVASION, SKIRMISH);
+    public static final Mode RAAS = new Mode(
+            "raas",
+            "RAAS",
+            "Random Advance and Secure: как AAS, но цепочка точек каждый матч своя — одна карта, разные бои.",
+            Order.CHAIN,
+            true,
+            false);
+    public static final Mode TRAINING = new Mode(
+            "training",
+            "СТРЕЛЬБИЩЕ",
+            "Тренировка: любые роли без лимитов, техника, тикеты не тратятся, быстрый респаун. Попробуй всё без"
+                    + " давления матча.",
+            Order.FREE,
+            true,
+            true);
+
+    private static final List<Mode> ALL = List.of(AAS, INVASION, SKIRMISH, RAAS, TRAINING);
+
+    /** Тренировка: без счёта и лимитов ролей. */
+    public static boolean isTraining(String id) {
+        return TRAINING.id().equalsIgnoreCase(id == null ? "" : id.trim());
+    }
+
+    /** RAAS: цепочка точек случайная на матч. */
+    public static boolean isRaas(String id) {
+        return RAAS.id().equalsIgnoreCase(id == null ? "" : id.trim());
+    }
+
+    /** Респаун в тренировке, секунд. */
+    public static final int TRAINING_RESPAWN_SECONDS = 3;
 
     private GameModes() {}
 
@@ -83,7 +116,6 @@ public final class GameModes {
         return m == null ? AAS : m;
     }
 
-    /** Режимы голосования для карты: все не-optIn + optIn, объявленные картой ({@code map_config.modes}). */
     /** Минимум тикетов малого режима. */
     public static final int SMALL_MODE_MIN_TICKETS = 100;
 
@@ -97,6 +129,7 @@ public final class GameModes {
         return Math.max(SMALL_MODE_MIN_TICKETS, mapTickets / 2);
     }
 
+    /** Режимы голосования для карты: все не-optIn + optIn, объявленные картой ({@code map_config.modes}). */
     public static List<Mode> votable(Collection<String> mapModes) {
         List<Mode> out = new ArrayList<>();
         for (Mode m : ALL) {
