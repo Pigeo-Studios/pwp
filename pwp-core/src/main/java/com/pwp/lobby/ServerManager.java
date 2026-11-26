@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.pwp.api.config.MatchConfig;
 import com.pwp.api.lobby.MatchHandoff;
+import com.pwp.api.time.GameClock;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -45,7 +46,7 @@ public class ServerManager {
             this.serverId = serverId;
             this.port = port;
             this.directory = directory;
-            this.createdAt = System.currentTimeMillis();
+            this.createdAt = GameClock.realMillis();
         }
     }
 
@@ -107,7 +108,7 @@ public class ServerManager {
                 if (Files.exists(serverDir)) deleteDirectory(serverDir);
 
                 instance.phase = "template";
-                instance.phaseStartedAt = System.currentTimeMillis();
+                instance.phaseStartedAt = GameClock.realMillis();
                 log.info("Copying template to {}...", dirName);
                 robocopy(templatePath, serverDir);
 
@@ -115,7 +116,7 @@ public class ServerManager {
                     Path mapWorldDir = Paths.get(mapWorldPath);
                     if (Files.isDirectory(mapWorldDir)) {
                         instance.phase = "map";
-                        instance.phaseStartedAt = System.currentTimeMillis();
+                        instance.phaseStartedAt = GameClock.realMillis();
                         log.info("Copying map world '{}'...", mapName);
                         Path matchWorldDir = serverDir.resolve(mapName);
                         Files.createDirectories(matchWorldDir);
@@ -124,7 +125,7 @@ public class ServerManager {
                 }
 
                 instance.phase = "config";
-                instance.phaseStartedAt = System.currentTimeMillis();
+                instance.phaseStartedAt = GameClock.realMillis();
 
                 // файлы канала лобби↔матч из шаблона/прошлого запуска не должны «дожить» до этого матча
                 Files.deleteIfExists(serverDir.resolve(MatchHandoff.SETTINGS_FILE));
@@ -205,7 +206,7 @@ public class ServerManager {
                 }
 
                 instance.phase = "booting";
-                instance.phaseStartedAt = System.currentTimeMillis();
+                instance.phaseStartedAt = GameClock.realMillis();
                 String title = "PWP Match " + serverId;
                 String dir = serverDir.toAbsolutePath().toString();
                 File sDir = serverDir.toFile();
@@ -235,7 +236,7 @@ public class ServerManager {
 
     /** Called from main tick — updates booted status, cleans dead servers, broadcasts progress */
     public static void tick() {
-        long now = System.currentTimeMillis();
+        long now = GameClock.realMillis();
         for (ServerInstance si : servers.values()) {
             if (si.failed || (!si.booted && now - si.createdAt > SERVER_START_TIMEOUT_MS)) {
                 if (!si.failed) {

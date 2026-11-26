@@ -1,5 +1,6 @@
 package com.pwp.lobby;
 
+import com.pwp.api.time.GameClock;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
@@ -40,7 +41,7 @@ public class FactionVotingManager {
         }
         active = true;
         finished = false;
-        startTime = System.currentTimeMillis();
+        startTime = GameClock.realMillis();
         mapName = map;
         availableFactions = new ArrayList<>(available);
         Collections.shuffle(availableFactions);
@@ -60,13 +61,13 @@ public class FactionVotingManager {
 
     public static void tick() {
         if (!active || finished) return;
-        long elapsed = System.currentTimeMillis() - startTime;
+        long elapsed = GameClock.realMillis() - startTime;
         if (elapsed >= durationSec * 1000L) finishFactionVote();
     }
 
     public static int getRemainingSeconds() {
         if (!active) return 0;
-        return Math.max(0, durationSec - (int) ((System.currentTimeMillis() - startTime) / 1000));
+        return Math.max(0, durationSec - (int) ((GameClock.realMillis() - startTime) / 1000));
     }
 
     public static void stop() {

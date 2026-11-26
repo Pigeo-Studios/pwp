@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.pigeostudios.pwp.warfare.map.MapOverview;
 import com.pigeostudios.pwp.warfare.map.MapPng;
 import com.pigeostudios.pwp.warfare.map.MapTileMath;
+import com.pwp.api.time.GameClock;
 import com.pwp.coreclient.network.data.DataRequests;
 import java.util.Base64;
 import java.util.HashMap;
@@ -80,7 +81,7 @@ final class MapOverviewService {
             }
         }
         String s = MapPng.hash(sig.toString().getBytes(java.nio.charset.StandardCharsets.US_ASCII));
-        long now = System.currentTimeMillis();
+        long now = GameClock.realMillis();
         boolean sameKey = key.equals(lastKey) && lastPng != null;
         if (!sameKey || (!s.equals(lastSig) && now - lastBuildMs >= MIN_REBUILD_MS)) {
             try {

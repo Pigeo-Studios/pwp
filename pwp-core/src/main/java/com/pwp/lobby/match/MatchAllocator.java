@@ -275,7 +275,7 @@ public class MatchAllocator {
         mi.redTickets = map.teams.RED.tickets;
         mi.worldPath = map.worldPath;
         mi.mode = map.mode;
-        mi.startedAt = System.currentTimeMillis();
+        mi.startedAt = GameClock.realMillis();
         mi.phase = MatchPhase.PREPARING;
         cycleMatch = mi;
         cycleMap = map;
@@ -429,7 +429,7 @@ public class MatchAllocator {
                 cycleSettings = null;
                 cycle.reset();
                 mi.phase = MatchPhase.PLAYING;
-                mi.startedAt = System.currentTimeMillis();
+                mi.startedAt = GameClock.realMillis();
                 resultState = LobbyStatePacket.PREP_TRANSFERRING;
                 resultError = null;
                 resultUntil = now + 10_000;
@@ -515,7 +515,7 @@ public class MatchAllocator {
                 if (!ServerManager.isAlive(mi.serverId)) {
                     log.info("Match {} stopped gracefully", mi.serverId);
                     matchEnded(mi.serverId);
-                } else if (System.currentTimeMillis() - mi.stopRequestedAt > STOP_TIMEOUT_MS) {
+                } else if (GameClock.realMillis() - mi.stopRequestedAt > STOP_TIMEOUT_MS) {
                     log.warn("Match {} stop timed out, force killing", mi.serverId);
                     matchEnded(mi.serverId);
                 }
@@ -593,11 +593,11 @@ public class MatchAllocator {
             return;
         }
         mi.phase = MatchPhase.ENDING;
-        mi.stopRequestedAt = System.currentTimeMillis();
+        mi.stopRequestedAt = GameClock.realMillis();
         Path dir = ServerManager.getServerDirectory(serverId);
         if (dir != null) {
             try {
-                Files.writeString(dir.resolve("stop.signal"), "{\"requestedAt\":" + System.currentTimeMillis() + "}");
+                Files.writeString(dir.resolve("stop.signal"), "{\"requestedAt\":" + GameClock.realMillis() + "}");
                 log.info("Stop signal sent to match {} ({})", serverId, mi.mapName);
             } catch (Exception e) {
                 log.error("Failed to write stop signal for match {}: {}", serverId, e.getMessage());
@@ -661,7 +661,7 @@ public class MatchAllocator {
 
         public int getElapsedSeconds() {
             if (startedAt == 0) return 0;
-            return (int) ((System.currentTimeMillis() - startedAt) / 1000);
+            return (int) ((GameClock.realMillis() - startedAt) / 1000);
         }
     }
 }

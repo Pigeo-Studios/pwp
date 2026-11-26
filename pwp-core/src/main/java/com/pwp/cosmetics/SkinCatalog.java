@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.time.GameClock;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +50,7 @@ public final class SkinCatalog {
 
     /** Все определения skinId → {@link Def} (кэш 60 с; core недоступен — последний известный каталог). */
     public static CompletableFuture<Map<String, Def>> defs() {
-        if (System.currentTimeMillis() - loadedAt < TTL_MS) {
+        if (GameClock.realMillis() - loadedAt < TTL_MS) {
             return CompletableFuture.completedFuture(defs);
         }
         return CoreApi.getSkins().thenApply(resp -> {
@@ -67,7 +68,7 @@ public final class SkinCatalog {
             }
             defs = Collections.unmodifiableMap(d);
             modelPaths = Collections.unmodifiableMap(map);
-            loadedAt = System.currentTimeMillis();
+            loadedAt = GameClock.realMillis();
             return defs;
         });
     }

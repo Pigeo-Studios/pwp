@@ -1,5 +1,6 @@
 package com.pwp.lobby;
 
+import com.pwp.api.time.GameClock;
 import com.pwp.lobby.maps.MapConfig;
 import com.pwp.lobby.maps.MapRegistry;
 import com.pwp.lobby.match.MatchAllocator;
@@ -56,7 +57,7 @@ public class VotingManager {
         accelerated = false;
         winner = null;
         votes.clear();
-        voteStartTime = System.currentTimeMillis();
+        voteStartTime = GameClock.realMillis();
         lastTimerBroadcast = 0;
         lastLeaderBroadcast = 0;
         lastBroadcastedRemaining = -1;
@@ -95,7 +96,7 @@ public class VotingManager {
 
     public static void tick() {
         if (!active || finished) return;
-        long now = System.currentTimeMillis();
+        long now = GameClock.realMillis();
         long elapsed = now - voteStartTime;
         int remaining = voteDurationSec - (int) (elapsed / 1000);
 
@@ -237,7 +238,7 @@ public class VotingManager {
 
     public static int getRemainingSeconds() {
         if (!active) return 0;
-        long elapsed = System.currentTimeMillis() - voteStartTime;
+        long elapsed = GameClock.realMillis() - voteStartTime;
         int remaining = voteDurationSec - (int) (elapsed / 1000);
         return Math.max(0, remaining);
     }

@@ -1,6 +1,7 @@
 package com.pwp.api.core;
 
 import com.google.gson.JsonObject;
+import com.pwp.api.time.GameClock;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -36,13 +37,13 @@ public final class MatchPolicy {
     }
 
     private static void refreshIfStale() {
-        if (System.currentTimeMillis() - checkedAt < TTL_MS) return;
+        if (GameClock.realMillis() - checkedAt < TTL_MS) return;
         if (!refreshing.compareAndSet(false, true)) return;
         CoreApi.getMatchPolicy().whenComplete((resp, error) -> {
             try {
                 apply(CoreApi.dataObject(resp));
             } finally {
-                checkedAt = System.currentTimeMillis();
+                checkedAt = GameClock.realMillis();
                 refreshing.set(false);
             }
         });

@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.map.MapPng;
 import com.pigeostudios.pwp.warfare.map.MapTileMath;
 import com.pigeostudios.pwp.warfare.map.MapTileQuery;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import com.pwp.coreclient.network.data.DataRequests;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -103,7 +104,7 @@ public final class MapTileService {
             }
             Entry e = memory(dim).get(MapTileMath.key(0, r.x(), r.z()));
             if (e != null) {
-                if (System.currentTimeMillis() - e.renderedAt() > TTL_MS) startRender(level, server, dim, r, false);
+                if (GameClock.realMillis() - e.renderedAt() > TTL_MS) startRender(level, server, dim, r, false);
                 futures.add(CompletableFuture.completedFuture(e));
             } else if (renders < MAX_RENDERS_PER_REQUEST || IN_FLIGHT.containsKey(flightKey(dim, r))) {
                 if (!IN_FLIGHT.containsKey(flightKey(dim, r))) renders++;
@@ -170,7 +171,7 @@ public final class MapTileService {
         long key = MapTileMath.key(0, r.x(), r.z());
         CompletableFuture<Entry> f = CompletableFuture.supplyAsync(() -> tryDisk ? readDisk(file) : null, EXEC)
                 .thenCompose(disk -> {
-                    if (disk != null && System.currentTimeMillis() - disk.renderedAt() <= TTL_MS) {
+                    if (disk != null && GameClock.realMillis() - disk.renderedAt() <= TTL_MS) {
                         return CompletableFuture.completedFuture(disk);
                     }
                     // снимок — задачей главного потока (не блокирует текущий тик)
@@ -197,7 +198,7 @@ public final class MapTileService {
                 .thenApplyAsync(
                         s -> {
                             byte[] png = s.render();
-                            Entry e = new Entry(png, MapPng.hash(png), System.currentTimeMillis());
+                            Entry e = new Entry(png, MapPng.hash(png), GameClock.realMillis());
                             writeDisk(file, png);
                             return e;
                         },
@@ -217,7 +218,7 @@ public final class MapTileService {
     static boolean loadIfFresh(MinecraftServer server, ServerLevel level, String dim, int tx, int tz) {
         long key = MapTileMath.key(0, tx, tz);
         Entry mem = memory(dim).get(key);
-        if (mem != null && MapPng.isIndexed(mem.png()) && System.currentTimeMillis() - mem.renderedAt() <= TTL_MS)
+        if (mem != null && MapPng.isIndexed(mem.png()) && GameClock.realMillis() - mem.renderedAt() <= TTL_MS)
             return true;
         Path file = tileFile(server, dim, tx, tz);
         try {
@@ -232,7 +233,7 @@ public final class MapTileService {
             byte[] png = Files.readAllBytes(file);
             if (!MapOverview.cacheFresh(MapPng.isIndexed(png), tileMtime, regionMtime)) return false;
             MapPng.decode(png); // проверка целостности
-            put(dim, key, new Entry(png, MapPng.hash(png), System.currentTimeMillis()));
+            put(dim, key, new Entry(png, MapPng.hash(png), GameClock.realMillis()));
             return true;
         } catch (IOException | IllegalArgumentException e) {
             LOG.warn("Кэш тайла карты {} не прочитан — будет перерисован", file, e);

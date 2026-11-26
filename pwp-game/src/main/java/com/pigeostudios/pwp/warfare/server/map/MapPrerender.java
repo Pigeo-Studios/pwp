@@ -2,6 +2,7 @@ package com.pigeostudios.pwp.warfare.server.map;
 
 import com.pigeostudios.pwp.warfare.map.MapOverview;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
+import com.pwp.api.time.GameClock;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -133,7 +134,7 @@ public final class MapPrerender {
                     total,
                     RENDERED.get(),
                     total - RENDERED.get(),
-                    (System.currentTimeMillis() - startedMs) / 1000);
+                    (GameClock.realMillis() - startedMs) / 1000);
         }
     }
 
@@ -168,7 +169,7 @@ public final class MapPrerender {
         }
         QUEUE.addAll(MapOverview.order(r[0], r[1], r[2], r[3], hotspots(level)));
         total = QUEUE.size();
-        startedMs = System.currentTimeMillis();
+        startedMs = GameClock.realMillis();
         finishLogged = false;
         LOG.info("Пререндер карты: {} тайлов зоны {} (бюджет {} мс/тик)", total, sig, TICK_BUDGET_NS / 1_000_000.0);
     }

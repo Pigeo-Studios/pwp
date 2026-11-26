@@ -1283,7 +1283,7 @@ public class GameLogicEvents {
             java.util.Map<String, com.pigeostudios.pwp.warfare.stats.PlayerMatchStats> matchStatsSnapshot =
                     new java.util.HashMap<>(MatchStatsTracker.get().getAllPlayers());
             int matchDurationSec =
-                    (int) ((System.currentTimeMillis() - MatchStatsTracker.get().getStartedAt()) / 1000);
+                    (int) ((GameClock.realMillis() - MatchStatsTracker.get().getStartedAt()) / 1000);
 
             MatchStatsTracker.get().finalizeMatch(winner, data.match.blueTickets, data.match.redTickets);
 

@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.network.PacketVoiceActivity;
 import com.pigeostudios.pwp.warfare.network.PacketVoiceChannelState.Channel;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.time.GameClock;
 import de.maxhenkel.voicechat.api.ForgeVoicechatPlugin;
 import de.maxhenkel.voicechat.api.Position;
 import de.maxhenkel.voicechat.api.VoicechatApi;
@@ -202,7 +203,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
                 }
             }
 
-            long now = System.currentTimeMillis();
+            long now = GameClock.realMillis();
             if (now - lastVoiceActivity.getOrDefault(playerUuid, 0L) > 150L) {
                 lastVoiceActivity.put(playerUuid, now);
 
@@ -303,7 +304,7 @@ public class WarfareVoicechatPlugin implements VoicechatPlugin {
      * Пока ответа ещё не было — игрок не замучен (как и раньше при недоступном core-service).
      */
     private static boolean isPlayerVoiceMuted(UUID playerUuid) {
-        long now = System.currentTimeMillis();
+        long now = GameClock.realMillis();
         Long lastCheck = mutedCacheTimestamp.get(playerUuid);
         if (lastCheck == null || now - lastCheck >= MUTE_CACHE_TTL_MS) {
             // Метка ставится сразу — повторные пакеты голоса не плодят запросы, пока идёт этот

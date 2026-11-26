@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.core.Heartbeat;
 import com.pwp.api.core.MatchPolicy;
+import com.pwp.api.time.GameClock;
 import com.pwp.coreclient.network.LobbyStatePacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.lobby.maps.MapConfig;
@@ -1066,7 +1067,7 @@ public class LobbyMod {
         modeVoteFinished = false;
         modeVoteWinner = null;
         modeVotes.clear();
-        modeVoteStartTime = System.currentTimeMillis();
+        modeVoteStartTime = GameClock.realMillis();
         modeVoteLastTimerBroadcast = 0;
         modeVoteLastBroadcastedRemaining = -1;
 
@@ -1094,7 +1095,7 @@ public class LobbyMod {
 
     private static void tickModeVote() {
         if (!modeVoteActive || modeVoteFinished) return;
-        long now = System.currentTimeMillis();
+        long now = GameClock.realMillis();
         long elapsed = now - modeVoteStartTime;
         int remaining = modeVoteDurationSec - (int) (elapsed / 1000);
 
@@ -1255,7 +1256,7 @@ public class LobbyMod {
 
     static int getModeVoteRemainingSeconds() {
         if (!modeVoteActive) return 0;
-        long elapsed = System.currentTimeMillis() - modeVoteStartTime;
+        long elapsed = GameClock.realMillis() - modeVoteStartTime;
         int remaining = modeVoteDurationSec - (int) (elapsed / 1000);
         return Math.max(0, remaining);
     }

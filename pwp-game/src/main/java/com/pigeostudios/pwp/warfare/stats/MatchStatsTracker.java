@@ -7,6 +7,7 @@ import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pwp.api.core.CoreApi;
+import com.pwp.api.time.GameClock;
 import com.pwp.coreclient.network.ConnectToServerPacket;
 import com.pwp.coreclient.network.PacketHandler;
 import com.pwp.coreserver.TransferHosts;
@@ -52,7 +53,7 @@ public class MatchStatsTracker {
     public void startMatch(String mapName, String mode) {
         this.mapName = mapName;
         this.mode = mode;
-        this.startedAt = System.currentTimeMillis();
+        this.startedAt = GameClock.realMillis();
         this.active = true;
         AssistTracker.clear();
         this.players.clear();
@@ -163,14 +164,14 @@ public class MatchStatsTracker {
 
     public void recordSpawn(ServerPlayer player) {
         if (!active) return;
-        spawnTimes.put(player.getUUID(), System.currentTimeMillis());
+        spawnTimes.put(player.getUUID(), GameClock.realMillis());
     }
 
     public void recordDeath(ServerPlayer player) {
         if (!active) return;
         Long spawnTime = spawnTimes.remove(player.getUUID());
         if (spawnTime != null) {
-            long survived = System.currentTimeMillis() - spawnTime;
+            long survived = GameClock.realMillis() - spawnTime;
             getOrCreate(player).survivalTime += survived;
         }
     }
@@ -181,7 +182,7 @@ public class MatchStatsTracker {
         if (!active) return;
         active = false;
 
-        long endedAt = System.currentTimeMillis();
+        long endedAt = GameClock.realMillis();
         int durationSec = (int) ((endedAt - startedAt) / 1000);
 
         JsonObject match = new JsonObject();
