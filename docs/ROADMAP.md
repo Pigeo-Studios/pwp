@@ -2,7 +2,9 @@
 
 Ветка: `rewrite/unified` (от `rewrite/playable`, 25.11.2026). Старые планы (`REWRITE_PLAN`, `PLAYABLE_PLAN`,
 `AUDIT_INTERNALS`, `GAMEPLAY_READINESS`, `DEPLOY_INTERNALS`, `MODLOG_PLAYABLE`, `AGENT_PROMPT`, промпты
-`ui-redesign/`) слиты сюда и удалены — их история в git (`git show rewrite/playable:docs/<файл>`).
+`ui-redesign/`) слиты сюда и удалены — их история в git (`git show archive/rewrite/playable:docs/<файл>`).
+
+**Ветки (26.11.2026):** одна рабочая ветка — `rewrite/unified`. Все прежние (`rewrite/stage-1`, `stage-2`, `ui-redesign`, `hud-style`, `controls`, `gameplay-setup`, `internals`, `playable`, `review/cleanup`) целиком в ней (`git rev-list --count rewrite/unified..<ветка>` = 0) и удалены; их концы — теги `archive/<ветка>`. `main` — прежний снимок, в него не сливали.
 
 Проверка каждого этапа: `gradlew build` (с тестами) зелёный + reobf jar проверен (SRG-имена в миксинах) +
 коммит. **В игре не проверялось** — что проверить руками, сказано в конце каждого этапа и в
@@ -431,6 +433,7 @@ Minecraft и публичный сервер. «Есть» — по коду, в
 
 ### Решения (ревью, самостоятельно)
 - Работа в `review/cleanup`, в конце — fast-forward `rewrite/unified` и push обеих веток (без merge в `main`): так просили оба указания.
+- Одна ветка: `rewrite/unified`; слитые ветки удалены локально и на GitHub, концы сохранены аннотированными тегами `archive/*` (история не теряется, `git show archive/<ветка>:<файл>` работает). `main` не трогал: туда сливать — только по слову владельца.
 - Ключи lang, которые больше не используются (например, `pwpwarfare.msg.item.mortar_limit`), не удалял: часть ключей собирается строкой (`"pwpwarfare.cmd.used." + имя`), grep этого не докажет, а лишний ключ безвреден.
 - Методы UI-кита `com.pwp.coreclient.ui` без вызовов оставил: по AGENTS.md его API только растёт. `Easing` тоже оставил — цельная библиотека функций.
 - Лимит мин миномёта (8 шт.) не включал, а удалил: он не работал никогда, включить его — новое поведение.
