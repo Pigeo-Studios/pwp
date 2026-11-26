@@ -108,7 +108,8 @@ public class VehicleSpawnerBlockEntity extends BlockEntity implements MenuProvid
         syncToWorldData();
     }
 
-    private static String getSpawnerTeam(VehicleSpawnerBlockEntity be) {
+    /** Команда спавнера по маркеру в слоте 0 (есть и на клиенте — инвентарь приходит в update-теге). */
+    public static String getSpawnerTeam(VehicleSpawnerBlockEntity be) {
         ItemStack modifierStack = be.inventory.getStackInSlot(0);
         if (!modifierStack.isEmpty()) {
             if (modifierStack.getItem() instanceof VehicleMarkerItem marker) {
