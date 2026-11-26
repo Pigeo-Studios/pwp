@@ -291,8 +291,7 @@ public final class FactionDataLoader {
 
     /** Команда игрока в формате BLUE/RED/NEUTRAL (как в PacketRespawnRequest). */
     public static String teamOf(ServerPlayer player) {
-        if (player.getTeam() == null) return "NEUTRAL";
-        return player.getTeam().getName().equalsIgnoreCase("Blue") ? "BLUE" : "RED";
+        return com.pigeostudios.pwp.warfare.util.Teams.orNeutral(player);
     }
 
     private static Team parse(String team) {

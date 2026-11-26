@@ -32,7 +32,7 @@ public final class TacticalActions {
     private TacticalActions() {}
 
     static String team(ServerPlayer p) {
-        return p.getTeam() == null ? "" : p.getTeam().getName();
+        return com.pigeostudios.pwp.warfare.util.Teams.of(p);
     }
 
     /** true — можно (и кулдаун взведён); false — игроку уже сказано «подождите». */

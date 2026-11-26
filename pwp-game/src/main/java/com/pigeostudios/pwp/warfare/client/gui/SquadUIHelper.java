@@ -1,48 +1,16 @@
 package com.pigeostudios.pwp.warfare.client.gui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.pigeostudios.pwp.warfare.client.ClientData;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
-import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.ui.layout.Rect;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
 public class SquadUIHelper {
 
-    private static final int SIDEBAR_WIDTH = 170;
-    private static final ResourceLocation ARROW_DOWN =
-            new ResourceLocation("pwpwarfare", "textures/gui/arrow_down.png");
-    private static final ResourceLocation ARROW_UP = new ResourceLocation("pwpwarfare", "textures/gui/arrow_up.png");
-    private static final ResourceLocation LOCK_ICON = new ResourceLocation("pwpwarfare", "textures/gui/squad_lock.png");
-
     private SquadUIHelper() {}
-
-    /** Старые экраны: список в своих координатах (x от 0, ширина {@link #getSidebarWidth}). */
-    private static Rect legacyArea() {
-        return Rect.of(0, 0, SIDEBAR_WIDTH, Short.MAX_VALUE);
-    }
-
-    /** Отступ сверху под кнопку «стать командиром» (как раньше: 35 / 10). */
-    private static int legacyInset(boolean applyCmdVisible) {
-        return applyCmdVisible ? 35 : 10;
-    }
-
-    private static void renderSpeakerRow(GuiGraphics gui, int x, int y, String name, int color, ResourceLocation icon) {
-        int tw = PWPTheme.Fonts.display().width(name) + 15;
-        gui.fill(x, y - 2, x + tw + 4, y + 10, 0xCC000000);
-        RenderSystem.enableBlend();
-        float r = (color >> 16 & 0xFF) / 255f, g = (color >> 8 & 0xFF) / 255f, b = (color & 0xFF) / 255f;
-        RenderSystem.setShaderColor(r, g, b, 1f);
-        gui.blit(icon, x + 3, y, 0, 0, 8, 8, 8, 8);
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        gui.drawString(PWPTheme.Fonts.display(), name, x + 14, y, color, false);
-    }
 
     public static boolean isApplyCmdVisible() {
         String myName = Minecraft.getInstance().player.getScoreboardName();
@@ -110,10 +78,5 @@ public class SquadUIHelper {
             if (!m.equals(squad.charlieLeader) && squad.members.contains(m)) sorted.add(m);
         }
         return sorted;
-    }
-
-    private static ResourceLocation getFlagTexture(String faction) {
-        if (faction == null || faction.equalsIgnoreCase("none")) return null;
-        return com.pigeostudios.pwp.warfare.client.Tex.of("textures/gui/flags/" + faction.toLowerCase() + ".png");
     }
 }

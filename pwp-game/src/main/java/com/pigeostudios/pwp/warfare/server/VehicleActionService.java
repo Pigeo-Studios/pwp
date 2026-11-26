@@ -15,7 +15,6 @@ import com.pwp.api.net.Net;
 import com.pwp.api.net.Validate;
 import com.pwp.api.time.GameClock;
 import com.pwp.coreclient.network.data.DataRequests;
-import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.network.FriendlyByteBuf;
@@ -86,7 +85,7 @@ public final class VehicleActionService {
     }
 
     static String team(ServerPlayer p) {
-        return p.getTeam() == null ? "" : p.getTeam().getName().toUpperCase(Locale.ROOT);
+        return com.pigeostudios.pwp.warfare.util.Teams.of(p);
     }
 
     static VehicleActions.State state(ServerPlayer p, Entity v) {

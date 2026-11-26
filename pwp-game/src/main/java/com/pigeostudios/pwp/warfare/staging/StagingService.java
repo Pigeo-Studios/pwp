@@ -56,8 +56,7 @@ public final class StagingService {
     }
 
     public static String teamOf(ServerPlayer p) {
-        String t = p.getTeam() != null ? p.getTeam().getName() : "";
-        return TeamBalance.BLUE.equalsIgnoreCase(t) || TeamBalance.RED.equalsIgnoreCase(t) ? t : "";
+        return com.pigeostudios.pwp.warfare.util.Teams.of(p);
     }
 
     /** Игрок внутри мейн-зоны СВОЕЙ команды. */

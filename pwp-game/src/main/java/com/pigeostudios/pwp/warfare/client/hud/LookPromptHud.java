@@ -94,7 +94,7 @@ public final class LookPromptHud {
     }
 
     private static String myTeam(Minecraft mc) {
-        return mc.player.getTeam() == null ? "" : mc.player.getTeam().getName();
+        return com.pigeostudios.pwp.warfare.util.Teams.of(mc.player);
     }
 
     private static boolean mine(String team, String my) {

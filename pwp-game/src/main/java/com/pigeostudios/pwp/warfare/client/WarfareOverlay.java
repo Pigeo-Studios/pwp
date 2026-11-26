@@ -324,15 +324,6 @@ public class WarfareOverlay {
                 1.0F);
     }
 
-    private static void drawOutlinedString(GuiGraphics gui, Minecraft mc, String text, int x, int y, int color) {
-        int black = -16777216;
-        gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x + 1, y, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, black, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y, color, false);
-    }
-
     private static long chargeScanTick = Long.MIN_VALUE;
     private static boolean chargeScanResult;
 

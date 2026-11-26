@@ -39,7 +39,7 @@ public final class TeamVisibility {
     }
 
     /** "BLUE"/"RED" или null для пустого, "NEUTRAL", "NONE" и прочего. */
-    static String normalize(String team) {
+    public static String normalize(String team) {
         if (team == null) return null;
         if (team.equalsIgnoreCase("BLUE")) return "BLUE";
         if (team.equalsIgnoreCase("RED")) return "RED";
