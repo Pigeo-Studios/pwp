@@ -1327,5 +1327,6 @@
     "pwpwarfare.tactical.request_nobody": "Nobody else is in your squad",
     "pwpwarfare.tactical.request.medic": "%s needs a medic (%s m)",
     "pwpwarfare.tactical.request.ammo": "%s needs ammo (%s m)",
-    "pwpwarfare.tactical.request.ride": "%s needs a ride (%s m)"
+    "pwpwarfare.tactical.request.ride": "%s needs a ride (%s m)",
+    "pwpwarfare.msg.fob.under_attack": "Enemies are digging out the FOB at %s, %s! Dismantled %s%%"
 }

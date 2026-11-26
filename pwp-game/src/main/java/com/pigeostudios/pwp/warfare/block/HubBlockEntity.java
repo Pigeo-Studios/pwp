@@ -281,8 +281,34 @@ public class HubBlockEntity extends BlockEntity {
                 }
             }
 
+            // враг подкапывает радио — тревога команде ФОБа, как в Squad (этап 17e)
+            if (entity.activeDiggers > 0 && entity.dismantleMultiplier < 1.0F && level instanceof ServerLevel sl) {
+                entity.alertDigging(sl, pos);
+            }
             entity.activeDiggers = 0;
             entity.dismantleMultiplier = 1.0F;
+        }
+    }
+
+    /** Последняя тревога «ФОБ подкапывают» (серверные тики, в памяти). */
+    private long lastDigAlert = Long.MIN_VALUE;
+
+    private static final long DIG_ALERT_TICKS = 20L * 15L;
+
+    private void alertDigging(ServerLevel level, BlockPos pos) {
+        long now = GameClock.serverTicks(level.getServer());
+        if (now - this.lastDigAlert < DIG_ALERT_TICKS) return;
+        this.lastDigAlert = now;
+        String team = this.getTeam();
+        int percent = Math.min(100, this.dismantleProgress * 100 / 2400);
+        Component msg = Component.translatable("pwpwarfare.msg.fob.under_attack", pos.getX(), pos.getZ(), percent)
+                .withStyle(ChatFormatting.RED);
+        for (net.minecraft.server.level.ServerPlayer p :
+                level.getServer().getPlayerList().getPlayers()) {
+            if (p.getTeam() != null && p.getTeam().getName().equalsIgnoreCase(team)) {
+                p.sendSystemMessage(msg);
+                p.displayClientMessage(msg, true);
+            }
         }
     }
 

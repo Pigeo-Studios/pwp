@@ -1327,5 +1327,6 @@
     "pwpwarfare.tactical.request_nobody": "В отряде больше никого нет",
     "pwpwarfare.tactical.request.medic": "%s: нужен медик (%s м)",
     "pwpwarfare.tactical.request.ammo": "%s: нужны патроны (%s м)",
-    "pwpwarfare.tactical.request.ride": "%s: нужен транспорт (%s м)"
+    "pwpwarfare.tactical.request.ride": "%s: нужен транспорт (%s м)",
+    "pwpwarfare.msg.fob.under_attack": "ФОБ у %s, %s подкапывает враг! Разобран на %s%%"
 }
