@@ -324,7 +324,9 @@ public class SkinInventoryScreen extends Screen {
             equipped = source.equipped();
             relayout();
         } else {
-            PWPToastManager.show(result.message(), PWPToastManager.ToastType.ERROR);
+            PWPToastManager.show(
+                    net.minecraft.client.resources.language.I18n.get(result.message()),
+                    PWPToastManager.ToastType.ERROR);
         }
     }
 

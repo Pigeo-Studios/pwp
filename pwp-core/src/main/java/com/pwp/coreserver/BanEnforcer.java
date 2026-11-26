@@ -94,8 +94,13 @@ public class BanEnforcer {
                 }
             }
             if (p == null) continue;
-            String reason = k.reason.isEmpty() ? "Вы забанены" : k.reason;
-            p.connection.disconnect(Component.literal("\u00A7cВы забанены: " + reason));
+            String reason = k.reason;
+            p.connection.disconnect(
+                    reason.isEmpty()
+                            ? Component.translatable("pwp_core.ban.kicked_no_reason")
+                                    .withStyle(net.minecraft.ChatFormatting.RED)
+                            : Component.translatable("pwp_core.ban.kicked", reason)
+                                    .withStyle(net.minecraft.ChatFormatting.RED));
             CoreServerMod.log.info(
                     "Kicked banned player {}: {}", p.getGameProfile().getName(), reason);
         }

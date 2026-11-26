@@ -69,7 +69,8 @@ public final class CosmeticService {
         }
     }
 
-    private static final String BUSY = "Подождите, предыдущий запрос ещё выполняется";
+    /** Ключи lang: клиент показывает их через I18n (неизвестную строку старого сервера — как есть). */
+    private static final String BUSY = "pwp_core.skin.equip.busy";
 
     private record Pair(Result result, com.pwp.api.cosmetics.WeaponSkin weapon) {}
 
@@ -88,13 +89,13 @@ public final class CosmeticService {
 
     private static CompletableFuture<Result> equipOwned(String uuid, String skinId, String role, JsonObject owned) {
         if (owned == null) {
-            return CompletableFuture.completedFuture(Result.fail("Этот скин вам не принадлежит"));
+            return CompletableFuture.completedFuture(Result.fail("pwp_core.skin.equip.not_owned"));
         }
         String slotType = owned.get("slotType").getAsString();
         String itemUuid = owned.get("itemUuid").getAsString();
         return CoreApi.equipItem(uuid, itemUuid, slotType, role).thenCompose(resp -> {
             if (!CoreApi.isSuccess(resp)) {
-                return CompletableFuture.completedFuture(Result.fail("core-service отклонил экипировку"));
+                return CompletableFuture.completedFuture(Result.fail("pwp_core.skin.equip.core_rejected"));
             }
             return SkinCatalog.modelPaths()
                     .thenCombine(

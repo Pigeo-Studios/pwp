@@ -585,5 +585,16 @@
     "pwp_core.hub.skins_catalog.desc": "Create skins: hold a gun with the wanted look",
     "pwp_core.skin.try.no_gun": "Hold a TaCZ gun in your main hand",
     "pwp_core.skin.try.set": "%s now looks like %s — open Skin catalog → New to save it",
-    "pwp_core.skin.try.cleared": "%s: native look restored"
+    "pwp_core.skin.try.cleared": "%s: native look restored",
+    "pwp_core.ban.failed_core": "Ban failed: core-service is unavailable or rejected the request",
+    "pwp_core.ban.error": "Ban failed: %s",
+    "pwp_core.ban.done": "%s banned (%s)",
+    "pwp_core.unban.failed_core": "Unban failed: core-service is unavailable or rejected the request",
+    "pwp_core.unban.error": "Unban failed: %s",
+    "pwp_core.unban.done": "%s unbanned",
+    "pwp_core.ban.kicked": "You are banned: %s",
+    "pwp_core.ban.kicked_no_reason": "You are banned",
+    "pwp_core.skin.equip.busy": "Please wait, the previous request is still running",
+    "pwp_core.skin.equip.not_owned": "You don't own this skin",
+    "pwp_core.skin.equip.core_rejected": "core-service rejected the equip request"
 }

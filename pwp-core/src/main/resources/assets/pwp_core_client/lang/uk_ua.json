@@ -585,5 +585,16 @@
     "pwp_core.hub.skins_catalog.desc": "Створити скін: тримайте зброю з потрібним виглядом",
     "pwp_core.skin.try.no_gun": "Візьміть зброю TaCZ в основну руку",
     "pwp_core.skin.try.set": "%s тепер виглядає як %s — «Каталог скінів» → «Новий», щоб зберегти",
-    "pwp_core.skin.try.cleared": "%s: рідний вигляд повернуто"
+    "pwp_core.skin.try.cleared": "%s: рідний вигляд повернуто",
+    "pwp_core.ban.failed_core": "Бан не виконано: core-service недоступний або відхилив запит",
+    "pwp_core.ban.error": "Бан не виконано: %s",
+    "pwp_core.ban.done": "%s забанено (%s)",
+    "pwp_core.unban.failed_core": "Розбан не виконано: core-service недоступний або відхилив запит",
+    "pwp_core.unban.error": "Розбан не виконано: %s",
+    "pwp_core.unban.done": "%s розбанено",
+    "pwp_core.ban.kicked": "Вас забанено: %s",
+    "pwp_core.ban.kicked_no_reason": "Вас забанено",
+    "pwp_core.skin.equip.busy": "Зачекайте, попередній запит ще виконується",
+    "pwp_core.skin.equip.not_owned": "Цей скін вам не належить",
+    "pwp_core.skin.equip.core_rejected": "core-service відхилив екіпірування"
 }

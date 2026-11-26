@@ -3,13 +3,17 @@ package com.pwp.coreserver;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.pwp.api.admin.AuditTrail;
 import com.pwp.api.core.CoreApi;
 import com.pwp.api.util.ServerThread;
+import com.pwp.coreclient.network.data.AdminAudit;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 public class BanCommand {
+    static final String ACTION = "ban";
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("pwpban")
@@ -37,14 +41,22 @@ public class BanCommand {
 
     private static int ban(CommandContext<CommandSourceStack> ctx, String target, String duration, String reason) {
         CommandSourceStack source = ctx.getSource();
+        String details = target + " " + duration + " " + reason;
         ServerThread.thenOnServer(CoreApi.banPlayer(target, reason, duration), source.getServer(), json -> {
             if (json == null) {
-                source.sendFailure(Component.literal("§cBan failed: core-service недоступен или отклонил запрос"));
+                source.sendFailure(Component.translatable("pwp_core.ban.failed_core"));
+                AdminAudit.recordSource(source, ACTION, details, AuditTrail.Result.FAILED, "core");
             } else if (json.has("error")) {
-                source.sendFailure(Component.literal("§c" + json.get("error").getAsString()));
+                String err = json.get("error").getAsString();
+                source.sendFailure(Component.translatable("pwp_core.ban.error", err));
+                AdminAudit.recordSource(source, ACTION, details, AuditTrail.Result.FAILED, err);
             } else {
                 String shown = json.has("duration") ? json.get("duration").getAsString() : duration;
-                source.sendSuccess(() -> Component.literal("§a" + target + " banned (" + shown + ")"), true);
+                source.sendSuccess(
+                        () -> Component.translatable("pwp_core.ban.done", target, shown)
+                                .withStyle(ChatFormatting.GREEN),
+                        true);
+                AdminAudit.recordSource(source, ACTION, details, AuditTrail.Result.OK, null);
             }
         });
         return 1;

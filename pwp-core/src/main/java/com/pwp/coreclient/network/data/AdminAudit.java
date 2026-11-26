@@ -38,14 +38,33 @@ public final class AdminAudit {
     /** Записать действие {@code actor}. {@code error} — ключ/текст ошибки или null/"" при успехе. */
     public static void record(
             ServerPlayer actor, String action, String details, AuditTrail.Result result, String error) {
-        AuditTrail.Entry e = TRAIL.add(
-                System.currentTimeMillis(),
-                actor.getGameProfile().getName(),
-                PwpPermissions.level(actor).name(),
+        write(actor.getGameProfile().getName(), PwpPermissions.level(actor).name(), action, details, result, error);
+    }
+
+    /**
+     * Действие из команды (консоль, RCON, op-команда, лестница тимкиллов от имени сервера): актёр — имя
+     * источника, уровень — игрока или {@code CONSOLE}.
+     */
+    public static void recordSource(
+            net.minecraft.commands.CommandSourceStack src,
+            String action,
+            String details,
+            AuditTrail.Result result,
+            String error) {
+        ServerPlayer p = src.getPlayer();
+        write(
+                src.getTextName(),
+                p != null ? PwpPermissions.level(p).name() : "CONSOLE",
                 action,
                 details,
                 result,
                 error);
+    }
+
+    private static void write(
+            String actor, String level, String action, String details, AuditTrail.Result result, String error) {
+        AuditTrail.Entry e =
+                TRAIL.add(com.pwp.api.time.GameClock.realMillis(), actor, level, action, details, result, error);
         String line = AuditTrail.format(e) + System.lineSeparator();
         WRITER.execute(() -> {
             try {

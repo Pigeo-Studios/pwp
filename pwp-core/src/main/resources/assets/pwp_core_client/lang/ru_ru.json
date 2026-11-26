@@ -585,5 +585,16 @@
     "pwp_core.hub.skins_catalog.desc": "Создать скин: держите ствол с нужным видом",
     "pwp_core.skin.try.no_gun": "Возьмите ствол TaCZ в основную руку",
     "pwp_core.skin.try.set": "%s теперь выглядит как %s — «Каталог скинов» → «Новый», чтобы сохранить",
-    "pwp_core.skin.try.cleared": "%s: родной вид возвращён"
+    "pwp_core.skin.try.cleared": "%s: родной вид возвращён",
+    "pwp_core.ban.failed_core": "Бан не выполнен: core-service недоступен или отклонил запрос",
+    "pwp_core.ban.error": "Бан не выполнен: %s",
+    "pwp_core.ban.done": "%s забанен (%s)",
+    "pwp_core.unban.failed_core": "Разбан не выполнен: core-service недоступен или отклонил запрос",
+    "pwp_core.unban.error": "Разбан не выполнен: %s",
+    "pwp_core.unban.done": "%s разбанен",
+    "pwp_core.ban.kicked": "Вы забанены: %s",
+    "pwp_core.ban.kicked_no_reason": "Вы забанены",
+    "pwp_core.skin.equip.busy": "Подождите, предыдущий запрос ещё выполняется",
+    "pwp_core.skin.equip.not_owned": "Этот скин вам не принадлежит",
+    "pwp_core.skin.equip.core_rejected": "core-service отклонил экипировку"
 }
