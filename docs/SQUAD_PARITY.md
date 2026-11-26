@@ -26,7 +26,7 @@
 | Установки: пулемёт, АГС, ПТРК, миномёт | ✅ | `*ConstructionBlock`, `StaticGunRadialScreen` |
 | Логистика: грузовик возит материалы, разгрузка у ФОБа | ✅ | `IS_SUPPLY_TRUCK`, `MainSupplyBlockEntity` |
 | Ремонт и пополнение техники на станции | ✅ | `VehicleStationBlockEntity` |
-| Ремонтный ключ у экипажа (ремонт в поле) | ⬜ | только станция |
+| Ремонтный ключ у экипажа (ремонт в поле) | ✅ | уже был: `superbwarfare:repair_tool` в китах Mechanic/Pilot (+Officer) и Sapper всех 6 фракций (`maps/kits`) — в первой сверке ошибочно «нет» |
 
 ## Техника
 | Механика | PWP | Где / чего не хватает |
