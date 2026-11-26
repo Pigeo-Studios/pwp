@@ -19,11 +19,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.TickEvent.Phase;
@@ -182,68 +180,6 @@ public final class PlayerItemEvents {
         }
 
         return false;
-    }
-
-    static int findItemInInventory(Inventory inventory, Item item) {
-        for (int i = 0; i < inventory.items.size(); i++) {
-            if (((ItemStack) inventory.items.get(i)).getItem() == item) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    static void moveItemToInventory(Player player, ItemStack stack) {
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
-        }
-    }
-
-    public static void enforceMortarShellLimit(PlayerTickEvent event) {
-        if (event.phase == Phase.END && !event.player.level().isClientSide) {
-            if (event.player.tickCount % 10 == 0) {
-                Player player = event.player;
-                if (!player.isCreative() && !player.isSpectator()) {
-                    Item mortarItem = (Item)
-                            ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "mortar_shell"));
-                    if (mortarItem == null || mortarItem == Items.AIR) {
-                        mortarItem = Items.ARROW;
-                    }
-
-                    int totalCount = 0;
-                    Inventory inv = player.getInventory();
-
-                    for (int i = 0; i < inv.getContainerSize(); i++) {
-                        ItemStack stack = inv.getItem(i);
-                        if (stack.getItem() == mortarItem) {
-                            totalCount += stack.getCount();
-                        }
-                    }
-
-                    if (totalCount > 8) {
-                        int toRemove = totalCount - 8;
-                        int removedSoFar = 0;
-
-                        for (int i = 0; i < inv.getContainerSize() && removedSoFar < toRemove; i++) {
-                            ItemStack stack = inv.getItem(i);
-                            if (stack.getItem() == mortarItem) {
-                                int shrinkAmount = Math.min(stack.getCount(), toRemove - removedSoFar);
-                                stack.shrink(shrinkAmount);
-                                removedSoFar += shrinkAmount;
-                                ItemStack dropped = new ItemStack(mortarItem, shrinkAmount);
-                                player.drop(dropped, false, true);
-                            }
-                        }
-
-                        player.displayClientMessage(
-                                Component.translatable("pwpwarfare.msg.item.mortar_limit")
-                                        .withStyle(ChatFormatting.RED),
-                                true);
-                    }
-                }
-            }
-        }
     }
 
     @SubscribeEvent

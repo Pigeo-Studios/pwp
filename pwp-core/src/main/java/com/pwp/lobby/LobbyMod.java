@@ -40,10 +40,6 @@ public class LobbyMod {
     private static int modeVoteDurationSec = 120;
     private static final Map<UUID, String> modeVotes = new HashMap<>();
 
-    public static boolean hasVotedMode(java.util.UUID uuid) {
-        return modeVotes.containsKey(uuid);
-    }
-
     private static String modeVoteWinner = null;
     private static String pendingMapName = null;
     private static long modeVoteLastTimerBroadcast = 0;

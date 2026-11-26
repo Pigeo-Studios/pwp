@@ -154,15 +154,6 @@ public class MatchAllocator {
         }
     }
 
-    /** Позиция игрока в очереди любого матча (0 — не в очереди). */
-    public static int queuePosition(String uuid) {
-        for (com.pwp.api.lobby.JoinQueue q : QUEUES.values()) {
-            int pos = q.position(uuid);
-            if (pos > 0) return pos;
-        }
-        return 0;
-    }
-
     /** Матч запущен/идёт/останавливается (предпрогрев PREPARING сюда НЕ входит — голосования продолжаются). */
     public static boolean hasActiveMatch() {
         return activeMatches.values().stream()

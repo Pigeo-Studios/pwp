@@ -395,10 +395,6 @@ public class ServerManager {
         return si != null ? si.directory : null;
     }
 
-    public static int getActiveCount() {
-        return (int) servers.values().stream().filter(si -> !si.failed).count();
-    }
-
     // --- private helpers ---
 
     private static void writeSBWServerConfig(Path serverDir, String levelName, MatchConfig.Superbwarfare cfg)

@@ -18,18 +18,14 @@ import com.pigeostudios.pwp.warfare.staging.StagingService;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.cosmetics.CosmeticService;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundPlayerAbilitiesPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
@@ -244,31 +240,6 @@ public final class PlayerLifecycleEvents {
                 }
 
                 processEntityLoss(entity);
-            }
-        }
-    }
-
-    static void saveKitNbtBeforeDeath(ServerPlayer player) {
-        WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-        String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
-        String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-        if (!team.isEmpty() && !kitName.isEmpty() && !kitName.equals("Unassigned")) {
-            WarfareWorldData.KitInfo kit = team.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
-            if (kit != null) {
-                Map<Integer, CompoundTag> savedTags = new HashMap<>();
-
-                for (int i = 0; i < 41; i++) {
-                    if (i < kit.saveNbtFlags.length && kit.saveNbtFlags[i]) {
-                        ItemStack item = player.getInventory().getItem(i);
-                        if (!item.isEmpty() && item.hasTag()) {
-                            savedTags.put(i, item.getTag().copy());
-                        }
-                    }
-                }
-
-                if (!savedTags.isEmpty()) {
-                    PERSISTENT_NBT_STORAGE.put(player.getUUID(), savedTags);
-                }
             }
         }
     }

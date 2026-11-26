@@ -1070,95 +1070,6 @@ public class SquadMapRenderer {
                 : InputConstants.isKeyDown(window, nickKey.getValue());
     }
 
-    public boolean hitPath(int mx, int my, double cx, double cz) {
-        int r = 12;
-        for (var pts : pathGroups()) {
-            if (!pts.isEmpty()) {
-                var p = pts.get(0);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    pathGroups().remove(pts);
-                    return true;
-                }
-            }
-            if (pts.size() >= 2) {
-                var p = pts.get(pts.size() - 1);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    pathGroups().remove(pts);
-                    return true;
-                }
-            }
-        }
-        for (var pts : pathGroupsRed()) {
-            if (!pts.isEmpty()) {
-                var p = pts.get(0);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    pathGroupsRed().remove(pts);
-                    return true;
-                }
-            }
-            if (pts.size() >= 2) {
-                var p = pts.get(pts.size() - 1);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    pathGroupsRed().remove(pts);
-                    return true;
-                }
-            }
-        }
-        for (var pts : pathGroupsYellow()) {
-            if (!pts.isEmpty()) {
-                var p = pts.get(0);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    pathGroupsYellow().remove(pts);
-                    return true;
-                }
-            }
-            if (pts.size() >= 2) {
-                var p = pts.get(pts.size() - 1);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    pathGroupsYellow().remove(pts);
-                    return true;
-                }
-            }
-        }
-        var sqIt = pathGroupsSquad().entrySet().iterator();
-        while (sqIt.hasNext()) {
-            var pts = sqIt.next().getValue();
-            if (!pts.isEmpty()) {
-                var p = pts.get(0);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    sqIt.remove();
-                    return true;
-                }
-            }
-            if (pts.size() >= 2) {
-                var p = pts.get(pts.size() - 1);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r) {
-                    sqIt.remove();
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public java.util.UUID hitServerPath(int mx, int my, double cx, double cz) {
-        int r = 12;
-        for (var entry : com.pigeostudios.pwp.warfare.client.PathCache.serverPaths.entrySet()) {
-            var pts = entry.getValue().points();
-            if (!pts.isEmpty()) {
-                var p = pts.get(0);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r)
-                    return entry.getKey();
-            }
-            if (pts.size() >= 2) {
-                var p = pts.get(pts.size() - 1);
-                if (Math.abs(mx - toScreenX(p.x, cx)) < r && Math.abs(my - toScreenZ(p.z, cz)) < r)
-                    return entry.getKey();
-            }
-        }
-        return null;
-    }
-
     public MapMarker hitMarker(int mx, int my, double cx, double cz) {
         for (var m : com.pigeostudios.pwp.warfare.client.MarkerClientCache.getAll()) {
             int px = toScreenX(m.pos.getX() + 0.5, cx), py = toScreenZ(m.pos.getZ() + 0.5, cz);
@@ -1470,10 +1381,6 @@ public class SquadMapRenderer {
         RenderSystem.setShaderColor(1, 1, 1, 0.5F);
         g.blit(ICON_CIRCLE, x1 - 8, y1 - 8, 16, 16, 0, 0, 16, 16, 16, 16);
         RenderSystem.setShaderColor(1, 1, 1, 1);
-    }
-
-    public static String toAlpha(long n) {
-        return MapView.column(n);
     }
 
     public static String getKP(double wx, double wz) {

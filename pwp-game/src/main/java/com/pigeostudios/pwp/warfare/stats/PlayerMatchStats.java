@@ -84,8 +84,4 @@ public class PlayerMatchStats {
     public void recordTeamKillStat() {
         teamKills++;
     }
-
-    public double getKD() {
-        return deaths == 0 ? kills : Math.round((double) kills / deaths * 100.0) / 100.0;
-    }
 }

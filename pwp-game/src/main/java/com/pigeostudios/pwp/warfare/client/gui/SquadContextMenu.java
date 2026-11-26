@@ -416,10 +416,6 @@ public class SquadContextMenu {
         if (found == null && expanded != null && closeTimer < 0) closeTimer = System.currentTimeMillis();
     }
 
-    private int hitIdx() {
-        return hoverRow;
-    }
-
     // ───── Click ─────
     public boolean mouseClicked(double mx, double my, int btn) {
         if (!visible || btn != 0) return false;

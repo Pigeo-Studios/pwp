@@ -197,10 +197,6 @@ public class VotingManager {
         }
     }
 
-    public static String getWinner() {
-        return winner;
-    }
-
     public static Map<String, Integer> getVoteCounts() {
         Map<String, Integer> counts = new HashMap<>();
         for (String vote : votes.values()) {
@@ -232,10 +228,6 @@ public class VotingManager {
         return active;
     }
 
-    public static boolean isFinished() {
-        return finished;
-    }
-
     public static int getRemainingSeconds() {
         if (!active) return 0;
         long elapsed = GameClock.realMillis() - voteStartTime;
@@ -243,16 +235,8 @@ public class VotingManager {
         return Math.max(0, remaining);
     }
 
-    public static int getVoteDuration() {
-        return voteDurationSec;
-    }
-
     public static int getVoteCount() {
         return votes.size();
-    }
-
-    public static int getTotalOnline() {
-        return MatchAllocator.getLobbyPlayerCount();
     }
 
     public static int getVoteCountForMap(String mapName) {
@@ -266,13 +250,5 @@ public class VotingManager {
                 .max(Map.Entry.comparingByValue())
                 .map(Map.Entry::getKey)
                 .orElse(null);
-    }
-
-    public static List<String> getVotableMapNames() {
-        return MapRegistry.getVotable().stream().map(m -> m.name).collect(java.util.stream.Collectors.toList());
-    }
-
-    public static List<MapConfig> getVotableMaps() {
-        return MapRegistry.getVotable();
     }
 }

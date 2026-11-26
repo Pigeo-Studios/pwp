@@ -79,19 +79,11 @@ public final class CoreApi {
         return post("/api/v1/player/load", map("uuid", uuid));
     }
 
-    public static CompletableFuture<JsonObject> createPlayer(String uuid, String nickname) {
-        return post("/api/v1/player/create", map("uuid", uuid, "nickname", nickname));
-    }
-
     public static CompletableFuture<JsonObject> saveStats(String uuid, JsonObject stats) {
         JsonObject body = new JsonObject();
         body.addProperty("uuid", uuid);
         body.add("stats", stats);
         return post("/api/v1/player/save", body);
-    }
-
-    public static CompletableFuture<JsonObject> getPlayerProfile(String uuid) {
-        return get("/api/v1/player/" + enc(uuid));
     }
 
     // ====== BANS ======
@@ -118,20 +110,12 @@ public final class CoreApi {
         return post("/api/v1/currency/add", map("uuid", uuid, "amount", amount, "reason", reason));
     }
 
-    public static CompletableFuture<JsonObject> spendCurrency(String uuid, long amount, String itemId) {
-        return post("/api/v1/currency/spend", map("uuid", uuid, "amount", amount, "itemId", itemId));
-    }
-
     public static CompletableFuture<JsonObject> addXp(String uuid, long amount, String reason) {
         return post("/api/v1/xp/add", map("uuid", uuid, "amount", amount, "reason", reason));
     }
 
     public static CompletableFuture<JsonObject> checkRank(String uuid) {
         return post("/api/v1/ranks/check", map("uuid", uuid));
-    }
-
-    public static CompletableFuture<JsonObject> getPlayerRanks(String uuid) {
-        return get("/api/v1/ranks/player/" + enc(uuid));
     }
 
     // ====== MATCH / REWARDS ======
@@ -201,14 +185,6 @@ public final class CoreApi {
         return get("/api/v1/skins");
     }
 
-    public static CompletableFuture<JsonObject> getSkinsBySlot(String slotType) {
-        return get("/api/v1/skins/slot/" + enc(slotType));
-    }
-
-    public static CompletableFuture<JsonObject> getSkinsByWeapon(String weaponTag) {
-        return get("/api/v1/skins/weapon/" + enc(weaponTag));
-    }
-
     public static CompletableFuture<JsonObject> saveSkin(
             String skinId,
             String name,
@@ -244,14 +220,6 @@ public final class CoreApi {
 
     // ====== CASES ======
 
-    public static CompletableFuture<JsonObject> getCases() {
-        return get("/api/v1/cases");
-    }
-
-    public static CompletableFuture<JsonObject> openCase(String uuid, String caseId) {
-        return post("/api/v1/cases/open", map("uuid", uuid, "caseId", caseId));
-    }
-
     // ====== LEADERBOARD ======
 
     public static CompletableFuture<JsonObject> getLeaderboard(String orderBy, int page, int limit) {
@@ -263,19 +231,10 @@ public final class CoreApi {
         return get("/api/v1/player/" + enc(uuid) + "/role");
     }
 
-    public static CompletableFuture<JsonObject> getPlayerRank(String uuid, String orderBy) {
-        return get("/api/v1/player/" + enc(uuid) + "/rank?orderBy=" + enc(orderBy));
-    }
-
     // ====== NETWORK ======
 
     public static CompletableFuture<JsonObject> getMatchPolicy() {
         return get("/api/v1/network/match-policy");
-    }
-
-    public static CompletableFuture<JsonObject> setMatchPolicy(boolean canStart, String reason) {
-        MatchPolicy.invalidate();
-        return post("/api/v1/network/match-policy", map("canStartNewMatch", canStart, "reason", reason));
     }
 
     /** Статус всех серверов из core-service (heartbeat'ы) — для живого онлайна матчей. */
@@ -309,10 +268,6 @@ public final class CoreApi {
 
     public static CompletableFuture<JsonObject> saveFactionKit(String faction, String kitName, JsonObject kitData) {
         return put("/api/v1/kits/faction/" + enc(faction.toLowerCase()) + "/" + enc(kitName), kitData);
-    }
-
-    public static CompletableFuture<JsonObject> bulkSaveFactionKits(String faction, JsonArray kits) {
-        return post("/api/v1/kits/faction/" + enc(faction.toLowerCase()) + "/bulk", kits);
     }
 
     // ====== FACTION VEHICLES ======
@@ -415,10 +370,6 @@ public final class CoreApi {
     /** Последняя версия с JSON: {@code {data: {id, …, json}}}; версий нет — {@code {data: null}}. */
     public static CompletableFuture<JsonObject> getLatestMapLayout(String mapName) {
         return get("/api/v1/maps/" + enc(mapName) + "/layouts/latest");
-    }
-
-    public static CompletableFuture<JsonObject> getMapLayout(long id) {
-        return get("/api/v1/maps/layouts/" + id);
     }
 
     /** Новая версия; {@code json} — раскладка в формате MapLayoutCodec (строкой). Ответ — сохранённая версия. */

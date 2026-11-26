@@ -52,9 +52,5 @@ public final class RequestGuard {
         inFlight.keySet().removeIf(k -> k.player.equals(player));
     }
 
-    public boolean isInFlight(UUID player, String type) {
-        return inFlight.containsKey(new Key(player, type));
-    }
-
     private record Key(UUID player, String type) {}
 }

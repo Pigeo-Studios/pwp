@@ -88,11 +88,4 @@ public class MapRegistry {
                 .filter(m -> m.maxPlayers > 0 && m.minPlayers > 0)
                 .collect(Collectors.toList());
     }
-
-    public static MapConfig getBestFit(int playerCount) {
-        return maps.values().stream()
-                .filter(m -> playerCount >= m.minPlayers)
-                .min(Comparator.comparingInt(m -> Math.abs(m.maxPlayers - playerCount)))
-                .orElse(maps.values().iterator().next());
-    }
 }

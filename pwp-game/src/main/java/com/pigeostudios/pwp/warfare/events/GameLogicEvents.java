@@ -45,7 +45,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,7 +52,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
@@ -68,7 +66,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
 import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -803,23 +800,6 @@ public class GameLogicEvents {
         }
     }
 
-    static void spawnArtShell(ServerLevel level, BlockPos pos) {
-        int rad = (Integer) WarfareConfig.ART_STRIKE_RADIUS.get();
-        double x = pos.getX() + level.random.nextDouble() * rad * 2.0 - rad;
-        double z = pos.getZ() + level.random.nextDouble() * rad * 2.0 - rad;
-        double y = level.getMaxBuildHeight() - 2;
-        EntityType<?> shellType = (EntityType<?>)
-                ForgeRegistries.ENTITY_TYPES.getValue(new ResourceLocation("superbwarfare", "mortar_shell"));
-        if (shellType != null) {
-            Entity shell = shellType.create(level);
-            if (shell != null) {
-                shell.setPos(x, y, z);
-                shell.setDeltaMovement(0.0, 0.0, 0.0);
-                level.addFreshEntity(shell);
-            }
-        }
-    }
-
     static boolean isTeamReady(ServerLevel level, String teamName, WarfareWorldData data) {
         List<ServerPlayer> allPlayers = level.players();
         if (allPlayers.isEmpty()) return false;
@@ -1217,10 +1197,6 @@ public class GameLogicEvents {
                 pos -> level.isLoaded(pos) ? !(level.getBlockState(pos).getBlock() instanceof RallyPointBlock) : false);
     }
 
-    static boolean isEnemyNearby(ServerLevel level, BlockPos pos, String allyTeamName, int radius, int minCount) {
-        return getEnemyCount(level, pos, allyTeamName, radius) >= minCount;
-    }
-
     static int getEnemyCount(ServerLevel level, BlockPos pos, String allyTeamName, int radius) {
         AABB checkArea = new AABB(pos).inflate(radius);
         List<ServerPlayer> enemies = level.getEntitiesOfClass(ServerPlayer.class, checkArea);
@@ -1432,15 +1408,6 @@ public class GameLogicEvents {
         Component title = text.copy().withStyle(color).withStyle(ChatFormatting.BOLD);
 
         for (ServerPlayer player : level.players()) {
-            player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 20, 10));
-            player.connection.send(new ClientboundSetTitleTextPacket(title));
-        }
-    }
-
-    static void sendTitleToAll(MinecraftServer server, Component text, ChatFormatting color) {
-        Component title = text.copy().withStyle(color).withStyle(ChatFormatting.BOLD);
-
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 20, 10));
             player.connection.send(new ClientboundSetTitleTextPacket(title));
         }

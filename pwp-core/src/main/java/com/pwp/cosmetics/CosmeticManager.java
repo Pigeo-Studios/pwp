@@ -53,15 +53,6 @@ public class CosmeticManager {
         return null;
     }
 
-    public static List<SkinData> getEquipmentList(UUID playerUuid, String slotType, String role) {
-        Map<String, List<SkinData>> slots = playerEquipment.get(playerUuid);
-        if (slots == null) return Collections.emptyList();
-        String key = slotType + ":" + (role != null ? role : "ALL");
-        List<SkinData> list = slots.get(key);
-        if (list == null) list = slots.get(slotType + ":ALL");
-        return list != null ? list : Collections.emptyList();
-    }
-
     public static SkinData getEquipmentBySkinId(UUID playerUuid, String skinId) {
         Map<String, List<SkinData>> slots = playerEquipment.get(playerUuid);
         if (slots == null) return null;
@@ -71,14 +62,6 @@ public class CosmeticManager {
             }
         }
         return null;
-    }
-
-    public static ItemStack getSkinItem(UUID playerUuid, String slotType, String role) {
-        SkinData data = getEquipment(playerUuid, slotType, role);
-        if (data != null && !data.item.isEmpty()) {
-            return data.item.copy();
-        }
-        return ItemStack.EMPTY;
     }
 
     public static void clearPlayer(UUID uuid) {

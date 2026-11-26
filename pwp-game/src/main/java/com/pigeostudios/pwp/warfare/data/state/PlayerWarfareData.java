@@ -81,11 +81,6 @@ public final class PlayerWarfareData extends WarfareData {
         PlayerCloneRules.copy(of(oldPlayer).tag, of(newPlayer).tag, wasDeath);
     }
 
-    /** Полная копия данных (для клона игрока при смене измерения и тестов). */
-    public CompoundTag copyTag() {
-        return tag.copy();
-    }
-
     // ===== Регистрация и прикрепление =====
 
     @Mod.EventBusSubscriber(modid = "pwpwarfare", bus = Mod.EventBusSubscriber.Bus.MOD)
