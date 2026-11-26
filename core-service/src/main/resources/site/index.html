@@ -40,6 +40,7 @@ th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);font-
 th{color:var(--muted);font-weight:600;background:var(--panel2)}
 tr:last-child td{border-bottom:0}
 .tbl{overflow-x:auto}
+.news{display:grid;gap:10px}.news article{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px}.news article.pin{border-color:var(--acc)}.news h3{margin:4px 0 6px}.news p{margin:0;white-space:pre-line}.news img{max-width:100%;border-radius:6px;margin-top:8px}.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted);margin-right:6px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tabs button{background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
 .tabs button.on{color:var(--text);border-color:var(--acc)}
@@ -57,6 +58,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
   <div class="logo">P<span>W</span>P</div>
   <nav id="nav">
     <a href="#home" data-s="home">Главная</a>
+    <a href="#news" data-s="news">Новости</a>
     <a href="#online" data-s="online">Онлайн</a>
     <a href="#top" data-s="top">Топ</a>
     <a href="#player" data-s="player">Игрок</a>
@@ -80,12 +82,19 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;paddin
       <div class="card"><b>ФОБы и снабжение</b><span class="muted">Строй передовые базы, вози материалы, ставь укрепления и точки возрождения.</span></div>
       <div class="card"><b>Техника</b><span class="muted">Транспорт, БТР, танки, вертолёты и авиация — машиной управляет отряд, который её занял.</span></div>
     </div>
+    <h2>Новости</h2>
+    <div id="homeNews" class="news"></div>
     <h2>Как начать</h2>
     <ol>
       <li>Скачай лаунчер и создай аккаунт.</li>
       <li>«Играть» — попадёшь в лобби: голосование за карту и режим.</li>
       <li>В матче: выбери команду, вступи в отряд (K), возьми роль, выбери точку и деплойся. Подсказки обучения проведут.</li>
     </ol>
+  </section>
+
+  <section id="news">
+    <h1>Новости</h1>
+    <div id="newsList" class="news"></div>
   </section>
 
   <section id="online">
@@ -143,11 +152,28 @@ function show(name) {
   if (!document.getElementById(name)) name = 'home';
   document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === name));
   document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.s === name));
+  if (name === 'news') loadNews($('newsList'), 20);
   if (name === 'online') loadOnline();
   if (name === 'top') loadTop(currentBy);
   if (name === 'bans') loadBans();
 }
 window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+
+const TAGS = {news: 'Новость', update: 'Обновление', event: 'Событие', maintenance: 'Тех. работы'};
+// новости (этап 17b): тот же /api/v1/public/news берут лаунчер и игра; текст — только textContent
+async function loadNews(box, limit) {
+  const d = await api('news?limit=' + limit);
+  box.replaceChildren();
+  if (!d || !d.length) { box.append(el('div', d ? 'Новостей пока нет' : 'Сервер недоступен', 'empty')); return; }
+  for (const n of d) {
+    const a = el('article', null, n.pinned ? 'pin' : '');
+    const head = el('div');
+    head.append(el('span', (n.pinned ? '📌 ' : '') + (TAGS[n.tag] || n.tag), 'tag'), el('span', new Date(n.createdAt).toLocaleDateString('ru-RU'), 'muted'));
+    a.append(head, el('h3', n.title), el('p', n.body));
+    if (n.imageUrl && /^https?:\/\//.test(n.imageUrl)) { const img = document.createElement('img'); img.src = n.imageUrl; img.alt = ''; img.loading = 'lazy'; a.append(img); }
+    box.append(a);
+  }
+}
 
 async function loadSite() {
   const s = await api('site');
@@ -220,6 +246,7 @@ async function loadBans() {
 }
 
 loadSite();
+loadNews($('homeNews'), 3);
 show(location.hash.slice(1) || 'home');
 loadOnline();
 setInterval(() => { if (document.getElementById('online').classList.contains('on') || document.getElementById('home').classList.contains('on')) loadOnline(); }, 30000);

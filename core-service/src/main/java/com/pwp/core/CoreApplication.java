@@ -122,6 +122,7 @@ public class CoreApplication {
         new SecurityController(app, config);
         new CommunityController(app);
         new PublicController(app);
+        new NewsController(app);
         com.pwp.core.backup.BackupService.start(config.backup, config.database);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

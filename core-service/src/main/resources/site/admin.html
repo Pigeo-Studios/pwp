@@ -12,7 +12,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-a
 .wrap{max-width:1100px;margin:0 auto;padding:16px}
 h1{font-size:22px;margin:4px 0 14px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-input,select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font:inherit}
+input,select,textarea{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:6px;font:inherit}
 button{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:6px;cursor:pointer;font:inherit}
 button.acc{background:var(--acc);border-color:var(--acc);color:#14120a;font-weight:600}
 button.bad{border-color:var(--bad);color:#ffb3ad}
@@ -41,6 +41,7 @@ section{display:none}section.on{display:block}
     <button data-t="reports" class="on">Жалобы</button>
     <button data-t="bans">Баны</button>
     <button data-t="backup">Бэкап БД</button>
+    <button data-t="news">Новости</button>
   </div>
   <div class="msg" id="msg"></div>
 
@@ -61,6 +62,19 @@ section{display:none}section.on{display:block}
     </div>
     <div class="row"><button id="bLoad">Обновить список</button></div>
     <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Игрок</th><th>Статус</th><th>Причина</th><th>С</th><th>До</th><th></th></tr></thead><tbody id="bBody"></tbody></table></div>
+  </section>
+
+  <section id="news">
+    <div class="card">
+      <div class="row"><input id="nTitle" placeholder="Заголовок (до 120)" maxlength="120" style="flex:1">
+        <select id="nTag"><option value="news">Новость</option><option value="update">Обновление</option><option value="event">Событие</option><option value="maintenance">Тех. работы</option></select></div>
+      <div class="row"><textarea id="nBody" rows="6" placeholder="Текст новости" maxlength="8000" style="flex:1"></textarea></div>
+      <div class="row"><input id="nImg" placeholder="Картинка https://… (необязательно)" style="flex:1">
+        <label><input type="checkbox" id="nPin"> закрепить</label>
+        <button class="acc" id="nSave">Опубликовать</button><button id="nNew">Новая</button></div>
+      <div class="muted" id="nEdit"></div>
+    </div>
+    <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Дата</th><th>Тег</th><th>Заголовок</th><th>Статус</th><th></th></tr></thead><tbody id="nBody2"></tbody></table></div>
   </section>
 
   <section id="backup">
@@ -93,7 +107,7 @@ document.querySelector('.tabs').onclick = e => {
   const t = e.target.dataset.t; if (!t) return;
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
   document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === t));
-  ({reports: loadReports, bans: loadBans, backup: loadBackup})[t]();
+  ({reports: loadReports, bans: loadBans, backup: loadBackup, news: loadNews})[t]();
 };
 $('go').onclick = () => { token = $('tok').value.trim(); try { sessionStorage.setItem('pwpTok', token); } catch (e) {} say('', true); loadReports(); };
 
@@ -157,6 +171,38 @@ async function loadBackup() {
 }
 $('bkLoad').onclick = loadBackup;
 $('bkRun').onclick = async () => { if (await call('POST', '/api/v1/admin/backup/run')) { say('Бэкап запущен — обновите через минуту', true); } };
+
+// новости (этап 17b): POST — новая, PUT /{id} — правка или скрыть/показать; удаления нет
+let editing = 0;
+function newsForm(n) {
+  editing = n ? n.id : 0;
+  $('nTitle').value = n ? n.title : ''; $('nBody').value = n ? n.body : ''; $('nTag').value = n ? n.tag : 'news';
+  $('nImg').value = n ? (n.imageUrl || '') : ''; $('nPin').checked = !!(n && n.pinned);
+  $('nEdit').textContent = n ? 'Правка новости #' + n.id : '';
+  $('nSave').textContent = n ? 'Сохранить' : 'Опубликовать';
+}
+const newsBody = published => ({ title: $('nTitle').value, body: $('nBody').value, tag: $('nTag').value, imageUrl: $('nImg').value.trim(), pinned: $('nPin').checked, published });
+async function loadNews() {
+  const d = await call('GET', '/api/v1/admin/news');
+  const body = $('nBody2'); body.replaceChildren();
+  if (!d) return;
+  if (!d.length) { const tr = el('tr'); const td = el('td', 'Новостей нет', 'muted'); td.colSpan = 5; tr.append(td); body.append(tr); return; }
+  for (const n of d) {
+    const tr = el('tr'); const act = el('td');
+    const ed = el('button', 'Править'); ed.onclick = () => newsForm(n);
+    const tg = el('button', n.published ? 'Скрыть' : 'Показать'); tg.style.marginLeft = '6px';
+    tg.onclick = async () => { if (await call('PUT', '/api/v1/admin/news/' + n.id, { title: n.title, body: n.body, tag: n.tag, imageUrl: n.imageUrl, pinned: n.pinned, published: !n.published })) { say('Готово', true); loadNews(); } };
+    act.append(ed, tg);
+    tr.append(el('td', when(n.createdAt)), el('td', n.tag), el('td', (n.pinned ? '📌 ' : '') + n.title), el('td', n.published ? 'опубликована' : 'скрыта', n.published ? 'ok' : 'muted'), act);
+    body.append(tr);
+  }
+}
+$('nNew').onclick = () => newsForm(null);
+$('nSave').onclick = async () => {
+  if (!$('nTitle').value.trim() || !$('nBody').value.trim()) { say('Нужны заголовок и текст', false); return; }
+  const ok = editing ? await call('PUT', '/api/v1/admin/news/' + editing, newsBody(true)) : await call('POST', '/api/v1/admin/news', newsBody(true));
+  if (ok) { say(editing ? 'Сохранено' : 'Опубликовано', true); newsForm(null); loadNews(); }
+};
 
 if (token) loadReports();
 </script>

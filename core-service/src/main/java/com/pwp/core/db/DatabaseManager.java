@@ -481,6 +481,20 @@ public class DatabaseManager {
                 + "comment VARCHAR(200) NOT NULL DEFAULT '', "
                 + "INDEX idx_map_layout_versions_map (map_name, id))",
 
+                // новости (этап 17b): сайт, лаунчер, игра — то же, что sql/migration_add_news.sql
+                "CREATE TABLE IF NOT EXISTS news ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "title VARCHAR(120) NOT NULL, "
+                + "body TEXT NOT NULL, "
+                + "tag VARCHAR(24) NOT NULL DEFAULT 'news', "
+                + "image_url VARCHAR(255) NOT NULL DEFAULT '', "
+                + "pinned TINYINT NOT NULL DEFAULT 0, "
+                + "published TINYINT NOT NULL DEFAULT 1, "
+                + "author VARCHAR(32) NOT NULL DEFAULT '', "
+                + "created_at BIGINT NOT NULL, "
+                + "updated_at BIGINT NOT NULL, "
+                + "INDEX idx_news_feed (published, pinned, created_at))",
+
                 // жалобы игроков (этап 10a): пишут игровые серверы, читают F6 и боты
                 "CREATE TABLE IF NOT EXISTS player_reports ("
                 + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
