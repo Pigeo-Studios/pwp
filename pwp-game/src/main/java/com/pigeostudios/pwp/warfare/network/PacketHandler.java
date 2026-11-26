@@ -370,6 +370,8 @@ public class PacketHandler {
         id = com.pigeostudios.pwp.limit.network.NetworkHandler.register(INSTANCE, v2.nextId());
         // 9 (26.11.2026): редактор дивизий в F6 — в самый конец
         id = com.pigeostudios.pwp.warfare.admin.DivisionAdmin.register(INSTANCE, id);
+        // 9 (26.11.2026): способности командира
+        id = com.pigeostudios.pwp.warfare.server.CommanderAbilities.register(INSTANCE, id);
     }
 
     private static String getFactionName(String currentFaction, boolean isBlue) {

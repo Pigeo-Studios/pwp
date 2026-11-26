@@ -49,6 +49,10 @@ public class ClientModEvents {
         WarfareHints.register();
         // «Меню PWP» (этап 11): деплой, карта, редакторы контента
         WarfareHubEntries.register();
+        // табло по Tab (этап 15)
+        com.pigeostudios.pwp.warfare.client.hud.ScoreboardOverlay.init();
+        // выносливость и раскачка прицела (этап 15)
+        com.pigeostudios.pwp.warfare.client.hud.StaminaClient.init();
         // админ-панель core-client: вкладки «Матч» и «Карта»
         com.pigeostudios.pwp.warfare.client.admin.WarfareAdminTabs.register();
         // этап 3: редактор карты (кнопки в паузе и во вкладке «Карта»)

@@ -426,7 +426,19 @@ public class SquadMapScreen extends Screen {
             LocalPlayer p = Minecraft.getInstance().player;
             BiConsumer<String, String> pathCb = (cat, icon) -> {
                 int wx2 = toWorldX(mx), wz2 = toWorldZ(my);
-                if ("cmd_squads".equals(cat)) {
+                String ability = !"cmd_top".equals(cat)
+                        ? null
+                        : switch (icon) {
+                            case "drone" -> "UAV";
+                            case "transport_helo" -> "SUPPLY";
+                            case "attack_helo" -> "CAS";
+                            default -> null;
+                        };
+                if (ability != null) {
+                    PacketHandler.INSTANCE.sendToServer(
+                            new com.pigeostudios.pwp.warfare.server.CommanderAbilities.Use(ability, wx2, wz2));
+                    ctx.close();
+                } else if ("cmd_squads".equals(cat)) {
                     int squadId = Parse.intOr(icon, Integer.MIN_VALUE);
                     if (squadId != Integer.MIN_VALUE) startSquadPath(wx2, wz2, squadId);
                     ctx.close();

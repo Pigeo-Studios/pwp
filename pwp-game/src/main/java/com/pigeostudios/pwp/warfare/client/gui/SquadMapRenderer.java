@@ -632,6 +632,19 @@ public class SquadMapRenderer {
             int sy = toScreenZ(info.z, cz);
             if (!inMap(sx, sy)) continue;
             var f = PWPTheme.Fonts.display();
+            // враг, раскрытый разведкой командира (этап 15): красная точка, без ника и номера отряда
+            if (myTeamForNums != null
+                    && info.team != null
+                    && !info.team.equalsIgnoreCase(myTeamForNums)
+                    && !self.isCreative()
+                    && !self.isSpectator()) {
+                RenderSystem.setShaderColor(1F, 0.25F, 0.2F, 1F);
+                pushIconScale(g, sx, sy);
+                g.blit(ICON_CIRCLE, sx - 3, sy - 3, 6, 6, 0, 0, 16, 16, 16, 16);
+                g.pose().popPose();
+                RenderSystem.setShaderColor(1, 1, 1, 1);
+                continue;
+            }
             if (isShowNicksHeld && !info.name.equals(myName) && !info.isDowned) {
                 int nickColor = info.squadId != -1 && info.squadId == myInternalSquadId ? -11141291 : -1;
                 drawNick(g, f, info.name, sx, sy, nickColor);

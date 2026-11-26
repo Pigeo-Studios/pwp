@@ -75,6 +75,8 @@ public final class KitAccess {
             String kitName,
             WarfareWorldData.KitInfo kit,
             List<KitLimits.Holder> others) {
+        // «Стрельбище» (этап 15): любые роли без лимитов — тренироваться можно всем
+        if (com.pwp.api.match.GameModes.isTraining(data.match.gameMode) && kit != null) return null;
         Map<String, WarfareWorldData.KitInfo> kits = teamKits(player, data);
         WarfareWorldData.Squad mySquad = squadOf(player.getScoreboardName(), data);
         KitLimits.Occupancy occ = KitLimits.occupancy(others, kitName);

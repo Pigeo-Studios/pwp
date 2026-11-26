@@ -56,8 +56,11 @@ public class TeamRoster {
         List<MapPlayerInfo> allies = all.stream()
                 .filter(p -> p.team != null && p.team.equalsIgnoreCase(myTeam))
                 .toList();
+        // враги в списке — только у наблюдателя (раскрытые разведкой командира — лишь точки на карте)
+        var self = Minecraft.getInstance().player;
+        boolean observer = self != null && (self.isCreative() || self.isSpectator());
         List<MapPlayerInfo> enemies = all.stream()
-                .filter(p -> p.team != null && !p.team.equalsIgnoreCase(myTeam))
+                .filter(p -> observer && p.team != null && !p.team.equalsIgnoreCase(myTeam))
                 .toList();
         int headerH = WDraw.headerHeight(Minecraft.getInstance().getWindow().getGuiScaledHeight());
         int rowsH = Math.max(allies.size(), enemies.size()) * (WTheme.ROW_H + 1);

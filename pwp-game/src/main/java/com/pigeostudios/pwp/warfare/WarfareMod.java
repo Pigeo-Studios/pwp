@@ -87,6 +87,8 @@ public class WarfareMod {
             // админ-панель: тип adminMatch + разделы match/map
             com.pigeostudios.pwp.warfare.admin.MatchAdminPackets.registerData();
             com.pigeostudios.pwp.warfare.admin.DivisionAdmin.registerData();
+            com.pigeostudios.pwp.warfare.stats.ScoreboardData.register();
+            com.pigeostudios.pwp.warfare.server.CommanderAbilities.init();
             com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.registerData();
             com.pigeostudios.pwp.warfare.admin.MapEditorPackets.registerData();
             // тайлы динамической карты (mapTile): отвечает только на запросы клиентов с включённой картой
@@ -138,6 +140,42 @@ public class WarfareMod {
             configPath = Path.of("map_config.json");
         }
         return Files.exists(configPath) ? configPath : null;
+    }
+
+    /**
+     * RAAS: перестроить цепочку точек матча ({@link com.pigeostudios.pwp.warfare.match.RaasChain}) — выбранные
+     * точки получают приоритеты BLUE 1..N / RED N..1, остальные в этом матче не участвуют. Мейны — спавны команд.
+     */
+    static void applyRaasChain(WarfareWorldData data) {
+        var points = data.match.capturePoints;
+        if (points.size() < 2) return;
+        var blue = data.match.blueSpawns.values().stream().findFirst().orElse(null);
+        var red = data.match.redSpawns.values().stream().findFirst().orElse(null);
+        if (blue == null || red == null) {
+            LOGGER.warn("RAAS: нет спавнов мейнов — цепочка как в AAS");
+            return;
+        }
+        java.util.List<com.pigeostudios.pwp.warfare.match.RaasChain.Point> pts = new java.util.ArrayList<>();
+        for (int i = 0; i < points.size(); i++) {
+            var c = points.get(i).area.getCenter();
+            pts.add(new com.pigeostudios.pwp.warfare.match.RaasChain.Point(i, c.x, c.z));
+        }
+        var chain = com.pigeostudios.pwp.warfare.match.RaasChain.build(
+                pts,
+                new double[] {blue.getX(), blue.getZ()},
+                new double[] {red.getX(), red.getZ()},
+                com.pigeostudios.pwp.warfare.match.RaasChain.DEFAULT_LAYERS,
+                new java.util.Random());
+        java.util.List<WarfareWorldData.CapturePoint> picked = new java.util.ArrayList<>();
+        for (int i = 0; i < chain.size(); i++) {
+            WarfareWorldData.CapturePoint cp = points.get(chain.get(i));
+            cp.bluePriority = i + 1;
+            cp.redPriority = chain.size() - i;
+            picked.add(cp);
+        }
+        points.clear();
+        points.addAll(picked);
+        LOGGER.info("RAAS: цепочка {}", picked.stream().map(p -> p.name).toList());
     }
 
     public static void applyMapConfig(ServerLevel level) {
@@ -343,6 +381,15 @@ public class WarfareMod {
             // INVASION mode: set all points to defender, adjust tickets
             String mode = layout.effectiveMode();
             data.match.gameMode = mode;
+            // RAAS (этап 15): цепочка точек на этот матч — по одной из каждого слоя между мейнами
+            if (com.pwp.api.match.GameModes.isRaas(mode)) applyRaasChain(data);
+            // «Стрельбище» (этап 15): без счёта — тикеты не кончаются, смерть бесплатна, быстрый респаун
+            if (com.pwp.api.match.GameModes.isTraining(mode)) {
+                data.match.blueTickets = 9999;
+                data.match.redTickets = 9999;
+                data.match.deathTicketCost = 0;
+                data.match.respawnTimer = com.pwp.api.match.GameModes.TRAINING_RESPAWN_SECONDS;
+            }
             if (mode.equals("invasion") && !data.match.capturePoints.isEmpty()) {
                 String defender = root.has("invasionDefender")
                         ? root.get("invasionDefender").getAsString()

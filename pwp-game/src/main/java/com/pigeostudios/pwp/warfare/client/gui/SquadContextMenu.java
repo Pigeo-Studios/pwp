@@ -91,7 +91,11 @@ public class SquadContextMenu {
                         new Item("repair_m", "gui.pwpwarfare.map.menu.repair"),
                         new Item("pickup_m", "gui.pwpwarfare.map.menu.capture"),
                         new Item("logistic_m", "gui.pwpwarfare.map.menu.logistics"),
-                        new Item("transport_m", "gui.pwpwarfare.map.menu.transport")));
+                        new Item("transport_m", "gui.pwpwarfare.map.menu.transport"),
+                        // способности командира (этап 15): разведка, сброс снабжения, авиаудар
+                        new Item("drone", "gui.pwpwarfare.map.menu.cmd_uav"),
+                        new Item("transport_helo", "gui.pwpwarfare.map.menu.cmd_supply"),
+                        new Item("attack_helo", "gui.pwpwarfare.map.menu.cmd_cas")));
     }
 
     private static final List<ColGroup> ENEMY_COLS = List.of(

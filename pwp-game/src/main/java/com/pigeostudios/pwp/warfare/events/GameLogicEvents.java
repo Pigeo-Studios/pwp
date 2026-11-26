@@ -313,9 +313,14 @@ public class GameLogicEvents {
                             if (com.pigeostudios.pwp.warfare.match.TeamVisibility.ALL.equals(key)) {
                                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), allPlayersPacket);
                             } else if (!com.pigeostudios.pwp.warfare.match.TeamVisibility.NONE.equals(key)) {
-                                List<MapPlayerInfo> teamOnly = allPlayersInfo.stream()
+                                List<MapPlayerInfo> teamOnly = new java.util.ArrayList<>(allPlayersInfo.stream()
                                         .filter(info -> key.equalsIgnoreCase(info.team))
-                                        .toList();
+                                        .toList());
+                                // разведка с воздуха командира (этап 15): враги в её радиусе — только этой команде
+                                teamOnly.addAll(com.pigeostudios.pwp.warfare.server.CommanderAbilities.revealedFor(
+                                        key,
+                                        allPlayersInfo,
+                                        com.pwp.api.time.GameClock.serverTicks(level.getServer())));
                                 PacketHandler.INSTANCE.send(
                                         PacketDistributor.PLAYER.with(() -> p), new PacketSyncMapPlayers(teamOnly));
                             }
