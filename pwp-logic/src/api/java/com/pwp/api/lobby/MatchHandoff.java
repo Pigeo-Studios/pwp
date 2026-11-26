@@ -93,7 +93,8 @@ public final class MatchHandoff {
             b.addProperty("tickets", blueTickets);
             r.addProperty("tickets", redTickets);
             root.addProperty("mode", mode);
-            root.addProperty("modeDisplayName", invasion() ? "INVASION" : "Advance and Secure");
+            root.addProperty(
+                    "modeDisplayName", com.pwp.api.match.GameModes.orAas(mode).displayName());
             root.addProperty("invasionDefender", invasionDefenderIsRed ? "RED" : "BLUE");
             JsonElement patterns = root.get("capturePointPatterns");
             int count = patterns != null && patterns.isJsonArray()
