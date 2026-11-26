@@ -48,4 +48,14 @@ public class MapPlayerInfo {
         this.seatIndex = seatIndex;
         this.team = team;
     }
+
+    /**
+     * Обезличенная копия врага для разведки командира: только позиция и команда. Ник, UUID, отряд, лидерство,
+     * нок и техника врагу не уходят (клиент рисует красную точку; ник водителя он подписал бы у машины).
+     * {@code index} даёт уникальный ключ {@code ?N} — клиент хранит игроков карты по имени.
+     */
+    public static MapPlayerInfo anonymous(MapPlayerInfo src, int index) {
+        return new MapPlayerInfo(
+                "?" + index, new UUID(0L, index + 1L), src.x, src.z, 0F, -1, false, false, 0L, false, -1, 0, src.team);
+    }
 }

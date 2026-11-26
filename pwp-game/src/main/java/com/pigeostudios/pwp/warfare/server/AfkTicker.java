@@ -33,7 +33,9 @@ public final class AfkTicker {
         int kick = c.afkKickMinutes() * 60;
         if (kick <= 0) return;
         long now = GameClock.realMillis();
-        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+        // копия: disconnect() на серверном потоке сразу убирает игрока из списка (executeBlocking →
+        // handleDisconnection), обход живого списка дал бы ConcurrentModificationException
+        for (ServerPlayer p : java.util.List.copyOf(server.getPlayerList().getPlayers())) {
             String id = p.getStringUUID();
             GameType mode = p.gameMode.getGameModeForPlayer();
             if (mode == GameType.SPECTATOR

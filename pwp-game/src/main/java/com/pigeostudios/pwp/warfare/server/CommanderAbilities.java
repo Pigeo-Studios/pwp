@@ -46,7 +46,7 @@ public final class CommanderAbilities {
     private static final int CAS_SHELLS = 6;
     private static final int CAS_INTERVAL = 6;
 
-    private record Reveal(String team, double x, double z, int radius, long until) {}
+    record Reveal(String team, double x, double z, int radius, long until) {}
 
     private record Blast(ServerLevel level, double x, double z, long at) {}
 
@@ -59,14 +59,27 @@ public final class CommanderAbilities {
         MinecraftForge.EVENT_BUS.addListener(CommanderAbilities::onTick);
     }
 
-    /** Враги, раскрытые разведкой команды {@code team}, из полного списка игроков карты. */
+    /**
+     * Враги, раскрытые разведкой команды {@code team}, из полного списка игроков карты — обезличенные
+     * ({@link MapPlayerInfo#anonymous}): только позиция и команда.
+     */
     public static synchronized List<MapPlayerInfo> revealedFor(String team, List<MapPlayerInfo> all, long now) {
-        List<MapPlayerInfo> out = new ArrayList<>();
+        List<Reveal> active = new ArrayList<>();
         for (Reveal r : REVEALS) {
-            if (!r.team.equalsIgnoreCase(team) || r.until < now) continue;
-            for (MapPlayerInfo p : all) {
-                if (p.team == null || p.team.equalsIgnoreCase(team) || out.contains(p)) continue;
-                if (CommanderRules.revealed(p.x, p.z, r.x, r.z, r.radius)) out.add(p);
+            if (r.team.equalsIgnoreCase(team) && r.until >= now) active.add(r);
+        }
+        return reveal(team, all, active);
+    }
+
+    static List<MapPlayerInfo> reveal(String team, List<MapPlayerInfo> all, List<Reveal> active) {
+        List<MapPlayerInfo> out = new ArrayList<>();
+        for (MapPlayerInfo p : all) {
+            if (p.team == null || p.team.equalsIgnoreCase(team)) continue;
+            for (Reveal r : active) {
+                if (CommanderRules.revealed(p.x, p.z, r.x, r.z, r.radius)) {
+                    out.add(MapPlayerInfo.anonymous(p, out.size()));
+                    break;
+                }
             }
         }
         return out;

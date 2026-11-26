@@ -382,7 +382,11 @@ public class WarfareMod {
             String mode = layout.effectiveMode();
             data.match.gameMode = mode;
             // RAAS (этап 15): цепочка точек на этот матч — по одной из каждого слоя между мейнами
-            if (com.pwp.api.match.GameModes.isRaas(mode)) applyRaasChain(data);
+            // Точки только из map_config: RAAS вырезает невыбранные, а точки из SavedData мира потерялись бы навсегда
+            if (com.pwp.api.match.GameModes.isRaas(mode)) {
+                if (pointsFromConfig) applyRaasChain(data);
+                else LOGGER.warn("RAAS: точки не из map_config — цепочка как в AAS (перенесите точки в map_config)");
+            }
             // «Стрельбище» (этап 15): без счёта — тикеты не кончаются, смерть бесплатна, быстрый респаун
             if (com.pwp.api.match.GameModes.isTraining(mode)) {
                 data.match.blueTickets = 9999;
