@@ -47,8 +47,10 @@ PWP — «Squad в Minecraft» (Forge 1.20.1-47.3.0, Java 17, official mappings,
 - Комментарии и документы — на русском. Файлы — UTF-8.
 - Пустой `catch` запрещён: минимум `LOG.warn(…, e)`; в покадровом коде — `LogOnce.warn`. `System.out/err` запрещены. Числа из ввода — `Parse.intOr/floatOr`.
 - Время на сервере — только `GameClock`: `serverTicks` (в памяти: каналы, таймеры) или `worldTicks` (что сохраняется в данные игрока/SavedData); `realMillis` — для настенного времени (антиспам, очереди). Кулдаун — абсолютная метка «до», перезаписывается, не прибавляется.
+- Исключение — `sbwchunkload`: отдельный мод без зависимости от pwp-core, тики — `server.getTickCount()`.
 - Клиенту не доверять: C→S несёт только идентификаторы/намерение, сервер сам проверяет право и сам строит предметы/состояние.
 - Отказ действия игрока — всегда с причиной (`PlayerFeedback.deny/info`, ключ lang). Молча — только для заведомо битого ввода.
+- Кик/`disconnect()` в цикле по `getPlayerList().getPlayers()` — только по копии списка: на серверном потоке игрок удаляется сразу (CME).
 
 ### Сеть
 - Новый пакет — сеть v2: record `Net.C2S` (с `validate()`) / `Net.S2C`, регистрация через `Net.Registrar` **в конец** канала. Один пакет = одно действие. Большие строки S→C — `Payloads.writeLarge`.
@@ -60,6 +62,7 @@ PWP — «Squad в Minecraft» (Forge 1.20.1-47.3.0, Java 17, official mappings,
 - Состояние матча (SyncGameData, отряды, нок, игроки на карте) — только через `PacketHandler.sendSync/sendToAllClients/syncSquadsAll/syncSquadsTo/syncDowned` и `PacketHandler.viewerKey` → `TeamVisibility`. Прямой `send(ALL, …)` таких пакетов — мап-хак.
 - «Видит всё» — только модератор-наблюдатель (`viewerKey(team, spectator||creative, MODERATOR+)`). Не проверять `isSpectator()||isCreative()` напрямую.
 - Ники над головой: `HIDE_FOR_OTHER_TEAMS` (врагу никогда), `hideNametags` → `NEVER`.
+- Враг, раскрытый способностью (UAV и т.п.), уходит только обезличенным: `MapPlayerInfo.anonymous` (позиция + команда).
 
 ### Core-service (HTTP)
 - HTTP к core — только `CoreApi`. На главном потоке сервера не ждать: `ServerThread.thenOnServer`; с игроком — `thenForPlayer` (игрок ищется заново по UUID); из пакета игрока — `guardedForPlayer` + `RequestGuard`. `CoreApi.await` — только в фоне.
@@ -74,6 +77,7 @@ PWP — «Squad в Minecraft» (Forge 1.20.1-47.3.0, Java 17, official mappings,
 - Конфиг сервера — `config/pwp-server.json` (`ServerSettings` + `CommunitySettings`, доступ `ServerRole.settings()`): роль, лобби, шаблон матчей, папка карт, правила публичного сервера (`community`). Баланс боя — Forge-TOML (`pwpwarfare-common.toml`).
 - Права: `PwpPermissions.has(player, AccessLevel)` — PLAYER < MODERATOR < ADMIN < OWNER (op 2–3 = ADMIN, op 4 = OWNER, либо роль в БД). Проверка — на сервере в каждом пакете; `isCreative()` правом не является.
 - Админ-действие — только через `AdminAction.runLocal/run` (иначе его нет в аудит-логе `logs/pwp-admin-audit.log`).
+- Админ-команда (консоль/op) — запись `AdminAudit.recordSource(src, …)`. Строка-ответ сервера в пакете — ключ lang, клиент показывает `I18n.get`.
 
 ### UI
 - Только `GuiGraphics` и UI-кит `com.pwp.coreclient.ui` (`UIButton`, `UICard`, `UIScrollArea`, `AdminForm`, …) + лейаут `ui/layout` (`Rect`, `Flow`, `Grid`, `TextFit`). Цвета/отступы — `PWPTheme` (warfare — `WTheme` поверх). Публичный API кита меняется только добавлением.
