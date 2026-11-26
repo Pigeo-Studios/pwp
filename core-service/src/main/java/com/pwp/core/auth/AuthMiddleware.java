@@ -33,6 +33,7 @@ public class AuthMiddleware {
         "/api/v1/launcher/anticheat/artifact/",
         "/api/v1/launcher/p5/",
         "/api/v1/admin/",
+        "/api/v1/public/",
         "/authlib/",
         "/authlib/authserver/",
         "/authlib/sessionserver/",

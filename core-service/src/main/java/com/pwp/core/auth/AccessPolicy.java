@@ -41,7 +41,10 @@ public final class AccessPolicy {
             p("POST /api/v1/maps/[^/]+/layouts"),
             p("POST /api/v1/maps/layouts/[^/]+/rollback"),
             p("(PUT|DELETE) /api/v1/factions/[^/]+/divisions/[^/]+"),
-            p("POST /api/v1/shop/buy"));
+            p("POST /api/v1/shop/buy"),
+            p("POST /api/v1/reports"),
+            p("POST /api/v1/punishments"),
+            p("POST /api/v1/discord/(code|link)"));
 
     static final List<String> UUID_FIELDS = List.of("uuid", "playerUuid", "player_uuid", "targetUuid", "target_uuid");
 

@@ -208,6 +208,38 @@ public class NetworkController {
         });
     }
 
+    /**
+     * Для сайта (этап 10d): живые серверы без IP/портов и служебных полей — имя, онлайн, карта, режим,
+     * фракции, тикеты, фаза. Читает {@code PublicController}.
+     */
+    static List<Map<String, Object>> publicServers() {
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (ServerHeartbeat h : heartbeats.values()) {
+            if (now - h.lastSeen >= 120_000) continue;
+            Map<String, Object> s = new LinkedHashMap<>();
+            s.put("name", h.server);
+            s.put("online", h.online);
+            s.put("maxPlayers", h.maxPlayers);
+            if (h.mapName != null) {
+                s.put("map", h.mapName);
+                s.put("mode", h.mode);
+                s.put("blueFaction", h.blueFaction);
+                s.put("redFaction", h.redFaction);
+                s.put("blueTickets", h.blueScore);
+                s.put("redTickets", h.redScore);
+                s.put("phase", h.phase);
+                s.put("matchStartedAt", h.matchStartedAt);
+            }
+            out.add(s);
+        }
+        return out;
+    }
+
+    static int publicTotalOnline() {
+        return currentTotalOnline();
+    }
+
     private static int currentTotalOnline() {
         return heartbeats.values().stream()
             .filter(h -> System.currentTimeMillis() - h.lastSeen < 120_000)

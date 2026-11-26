@@ -114,6 +114,9 @@ public class CoreApplication {
         new MatchPolicyController(app);
         new MapLayoutController(app);
         new SecurityController(app, config);
+        new CommunityController(app);
+        new PublicController(app);
+        com.pwp.core.backup.BackupService.start(config.backup, config.database);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             log.info("Shutting down Core Service...");
@@ -193,6 +196,7 @@ public class CoreApplication {
         public LoggingConfig logging = new LoggingConfig();
         public LauncherConfig launcher = new LauncherConfig();
         public AnticheatConfig anticheat = new AnticheatConfig();
+        public BackupConfig backup = new BackupConfig();
 
     }
 
@@ -204,6 +208,16 @@ public class CoreApplication {
         public int heartbeatTimeoutSec = 60;
         public String screenshotDir = "C:/Users/maska/OneDrive/Desktop/PWP-Server/anticheat-screenshots";
         public String artifactsDir = "C:/Users/maska/OneDrive/Desktop/Pwpfiles/anticheat";
+    }
+
+    /** Ночной бэкап БД (этап 10a). mysqldump пусто — ищется XAMPP, затем mysqldump/mariadb-dump в PATH. */
+    public static class BackupConfig {
+        public boolean enabled = true;
+        public String dir = "backups";
+        public String mysqldump = "";
+        public int hour = 4;
+        public int keepDays = 14;
+        public int keepMin = 3;
     }
 
     public static class LauncherConfig {

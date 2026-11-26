@@ -479,7 +479,31 @@ public class DatabaseManager {
                 + "author_name VARCHAR(32) NOT NULL, "
                 + "created_at BIGINT NOT NULL, "
                 + "comment VARCHAR(200) NOT NULL DEFAULT '', "
-                + "INDEX idx_map_layout_versions_map (map_name, id))"
+                + "INDEX idx_map_layout_versions_map (map_name, id))",
+
+                // жалобы игроков (этап 10a): пишут игровые серверы, читают F6 и боты
+                "CREATE TABLE IF NOT EXISTS player_reports ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "server VARCHAR(64) NOT NULL DEFAULT '', "
+                + "reporter_uuid VARCHAR(36) NOT NULL, "
+                + "reporter_name VARCHAR(16) NOT NULL, "
+                + "target_uuid VARCHAR(36) NOT NULL, "
+                + "target_name VARCHAR(16) NOT NULL, "
+                + "reason VARCHAR(24) NOT NULL, "
+                + "details VARCHAR(300) NOT NULL DEFAULT '', "
+                + "status VARCHAR(8) NOT NULL DEFAULT 'open', "
+                + "handled_by VARCHAR(32) DEFAULT NULL, "
+                + "created_at BIGINT NOT NULL, "
+                + "closed_at BIGINT NOT NULL DEFAULT 0, "
+                + "INDEX idx_reports_status (status, id), "
+                + "INDEX idx_reports_target (target_uuid))",
+
+                // привязка Discord-аккаунта (этап 10d): один Discord — один игрок
+                "CREATE TABLE IF NOT EXISTS discord_links ("
+                + "uuid VARCHAR(36) PRIMARY KEY, "
+                + "discord_id VARCHAR(25) NOT NULL, "
+                + "linked_at BIGINT NOT NULL, "
+                + "UNIQUE KEY uq_discord_id (discord_id))"
             };
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
