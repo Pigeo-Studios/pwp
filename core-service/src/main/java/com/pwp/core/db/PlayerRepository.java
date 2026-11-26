@@ -821,11 +821,25 @@ public class PlayerRepository {
         public String createdAt;
     }
 
+    /**
+     * Место игрока: 1 + сколько игроков строго лучше. Подзапрос объявляет СВОИ псевдонимы {@code ps}/{@code px}:
+     * без них MySQL брал {@code ps} внешнего запроса, условие становилось «значение > само себя» и место было
+     * всегда 1 (баг до 26.11.2026 — на сайте и в профиле у всех №1).
+     */
+    static String rankSql(String column) {
+        return "SELECT 1 + COUNT(*) AS rank FROM player_stats ps "
+                + "JOIN player_xp px ON ps.uuid = px.uuid "
+                + "WHERE " + column + " > (SELECT " + column + " FROM player_stats ps "
+                + "JOIN player_xp px ON ps.uuid = px.uuid WHERE ps.uuid = ?)";
+    }
+
+    static String rankColumn(String orderBy) {
+        return ORDER_BY_COLUMNS.getOrDefault(orderBy, "ps.kills");
+    }
+
     public static int getPlayerRank(String uuid, String orderBy) throws SQLException {
         String column = ORDER_BY_COLUMNS.getOrDefault(orderBy, "ps.kills");
-        String sql = "SELECT 1 + COUNT(*) AS rank FROM player_stats ps "
-                + "JOIN player_xp px ON ps.uuid = px.uuid "
-                + "WHERE " + column + " > (SELECT " + column + " FROM player_stats WHERE uuid = ?)";
+        String sql = rankSql(column);
         try (Connection c = DatabaseManager.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, uuid);

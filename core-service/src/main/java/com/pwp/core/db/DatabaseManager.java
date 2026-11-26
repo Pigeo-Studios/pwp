@@ -26,7 +26,13 @@ public class DatabaseManager {
         hikari.setMaxLifetime(cfg.maxLifetimeMs);
         hikari.setMinimumIdle(2);
         hikari.setConnectionTimeout(5000);
-        hikari.setConnectionTestQuery("SELECT 1");
+        // JDBC4-драйвер MySQL проверяет соединение сам (isValid) — тестовый запрос был лишним походом в БД
+        // кэш prepared statements на соединении + серверная подготовка: повторные запросы без перепарсинга SQL
+        hikari.addDataSourceProperty("cachePrepStmts", "true");
+        hikari.addDataSourceProperty("prepStmtCacheSize", "250");
+        hikari.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        hikari.addDataSourceProperty("useServerPrepStmts", "true");
+        hikari.addDataSourceProperty("rewriteBatchedStatements", "true");
         hikari.setPoolName("PWP-Core-Pool");
 
         dataSource = new HikariDataSource(hikari);
@@ -281,6 +287,8 @@ public class DatabaseManager {
                 "ALTER TABLE players ADD COLUMN last_ip VARCHAR(45) DEFAULT NULL",
                     "ALTER TABLE players ADD INDEX idx_players_telegram (telegram_id)",
                 "ALTER TABLE players ADD INDEX idx_players_login (login)",
+                // по нику ищут профиль сайта, бан и привязку Discord — без индекса полный проход таблицы
+                "ALTER TABLE players ADD INDEX idx_players_nickname (nickname)",
                 "ALTER TABLE password_resets ADD COLUMN player_uuid VARCHAR(36) NOT NULL",
                 "ALTER TABLE players ADD COLUMN banned_until DATETIME DEFAULT NULL",
                 "ALTER TABLE hwid_bans ADD COLUMN banned_until DATETIME DEFAULT NULL",
