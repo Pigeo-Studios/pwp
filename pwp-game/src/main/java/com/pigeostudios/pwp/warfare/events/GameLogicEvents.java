@@ -1,5 +1,9 @@
 package com.pigeostudios.pwp.warfare.events;
 
+import static com.pigeostudios.pwp.warfare.events.PlayerItemEvents.*;
+import static com.pigeostudios.pwp.warfare.events.PlayerLifecycleEvents.*;
+import static com.pigeostudios.pwp.warfare.events.VehicleLossEvents.*;
+
 import com.pigeostudios.pwp.warfare.block.GameStartTriggerBlock;
 import com.pigeostudios.pwp.warfare.block.HubBlockEntity;
 import com.pigeostudios.pwp.warfare.block.ModBlocks;
@@ -7,10 +11,8 @@ import com.pigeostudios.pwp.warfare.block.RallyPointBlock;
 import com.pigeostudios.pwp.warfare.block.RallyPointBlockEntity;
 import com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlockEntity;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
-import com.pigeostudios.pwp.warfare.data.state.PlayerWarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
-import com.pigeostudios.pwp.warfare.item.ModItems;
 import com.pigeostudios.pwp.warfare.match.CaptureLogic;
 import com.pigeostudios.pwp.warfare.network.MapPlayerInfo;
 import com.pigeostudios.pwp.warfare.network.PacketCaptureNotification;
@@ -21,8 +23,6 @@ import com.pigeostudios.pwp.warfare.network.PacketSyncMapPlayers;
 import com.pigeostudios.pwp.warfare.network.PacketSyncPoint;
 import com.pigeostudios.pwp.warfare.network.PacketSyncSpawners;
 import com.pigeostudios.pwp.warfare.network.ResupplyHandler;
-import com.pigeostudios.pwp.warfare.server.MarkerManager;
-import com.pigeostudios.pwp.warfare.server.PathManager;
 import com.pigeostudios.pwp.warfare.sound.ModSounds;
 import com.pigeostudios.pwp.warfare.squad.SquadActions;
 import com.pigeostudios.pwp.warfare.staging.StagingPackets;
@@ -30,7 +30,6 @@ import com.pigeostudios.pwp.warfare.staging.StagingService;
 import com.pigeostudios.pwp.warfare.stats.MatchStatsTracker;
 import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.api.time.GameClock;
-import com.pwp.cosmetics.CosmeticService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,7 +43,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundPlayerAbilitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.resources.ResourceLocation;
@@ -54,40 +52,18 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraftforge.event.TickEvent.LevelTickEvent;
 import net.minecraftforge.event.TickEvent.Phase;
-import net.minecraftforge.event.TickEvent.PlayerTickEvent;
 import net.minecraftforge.event.TickEvent.ServerTickEvent;
-import net.minecraftforge.event.entity.EntityJoinLevelEvent;
-import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
-import net.minecraftforge.event.entity.EntityTravelToDimensionEvent;
-import net.minecraftforge.event.entity.item.ItemTossEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.Clone;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
-import net.minecraftforge.event.level.ExplosionEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
@@ -105,9 +81,9 @@ public class GameLogicEvents {
     public static final Map<UUID, String> pendingTeams = new HashMap<>();
     public static final Map<UUID, BlockPos> pendingSpawnPositions = new HashMap<>();
     public static final Map<UUID, Map<Integer, CompoundTag>> PERSISTENT_NBT_STORAGE = new HashMap<>();
-    private static final Map<String, Boolean> lastBlueBlockedMap = new HashMap<>();
-    private static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
-    private static final Logger LOGGER = LoggerFactory.getLogger(GameLogicEvents.class);
+    static final Map<String, Boolean> lastBlueBlockedMap = new HashMap<>();
+    static final Map<String, Boolean> lastRedBlockedMap = new HashMap<>();
+    static final Logger LOGGER = LoggerFactory.getLogger(GameLogicEvents.class);
 
     /** Матч окончен и сервер уходит в лобби (экран победы) — админ-рестарт в это время запрещён. */
     public static boolean returningToLobby() {
@@ -155,161 +131,6 @@ public class GameLogicEvents {
     }
 
     public static void cancelCountdown() {}
-
-    @SubscribeEvent
-    public static void onItemToss(ItemTossEvent event) {
-        if (event.getPlayer() != null && !event.getPlayer().level().isClientSide) {
-            ServerPlayer player = (ServerPlayer) event.getPlayer();
-            if (!player.isCreative()) {
-                WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                if (data.match.isGameStarted) {
-                    boolean preventAll = false;
-
-                    try {
-                        preventAll = (Boolean) WarfareConfig.PREVENT_ALL_ITEM_DROPS.get();
-                    } catch (Exception ex) {
-                        com.pwp.api.util.LogOnce.warn(
-                                LOGGER, "GameLogicEvents:156", "GameLogicEvents.onItemToss: исключение", ex);
-                    }
-
-                    if (preventAll) {
-                        event.setCanceled(true);
-                        player.getInventory().add(event.getEntity().getItem());
-                        player.displayClientMessage(
-                                Component.translatable("pwpwarfare.msg.item.drop_disabled")
-                                        .withStyle(ChatFormatting.RED),
-                                true);
-                    } else if (isHeavyItem(event.getEntity().getItem().getItem())) {
-                        event.setCanceled(true);
-                        player.getInventory().add(event.getEntity().getItem());
-                        player.displayClientMessage(
-                                Component.translatable("pwpwarfare.msg.item.drop_heavy")
-                                        .withStyle(ChatFormatting.RED),
-                                true);
-                    }
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerTickEffects(PlayerTickEvent event) {
-        if (event.phase == Phase.END && !event.player.level().isClientSide) {
-            if (event.player.tickCount % 10 == 0) {
-                ServerPlayer player = (ServerPlayer) event.player;
-                WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-                if (data.match.isGameStarted && !player.isCreative()) {
-                    boolean hasHeavyItem = false;
-
-                    for (ItemStack stack : player.getInventory().items) {
-                        if (!stack.isEmpty() && isHeavyItem(stack.getItem())) {
-                            hasHeavyItem = true;
-                            break;
-                        }
-                    }
-
-                    if (!hasHeavyItem) {
-                        for (ItemStack stack : player.getInventory().offhand) {
-                            if (!stack.isEmpty() && isHeavyItem(stack.getItem())) {
-                                hasHeavyItem = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (hasHeavyItem) {
-                        player.addEffect(
-                                new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 2, false, false, true));
-                    }
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerTickDriveCheck(PlayerTickEvent event) {
-        if (event.phase == Phase.END && !event.player.level().isClientSide) {
-            if ((Boolean) WarfareConfig.REQUIRE_SPECIALIST_TO_DRIVE.get()) {
-                ServerPlayer player = (ServerPlayer) event.player;
-                Entity vehicle = player.getVehicle();
-                if (vehicle == null) {
-                    WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
-                    WarfareData.of(player).remove(WarfareKeys.BOARDING_GRACE);
-                    WarfareData.of(player).remove(WarfareKeys.LAST_VEHICLE_ID);
-                } else {
-                    int lastVehicleId = WarfareData.of(player).getInt(WarfareKeys.LAST_VEHICLE_ID);
-                    if (lastVehicleId != vehicle.getId()) {
-                        WarfareData.of(player).putInt(WarfareKeys.LAST_VEHICLE_ID, vehicle.getId());
-                        WarfareData.of(player).putInt(WarfareKeys.BOARDING_GRACE, 0);
-                        WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
-                    } else {
-                        if (vehicle.getFirstPassenger() != player) {
-                            WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
-                        } else if (!player.isCreative() && !player.isSpectator()) {
-                            String vType = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_TYPE);
-                            if (vType.isEmpty() || vType.equals("DEFAULT")) {
-                                WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
-                                return;
-                            }
-                            String pKit = KitUtil.getEffectiveKit(player);
-                            if (!hasCorrectKit(vType, pKit)) {
-                                player.stopRiding();
-                                player.displayClientMessage(
-                                        Component.translatable("pwpwarfare.msg.vehicle.crew_kit_required")
-                                                .withStyle(ChatFormatting.RED),
-                                        true);
-                            } else {
-                                WarfareData.of(player).remove(WarfareKeys.DRIVE_KICK_TIMER);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerItemLogic(PlayerTickEvent event) {}
-
-    private static boolean isHeavyItem(Item item) {
-        if (item == ModItems.AGS_AMMO.get()) {
-            return true;
-        }
-
-        if (item == ModItems.M2_AMMO.get()) {
-            return true;
-        }
-
-        ResourceLocation id = ForgeRegistries.ITEMS.getKey(item);
-        if (id != null) {
-            String path = id.getPath();
-            if (path.equals("mortar_shell")) {
-                return true;
-            }
-
-            if (path.equals("medium_anti_ground_missile")) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static int findItemInInventory(Inventory inventory, Item item) {
-        for (int i = 0; i < inventory.items.size(); i++) {
-            if (((ItemStack) inventory.items.get(i)).getItem() == item) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static void moveItemToInventory(Player player, ItemStack stack) {
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
-        }
-    }
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent event) {
@@ -977,7 +798,7 @@ public class GameLogicEvents {
         }
     }
 
-    private static void spawnArtShell(ServerLevel level, BlockPos pos) {
+    static void spawnArtShell(ServerLevel level, BlockPos pos) {
         int rad = (Integer) WarfareConfig.ART_STRIKE_RADIUS.get();
         double x = pos.getX() + level.random.nextDouble() * rad * 2.0 - rad;
         double z = pos.getZ() + level.random.nextDouble() * rad * 2.0 - rad;
@@ -994,7 +815,7 @@ public class GameLogicEvents {
         }
     }
 
-    private static boolean isTeamReady(ServerLevel level, String teamName, WarfareWorldData data) {
+    static boolean isTeamReady(ServerLevel level, String teamName, WarfareWorldData data) {
         List<ServerPlayer> allPlayers = level.players();
         if (allPlayers.isEmpty()) return false;
         List<ServerPlayer> teamPlayers = allPlayers.stream()
@@ -1011,7 +832,7 @@ public class GameLogicEvents {
         return percent >= ((Integer) WarfareConfig.VOTE_REQUIRED_PERCENTAGE.get()).intValue();
     }
 
-    private static List<MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, WarfareWorldData data) {
+    static List<MapPlayerInfo> buildPlayerInfo(List<ServerPlayer> players, WarfareWorldData data) {
         List<MapPlayerInfo> infoList = new ArrayList<>();
 
         for (ServerPlayer p : players) {
@@ -1251,480 +1072,7 @@ public class GameLogicEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
-        Level level = event.getLevel();
-        if (level.isClientSide) return;
-
-        if (!(level instanceof ServerLevel serverLevel)) return;
-
-        WarfareWorldData data = WarfareWorldData.get(serverLevel);
-        if (data.structures.mainZones.isEmpty()) return;
-
-        event.getAffectedBlocks().removeIf(pos -> data.structures.mainZones.stream()
-                .anyMatch(zone -> zone.isInside(Vec3.atCenterOf(pos))));
-    }
-
-    @SubscribeEvent
-    public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide) return;
-        Entity entity = event.getEntity();
-        ResourceLocation rl = ForgeRegistries.ENTITY_TYPES.getKey(entity.getType());
-        if (rl != null
-                && (rl.toString().equals("superbwarfare:tm_62") || rl.toString().equals("superbwarfare:claymore"))) {
-            ServerLevel serverLevel = (ServerLevel) event.getLevel();
-            WarfareWorldData data = WarfareWorldData.get(serverLevel);
-            if (data.vehicles.markedVehicles.stream().anyMatch(v -> v.uuid.equals(entity.getUUID()))) return;
-            String team = "NEUTRAL";
-            if (WarfareData.of(entity).contains(WarfareKeys.VEHICLE_TEAM)) {
-                team = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
-            } else {
-                Player owner = serverLevel.getNearestPlayer(entity, 10.0);
-                if (owner != null && owner.getTeam() != null) {
-                    team = owner.getTeam().getName().toUpperCase();
-                    WarfareData.of(entity).putString(WarfareKeys.VEHICLE_TEAM, team);
-                    WarfareData.of(entity).putString(WarfareKeys.VEHICLE_TYPE, "Mine");
-                }
-            }
-            if (!team.equals("NEUTRAL")) {
-                data.vehicles.markedVehicles.add(new WarfareWorldData.VehicleRecord(
-                        entity.getUUID(),
-                        team,
-                        "Mine",
-                        entity.getX(),
-                        entity.getY(),
-                        entity.getZ(),
-                        entity.getYRot(),
-                        null,
-                        0));
-                data.setDirty();
-                PacketHandler.sendToAllClients(serverLevel, data);
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerChangeDimension(EntityTravelToDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            ServerLevel level = player.serverLevel();
-            WarfareWorldData data = WarfareWorldData.get(level);
-            SquadActions.leaveCurrentSquad(player, data);
-            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
-            player.sendSystemMessage(Component.translatable("pwpwarfare.msg.squad.left_world_change")
-                    .withStyle(ChatFormatting.YELLOW));
-        }
-    }
-
-    private static String findRequiredPointName(
-            WarfareWorldData.CapturePoint currentPoint, String team, WarfareWorldData data) {
-        int currentPriority = team.equals("BLUE") ? currentPoint.bluePriority : currentPoint.redPriority;
-        int requiredPriority = currentPriority - 1;
-        if (requiredPriority < 1) {
-            return "";
-        }
-
-        for (WarfareWorldData.CapturePoint p : data.match.capturePoints) {
-            int pPriority = team.equals("BLUE") ? p.bluePriority : p.redPriority;
-            if (pPriority == requiredPriority) {
-                return p.name;
-            }
-        }
-
-        return "Unknown";
-    }
-
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerLoggedInEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-            ServerPlayer player = (ServerPlayer) event.getEntity();
-            CosmeticService.loadForPlayer(player);
-            PacketHandler.broadcastPlayerSkin(player);
-            KitUtil.syncMyKit(player);
-            ServerLevel level = player.serverLevel();
-            WarfareWorldData data = WarfareWorldData.get(level);
-            sendSyncPacket(level, data);
-            PacketHandler.syncSquadsTo(player, data.squadRegistry.squads);
-            PacketHandler.syncDowned(player, false);
-            MarkerManager.syncToPlayer(player);
-            PathManager.syncToPlayer(player);
-            // решение 5: без команды — сразу в меньшую (сменить можно в меню K)
-            StagingService.autoAssign(player);
-            String teamName = player.getTeam() != null ? player.getTeam().getName() : "";
-            if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
-                player.setGameMode(GameType.ADVENTURE);
-                player.sendSystemMessage(Component.translatable(
-                                "pwpwarfare.team.choose", Component.keybind("key.pwpwarfare.open_squad_menu"))
-                        .withStyle(ChatFormatting.GOLD));
-            }
-            StagingPackets.sendState(player, data);
-            if (!data.match.isGameStarted
-                    && !data.match.waitingActive
-                    && com.pwp.api.security.PwpPermissions.isAdmin(player)) {
-                player.sendSystemMessage(Component.translatable(
-                                "pwpwarfare.admin.paused_hint", Component.keybind("key.pwp_core.admin_panel"))
-                        .withStyle(ChatFormatting.YELLOW));
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerRespawn(PlayerRespawnEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-            ServerPlayer newPlayer = (ServerPlayer) event.getEntity();
-            MatchStatsTracker.get().recordSpawn(newPlayer);
-            String teamName = newPlayer.getTeam() != null ? newPlayer.getTeam().getName() : "";
-            if (!teamName.equalsIgnoreCase("Blue") && !teamName.equalsIgnoreCase("Red")) {
-                newPlayer.setGameMode(GameType.ADVENTURE);
-            } else if (newPlayer.gameMode.getGameModeForPlayer() != GameType.CREATIVE) {
-                newPlayer.setGameMode(GameType.SURVIVAL);
-            }
-
-            newPlayer.connection.send(new ClientboundPlayerAbilitiesPacket(newPlayer.getAbilities()));
-            pendingRespawnLocations.remove(newPlayer.getUUID());
-            pendingTeams.remove(newPlayer.getUUID());
-
-            BlockPos spawnPos = pendingSpawnPositions.remove(newPlayer.getUUID());
-            if (spawnPos != null) {
-                newPlayer.teleportTo(
-                        newPlayer.serverLevel(),
-                        spawnPos.getX() + 0.5,
-                        spawnPos.getY(),
-                        spawnPos.getZ() + 0.5,
-                        newPlayer.getYRot(),
-                        0.0F);
-            }
-
-            ServerLevel level = newPlayer.serverLevel();
-            WarfareWorldData data = WarfareWorldData.get(level);
-            if (data.match.isGameStarted) {
-                String pTeam = newPlayer.getTeam() != null
-                        ? newPlayer.getTeam().getName().toUpperCase()
-                        : "";
-                boolean isSetupAttacker =
-                        data.match.invasionSetupActive && !pTeam.equalsIgnoreCase(data.match.invasionDefender);
-                if (!isSetupAttacker) {
-                    ResupplyHandler.applyKitOnSpawn(newPlayer, data);
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onEntityDeath(LivingDeathEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-            Entity entity = event.getEntity();
-            if (entity instanceof ServerPlayer victim) {
-                Entity sourceEntity = event.getSource().getEntity();
-                String weapon = event.getSource().getMsgId();
-
-                // Прямое убийство игроком
-                if (sourceEntity instanceof ServerPlayer killer) {
-                    boolean isTeamkill = killer.getTeam() != null
-                            && victim.getTeam() != null
-                            && killer.getTeam().isAlliedTo(victim.getTeam());
-
-                    if (!WarfareData.of(victim).getBoolean(WarfareKeys.IS_DOWNED) && isTeamkill) {
-                        DownedHandler.handleTeamkill(killer);
-                    }
-
-                    if (isTeamkill) {
-                        MatchStatsTracker.get().recordTeamKill(killer, victim);
-                    } else {
-                        double dist = killer.distanceTo(victim);
-                        MatchStatsTracker.get().recordKill(killer, victim, weapon, dist);
-                    }
-
-                    // Убийство техникой
-                } else if (sourceEntity != null && WarfareData.of(sourceEntity).contains(WarfareKeys.VEHICLE_TEAM)) {
-                    List<Entity> passengers = sourceEntity.getPassengers();
-                    if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
-                        MatchStatsTracker.get().recordVehicleKill(driver);
-                    }
-                    // Record victim death for vehicle kills
-                    MatchStatsTracker.get().recordDeath(victim);
-                    MatchStatsTracker.get().getOrCreate(victim).recordDeath();
-
-                    // Смерть через downed system (forceGiveUp/bleed out)
-                } else {
-                    net.minecraft.world.entity.LivingEntity lastAttacker = victim.getLastHurtByMob();
-                    if (lastAttacker instanceof ServerPlayer killer && killer.isAlive()) {
-                        double dist = killer.distanceTo(victim);
-                        MatchStatsTracker.get().recordKill(killer, victim, "knockout", dist);
-                    }
-                }
-
-                MatchStatsTracker.get().recordDeath(victim);
-                processEntityLoss(victim);
-                WarfareData.of(victim).putBoolean(WarfareKeys.IS_DOWNED, false);
-                if (WarfareData.of(victim).getBoolean(WarfareKeys.GIVING_UP)) {
-                    return;
-                }
-            } else if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)) {
-                Entity sourceEntity = event.getSource().getEntity();
-                Entity vehicleDestroyer = null;
-
-                if (sourceEntity instanceof ServerPlayer destroyer) {
-                    vehicleDestroyer = destroyer;
-                } else if (sourceEntity != null && WarfareData.of(sourceEntity).contains(WarfareKeys.VEHICLE_TEAM)) {
-                    List<Entity> passengers = sourceEntity.getPassengers();
-                    if (!passengers.isEmpty() && passengers.get(0) instanceof ServerPlayer driver) {
-                        vehicleDestroyer = driver;
-                    }
-                } else if (sourceEntity instanceof net.minecraft.world.entity.projectile.Projectile proj) {
-                    Entity owner = proj.getOwner();
-                    if (owner instanceof ServerPlayer shooter) {
-                        vehicleDestroyer = shooter;
-                    }
-                }
-
-                if (vehicleDestroyer == null && WarfareData.of(entity).contains(WarfareKeys.LAST_DAMAGER)) {
-                    String lastUuid = WarfareData.of(entity).getString(WarfareKeys.LAST_DAMAGER);
-                    if (event.getEntity().level() != null) {
-                        net.minecraft.server.level.ServerLevel sl = (net.minecraft.server.level.ServerLevel)
-                                event.getEntity().level();
-                        Entity lastPlayer = sl.getEntity(java.util.UUID.fromString(lastUuid));
-                        if (lastPlayer instanceof ServerPlayer lp) {
-                            vehicleDestroyer = lp;
-                        }
-                    }
-                }
-
-                if (vehicleDestroyer instanceof ServerPlayer vd) {
-                    MatchStatsTracker.get().recordVehicleDestroyed(vd, entity);
-                }
-
-                processEntityLoss(entity);
-            }
-        }
-    }
-
-    private static void saveKitNbtBeforeDeath(ServerPlayer player) {
-        WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
-        String kitName = WarfareData.of(player).getString(WarfareKeys.CURRENT_KIT);
-        String team = player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-        if (!team.isEmpty() && !kitName.isEmpty() && !kitName.equals("Unassigned")) {
-            WarfareWorldData.KitInfo kit = team.equals("BLUE") ? data.blueKits.get(kitName) : data.redKits.get(kitName);
-            if (kit != null) {
-                Map<Integer, CompoundTag> savedTags = new HashMap<>();
-
-                for (int i = 0; i < 41; i++) {
-                    if (i < kit.saveNbtFlags.length && kit.saveNbtFlags[i]) {
-                        ItemStack item = player.getInventory().getItem(i);
-                        if (!item.isEmpty() && item.hasTag()) {
-                            savedTags.put(i, item.getTag().copy());
-                        }
-                    }
-                }
-
-                if (!savedTags.isEmpty()) {
-                    PERSISTENT_NBT_STORAGE.put(player.getUUID(), savedTags);
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onPlayerClone(Clone event) {
-        ServerPlayer oldPlayer = (ServerPlayer) event.getOriginal();
-        ServerPlayer newPlayer = (ServerPlayer) event.getEntity();
-        // capability старого игрока после клона инвалидирована — оживляем на время копирования.
-        // Смерть: переживает только PlayerCloneRules.SURVIVE_DEATH; возврат из Энда — всё.
-        oldPlayer.reviveCaps();
-        try {
-            PlayerWarfareData.copyOnClone(oldPlayer, newPlayer, event.isWasDeath());
-        } finally {
-            oldPlayer.invalidateCaps();
-        }
-        // Нок не переживает пересоздание игрока ни в каком случае (как и раньше)
-        WarfareData.of(newPlayer).putBoolean(WarfareKeys.IS_DOWNED, false);
-        WarfareData.of(newPlayer).remove(WarfareKeys.GIVING_UP);
-        WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_YAW);
-        WarfareData.of(newPlayer).remove(WarfareKeys.DOWNED_PITCH);
-        WarfareData.of(newPlayer).putLong(WarfareKeys.LAST_REVIVE_TIME, 0L);
-        PacketHandler.syncDowned(newPlayer, false);
-
-        if (event.isWasDeath()) {
-            String teamName = oldPlayer.getTeam() != null ? oldPlayer.getTeam().getName() : null;
-            if (teamName != null) {
-                Scoreboard scoreboard = newPlayer.getScoreboard();
-                PlayerTeam pTeam = scoreboard.getPlayerTeam(teamName);
-                if (pTeam != null) {
-                    scoreboard.addPlayerToTeam(newPlayer.getScoreboardName(), pTeam);
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void onEntityRemove(EntityLeaveLevelEvent event) {
-        if (!event.getLevel().isClientSide) {
-            Entity entity = event.getEntity();
-            if (!(entity instanceof LivingEntity)) {
-                RemovalReason reason = entity.getRemovalReason();
-                if (reason != null && (reason == RemovalReason.KILLED || reason == RemovalReason.DISCARDED)) {
-                    // Check if this was a tagged vehicle with a known last damager
-                    if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)
-                            && WarfareData.of(entity).contains(WarfareKeys.LAST_DAMAGER)) {
-                        String lastUuid = WarfareData.of(entity).getString(WarfareKeys.LAST_DAMAGER);
-                        net.minecraft.server.level.ServerLevel sl =
-                                (net.minecraft.server.level.ServerLevel) event.getLevel();
-                        Entity lastPlayer = sl.getEntity(java.util.UUID.fromString(lastUuid));
-                        if (lastPlayer instanceof ServerPlayer destroyer) {
-                            MatchStatsTracker.get().recordVehicleDestroyed(destroyer, entity);
-                        }
-                    }
-                    processEntityLoss(entity);
-                }
-            }
-        }
-    }
-
-    private static void processEntityLoss(Entity entity) {
-        if (entity.level() != null && entity.level().getServer() != null) {
-            ServerLevel level = (ServerLevel) entity.level();
-            WarfareWorldData data = WarfareWorldData.get(level);
-            boolean markerRemoved = data.vehicles.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
-            data.removeApprovedDrivers(entity.getUUID());
-            if (data.match.isGameStarted && data.match.blueTickets > 0 && data.match.redTickets > 0) {
-                boolean ticketsChanged = false;
-                if (entity instanceof ServerPlayer player && player.getTeam() != null) {
-                    String teamName = player.getTeam().getName();
-                    boolean isInSetupAttacker =
-                            data.match.invasionSetupActive && !teamName.equalsIgnoreCase(data.match.invasionDefender);
-                    if (!isInSetupAttacker) {
-                        int cost = data.match.deathTicketCost;
-                        if (teamName.equalsIgnoreCase("Blue")) {
-                            data.match.blueTickets = Math.max(0, data.match.blueTickets - cost);
-                            ticketsChanged = true;
-                        } else if (teamName.equalsIgnoreCase("Red")) {
-                            data.match.redTickets = Math.max(0, data.match.redTickets - cost);
-                            ticketsChanged = true;
-                        }
-                    }
-                }
-
-                if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)) {
-                    String vTeam = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
-                    boolean isInSetupAttackerVehicle =
-                            data.match.invasionSetupActive && !vTeam.equalsIgnoreCase(data.match.invasionDefender);
-                    if (!isInSetupAttackerVehicle) {
-                        int penalty = WarfareData.of(entity).getInt(WarfareKeys.TICKET_PENALTY);
-                        String vType = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TYPE);
-                        WarfareData.of(entity).remove(WarfareKeys.TICKET_PENALTY);
-                        if (penalty > 0) {
-                            if (vTeam.equalsIgnoreCase("BLUE")) {
-                                data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
-                                ticketsChanged = true;
-                                broadcastMessage(
-                                        level,
-                                        Component.translatable("pwpwarfare.msg.vehicle.lost.blue", vType, penalty),
-                                        ChatFormatting.BLUE);
-                            } else if (vTeam.equalsIgnoreCase("RED")) {
-                                data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
-                                ticketsChanged = true;
-                                broadcastMessage(
-                                        level,
-                                        Component.translatable("pwpwarfare.msg.vehicle.lost.red", vType, penalty),
-                                        ChatFormatting.RED);
-                            }
-                        }
-                    }
-                }
-
-                if (ticketsChanged || markerRemoved) {
-                    if (ticketsChanged) {
-                        checkGameOver(level, data);
-                    }
-
-                    data.setDirty();
-                    sendSyncPacket(level, data);
-                }
-            } else {
-                if (markerRemoved) {
-                    data.setDirty();
-                    sendSyncPacket(level, data);
-                }
-            }
-        }
-    }
-
-    private static boolean hasCorrectKit(String vType, String kit) {
-        if (vType.equalsIgnoreCase("HELICOPTER")
-                || vType.toUpperCase().contains("CAS")
-                || vType.toUpperCase().contains("SUPPLY HELICOPTER")) {
-            return kit.equals("Pilot") || kit.equals("Pilot Officer");
-        }
-        if (vType.equalsIgnoreCase("TANK") || vType.equalsIgnoreCase("APC") || vType.equalsIgnoreCase("Mobile ZU")) {
-            return kit.equals("Mechanic") || kit.equals("Mechanic Officer");
-        }
-        return true;
-    }
-
-    private static float getVehicleHealth(Entity entity) {
-        try {
-            Object result = entity.getClass().getMethod("getHealth").invoke(entity);
-            if (result instanceof Float health) {
-                return health;
-            }
-        } catch (Exception ignored) {
-            com.pwp.api.util.LogOnce.warn(
-                    LOGGER, "GameLogicEvents:1697", "GameLogicEvents.getVehicleHealth: исключение", ignored);
-        }
-        return Float.MAX_VALUE;
-    }
-
-    private static void processWreckLoss(Entity entity, WarfareWorldData data, ServerLevel level) {
-        if (WarfareData.of(entity).contains(WarfareKeys.TICKET_PENALTY)) {
-            String vTeam = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TEAM);
-            // During invasion setup: skip ticket deduction for attackers' vehicles
-            if (data.match.invasionSetupActive && !vTeam.equalsIgnoreCase(data.match.invasionDefender)) {
-                boolean markerRemoved = data.vehicles.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
-                data.removeApprovedDrivers(entity.getUUID());
-                WarfareData.of(entity).remove(WarfareKeys.TICKET_PENALTY);
-                if (markerRemoved) {
-                    data.setDirty();
-                    sendSyncPacket(level, data);
-                }
-                return;
-            }
-
-            int penalty = WarfareData.of(entity).getInt(WarfareKeys.TICKET_PENALTY);
-            String vType = WarfareData.of(entity).getString(WarfareKeys.VEHICLE_TYPE);
-            WarfareData.of(entity).remove(WarfareKeys.TICKET_PENALTY);
-            boolean markerRemoved = data.vehicles.markedVehicles.removeIf(v -> v.uuid.equals(entity.getUUID()));
-            data.removeApprovedDrivers(entity.getUUID());
-            if (penalty > 0 && data.match.blueTickets > 0 && data.match.redTickets > 0) {
-                boolean ticketsChanged = false;
-                if (vTeam.equalsIgnoreCase("BLUE")) {
-                    data.match.blueTickets = Math.max(0, data.match.blueTickets - penalty);
-                    ticketsChanged = true;
-                    broadcastMessage(
-                            level,
-                            Component.translatable("pwpwarfare.msg.vehicle.lost.blue", vType, penalty),
-                            ChatFormatting.BLUE);
-                } else if (vTeam.equalsIgnoreCase("RED")) {
-                    data.match.redTickets = Math.max(0, data.match.redTickets - penalty);
-                    ticketsChanged = true;
-                    broadcastMessage(
-                            level,
-                            Component.translatable("pwpwarfare.msg.vehicle.lost.red", vType, penalty),
-                            ChatFormatting.RED);
-                }
-                if (ticketsChanged || markerRemoved) {
-                    if (ticketsChanged) {
-                        checkGameOver(level, data);
-                    }
-                    data.setDirty();
-                    sendSyncPacket(level, data);
-                }
-            } else if (markerRemoved) {
-                data.setDirty();
-                sendSyncPacket(level, data);
-            }
-        }
-    }
-
-    private static void handleTeamInfluence(
+    static void handleTeamInfluence(
             WarfareWorldData.CapturePoint point,
             String attackingTeam,
             float multiplier,
@@ -1777,12 +1125,12 @@ public class GameLogicEvents {
         }
     }
 
-    private static void applyTickets(WarfareWorldData data, CaptureLogic.Tickets delta) {
+    static void applyTickets(WarfareWorldData data, CaptureLogic.Tickets delta) {
         data.match.blueTickets += delta.blue();
         data.match.redTickets += delta.red();
     }
 
-    private static void validateAndSync(ServerLevel level, boolean forceSend, boolean blueBleed, boolean redBleed) {
+    static void validateAndSync(ServerLevel level, boolean forceSend, boolean blueBleed, boolean redBleed) {
         WarfareWorldData data = WarfareWorldData.get(level);
         boolean changed = false;
         String dimKey = level.dimension().location().toString();
@@ -1855,21 +1203,20 @@ public class GameLogicEvents {
         }
     }
 
-    private static void validateAndSync(ServerLevel level, boolean forceSend) {
+    static void validateAndSync(ServerLevel level, boolean forceSend) {
         validateAndSync(level, forceSend, false, false);
     }
 
-    private static boolean validateRallies(ServerLevel level, List<BlockPos> rallies) {
+    static boolean validateRallies(ServerLevel level, List<BlockPos> rallies) {
         return rallies.removeIf(
                 pos -> level.isLoaded(pos) ? !(level.getBlockState(pos).getBlock() instanceof RallyPointBlock) : false);
     }
 
-    private static boolean isEnemyNearby(
-            ServerLevel level, BlockPos pos, String allyTeamName, int radius, int minCount) {
+    static boolean isEnemyNearby(ServerLevel level, BlockPos pos, String allyTeamName, int radius, int minCount) {
         return getEnemyCount(level, pos, allyTeamName, radius) >= minCount;
     }
 
-    private static int getEnemyCount(ServerLevel level, BlockPos pos, String allyTeamName, int radius) {
+    static int getEnemyCount(ServerLevel level, BlockPos pos, String allyTeamName, int radius) {
         AABB checkArea = new AABB(pos).inflate(radius);
         List<ServerPlayer> enemies = level.getEntitiesOfClass(ServerPlayer.class, checkArea);
         int count = 0;
@@ -1918,7 +1265,7 @@ public class GameLogicEvents {
         executeVictory(level, data, blueWon);
     }
 
-    private static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
+    static void executeVictory(ServerLevel level, WarfareWorldData data, boolean blueWon) {
         try {
             data.match.isGameStarted = false;
             // этап 3: правка раскладки «только на этот матч» пропадает с концом матча
@@ -2061,7 +1408,7 @@ public class GameLogicEvents {
         com.pigeostudios.pwp.warfare.server.MatchShutdown.schedule(level.getServer(), 300);
     }
 
-    private static String formatFactionName(String faction) {
+    static String formatFactionName(String faction) {
         return faction.replace("_", " ").toUpperCase();
     }
 
@@ -2076,7 +1423,7 @@ public class GameLogicEvents {
         return c.copy().withStyle(ChatFormatting.YELLOW);
     }
 
-    private static void sendTitleToLevel(ServerLevel level, Component text, ChatFormatting color) {
+    static void sendTitleToLevel(ServerLevel level, Component text, ChatFormatting color) {
         Component title = text.copy().withStyle(color).withStyle(ChatFormatting.BOLD);
 
         for (ServerPlayer player : level.players()) {
@@ -2085,7 +1432,7 @@ public class GameLogicEvents {
         }
     }
 
-    private static void sendTitleToAll(MinecraftServer server, Component text, ChatFormatting color) {
+    static void sendTitleToAll(MinecraftServer server, Component text, ChatFormatting color) {
         Component title = text.copy().withStyle(color).withStyle(ChatFormatting.BOLD);
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
@@ -2094,35 +1441,35 @@ public class GameLogicEvents {
         }
     }
 
-    private static void broadcastTranslatable(ServerLevel level, String key, ChatFormatting color) {
+    static void broadcastTranslatable(ServerLevel level, String key, ChatFormatting color) {
         Component c = Component.translatable(key).withStyle(color);
         for (ServerPlayer p : level.players()) p.sendSystemMessage(c);
     }
 
     /** Есть ли хоть один игрок в командах (пустой сервер не «готов» к досрочному старту). */
-    private static boolean anyTeamPlayers(ServerLevel level) {
+    static boolean anyTeamPlayers(ServerLevel level) {
         for (ServerPlayer p : level.players()) {
             if (!StagingService.teamOf(p).isEmpty()) return true;
         }
         return false;
     }
 
-    private static void broadcastMessage(ServerLevel level, Component text, ChatFormatting color) {
+    static void broadcastMessage(ServerLevel level, Component text, ChatFormatting color) {
         level.getServer().getPlayerList().broadcastSystemMessage(text.copy().withStyle(color), false);
     }
 
-    private static void sendSyncPacket(ServerLevel level, WarfareWorldData data) {
+    static void sendSyncPacket(ServerLevel level, WarfareWorldData data) {
         sendSyncPacket(level, data, false, false);
     }
 
-    private static void sendSyncPacket(ServerLevel level, WarfareWorldData data, boolean blueBleed, boolean redBleed) {
+    static void sendSyncPacket(ServerLevel level, WarfareWorldData data, boolean blueBleed, boolean redBleed) {
         String dimKey = level.dimension().location().toString();
         boolean bBlocked = lastBlueBlockedMap.getOrDefault(dimKey, false);
         boolean rBlocked = lastRedBlockedMap.getOrDefault(dimKey, false);
         sendSyncPacket(level, data, blueBleed, redBleed, bBlocked, rBlocked);
     }
 
-    private static void sendSyncPacket(
+    static void sendSyncPacket(
             ServerLevel level,
             WarfareWorldData data,
             boolean blueBleed,
@@ -2133,7 +1480,7 @@ public class GameLogicEvents {
         PacketHandler.sendSync(level.players(), data, blueBleed, redBleed, bBlocked, rBlocked);
     }
 
-    private static boolean canCapture(WarfareWorldData.CapturePoint target, String team, WarfareWorldData data) {
+    static boolean canCapture(WarfareWorldData.CapturePoint target, String team, WarfareWorldData data) {
         // правило порядка захвата — реестр режимов (AAS: цепочка, Invasion: + блокировки, Стычка: любой порядок)
         java.util.List<com.pwp.api.match.GameModes.PointState> all = new java.util.ArrayList<>();
         for (WarfareWorldData.CapturePoint p : data.match.capturePoints) all.add(pointState(p));
@@ -2145,77 +1492,11 @@ public class GameLogicEvents {
                 data.match.invasionDefender);
     }
 
-    private static com.pwp.api.match.GameModes.PointState pointState(WarfareWorldData.CapturePoint p) {
+    static com.pwp.api.match.GameModes.PointState pointState(WarfareWorldData.CapturePoint p) {
         return new com.pwp.api.match.GameModes.PointState(p.bluePriority, p.redPriority, p.owner, p.invLocked);
     }
 
-    public static void leaveCurrentSquad(ServerPlayer player, WarfareWorldData data) {
-        String pName = player.getScoreboardName();
-
-        for (WarfareWorldData.Squad s : data.squadRegistry.squads) {
-            if (s.members.contains(pName)) {
-                s.members.remove(pName);
-                if (s.leader.equals(pName)) {
-                    SquadActions.removeRadio(player);
-                    if (!s.members.isEmpty()) {
-                        s.leader = s.members.get(0);
-                        ServerPlayer newLeader = player.server.getPlayerList().getPlayerByName(s.leader);
-                        if (newLeader != null) {
-                            SquadActions.updatePlayerTags(newLeader, s.id, true);
-                            if ((Boolean) WarfareConfig.AUTO_GIVE_SL_RADIO.get()) {
-                                SquadActions.giveRadio(newLeader);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        data.squadRegistry.squads.removeIf(sx -> sx.members.isEmpty());
-        data.setDirty();
-        PacketHandler.sendToAllClients(player.serverLevel(), data);
-        WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
-        WarfareData.of(player).putString(WarfareKeys.PENDING_KIT, "");
-        player.getInventory().clearContent();
-        ResupplyHandler.clearCurios(player);
-        player.inventoryMenu.broadcastChanges();
-        player.containerMenu.broadcastChanges();
-        SquadActions.removePlayerTags(player);
-        player.displayClientMessage(
-                Component.translatable("pwpwarfare.msg.squad.left_kit_cleared").withStyle(ChatFormatting.YELLOW), true);
-        data.setDirty();
-        PacketHandler.sendToAllClients(player.serverLevel(), data);
-    }
-
-    @SubscribeEvent
-    public static void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-            ServerPlayer player = (ServerPlayer) event.getEntity();
-            com.pigeostudios.pwp.warfare.server.AfkTicker.forget(player);
-            ServerLevel level = player.serverLevel();
-            WarfareWorldData data = WarfareWorldData.get(level);
-            if (data.match.isGameStarted) {
-                String team =
-                        player.getTeam() != null ? player.getTeam().getName().toUpperCase() : "";
-                boolean isSetupAttacker =
-                        data.match.invasionSetupActive && !team.equalsIgnoreCase(data.match.invasionDefender);
-                if (!isSetupAttacker) {
-                    return;
-                }
-            }
-
-            SquadActions.leaveCurrentSquad(player, data);
-            WarfareData.of(player).putString(WarfareKeys.CURRENT_KIT, "Unassigned");
-            WarfareData.of(player).remove(WarfareKeys.PENDING_KIT);
-            player.getInventory().clearContent();
-            ResupplyHandler.clearCurios(player);
-            player.inventoryMenu.broadcastChanges();
-            data.setDirty();
-            PacketHandler.syncSquadsAll(data.squadRegistry.squads);
-        }
-    }
-
-    private static void playSirenForTeam(ServerLevel level, String teamName) {
+    static void playSirenForTeam(ServerLevel level, String teamName) {
         for (ServerPlayer player : level.players()) {
             if (player.getTeam() != null && player.getTeam().getName().equalsIgnoreCase(teamName)) {
                 player.playNotifySound((SoundEvent) ModSounds.SIREN_ALARM.get(), SoundSource.MASTER, 1.0F, 1.0F);
@@ -2239,71 +1520,7 @@ public class GameLogicEvents {
         }
     }
 
-    @SubscribeEvent
-    public static void onProjectileImpact(net.minecraftforge.event.entity.ProjectileImpactEvent event) {
-        if (event.getEntity().level().isClientSide) return;
-        if (event.getRayTraceResult() instanceof net.minecraft.world.phys.EntityHitResult hit) {
-            Entity hitEntity = hit.getEntity();
-            if (WarfareData.of(hitEntity).contains(WarfareKeys.TICKET_PENALTY)) {
-                Entity projectile = event.getEntity();
-                if (projectile instanceof net.minecraft.world.entity.projectile.Projectile proj) {
-                    Entity owner = proj.getOwner();
-                    if (owner instanceof ServerPlayer shooter) {
-                        WarfareData.of(hitEntity).putString(WarfareKeys.LAST_DAMAGER, shooter.getStringUUID());
-                    }
-                }
-            }
-        }
-    }
-
-    public static void enforceMortarShellLimit(PlayerTickEvent event) {
-        if (event.phase == Phase.END && !event.player.level().isClientSide) {
-            if (event.player.tickCount % 10 == 0) {
-                Player player = event.player;
-                if (!player.isCreative() && !player.isSpectator()) {
-                    Item mortarItem = (Item)
-                            ForgeRegistries.ITEMS.getValue(new ResourceLocation("superbwarfare", "mortar_shell"));
-                    if (mortarItem == null || mortarItem == Items.AIR) {
-                        mortarItem = Items.ARROW;
-                    }
-
-                    int totalCount = 0;
-                    Inventory inv = player.getInventory();
-
-                    for (int i = 0; i < inv.getContainerSize(); i++) {
-                        ItemStack stack = inv.getItem(i);
-                        if (stack.getItem() == mortarItem) {
-                            totalCount += stack.getCount();
-                        }
-                    }
-
-                    if (totalCount > 8) {
-                        int toRemove = totalCount - 8;
-                        int removedSoFar = 0;
-
-                        for (int i = 0; i < inv.getContainerSize() && removedSoFar < toRemove; i++) {
-                            ItemStack stack = inv.getItem(i);
-                            if (stack.getItem() == mortarItem) {
-                                int shrinkAmount = Math.min(stack.getCount(), toRemove - removedSoFar);
-                                stack.shrink(shrinkAmount);
-                                removedSoFar += shrinkAmount;
-                                ItemStack dropped = new ItemStack(mortarItem, shrinkAmount);
-                                player.drop(dropped, false, true);
-                            }
-                        }
-
-                        player.displayClientMessage(
-                                Component.translatable("pwpwarfare.msg.item.mortar_limit")
-                                        .withStyle(ChatFormatting.RED),
-                                true);
-                    }
-                }
-            }
-        }
-    }
-
-    private static void checkCmdVoteStatus(
-            ServerLevel level, MinecraftServer server, WarfareWorldData data, String team) {
+    static void checkCmdVoteStatus(ServerLevel level, MinecraftServer server, WarfareWorldData data, String team) {
         boolean isBlue = team.equals("BLUE");
         boolean active = isBlue ? data.squadRegistry.blueCmdVoteActive : data.squadRegistry.redCmdVoteActive;
         String candidateName =
@@ -2364,7 +1581,7 @@ public class GameLogicEvents {
         }
     }
 
-    private static void broadcastTeamMessage(ServerLevel level, String team, Component text, ChatFormatting color) {
+    static void broadcastTeamMessage(ServerLevel level, String team, Component text, ChatFormatting color) {
         Component message = text.copy().withStyle(color);
 
         for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
@@ -2372,30 +1589,5 @@ public class GameLogicEvents {
                 player.sendSystemMessage(message);
             }
         }
-    }
-
-    @SubscribeEvent
-    public static void onBlockPlaced(net.minecraftforge.event.level.BlockEvent.EntityPlaceEvent event) {
-        if (event.getLevel().isClientSide()) return;
-        if (!(event.getPlacedBlock().getBlock() instanceof com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlock))
-            return;
-        net.minecraft.world.level.block.entity.BlockEntity be =
-                ((net.minecraft.world.level.LevelAccessor) event.getLevel()).getBlockEntity(event.getPos());
-        if (be instanceof VehicleSpawnerBlockEntity spawner) {
-            net.minecraft.server.level.ServerLevel sLevel = (net.minecraft.server.level.ServerLevel) event.getLevel();
-            WarfareWorldData data = WarfareWorldData.get(sLevel);
-            data.vehicles.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(event.getPos()));
-            WarfareWorldData.SpawnerInfo info = spawner.getSpawnerInfo();
-            if (info != null) data.vehicles.spawnerInfos.add(info);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onBlockBroken(net.minecraftforge.event.level.BlockEvent.BreakEvent event) {
-        if (event.getLevel().isClientSide()) return;
-        if (!(event.getState().getBlock() instanceof com.pigeostudios.pwp.warfare.block.VehicleSpawnerBlock)) return;
-        net.minecraft.server.level.ServerLevel sLevel = (net.minecraft.server.level.ServerLevel) event.getLevel();
-        WarfareWorldData data = WarfareWorldData.get(sLevel);
-        data.vehicles.spawnerInfos.removeIf(s -> s.pos != null && s.pos.equals(event.getPos()));
     }
 }
