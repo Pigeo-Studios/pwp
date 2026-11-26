@@ -90,6 +90,7 @@ public class WarfareMod {
             com.pigeostudios.pwp.warfare.stats.ScoreboardData.register();
             com.pigeostudios.pwp.warfare.server.VehicleActionService.register();
             com.pigeostudios.pwp.warfare.server.CommanderAbilities.init();
+            com.pigeostudios.pwp.warfare.server.StaminaServer.init();
             com.pigeostudios.pwp.warfare.admin.PlayerAdminPackets.registerData();
             com.pigeostudios.pwp.warfare.admin.MapEditorPackets.registerData();
             // тайлы динамической карты (mapTile): отвечает только на запросы клиентов с включённой картой
