@@ -39,6 +39,17 @@ powershell -ExecutionPolicy Bypass -File tools\pwp-server.ps1 -Build -Start -Ser
 фракции) → поднимает матч-сервер из шаблона → переброс → бой → итоги → все обратно в лобби → следующее
 голосование. Пустой или бесконечный матч сервер гасит сам (сторож матча).
 
+**Полный локальный сервер** (MariaDB + core-service + лобби + матчи, всё на 127.0.0.1, offline) — тест-стенд
+`Desktop\PWP-TestLobby` + `%USERPROFILE%\pwp-local`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\pwp-local.ps1 -Build -Start
+```
+
+Скрипт собирает моды и core-service, раскладывает jar в лобби, шаблон матча и Prism-клиент, поднимает базу
+(при первом запуске сам создаёт `pwp_core`, при пустых дивизиях импортирует стартовые), затем core и лобби.
+Без `-Start` только раскладывает jar.
+
 Настройки сервера — один файл `config/pwp-server.json` (создаётся при первом старте):
 
 ```json

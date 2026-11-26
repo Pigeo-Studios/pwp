@@ -467,7 +467,19 @@ public class DatabaseManager {
                 + "map_sizes VARCHAR(64) NOT NULL DEFAULT '', "
                 + "vehicles MEDIUMTEXT NOT NULL, "
                 + "updated_at BIGINT NOT NULL, "
-                + "UNIQUE KEY uq_faction_division (faction, division_id))"
+                + "UNIQUE KEY uq_faction_division (faction, division_id))",
+
+                // версии раскладки карты из редактора — то же, что sql/migration_add_map_layout_versions.sql
+                // (раньше только ручная миграция: без неё «Сохранить навсегда» падал на свежей БД)
+                "CREATE TABLE IF NOT EXISTS map_layout_versions ("
+                + "id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+                + "map_name VARCHAR(64) NOT NULL, "
+                + "json MEDIUMTEXT NOT NULL, "
+                + "author_uuid VARCHAR(36) NOT NULL, "
+                + "author_name VARCHAR(32) NOT NULL, "
+                + "created_at BIGINT NOT NULL, "
+                + "comment VARCHAR(200) NOT NULL DEFAULT '', "
+                + "INDEX idx_map_layout_versions_map (map_name, id))"
             };
             for (String sql : launcherTables) {
                 try { s.execute(sql); } catch (Exception ignored) { migrationFailed(ignored); }
