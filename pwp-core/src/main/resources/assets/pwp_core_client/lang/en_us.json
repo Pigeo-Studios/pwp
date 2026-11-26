@@ -596,5 +596,16 @@
     "pwp_core.ban.kicked_no_reason": "You are banned",
     "pwp_core.skin.equip.busy": "Please wait, the previous request is still running",
     "pwp_core.skin.equip.not_owned": "You don't own this skin",
-    "pwp_core.skin.equip.core_rejected": "core-service rejected the equip request"
+    "pwp_core.skin.equip.core_rejected": "core-service rejected the equip request",
+    "pwp_core.hub.news.title": "News",
+    "pwp_core.hub.news.desc": "Updates, events and maintenance",
+    "pwp_core.news.title": "News",
+    "pwp_core.news.loading": "Loading…",
+    "pwp_core.news.empty": "No news yet",
+    "pwp_core.news.error": "News are unavailable right now",
+    "pwp_core.news.offline": "Join a server to see the news (also on the site and in the launcher)",
+    "pwp_core.news.tag.news": "News",
+    "pwp_core.news.tag.update": "Update",
+    "pwp_core.news.tag.event": "Event",
+    "pwp_core.news.tag.maintenance": "Maintenance"
 }

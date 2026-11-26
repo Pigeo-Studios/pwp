@@ -41,6 +41,14 @@ public final class CoreHubEntries {
                 LobbyHud::isOnLobby,
                 () -> LobbyHud.LOBBY_KEY);
         PwpHub.register(PwpHub.Section.PLAY, "howto", 90, UIIcon.INFO, PWPHowToPlayScreen::new, null, null);
+        PwpHub.register(
+                PwpHub.Section.COMMUNITY,
+                "news",
+                5,
+                UIIcon.INFO,
+                com.pwp.coreclient.gui.screens.PWPNewsScreen::new,
+                null,
+                null);
 
         // ПРОФИЛЬ
         PwpHub.register(PwpHub.Section.PROFILE, "stats", 10, UIIcon.PROFILE, p -> new StatsScreen(), null, null);

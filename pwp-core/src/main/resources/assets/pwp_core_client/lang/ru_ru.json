@@ -596,5 +596,16 @@
     "pwp_core.ban.kicked_no_reason": "Вы забанены",
     "pwp_core.skin.equip.busy": "Подождите, предыдущий запрос ещё выполняется",
     "pwp_core.skin.equip.not_owned": "Этот скин вам не принадлежит",
-    "pwp_core.skin.equip.core_rejected": "core-service отклонил экипировку"
+    "pwp_core.skin.equip.core_rejected": "core-service отклонил экипировку",
+    "pwp_core.hub.news.title": "Новости",
+    "pwp_core.hub.news.desc": "Обновления, события и тех. работы",
+    "pwp_core.news.title": "Новости",
+    "pwp_core.news.loading": "Загрузка…",
+    "pwp_core.news.empty": "Новостей пока нет",
+    "pwp_core.news.error": "Новости сейчас недоступны",
+    "pwp_core.news.offline": "Новости видны на сервере, на сайте и в лаунчере",
+    "pwp_core.news.tag.news": "Новость",
+    "pwp_core.news.tag.update": "Обновление",
+    "pwp_core.news.tag.event": "Событие",
+    "pwp_core.news.tag.maintenance": "Тех. работы"
 }

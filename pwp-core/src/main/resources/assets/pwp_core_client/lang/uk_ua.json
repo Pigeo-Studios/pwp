@@ -596,5 +596,16 @@
     "pwp_core.ban.kicked_no_reason": "Вас забанено",
     "pwp_core.skin.equip.busy": "Зачекайте, попередній запит ще виконується",
     "pwp_core.skin.equip.not_owned": "Цей скін вам не належить",
-    "pwp_core.skin.equip.core_rejected": "core-service відхилив екіпірування"
+    "pwp_core.skin.equip.core_rejected": "core-service відхилив екіпірування",
+    "pwp_core.hub.news.title": "Новини",
+    "pwp_core.hub.news.desc": "Оновлення, події та тех. роботи",
+    "pwp_core.news.title": "Новини",
+    "pwp_core.news.loading": "Завантаження…",
+    "pwp_core.news.empty": "Новин поки немає",
+    "pwp_core.news.error": "Новини зараз недоступні",
+    "pwp_core.news.offline": "Новини видно на сервері, на сайті та в лаунчері",
+    "pwp_core.news.tag.news": "Новина",
+    "pwp_core.news.tag.update": "Оновлення",
+    "pwp_core.news.tag.event": "Подія",
+    "pwp_core.news.tag.maintenance": "Тех. роботи"
 }

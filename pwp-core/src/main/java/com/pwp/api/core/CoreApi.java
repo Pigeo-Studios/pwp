@@ -238,6 +238,11 @@ public final class CoreApi {
     }
 
     /** Статус всех серверов из core-service (heartbeat'ы) — для живого онлайна матчей. */
+    /** Лента новостей (этап 17b) — та же, что у сайта и лаунчера. */
+    public static CompletableFuture<JsonObject> news(int limit) {
+        return get("/api/v1/public/news?limit=" + Math.max(1, Math.min(50, limit)));
+    }
+
     public static CompletableFuture<JsonObject> fetchServersStatus() {
         return get("/api/v1/network/status");
     }
