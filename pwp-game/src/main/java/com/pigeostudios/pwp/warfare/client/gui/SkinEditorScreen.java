@@ -35,7 +35,7 @@ import net.minecraftforge.registries.ForgeRegistries;
  */
 public class SkinEditorScreen extends AdminFormScreen {
     private static final org.slf4j.Logger PWP_LOG = org.slf4j.LoggerFactory.getLogger(SkinEditorScreen.class);
-    private static final String[] SLOT_TYPES = {"PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
+    private static final String[] SLOT_TYPES = {"WEAPON", "PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
     private static final String[] RARITIES = {"COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY", "MYTHIC"};
     private static final int[] RARITY_COLORS = {
         Colors.RARITY_COMMON,
@@ -232,12 +232,23 @@ public class SkinEditorScreen extends AdminFormScreen {
     private void setPreviewItem(ItemStack stack) {
         previewItem = stack.copy();
         previewItem.setCount(1);
-        CompoundTag tag = new CompoundTag();
-        stack.save(tag);
-        previewRegistryName = tag.toString();
         ResourceLocation key = ForgeRegistries.ITEMS.getKey(stack.getItem());
         previewItemName = key != null ? key.toString() : "unknown";
         String id = key != null ? key.toString() : "";
+        // скин ствола TaCZ (этап 11): в руке ствол с нужным видом (GunDisplayId) — сохраняем «для GunId — этот
+        // display»; характеристики ствола не меняются, на кит привязывать не нужно
+        CompoundTag held = stack.getTag();
+        if (held != null && held.contains("GunId", 8)) {
+            slotType = com.pwp.api.cosmetics.WeaponSkin.SLOT;
+            weaponTag = held.getString("GunId");
+            String display = held.getString(com.pwp.api.cosmetics.WeaponSkin.DISPLAY_TAG);
+            previewRegistryName = display.isEmpty() ? "" : com.pwp.api.cosmetics.WeaponSkin.modelPath(display);
+            previewItemName = display.isEmpty() ? weaponTag : display;
+            if (slotButton != null) slotButton.label(Component.translatable("pwp_cosmetics.slot." + slotType));
+            return;
+        }
+        // скин-предмет: id предмета (SNBT не проходит проверку пакета — раньше сохранение молча падало)
+        previewRegistryName = id;
         if (id.contains("knife") || id.contains("bayonet") || id.contains("dagger") || id.contains("sword")) {
             slotType = "KNIFE";
             weaponTag = "knife";
@@ -266,6 +277,11 @@ public class SkinEditorScreen extends AdminFormScreen {
         }
         if (previewItem.isEmpty()) {
             status(Component.translatable("gui.pwpwarfare.skin_editor.need_item"), true);
+            return;
+        }
+        if (previewRegistryName.isEmpty()) {
+            // ствол без своего вида: сначала /pwpskin try <display> с этим стволом в руке
+            status(Component.translatable("gui.pwpwarfare.skin_editor.need_display"), true);
             return;
         }
         String saveSkinId = editSkinId != null

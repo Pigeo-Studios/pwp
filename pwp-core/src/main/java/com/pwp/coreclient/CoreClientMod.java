@@ -32,6 +32,8 @@ public class CoreClientMod {
             // подсказки «что дальше» (этап 4): реестр + выключатель в «Интерфейсе», до загрузки файла настроек
             com.pwp.coreclient.hints.Hints.init(FMLJavaModLoadingContext.get().getModEventBus());
             com.pwp.coreclient.hints.CoreHints.register();
+            // «Меню PWP» (этап 11): одно место для всех экранов
+            com.pwp.coreclient.hub.CoreHubEntries.register();
             com.pwp.coreclient.settings.UiSettingsFile.load();
             // тест-стенд UI (/pwpui): только -Dpwp.uitest=true или dev-окружение
             com.pwp.coreclient.gui.devtest.UiTestCommand.init();

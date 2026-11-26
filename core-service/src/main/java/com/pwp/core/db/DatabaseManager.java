@@ -518,6 +518,10 @@ public class DatabaseManager {
                 "ALTER TABLE anticheat_sessions ADD COLUMN revoked TINYINT NOT NULL DEFAULT 0 AFTER last_heartbeat");
             migrateAddColumn(s, "anticheat_detections", "details",
                 "ALTER TABLE anticheat_detections ADD COLUMN details TEXT AFTER signature");
+            // скины стволов (этап 11): role = GunId TaCZ ("cib:ak74", "maxstuff:m320t") — 32 символов мало;
+            // расширение колонки, данные не трогаются; повторный запуск — no-op
+            try { s.execute("ALTER TABLE player_equipment MODIFY role VARCHAR(96) NOT NULL DEFAULT 'ALL'"); }
+            catch (Exception e) { migrationFailed(e); }
         } catch (Exception e) {
             log.warn("Could not create tables (may already exist): {}", e.getMessage());
         }

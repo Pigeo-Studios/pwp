@@ -1235,5 +1235,6 @@
     "pwpwarfare.message.teamkill_ban_broadcast": "%s was banned for %s minutes for repeated teamkills",
     "pwpwarfare.message.teamkill_ban_self": "Banned for %s minutes for repeated teamkills",
     "pwpwarfare.msg.vehicle.claimed": "This vehicle belongs to squad %s — only they can drive it",
-    "pwpwarfare.msg.vehicle.claimed_by_you": "Vehicle claimed by your squad %s"
+    "pwpwarfare.msg.vehicle.claimed_by_you": "Vehicle claimed by your squad %s",
+    "gui.pwpwarfare.skin_editor.need_display": "This gun has its native look — first /pwpskin try <display> with the gun in hand"
 }

@@ -1235,5 +1235,6 @@
     "pwpwarfare.message.teamkill_ban_broadcast": "%s забанений на %s хвилин за повторні тімкіли",
     "pwpwarfare.message.teamkill_ban_self": "Бан на %s хвилин за повторні тімкіли",
     "pwpwarfare.msg.vehicle.claimed": "Ця техніка закріплена за загоном %s — керувати може лише він",
-    "pwpwarfare.msg.vehicle.claimed_by_you": "Техніку закріплено за вашим загоном %s"
+    "pwpwarfare.msg.vehicle.claimed_by_you": "Техніку закріплено за вашим загоном %s",
+    "gui.pwpwarfare.skin_editor.need_display": "У зброї рідний вигляд — спершу /pwpskin try <display> зі зброєю в руці"
 }

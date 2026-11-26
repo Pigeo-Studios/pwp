@@ -214,10 +214,9 @@ public final class AdminAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(
-                    sender,
-                    SAVE_SKIN,
-                    () -> CoreApi.saveSkin(skinId, name, description, slotType, weaponTag, rarity, modelPath));
+            run(sender, SAVE_SKIN, () -> CoreApi.saveSkin(
+                            skinId, name, description, slotType, weaponTag, rarity, modelPath)
+                    .whenComplete((r, e) -> com.pwp.cosmetics.SkinCatalog.invalidate()));
         }
     }
 
@@ -238,7 +237,8 @@ public final class AdminAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, DELETE_SKIN, () -> CoreApi.deleteSkin(skinId));
+            run(sender, DELETE_SKIN, () -> CoreApi.deleteSkin(skinId)
+                    .whenComplete((r, e) -> com.pwp.cosmetics.SkinCatalog.invalidate()));
         }
     }
 

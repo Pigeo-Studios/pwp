@@ -1235,5 +1235,6 @@
     "pwpwarfare.message.teamkill_ban_broadcast": "%s забанен на %s минут за повторные тимкиллы",
     "pwpwarfare.message.teamkill_ban_self": "Бан на %s минут за повторные тимкиллы",
     "pwpwarfare.msg.vehicle.claimed": "Эта техника закреплена за отрядом %s — водить может только он",
-    "pwpwarfare.msg.vehicle.claimed_by_you": "Техника закреплена за вашим отрядом %s"
+    "pwpwarfare.msg.vehicle.claimed_by_you": "Техника закреплена за вашим отрядом %s",
+    "gui.pwpwarfare.skin_editor.need_display": "У ствола родной вид — сначала /pwpskin try <display> со стволом в руке"
 }

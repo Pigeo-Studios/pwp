@@ -47,6 +47,8 @@ public class ClientModEvents {
         WarfareUiSettings.init();
         // этап 4: подсказки «что дальше» матча (реестр core-client, выключатель — в настройках интерфейса)
         WarfareHints.register();
+        // «Меню PWP» (этап 11): деплой, карта, редакторы контента
+        WarfareHubEntries.register();
         // админ-панель core-client: вкладки «Матч» и «Карта»
         com.pigeostudios.pwp.warfare.client.admin.WarfareAdminTabs.register();
         // этап 3: редактор карты (кнопки в паузе и во вкладке «Карта»)

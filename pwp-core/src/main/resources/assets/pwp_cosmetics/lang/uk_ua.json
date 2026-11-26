@@ -69,5 +69,9 @@
     "pwp_cosmetics.status.not_owned": "Скін не придбано",
     "pwp_cosmetics.status.done": "Готово",
     "pwp_cosmetics.hint.primary_multi": "Можна обрати кілька основних скінів",
-    "pwp_cosmetics.empty_hint": "Скіни з'являться після покупки або нагород"
+    "pwp_cosmetics.empty_hint": "Скіни з'являться після покупки або нагород",
+    "pwp_cosmetics.filter.WEAPON": "Зброя",
+    "pwp_cosmetics.slot.WEAPON": "Зброя",
+    "pwp_cosmetics.tooltip.weapon": "Для: %s",
+    "pwp_cosmetics.hint.weapon": "Один скін на зброю — діє в усіх кітах і ролях; змінюється лише вигляд"
 }

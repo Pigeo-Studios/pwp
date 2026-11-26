@@ -59,6 +59,19 @@ public final class CommunityCommands {
 
         d.register(Commands.literal("link").executes(ctx -> link(ctx.getSource())));
 
+        // примерить вид ствола (админ, этап 11): ствол в руке получает GunDisplayId — затем «Меню PWP» → Админ →
+        // «Каталог скинов» → «Новый» с этим стволом в руке сохраняет скин ствола
+        d.register(Commands.literal("pwpskin")
+                .requires(s -> s.hasPermission(2))
+                .then(Commands.literal("try")
+                        .then(Commands.argument(
+                                        "display", net.minecraft.commands.arguments.ResourceLocationArgument.id())
+                                .executes(ctx -> trySkin(
+                                        ctx.getSource(),
+                                        net.minecraft.commands.arguments.ResourceLocationArgument.getId(ctx, "display")
+                                                .toString()))))
+                .then(Commands.literal("clear").executes(ctx -> trySkin(ctx.getSource(), ""))));
+
         d.register(Commands.literal("pwpchat")
                 .requires(s -> s.hasPermission(2))
                 .then(Commands.literal("reload").executes(ctx -> {
@@ -66,6 +79,27 @@ public final class CommunityCommands {
                     ctx.getSource().sendSuccess(() -> Component.translatable("pwp_core.chat.reloaded", n), true);
                     return n;
                 })));
+    }
+
+    private static int trySkin(CommandSourceStack src, String display) {
+        ServerPlayer p = src.getPlayer();
+        if (p == null) return 0;
+        var stack = p.getMainHandItem();
+        if (stack.isEmpty() || !stack.hasTag() || !stack.getTag().contains("GunId", 8)) {
+            src.sendFailure(Component.translatable("pwp_core.skin.try.no_gun"));
+            return 0;
+        }
+        var tag = stack.getTag();
+        tag.remove(com.pwp.api.cosmetics.WeaponSkin.MARK_TAG);
+        if (display.isEmpty()) tag.remove(com.pwp.api.cosmetics.WeaponSkin.DISPLAY_TAG);
+        else tag.putString(com.pwp.api.cosmetics.WeaponSkin.DISPLAY_TAG, display);
+        src.sendSuccess(
+                () -> Component.translatable(
+                        display.isEmpty() ? "pwp_core.skin.try.cleared" : "pwp_core.skin.try.set",
+                        tag.getString("GunId"),
+                        display),
+                false);
+        return 1;
     }
 
     private static int report(CommandSourceStack src, String target, String reason, String details) {

@@ -12,6 +12,8 @@ public class CosmeticsMod {
 
     public CosmeticsMod() {
         SkinRegistry.initDefaults();
+        // скины стволов: GunDisplayId на стволах инвентаря (этап 11)
+        WeaponSkinService.init();
         if (net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT) {
             // тест-стенд UI (/pwpui): регистрирует экраны только при включённом стенде
             com.pwp.cosmetics.gui.CosmeticsUiFixtures.register();

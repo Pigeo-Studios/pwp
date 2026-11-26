@@ -69,5 +69,9 @@
     "pwp_cosmetics.status.not_owned": "Skin not purchased",
     "pwp_cosmetics.status.done": "Done",
     "pwp_cosmetics.hint.primary_multi": "You can pick several primary skins",
-    "pwp_cosmetics.empty_hint": "Skins appear after purchase or rewards"
+    "pwp_cosmetics.empty_hint": "Skins appear after purchase or rewards",
+    "pwp_cosmetics.filter.WEAPON": "Guns",
+    "pwp_cosmetics.slot.WEAPON": "Gun",
+    "pwp_cosmetics.tooltip.weapon": "For: %s",
+    "pwp_cosmetics.hint.weapon": "One skin per gun — works in every kit and role; only the look changes"
 }

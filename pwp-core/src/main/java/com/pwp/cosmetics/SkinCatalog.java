@@ -28,6 +28,15 @@ public final class SkinCatalog {
     private static final Logger LOG = LoggerFactory.getLogger(SkinCatalog.class);
     private static final long TTL_MS = 60_000;
 
+    /** Определение скина из каталога core. */
+    public record Def(String skinId, String slotType, String weaponTag, String modelPath) {
+        /** Скин ствола (display TaCZ) или null — старый скин-предмет. */
+        public com.pwp.api.cosmetics.WeaponSkin weapon() {
+            return com.pwp.api.cosmetics.WeaponSkin.parse(skinId, slotType, weaponTag, modelPath);
+        }
+    }
+
+    private static volatile Map<String, Def> defs = Collections.emptyMap();
     private static volatile Map<String, String> modelPaths = Collections.emptyMap();
     private static volatile long loadedAt = 0;
 
@@ -35,29 +44,48 @@ public final class SkinCatalog {
 
     /** Карта skinId → modelPath; из кэша, если он свежий, иначе с core-service. */
     public static CompletableFuture<Map<String, String>> modelPaths() {
+        return defs().thenApply(d -> modelPaths);
+    }
+
+    /** Все определения skinId → {@link Def} (кэш 60 с; core недоступен — последний известный каталог). */
+    public static CompletableFuture<Map<String, Def>> defs() {
         if (System.currentTimeMillis() - loadedAt < TTL_MS) {
-            return CompletableFuture.completedFuture(modelPaths);
+            return CompletableFuture.completedFuture(defs);
         }
         return CoreApi.getSkins().thenApply(resp -> {
             JsonArray arr = CoreApi.dataArray(resp);
-            if (arr == null) return modelPaths; // core-service недоступен — последний известный каталог
+            if (arr == null) return defs;
+            Map<String, Def> d = new HashMap<>();
             Map<String, String> map = new HashMap<>();
             for (JsonElement e : arr) {
                 JsonObject s = e.getAsJsonObject();
-                String mp = s.has("modelPath") && !s.get("modelPath").isJsonNull()
-                        ? s.get("modelPath").getAsString()
-                        : "";
-                if (!mp.isEmpty()) map.put(s.get("skinId").getAsString(), mp);
+                String id = str(s, "skinId");
+                if (id.isEmpty()) continue;
+                String mp = str(s, "modelPath");
+                d.put(id, new Def(id, str(s, "slotType"), str(s, "weaponTag"), mp));
+                if (!mp.isEmpty()) map.put(id, mp);
             }
+            defs = Collections.unmodifiableMap(d);
             modelPaths = Collections.unmodifiableMap(map);
             loadedAt = System.currentTimeMillis();
-            return modelPaths;
+            return defs;
         });
+    }
+
+    /** Сбросить кэш (админ сохранил/удалил скин). */
+    public static void invalidate() {
+        loadedAt = 0;
+    }
+
+    private static String str(JsonObject o, String k) {
+        return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsString() : "";
     }
 
     /** Предмет скина из modelPath: SNBT ({@code {...}}) или id предмета ({@code mod:item}). */
     public static ItemStack buildItem(String skinId, String modelPath) {
         if (modelPath == null || modelPath.isEmpty()) return ItemStack.EMPTY;
+        // скин ствола (display TaCZ) — не предмет; иконку рисует экран арсенала сам
+        if (modelPath.startsWith(com.pwp.api.cosmetics.WeaponSkin.DISPLAY_PREFIX)) return ItemStack.EMPTY;
         if (modelPath.startsWith("{")) {
             try {
                 CompoundTag tag = TagParser.parseTag(modelPath);

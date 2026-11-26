@@ -334,7 +334,37 @@ def check_maps(kit_roles, pools):
                 warn("maps", f"{name}: у {f} нет техники для слотов {sorted(miss)} (слоты будут пустыми)")
 
 
+def list_displays():
+    """Все display стволов из ганпаков Pwpfiles — id для скинов стволов (modelPath = display:<id>)."""
+    import zipfile
+    rx = re.compile(r"assets/([a-z0-9_]+)/display/guns/([a-z0-9_]+)\.json$")
+    found = set()
+    for d in (PWPFILES / "tacz", PWPFILES / "mods"):
+        if not d.exists():
+            continue
+        for f in d.iterdir():
+            names = []
+            if f.suffix in (".zip", ".jar"):
+                try:
+                    with zipfile.ZipFile(f) as z:
+                        names = z.namelist()
+                except (OSError, zipfile.BadZipFile):
+                    continue
+            elif f.is_dir():
+                names = [str(p.relative_to(f)).replace("\\", "/") for p in f.rglob("*.json")]
+            for n in names:
+                m = rx.search(n)
+                if m:
+                    found.add(f"{m.group(1)}:{m.group(2)}")
+    for x in sorted(found):
+        print(x)
+    print(f"Итого display: {len(found)}. Скин ствола: slotType=WEAPON, weaponTag=<GunId>, modelPath=display:<id>")
+    return 0
+
+
 def main():
+    if "--displays" in sys.argv:
+        return list_displays()
     regs = registered_names()
     check_lang()
     kit_roles = check_kits(regs)

@@ -20,6 +20,10 @@ PWP — тактический шутер «Squad в Minecraft» (Forge 1.20.1, 
 - Модули pwp-logic по-прежнему не jar: `src/api` + `src/coreclient` → pwp-core, `src/warfare` → pwp-game.
 - Ниже в карте модулей названия старых модулей = части нового jar (`pwp-warfare` = pwp-game/warfare и т.д.).
 
+### Одно меню и скины стволов (этап 11, 26.11.2026)
+- «Меню PWP» — `coreclient/hub/PwpHub.register(section, id, order, icon, open, visible, key)` + `PWPHubScreen` (из паузы). Новый экран игрока/админа — ТОЛЬКО карточка здесь (lang `pwp_core.hub.<id>.title/.desc`), не новая кнопка паузы, не предмет и не команда. Карточки core — `CoreHubEntries`, warfare — `client/WarfareHubEntries`.
+- Скины стволов — `api/cosmetics/WeaponSkin` (`slotType=WEAPON`, `weaponTag=GunId`, `modelPath=display:<id>`) → `cosmetics/WeaponSkinService` ставит TaCZ `GunDisplayId` + метку `PwpSkin` на стволы инвентаря. GunId ствола скин не меняет никогда. Привязка скинов к слотам китов (`slotSkins`) — только для старых скинов-предметов.
+
 ### Публичный сервер (этап 10, 26.11.2026; подробно — ROADMAP и README)
 - Правила — `pwp-server.json` → `community` (`CommunitySettings` в pwp-logic; `ServerRole.settings().community()`): AFK, жалобы, тимкилл-бан, сидинг, резерв, чат, закрепление техники. Новое правило публичного сервера — поле сюда, не в Forge-TOML.
 - Чат — ТОЛЬКО через `coreserver/community/ChatGuard.filter` (фильтр `config/pwp_chat_filter.txt` + антиспам); warfare зовёт его в `PacketSquadChat.processChat` — новый канал чата обязан идти через него.

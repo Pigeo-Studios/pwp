@@ -69,5 +69,9 @@
     "pwp_cosmetics.status.not_owned": "Скин не куплен",
     "pwp_cosmetics.status.done": "Готово",
     "pwp_cosmetics.hint.primary_multi": "Можно выбрать несколько основных скинов",
-    "pwp_cosmetics.empty_hint": "Скины появятся после покупки или наград"
+    "pwp_cosmetics.empty_hint": "Скины появятся после покупки или наград",
+    "pwp_cosmetics.filter.WEAPON": "Стволы",
+    "pwp_cosmetics.slot.WEAPON": "Ствол",
+    "pwp_cosmetics.tooltip.weapon": "Для: %s",
+    "pwp_cosmetics.hint.weapon": "Один скин на ствол — действует во всех китах и ролях; меняется только вид"
 }

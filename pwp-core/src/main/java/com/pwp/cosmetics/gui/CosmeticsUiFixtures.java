@@ -24,6 +24,8 @@ public final class CosmeticsUiFixtures {
         JsonArray skins = new JsonArray();
         if (!UiGallery.emptyData()) {
             String[][] data = {
+                {"ak74_gold", "AK-74 «Золото»", "display:cib:ak74_display", "WEAPON", "LEGENDARY", "cib:ak74"},
+                {"m4_tan", "M4A1 «Пустыня»", "display:tacz:m4a1_display", "WEAPON", "RARE", "tacz:m4a1"},
                 {"ak_gold", "Золотой АК", "minecraft:golden_sword", "PRIMARY", "LEGENDARY"},
                 {"ak_default", "Стандартный АК", "minecraft:iron_sword", "PRIMARY", "COMMON"},
                 {"m4_tiger", "M4 «Тигр»", "minecraft:diamond_sword", "PRIMARY", "EPIC"},
@@ -44,11 +46,13 @@ public final class CosmeticsUiFixtures {
                     o.addProperty("modelPath", d[2]);
                     o.addProperty("slotType", d[3]);
                     o.addProperty("rarity", d[4]);
+                    if (d.length > 5) o.addProperty("weaponTag", d[5]);
                     skins.add(o);
                 }
             }
         }
-        Set<String> owned = Set.of("ak_gold", "ak_default", "knife_dragon", "uniform_multicam", "p320_black");
+        Set<String> owned =
+                Set.of("ak74_gold", "ak_gold", "ak_default", "knife_dragon", "uniform_multicam", "p320_black");
         Set<String> equipped = Set.of("ak_gold", "knife_dragon");
         return new SkinInventoryScreen.Source() {
             @Override

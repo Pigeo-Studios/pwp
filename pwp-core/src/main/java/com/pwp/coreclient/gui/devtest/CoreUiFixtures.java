@@ -59,6 +59,7 @@ public final class CoreUiFixtures {
         UiGallery.register("core.howto", () -> new com.pwp.coreclient.gui.screens.PWPHowToPlayScreen(null));
         UiGallery.register(
                 "core.shop", () -> com.pwp.coreclient.gui.screens.PWPShopScreen.preview(UiGallery.emptyData()));
+        UiGallery.register("core.hub", com.pwp.coreclient.gui.screens.PWPHubScreen::preview);
         UiGallery.register(
                 "core.community",
                 () -> com.pwp.coreclient.gui.screens.PWPCommunityScreen.preview(UiGallery.emptyData()));

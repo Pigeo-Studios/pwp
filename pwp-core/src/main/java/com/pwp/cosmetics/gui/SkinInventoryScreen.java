@@ -46,7 +46,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Инвентарь скинов (переписан на UI-ките): вкладки-фильтры по слоту, сетка плиток
+ * «Арсенал» — инвентарь скинов (этап 11: открывается из «Меню PWP» → Профиль, а не только {@code /pwp inv}).
+ * Вкладка «Стволы» — скины стволов TaCZ (меняют только вид: {@code GunDisplayId}; один скин на оружие, сразу на
+ * всех ролях и китах — сервер сам перекрашивает стволы в инвентаре). Плитка ствола рисует сам ствол в этом
+ * скине. Остальные вкладки — прежние скины-предметы.
+ *
+ * <p>Инвентарь скинов (переписан на UI-ките): вкладки-фильтры по слоту, сетка плиток
  * ({@link Grid#columnsFor}) в прокручиваемой области, у плитки — иконка предмета, полоса
  * редкости, галочка «надето», замок «нет доступа». Клик — надеть/снять (прежний
  * PacketCosmeticEquip; владение проверяет сервер), результат — тостом.
@@ -71,6 +76,11 @@ public class SkinInventoryScreen extends Screen {
 
         /** Надеть (skinId) или снять (skinId пустой) скин слота. */
         void equip(String slotType, String skinId);
+
+        /** То же с ролью: скин ствола снимается по {@code role = GunId}. */
+        default void equip(String slotType, String role, String skinId) {
+            equip(slotType, skinId);
+        }
     }
 
     /** Игра: прежние запросы и пакет экипировки. */
@@ -116,11 +126,17 @@ public class SkinInventoryScreen extends Screen {
         public void equip(String slotType, String skinId) {
             CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(slotType, "ALL", skinId));
         }
+
+        @Override
+        public void equip(String slotType, String role, String skinId) {
+            CosmeticsMod.NETWORK.sendToServer(new PacketCosmeticEquip(slotType, role, skinId));
+        }
     };
 
-    private static final String[] FILTERS = {"ALL", "PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
+    private static final String[] FILTERS = {"ALL", "WEAPON", "PRIMARY", "SECONDARY", "KNIFE", "MELEE", "UNIFORM"};
 
-    private record Skin(String id, String name, String slot, String rarity, ItemStack icon) {}
+    /** {@code gunId} — для скина ствола (иначе пусто). */
+    private record Skin(String id, String name, String slot, String rarity, ItemStack icon, String gunId) {}
 
     private final Source source;
     private final UILayer layer = new UILayer();
@@ -227,6 +243,7 @@ public class SkinInventoryScreen extends Screen {
                 "pwp_cosmetics.tooltip.slot", Component.translatable("pwp_cosmetics.slot." + s.slot())));
         lines.add(Component.translatable(
                 "pwp_cosmetics.tooltip.rarity", Component.translatable("pwp_cosmetics.rarity." + s.rarity())));
+        if (!s.gunId().isEmpty()) lines.add(Component.translatable("pwp_cosmetics.tooltip.weapon", s.gunId()));
         lines.add(Component.translatable(
                 on
                         ? "pwp_cosmetics.action.unequip"
@@ -254,23 +271,40 @@ public class SkinInventoryScreen extends Screen {
             String model = o.has("modelPath") && !o.get("modelPath").isJsonNull()
                     ? o.get("modelPath").getAsString()
                     : "";
-            // предмет — только иконка; выдаваемый предмет собирает сервер
-            ItemStack icon = icons.computeIfAbsent(id, k -> SkinCatalog.buildItem(k, model));
+            String slot = o.has("slotType") ? o.get("slotType").getAsString() : "";
+            String tag = o.has("weaponTag") && !o.get("weaponTag").isJsonNull()
+                    ? o.get("weaponTag").getAsString()
+                    : "";
+            com.pwp.api.cosmetics.WeaponSkin w = com.pwp.api.cosmetics.WeaponSkin.parse(id, slot, tag, model);
+            // предмет — только иконка; выдаваемый предмет собирает сервер. Скин ствола — сам ствол в этом виде
+            ItemStack icon = icons.computeIfAbsent(id, k -> w != null ? gunIcon(w) : SkinCatalog.buildItem(k, model));
             out.add(new Skin(
                     id,
                     o.has("name") ? o.get("name").getAsString() : id,
-                    o.has("slotType") ? o.get("slotType").getAsString() : "",
+                    w != null ? com.pwp.api.cosmetics.WeaponSkin.SLOT : slot,
                     o.has("rarity") ? o.get("rarity").getAsString().toUpperCase() : "COMMON",
-                    icon));
+                    icon,
+                    w != null ? w.gunId() : ""));
         }
         return out;
+    }
+
+    /** Ствол TaCZ с GunId и display скина — иконка плитки (рендер TaCZ сам покажет нужную модель). */
+    private static ItemStack gunIcon(com.pwp.api.cosmetics.WeaponSkin w) {
+        var item = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
+                net.minecraft.resources.ResourceLocation.tryParse("tacz:modern_kinetic_gun"));
+        if (item == null || item == net.minecraft.world.item.Items.AIR) return ItemStack.EMPTY;
+        ItemStack st = new ItemStack(item);
+        st.getOrCreateTag().putString("GunId", w.gunId());
+        st.getOrCreateTag().putString(com.pwp.api.cosmetics.WeaponSkin.DISPLAY_TAG, w.displayId());
+        return st;
     }
 
     private void toggle(Skin s) {
         if (equipped.contains(s.id())) {
             PWPToastManager.show(
                     Component.translatable("pwp_cosmetics.status.unequipping").getString());
-            source.equip(s.slot(), "");
+            source.equip(s.slot(), s.gunId().isEmpty() ? "ALL" : s.gunId(), "");
         } else if (!owned.contains(s.id()) && !source.admin()) {
             PWPToastManager.show(
                     Component.translatable("pwp_cosmetics.status.not_owned").getString(),
@@ -324,7 +358,10 @@ public class SkinInventoryScreen extends Screen {
                     Component.translatable("pwp_cosmetics.empty_hint"),
                     1F);
         }
-        if (FILTERS[filter].equals("PRIMARY")) {
+        if (FILTERS[filter].equals("WEAPON")) {
+            Component hint = UIDraw.ellipsize(font, Component.translatable("pwp_cosmetics.hint.weapon"), hintR.w());
+            UIDraw.text(g, font, hint, hintR.centerX() - font.width(hint) / 2, hintR.y(), PWPTheme.Text.CAPTION, false);
+        } else if (FILTERS[filter].equals("PRIMARY")) {
             Component hint =
                     UIDraw.ellipsize(font, Component.translatable("pwp_cosmetics.hint.primary_multi"), hintR.w());
             UIDraw.text(g, font, hint, hintR.centerX() - font.width(hint) / 2, hintR.y(), PWPTheme.Text.CAPTION, false);

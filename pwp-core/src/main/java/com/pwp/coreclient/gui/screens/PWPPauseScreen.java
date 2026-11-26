@@ -82,7 +82,13 @@ public class PWPPauseScreen extends Screen {
         buttons.add(new UIButton(Component.translatable("pwp_core.pause.resume"), this::resume)
                 .style(UIButton.Style.ACCENT)
                 .icon(UIIcon.PLAY));
-        // только на лобби-сервере (пришёл LobbyStatePacket): меню голосования/матчей
+        // всё остальное — одно место: «Меню PWP» (этап 11; раньше здесь было 11 кнопок)
+        buttons.add(new UIButton(
+                        Component.translatable("pwp_core.pause.hub"),
+                        () -> mc.setScreen(preview ? PWPHubScreen.preview() : new PWPHubScreen(this)))
+                .style(UIButton.Style.DARK)
+                .icon(UIIcon.MODS));
+        // только на лобби-сервере (пришёл LobbyStatePacket): меню голосования/матчей — самое частое действие
         if (!preview && com.pwp.coreclient.lobby.LobbyHud.isOnLobby()) {
             buttons.add(new UIButton(Component.translatable("pwp_core.pause.lobby"), () -> {
                         mc.setScreen(null);
@@ -91,7 +97,8 @@ public class PWPPauseScreen extends Screen {
                     .style(UIButton.Style.DARK)
                     .icon(UIIcon.SERVER));
         }
-        // блок админ-кнопок — только при уровне MODERATOR+ (уровень сообщает сервер; права проверяет сервер)
+        // админ-панель — только MODERATOR+ (уровень сообщает сервер; права проверяет сервер); прочие
+        // админские экраны (редактор карты, киты, техника, скины) — раздел «Админ» в «Меню PWP»
         boolean adminBlock = preview || com.pwp.coreclient.admin.AdminPanel.hasAccess();
         if (!preview && adminBlock) com.pwp.coreclient.admin.AdminPanel.refresh();
         if (adminBlock) {
@@ -104,58 +111,12 @@ public class PWPPauseScreen extends Screen {
                     })
                     .style(UIButton.Style.DARK)
                     .icon(UIIcon.SERVER));
-            UIButton mapEditor = new UIButton(Component.translatable("pwp_core.pause.map_editor"), () -> {
-                        if (preview) {
-                            LOG.info("[PWPUI] pause: map editor (preview — без действия)");
-                        } else {
-                            com.pwp.coreclient.admin.AdminPanel.openMapEditor(this);
-                        }
-                    })
-                    .style(UIButton.Style.DARK)
-                    .icon(UIIcon.SETTINGS);
-            // редактор — уровень ADMIN+ и раздел «Карта» на сервере (этап 3); права проверяет сервер
-            if (!preview && !com.pwp.coreclient.admin.AdminPanel.mapEditorAvailable()) {
-                mapEditor.setEnabled(false);
-                mapEditor.tooltip(com.pwp.coreclient.ui.UITooltip.Content.of(
-                        Component.translatable("pwp_core.admin.map_editor.unavailable")));
-            }
-            buttons.add(mapEditor);
         }
-        // «Сообщество» (этап 10): магазин за Coins, жалоба, Discord — только на сервере (в одиночке core нет);
-        // одна кнопка вместо трёх, чтобы меню влезало на маленький экран
-        if (!mc.isLocalServer()) {
-            buttons.add(new UIButton(
-                            Component.translatable("pwp_core.pause.community"),
-                            () -> mc.setScreen(
-                                    preview ? PWPCommunityScreen.preview(false) : new PWPCommunityScreen(this)))
-                    .style(UIButton.Style.DARK)
-                    .icon(UIIcon.PROFILE));
-        }
-        buttons.add(new UIButton(
-                        Component.translatable("pwp_core.pause.howto"),
-                        () -> mc.setScreen(new PWPHowToPlayScreen(this)))
-                .style(UIButton.Style.DARK)
-                .icon(UIIcon.INFO));
-        buttons.add(new UIButton(
-                        Component.translatable("pwp_core.pause.ui_settings"),
-                        () -> mc.setScreen(new PWPUiSettingsScreen(this)))
-                .style(UIButton.Style.DARK)
-                .icon(UIIcon.SLIDERS));
         buttons.add(new UIButton(
                         Component.translatable("pwp_core.pause.options"),
                         () -> mc.setScreen(new OptionsScreen(this, mc.options)))
                 .style(UIButton.Style.DARK)
                 .icon(UIIcon.SETTINGS));
-        buttons.add(new UIButton(
-                        Component.translatable("pwp_core.pause.controls"),
-                        () -> mc.setScreen(new PWPControlsScreen(this)))
-                .style(UIButton.Style.DARK)
-                .icon(UIIcon.KEYBOARD));
-        buttons.add(new UIButton(
-                        Component.translatable("pwp_core.pause.mods"),
-                        () -> mc.setScreen(new net.minecraftforge.client.gui.ModListScreen(this)))
-                .style(UIButton.Style.DARK)
-                .icon(UIIcon.MODS));
         disconnect = new UIButton(
                         Component.translatable(
                                 mc.isLocalServer() ? "pwp_core.pause.save_quit" : "pwp_core.pause.disconnect"),
