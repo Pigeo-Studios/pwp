@@ -121,11 +121,13 @@ public class PWPPauseScreen extends Screen {
             }
             buttons.add(mapEditor);
         }
-        // магазин за Coins (этап 8 ROADMAP) — только на сервере (в одиночке core нет)
+        // «Сообщество» (этап 10): магазин за Coins, жалоба, Discord — только на сервере (в одиночке core нет);
+        // одна кнопка вместо трёх, чтобы меню влезало на маленький экран
         if (!mc.isLocalServer()) {
             buttons.add(new UIButton(
-                            Component.translatable("pwp_core.pause.shop"),
-                            () -> mc.setScreen(preview ? PWPShopScreen.preview(false) : new PWPShopScreen(this)))
+                            Component.translatable("pwp_core.pause.community"),
+                            () -> mc.setScreen(
+                                    preview ? PWPCommunityScreen.preview(false) : new PWPCommunityScreen(this)))
                     .style(UIButton.Style.DARK)
                     .icon(UIIcon.PROFILE));
         }

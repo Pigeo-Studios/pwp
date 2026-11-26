@@ -67,7 +67,7 @@ public final class ModerationAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, KICK, target, true, () -> ModerationInput.kick(target, reason));
+            run(sender, KICK, target, true, "KICK", reason, null, () -> ModerationInput.kick(target, reason));
         }
     }
 
@@ -90,7 +90,8 @@ public final class ModerationAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, BAN, target, true, () -> ModerationInput.ban(target, duration, reason));
+            // бан пишет историю сам (core /launcher/ban)
+            run(sender, BAN, target, true, null, reason, null, () -> ModerationInput.ban(target, duration, reason));
         }
     }
 
@@ -111,7 +112,7 @@ public final class ModerationAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, WARN, target, false, () -> ModerationInput.warn(target, message));
+            run(sender, WARN, target, false, "WARN", message, null, () -> ModerationInput.warn(target, message));
         }
     }
 
@@ -135,7 +136,15 @@ public final class ModerationAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, VOICE_MUTE, target, true, () -> ModerationInput.voiceMute(target, minutes, reason));
+            run(
+                    sender,
+                    VOICE_MUTE,
+                    target,
+                    true,
+                    "MUTE",
+                    reason,
+                    minutes,
+                    () -> ModerationInput.voiceMute(target, minutes, reason));
         }
     }
 
@@ -156,7 +165,7 @@ public final class ModerationAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, TEAM_JOIN, target, false, () -> ModerationInput.teamJoin(target, team));
+            run(sender, TEAM_JOIN, target, false, null, null, null, () -> ModerationInput.teamJoin(target, team));
         }
     }
 
@@ -171,7 +180,7 @@ public final class ModerationAction {
 
         @Override
         public void handle(ServerPlayer sender) {
-            run(sender, CLEAR_TEAMKILL, target, false, () -> ModerationInput.clearTeamkill(target));
+            run(sender, CLEAR_TEAMKILL, target, false, null, null, null, () -> ModerationInput.clearTeamkill(target));
         }
     }
 
@@ -184,6 +193,9 @@ public final class ModerationAction {
             String action,
             String target,
             boolean punish,
+            String historyType,
+            String reason,
+            Integer minutes,
             java.util.function.Supplier<String> cmd) {
         AdminAction.runLocal(sender, action, AccessLevel.MODERATOR, target, () -> {
             if (!ModerationInput.validName(target)) return ERR_NAME;
@@ -201,9 +213,16 @@ public final class ModerationAction {
             String root = command.substring(0, command.indexOf(' '));
             if (server.getCommands().getDispatcher().getRoot().getChild(root) == null) return ERR_UNAVAILABLE;
             LOG.info("Модерация: {} выполняет /{}", sender.getGameProfile().getName(), command);
+            String victimUuid = victim.getStringUUID();
             int result = server.getCommands()
                     .performPrefixedCommand(sender.createCommandSourceStack().withPermission(4), command);
-            return result > 0 ? null : ERR_FAILED;
+            if (result <= 0) return ERR_FAILED;
+            // история наказаний (этап 10a): видна в карточке игрока F6 на любом сервере
+            if (historyType != null) {
+                com.pwp.api.core.CoreApi.recordPunishment(
+                        victimUuid, historyType, reason, sender.getStringUUID(), minutes);
+            }
+            return null;
         });
     }
 

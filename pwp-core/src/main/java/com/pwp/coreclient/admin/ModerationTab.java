@@ -67,6 +67,10 @@ public class ModerationTab implements AdminTab {
     private int ticks;
     private AdminBackend backend;
     private Host host;
+    /** История наказаний выбранного игрока (этап 10a): для кого запрошена и итоговая строка. */
+    private String historyFor = "";
+
+    private Component history = Component.empty();
 
     public static JsonObject fixture(boolean empty) {
         JsonObject o = new JsonObject();
@@ -114,10 +118,65 @@ public class ModerationTab implements AdminTab {
             ticks = 0;
             backend.request(ModerationAction.PLAYERS_TYPE, "");
         }
+        Entry e = current();
+        String name = e == null ? "" : e.name();
+        if (!name.equals(historyFor)) {
+            historyFor = name;
+            history = name.isEmpty() ? Component.empty() : Component.translatable("pwp_core.admin.mod.history.loading");
+            if (!name.isEmpty()) {
+                JsonObject q = new JsonObject();
+                q.addProperty("name", name);
+                backend.request(com.pwp.coreclient.network.data.ReportData.HISTORY_TYPE, q.toString());
+            }
+        }
+    }
+
+    /** Строка истории: «Наказаний: 3 (варн ×2, кик ×1) · последнее: бан 2 д назад — причина». */
+    static Component historyLine(JsonObject o) {
+        if (o.has("error")) return Component.translatable("pwp_core.admin.mod.history.unavailable");
+        if (!o.has("items")
+                || !o.get("items").isJsonArray()
+                || o.getAsJsonArray("items").isEmpty()) {
+            return Component.translatable("pwp_core.admin.mod.history.clean");
+        }
+        JsonArray items = o.getAsJsonArray("items");
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        for (JsonElement el : items) {
+            String t = str(el.getAsJsonObject(), "type").toLowerCase(java.util.Locale.ROOT);
+            counts.merge(t, 1, Integer::sum);
+        }
+        StringBuilder parts = new StringBuilder();
+        counts.forEach((t, n) -> {
+            if (parts.length() > 0) parts.append(", ");
+            parts.append(Component.translatable("pwp_core.admin.mod.history.type." + t)
+                            .getString())
+                    .append(" ×")
+                    .append(n);
+        });
+        JsonObject last = items.get(0).getAsJsonObject();
+        long at = last.has("createdAt") ? last.get("createdAt").getAsLong() : 0;
+        long days = at <= 0 ? 0 : Math.max(0, (System.currentTimeMillis() - at) / 86_400_000L);
+        return Component.translatable(
+                "pwp_core.admin.mod.history.summary",
+                items.size(),
+                parts.toString(),
+                Component.translatable(
+                        "pwp_core.admin.mod.history.type." + str(last, "type").toLowerCase(java.util.Locale.ROOT)),
+                days,
+                str(last, "reason"));
     }
 
     @Override
     public void onData(String type, String json) {
+        if (com.pwp.coreclient.network.data.ReportData.HISTORY_TYPE.equals(type)) {
+            try {
+                JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+                if (str(o, "name").equals(historyFor)) history = historyLine(o);
+            } catch (JsonParseException | IllegalStateException e) {
+                LOG.warn("ModerationTab: битая история", e);
+            }
+            return;
+        }
         if (!ModerationAction.PLAYERS_TYPE.equals(type)) return;
         try {
             Set<String> before = new HashSet<>(actions);
@@ -172,6 +231,7 @@ public class ModerationTab implements AdminTab {
                     if (!players.isEmpty()) player = Math.floorMod(player + d, players.size());
                 }))
                 .text(this::detailsText, () -> PWPTheme.Text.BODY)
+                .text(() -> history, () -> PWPTheme.Text.MUTED)
                 .control(
                         Component.translatable("pwp_core.admin.mod.reason"),
                         new UIChoice(() -> reasonText(), d -> reason = Math.floorMod(reason + d, REASONS.length)))

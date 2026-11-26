@@ -967,6 +967,8 @@ public class GameLogicEvents {
             com.pigeostudios.pwp.warfare.server.MatchShutdown.tick(server);
             // сторож: пустой/никем не занятый/слишком долгий матч не держит слот лобби (этап 4 ROADMAP)
             com.pigeostudios.pwp.warfare.server.MatchWatchdogTicker.tick(server);
+            // кик за AFK (этап 10a, community.afkKickMinutes)
+            com.pigeostudios.pwp.warfare.server.AfkTicker.tick(server);
         }
     }
 
@@ -2184,6 +2186,7 @@ public class GameLogicEvents {
     public static void onPlayerLoggedOut(PlayerLoggedOutEvent event) {
         if (!event.getEntity().level().isClientSide) {
             ServerPlayer player = (ServerPlayer) event.getEntity();
+            com.pigeostudios.pwp.warfare.server.AfkTicker.forget(player);
             ServerLevel level = player.serverLevel();
             WarfareWorldData data = WarfareWorldData.get(level);
             if (data.match.isGameStarted) {

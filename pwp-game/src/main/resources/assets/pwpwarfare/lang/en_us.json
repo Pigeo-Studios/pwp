@@ -1229,5 +1229,11 @@
     "pwpwarfare.admin.match.division_blue": "BLUE division",
     "pwpwarfare.admin.match.division_red": "RED division",
     "pwpwarfare.admin.match.division.auto": "Auto (mode and map size)",
-    "pwpwarfare.admin.match.mode.skirmish": "Skirmish"
+    "pwpwarfare.admin.match.mode.skirmish": "Skirmish",
+    "pwpwarfare.msg.afk.warn": "You are AFK — move or you will be kicked in %s s",
+    "pwpwarfare.msg.afk.kick": "Kicked for being AFK for %s minutes. Come back when you are ready to play!",
+    "pwpwarfare.message.teamkill_ban_broadcast": "%s was banned for %s minutes for repeated teamkills",
+    "pwpwarfare.message.teamkill_ban_self": "Banned for %s minutes for repeated teamkills",
+    "pwpwarfare.msg.vehicle.claimed": "This vehicle belongs to squad %s — only they can drive it",
+    "pwpwarfare.msg.vehicle.claimed_by_you": "Vehicle claimed by your squad %s"
 }

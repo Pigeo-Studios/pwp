@@ -1229,5 +1229,11 @@
     "pwpwarfare.admin.match.division_blue": "Дивізія BLUE",
     "pwpwarfare.admin.match.division_red": "Дивізія RED",
     "pwpwarfare.admin.match.division.auto": "Авто (режим і розмір мапи)",
-    "pwpwarfare.admin.match.mode.skirmish": "Сутичка"
+    "pwpwarfare.admin.match.mode.skirmish": "Сутичка",
+    "pwpwarfare.msg.afk.warn": "Ви AFK — порухайтеся, інакше кік через %s с",
+    "pwpwarfare.msg.afk.kick": "Кік за AFK %s хвилин. Повертайтеся, коли будете готові грати!",
+    "pwpwarfare.message.teamkill_ban_broadcast": "%s забанений на %s хвилин за повторні тімкіли",
+    "pwpwarfare.message.teamkill_ban_self": "Бан на %s хвилин за повторні тімкіли",
+    "pwpwarfare.msg.vehicle.claimed": "Ця техніка закріплена за загоном %s — керувати може лише він",
+    "pwpwarfare.msg.vehicle.claimed_by_you": "Техніку закріплено за вашим загоном %s"
 }

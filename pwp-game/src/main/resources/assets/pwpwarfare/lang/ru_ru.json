@@ -1229,5 +1229,11 @@
     "pwpwarfare.admin.match.division_blue": "Дивизия BLUE",
     "pwpwarfare.admin.match.division_red": "Дивизия RED",
     "pwpwarfare.admin.match.division.auto": "Авто (режим и размер карты)",
-    "pwpwarfare.admin.match.mode.skirmish": "Стычка"
+    "pwpwarfare.admin.match.mode.skirmish": "Стычка",
+    "pwpwarfare.msg.afk.warn": "Вы AFK — подвигайтесь, иначе кик через %s с",
+    "pwpwarfare.msg.afk.kick": "Кик за AFK %s минут. Возвращайтесь, когда будете готовы играть!",
+    "pwpwarfare.message.teamkill_ban_broadcast": "%s забанен на %s минут за повторные тимкиллы",
+    "pwpwarfare.message.teamkill_ban_self": "Бан на %s минут за повторные тимкиллы",
+    "pwpwarfare.msg.vehicle.claimed": "Эта техника закреплена за отрядом %s — водить может только он",
+    "pwpwarfare.msg.vehicle.claimed_by_you": "Техника закреплена за вашим отрядом %s"
 }

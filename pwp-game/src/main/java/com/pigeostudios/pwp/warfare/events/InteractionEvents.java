@@ -601,6 +601,58 @@ public class InteractionEvents {
         player.sendSystemMessage(requestMsg);
     }
 
+    /**
+     * Закрепление техники за отрядом, как в Squad (этап 10c, {@code community.vehicleClaim}): садится ВОДИТЕЛЕМ
+     * игрок отряда — машина за этим отрядом; водить её может только он, пока отряд жив (модераторы — всегда).
+     * Пассажиром — можно всем. Решение — {@link com.pigeostudios.pwp.warfare.vehicles.VehicleClaim}. Идёт после
+     * проверки кита/разрешения лидера (HIGHEST), отменённую посадку не трогает.
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onMountClaim(EntityMountEvent event) {
+        if (!event.isMounting() || event.getLevel().isClientSide()) return;
+        if (!(event.getEntityMounting() instanceof ServerPlayer player)) return;
+        if (!com.pwp.api.ServerRole.settings().community().vehicleClaim()) return;
+        Entity vehicle = event.getEntityBeingMounted();
+        if (!WarfareData.of(vehicle).contains(WarfareKeys.VEHICLE_TEAM)) return;
+        if (!vehicle.getPassengers().isEmpty()) return; // не водитель
+        if (player.isSpectator()) return;
+
+        String team = player.getTeam() == null ? "" : player.getTeam().getName();
+        int claim = WarfareData.of(vehicle).getInt(WarfareKeys.VEHICLE_CLAIM_SQUAD);
+        String claimTeam = WarfareData.of(vehicle).getString(WarfareKeys.VEHICLE_CLAIM_TEAM);
+        WarfareWorldData data = WarfareWorldData.get(player.serverLevel());
+        WarfareWorldData.Squad owner = claim == 0
+                ? null
+                : data.squadRegistry.squads.stream()
+                        .filter(s -> s.id == claim && s.team.equalsIgnoreCase(claimTeam))
+                        .findFirst()
+                        .orElse(null);
+        int mySquad = WarfareData.of(player).getInt(WarfareKeys.SQUAD_ID);
+        // id отрядов уникальны только внутри команды: чужая команда не совпадает никогда
+        int mine = claimTeam.isEmpty() || claimTeam.equalsIgnoreCase(team) ? mySquad : -1;
+        boolean staff = player.isCreative()
+                || com.pwp.api.security.PwpPermissions.has(player, com.pwp.api.security.AccessLevel.MODERATOR);
+        switch (com.pigeostudios.pwp.warfare.vehicles.VehicleClaim.decide(claim, owner != null, mine, staff)) {
+            case DENY -> {
+                event.setCanceled(true);
+                com.pigeostudios.pwp.warfare.util.PlayerFeedback.deny(
+                        player, "pwpwarfare.msg.vehicle.claimed", owner == null ? "?" : owner.name);
+            }
+            case CLAIM -> {
+                WarfareData.of(vehicle).putInt(WarfareKeys.VEHICLE_CLAIM_SQUAD, mySquad);
+                WarfareData.of(vehicle).putString(WarfareKeys.VEHICLE_CLAIM_TEAM, team);
+                String squadName = data.squadRegistry.squads.stream()
+                        .filter(s -> s.id == mySquad && s.team.equalsIgnoreCase(team))
+                        .map(s -> s.name)
+                        .findFirst()
+                        .orElse("#" + mySquad);
+                com.pigeostudios.pwp.warfare.util.PlayerFeedback.info(
+                        player, "pwpwarfare.msg.vehicle.claimed_by_you", squadName);
+            }
+            case ALLOW -> {}
+        }
+    }
+
     private static boolean isSpecialistVehicle(String vType) {
         if (vType.equalsIgnoreCase("TANK")) return true;
         if (vType.equalsIgnoreCase("APC")) return true;

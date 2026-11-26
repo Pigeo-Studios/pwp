@@ -95,6 +95,10 @@ public final class WarfareKeys {
     public static final WarfareKey<Boolean> DRONE_DEPLOYING = reg(WarfareKey.bool(PREFIX + "DroneDeploying"));
     public static final WarfareKey<String> DRONE_OWNER = reg(WarfareKey.string(PREFIX + "DroneOwner"));
     public static final WarfareKey<Integer> DRONE_IDLE_TICKS = reg(WarfareKey.integer(PREFIX + "DroneIdleTicks"));
+    /** Закрепление техники за отрядом (этап 10c): id отряда и его команда; 0/пусто — свободна. */
+    public static final WarfareKey<Integer> VEHICLE_CLAIM_SQUAD = reg(WarfareKey.integer(PREFIX + "VehicleClaimSquad"));
+
+    public static final WarfareKey<String> VEHICLE_CLAIM_TEAM = reg(WarfareKey.string(PREFIX + "VehicleClaimTeam"));
     public static final WarfareKey<Integer> DRONE_FALLBACK_TICKS =
             reg(WarfareKey.integer(PREFIX + "DroneFallbackTicks"));
 

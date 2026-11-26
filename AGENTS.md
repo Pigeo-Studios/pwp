@@ -20,6 +20,13 @@ PWP — тактический шутер «Squad в Minecraft» (Forge 1.20.1, 
 - Модули pwp-logic по-прежнему не jar: `src/api` + `src/coreclient` → pwp-core, `src/warfare` → pwp-game.
 - Ниже в карте модулей названия старых модулей = части нового jar (`pwp-warfare` = pwp-game/warfare и т.д.).
 
+### Публичный сервер (этап 10, 26.11.2026; подробно — ROADMAP и README)
+- Правила — `pwp-server.json` → `community` (`CommunitySettings` в pwp-logic; `ServerRole.settings().community()`): AFK, жалобы, тимкилл-бан, сидинг, резерв, чат, закрепление техники. Новое правило публичного сервера — поле сюда, не в Forge-TOML.
+- Чат — ТОЛЬКО через `coreserver/community/ChatGuard.filter` (фильтр `config/pwp_chat_filter.txt` + антиспам); warfare зовёт его в `PacketSquadChat.processChat` — новый канал чата обязан идти через него.
+- Жалобы — `ReportService.report/auto` (core `player_reports`, F6 «Жалобы» = `ReportsTab`, боты — `bots/reports_feed.py`). История наказаний — `CoreApi.recordPunishment` (KICK/WARN/MUTE/TEAMKILL/AFK; бан пишет core сам).
+- Очередь в матч — `MatchAllocator.connectOrQueue` (`JoinQueue`); подключать игрока к матчу только через неё. `ServerManager` пишет `max-players` = лимит + `reservedSlots`, страховка на матче — `ReservedSlots`.
+- core: `CommunityController` (reports/punishments/discord/backup), `PublicController` (`/api/v1/public/*` без ключа — только безопасные поля, без uuid/IP/портов), `BackupService` (config `backup`).
+
 ### Новое с 25.11.2026 (подробно — ROADMAP)
 - **Конфиг сервера** — `config/pwp-server.json` (`ServerSettings`/`ServerSettingsFile` в pwp-logic, доступ — `com.pwp.api.ServerRole`): `role` auto|lobby|match, `lobby` {autostart, maxMatches, minPlayers, prewarm}, `matchServers` {template, basePort}, `mapsDir`. Старый `config/pwp-server.json (секция lobby)` переносится один раз (не удаляется). Игровой баланс — по-прежнему Forge-TOML.
 - **Сторож матча** — `match/MatchWatchdog` (pwp-logic) + `server/MatchWatchdogTicker`: пусто 3 мин / никто не пришёл 15 мин / бой > 120 мин → корректная остановка или победа по тикетам (`emptyMatchShutdownMinutes`, `noShowShutdownMinutes`, `matchMaxMinutes`). Остановка — `MatchShutdown.stopGracefully`.
@@ -190,7 +197,7 @@ PWP — тактический шутер «Squad в Minecraft» (Forge 1.20.1, 
 - **M5 (часть, 19.11.2026)**: из `GameLogicEvents` вынесены без смены логики `match/MainZoneGuard.tick` (удержание в мейне до GO, выталкивание чужих) и `server/MatchShutdown` (таймер «все в лобби → halt» после победы, `stop.signal` раз в секунду; `returningToLobby()`). Тик матча `onServerTick` не разбирался — без проверки в игре риск высокий
 - GeckoLib на компиляции — 4.8.4 (как в проде) в warfare/medicine/cosmetics
 - Пустые `catch` запрещены: минимум `LOG.warn(..., e)`; в покадровом/потиковом коде — `LogOnce.warn`; разбор чисел из ввода — `Parse.intOr/floatOr` вместо `catch (NumberFormatException)`. `System.out/err` запрещены — SLF4J
-- Каналы SimpleChannel объявлять с `PROTOCOL_VERSION`, не литералом (канал pwpwarfare годами был `"1"` мимо константы). Удаление/перестановка пакета = поднять версию. Каналов два (по одному на jar): `pwpwarfare:main`=8 (8 — удалены 3 мёртвых пакета, `SetDivision`, в конце — пакет лимитов бывшего канала `pwplimit:network`, 25.11.2026), `pwp_core_client:network`=8 (8 — в конце пакеты косметики бывшего канала `pwp_cosmetics:main` и `ShopData.Buy`, 25.11.2026)
+- Каналы SimpleChannel объявлять с `PROTOCOL_VERSION`, не литералом (канал pwpwarfare годами был `"1"` мимо константы). Удаление/перестановка пакета = поднять версию. Каналов два (по одному на jar): `pwpwarfare:main`=8 (8 — удалены 3 мёртвых пакета, `SetDivision`, в конце — пакет лимитов бывшего канала `pwplimit:network`, 25.11.2026), `pwp_core_client:network`=9 (8 — в конце пакеты косметики бывшего канала `pwp_cosmetics:main` и `ShopData.Buy`, 25.11.2026; 9 — `ReportData.Send/Close`, 26.11.2026)
 - Модуль, который импортирует классы другого pwp-мода, ОБЯЗАН объявить его в `mods.toml` (`mandatory=true`, `side="BOTH"`): иначе при отсутствии мода Forge падает с `NoClassDefFoundError` вместо экрана «не хватает мода» (инцидент 15.11.2026: в инстансе не было pwp-core-client). С 25.11.2026 модов два: pwp-game (`pwpwarfare`) объявляет `pwpcore` [2.0,) BOTH AFTER; внутри jar зависимостей нет
 - Кодировка исходников — UTF-8; сохранять файлы как UTF-8 (в коде были строки, сохранённые через cp1251 — игроки видели «РЎРЅСЏС‚РёРµ»)
 

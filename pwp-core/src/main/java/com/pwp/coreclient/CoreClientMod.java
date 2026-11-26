@@ -43,6 +43,7 @@ public class CoreClientMod {
             PacketHandler.register();
             // магазин за Coins (этап 8 ROADMAP): тип данных shop
             com.pwp.coreclient.network.data.ShopData.registerData();
+            com.pwp.coreclient.network.data.ReportData.registerData();
         });
     }
 }

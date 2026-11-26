@@ -41,8 +41,14 @@ public class PacketSquadChat {
 
     // Отправляет сообщение в соответствующий канал: mode 0-ALL, 1-TEAM, 2-SQUAD
     public static void processChat(ServerPlayer sender, String message, int mode) {
+        // антиспам и фильтр мата — единая точка для всех каналов (этап 10c, pwp-core ChatGuard)
+        message = com.pwp.coreserver.community.ChatGuard.filter(sender, message);
+        if (message == null) return;
+        com.pigeostudios.pwp.warfare.server.AfkTicker.touch(sender);
         String senderName = sender.getScoreboardName();
         String senderTeam = sender.getTeam() != null ? sender.getTeam().getName() : "NEUTRAL";
+        // без команды (лобби, только что зашёл) командного канала нет — пишем в общий, а не отказываем
+        if (senderTeam.equals("NEUTRAL") && mode == 1) mode = 0;
         if (mode == 0) {
             MutableComponent formattedMessage = Component.translatable("pwpwarfare.chat.prefix.all")
                     .withStyle(ChatFormatting.LIGHT_PURPLE)

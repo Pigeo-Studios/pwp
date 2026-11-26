@@ -267,7 +267,41 @@ public class DownedHandler {
         int teamKills = WarfareData.of(attacker).getInt(WarfareKeys.TEAM_KILLS) + 1;
         WarfareData.of(attacker).putInt(WarfareKeys.TEAM_KILLS, teamKills);
 
-        if (teamKills >= WarfareConfig.TEAMKILL_SPECTATOR_THRESHOLD.get()) {
+        // лестница (этап 10a): прежние ступени + бан вместо наблюдателя (community.teamkillBanMinutes),
+        // автожалоба модераторам на ступени ограничения, каждый тимкилл — в историю наказаний
+        int banMinutes = com.pwp.api.ServerRole.settings().community().teamkillBanMinutes();
+        com.pigeostudios.pwp.warfare.match.TeamkillLadder.Step step =
+                com.pigeostudios.pwp.warfare.match.TeamkillLadder.step(
+                        teamKills, WarfareConfig.TEAMKILL_SPECTATOR_THRESHOLD.get(), banMinutes);
+        com.pwp.api.core.CoreApi.recordPunishment(
+                attacker.getStringUUID(), "TEAMKILL", "teamkill #" + teamKills + " " + step, null, null);
+        if (com.pigeostudios.pwp.warfare.match.TeamkillLadder.autoReport(teamKills)) {
+            com.pwp.coreserver.community.ReportService.auto(
+                    attacker, "teamkill", teamKills + " teamkills in this match");
+        }
+        if (step == com.pigeostudios.pwp.warfare.match.TeamkillLadder.Step.BAN) {
+            attacker.server
+                    .getPlayerList()
+                    .broadcastSystemMessage(
+                            Component.translatable(
+                                            "pwpwarfare.message.teamkill_ban_broadcast",
+                                            attacker.getScoreboardName(),
+                                            banMinutes)
+                                    .withStyle(ChatFormatting.RED),
+                            false);
+            String name = attacker.getGameProfile().getName();
+            attacker.server
+                    .getCommands()
+                    .performPrefixedCommand(
+                            attacker.server
+                                    .createCommandSourceStack()
+                                    .withPermission(4)
+                                    .withSuppressedOutput(),
+                            "pwpban " + name + " " + banMinutes + "m teamkill x" + teamKills);
+            attacker.connection.disconnect(Component.translatable("pwpwarfare.message.teamkill_ban_self", banMinutes));
+            return;
+        }
+        if (step == com.pigeostudios.pwp.warfare.match.TeamkillLadder.Step.SPECTATE) {
             attacker.setGameMode(GameType.SPECTATOR);
             WarfareData.of(attacker).putBoolean(WarfareKeys.TEAM_KILL_SPECTATOR, true);
             MutableComponent broadcast = Component.translatable(
@@ -279,7 +313,7 @@ public class DownedHandler {
             return;
         }
 
-        if (teamKills >= 5) {
+        if (step == com.pigeostudios.pwp.warfare.match.TeamkillLadder.Step.RESTRICT) {
             sendTeamkillWarning(attacker);
             long restrictionUntil = GameClock.worldTicks(attacker.level()) + 20L * 60L * 5L;
             WarfareData.of(attacker).putLong(WarfareKeys.BASE_RESTRICTED_UNTIL, restrictionUntil);

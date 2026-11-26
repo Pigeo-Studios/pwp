@@ -351,6 +351,44 @@ public final class CoreApi {
         return post("/api/v1/shop/buy", map("uuid", uuid, "skinId", skinId));
     }
 
+    // ====== ПУБЛИЧНЫЙ СЕРВЕР — этап 10 ROADMAP (жалобы, наказания, Discord) ======
+
+    /** Жалоба игрока (только сервер): {@code {data: {id}}}. */
+    public static CompletableFuture<JsonObject> sendReport(JsonObject report) {
+        return post("/api/v1/reports", report);
+    }
+
+    /** Жалобы для F6/ботов: status open|closed|all, после id {@code after}. */
+    public static CompletableFuture<JsonObject> listReports(String status, long after, int limit) {
+        return get("/api/v1/admin/reports?status=" + enc(status) + "&after=" + after + "&limit=" + limit);
+    }
+
+    public static CompletableFuture<JsonObject> closeReport(long id, String by) {
+        return post("/api/v1/admin/reports/" + id + "/close", map("by", by));
+    }
+
+    /** Запись в историю наказаний: type KICK|WARN|MUTE|TEAMKILL|AFK; minutes может быть null. */
+    public static CompletableFuture<JsonObject> recordPunishment(
+            String uuid, String type, String reason, String adminUuid, Integer minutes) {
+        JsonObject o = new JsonObject();
+        o.addProperty("uuid", uuid);
+        o.addProperty("type", type);
+        o.addProperty("reason", reason == null ? "" : reason);
+        if (adminUuid != null) o.addProperty("adminUuid", adminUuid);
+        if (minutes != null) o.addProperty("minutes", minutes);
+        return post("/api/v1/punishments", o);
+    }
+
+    /** {@code {data: [{type, reason, minutes, admin, createdAt, expiresAt}]}} — новые сверху. */
+    public static CompletableFuture<JsonObject> getPunishments(String uuid) {
+        return get("/api/v1/admin/player/" + enc(uuid) + "/punishments");
+    }
+
+    /** Код привязки Discord: {@code {data: {code, ttlSeconds}}}. */
+    public static CompletableFuture<JsonObject> discordCode(String uuid) {
+        return post("/api/v1/discord/code", map("uuid", uuid));
+    }
+
     // ====== ДИВИЗИИ (составы) ФРАКЦИЙ — этап 6 ROADMAP ======
 
     /** {@code {data: [{faction, divisionId, displayName, modes, mapSizes, vehicles: [...]}]}}. */

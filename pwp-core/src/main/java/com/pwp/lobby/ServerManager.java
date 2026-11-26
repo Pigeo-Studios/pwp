@@ -162,7 +162,12 @@ public class ServerManager {
                 StringBuilder props = new StringBuilder();
                 props.append("server-port=").append(port).append("\n");
                 props.append("level-name=").append(mapName).append("\n");
-                props.append("max-players=").append(maxPlayers).append("\n");
+                // резервные слоты (этап 10b): сверх публичного лимита — для модераторов и выше;
+                // сколько из них публичных, решают очередь лобби и ReservedSlots матч-сервера
+                props.append("max-players=")
+                        .append(maxPlayers
+                                + com.pwp.api.ServerRole.settings().community().reservedSlots())
+                        .append("\n");
                 props.append("online-mode=true\n");
                 props.append("level-type=minecraft:superflat\n");
                 props.append("generator-settings=").append(voidGen).append("\n");

@@ -65,3 +65,6 @@ server-template/run.sh
 server-template/user_jvm_args.txt
 server-template/forge-installer.jar.log
 server-template/eula.txt
+
+# состояние ленты жалоб ботов (этап 10)
+bots/reports_state.json

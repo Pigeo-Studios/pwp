@@ -3,6 +3,7 @@ from pathlib import Path
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 import config
+import reports_feed
 from auth_handlers import handle_callback, handle_message, handle_command_start, handle_command_myid, handle_command_login, handle_command_logout, handle_command_register
 from auth_handlers.utils import launcher_sign
 from auth_handlers.screens.notify import subscribers as notify_subscribers
@@ -111,11 +112,35 @@ async def start(shared_state=None):
     print(f"[Telegram] @{me.username} (Pigeo Studios) ready")
 
     try:
-        await asyncio.gather(process_commands(), notify_loop())
+        await asyncio.gather(process_commands(), notify_loop(), reports_loop())
     finally:
         await app.updater.stop()
         await app.stop()
         await app.shutdown()
+
+async def _api_get(path):
+    try:
+        headers = {"Authorization": f"Bearer {config.CORE_API_KEY}", "X-PWP-Sign": launcher_sign(path.split("?")[0])}
+        async with httpx.AsyncClient(timeout=5) as h:
+            r = await h.get(f"{config.CORE_API_URL}{path}", headers=headers)
+            return r.json()
+    except Exception as e:
+        print(f"[TG] GET {path}: {e}")
+        return None
+
+async def reports_loop():
+    """Новые жалобы игроков → чат модераторов (config.TG_REPORTS_CHAT_ID; 0 — выключено). Этап 10a."""
+    chat_id = int(getattr(config, "TG_REPORTS_CHAT_ID", 0) or 0)
+    if not chat_id:
+        print("[TG] TG_REPORTS_CHAT_ID не задан — жалобы в Telegram не пересылаются")
+        return
+    while True:
+        try:
+            for r in await reports_feed.poll_new("telegram", _api_get):
+                await app.bot.send_message(chat_id=chat_id, text=reports_feed.format_text(r, html=True), parse_mode="HTML")
+        except Exception as e:
+            print(f"[TG] reports loop error: {e}")
+        await asyncio.sleep(30)
 
 async def notify_loop():
     """Рассылка подписчикам уведомлений о старте игр (флаги шедулера)."""

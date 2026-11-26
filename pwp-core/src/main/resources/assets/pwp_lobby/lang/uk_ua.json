@@ -130,5 +130,10 @@
     "pwp_lobby.lobby.max_players": "Макс. %d гравців",
     "pwp_lobby.lobby.no_preview": "Немає прев'ю",
     "pwp_lobby.lobby.join_match": "Приєднатися",
-    "pwp_lobby.lobby.players_online": "%d онлайн"
+    "pwp_lobby.lobby.players_online": "%d онлайн",
+    "pwp_lobby.msg.queue_admitted": "Місце звільнилося — переносимо в матч",
+    "pwp_lobby.msg.seeding": "У лобі %s гравців (менше %s) — поки лише малі режими",
+    "pwp_lobby.msg.queue_expired": "Очікування 15 хвилин — ви вийшли з черги. Станьте знову з меню лобі",
+    "pwp_lobby.msg.queue_position": "Черга в матч: %s з %s",
+    "pwp_lobby.msg.queue_joined": "Матч заповнений (%2$s/%3$s) — ви %1$s-й у черзі, перенесемо автоматично"
 }

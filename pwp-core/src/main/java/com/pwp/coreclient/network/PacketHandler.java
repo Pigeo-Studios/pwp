@@ -16,7 +16,7 @@ public class PacketHandler {
     // 3 — этап 2: сеть v2 (DataRequest/DataResponse, AdminAction.*), удалены мёртвые Vote*/JoinMatchPacket
     // 4: LobbyStatePacket.minPlayers (этап 4); 5: LobbyStatePacket.prepState/prepPercent/prepError (этап 5)
     // 8 (25.11.2026): слияние в pwp-core — пакеты косметики (бывший канал pwp_cosmetics:main) в конце
-    private static final String PROTOCOL_VERSION = "8";
+    private static final String PROTOCOL_VERSION = "9";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(CoreClientMod.MODID, "network"),
             () -> PROTOCOL_VERSION,
@@ -102,6 +102,17 @@ public class PacketHandler {
                         com.pwp.coreclient.network.data.ShopData.Buy.class,
                         com.pwp.coreclient.network.data.ShopData.Buy::encode,
                         com.pwp.coreclient.network.data.ShopData.Buy::decode)
+                .nextId();
+        // 9: жалобы игроков (этап 10a)
+        id = new Net.Registrar(INSTANCE, id)
+                .c2s(
+                        com.pwp.coreclient.network.data.ReportData.Send.class,
+                        com.pwp.coreclient.network.data.ReportData.Send::encode,
+                        com.pwp.coreclient.network.data.ReportData.Send::decode)
+                .c2s(
+                        com.pwp.coreclient.network.data.ReportData.Close.class,
+                        com.pwp.coreclient.network.data.ReportData.Close::encode,
+                        com.pwp.coreclient.network.data.ReportData.Close::decode)
                 .nextId();
     }
 }

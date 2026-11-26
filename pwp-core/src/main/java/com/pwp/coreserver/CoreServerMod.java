@@ -11,7 +11,10 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Серверная часть pwp-core: ключ CoreApi, баны (вызывается из {@link com.pwp.api.PwpCoreMod}). */
+/**
+ * Серверная часть pwp-core: ключ CoreApi, баны, публичный сервер — жалобы, фильтр чата, админ-чат, привязка
+ * Discord (пакет {@code community}; вызывается из {@link com.pwp.api.PwpCoreMod}).
+ */
 public class CoreServerMod {
     public static final String MODID = "pwpcore";
     public static final Logger log = LoggerFactory.getLogger(CoreServerMod.class);
@@ -24,6 +27,8 @@ public class CoreServerMod {
         if (FMLEnvironment.dist.isDedicatedServer()) {
             FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
             MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+            MinecraftForge.EVENT_BUS.addListener(this::onLogout);
+            com.pwp.coreserver.community.ReservedSlots.init();
             new BanEnforcer();
             log.info("PWP Core Server initialized");
         } else {
@@ -45,7 +50,15 @@ public class CoreServerMod {
     private void onRegisterCommands(RegisterCommandsEvent event) {
         BanCommand.register(event.getDispatcher());
         UnbanCommand.register(event.getDispatcher());
-        log.info("Ban/Unban commands registered");
+        com.pwp.coreserver.community.CommunityCommands.register(event.getDispatcher());
+        log.info("Ban/Unban + report/a/link/pwpchat commands registered");
+    }
+
+    private void onLogout(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
+            com.pwp.coreserver.community.ChatGuard.forget(p);
+            com.pwp.coreserver.community.ReportService.forget(p);
+        }
     }
 
     private static String loadApiKey() {

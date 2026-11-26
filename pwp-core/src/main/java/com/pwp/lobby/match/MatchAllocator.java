@@ -58,6 +58,109 @@ public class MatchAllocator {
 
     public static void playerLeft(String uuid) {
         lobbyPlayers.remove(uuid);
+        QUEUES.values().forEach(q -> q.leave(uuid));
+    }
+
+    // ====== Очередь в полный матч и резервные слоты (этап 10b) ======
+
+    /** Очередь на матч (serverId → очередь). Приоритет — модераторы и выше (резервные слоты). */
+    private static final Map<Integer, com.pwp.api.lobby.JoinQueue> QUEUES = new ConcurrentHashMap<>();
+
+    private static final long QUEUE_MAX_WAIT_MS = 15 * 60_000L;
+    /** Онлайн матча старше — не знаем реальной заполненности (core молчит): пускаем без очереди. */
+    private static final long ONLINE_STALE_MS = 60_000L;
+
+    private static int queueTicks;
+
+    static int reservedSlots() {
+        return com.pwp.api.ServerRole.settings().community().reservedSlots();
+    }
+
+    private static boolean staff(ServerPlayer p) {
+        return com.pwp.api.security.PwpPermissions.has(p, com.pwp.api.security.AccessLevel.MODERATOR);
+    }
+
+    /** Свободные общие слоты матча; Integer.MAX_VALUE — лимит неизвестен (нет maxPlayers или онлайн устарел). */
+    private static int publicFree(MatchInfo mi) {
+        if (mi.maxPlayers <= 0 || GameClock.realMillis() - mi.onlineUpdatedAt > ONLINE_STALE_MS) {
+            return Integer.MAX_VALUE;
+        }
+        return Math.max(0, mi.maxPlayers - mi.playerCount);
+    }
+
+    private static int reservedFree(MatchInfo mi) {
+        if (publicFree(mi) == Integer.MAX_VALUE) return Integer.MAX_VALUE;
+        return Math.max(0, reservedSlots() - Math.max(0, mi.playerCount - mi.maxPlayers));
+    }
+
+    /** Подключить сразу или поставить в очередь (с сообщением о позиции). */
+    private static void connectOrQueue(ServerPlayer player, MatchInfo mi) {
+        com.pwp.api.lobby.JoinQueue q = QUEUES.computeIfAbsent(mi.serverId, k -> new com.pwp.api.lobby.JoinQueue());
+        boolean prio = staff(player);
+        boolean free = prio ? publicFree(mi) > 0 || reservedFree(mi) > 0 : publicFree(mi) > 0;
+        // перед ним никого (или он уже первый) — пускаем
+        boolean first = q.size() == 0 || q.position(player.getStringUUID()) == 1;
+        if (free && first) {
+            q.leave(player.getStringUUID());
+            mi.playerCount++; // до следующего heartbeat — чтобы не пустить лишних
+            connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
+            return;
+        }
+        int pos = q.join(player.getStringUUID(), prio, GameClock.realMillis());
+        player.sendSystemMessage(
+                Component.translatable("pwp_lobby.msg.queue_joined", pos, mi.playerCount, mi.maxPlayers)
+                        .withStyle(ChatFormatting.YELLOW),
+                false);
+    }
+
+    /** Раз в секунду: пустить из очередей, сколько есть мест; раз в 10 с — напомнить позицию. */
+    private static void tickQueues() {
+        if (++queueTicks % 20 != 0) return;
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        boolean remind = queueTicks % 200 == 0;
+        for (Map.Entry<Integer, com.pwp.api.lobby.JoinQueue> e : QUEUES.entrySet()) {
+            MatchInfo mi = activeMatches.get(e.getKey());
+            com.pwp.api.lobby.JoinQueue q = e.getValue();
+            if (mi == null || mi.phase != MatchPhase.PLAYING) {
+                QUEUES.remove(e.getKey());
+                continue;
+            }
+            for (String gone : q.expire(GameClock.realMillis(), QUEUE_MAX_WAIT_MS)) {
+                ServerPlayer p = server.getPlayerList().getPlayer(UUID.fromString(gone));
+                if (p != null) p.sendSystemMessage(Component.translatable("pwp_lobby.msg.queue_expired"), false);
+            }
+            int pub = Math.min(publicFree(mi), 64);
+            int res = Math.min(reservedFree(mi), 64);
+            for (String id : q.admit(pub, res)) {
+                ServerPlayer p = server.getPlayerList().getPlayer(UUID.fromString(id));
+                if (p == null) continue;
+                mi.playerCount++;
+                p.sendSystemMessage(
+                        Component.translatable("pwp_lobby.msg.queue_admitted").withStyle(ChatFormatting.GREEN), false);
+                connectPlayerToMatch(p, mi, TransferHosts.resolveTransferHost(p));
+            }
+            if (remind) {
+                for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+                    int pos = q.position(p.getStringUUID());
+                    if (pos > 0) {
+                        p.displayClientMessage(
+                                Component.translatable("pwp_lobby.msg.queue_position", pos, q.size())
+                                        .withStyle(ChatFormatting.YELLOW),
+                                true);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Позиция игрока в очереди любого матча (0 — не в очереди). */
+    public static int queuePosition(String uuid) {
+        for (com.pwp.api.lobby.JoinQueue q : QUEUES.values()) {
+            int pos = q.position(uuid);
+            if (pos > 0) return pos;
+        }
+        return 0;
     }
 
     /** Матч запущен/идёт/останавливается (предпрогрев PREPARING сюда НЕ входит — голосования продолжаются). */
@@ -374,7 +477,7 @@ public class MatchAllocator {
                     Component.translatable("pwp_lobby.msg.no_match_to_join").withStyle(ChatFormatting.RED), false);
             return;
         }
-        connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
+        connectOrQueue(player, mi);
     }
 
     public static void joinMatchById(int serverId, ServerPlayer player) {
@@ -384,7 +487,7 @@ public class MatchAllocator {
                     Component.translatable("pwp_lobby.msg.match_unavailable").withStyle(ChatFormatting.RED), false);
             return;
         }
-        connectPlayerToMatch(player, mi, TransferHosts.resolveTransferHost(player));
+        connectOrQueue(player, mi);
     }
 
     private static void connectPlayerToMatch(ServerPlayer player, MatchInfo mi, String host) {
@@ -400,6 +503,7 @@ public class MatchAllocator {
     public static void tick() {
         ServerManager.tick();
         stepCycle();
+        tickQueues();
         if (++statusPollTicks >= 200) {
             statusPollTicks = 0;
             updateMatchOnlineFromCore();
@@ -469,6 +573,7 @@ public class MatchAllocator {
                 for (MatchInfo mi : activeMatches.values()) {
                     if (mi.port != port || mi == cycleMatch) continue;
                     mi.playerCount = online;
+                    mi.onlineUpdatedAt = GameClock.realMillis();
                     JsonObject m = s.getAsJsonObject("match");
                     if (m.has("blueScore")) mi.blueTickets = m.get("blueScore").getAsInt();
                     if (m.has("redScore")) mi.redTickets = m.get("redScore").getAsInt();
@@ -542,6 +647,9 @@ public class MatchAllocator {
         public int port;
         public int playerCount;
         public int maxPlayers;
+        /** Когда онлайн последний раз пришёл из heartbeat (0 — ещё не приходил): для очереди (этап 10b). */
+        public long onlineUpdatedAt;
+
         public String blueFaction;
         public String redFaction;
         public int blueTickets;

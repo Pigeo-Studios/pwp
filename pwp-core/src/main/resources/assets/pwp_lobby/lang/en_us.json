@@ -130,5 +130,10 @@
     "pwp_lobby.msg.match_stopping": "Stopping match %s...",
     "pwp_lobby.msg.match_ended": "Match %s is over. Head back to the lobby!",
     "pwp_lobby.msg.no_match_to_join": "No active match to join",
-    "pwp_lobby.msg.match_unavailable": "The match is not available to join"
+    "pwp_lobby.msg.match_unavailable": "The match is not available to join",
+    "pwp_lobby.msg.queue_admitted": "A slot is free — moving you to the match",
+    "pwp_lobby.msg.seeding": "Only %s players in the lobby (fewer than %s) — small modes only until more join",
+    "pwp_lobby.msg.queue_expired": "You waited 15 minutes — left the queue. Join again from the lobby menu",
+    "pwp_lobby.msg.queue_position": "Queue to the match: %s of %s",
+    "pwp_lobby.msg.queue_joined": "The match is full (%2$s/%3$s) — you are #%1$s in the queue, we will move you automatically"
 }

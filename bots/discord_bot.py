@@ -4,6 +4,7 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 import config
+import reports_feed
 
 BASE = Path(__file__).parent.resolve()
 CMDS = BASE / config.COMMANDS_DIR
@@ -520,7 +521,51 @@ async def _news_poll_loop():
 
 
 
+# ── Публичный сервер (этап 10): жалобы модераторам и привязка аккаунта ──
+
+@bot.tree.command(name="link", description="Привязать аккаунт PWP: код из игры (Esc → Сообщество → Привязать Discord)")
+async def link(interaction: discord.Interaction, code: str):
+    code = code.strip()
+    if not code.isdigit() or len(code) != 6:
+        await interaction.response.send_message("Код — 6 цифр из игры (Esc → Сообщество → Привязать Discord).", ephemeral=True)
+        return
+    r = await api_post("/api/v1/discord/link", {"code": code, "discordId": str(interaction.user.id)})
+    if not r or not r.get("success"):
+        await interaction.response.send_message("Код неверный или истёк (живёт 10 минут). Запросите новый в игре.", ephemeral=True)
+        return
+    nick = (r.get("data") or {}).get("nickname") or "?"
+    role_id = int(getattr(config, "DISCORD_LINKED_ROLE_ID", 0) or 0)
+    if role_id and interaction.guild:
+        role = interaction.guild.get_role(role_id)
+        member = interaction.guild.get_member(interaction.user.id)
+        if role and member:
+            try:
+                await member.add_roles(role, reason=f"PWP link: {nick}")
+            except Exception as e:
+                print(f"[DS] link role error: {e}")
+    await interaction.response.send_message(f"Готово: Discord привязан к игроку **{nick}**.", ephemeral=True)
+
+
+async def reports_loop():
+    """Новые жалобы игроков → канал модераторов (config.DISCORD_REPORTS_CHANNEL_ID; 0 — выключено)."""
+    await bot.wait_until_ready()
+    channel_id = int(getattr(config, "DISCORD_REPORTS_CHANNEL_ID", 0) or 0)
+    if not channel_id:
+        print("[DS] DISCORD_REPORTS_CHANNEL_ID не задан — жалобы в Discord не пересылаются")
+        return
+    while not bot.is_closed():
+        try:
+            ch = bot.get_channel(channel_id)
+            if ch:
+                for r in await reports_feed.poll_new("discord", api_get):
+                    await _send_retry(ch, reports_feed.format_text(r))
+        except Exception as e:
+            print(f"[DS] reports loop error: {e}")
+        await asyncio.sleep(30)
+
+
 async def start(shared_state):
+    asyncio.create_task(reports_loop())
     asyncio.create_task(process_commands())
     asyncio.create_task(update_dashboard_loop())
     asyncio.create_task(update_match_loop())

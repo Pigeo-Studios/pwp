@@ -130,5 +130,10 @@
     "pwp_lobby.msg.match_stopping": "Остановка матча %s...",
     "pwp_lobby.msg.match_ended": "Матч %s завершён. Возвращайтесь в лобби!",
     "pwp_lobby.msg.no_match_to_join": "Нет активного матча для подключения",
-    "pwp_lobby.msg.match_unavailable": "Матч недоступен для подключения"
+    "pwp_lobby.msg.match_unavailable": "Матч недоступен для подключения",
+    "pwp_lobby.msg.queue_admitted": "Место освободилось — переносим в матч",
+    "pwp_lobby.msg.seeding": "В лобби %s игроков (меньше %s) — пока только малые режимы",
+    "pwp_lobby.msg.queue_expired": "Ожидание 15 минут — вы вышли из очереди. Встаньте снова из меню лобби",
+    "pwp_lobby.msg.queue_position": "Очередь в матч: %s из %s",
+    "pwp_lobby.msg.queue_joined": "Матч заполнен (%2$s/%3$s) — вы %1$s-й в очереди, перенесём автоматически"
 }

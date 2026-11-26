@@ -59,6 +59,15 @@ public class LobbyMod {
     /** Режимы голосования для карты (вызывается перед голосованием за режим). */
     private static void setModesFor(MapConfig map) {
         var modes = com.pwp.api.match.GameModes.votable(map == null || map.modes == null ? null : map.modes.keySet());
+        // сидинг (этап 10b): мало игроков в лобби — только малые режимы, если карта их объявила
+        var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+        int online = server == null ? 0 : server.getPlayerCount();
+        int below = com.pwp.api.ServerRole.settings().community().seedingBelow();
+        var seeded = com.pwp.api.match.Seeding.modes(modes, online, below);
+        if (seeded != modes) {
+            broadcastPwp(ChatFormatting.AQUA, "pwp_lobby.msg.seeding", online, below);
+            modes = seeded;
+        }
         MODE_NAMES = modes.stream().map(com.pwp.api.match.GameModes.Mode::id).toArray(String[]::new);
         MODE_DISPLAY_NAMES = modes.stream()
                 .map(com.pwp.api.match.GameModes.Mode::displayName)
