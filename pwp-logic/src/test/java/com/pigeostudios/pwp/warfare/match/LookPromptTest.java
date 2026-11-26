@@ -35,7 +35,7 @@ class LookPromptTest {
     @Test
     void vehicleAndAmmoHaveSecondAction() {
         var v = LookPrompt.of(Target.OWN_VEHICLE, EMPTY);
-        assertEquals(Key.VEHICLE_MENU, v.altKey());
+        assertEquals(Key.VEHICLE_MENU, v.alt2Key());
         assertEquals(Key.SHIFT_USE, LookPrompt.of(Target.AMMO_BAG, EMPTY).altKey());
     }
 
@@ -53,5 +53,30 @@ class LookPromptTest {
         assertNotNull(notMedic);
         assertEquals(Key.TACTICAL, notMedic.altKey());
         assertNull(LookPrompt.of(Target.NONE, EMPTY));
+    }
+
+    @Test
+    void centralizedVehicleHints() {
+        var own = LookPrompt.of(Target.OWN_VEHICLE, EMPTY);
+        assertEquals("enter", own.action());
+        assertEquals(Key.SHIFT_USE, own.altKey()); // прежняя подсказка «Шифт+ПКМ — пополнить БК»
+        assertEquals(Key.VEHICLE_MENU, own.alt2Key());
+        var noKit = LookPrompt.of(Target.OWN_VEHICLE, new Context(false, true, false, false, true));
+        assertEquals("need_crew_kit", noKit.action());
+        assertNull(noKit.key());
+        org.junit.jupiter.api.Assertions.assertTrue(noKit.warn());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                LookPrompt.of(Target.ENEMY_VEHICLE, EMPTY).warn());
+    }
+
+    @Test
+    void materialsShownOnFobAndCrateOnly() {
+        org.junit.jupiter.api.Assertions.assertTrue(
+                LookPrompt.of(Target.OWN_FOB, SHOVEL).materials());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                LookPrompt.of(Target.SUPPLY_CRATE, EMPTY).materials());
+        org.junit.jupiter.api.Assertions.assertFalse(
+                LookPrompt.of(Target.AMMO_BAG, EMPTY).materials());
+        assertEquals("main_supply", LookPrompt.of(Target.MAIN_SUPPLY, EMPTY).action());
     }
 }

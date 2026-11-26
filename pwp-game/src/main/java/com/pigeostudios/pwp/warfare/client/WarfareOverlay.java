@@ -1,8 +1,6 @@
 package com.pigeostudios.pwp.warfare.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 import com.pigeostudios.pwp.warfare.block.AGSConstructionBlockEntity;
 import com.pigeostudios.pwp.warfare.block.BarbedWireBlock;
 import com.pigeostudios.pwp.warfare.block.BarbedWireBlockEntity;
@@ -28,12 +26,8 @@ import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
 import com.pigeostudios.pwp.warfare.entity.AGS30Entity;
 import com.pigeostudios.pwp.warfare.entity.M2BrowningEntity;
-import com.pigeostudios.pwp.warfare.entity.SupplyCrateEntity;
 import com.pigeostudios.pwp.warfare.item.ModItems;
-import com.pigeostudios.pwp.warfare.network.PacketVehicleStatus;
-import com.pigeostudios.pwp.warfare.world.WarfareWorldData;
 import com.pwp.coreclient.gui.theme.PWPTheme;
-import com.pwp.coreclient.ui.UIDamp;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
@@ -42,12 +36,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult.Type;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
@@ -146,12 +138,10 @@ public class WarfareOverlay {
         // этап 4 (gameplay-setup): «ПОДГОТОВКА · М:СС» + плашка канала рации
         ClientStaging.renderHud(gui, width);
 
-        renderHubMaterials(gui, mc, width, height);
-        renderVehicleHud(gui, mc, width, height);
         renderVehicleAmmo(gui, mc, width, height);
         renderSupplyTruckInfo(gui, mc, width, height);
         renderPlacementHints(gui, mc, width, height);
-        // после look-at/Build Mode: они резервируют низ-центр, стройка встаёт над ними
+        // подсказки при наведении — LookPromptHud (единая плашка); Build Mode резервирует низ-центр, стройка — над ним
         renderBuildProgress(gui);
     }
 
@@ -194,163 +184,6 @@ public class WarfareOverlay {
             gui.blit(ICON_CONFIRM, xStart + uiWidth - 20, row2Y, 0.0F, 0.0F, 12, 12, 12, 12);
             RenderSystem.disableBlend();
         }
-    }
-
-    /** Верх ромба команды над текстом «Материалы» (центр textY-12, повёрнутый 10x10 + рамка). */
-    private static final int LOOK_AT_DIAMOND_ABOVE = 19;
-
-    private static void renderHubMaterials(GuiGraphics gui, Minecraft mc, int width, int height) {
-        if (mc.hitResult != null) {
-            int mats = -1;
-            String team = "NEUTRAL";
-            if (mc.hitResult.getType() == Type.BLOCK) {
-                BlockHitResult hit = (BlockHitResult) mc.hitResult;
-                BlockPos pos = hit.getBlockPos();
-                BlockState state = mc.level.getBlockState(pos);
-                if (mc.level.getBlockEntity(pos) instanceof HubBlockEntity hub) {
-                    if (state.hasProperty(HubBlock.CONSTRUCTED) && !(Boolean) state.getValue(HubBlock.CONSTRUCTED)) {
-                        return;
-                    }
-
-                    mats = hub.getMaterials();
-                    team = hub.getTeam();
-                }
-            } else if (mc.hitResult.getType() == Type.ENTITY) {
-                EntityHitResult hit = (EntityHitResult) mc.hitResult;
-                if (hit.getEntity() instanceof SupplyCrateEntity crate) {
-                    mats = crate.getMaterials();
-                    team = crate.getTeamOwner();
-                }
-            }
-
-            if (mats != -1) {
-                int teamColor = -1;
-                if (team.equalsIgnoreCase("BLUE")) {
-                    teamColor = -11184641;
-                } else if (team.equalsIgnoreCase("RED")) {
-                    teamColor = -43691;
-                }
-
-                String text = I18n.get("gui.pwpwarfare.hud.materials", mats);
-                int textWidth = PWPTheme.Fonts.display().width(text);
-                int textX = (width - textWidth) / 2;
-                int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
-                WHud.contextReserve(textY - LOOK_AT_DIAMOND_ABOVE); // ромб выше текста
-                PoseStack pose = gui.pose();
-                pose.pushPose();
-                pose.translate(width / 2.0F, textY - 12, 0.0F);
-                pose.mulPose(Axis.ZP.rotationDegrees(45.0F));
-                gui.fill(-5, -5, 5, 5, -16777216);
-                gui.fill(-4, -4, 4, 4, teamColor);
-                pose.popPose();
-                drawOutlinedString(gui, mc, text, textX, textY, -22016);
-            }
-        }
-    }
-
-    private static float vehicleHintAlpha = 0.0F;
-    private static final UIDamp.Frame VEHICLE_HINT_FRAME = new UIDamp.Frame();
-
-    // Единый HUD-блок техники: подсказка при наведении прицела (спецкит/шифт+ПКМ)
-    // и статус-бар при нахождении в технике. Позиция — ярус look-at подсказок
-    // (height - 112, выше ленты h-76/h-94 и фидбек-блока h-58, коллизий нет),
-    // появляется и исчезает плавно.
-    private static void renderVehicleHud(GuiGraphics gui, Minecraft mc, int width, int height) {
-        String text = null;
-        int color = -1;
-        float target = 0.0F;
-        if (mc.player.isSpectator() || ClientPlacementHandler.isPlacing()) {
-            target = 0.0F;
-        } else if (mc.player.getVehicle() != null) {
-            ClientData.VehicleStatus st =
-                    ClientData.vehicleStatuses.get(mc.player.getVehicle().getId());
-            if (st != null && System.currentTimeMillis() - st.receivedAt < 5000L) {
-                text = vehicleStatusText(st);
-                if (text != null) {
-                    color = vehicleStatusColor(st.kind);
-                    target = 1.0F;
-                }
-            }
-        } else if (mc.hitResult instanceof BlockHitResult bh
-                && mc.hitResult.getType() == Type.BLOCK
-                && mc.level.getBlockState(bh.getBlockPos()).getBlock() instanceof MainSupplyBlock) {
-            // этап 4 (хвост): что делает «Главный склад» — техника рядом пополняется, игроки лечатся
-            text = Component.translatable("pwpwarfare.hint.main_supply").getString();
-            color = -1;
-            target = 1.0F;
-        } else if (mc.hitResult != null && mc.hitResult.getType() == Type.ENTITY) {
-            Entity targetEntity = ((EntityHitResult) mc.hitResult).getEntity();
-            WarfareWorldData.VehicleRecord record = null;
-
-            for (WarfareWorldData.VehicleRecord r : ClientData.clientVehicles) {
-                if (r.uuid.equals(targetEntity.getUUID())) {
-                    record = r;
-                    break;
-                }
-            }
-
-            if (record != null && isFriendlyVehicle(record, mc.player)) {
-                if (com.pigeostudios.pwp.warfare.vehicles.CrewRules.isSpecialist(record.type)
-                        && !com.pigeostudios.pwp.warfare.vehicles.CrewRules.hasCorrectKit(
-                                record.type, ClientData.myCurrentKit)) {
-                    text = I18n.get("gui.pwpwarfare.hud.need_crew_kit");
-                    color = -43691;
-                } else {
-                    text = I18n.get("gui.pwpwarfare.hud.rearm_hint");
-                    color = -1;
-                }
-                target = 1.0F;
-            }
-        }
-
-        // 0.2/кадр при 60 FPS, в реальном времени
-        vehicleHintAlpha = UIDamp.approach(vehicleHintAlpha, target, 0.2F, VEHICLE_HINT_FRAME.dtMs());
-        if (vehicleHintAlpha <= 0.02F || text == null) return;
-
-        int alpha = Math.min(255, (int) (vehicleHintAlpha * 255.0F));
-        int textWidth = PWPTheme.Fonts.display().width(text);
-        int textX = (width - textWidth) / 2;
-        int textY = height - 112; // ярус look-at подсказок (лента h-76/h-94 и фидбек h-58 ниже)
-        WHud.contextReserve(textY - 3);
-        gui.fill(textX - 8, textY - 3, textX + textWidth + 8, textY + 12, (alpha / 4) << 24);
-        drawVehicleHintText(gui, mc, text, textX, textY, color, alpha);
-    }
-
-    // Текст с полной прозрачностью (и обводка, и сам текст) для плавного фейда
-    private static void drawVehicleHintText(
-            GuiGraphics gui, Minecraft mc, String text, int x, int y, int color, int alpha) {
-        int outline = alpha << 24;
-        int textColor = (alpha << 24) | (color & 0xFFFFFF);
-        gui.drawString(PWPTheme.Fonts.display(), text, x - 1, y, outline, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x + 1, y, outline, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y - 1, outline, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y + 1, outline, false);
-        gui.drawString(PWPTheme.Fonts.display(), text, x, y, textColor, false);
-    }
-
-    private static String vehicleStatusText(ClientData.VehicleStatus st) {
-        int left = Math.max(0, st.secondsLeft - (int) ((System.currentTimeMillis() - st.receivedAt) / 1000L));
-        return switch (st.kind) {
-            case PacketVehicleStatus.KIND_REARMING -> I18n.get("gui.pwpwarfare.hud.veh.rearming", left);
-            case PacketVehicleStatus.KIND_LOADING_CRATE -> I18n.get("gui.pwpwarfare.hud.veh.loading_crate", left);
-            case PacketVehicleStatus.KIND_REARM_COOLDOWN -> I18n.get("gui.pwpwarfare.hud.veh.rearm_cooldown", left);
-            case PacketVehicleStatus.KIND_CRATE_RESUPPLY -> I18n.get("gui.pwpwarfare.hud.veh.crate_resupply", left);
-            default -> null;
-        };
-    }
-
-    private static int vehicleStatusColor(int kind) {
-        return switch (kind) {
-            case PacketVehicleStatus.KIND_LOADING_CRATE -> 16776917;
-            case PacketVehicleStatus.KIND_REARM_COOLDOWN -> 16733525;
-            default -> 5636095;
-        };
-    }
-
-    private static boolean isFriendlyVehicle(WarfareWorldData.VehicleRecord record, Player player) {
-        if (record.team == null || record.team.isEmpty() || record.team.equalsIgnoreCase("NEUTRAL")) return true;
-        String pTeam = player.getTeam() != null ? player.getTeam().getName() : "";
-        return record.team.equalsIgnoreCase(pTeam);
     }
 
     // ------------------------------------------------------------ прогресс стройки (контекстный ярус)

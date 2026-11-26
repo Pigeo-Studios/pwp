@@ -1332,7 +1332,6 @@
     "key.pwpwarfare.help": "Шпаргалка клавіш (тримати)",
     "gui.pwpwarfare.prompt.key.hold": "тримати %s",
     "gui.pwpwarfare.prompt.key.combo": "%s + %s",
-    "gui.pwpwarfare.prompt.with_alt": "%s · %s — %s",
     "gui.pwpwarfare.prompt.enter": "Сісти",
     "gui.pwpwarfare.prompt.vehicle_actions": "дії",
     "gui.pwpwarfare.prompt.dismantle": "Розібрати",
@@ -1372,5 +1371,11 @@
     "gui.pwpwarfare.keyhelp.look": "біля прицілу з'явиться підказка",
     "gui.pwpwarfare.keyhelp.key.medkit": "Медик: тримати ПКМ",
     "gui.pwpwarfare.keyhelp.revive": "Підняти пораненого союзника",
-    "gui.pwpwarfare.keyhelp.ready": "Готовий / голос «так»"
+    "gui.pwpwarfare.keyhelp.ready": "Готовий / голос «так»",
+    "gui.pwpwarfare.prompt.alt": " · %s — %s",
+    "gui.pwpwarfare.prompt.materials": " · Матеріали: %s",
+    "gui.pwpwarfare.prompt.rearm": "поповнити БК",
+    "gui.pwpwarfare.prompt.need_crew_kit": "Потрібен кіт Механік/Пілот",
+    "gui.pwpwarfare.prompt.enemy_vehicle": "Ворожа техніка",
+    "gui.pwpwarfare.prompt.main_supply": "Головний склад — техніка поруч поповнюється, гравці лікуються"
 }

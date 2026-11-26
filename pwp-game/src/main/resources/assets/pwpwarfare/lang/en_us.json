@@ -1332,7 +1332,6 @@
     "key.pwpwarfare.help": "Key cheat sheet (hold)",
     "gui.pwpwarfare.prompt.key.hold": "hold %s",
     "gui.pwpwarfare.prompt.key.combo": "%s + %s",
-    "gui.pwpwarfare.prompt.with_alt": "%s · %s — %s",
     "gui.pwpwarfare.prompt.enter": "Get in",
     "gui.pwpwarfare.prompt.vehicle_actions": "actions",
     "gui.pwpwarfare.prompt.dismantle": "Dismantle",
@@ -1372,5 +1371,11 @@
     "gui.pwpwarfare.keyhelp.look": "a hint appears under the crosshair",
     "gui.pwpwarfare.keyhelp.key.medkit": "Medic: hold RMB",
     "gui.pwpwarfare.keyhelp.revive": "Revive a wounded ally",
-    "gui.pwpwarfare.keyhelp.ready": "Ready / vote yes"
+    "gui.pwpwarfare.keyhelp.ready": "Ready / vote yes",
+    "gui.pwpwarfare.prompt.alt": " · %s — %s",
+    "gui.pwpwarfare.prompt.materials": " · Materials: %s",
+    "gui.pwpwarfare.prompt.rearm": "rearm",
+    "gui.pwpwarfare.prompt.need_crew_kit": "Needs Mechanic/Pilot kit",
+    "gui.pwpwarfare.prompt.enemy_vehicle": "Enemy vehicle",
+    "gui.pwpwarfare.prompt.main_supply": "Main supply — vehicles nearby rearm, players heal"
 }
