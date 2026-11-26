@@ -1,5 +1,5 @@
 {
-    "_comment": "Белый список экрана «Управление» PWP (docs/ui-redesign/AUDIT_CONTROLS.md, «Основные»). Отсутствующие в сборке id экран пропускает молча.",
+    "_comment": "Белый список экрана «Управление» PWP. Отсутствующие в сборке id экран пропускает молча.",
     "version": 1,
     "categories": [
         {"id": "movement", "titleKey": "pwp_core.controls.category.movement", "order": 10},

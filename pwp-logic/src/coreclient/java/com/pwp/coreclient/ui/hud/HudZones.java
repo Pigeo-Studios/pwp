@@ -3,7 +3,7 @@ package com.pwp.coreclient.ui.hud;
 import com.pwp.coreclient.ui.layout.Rect;
 
 /**
- * Сетка зон HUD (этап 1 редизайна, docs/ui-redesign/AUDIT_HUD.md): где на экране живёт каждый
+ * Сетка зон HUD: где на экране живёт каждый
  * элемент HUD, чтобы элементы разных модов не налезали друг на друга. Чистая логика без Minecraft.
  *
  * <p>Вход — размер GUI-экрана ({@code guiScaledWidth/Height}) и масштаб HUD (множитель базовых
