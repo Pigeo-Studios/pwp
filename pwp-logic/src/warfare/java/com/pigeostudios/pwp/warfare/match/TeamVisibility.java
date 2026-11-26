@@ -21,6 +21,15 @@ public final class TeamVisibility {
         return t == null ? NONE : t;
     }
 
+    /**
+     * Ключ зрителя с учётом прав (этап 12): видеть ВСЁ может только наблюдатель-модератор (MODERATOR+ в
+     * спектаторе/креативе). Игрок в спектаторе по другой причине (наказан за тимкилл, ждёт) — видит только
+     * свою команду: иначе он «наблюдатель со всей картой» и диктует позиции врагов своим в войс.
+     */
+    public static String viewerKey(String teamName, boolean observerMode, boolean staff) {
+        return viewerKey(teamName, observerMode && staff);
+    }
+
     /** Видна ли зрителю вещь, принадлежащая команде {@code ownerTeam}. Нейтральное/без команды — видно всем. */
     public static boolean visible(String ownerTeam, String viewerKey) {
         if (ALL.equals(viewerKey)) return true;

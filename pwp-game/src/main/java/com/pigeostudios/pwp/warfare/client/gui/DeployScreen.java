@@ -924,6 +924,9 @@ public class DeployScreen extends Screen {
      * Точки спавна поверх карты: кольцо (под курсором — ярче, выбранная — пульсирует акцентом,
      * недоступная — красная) и подпись с именем; у выбранной/наведённой — ещё статус.
      */
+    private final com.pigeostudios.pwp.warfare.map.LabelPlacer spawnLabels =
+            new com.pigeostudios.pwp.warfare.map.LabelPlacer();
+
     private void renderSpawnOverlay(GuiGraphics g, Layout l, int mx, int my) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
@@ -939,7 +942,13 @@ public class DeployScreen extends Screen {
         g.enableScissor(map.x(), map.y(), map.right(), map.bottom());
         g.pose().pushPose();
         g.pose().translate(0, 0, 200);
-        for (var sp : DeployData.spawns) {
+        // подписи без наложений (этап 12): выбранная и наведённая — первыми, остальные — куда влезут
+        spawnLabels.reset(map.x(), map.y(), map.w(), map.h());
+        var ordered = new java.util.ArrayList<>(DeployData.spawns);
+        ordered.sort(java.util.Comparator.comparingInt(sp -> sp.id().equals(selectedSpawn)
+                ? 0
+                : sp.id().equals(mapHoverSpawn) || sp.id().equals(listHover) ? 1 : 2));
+        for (var sp : ordered) {
             float sx = (float) v.sx(sp.pos().getX() + 0.5);
             float sy = (float) v.sy(sp.pos().getZ() + 0.5);
             if (!map.contains((int) sx, (int) sy)) continue;
@@ -958,7 +967,17 @@ public class DeployScreen extends Screen {
             Component label = Component.literal(sp.name());
             if (sel || hov) label = label.copy().append("  ").append(SpawnPanel.statusText(sp.status()));
             int tc = off ? WTheme.DEPLOY_SPAWN_RING_OFF : sel ? PWPTheme.Colors.TEXT_ACCENT : PWPTheme.Text.HEADING;
-            MapDraw.label(g, font, label, (int) sx, (int) (sy - r) - font.lineHeight - Spacing.XXS - 1, tc);
+            int ri = (int) Math.ceil(r);
+            spawnLabels.block((int) sx - ri, (int) sy - ri, 2 * ri, 2 * ri);
+            var spot = spawnLabels.place(
+                    (int) sx,
+                    (int) sy,
+                    ri,
+                    MapDraw.labelWidth(font, label),
+                    MapDraw.labelHeight(font),
+                    Spacing.XXS,
+                    com.pigeostudios.pwp.warfare.map.LabelPlacer.ABOVE_FIRST);
+            if (spot != null) MapDraw.labelAt(g, font, label, spot.x(), spot.y(), tc);
         }
         g.pose().popPose();
         g.disableScissor();

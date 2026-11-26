@@ -35,4 +35,14 @@ class TeamVisibilityTest {
         assertTrue(TeamVisibility.visible("RED", TeamVisibility.ALL));
         assertTrue(TeamVisibility.visible("BLUE", TeamVisibility.ALL));
     }
+
+    @Test
+    void onlyStaffObserversSeeEverything() {
+        // модератор в спектаторе — всё; наказанный тимкиллер в спектаторе — только своя команда
+        assertEquals(TeamVisibility.ALL, TeamVisibility.viewerKey("Blue", true, true));
+        assertEquals("BLUE", TeamVisibility.viewerKey("Blue", true, false));
+        assertFalse(TeamVisibility.visible("RED", TeamVisibility.viewerKey("Blue", true, false)));
+        assertEquals("RED", TeamVisibility.viewerKey("Red", false, true));
+        assertEquals(TeamVisibility.NONE, TeamVisibility.viewerKey(null, true, false));
+    }
 }

@@ -56,6 +56,22 @@ public final class MapDraw {
         if (p > 0F) arc(g, cx, cy, r0, radius, 0, 360.0 * p, color);
     }
 
+    /** Размер плашки подписи (для {@code LabelPlacer}). */
+    public static int labelWidth(Font font, Component text) {
+        return font.width(text) + 2 * Spacing.XXS + 2;
+    }
+
+    public static int labelHeight(Font font) {
+        return font.lineHeight + 1;
+    }
+
+    /** Плашка с левым верхним углом в (x, y) — место выбрал {@code LabelPlacer}. */
+    public static void labelAt(GuiGraphics g, Font font, Component text, int x, int y, int color) {
+        Rect r = Rect.of(x, y, labelWidth(font, text), labelHeight(font));
+        UIDraw.rect(g, r, WTheme.MAP_LABEL_BG);
+        UIDraw.text(g, font, text, r.x() + Spacing.XXS + 1, r.y() + 1, color, false);
+    }
+
     /** Подпись-плашка по центру под точкой (x — центр, y — верх плашки). */
     public static void label(GuiGraphics g, Font font, Component text, int cx, int y, int color) {
         int w = font.width(text) + 2 * Spacing.XXS + 2;

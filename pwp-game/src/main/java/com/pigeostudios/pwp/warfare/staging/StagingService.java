@@ -180,6 +180,10 @@ public final class StagingService {
             team.setColor(TeamBalance.BLUE.equals(target) ? ChatFormatting.BLUE : ChatFormatting.RED);
             team.setSeeFriendlyInvisibles(true);
         }
+        // врагу ник не показываем никогда (сквозь стены); своим — да (до GO; на GO — с учётом hideNametags)
+        if (team.getNameTagVisibility() == PlayerTeam.Visibility.ALWAYS) {
+            team.setNameTagVisibility(PlayerTeam.Visibility.HIDE_FOR_OTHER_TEAMS);
+        }
         scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
         player.setGameMode(GameType.SURVIVAL);
         PacketHandler.broadcastPlayerSkin(player);

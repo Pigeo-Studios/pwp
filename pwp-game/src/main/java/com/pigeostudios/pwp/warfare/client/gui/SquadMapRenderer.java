@@ -184,9 +184,14 @@ public class SquadMapRenderer {
      * маска вне зоны и линия границы → подписи квадратов → постройки/техника/игроки/маркеры/пути →
      * HUD (рамка, координаты, масштаб, компас).
      */
+    /** Подписи без наложений (этап 12): точки → материалы хабов → ники; не влезла — не рисуется. */
+    private final com.pigeostudios.pwp.warfare.map.LabelPlacer labels =
+            new com.pigeostudios.pwp.warfare.map.LabelPlacer();
+
     public void render(GuiGraphics g, int mx, int my, float pt) {
         LocalPlayer p = Minecraft.getInstance().player;
         if (p == null) return;
+        labels.reset(mapX, mapY, mapWidth, mapHeight);
         MapView v = view(p);
         double bpp = v.bpp();
         double cx = v.centerX();
@@ -354,13 +359,12 @@ public class SquadMapRenderer {
                     ? WTheme.TEAM_BLUE
                     : (ringTeam.equals("RED") ? WTheme.TEAM_RED : WTheme.MAP_RING_NEUTRAL);
             MapDraw.progressRing(g, pX, pY, WTheme.MAP_OBJECTIVE_R, owner.equals("NEUTRAL") ? progress : 1F, ringColor);
-            MapDraw.label(
-                    g,
-                    Minecraft.getInstance().font,
-                    Component.literal(cp.name),
-                    pX,
-                    pY + WTheme.MAP_OBJECTIVE_R + 1,
-                    WTheme.MAP_LABEL_TEXT);
+            var lf = Minecraft.getInstance().font;
+            Component name = Component.literal(cp.name);
+            int r0 = WTheme.MAP_OBJECTIVE_R;
+            labels.block(pX - r0, pY - r0, 2 * r0, 2 * r0);
+            var spot = labels.place(pX, pY, r0, MapDraw.labelWidth(lf, name), MapDraw.labelHeight(lf), 1);
+            if (spot != null) MapDraw.labelAt(g, lf, name, spot.x(), spot.y(), WTheme.MAP_LABEL_TEXT);
         }
         RenderSystem.setShaderColor(1, 1, 1, 1);
     }
@@ -480,8 +484,11 @@ public class SquadMapRenderer {
                 setFilter(hubTex, false);
                 String matsText = String.valueOf(hub.materials);
                 int matsW = PWPTheme.Fonts.display().width(matsText);
-                int matsX = (int) sx + 8;
-                int matsY = (int) sy - 2;
+                labels.block((int) sx - 6, (int) sy - 6, 12, 12);
+                var matsSpot = labels.place((int) sx, (int) sy, 6, matsW + 12, 10, 2);
+                if (matsSpot == null) continue;
+                int matsX = matsSpot.x() + 1;
+                int matsY = matsSpot.y() + 1;
                 g.pose().pushPose();
                 g.pose().translate(0, 0, 165);
                 RenderSystem.setShaderColor(1, 1, 1, 1);
@@ -626,12 +633,8 @@ public class SquadMapRenderer {
             if (!inMap(sx, sy)) continue;
             var f = PWPTheme.Fonts.display();
             if (isShowNicksHeld && !info.name.equals(myName) && !info.isDowned) {
-                g.pose().pushPose();
-                g.pose().translate(sx, sy - 8, 450);
-                g.pose().scale(0.6F, 0.6F, 1);
                 int nickColor = info.squadId != -1 && info.squadId == myInternalSquadId ? -11141291 : -1;
-                g.drawCenteredString(f, Component.literal(info.name), 0, 0, nickColor);
-                g.pose().popPose();
+                drawNick(g, f, info.name, sx, sy, nickColor);
             }
             if (info.name.equals(myName)) continue;
             if (info.isDowned) {
@@ -676,18 +679,13 @@ public class SquadMapRenderer {
                 int sx = toScreenX(driver.x, cx);
                 int sy = toScreenZ(driver.z, cz);
                 if (!inMap(sx, sy)) continue;
-                int yOffset = sy - 10 - (group.size() - 1) * 8;
+                // экипаж — одной подписью «водитель +N», чтобы столбик ников не закрывал карту
+                int nickColor = -1;
                 for (var pInfo : group) {
-                    g.pose().pushPose();
-                    g.pose().translate(sx, yOffset, 450);
-                    g.pose().scale(0.6F, 0.6F, 1);
-                    int nickColor = -1;
                     if (pInfo.squadId != -1 && pInfo.squadId == myInternalSquadId) nickColor = -11141291;
-                    if (pInfo.name.equals(myName)) nickColor = -171;
-                    g.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(pInfo.name), 0, 0, nickColor);
-                    g.pose().popPose();
-                    yOffset += 8;
                 }
+                String crew = driver.name + (group.size() > 1 ? " +" + (group.size() - 1) : "");
+                drawNick(g, PWPTheme.Fonts.display(), crew, sx, sy, nickColor);
             }
         }
 
@@ -710,13 +708,24 @@ public class SquadMapRenderer {
         RenderSystem.setShaderColor(1, 1, 1, 1);
         g.pose().popPose();
         if (isShowNicknamesHeld()) {
-            g.pose().pushPose();
-            g.pose().translate(mySx, mySy - 10, 450);
-            g.pose().scale(0.6F, 0.6F, 1);
             int myColor = mySquadId != -1 ? -11141291 : -171;
-            g.drawCenteredString(PWPTheme.Fonts.display(), Component.literal(self.getScoreboardName()), 0, 0, myColor);
-            g.pose().popPose();
+            drawNick(g, PWPTheme.Fonts.display(), self.getScoreboardName(), mySx, mySy, myColor);
         }
+    }
+
+    /** Ник у иконки игрока, место — через {@link #labels} (над иконкой, иначе сбоку/снизу; нет места — нет). */
+    private static final float NICK_SCALE = 0.6F;
+
+    private void drawNick(GuiGraphics g, net.minecraft.client.gui.Font f, String name, int sx, int sy, int color) {
+        int w = Math.max(1, Math.round(f.width(name) * NICK_SCALE));
+        int h = Math.max(1, Math.round(f.lineHeight * NICK_SCALE));
+        var spot = labels.place(sx, sy, 3, w, h, 1, com.pigeostudios.pwp.warfare.map.LabelPlacer.ABOVE_FIRST);
+        if (spot == null) return;
+        g.pose().pushPose();
+        g.pose().translate(spot.x(), spot.y(), 450);
+        g.pose().scale(NICK_SCALE, NICK_SCALE, 1);
+        g.drawString(f, Component.literal(name), 0, 0, color, true);
+        g.pose().popPose();
     }
 
     private void renderSquadMarkerLogic(GuiGraphics g, double cx, double cz, double bpp) {

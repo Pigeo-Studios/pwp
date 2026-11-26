@@ -485,13 +485,15 @@ public class GameLogicEvents {
                         List<MapPlayerInfo> allPlayersInfo = buildPlayerInfo(level.players(), data);
                         PacketSyncMapPlayers allPlayersPacket = new PacketSyncMapPlayers(allPlayersInfo);
 
+                        // кто кого видит — TeamVisibility через PacketHandler.viewerKey (этап 12): всё — только
+                        // модератор-наблюдатель; наказанный спектатор и игроки — только своя команда
                         for (ServerPlayer p : level.players()) {
-                            if (p.isSpectator() || p.isCreative()) {
+                            String key = PacketHandler.viewerKey(p);
+                            if (com.pigeostudios.pwp.warfare.match.TeamVisibility.ALL.equals(key)) {
                                 PacketHandler.INSTANCE.send(PacketDistributor.PLAYER.with(() -> p), allPlayersPacket);
-                            } else if (p.getTeam() != null) {
-                                String myTeamName = p.getTeam().getName();
+                            } else if (!com.pigeostudios.pwp.warfare.match.TeamVisibility.NONE.equals(key)) {
                                 List<MapPlayerInfo> teamOnly = allPlayersInfo.stream()
-                                        .filter(info -> info.team.equalsIgnoreCase(myTeamName))
+                                        .filter(info -> key.equalsIgnoreCase(info.team))
                                         .toList();
                                 PacketHandler.INSTANCE.send(
                                         PacketDistributor.PLAYER.with(() -> p), new PacketSyncMapPlayers(teamOnly));
@@ -809,10 +811,13 @@ public class GameLogicEvents {
                             PlayerTeam redTeam = scoreboard.getPlayerTeam("Red");
                             if (blueTeam != null) blueTeam.setAllowFriendlyFire(true);
                             if (redTeam != null) redTeam.setAllowFriendlyFire(true);
-                            if (data.match.hideNametags) {
-                                if (blueTeam != null) blueTeam.setNameTagVisibility(PlayerTeam.Visibility.NEVER);
-                                if (redTeam != null) redTeam.setNameTagVisibility(PlayerTeam.Visibility.NEVER);
-                            }
+                            // ники над головой (этап 12): врагу — никогда (ванильные ники видны сквозь стены —
+                            // бесплатный wallhack), своим — да; hideNametags — никому
+                            PlayerTeam.Visibility tags = data.match.hideNametags
+                                    ? PlayerTeam.Visibility.NEVER
+                                    : PlayerTeam.Visibility.HIDE_FOR_OTHER_TEAMS;
+                            if (blueTeam != null) blueTeam.setNameTagVisibility(tags);
+                            if (redTeam != null) redTeam.setNameTagVisibility(tags);
                             if (data.match.disableHunger) {
                                 for (ServerPlayer p : level.players()) {
                                     p.getFoodData().setFoodLevel(20);

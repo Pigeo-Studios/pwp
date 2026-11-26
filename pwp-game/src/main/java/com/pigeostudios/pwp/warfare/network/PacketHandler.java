@@ -512,7 +512,11 @@ public class PacketHandler {
     /** Ключ видимости игрока: креатив/спектатор — наблюдатель (видит всё), иначе по scoreboard-команде. */
     public static String viewerKey(ServerPlayer p) {
         String team = p.getTeam() != null ? p.getTeam().getName() : null;
-        return TeamVisibility.viewerKey(team, p.isSpectator() || p.isCreative());
+        // видеть всё — только модератор-наблюдатель (этап 12): наказанный спектатор видит свою команду
+        return TeamVisibility.viewerKey(
+                team,
+                p.isSpectator() || p.isCreative(),
+                com.pwp.api.security.PwpPermissions.has(p, com.pwp.api.security.AccessLevel.MODERATOR));
     }
 
     /** SyncGameData — каждому игроку версия его команды. */

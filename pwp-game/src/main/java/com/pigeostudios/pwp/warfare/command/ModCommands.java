@@ -1116,6 +1116,9 @@ public class ModCommands {
 
         team.setColor(color);
         team.setSeeFriendlyInvisibles(true);
+        if (team.getNameTagVisibility() == PlayerTeam.Visibility.ALWAYS) {
+            team.setNameTagVisibility(PlayerTeam.Visibility.HIDE_FOR_OTHER_TEAMS);
+        }
         scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
         player.setGameMode(GameType.SURVIVAL);
         player.inventoryMenu.broadcastChanges();
