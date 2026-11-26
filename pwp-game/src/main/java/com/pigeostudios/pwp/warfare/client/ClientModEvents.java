@@ -56,6 +56,7 @@ public class ClientModEvents {
         com.pigeostudios.pwp.warfare.client.hud.FobHud.init();
         com.pigeostudios.pwp.warfare.client.hud.LookPromptHud.init();
         com.pigeostudios.pwp.warfare.client.hud.KeyHelpOverlay.init();
+        com.pigeostudios.pwp.warfare.client.hud.SuppressionClient.init();
         com.pigeostudios.pwp.warfare.client.gui.VehicleRadialScreen.register();
         com.pigeostudios.pwp.warfare.client.gui.TacticalRadialScreen.register();
         // админ-панель core-client: вкладки «Матч» и «Карта»
