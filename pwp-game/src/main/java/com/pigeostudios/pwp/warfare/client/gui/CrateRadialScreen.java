@@ -66,20 +66,6 @@ public class CrateRadialScreen extends WarfareRadialScreen {
                         .warn(materials < cost);
         return List.of(
                 resupply,
-                new Entry(
-                        Component.translatable("gui.pwpwarfare.radial.item.ags"),
-                        WarfareIcon.GUN,
-                        cost(20),
-                        WTheme.STATUS_BAD,
-                        true,
-                        null),
-                new Entry(
-                        Component.translatable("gui.pwpwarfare.radial.item.m2"),
-                        WarfareIcon.GUN,
-                        cost(15),
-                        WTheme.STATUS_BAD,
-                        true,
-                        null),
                 Entry.of(
                                 Component.translatable("gui.pwpwarfare.radial.item.mortar"),
                                 WarfareIcon.TARGET,

@@ -1,15 +1,12 @@
 package com.pigeostudios.pwp.warfare.client.gui.devtest;
 
 import com.pigeostudios.pwp.warfare.client.WarfareDeathScreen;
-import com.pigeostudios.pwp.warfare.client.gui.DefenseRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DeployScreen;
 import com.pigeostudios.pwp.warfare.client.gui.DownedScreen;
 import com.pigeostudios.pwp.warfare.client.gui.HubRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.KitPreviewScreen;
 import com.pigeostudios.pwp.warfare.client.gui.RadioRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.SquadMarkerRadialScreen;
-import com.pigeostudios.pwp.warfare.client.gui.StaticGunRadialScreen;
-import com.pigeostudios.pwp.warfare.client.gui.WallRadialScreen;
 import com.pigeostudios.pwp.warfare.client.gui.deploy.DeployData;
 import com.pwp.coreclient.gui.devtest.UiGallery;
 import java.util.ArrayList;
@@ -58,9 +55,22 @@ public final class WarfareUiFixtures {
         });
         UiGallery.register("warfare.kits.preview", WarfareUiFixtures::kitPreview);
         UiGallery.register("warfare.radial.radio", () -> new RadioRadialScreen().asPreview());
-        UiGallery.register("warfare.radial.defense", () -> new DefenseRadialScreen(null).asPreview());
-        UiGallery.register("warfare.radial.walls", () -> new WallRadialScreen(null).asPreview());
-        UiGallery.register("warfare.radial.static_guns", () -> new StaticGunRadialScreen(null).asPreview());
+        UiGallery.register(
+                "warfare.radial.build.defense", () -> new com.pigeostudios.pwp.warfare.client.gui.BuildRadialScreen(
+                                null, com.pigeostudios.pwp.warfare.build.Structure.Category.DEFENSE)
+                        .asPreview());
+        UiGallery.register(
+                "warfare.radial.build.obstacle", () -> new com.pigeostudios.pwp.warfare.client.gui.BuildRadialScreen(
+                                null, com.pigeostudios.pwp.warfare.build.Structure.Category.OBSTACLE)
+                        .asPreview());
+        UiGallery.register(
+                "warfare.radial.build.emplacement", () -> new com.pigeostudios.pwp.warfare.client.gui.BuildRadialScreen(
+                                null, com.pigeostudios.pwp.warfare.build.Structure.Category.EMPLACEMENT)
+                        .asPreview());
+        UiGallery.register(
+                "warfare.radial.build.logistics", () -> new com.pigeostudios.pwp.warfare.client.gui.BuildRadialScreen(
+                                null, com.pigeostudios.pwp.warfare.build.Structure.Category.LOGISTICS)
+                        .asPreview());
         UiGallery.register("warfare.radial.hub", () -> new HubRadialScreen(BlockPos.ZERO).asPreview());
         UiGallery.register("warfare.radial.markers", () -> new SquadMarkerRadialScreen(0, 0, null).asPreview());
         UiGallery.register("warfare.map_editor", WarfareUiFixtures::mapEditor);

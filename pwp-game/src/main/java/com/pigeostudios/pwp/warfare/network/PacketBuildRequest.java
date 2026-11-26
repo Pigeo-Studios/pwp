@@ -14,6 +14,8 @@ import com.pigeostudios.pwp.warfare.block.VehicleStationBlock;
 import com.pigeostudios.pwp.warfare.block.VehicleStationBlockEntity;
 import com.pigeostudios.pwp.warfare.block.WallBlock;
 import com.pigeostudios.pwp.warfare.block.WallBlockEntity;
+import com.pigeostudios.pwp.warfare.build.Structure;
+import com.pigeostudios.pwp.warfare.build.StructureRules;
 import com.pigeostudios.pwp.warfare.config.WarfareConfig;
 import com.pigeostudios.pwp.warfare.data.state.WarfareData;
 import com.pigeostudios.pwp.warfare.data.state.WarfareKeys;
@@ -105,8 +107,26 @@ public class PacketBuildRequest {
                         }
 
                         boolean isCreative = player.isCreative();
+                        // каталог и условия (этап 17c): не в мейне врага, лимит таких построек у одного ФОБа
+                        Structure structure = Structure.byWireId(msg.structureId);
+                        String ruleDeny = StructureRules.check(
+                                structure,
+                                com.pigeostudios.pwp.warfare.server.BuildConditions.facts(
+                                        level, msg.pos, team, structure, isCreative));
+                        if (ruleDeny != null) {
+                            if (StructureRules.FOB_LIMIT.equals(ruleDeny)) {
+                                PlayerFeedback.deny(
+                                        player,
+                                        ruleDeny,
+                                        Component.translatable("gui.pwpwarfare.radial.item." + structure.id()),
+                                        structure.perFob);
+                            } else {
+                                PlayerFeedback.deny(player, ruleDeny);
+                            }
+                            return;
+                        }
                         if (msg.structureId == 10) {
-                            int cost = 5;
+                            int cost = Structure.WALL_1X1.cost;
                             if (!canPlaceAt(level, msg.pos)) {
                                 sendBlockedMessage(player);
                                 return;
@@ -129,7 +149,7 @@ public class PacketBuildRequest {
                                 setupWallEntity(level, msg.pos, team, false, null);
                             }
                         } else if (msg.structureId == 11) {
-                            int cost = 10;
+                            int cost = Structure.WALL_2X2.cost;
                             List<BlockPos> wallParts = new ArrayList<>();
                             wallParts.add(msg.pos);
                             wallParts.add(msg.pos.above());
@@ -138,7 +158,7 @@ public class PacketBuildRequest {
                             wallParts.add(secondColPos.above());
                             attemptBuildMulti(player, level, wallParts, facing, team, cost);
                         } else if (msg.structureId == 12) {
-                            int cost = 15;
+                            int cost = Structure.WALL_3X3.cost;
                             List<BlockPos> wallParts = new ArrayList<>();
 
                             for (int h = 0; h < 3; h++) {
@@ -151,7 +171,7 @@ public class PacketBuildRequest {
 
                             attemptBuildMulti(player, level, wallParts, facing, team, cost);
                         } else if (msg.structureId == 13) {
-                            int cost = 25;
+                            int cost = Structure.WIRE.cost;
                             List<BlockPos> parts = new ArrayList<>();
 
                             for (int h = 0; h < 3; h++) {
@@ -197,7 +217,7 @@ public class PacketBuildRequest {
                                 }
                             }
                         } else if (msg.structureId == 15) {
-                            int cost = 25;
+                            int cost = Structure.WALL_WIRE.cost;
                             List<BlockPos> wallParts = new ArrayList<>();
                             List<BlockPos> wireParts = new ArrayList<>();
                             boolean blocked = false;
@@ -273,7 +293,7 @@ public class PacketBuildRequest {
                                 }
                             }
                         } else if (msg.structureId == 16) {
-                            int cost = 20;
+                            int cost = Structure.EMBRASURE.cost;
                             List<BlockPos> wallParts = new ArrayList<>();
                             List<BlockPos> slabParts = new ArrayList<>();
                             boolean blocked = false;
@@ -344,7 +364,7 @@ public class PacketBuildRequest {
                                 setupWallEntity(level, p, team, true, allParts);
                             }
                         } else if (msg.structureId == 17) {
-                            int cost = 50;
+                            int cost = Structure.BUNKER.cost;
                             List<BlockPos> wallParts = new ArrayList<>();
                             boolean blocked = false;
 
@@ -431,7 +451,7 @@ public class PacketBuildRequest {
                                 setupWallEntity(level, p, team, true, wallParts);
                             }
                         } else if (msg.structureId == 18) {
-                            int cost = 100;
+                            int cost = Structure.VEHICLE_STATION.cost;
                             if (!canPlaceAt(level, msg.pos)) {
                                 sendBlockedMessage(player);
                                 return;
@@ -460,7 +480,7 @@ public class PacketBuildRequest {
                                 supply.setTeam(team);
                             }
                         } else if (msg.structureId == 22) {
-                            int cost = 300;
+                            int cost = Structure.MORTAR.cost;
                             if (!canPlaceAt(level, msg.pos)) {
                                 sendBlockedMessage(player);
                                 return;
@@ -489,7 +509,7 @@ public class PacketBuildRequest {
                                 }
                             }
                         } else if (msg.structureId == 23) {
-                            int cost = 200;
+                            int cost = Structure.TOW.cost;
                             if (!canPlaceAt(level, msg.pos)) {
                                 sendBlockedMessage(player);
                                 return;

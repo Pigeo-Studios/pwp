@@ -11,7 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 
-/** Радиалка рации: точка сбора (с кулдауном отряда), оборона, установки. */
+/** Радиалка рации: точка сбора (с кулдауном отряда), ФОБ и разделы стройки ({@link BuildRadialScreen}). */
 public class RadioRadialScreen extends WarfareRadialScreen {
     public RadioRadialScreen() {
         super(Component.translatable("gui.pwpwarfare.radial.radio"));
@@ -45,16 +45,21 @@ public class RadioRadialScreen extends WarfareRadialScreen {
                         })
                 .warn(cd > 0);
         if (cd > 0) rally = rally.detail(Component.translatable("gui.pwpwarfare.radial.cooldown", cd));
-        return List.of(
-                rally,
-                Entry.of(
-                        Component.translatable("gui.pwpwarfare.radial.item.defense"),
-                        WarfareIcon.SHIELD,
-                        () -> switchTo(new DefenseRadialScreen(this))),
-                Entry.of(
-                        Component.translatable("gui.pwpwarfare.radial.item.emplacements"),
-                        WarfareIcon.GUN,
-                        () -> switchTo(new StaticGunRadialScreen(this))));
+        // как в Squad: ралли, ФОБ, затем разделы стройки из каталога (этап 17c)
+        List<Entry> out = new java.util.ArrayList<>();
+        out.add(rally);
+        out.add(Entry.of(Component.translatable("gui.pwpwarfare.radial.item.fob"), WarfareIcon.SPAWN_FOB, () -> {
+            PacketHandler.INSTANCE.sendToServer(new PacketRadioAction(14));
+            onClose();
+        }));
+        for (com.pigeostudios.pwp.warfare.build.Structure.Category c :
+                com.pigeostudios.pwp.warfare.build.Structure.Category.values()) {
+            out.add(Entry.of(
+                    Component.translatable("gui.pwpwarfare.radial.cat." + c.id()),
+                    BuildRadialScreen.icon(c),
+                    () -> switchTo(new BuildRadialScreen(this, c))));
+        }
+        return out;
     }
 
     @Override

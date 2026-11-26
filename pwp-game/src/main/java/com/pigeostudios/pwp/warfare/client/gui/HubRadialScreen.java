@@ -14,14 +14,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
 /**
- * Снабжение FOB: пополнение БК (кулдаун 60 с), AGS-30/M2 (выключены), миномёт, ПТРК. Красным —
+ * Снабжение FOB: пополнение БК (кулдаун 60 с), миномёт, ПТРК (AGS-30/M2 выключены — пунктов нет). Красным —
  * кулдаун/нехватка материалов; клик по миномёту/ПТРК уходит на сервер всегда (сервер проверяет).
  */
 public class HubRadialScreen extends WarfareRadialScreen {
     private final BlockPos hubPos;
     private int cdAmmo;
-    private int cdAGS;
-    private int cdM2;
     private int cdMortar;
     private int cdTOW;
     private int materials;
@@ -37,8 +35,6 @@ public class HubRadialScreen extends WarfareRadialScreen {
         cdAmmo =
                 elapsed < 60000L && mc.player != null && !mc.player.isCreative() ? (int) ((60000L - elapsed) / 50L) : 0;
         if (mc.level != null && mc.level.getBlockEntity(hubPos) instanceof HubBlockEntity hub) {
-            cdAGS = hub.cooldownAGS;
-            cdM2 = hub.cooldownM2;
             cdMortar = hub.cooldownMortar;
             cdTOW = hub.cooldownTOW;
             materials = hub.getMaterials();
@@ -74,20 +70,6 @@ public class HubRadialScreen extends WarfareRadialScreen {
                         .warn(materials < cost);
         return List.of(
                 resupply,
-                new Entry(
-                        Component.translatable("gui.pwpwarfare.radial.item.ags"),
-                        WarfareIcon.GUN,
-                        cdAGS > 0 ? cooldown(cdAGS) : cost(20),
-                        WTheme.STATUS_BAD,
-                        true,
-                        null),
-                new Entry(
-                        Component.translatable("gui.pwpwarfare.radial.item.m2"),
-                        WarfareIcon.GUN,
-                        cdM2 > 0 ? cooldown(cdM2) : cost(15),
-                        WTheme.STATUS_BAD,
-                        true,
-                        null),
                 Entry.of(
                                 Component.translatable("gui.pwpwarfare.radial.item.mortar"),
                                 WarfareIcon.TARGET,

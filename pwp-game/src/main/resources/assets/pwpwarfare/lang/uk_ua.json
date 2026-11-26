@@ -1296,5 +1296,16 @@
     "pwpwarfare.vehicle_menu.error.far": "Підійдіть ближче до техніки",
     "pwpwarfare.vehicle_menu.error.not_allowed": "Зараз ця дія недоступна",
     "pwpwarfare.vehicle_menu.error.no_request": "Запит уже минув",
-    "pwpwarfare.vehicle_menu.error.not_your_squad": "Цей гравець не з вашого загону"
+    "pwpwarfare.vehicle_menu.error.not_your_squad": "Цей гравець не з вашого загону",
+    "gui.pwpwarfare.radial.cat.defense": "Оборона",
+    "gui.pwpwarfare.radial.cat.obstacle": "Загородження",
+    "gui.pwpwarfare.radial.cat.emplacement": "Вогневі точки",
+    "gui.pwpwarfare.radial.cat.logistics": "Логістика",
+    "gui.pwpwarfare.radial.item.wall_wire": "Стіна з колючкою",
+    "gui.pwpwarfare.radial.cost_per_fob": "%s мат. · до %s біля ФОБу",
+    "gui.pwpwarfare.radial.no_fob": "Поруч немає ФОБу",
+    "pwpwarfare.msg.build.enemy_main": "У ворожому мейні будувати не можна",
+    "pwpwarfare.msg.build.fob_limit": "%s: біля цього ФОБу вже %s — більше не можна",
+    "pwpwarfare.msg.build.unknown": "Цю споруду поставити не можна",
+    "gui.pwpwarfare.hud.fob": "ФОБ"
 }

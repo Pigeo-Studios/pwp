@@ -18,7 +18,8 @@
 | Механика | PWP | Где / чего не хватает |
 |---|---|---|
 | Лопата: строить и разбирать | ✅ | `EntrenchingToolItem`, `WallRadialScreen`, `DefenseRadialScreen` |
-| Очки строительства и боеприпасов ФОБа | ✅ | материалы хаба (`HubBlockEntity`), `CrateRadialScreen` |
+| Очки строительства и боеприпасов ФОБа | ✅ | материалы хаба (`HubBlockEntity`), `CrateRadialScreen`; плашка «ФОБ: N» в HUD (`FobHud`, 17c) |
+| Каталог построек по разделам, цены, лимиты у ФОБа, запрет в мейне врага | ✅ 17c | `build/Structure`, `StructureRules`, `BuildConditions`, радиалка `BuildRadialScreen` |
 | Мешок с патронами стрелка, ящики | ✅ | `AmmoBagBlock`, ящик снабжения |
 | Установки: пулемёт, АГС, ПТРК, миномёт | ✅ | `*ConstructionBlock`, `StaticGunRadialScreen` |
 | Логистика: грузовик возит материалы, разгрузка у ФОБа | ✅ | `IS_SUPPLY_TRUCK`, `MainSupplyBlockEntity` |

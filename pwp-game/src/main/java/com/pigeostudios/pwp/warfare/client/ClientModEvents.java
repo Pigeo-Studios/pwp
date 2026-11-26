@@ -53,6 +53,7 @@ public class ClientModEvents {
         com.pigeostudios.pwp.warfare.client.hud.ScoreboardOverlay.init();
         // выносливость и раскачка прицела (этап 15)
         com.pigeostudios.pwp.warfare.client.hud.StaminaClient.init();
+        com.pigeostudios.pwp.warfare.client.hud.FobHud.init();
         com.pigeostudios.pwp.warfare.client.gui.VehicleRadialScreen.register();
         // админ-панель core-client: вкладки «Матч» и «Карта»
         com.pigeostudios.pwp.warfare.client.admin.WarfareAdminTabs.register();

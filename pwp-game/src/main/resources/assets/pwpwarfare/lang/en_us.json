@@ -1296,5 +1296,16 @@
     "pwpwarfare.vehicle_menu.error.far": "Get closer to the vehicle",
     "pwpwarfare.vehicle_menu.error.not_allowed": "This action isn't available now",
     "pwpwarfare.vehicle_menu.error.no_request": "The request has expired",
-    "pwpwarfare.vehicle_menu.error.not_your_squad": "This player isn't in your squad"
+    "pwpwarfare.vehicle_menu.error.not_your_squad": "This player isn't in your squad",
+    "gui.pwpwarfare.radial.cat.defense": "Defenses",
+    "gui.pwpwarfare.radial.cat.obstacle": "Obstacles",
+    "gui.pwpwarfare.radial.cat.emplacement": "Emplacements",
+    "gui.pwpwarfare.radial.cat.logistics": "Logistics",
+    "gui.pwpwarfare.radial.item.wall_wire": "Wall with wire",
+    "gui.pwpwarfare.radial.cost_per_fob": "%s mat. · max %s per FOB",
+    "gui.pwpwarfare.radial.no_fob": "No FOB nearby",
+    "pwpwarfare.msg.build.enemy_main": "You can't build in the enemy main",
+    "pwpwarfare.msg.build.fob_limit": "%s: this FOB already has %s",
+    "pwpwarfare.msg.build.unknown": "This structure can't be built",
+    "gui.pwpwarfare.hud.fob": "FOB"
 }

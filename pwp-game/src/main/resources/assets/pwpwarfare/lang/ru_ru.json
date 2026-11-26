@@ -1296,5 +1296,16 @@
     "pwpwarfare.vehicle_menu.error.far": "Подойдите ближе к технике",
     "pwpwarfare.vehicle_menu.error.not_allowed": "Сейчас это действие недоступно",
     "pwpwarfare.vehicle_menu.error.no_request": "Запрос уже истёк",
-    "pwpwarfare.vehicle_menu.error.not_your_squad": "Этот игрок не из вашего отряда"
+    "pwpwarfare.vehicle_menu.error.not_your_squad": "Этот игрок не из вашего отряда",
+    "gui.pwpwarfare.radial.cat.defense": "Оборона",
+    "gui.pwpwarfare.radial.cat.obstacle": "Заграждения",
+    "gui.pwpwarfare.radial.cat.emplacement": "Огневые точки",
+    "gui.pwpwarfare.radial.cat.logistics": "Логистика",
+    "gui.pwpwarfare.radial.item.wall_wire": "Стена с колючкой",
+    "gui.pwpwarfare.radial.cost_per_fob": "%s мат. · до %s у ФОБа",
+    "gui.pwpwarfare.radial.no_fob": "Рядом нет ФОБа",
+    "pwpwarfare.msg.build.enemy_main": "Во вражеском мейне строить нельзя",
+    "pwpwarfare.msg.build.fob_limit": "%s: у этого ФОБа уже %s — больше нельзя",
+    "pwpwarfare.msg.build.unknown": "Эту постройку поставить нельзя",
+    "gui.pwpwarfare.hud.fob": "ФОБ"
 }
